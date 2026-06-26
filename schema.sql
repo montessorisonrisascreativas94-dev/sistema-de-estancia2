@@ -1262,8 +1262,13 @@ CREATE POLICY "admin_manage_permits"    ON public.staff_permits FOR UPDATE USING
 
 -- ── 9. PERFIL ADMIN INICIAL ───────────────────────────────────
 INSERT INTO public.profiles (id, email, name, role, accepted_terms, created_at)
-VALUES ('c1e72617-ab8f-44c0-b1eb-cdd92eda62e7','impulsodigital@gmail.com','Administrador','admin',true,now())
+VALUES ('5b6e8359-1a65-4d26-aba4-ca48b6b66409','impulsodigital@gmail.com','Administrador','admin',true,now())
 ON CONFLICT (id) DO UPDATE SET role='admin', accepted_terms=true;
+
+-- ── 9.1 PERFIL DIRECTORA INICIAL ──────────────────────────────
+INSERT INTO public.profiles (id, email, name, role, accepted_terms, created_at)
+VALUES ('c8923116-e769-4a01-a322-358a750ed37c','directora@sonrisacreativas.com','Directora','directora',true,'2026-06-26 17:15:50.326681+00')
+ON CONFLICT (id) DO UPDATE SET role='directora', accepted_terms=true, email=EXCLUDED.email, name=EXCLUDED.name, created_at=EXCLUDED.created_at;
 
 -- ── 10. STORAGE BUCKETS ───────────────────────────────────────
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
