@@ -564,7 +564,7 @@ async function initProfile() {
     await _loadQR();
     container.innerHTML = '';
     new window.QRCode(container, {
-      text: JSON.stringify({ matricula: c, name: p.name, type: 'karpus-staff', v: 1 }),
+      text: JSON.stringify({ matricula: c, name: p.name, type: 'sonrisas-staff', v: 1 }),
       width: 130, height: 130, colorDark: '#1e293b', colorLight: '#ffffff',
       correctLevel: window.QRCode.CorrectLevel.H
     });
@@ -601,7 +601,7 @@ async function initProfile() {
       .role{font-size:11px;color:#0d9488;font-weight:800;text-transform:uppercase;margin-top:2px;}
       .code{font-size:10px;color:#64748b;font-weight:700;margin-top:8px;}</style>
     </head><body><div class="card">
-      <div class="hdr">STAFF � KARPUS KIDS</div>
+      <div class="hdr">STAFF • COLEGIO MONTESSORI SONRISAS CREATIVAS</div>
       <img src="${img}">
       <div class="name">${p.name || 'Personal'}</div>
       <div class="role">${p.role || 'Asistente'}</div>

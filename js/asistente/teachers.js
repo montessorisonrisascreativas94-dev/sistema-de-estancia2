@@ -82,7 +82,7 @@ export const TeachersModule = {
           </div>
           <div class="sm:col-span-2">
             <label class="${LC}">Correo electrónico *</label>
-            <input id="teacherEmail" type="email" placeholder="usuario@karpus.com" class="${IC} py-2">
+            <input id="teacherEmail" type="email" placeholder="usuario@sonrisascreativas.com" class="${IC} py-2">
           </div>
           <div>
             <label class="${LC}">Teléfono</label>
@@ -209,7 +209,7 @@ export const TeachersModule = {
       const img = container?.querySelector('img')?.src || container?.querySelector('canvas')?.toDataURL();
       if (!img || !code) { Helpers.toast('Genera el QR primero', 'warning'); return; }
       const win = window.open('', '_blank');
-      win.document.write(`<!DOCTYPE html><html><head><title>Carnet ${name}</title><style>body{font-family:Arial,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;}.card{border:4px solid #0d9488;border-radius:20px;padding:24px;text-align:center;max-width:260px;}.hdr{background:#0d9488;color:white;margin:-24px -24px 16px;padding:12px;border-radius:16px 16px 0 0;font-weight:900;font-size:12px;text-transform:uppercase;}img{width:160px;height:160px;border-radius:8px;}.name{font-size:16px;font-weight:900;color:#1e293b;margin-top:12px;}.code{font-size:10px;color:#64748b;font-weight:700;margin-top:4px;}</style></head><body><div class="card"><div class="hdr">STAFF � KARPUS KIDS</div><img src="${img}"><div class="name">${name}</div><div class="code">ID: ${code}</div></div><script>window.onload=()=>window.print()<\/script></body></html>`);
+      win.document.write(`<!DOCTYPE html><html><head><title>Carnet ${name}</title><style>body{font-family:Arial,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;}.card{border:4px solid #0d9488;border-radius:20px;padding:24px;text-align:center;max-width:260px;}.hdr{background:#0d9488;color:white;margin:-24px -24px 16px;padding:12px;border-radius:16px 16px 0 0;font-weight:900;font-size:12px;text-transform:uppercase;}img{width:160px;height:160px;border-radius:8px;}.name{font-size:16px;font-weight:900;color:#1e293b;margin-top:12px;}.code{font-size:10px;color:#64748b;font-weight:700;margin-top:4px;}</style></head><body><div class="card"><div class="hdr">STAFF • COLEGIO MONTESSORI SONRISAS CREATIVAS</div><img src="${img}"><div class="name">${name}</div><div class="code">ID: ${code}</div></div><script>window.onload=()=>window.print()<\/script></body></html>`);
       win.document.close();
     };
 
@@ -296,19 +296,19 @@ export const TeachersModule = {
 
           const html = `
             <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e0f2fe; border-radius: 10px;">
-              <h2 style="color: #0369a1;">�Bienvenida al Equipo de Karpus Kids! ??</h2>
+              <h2 style="color: #0369a1;">¡Bienvenida al Equipo de Colegio Montessori Sonrisas Creativas! 🎉</h2>
               <p>Hola <b>${name}</b>,</p>
-              <p>Se ha creado tu cuenta de acceso al Panel de Maestra en Karpus Kids.</p>
+              <p>Se ha creado tu cuenta de acceso al Panel de Maestra en Colegio Montessori Sonrisas Creativas.</p>
               <div style="background: #f0f9ff; padding: 15px; border-radius: 8px; margin: 15px 0;">
                 <p><b>Usuario (Email):</b> ${email}</p>
-                <p style="color:#6b7280;font-size:13px;">Por seguridad, usa el enlace de abajo para establecer tu contrase�a.</p>
+                <p style="color:#6b7280;font-size:13px;">Por seguridad, usa el enlace de abajo para establecer tu contraseña.</p>
               </div>
-              <p>Accede desde aqu�: <a href="${window.location.origin}/login.html" style="color: #0369a1; font-weight: bold;">Iniciar Sesi�n</a></p>
+              <p>Accede desde aquí: <a href="${window.location.origin}/login.html" style="color: #0369a1; font-weight: bold;">Iniciar Sesión</a></p>
               <hr style="border: none; border-top: 1px solid #e0f2fe; margin: 20px 0;">
-              <p style="font-size: 12px; color: #666;">Karpus Kids - Administraci�n</p>
+              <p style="font-size: 12px; color: #666;">Colegio Montessori Sonrisas Creativas - Administración</p>
             </div>
           `;
-          await sendEmail(email, `Bienvenida a Karpus Kids - Credenciales de Acceso`, html);
+          await sendEmail(email, `Bienvenida a Colegio Montessori Sonrisas Creativas - Credenciales de Acceso`, html);
         }
       }
       window._closeAsistenteModal?.();

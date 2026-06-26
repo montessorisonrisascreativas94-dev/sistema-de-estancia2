@@ -1,516 +1,973 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Colegio Montessori Sonrisas Creativas - Acceso</title>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Acceso Portal · Sonrisas Creativas</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Baloo+2:wght@600;700;800;900&display=swap" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
-  
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
+  *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+  :root {
+    --blue:    #0B63C7;  --blue-d:  #0850A0;  --blue-lt: #E8F2FF;
+    --orange:  #FF7A00;  --orange-d:#D96500;  --orange-lt:#FFF0E0;
+    --green:   #28B54D;  --green-d: #1A8035;  --green-lt: #E6F7EB;
+    --yellow:  #FFD43B;  --yellow-d:#F0C000;  --yellow-lt:#FFFBE6;
+    --pink:    #FF6B9D;  --purple:  #9B59B6;
+    --white:   #FFFFFF;  --gray:    #F8FAFC;
+  }
+  html,body { height:100%; overflow-x:hidden; }
+  body { font-family:'Nunito',sans-serif; min-height:100vh; }
+
+  /* ===================== DESKTOP LAYOUT ===================== */
+  .page {
+    display:grid; grid-template-columns:1fr 1fr; min-height:100vh;
+  }
+
+  /* =========================================================
+     LEFT PANEL — scene ilustrada
+  ========================================================= */
+  .scene-panel {
+    position:relative; overflow:hidden;
+    background: linear-gradient(160deg,#0A4FA0 0%,#0B63C7 45%,#1368D4 75%,#0A4FA0 100%);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:50px 40px 40px;
+  }
+
+  /* Sky gradient overlay */
+  .sky {
+    position:absolute; inset:0;
+    background: linear-gradient(180deg,
+      rgba(11,99,199,0.0) 0%,
+      rgba(255,212,59,0.06) 60%,
+      rgba(40,181,77,0.12) 100%);
+    pointer-events:none;
+  }
+
+  /* Dot pattern */
+  .sky::after {
+    content:''; position:absolute; inset:0;
+    background-image:radial-gradient(circle,rgba(255,255,255,0.07) 1.5px,transparent 1.5px);
+    background-size:34px 34px;
+  }
+
+  /* Clouds */
+  .cloud {
+    position:absolute; pointer-events:none;
+    animation:cloudDrift linear infinite;
+  }
+  .cloud svg { filter:drop-shadow(0 4px 10px rgba(255,255,255,0.1)); }
+  .c1 { top:8%;  left:-80px; animation-duration:28s; animation-delay:0s; }
+  .c2 { top:18%; left:-120px; animation-duration:36s; animation-delay:-14s; opacity:.7; }
+  .c3 { top:5%;  left:-60px; animation-duration:22s; animation-delay:-8s;  opacity:.5; }
+  @keyframes cloudDrift { from{transform:translateX(-200px)} to{transform:translateX(110vw)} }
+
+  /* Stars */
+  .star-field { position:absolute; inset:0; pointer-events:none; }
+  .star {
+    position:absolute; border-radius:50%; background:white;
+    animation:starTwinkle ease-in-out infinite;
+  }
+  @keyframes starTwinkle {
+    0%,100%{opacity:.15;transform:scale(1)}
+    50%{opacity:.7;transform:scale(1.4)}
+  }
+
+  /* Paint splats on background */
+  .bg-splat {
+    position:absolute; pointer-events:none; opacity:.14; border-radius:50%;
+    animation:splatBreath 5s ease-in-out infinite;
+  }
+  @keyframes splatBreath {0%,100%{transform:scale(1) rotate(0deg)} 50%{transform:scale(1.08) rotate(5deg)}}
+  .bs1{width:260px;height:180px;background:var(--orange);top:-60px;right:-60px;border-radius:55% 45% 60% 40%;transform:rotate(-20deg);animation-delay:0s}
+  .bs2{width:200px;height:140px;background:var(--yellow);bottom:-50px;left:-40px;border-radius:40% 60% 45% 55%;transform:rotate(15deg);animation-delay:2s}
+  .bs3{width:150px;height:100px;background:var(--green);top:45%;left:5%;border-radius:60% 40% 50% 50%;transform:rotate(-10deg);animation-delay:4s}
+  .bs4{width:100px;height:70px;background:var(--pink);top:25%;right:8%;border-radius:45% 55% 40% 60%;transform:rotate(25deg);animation-delay:1.5s}
+
+  /* Floating deco elements */
+  .deco {
+    position:absolute; pointer-events:none; font-size:22px;
+    animation:decoFloat ease-in-out infinite;
+  }
+  @keyframes decoFloat{0%,100%{transform:translateY(0) rotate(0deg)}50%{transform:translateY(-14px) rotate(8deg)}}
+
+  /* ---- Brand ---- */
+  .brand {
+    text-align:center; position:relative; z-index:10; margin-bottom:28px;
+    animation:fadeSlideDown .7s ease-out both;
+  }
+  @keyframes fadeSlideDown{from{opacity:0;transform:translateY(-24px)}to{opacity:1;transform:translateY(0)}}
+  .brand-logo {
+    width:80px;height:80px;border-radius:20px;object-fit:contain;
+    background:white;padding:8px;
+    box-shadow:0 12px 36px rgba(0,0,0,.22);margin-bottom:14px;
+  }
+  .brand-name {
+    font-family:'Baloo 2',cursive;font-weight:900;font-size:1.75rem;
+    color:white;line-height:1.1;margin-bottom:4px;
+  }
+  .brand-sub { font-size:.9rem;color:rgba(255,255,255,.75);font-weight:700; }
+
+  /* ---- Photo frame ---- */
+  .photo-scene {
+    position:relative;z-index:10;width:280px;margin-bottom:24px;
+    animation:fadeSlideUp .8s .2s ease-out both;
+  }
+  @keyframes fadeSlideUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
+  .photo-blob {
+    width:100%;aspect-ratio:1/1.05;
+    border-radius:42% 58% 50% 50%/46% 52% 64% 40%;
+    overflow:hidden;border:5px solid rgba(255,255,255,.3);
+    box-shadow:0 24px 60px rgba(0,0,0,.28);
+    animation:photoWobble 9s ease-in-out infinite;
+  }
+  @keyframes photoWobble{0%,100%{border-radius:42% 58% 50% 50%/46% 52% 64% 40%}50%{border-radius:58% 42% 44% 56%/60% 44% 52% 46%}}
+  .photo-blob img{width:100%;height:100%;object-fit:cover;display:block}
+
+  /* ---- Mascots on desktop scene ---- */
+  .mascot {
+    position:absolute;z-index:12;
+    filter:drop-shadow(0 10px 22px rgba(0,0,0,.22));
+    cursor:pointer;
+  }
+  /* Triangle — bottom-left of photo */
+  .m-tri {
+    width:130px; bottom:-52px; left:-55px;
+    animation:triJump 2.6s ease-in-out infinite;
+  }
+  @keyframes triJump{
+    0%{transform:translateY(0) rotate(-4deg) scaleX(1)}
+    40%{transform:translateY(-22px) rotate(5deg) scaleX(1.04)}
+    55%{transform:translateY(-24px) rotate(4deg) scaleX(1.04)}
+    70%{transform:translateY(-18px) rotate(2deg) scaleX(1.02)}
+    85%{transform:translateY(-4px) rotate(-1deg) scaleX(.98)}
+    90%{transform:translateY(0) rotate(-2deg) scaleX(.97)}
+    95%{transform:translateY(2px) rotate(-3deg) scaleX(.98)}
+    100%{transform:translateY(0) rotate(-4deg) scaleX(1)}
+  }
+  /* Pentagon — bottom-right of photo */
+  .m-pent {
+    width:120px; bottom:-48px; right:-50px;
+    animation:pentPlay 3.2s ease-in-out infinite .5s;
+  }
+  @keyframes pentPlay{
+    0%,100%{transform:translateY(0) rotate(4deg)}
+    30%{transform:translateY(-16px) rotate(-3deg)}
+    60%{transform:translateY(-20px) rotate(5deg)}
+    80%{transform:translateY(-8px) rotate(1deg)}
+  }
+  /* Sun — top-right */
+  .m-sun {
+    width:88px; top:-40px; right:-40px;
+    animation:sunSpinFloat 22s linear infinite, sunBob 4s ease-in-out infinite;
+  }
+  @keyframes sunSpinFloat{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+  @keyframes sunBob{0%,100%{margin-top:0}50%{margin-top:-12px}}
+
+  /* ---- Speech bubble ---- */
+  .bubble {
+    position:absolute;z-index:15;bottom:70px;left:-10px;
+    background:white;border-radius:20px 20px 20px 4px;
+    padding:10px 16px;font-family:'Baloo 2',cursive;
+    font-size:.82rem;font-weight:800;color:var(--blue);
+    box-shadow:0 8px 24px rgba(0,0,0,.15);
+    min-width:160px;text-align:center;line-height:1.4;
+    animation:bubblePop .5s cubic-bezier(.34,1.56,.64,1) both;
+    pointer-events:none;
+  }
+  .bubble::after {
+    content:'';position:absolute;bottom:-10px;left:20px;
+    border:10px solid transparent;border-top:10px solid white;
+    border-bottom:none;transform:translateX(-5px);
+  }
+  @keyframes bubblePop{from{opacity:0;transform:scale(.5) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)}}
+  .bubble.hide{animation:bubbleFade .3s ease forwards}
+  @keyframes bubbleFade{to{opacity:0;transform:scale(.8)}}
+
+  /* ---- Floor grass strip ---- */
+  .grass-strip {
+    position:absolute;bottom:0;left:0;right:0;z-index:8;
+    pointer-events:none;
+  }
+
+  /* ---- Feature pills ---- */
+  .pills {
+    display:flex;flex-direction:column;gap:10px;
+    position:relative;z-index:10;width:100%;max-width:300px;
+    animation:fadeSlideUp .9s .4s ease-out both;
+  }
+  .pill {
+    display:flex;align-items:center;gap:12px;
+    background:rgba(255,255,255,.13);backdrop-filter:blur(8px);
+    border:1px solid rgba(255,255,255,.22);border-radius:50px;
+    padding:10px 18px;color:white;font-weight:800;font-size:.88rem;
+  }
+  .pill-ico {
+    width:30px;height:30px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;
+  }
+  .pio{background:var(--orange)} .pig{background:var(--green)} .piy{background:var(--yellow);color:#333}
+
+  /* Block decorations in desktop scene */
+  .block {
+    position:absolute;border-radius:10px;
+    animation:blockFloat ease-in-out infinite;
+    pointer-events:none;z-index:9;opacity:.85;
+    box-shadow:0 6px 18px rgba(0,0,0,.2);
+  }
+  @keyframes blockFloat{0%,100%{transform:translateY(0) rotate(var(--br,0deg))}50%{transform:translateY(-10px) rotate(calc(var(--br,0deg) + 8deg))}}
+  .bl1{width:42px;height:42px;background:var(--yellow);top:20%;left:6%;--br:-10deg;animation-duration:3.5s}
+  .bl2{width:34px;height:34px;background:var(--pink);top:30%;right:7%;--br:15deg;animation-duration:4s;animation-delay:.8s}
+  .bl3{width:38px;height:38px;background:var(--green);bottom:28%;left:4%;--br:8deg;animation-duration:3s;animation-delay:1.5s}
+  .bl4{width:30px;height:30px;background:var(--orange);bottom:35%;right:5%;--br:-18deg;animation-duration:4.5s;animation-delay:.4s}
+
+  /* ===================== RIGHT PANEL ===================== */
+  .form-panel {
+    background: var(--gray);
+    display:flex;align-items:center;justify-content:center;
+    padding:50px 40px;position:relative;overflow:hidden;
+  }
+  /* Corner color circles */
+  .form-panel::before {
+    content:'';position:absolute;top:-80px;right:-80px;
+    width:240px;height:240px;border-radius:50%;
+    background:var(--blue-lt);pointer-events:none;
+  }
+  .form-panel::after {
+    content:'';position:absolute;bottom:-60px;left:-60px;
+    width:180px;height:180px;border-radius:50%;
+    background:var(--orange-lt);pointer-events:none;
+  }
+
+  .form-card {
+    width:100%;max-width:430px;position:relative;z-index:1;
+    background:white;border-radius:32px;padding:44px 40px;
+    box-shadow:0 24px 80px rgba(11,99,199,.13);
+    border:2.5px solid rgba(11,99,199,.07);
+    animation:cardEntrance .8s .3s ease-out both;
+  }
+  @keyframes cardEntrance{from{opacity:0;transform:translateY(32px) scale(.97)}to{opacity:1;transform:none}}
+
+  /* Top stripe */
+  .card-stripe {
+    position:absolute;top:0;left:0;right:0;height:7px;border-radius:32px 32px 0 0;
+    background:linear-gradient(90deg,var(--orange),var(--yellow),var(--green),var(--blue));
+  }
+
+  /* Back link */
+  .back-link {
+    display:inline-flex;align-items:center;gap:6px;
+    color:#94A3B8;text-decoration:none;font-weight:700;font-size:.85rem;
+    transition:color .3s;margin-bottom:28px;
+  }
+  .back-link:hover{color:var(--blue)}
+
+  /* Greeting */
+  .greeting-emoji {
+    font-size:2.4rem;display:block;text-align:center;
+    margin-bottom:12px;
+    animation:emojiWave 2s ease-in-out infinite;
+  }
+  @keyframes emojiWave{
+    0%,100%{transform:rotate(0deg)}
+    20%{transform:rotate(-15deg)}
+    40%{transform:rotate(15deg)}
+    60%{transform:rotate(-10deg)}
+    80%{transform:rotate(5deg)}
+  }
+  .greeting-title {
+    font-family:'Baloo 2',cursive;font-weight:900;font-size:1.7rem;
+    color:var(--blue);text-align:center;line-height:1.2;margin-bottom:8px;
+  }
+  .greeting-sub {
+    font-size:.88rem;color:#64748B;text-align:center;
+    line-height:1.65;margin-bottom:6px;font-weight:600;
+  }
+  /* Motivational quote */
+  .motivational {
+    background:linear-gradient(135deg,var(--yellow-lt),var(--orange-lt));
+    border-radius:16px;padding:12px 16px;margin-bottom:28px;text-align:center;
+    border-left:4px solid var(--orange);
+  }
+  .motivational p {
+    font-size:.83rem;color:var(--orange-d);font-weight:800;line-height:1.5;
+    font-family:'Baloo 2',cursive;
+  }
+
+  /* Error */
+  .err-box {
+    background:rgba(239,68,68,.08);border:1.5px solid rgba(239,68,68,.25);
+    border-radius:14px;padding:11px 15px;
+    color:#B91C1C;font-size:.85rem;font-weight:700;
+    margin-bottom:18px;display:none;
+  }
+  .err-box.show{display:block}
+
+  /* Fields */
+  .field { margin-bottom:18px; }
+  .field label {
+    display:block;font-size:.75rem;font-weight:900;
+    text-transform:uppercase;letter-spacing:1.4px;
+    color:#64748B;margin-bottom:7px;
+  }
+  .input-shell {
+    display:flex;align-items:center;gap:0;
+    border:2.5px solid #E2E8F0;border-radius:18px;
+    background:var(--gray);overflow:hidden;
+    transition:all .3s cubic-bezier(.34,1.56,.64,1);
+  }
+  .input-shell:focus-within {
+    border-color:var(--blue);background:white;
+    box-shadow:0 0 0 5px rgba(11,99,199,.1);
+    transform:scale(1.01);
+  }
+  .input-icon-box {
+    width:52px;height:56px;display:flex;align-items:center;justify-content:center;
+    font-size:19px;color:#94A3B8;flex-shrink:0;transition:color .3s;
+  }
+  .input-shell:focus-within .input-icon-box{color:var(--blue)}
+  .field-input {
+    flex:1;height:56px;border:none;background:transparent;
+    font-family:'Nunito',sans-serif;font-size:.97rem;font-weight:700;
+    color:#1E293B;outline:none;padding:0 4px;
+  }
+  .field-input::placeholder{color:#CBD5E1;font-weight:600}
+  .eye-btn {
+    background:none;border:none;padding:0 16px;
+    color:#94A3B8;font-size:19px;cursor:pointer;transition:color .3s;height:56px;
+  }
+  .eye-btn:hover{color:var(--orange)}
+
+  /* Terms */
+  .terms-row {
+    display:flex;align-items:flex-start;gap:12px;
+    background:var(--gray);border-radius:14px;padding:13px 15px;
+    margin-bottom:22px;
+  }
+  .terms-row input[type=checkbox]{width:18px;height:18px;margin-top:2px;accent-color:var(--green);cursor:pointer;flex-shrink:0}
+  .terms-row label{font-size:.83rem;color:#64748B;font-weight:700;line-height:1.55;cursor:pointer}
+  .terms-row a{color:var(--blue);font-weight:800;text-decoration:none}
+  .terms-row a:hover{color:var(--orange);text-decoration:underline}
+
+  /* Submit button */
+  .btn-submit {
+    width:100%;height:60px;border:none;border-radius:22px;
+    background:linear-gradient(135deg,var(--orange) 0%,#FF9A00 100%);
+    color:white;font-family:'Baloo 2',cursive;font-weight:900;font-size:1.15rem;
+    cursor:pointer;position:relative;overflow:hidden;
+    box-shadow:0 10px 30px rgba(255,122,0,.38);
+    transition:all .35s cubic-bezier(.34,1.56,.64,1);
+    display:flex;align-items:center;justify-content:center;gap:10px;
+  }
+  .btn-submit:hover {
+    transform:translateY(-5px) scale(1.02);
+    box-shadow:0 20px 48px rgba(255,122,0,.48);
+  }
+  .btn-submit:active{transform:translateY(0) scale(.98)}
+  /* Shine sweep */
+  .btn-submit::after {
+    content:'';position:absolute;top:0;left:-100%;
+    width:60%;height:100%;
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,.35),transparent);
+    transition:left .5s ease;
+  }
+  .btn-submit:hover::after{left:150%}
+  /* Confetti burst on btn hover */
+  .btn-submit:hover .confetti-dot{display:block}
+  .confetti-dot{display:none;position:absolute;width:7px;height:7px;border-radius:50%;pointer-events:none}
+
+  /* Forgot */
+  .form-bottom{text-align:center;margin-top:18px}
+  .forgot-link{font-size:.87rem;color:#94A3B8;font-weight:700;text-decoration:none;transition:color .3s}
+  .forgot-link:hover{color:var(--blue)}
+  .divider{display:flex;align-items:center;gap:10px;margin:16px 0}
+  .divider hr{flex:1;border:none;border-top:1.5px solid #E2E8F0}
+  .divider span{font-size:.78rem;color:#94A3B8;font-weight:700;white-space:nowrap}
+  .wa-link{
+    display:flex;align-items:center;justify-content:center;gap:8px;
+    background:var(--green-lt);border:1.5px solid var(--green);border-radius:14px;
+    padding:11px;color:var(--green-d);font-weight:800;font-size:.88rem;text-decoration:none;
+    transition:all .3s;
+  }
+  .wa-link:hover{background:var(--green);color:white;transform:translateY(-2px)}
+
+  /* ===================== MOBILE ===================== */
+  @media(max-width:900px){
+    .page { grid-template-columns:1fr; }
+
+    /* Hide desktop left panel, show mobile hero bar */
+    .scene-panel { display:none; }
+    .form-panel {
+      background: linear-gradient(180deg,#0B63C7 0%,#1368D4 32%,var(--gray) 32%);
+      padding:0 20px 40px; align-items:flex-start; min-height:100vh;
+    }
+    .form-panel::before,.form-panel::after { display:none; }
+
+    /* Mobile header (brand inside form panel on mobile) */
+    .mobile-header {
+      display:flex !important;
+      flex-direction:column;align-items:center;
+      padding:40px 20px 70px;text-align:center;position:relative;width:100%;
+    }
+    .mob-logo {
+      width:72px;height:72px;border-radius:18px;object-fit:contain;
+      background:white;padding:7px;box-shadow:0 10px 30px rgba(0,0,0,.22);margin-bottom:14px;
+    }
+    .mob-name {
+      font-family:'Baloo 2',cursive;font-weight:900;font-size:1.5rem;
+      color:white;margin-bottom:4px;
+    }
+    .mob-sub{font-size:.85rem;color:rgba(255,255,255,.8);font-weight:700}
+
+    /* Mobile mascot — triangle jumping across bottom */
+    .mobile-tri-stage {
+      display:flex !important;
+      position:fixed;bottom:0;left:0;right:0;height:90px;
+      pointer-events:none;z-index:100;overflow:hidden;
+    }
+    .mobile-tri-stage svg {
+      position:absolute;bottom:0;width:80px;
+      animation:triRun 4s ease-in-out infinite;
+      filter:drop-shadow(0 8px 16px rgba(255,122,0,.4));
+    }
+    @keyframes triRun {
+      0%   { left:-100px; transform:scaleX(1) translateY(0) rotate(-3deg); }
+      10%  { transform:scaleX(1) translateY(-30px) rotate(5deg); }
+      20%  { transform:scaleX(1) translateY(0) rotate(-3deg); }
+      30%  { transform:scaleX(1) translateY(-22px) rotate(4deg); }
+      40%  { transform:scaleX(1) translateY(0) rotate(-2deg); }
+      49%  { left:calc(100vw + 20px); transform:scaleX(1) translateY(0) rotate(-3deg); }
+      50%  { left:calc(100vw + 20px); transform:scaleX(-1) translateY(0) rotate(3deg); }
+      60%  { transform:scaleX(-1) translateY(-28px) rotate(-5deg); }
+      70%  { transform:scaleX(-1) translateY(0) rotate(3deg); }
+      80%  { transform:scaleX(-1) translateY(-20px) rotate(-4deg); }
+      90%  { transform:scaleX(-1) translateY(0) rotate(2deg); }
+      99%  { left:-100px; transform:scaleX(-1) translateY(0) rotate(3deg); }
+      100% { left:-100px; transform:scaleX(1) translateY(0) rotate(-3deg); }
     }
 
-    :root {
-      --blue: #1E5AA8;
-      --orange: #F7931E;
-      --green: #43A047;
-      --yellow: #FFD54F;
-      --white: #FFFFFF;
-      --beige: #F5F5F5;
+    /* Mobile: card takes full width */
+    .form-card {
+      width:100%;max-width:none;border-radius:28px;
+      padding:32px 24px 100px; /* bottom pad for mobile mascot */
+      margin-top:-40px;box-shadow:0 -8px 40px rgba(11,99,199,.15);
     }
-
-    body {
-      font-family: 'Fredoka', sans-serif;
-      background: linear-gradient(135deg, #FFFFFF 0%, #F8F8F8 100%);
-      min-height: 100vh;
-      overflow-x: hidden;
-      position: relative;
+    /* Ground line for mobile mascot */
+    .mobile-ground {
+      display:block !important;
+      position:fixed;bottom:0;left:0;right:0;height:12px;
+      background:linear-gradient(135deg,var(--green),#5DD87A);
+      z-index:99;border-radius:6px 6px 0 0;
     }
-
-    .handwritten {
-      font-family: 'Patrick Hand', cursive;
+    /* Flowers on ground */
+    .mob-flowers {
+      display:flex !important;
+      position:fixed;bottom:10px;left:0;right:0;z-index:101;
+      pointer-events:none;justify-content:space-around;padding:0 10px;
     }
+    .mob-flower { font-size:16px; animation:flowerSway 3s ease-in-out infinite; }
+    .mob-flower:nth-child(2){animation-delay:.5s}
+    .mob-flower:nth-child(3){animation-delay:1s}
+    .mob-flower:nth-child(4){animation-delay:1.5s}
+    .mob-flower:nth-child(5){animation-delay:2s}
+    @keyframes flowerSway{0%,100%{transform:rotate(-5deg)}50%{transform:rotate(5deg)}}
+  }
 
-    /* Floating decorative elements */
-    .floating-element {
-      position: fixed;
-      pointer-events: none;
-      z-index: 1;
-      opacity: 0.3;
-      animation: float 6s ease-in-out infinite;
-    }
+  /* Hide mobile-only elements on desktop */
+  .mobile-header,
+  .mobile-tri-stage,
+  .mobile-ground,
+  .mob-flowers { display:none; }
 
-    @keyframes float {
-      0%, 100% { transform: translateY(0) rotate(0deg); }
-      50% { transform: translateY(-20px) rotate(10deg); }
-    }
-
-    .container {
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 24px;
-      position: relative;
-      z-index: 10;
-    }
-
-    .login-card {
-      background: rgba(255,255,255,0.92);
-      backdrop-filter: blur(6px);
-      border-radius: 40px;
-      padding: 46px 36px;
-      max-width: 460px;
-      width: 100%;
-      box-shadow: 0 30px 80px rgba(30, 90, 168, 0.12);
-      position: relative;
-      overflow: visible;
-      border: 2px solid rgba(255, 240, 220, 0.6);
-    }
-
-    .login-card::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 8px;
-      background: linear-gradient(90deg, var(--orange), var(--yellow), var(--green), var(--blue));
-    }
-
-    .logo-section {
-      text-align: center;
-      margin-bottom: 40px;
-    }
-
-    .logo-container {
-      width: 110px;
-      height: 110px;
-      background: linear-gradient(135deg, var(--blue), var(--green));
-      border-radius: 26px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin: 0 auto 18px;
-      box-shadow: 0 12px 36px rgba(30, 90, 168, 0.18);
-      overflow: hidden;
-      border: 6px solid rgba(255,255,255,0.12);
-    }
-
-    .logo-container img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-
-    .school-name {
-      font-size: 1.9rem;
-      font-weight: 700;
-      color: var(--blue);
-      margin-bottom: 6px;
-    }
-
-    .school-tagline {
-      font-size: 0.95rem;
-      color: #888;
-    }
-
-    .form-group {
-      margin-bottom: 28px;
-    }
-
-    .form-label {
-      display: block;
-      font-size: 0.9rem;
-      font-weight: 600;
-      color: var(--blue);
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      margin-bottom: 12px;
-    }
-
-    .form-input {
-      width: 100%;
-      padding: 18px 22px;
-      border: 3px solid var(--beige);
-      border-radius: 18px;
-      font-size: 1rem;
-      font-weight: 500;
-      color: var(--blue);
-      background: var(--beige);
-      transition: all 0.3s ease;
-      font-family: 'Fredoka', sans-serif;
-    }
-
-    .form-input:focus {
-      outline: none;
-      border-color: var(--orange);
-      background: white;
-      box-shadow: 0 0 0 5px rgba(247, 147, 30, 0.1);
-    }
-
-    .password-wrapper {
-      position: relative;
-    }
-
-    .toggle-password {
-      position: absolute;
-      right: 18px;
-      top: 50%;
-      transform: translateY(-50%);
-      background: none;
-      border: none;
-      color: #888;
-      font-size: 1.4rem;
-      cursor: pointer;
-      transition: color 0.3s ease;
-    }
-
-    .toggle-password:hover {
-      color: var(--orange);
-    }
-
-    .terms-wrapper {
-      display: flex;
-      align-items: flex-start;
-      gap: 14px;
-      padding: 18px;
-      background: var(--beige);
-      border-radius: 18px;
-      margin-bottom: 28px;
-    }
-
-    .terms-checkbox {
-      margin-top: 4px;
-      width: 20px;
-      height: 20px;
-      accent-color: var(--green);
-      cursor: pointer;
-    }
-
-    .terms-text {
-      font-size: 0.9rem;
-      color: #666;
-      line-height: 1.6;
-    }
-
-    .terms-link {
-      color: var(--blue);
-      font-weight: 700;
-      text-decoration: none;
-      transition: color 0.3s ease;
-    }
-
-    .terms-link:hover {
-      color: var(--orange);
-      text-decoration: underline;
-    }
-
-    .btn-primary {
-      width: 100%;
-      padding: 18px;
-      background: linear-gradient(135deg, var(--orange), #FFB74D);
-      color: white;
-      font-size: 1.1rem;
-      font-weight: 700;
-      border: none;
-      border-radius: 18px;
-      cursor: pointer;
-      box-shadow: 0 10px 30px rgba(247, 147, 30, 0.35);
-      transition: all 0.3s ease;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      font-family: 'Fredoka', sans-serif;
-    }
-
-    /* Small decorative brushstroke behind card */
-    .card-brush {
-      position: absolute;
-      top: -40px;
-      right: -60px;
-      width: 220px;
-      height: 120px;
-      background: linear-gradient(90deg, rgba(247,147,30,0.18), rgba(67,160,71,0.12));
-      transform: rotate(-18deg);
-      border-radius: 30px;
-      filter: blur(10px);
-      z-index: 2;
-      pointer-events: none;
-    }
-
-    .btn-primary:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 18px 45px rgba(247, 147, 30, 0.45);
-    }
-
-    .btn-primary:active {
-      transform: translateY(-1px);
-    }
-
-    .forgot-password {
-      text-align: center;
-      margin-top: 24px;
-    }
-
-    .forgot-link {
-      font-size: 0.95rem;
-      color: #888;
-      font-weight: 600;
-      text-decoration: none;
-      transition: color 0.3s ease;
-    }
-
-    .forgot-link:hover {
-      color: var(--blue);
-    }
-
-    .back-to-site {
-      text-align: center;
-      margin-top: 32px;
-      padding-top: 28px;
-      border-top: 2px solid var(--beige);
-    }
-
-    .back-link {
-      font-size: 0.95rem;
-      color: #888;
-      font-weight: 600;
-      text-decoration: none;
-      transition: color 0.3s ease;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .back-link:hover {
-      color: var(--green);
-    }
-
-    .error-message {
-      background: rgba(244, 67, 54, 0.1);
-      border: 2px solid rgba(244, 67, 54, 0.2);
-      border-radius: 16px;
-      padding: 14px 18px;
-      color: #D32F2F;
-      font-size: 0.9rem;
-      font-weight: 600;
-      margin-bottom: 24px;
-      display: none;
-    }
-
-    .error-message.show {
-      display: block;
-    }
-
-    /* Mascots */
-    .corner-mascot {
-      position: fixed;
-      width: 120px;
-      height: 120px;
-      animation: float 4s ease-in-out infinite;
-      z-index: 5;
-      opacity: 0.9;
-    }
-
-    .corner-mascot.bottom-left {
-      bottom: 30px;
-      left: 30px;
-    }
-
-    .corner-mascot.bottom-right {
-      bottom: 30px;
-      right: 30px;
-      animation-delay: 1s;
-    }
-
-    @media (max-width: 640px) {
-      .login-card {
-        padding: 40px 24px;
-      }
-
-      .school-name {
-        font-size: 1.5rem;
-      }
-
-      .corner-mascot {
-        width: 80px;
-        height: 80px;
-        bottom: 20px;
-      }
-
-      .corner-mascot.bottom-left {
-        left: 20px;
-      }
-
-      .corner-mascot.bottom-right {
-        right: 20px;
-      }
-    }
-
-    /* Tablet adjustments */
-    @media (max-width: 900px) {
-      .container { padding: 30px; }
-      .login-card { max-width: 560px; padding: 36px 28px; margin: 20px; }
-      .logo-container { width: 96px; height: 96px; }
-      .school-name { font-size: 1.8rem; }
-      .corner-mascot { width: 100px; height: 100px; }
-      .corner-mascot.bottom-left { left: 18px; bottom: 18px; }
-      .corner-mascot.bottom-right { right: 18px; bottom: 18px; }
-    }
-
-    /* Very small devices: simplify decorations */
-    @media (max-width: 420px) {
-      .floating-element { display: none; }
-      .card-brush { display: none; }
-      .corner-mascot { display: none; }
-      .login-card { padding: 26px 16px; border-radius: 22px; }
-      .logo-container { width: 78px; height: 78px; }
-      .school-name { font-size: 1.45rem; }
-      .btn-primary { padding: 14px; font-size: 1rem; }
-    }
+  @media(max-width:480px){
+    .form-card{padding:28px 18px 100px;}
+    .greeting-title{font-size:1.45rem}
+  }
   </style>
 </head>
 <body>
-  
-  <!-- Floating decorative elements -->
-  <div class="floating-element" style="top: 15%; left: 5%; font-size: 40px;">⭐</div>
-  <div class="floating-element" style="top: 30%; right: 8%; font-size: 30px; animation-delay: 1s;">❤️</div>
-  <div class="floating-element" style="top: 60%; left: 8%; font-size: 35px; animation-delay: 2s;">✨</div>
-  <div class="floating-element" style="top: 75%; right: 5%; font-size: 28px; animation-delay: 0.5s;">🌟</div>
+<div class="page">
 
-  <!-- Sun decorative (top-right) -->
-  <div style="position: fixed; top: 18px; right: 18px; z-index: 2; opacity: 0.95; pointer-events: none;">
-    <svg width="84" height="84" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="50" cy="50" r="22" fill="#FFD54F" />
-      <g stroke="#FFD54F" stroke-width="4" stroke-linecap="round">
-        <line x1="50" y1="6" x2="50" y2="18" />
-        <line x1="50" y1="82" x2="50" y2="94" />
-        <line x1="6" y1="50" x2="18" y2="50" />
-        <line x1="82" y1="50" x2="94" y2="50" />
-        <line x1="20" y1="20" x2="30" y2="30" />
-        <line x1="70" y1="70" x2="80" y2="80" />
-        <line x1="20" y1="80" x2="30" y2="70" />
-        <line x1="70" y1="30" x2="80" y2="20" />
-      </g>
-    </svg>
+<!-- ========== LEFT SCENE PANEL (desktop) ========== -->
+<div class="scene-panel">
+  <div class="sky"></div>
+
+  <!-- Stars -->
+  <div class="star-field" id="starField"></div>
+
+  <!-- Paint splats -->
+  <div class="bg-splat bs1"></div>
+  <div class="bg-splat bs2"></div>
+  <div class="bg-splat bs3"></div>
+  <div class="bg-splat bs4"></div>
+
+  <!-- Blocks -->
+  <div class="block bl1" style="display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900;color:rgba(0,0,0,.3)">A</div>
+  <div class="block bl2" style="display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;color:rgba(0,0,0,.3)">B</div>
+  <div class="block bl3" style="display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:900;color:rgba(0,0,0,.3)">1</div>
+  <div class="block bl4" style="display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:900;color:rgba(0,0,0,.3)">2</div>
+
+  <!-- Clouds -->
+  <div class="cloud c1"><svg width="130" height="60" viewBox="0 0 130 60"><ellipse cx="65" cy="45" rx="60" ry="25" fill="rgba(255,255,255,0.18)"/><ellipse cx="45" cy="35" rx="36" ry="22" fill="rgba(255,255,255,0.15)"/><ellipse cx="85" cy="32" rx="30" ry="20" fill="rgba(255,255,255,0.13)"/><ellipse cx="65" cy="28" rx="40" ry="24" fill="rgba(255,255,255,0.16)"/></svg></div>
+  <div class="cloud c2"><svg width="100" height="50" viewBox="0 0 100 50"><ellipse cx="50" cy="38" rx="46" ry="20" fill="rgba(255,255,255,0.12)"/><ellipse cx="35" cy="28" rx="28" ry="18" fill="rgba(255,255,255,0.1)"/><ellipse cx="65" cy="25" rx="24" ry="16" fill="rgba(255,255,255,0.1)"/></svg></div>
+  <div class="cloud c3"><svg width="80" height="40" viewBox="0 0 80 40"><ellipse cx="40" cy="30" rx="36" ry="16" fill="rgba(255,255,255,0.1)"/><ellipse cx="28" cy="22" rx="22" ry="14" fill="rgba(255,255,255,0.09)"/><ellipse cx="54" cy="20" rx="18" ry="12" fill="rgba(255,255,255,0.08)"/></svg></div>
+
+  <!-- Floating deco emojis -->
+  <div class="deco" style="top:8%;left:12%;animation-duration:5s">⭐</div>
+  <div class="deco" style="top:14%;right:14%;animation-duration:4s;animation-delay:.8s">🎨</div>
+  <div class="deco" style="top:72%;left:8%;animation-duration:6s;animation-delay:1.4s">✏️</div>
+  <div class="deco" style="top:60%;right:10%;animation-duration:4.5s;animation-delay:2s">❤️</div>
+  <div class="deco" style="top:40%;left:5%;animation-duration:5.5s;animation-delay:.3s">🌈</div>
+  <div class="deco" style="top:25%;right:6%;animation-duration:7s;animation-delay:3s;font-size:17px">📚</div>
+
+
+
+  <!-- Photo + mascots -->
+  <div class="photo-scene">
+
+    <!-- Sun (top-right, spinning) -->
+    <div class="mascot m-sun" id="mSun">
+      <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+        <line x1="100" y1="6"   x2="100" y2="28"  stroke="#FFD43B" stroke-width="9" stroke-linecap="round"/>
+        <line x1="157" y1="28"  x2="144" y2="42"  stroke="#FFD43B" stroke-width="9" stroke-linecap="round"/>
+        <line x1="182" y1="80"  x2="164" y2="86"  stroke="#FFD43B" stroke-width="9" stroke-linecap="round"/>
+        <line x1="174" y1="140" x2="157" y2="132" stroke="#FFD43B" stroke-width="9" stroke-linecap="round"/>
+        <line x1="43"  y1="28"  x2="56"  y2="42"  stroke="#FFD43B" stroke-width="9" stroke-linecap="round"/>
+        <line x1="18"  y1="80"  x2="36"  y2="86"  stroke="#FFD43B" stroke-width="9" stroke-linecap="round"/>
+        <line x1="26"  y1="140" x2="43"  y2="132" stroke="#FFD43B" stroke-width="9" stroke-linecap="round"/>
+        <circle cx="100" cy="108" r="64" fill="#FFD43B" stroke="#F0C000" stroke-width="4"/>
+        <!-- Eyes (blink capable) -->
+        <ellipse cx="82"  cy="98" rx="12" ry="12" fill="white" class="sun-eye-l"/>
+        <ellipse cx="118" cy="98" rx="12" ry="12" fill="white" class="sun-eye-r"/>
+        <circle cx="83"  cy="99" r="7" fill="#333" class="sun-pupil-l"/>
+        <circle cx="119" cy="99" r="7" fill="#333" class="sun-pupil-r"/>
+        <circle cx="86"  cy="96" r="3" fill="white"/>
+        <circle cx="122" cy="96" r="3" fill="white"/>
+        <ellipse cx="72"  cy="112" rx="9" ry="5.5" fill="#FFB3B3" opacity=".6"/>
+        <ellipse cx="128" cy="112" rx="9" ry="5.5" fill="#FFB3B3" opacity=".6"/>
+        <path d="M 80 124 Q 100 140 120 124" stroke="#333" stroke-width="5.5" fill="none" stroke-linecap="round"/>
+      </svg>
+    </div>
+
+    <!-- Photo frame -->
+    <div class="photo-blob">
+      <img src="img/monte.png" alt="Niños Montessori">
+    </div>
+
+    <!-- Triangle with paintbrush (bottom-left, jumping) -->
+    <div class="mascot m-tri" id="mTri">
+      <!-- Speech bubble -->
+      <div class="bubble" id="bubble">¡Hola! 😊<br>¡Te esperábamos!</div>
+      <svg viewBox="0 0 220 275" xmlns="http://www.w3.org/2000/svg">
+        <!-- Brush handle -->
+        <rect x="168" y="40" width="11" height="74" rx="5.5" fill="#8B4513" transform="rotate(28,173,77)"/>
+        <ellipse cx="192" cy="32" rx="9" ry="17" fill="#FF7A00" transform="rotate(28,192,41)"/>
+        <ellipse cx="197" cy="18" rx="7" ry="5" fill="#FFD43B" opacity=".9" transform="rotate(28,197,24)"/>
+        <circle cx="200" cy="14" r="5.5" fill="#28B54D" opacity=".9"/>
+        <!-- Drip of paint -->
+        <ellipse cx="202" cy="9" rx="3" ry="5" fill="#28B54D" opacity=".7"/>
+        <!-- Body -->
+        <polygon points="110,18 200,205 20,205" fill="#FF7A00" stroke="#D96500" stroke-width="5"/>
+        <!-- Eyes -->
+        <circle cx="84"  cy="125" r="20" fill="white"/>
+        <circle cx="136" cy="125" r="20" fill="white"/>
+        <circle cx="85"  cy="126" r="11" fill="#333" class="tri-pupil-l"/>
+        <circle cx="137" cy="126" r="11" fill="#333" class="tri-pupil-r"/>
+        <circle cx="89"  cy="122" r="4.5" fill="white"/>
+        <circle cx="141" cy="122" r="4.5" fill="white"/>
+        <!-- Cheeks -->
+        <ellipse cx="70"  cy="140" rx="12" ry="7.5" fill="#FF9494" opacity=".55"/>
+        <ellipse cx="150" cy="140" rx="12" ry="7.5" fill="#FF9494" opacity=".55"/>
+        <!-- Smile -->
+        <path d="M 74 160 Q 110 184 146 160" stroke="#333" stroke-width="7.5" fill="none" stroke-linecap="round"/>
+        <!-- Left arm -->
+        <line x1="20"  y1="160" x2="-16" y2="126" stroke="#D96500" stroke-width="7" stroke-linecap="round"/>
+        <circle cx="-18" cy="124" r="8.5" fill="#D96500"/>
+        <!-- Right arm → holds brush -->
+        <line x1="200" y1="160" x2="175" y2="112" stroke="#D96500" stroke-width="7" stroke-linecap="round"/>
+        <!-- Legs -->
+        <line x1="82"  y1="205" x2="64"  y2="258" stroke="#D96500" stroke-width="7.5" stroke-linecap="round"/>
+        <line x1="138" y1="205" x2="156" y2="258" stroke="#D96500" stroke-width="7.5" stroke-linecap="round"/>
+        <ellipse cx="58"  cy="262" rx="17" ry="9" fill="#B85500"/>
+        <ellipse cx="162" cy="262" rx="17" ry="9" fill="#B85500"/>
+      </svg>
+    </div>
+
+    <!-- Pentagon with cap + pencil (bottom-right, playing) -->
+    <div class="mascot m-pent" id="mPent">
+      <svg viewBox="0 0 220 275" xmlns="http://www.w3.org/2000/svg">
+        <!-- Cap -->
+        <ellipse cx="110" cy="20" rx="62" ry="23" fill="#0B63C7"/>
+        <path d="M 60 30 Q 46 52 54 65 L 166 65 Q 174 52 160 30 Z" fill="#0B63C7"/>
+        <ellipse cx="110" cy="32" rx="62" ry="12" fill="#0850A0"/>
+        <circle cx="110" cy="4" r="5.5" fill="#063A80"/>
+        <!-- Pencil -->
+        <rect x="194" y="46" width="13" height="64" rx="3.5" fill="#FFD43B" transform="rotate(-20,200,78)"/>
+        <polygon points="200,44 208,44 204,29" fill="#FFB347" transform="rotate(-20,204,37)"/>
+        <rect x="194" y="108" width="13" height="8" rx="2.5" fill="#FF9999" transform="rotate(-20,200,112)"/>
+        <polygon points="200,116 208,116 204,126" fill="#444" transform="rotate(-20,204,121)"/>
+        <!-- Body -->
+        <polygon points="110,65 192,120 164,210 56,210 28,120" fill="#28B54D" stroke="#1A8035" stroke-width="5"/>
+        <!-- Eyes -->
+        <circle cx="87"  cy="140" r="19" fill="white"/>
+        <circle cx="133" cy="140" r="19" fill="white"/>
+        <circle cx="88"  cy="141" r="10.5" fill="#333" class="pent-pupil-l"/>
+        <circle cx="134" cy="141" r="10.5" fill="#333" class="pent-pupil-r"/>
+        <circle cx="91"  cy="138" r="4.5" fill="white"/>
+        <circle cx="137" cy="138" r="4.5" fill="white"/>
+        <!-- Cheeks -->
+        <ellipse cx="73"  cy="154" rx="10" ry="6.5" fill="#FF9494" opacity=".55"/>
+        <ellipse cx="147" cy="154" rx="10" ry="6.5" fill="#FF9494" opacity=".55"/>
+        <!-- Smile -->
+        <path d="M 77 170 Q 110 194 143 170" stroke="#333" stroke-width="6.5" fill="none" stroke-linecap="round"/>
+        <!-- Left arm waving -->
+        <line x1="28" y1="132" x2="-5"  y2="114" stroke="#1A8035" stroke-width="7.5" stroke-linecap="round"/>
+        <line x1="28" y1="143" x2="-7"  y2="143" stroke="#1A8035" stroke-width="7.5" stroke-linecap="round"/>
+        <line x1="28" y1="154" x2="-5"  y2="166" stroke="#1A8035" stroke-width="7.5" stroke-linecap="round"/>
+        <!-- Right arm → holds pencil -->
+        <line x1="192" y1="132" x2="212" y2="104" stroke="#1A8035" stroke-width="7.5" stroke-linecap="round"/>
+        <!-- Legs -->
+        <line x1="82"  y1="210" x2="66"  y2="256" stroke="#1A8035" stroke-width="7.5" stroke-linecap="round"/>
+        <line x1="138" y1="210" x2="154" y2="256" stroke="#1A8035" stroke-width="7.5" stroke-linecap="round"/>
+        <ellipse cx="60"  cy="260" rx="17" ry="9" fill="#0F6B28"/>
+        <ellipse cx="160" cy="260" rx="17" ry="9" fill="#0F6B28"/>
+      </svg>
+    </div>
+  </div><!-- /photo-scene -->
+
+  <!-- Feature pills -->
+  <div class="pills">
+    <div class="pill"><div class="pill-ico pio"><i class="bi bi-shield-fill-check" style="color:white;font-size:13px"></i></div>Acceso seguro y privado</div>
+    <div class="pill"><div class="pill-ico pig"><i class="bi bi-graph-up-arrow" style="color:white;font-size:13px"></i></div>Seguimiento en tiempo real</div>
+    <div class="pill"><div class="pill-ico piy"><i class="bi bi-chat-dots-fill" style="font-size:13px"></i></div>Comunicación con maestros</div>
   </div>
 
-  <!-- Triangle mascot -->
-  <div class="corner-mascot bottom-left">
-    <svg viewBox="0 0 200 200">
-      <polygon points="100,15 185,180 15,180" fill="#F7931E" stroke="#E67E22" stroke-width="5"/>
-      <circle cx="75" cy="110" r="16" fill="white"/>
-      <circle cx="125" cy="110" r="16" fill="white"/>
-      <circle cx="75" cy="110" r="8" fill="#333"/>
-      <circle cx="125" cy="110" r="8" fill="#333"/>
-      <circle cx="78" cy="107" r="3" fill="white"/>
-      <circle cx="128" cy="107" r="3" fill="white"/>
-      <path d="M 65 140 Q 100 170 135 140" stroke="#333" stroke-width="6" fill="none" stroke-linecap="round"/>
-      <line x1="55" y1="50" x2="40" y2="25" stroke="#E67E22" stroke-width="8" stroke-linecap="round"/>
-      <line x1="145" y1="50" x2="160" y2="25" stroke="#E67E22" stroke-width="8" stroke-linecap="round"/>
-      <rect x="25" y="10" width="35" height="8" rx="2" fill="#795548" transform="rotate(-30 42 14)"/>
-      <polygon points="55,5 50,20 60,20" fill="#FFD54F" transform="rotate(-30 55 12)"/>
+  <!-- Grass strip (SVG) -->
+  <div class="grass-strip">
+    <svg viewBox="0 0 800 80" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block">
+      <path d="M0,50 Q50,20 100,50 Q150,80 200,50 Q250,20 300,50 Q350,80 400,50 Q450,20 500,50 Q550,80 600,50 Q650,20 700,50 Q750,80 800,50 L800,80 L0,80 Z" fill="#28B54D" opacity=".7"/>
+      <path d="M0,60 Q60,30 120,60 Q180,90 240,60 Q300,30 360,60 Q420,90 480,60 Q540,30 600,60 Q660,90 720,60 Q780,30 800,60 L800,80 L0,80 Z" fill="#28B54D"/>
+      <!-- Flowers -->
+      <text x="60"  y="68" font-size="14" text-anchor="middle">🌸</text>
+      <text x="160" y="66" font-size="13" text-anchor="middle">🌼</text>
+      <text x="280" y="70" font-size="14" text-anchor="middle">🌺</text>
+      <text x="400" y="67" font-size="13" text-anchor="middle">🌸</text>
+      <text x="520" y="69" font-size="14" text-anchor="middle">🌻</text>
+      <text x="640" y="66" font-size="13" text-anchor="middle">🌼</text>
+      <text x="740" y="70" font-size="14" text-anchor="middle">🌸</text>
     </svg>
   </div>
+</div><!-- /scene-panel -->
 
-  <!-- Hexagon mascot -->
-  <div class="corner-mascot bottom-right">
-    <svg viewBox="0 0 200 200">
-      <polygon points="100,10 170,45 170,115 100,150 30,115 30,45" fill="#43A047" stroke="#388E3C" stroke-width="5"/>
-      <ellipse cx="100" cy="28" rx="45" ry="18" fill="#1E5AA8"/>
-      <circle cx="75" cy="85" r="16" fill="white"/>
-      <circle cx="125" cy="85" r="16" fill="white"/>
-      <circle cx="75" cy="85" r="8" fill="#333"/>
-      <circle cx="125" cy="85" r="8" fill="#333"/>
-      <circle cx="78" cy="82" r="3" fill="white"/>
-      <circle cx="128" cy="82" r="3" fill="white"/>
-      <path d="M 65 110 Q 100 135 135 110" stroke="#333" stroke-width="6" fill="none" stroke-linecap="round"/>
-      <line x1="25" y1="75" x2="0" y2="65" stroke="#388E3C" stroke-width="8" stroke-linecap="round"/>
-      <line x1="25" y1="85" x2="0" y2="85" stroke="#388E3C" stroke-width="8" stroke-linecap="round"/>
-      <line x1="25" y1="95" x2="0" y2="105" stroke="#388E3C" stroke-width="8" stroke-linecap="round"/>
-    </svg>
-  </div>
+<!-- ========== FORM PANEL (desktop right / mobile full) ========== -->
+<div class="form-panel">
 
-  <div class="container">
-    <div class="login-card">
-      <div class="card-brush" aria-hidden="true"></div>
-      <div class="logo-section">
-        <div class="logo-container">
-          <img src="img/monte.jpg" alt="Colegio Montessori Sonrisas Creativas">
+
+
+  <div class="form-card">
+    <div class="card-stripe"></div>
+
+    <a href="index.html" class="back-link">
+      <i class="bi bi-arrow-left-circle-fill"></i> Volver al inicio
+    </a>
+
+    <!-- Greeting -->
+    <span class="greeting-emoji" id="greetEmoji">🌞</span>
+    <h1 class="greeting-title" id="greetTitle">¡Qué alegría verte!</h1>
+    <p class="greeting-sub">Hoy seguiremos aprendiendo, creando y compartiendo sonrisas. 💙</p>
+
+    <!-- Motivational quote -->
+    <div class="motivational">
+      <p id="motivQuote">✨ Cada día es una nueva oportunidad para descubrir y crecer.</p>
+    </div>
+
+    <!-- Error -->
+    <div id="login-error" class="err-box"></div>
+
+    <!-- Form -->
+    <form id="login-form" novalidate>
+
+      <div class="field">
+        <label for="email">Correo Electrónico</label>
+        <div class="input-shell">
+          <div class="input-icon-box"><i class="bi bi-envelope-heart-fill"></i></div>
+          <input id="email" type="email" class="field-input"
+            placeholder="tucorreo@ejemplo.com" autocomplete="email" required>
         </div>
-        <h1 class="school-name handwritten">Sonrisas Creativas</h1>
-        <p class="school-tagline">Colegio Montessori</p>
       </div>
 
-      <div id="login-error" class="error-message"></div>
-
-      <form id="login-form">
-        <div class="form-group">
-          <label class="form-label" for="email">Correo Electrónico</label>
-          <input id="email" type="email" class="form-input" placeholder="tu@correo.com" required>
+      <div class="field">
+        <label for="password">Contraseña</label>
+        <div class="input-shell">
+          <div class="input-icon-box"><i class="bi bi-lock-fill"></i></div>
+          <input id="password" type="password" class="field-input"
+            placeholder="••••••••" autocomplete="current-password" required>
+          <button type="button" id="toggle-pw" class="eye-btn" aria-label="Mostrar contraseña">
+            <i class="bi bi-eye-fill" id="eye-icon"></i>
+          </button>
         </div>
-
-        <div class="form-group">
-          <label class="form-label" for="password">Contraseña</label>
-          <div class="password-wrapper">
-            <input id="password" type="password" class="form-input" placeholder="••••••••" required>
-            <button type="button" id="toggle-password" class="toggle-password">
-              👁
-            </button>
-          </div>
-        </div>
-
-        <div class="terms-wrapper">
-          <input type="checkbox" id="terms" class="terms-checkbox" required>
-          <label for="terms" class="terms-text">
-            Acepto la 
-            <a href="politica-privacidad.html" class="terms-link" target="_blank">Política de Privacidad</a> 
-            y los 
-            <a href="terminos-uso.html" class="terms-link" target="_blank">Términos de Uso</a>
-          </label>
-        </div>
-
-        <button type="submit" class="btn-primary">
-          <i class="bi bi-person-check"></i>
-          Ingresar al Panel
-        </button>
-      </form>
-
-      <div class="forgot-password">
-        <a href="recuperar.html" class="forgot-link">¿Olvidaste tu contraseña?</a>
       </div>
 
-      <div class="back-to-site">
-        <a href="index.html" class="back-link">
-          <i class="bi bi-arrow-left"></i>
-          Volver al sitio
-        </a>
+      <div class="terms-row">
+        <input type="checkbox" id="terms" required>
+        <label for="terms">
+          Acepto la <a href="politica-privacidad.html" target="_blank">Política de Privacidad</a>
+          y los <a href="terminos-uso.html" target="_blank">Términos de Uso</a>
+        </label>
       </div>
+
+      <button type="submit" class="btn-submit" id="submitBtn">
+        <i class="bi bi-stars"></i>
+        ✨ Entrar a Mi Mundo Montessori
+      </button>
+    </form>
+
+    <div class="form-bottom">
+      <a href="recuperar.html" class="forgot-link">¿Olvidaste tu contraseña?</a>
     </div>
   </div>
+</div><!-- /form-panel -->
 
-  <script>
-    document.getElementById('toggle-password').addEventListener('click', () => {
-      const passwordInput = document.getElementById('password');
-      const toggleBtn = document.getElementById('toggle-password');
+<!-- Mobile mascot bounce (triangle running across screen) -->
+<div class="mobile-tri-stage">
+  <svg viewBox="0 0 220 275" xmlns="http://www.w3.org/2000/svg">
+    <polygon points="110,18 200,205 20,205" fill="#FF7A00" stroke="#D96500" stroke-width="5"/>
+    <circle cx="84"  cy="120" r="18" fill="white"/>
+    <circle cx="136" cy="120" r="18" fill="white"/>
+    <circle cx="85"  cy="121" r="10" fill="#333"/>
+    <circle cx="137" cy="121" r="10" fill="#333"/>
+    <circle cx="89"  cy="118" r="4"  fill="white"/>
+    <circle cx="141" cy="118" r="4"  fill="white"/>
+    <ellipse cx="70"  cy="134" rx="11" ry="7"  fill="#FF9494" opacity=".55"/>
+    <ellipse cx="150" cy="134" rx="11" ry="7"  fill="#FF9494" opacity=".55"/>
+    <path d="M 74 155 Q 110 178 146 155" stroke="#333" stroke-width="7" fill="none" stroke-linecap="round"/>
+    <line x1="20"  y1="155" x2="-14" y2="122" stroke="#D96500" stroke-width="7" stroke-linecap="round"/>
+    <line x1="200" y1="155" x2="234" y2="122" stroke="#D96500" stroke-width="7" stroke-linecap="round"/>
+    <line x1="82"  y1="205" x2="64"  y2="254" stroke="#D96500" stroke-width="7" stroke-linecap="round"/>
+    <line x1="138" y1="205" x2="156" y2="254" stroke="#D96500" stroke-width="7" stroke-linecap="round"/>
+    <ellipse cx="58"  cy="258" rx="16" ry="8" fill="#B85500"/>
+    <ellipse cx="162" cy="258" rx="16" ry="8" fill="#B85500"/>
+  </svg>
+</div>
+<div class="mobile-ground"></div>
+<div class="mob-flowers">
+  <span class="mob-flower">🌸</span>
+  <span class="mob-flower">🌼</span>
+  <span class="mob-flower">🌺</span>
+  <span class="mob-flower">🌻</span>
+  <span class="mob-flower">🌸</span>
+</div>
+</div><!-- /page -->
 
-      if (passwordInput.type === 'password') {
-        passwordInput.type = 'text';
-        toggleBtn.textContent = '🙈';
-      } else {
-        passwordInput.type = 'password';
-        toggleBtn.textContent = '👁';
-      }
+<script>
+/* ============================================================
+   STARS
+============================================================ */
+const sf = document.getElementById('starField');
+if(sf){
+  for(let i=0;i<55;i++){
+    const s=document.createElement('div'); s.className='star';
+    const sz=Math.random()*3+1;
+    Object.assign(s.style,{
+      width:sz+'px',height:sz+'px',
+      left:Math.random()*100+'%', top:Math.random()*85+'%',
+      animationDuration:(Math.random()*3+1.5)+'s',
+      animationDelay:Math.random()*4+'s'
+    }); sf.appendChild(s);
+  }
+}
+
+/* ============================================================
+   MOTIVATIONAL QUOTES + GREETING
+============================================================ */
+const quotes=[
+  {e:'🌞',t:'¡Qué alegría verte!',   q:'✨ Hoy será un gran día para aprender y crecer juntos.'},
+  {e:'🎨',t:'¡Bienvenido de nuevo!', q:'🎨 Cada niño tiene un talento único. ¡Descúbrelo aquí!'},
+  {e:'⭐',t:'¡Te estábamos esperando!',q:'⭐ Juntos construimos grandes sueños, un día a la vez.'},
+  {e:'📚',t:'¡Hola de nuevo!',        q:'📚 Aprender jugando es la mejor aventura del mundo.'},
+  {e:'🌈',t:'¡Qué bueno que estás!',  q:'🌈 Bienvenido a un mundo lleno de creatividad y sonrisas.'},
+];
+const q=quotes[Math.floor(Math.random()*quotes.length)];
+document.getElementById('greetEmoji').textContent=q.e;
+document.getElementById('greetTitle').textContent=q.t;
+document.getElementById('motivQuote').textContent=q.q;
+
+/* ============================================================
+   SPEECH BUBBLE — rotating messages
+============================================================ */
+const bubbleMsgs=[
+  '¡Hola! 😊\n¡Te esperábamos!',
+  '¿Listo para\naprender hoy? 📚',
+  '¡Qué alegría\nverte! 🌈',
+  '¡Hola! Hoy\nhay mucho que crear 🎨',
+  '¡Buenos días!\nSonrisas para todos ☀️',
+];
+const bubble=document.getElementById('bubble');
+let bIdx=0;
+function rotateBubble(){
+  if(!bubble) return;
+  bubble.classList.add('hide');
+  setTimeout(()=>{
+    bIdx=(bIdx+1)%bubbleMsgs.length;
+    bubble.innerHTML=bubbleMsgs[bIdx].replace('\n','<br>');
+    bubble.classList.remove('hide');
+    bubble.style.animation='none';
+    void bubble.offsetWidth;
+    bubble.style.animation='';
+  },350);
+}
+setInterval(rotateBubble, 3800);
+
+/* ============================================================
+   EYES FOLLOW CURSOR (desktop only)
+============================================================ */
+function movePupil(el, cx, cy, mx, my, maxD){
+  if(!el) return;
+  const rect=el.closest('svg').getBoundingClientRect();
+  const svgW=rect.width, svgH=rect.height;
+  // convert mouse to svg coords roughly
+  const dx=mx-(rect.left+svgW*(cx/220));
+  const dy=my-(rect.top +svgH*(cy/275));
+  const dist=Math.sqrt(dx*dx+dy*dy);
+  const d=Math.min(dist,maxD)/dist*maxD;
+  const nx=dist>0?dx/dist*d:0;
+  const ny=dist>0?dy/dist*d:0;
+  el.setAttribute('cx', cx+nx*0.18);
+  el.setAttribute('cy', cy+ny*0.18);
+}
+
+document.addEventListener('mousemove',e=>{
+  const mx=e.clientX, my=e.clientY;
+  // Triangle pupils
+  const tl=document.querySelector('.tri-pupil-l');
+  const tr=document.querySelector('.tri-pupil-r');
+  if(tl) movePupil(tl, 85, 126, mx, my, 5);
+  if(tr) movePupil(tr,137, 126, mx, my, 5);
+  // Pentagon pupils
+  const pl=document.querySelector('.pent-pupil-l');
+  const pr=document.querySelector('.pent-pupil-r');
+  if(pl) movePupil(pl, 88, 141, mx, my, 5);
+  if(pr) movePupil(pr,134, 141, mx, my, 5);
+  // Sun pupils
+  const sl=document.querySelector('.sun-pupil-l');
+  const sr=document.querySelector('.sun-pupil-r');
+  if(sl) movePupil(sl, 83, 99, mx, my, 4);
+  if(sr) movePupil(sr,119, 99, mx, my, 4);
+});
+
+/* ============================================================
+   SUN BLINK
+============================================================ */
+function blinkSun(){
+  const el=document.querySelector('.sun-eye-l');
+  const er=document.querySelector('.sun-eye-r');
+  if(!el) return;
+  [el,er].forEach(e=>{
+    e.setAttribute('ry','2');
+    setTimeout(()=>e.setAttribute('ry','12'),150);
+  });
+}
+setInterval(blinkSun, 3200+Math.random()*2000);
+
+/* ============================================================
+   MASCOT CLICK — jump with confetti
+============================================================ */
+function launchConfetti(x,y){
+  const colors=['#FF7A00','#FFD43B','#28B54D','#0B63C7','#FF6B9D','#9B59B6'];
+  for(let i=0;i<14;i++){
+    const d=document.createElement('div');
+    d.style.cssText=`
+      position:fixed;left:${x}px;top:${y}px;width:8px;height:8px;
+      border-radius:${Math.random()>.5?'50%':'2px'};
+      background:${colors[i%colors.length]};
+      pointer-events:none;z-index:9999;
+      transition:all ${.6+Math.random()*.5}s ease-out;
+    `;
+    document.body.appendChild(d);
+    requestAnimationFrame(()=>{
+      const angle=Math.random()*Math.PI*2;
+      const dist=60+Math.random()*80;
+      d.style.transform=`translate(${Math.cos(angle)*dist}px,${Math.sin(angle)*dist-60}px) rotate(${Math.random()*360}deg)`;
+      d.style.opacity='0';
     });
-  </script>
+    setTimeout(()=>d.remove(),1200);
+  }
+}
+['mTri','mPent','mSun'].forEach(id=>{
+  const el=document.getElementById(id);
+  if(!el) return;
+  el.addEventListener('click',e=>{
+    launchConfetti(e.clientX,e.clientY);
+    el.style.transition='transform .15s ease';
+    el.style.transform='scale(.88) translateY(6px)';
+    setTimeout(()=>{
+      el.style.transition='transform .4s cubic-bezier(.34,1.56,.64,1)';
+      el.style.transform='scale(1.18) translateY(-18px)';
+      setTimeout(()=>el.style.transform='',450);
+    },150);
+  });
+  el.addEventListener('mouseenter',()=>{
+    el.style.transition='transform .3s cubic-bezier(.34,1.56,.64,1)';
+    el.style.transform='scale(1.12) translateY(-8px)';
+  });
+  el.addEventListener('mouseleave',()=>{el.style.transform=''});
+});
+
+/* ============================================================
+   BUTTON HOVER CONFETTI
+============================================================ */
+const submitBtn=document.getElementById('submitBtn');
+if(submitBtn){
+  submitBtn.addEventListener('mouseenter',()=>{
+    const rect=submitBtn.getBoundingClientRect();
+    launchConfetti(rect.left+rect.width/2, rect.top);
+  });
+}
+
+/* ============================================================
+   TOGGLE PASSWORD
+============================================================ */
+const pwInput=document.getElementById('password');
+const togglePw=document.getElementById('toggle-pw');
+const eyeIcon=document.getElementById('eye-icon');
+if(togglePw){
+  togglePw.addEventListener('click',()=>{
+    const isPass=pwInput.type==='password';
+    pwInput.type=isPass?'text':'password';
+    eyeIcon.className=isPass?'bi bi-eye-slash-fill':'bi bi-eye-fill';
+  });
+}
+
+/* ============================================================
+   FORM SUBMIT
+============================================================ */
+const form=document.getElementById('login-form');
+const errorDiv=document.getElementById('login-error');
+if(form){
+  form.addEventListener('submit',async(e)=>{
+    e.preventDefault();
+    errorDiv.classList.remove('show');
+    const terms=document.getElementById('terms');
+    if(!terms.checked){
+      errorDiv.textContent='Debes aceptar la Política de Privacidad y los Términos de Uso.';
+      errorDiv.classList.add('show');
+      return;
+    }
+    submitBtn.disabled=true;
+    submitBtn.innerHTML='<span style="display:inline-block;animation:spin .8s linear infinite;font-size:20px">⏳</span> Verificando...';
+    await new Promise(r=>setTimeout(r,400));
+    submitBtn.disabled=false;
+    submitBtn.innerHTML='<i class="bi bi-stars"></i> ✨ Entrar a Mi Mundo Montessori';
+    if(typeof window.handleLoginSubmit==='function') window.handleLoginSubmit(e);
+  });
+}
+
+/* Spin keyframe */
+const sk=document.createElement('style');
+sk.textContent='@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}';
+document.head.appendChild(sk);
+</script>
 </body>
 </html>

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Ponche Digital \u2014 Karpus Kids</title>
+  <title>Ponche Digital — Colegio Montessori Sonrisas Creativas</title>
   <link rel="manifest" href="manifest-live.json">
   <meta name="theme-color" content="#16a34a">
   <link rel="apple-touch-icon" href="logo/apple-touch-icon.png">
@@ -115,10 +115,7 @@
         </svg>
       </div>
       <div>
-        <div class="kk-logo">
-          <span class="k1">K</span><span class="k2">a</span><span class="k3">r</span><span class="k4">p</span><span class="k5">u</span><span class="k6">s</span>
-          <span class="k7">K</span><span class="k8">i</span><span class="k9">d</span><span class="k10">s</span>
-        </div>
+        <div style="font-weight: 900; font-size: 16px;">Colegio Montessori Sonrisas Creativas</div>
         <div class="kk-sub">Ponche Digital · Entrada/Salida</div>
       </div>
     </div>
@@ -335,8 +332,8 @@ async function notifyParent(studentId, parentId, studentName, punchType, timeStr
 
   // Llamar directamente a las Edge Functions con fetch + anon key
   // (attendance-live.html no tiene sesión activa, pero las Edge Functions aceptan anon key)
-  const SUPA_URL = 'https://wwnfonkvemimwiqjpkij.supabase.co';
-  const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind3bmZvbmt2ZW1pbXdpcWpwa2lqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc4MzY0MzUsImV4cCI6MjA4MzQxMjQzNX0.n5VW-3U0r2nRlwC8pDstQLowu9MZ3aWHMzXVVNFQaDo';
+  const SUPA_URL = 'https://yswizaskeftxpcphixiy.supabase.co';
+  const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlzd2l6YXNrZWZ0eHBjcGhpeGl5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIzNDM4NTcsImV4cCI6MjA5NzkxOTg1N30.SQEZzGCCsADmbYTNrpjw6k1uBs8mXnhn8IhzTHH6rto';
   const headers  = { 'Content-Type': 'application/json', 'apikey': ANON_KEY, 'Authorization': `Bearer ${ANON_KEY}` };
 
   // Push notification
@@ -354,7 +351,7 @@ async function notifyParent(studentId, parentId, studentName, punchType, timeStr
     if (emailList.length > 0) {
       const html = `<div style="font-family:Arial,sans-serif;max-width:500px;margin:auto;padding:20px;border:1px solid #d1fae5;border-radius:12px;">
         <div style="background:linear-gradient(135deg,#22c55e,#16a34a);padding:20px;border-radius:8px 8px 0 0;text-align:center;">
-          <h2 style="color:white;margin:0;">${emoji} Karpus Kids</h2>
+          <h2 style="color:white;margin:0;">${emoji} Colegio Montessori Sonrisas Creativas</h2>
         </div>
         <div style="padding:24px;">
           <h3 style="color:#166534;">${title}</h3>
@@ -362,7 +359,7 @@ async function notifyParent(studentId, parentId, studentName, punchType, timeStr
           <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:12px;text-align:center;">
             <p style="color:#166534;font-weight:700;font-size:16px;margin:0;">🕐 ${timeStr}</p>
           </div>
-          <p style="color:#6b7280;font-size:12px;margin-top:16px;text-align:center;">Karpus Kids · Notificación automática</p>
+          <p style="color:#6b7280;font-size:12px;margin-top:16px;text-align:center;">Colegio Montessori Sonrisas Creativas · Notificación automática</p>
         </div>
       </div>`;
       // Enviar a cada correo por separado para personalización futura

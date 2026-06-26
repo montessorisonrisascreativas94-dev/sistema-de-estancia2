@@ -644,7 +644,7 @@ window.exportAudit = function() {
   const csv = rows.map(r => r.join(',')).join('\n');
   const blob = new Blob([csv], { type: 'text/csv' });
   const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a'); a.href = url; a.download = 'auditoria_karpus.csv'; a.click();
+  const a    = document.createElement('a'); a.href = url; a.download = 'auditoria_sonrisas_creativas.csv'; a.click();
   URL.revokeObjectURL(url);
 };
 
@@ -977,7 +977,7 @@ function renderRoleTable(role, data) {
     return `<tr>
       <td style="font-weight:800;">${escH(u.name||'—')}</td>
       <td style="color:var(--muted);font-size:12px;">${escH(u.email||'—')}</td>
-      <td>Karpus Kids</td>
+      <td>Colegio Montessori Sonrisas Creativas</td>
       <td style="font-size:11px;color:var(--muted);">${lastAccess}</td>
       <td><span class="badge badge-green">Activo</span></td>
     </tr>`;
@@ -1238,8 +1238,8 @@ window.testEmail = async function() {
     const { data, error } = await supabase.functions.invoke('send-email', {
       body: {
         to: 'impulsodigital@gmail.com',
-        subject: '✅ Test de correo — Karpus Kids',
-        html: '<div style="font-family:Arial;padding:20px;"><h2 style="color:#16a34a;">✅ Sistema de correo funcionando</h2><p>Correo de prueba desde el Panel de Control de Karpus Kids.</p><p style="color:#6b7280;font-size:12px;">Enviado: ' + new Date().toLocaleString('es-DO') + '</p></div>'
+        subject: '✅ Test de correo — Colegio Montessori Sonrisas Creativas',
+        html: '<div style="font-family:Arial;padding:20px;"><h2 style="color:#16a34a;">✅ Sistema de correo funcionando</h2><p>Correo de prueba desde el Panel de Control de Colegio Montessori Sonrisas Creativas.</p><p style="color:#6b7280;font-size:12px;">Enviado: ' + new Date().toLocaleString('es-DO') + '</p></div>'
       }
     });
     if (error) throw new Error(error.message || JSON.stringify(error));

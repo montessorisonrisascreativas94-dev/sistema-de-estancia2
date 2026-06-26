@@ -1,4 +1,4 @@
-﻿import { supabase } from '../shared/supabase.js';
+import { supabase } from '../shared/supabase.js';
 import { Helpers } from '../shared/helpers.js';
 
 export const AccessModule = {
@@ -178,7 +178,7 @@ export const AccessModule = {
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF();
       doc.setFontSize(18);
-      doc.text('Karpus Kids — Reporte de Monitoreo', 14, 15);
+      doc.text('Colegio Montessori Sonrisas Creativas — Reporte de Monitoreo', 14, 15);
       doc.setFontSize(10);
       doc.text(`Periodo: ${from} al ${to}`, 14, 22);
 
