@@ -1,4 +1,4 @@
-﻿/**
+/**
  * 🎥 Karpus Kids — VideoCall UI
  * Sistema unificado de videollamadas para todos los paneles.
  * Usa meet.jit.si — funciona sin cuenta, sin límite de tiempo en salas privadas.
@@ -432,7 +432,7 @@ export const VideoCallUI = {
             <div class="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center text-xl">📅</div>
             <div>
               <h3 class="font-black text-lg">Programar Reunión</h3>
-              <p class="text-xs text-white/70 font-bold uppercase">Videollamada Karpus Kids</p>
+              <p class="text-xs text-white/70 font-bold uppercase">Videollamada Colegio Montessori Sonrisas Creativas</p>
             </div>
           </div>
           <button onclick="document.getElementById('schedule-modal').remove()" class="w-8 h-8 bg-white/10 hover:bg-white/20 rounded-xl flex items-center justify-center font-black">✕</button>

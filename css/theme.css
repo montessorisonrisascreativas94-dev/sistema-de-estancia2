@@ -1,11 +1,38 @@
-:root{
-  --karpus-green: #4CAF50;
-  --karpus-pink: #FF4081;
-  --karpus-blue: #2196F3;
-  --karpus-orange: #FF9800;
-  --karpus-yellow: #FFC107;
-  --karpus-purple: #9C27B0;
-  --karpus-teal: #009688;
+/* ============================================================
+   🎨 PALETA OFICIAL — Colegio Montessori Sonrisas Creativas
+   ============================================================ */
+:root {
+  /* ── PRIMARIOS ── */
+  --sc-blue:        #0B63C7;   /* Azul institucional — títulos, footer, nav */
+  --sc-blue-dark:   #0850A0;
+  --sc-blue-light:  #E8F2FF;
+  --sc-orange:      #FF7A00;   /* Naranja CTA — botones acción, highlights */
+  --sc-orange-dark: #D96500;
+  --sc-orange-light:#FFF0E0;
+  --sc-green:       #28B54D;   /* Verde apoyo — iconos check, botones 2° */
+  --sc-green-dark:  #1A8035;
+  --sc-green-light: #E6F7EB;
+  --sc-yellow:      #FFD43B;   /* Amarillo acento — detalles lúdicos */
+  --sc-yellow-dark: #F0C000;
+  --sc-yellow-light:#FFFBE6;
+
+  /* ── NEUTROS ── */
+  --sc-white:       #FFFFFF;
+  --sc-cream:       #FAFBFC;
+  --sc-gray-bg:     #F8FAFC;
+  --sc-border:      #E2E8F0;
+  --sc-text:        #1A2340;
+  --sc-text-mid:    #4A5568;
+  --sc-text-light:  #718096;
+
+  /* ── ALIASES (compatibilidad hacia atrás) ── */
+  --karpus-green:   var(--sc-green);
+  --karpus-blue:    var(--sc-blue);
+  --karpus-orange:  var(--sc-orange);
+  --karpus-yellow:  var(--sc-yellow);
+  --karpus-pink:    #FF6B9D;
+  --karpus-purple:  #9B59B6;
+  --karpus-teal:    #0B63C7;
 }
 
 /* Estilos generales */
@@ -13,9 +40,9 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 *, *::before, *::after { box-sizing: border-box; }
 body {
   font-family: 'Nunito', sans-serif;
-  background-color: #f5f7fb;
+  background-color: var(--sc-gray-bg, #F8FAFC);
   transition: all 0.3s ease;
-  overscroll-behavior: auto; /* Permitir scroll normal en móviles */
+  overscroll-behavior: auto;
 }
 
 /* Panel Padres: cabecera cielo con nubes suaves */
@@ -59,19 +86,55 @@ body {
 .badge-orange{ background: #FFF3E0; color:#EF6C00; }
 .badge-yellow{ background: #FFF9C4; color:#F57F17; }
 
-.btn{ border-radius:12px; padding:6px 10px; font-size:13px; }
-.btn-green{ background:var(--karpus-green); color:#fff; }
-.btn-pink{ background:var(--karpus-pink); color:#fff; }
-.btn-blue{ background:var(--karpus-blue); color:#fff; }
-.btn-orange{ background:var(--karpus-orange); color:#fff; }
-.btn-yellow{ background:var(--karpus-yellow); color:#fff; }
+/* ── BOTONES GLOBALES (Sonrisas Creativas) ── */
+.btn{ border-radius:12px; padding:8px 14px; font-size:13px; font-weight:700; border:none; cursor:pointer; transition:all .2s; }
+.btn-blue,
+.btn-primary-sc { background: var(--sc-blue); color:#fff; box-shadow:0 4px 14px rgba(11,99,199,.25); }
+.btn-blue:hover,
+.btn-primary-sc:hover { background: var(--sc-blue-dark); transform:translateY(-2px); }
+.btn-orange,
+.btn-cta { background: var(--sc-orange); color:#fff; box-shadow:0 4px 14px rgba(255,122,0,.3); }
+.btn-orange:hover,
+.btn-cta:hover { background: var(--sc-orange-dark); transform:translateY(-2px); }
+.btn-green,
+.btn-success-sc { background: var(--sc-green); color:#fff; box-shadow:0 4px 14px rgba(40,181,77,.25); }
+.btn-green:hover,
+.btn-success-sc:hover { background: var(--sc-green-dark); transform:translateY(-2px); }
 
-/* Sidebar gradients in requested palette */
-.sidebar-green { background: linear-gradient(135deg,#E8F8F0,#D0F0E0); }
-.sidebar-yellow { background: linear-gradient(135deg,#FFF8E0,#FFF1C2); }
-.sidebar-pink { background: linear-gradient(135deg,#FFF0F6,#FFE3F0); }
-.sidebar-blue { background: linear-gradient(135deg,#E3F2FD,#BBDEFB); }
-.sidebar-orange { background: linear-gradient(135deg,#FFF3E0,#FFE0B2); }
+/* Badges */
+.badge{ display:inline-block; padding:3px 10px; border-radius:50px; font-size:11px; font-weight:800; }
+.badge-blue   { background:var(--sc-blue-light);    color:var(--sc-blue-dark); }
+.badge-orange { background:var(--sc-orange-light);  color:var(--sc-orange-dark); }
+.badge-green  { background:var(--sc-green-light);   color:var(--sc-green-dark); }
+.badge-yellow { background:var(--sc-yellow-light);  color:var(--sc-yellow-dark); }
+.badge-pink   { background:#FFE3F0; color:#C2185B; }
+
+/* Chips */
+.chip{ display:inline-block; border-radius:9999px; padding:3px 12px; font-size:11px; font-weight:800; }
+.chip-blue   { background:var(--sc-blue-light);   color:var(--sc-blue); }
+.chip-orange { background:var(--sc-orange-light); color:var(--sc-orange-dark); }
+.chip-green  { background:var(--sc-green-light);  color:var(--sc-green-dark); }
+.chip-yellow { background:var(--sc-yellow-light); color:var(--sc-yellow-dark); }
+
+/* Logo "Sonrisas Creativas" en sidebar */
+.karpus-kids-inline { font-weight:800; font-family:'Baloo 2',cursive; }
+.karpus-kids-inline .k-1  { color: var(--sc-orange); }
+.karpus-kids-inline .k-2  { color: var(--sc-blue); }
+.karpus-kids-inline .k-3  { color: var(--sc-green); }
+.karpus-kids-inline .k-4  { color: var(--sc-yellow-dark); }
+.karpus-kids-inline .k-5  { color: var(--sc-orange); }
+.karpus-kids-inline .k-6  { color: var(--sc-blue); }
+.karpus-kids-inline .k-7  { color: var(--sc-green); }
+.karpus-kids-inline .k-8  { color: var(--sc-orange); }
+.karpus-kids-inline .k-9  { color: var(--sc-blue); }
+.karpus-kids-inline .k-10 { color: var(--sc-yellow-dark); }
+
+/* Sidebar gradients — Sonrisas Creativas palette */
+.sidebar-blue   { background: linear-gradient(135deg, var(--sc-blue-light),  #DBEAFE); }
+.sidebar-green  { background: linear-gradient(135deg, var(--sc-green-light), #D1FAE5); }
+.sidebar-orange { background: linear-gradient(135deg, var(--sc-orange-light),#FFE4C4); }
+.sidebar-yellow { background: linear-gradient(135deg, var(--sc-yellow-light),#FEF9C3); }
+.sidebar-pink   { background: linear-gradient(135deg, #FFE3F0, #FECDD3); }
 
 /* Scroll container para sidebars */
 .sidebar-scroll { max-height: calc(100vh - 4rem); overflow: auto; }
@@ -155,26 +218,36 @@ body {
 
 /* --- ESTILOS INFANTILES (REDISEÑO) --- */
 
-/* 1. SIDEBAR → ESTILO MOCHILA ESCOLAR */
+/* ============================================================
+   SIDEBARS POR ROL — Paleta Sonrisas Creativas
+   ============================================================ */
+
+/* Panel Padres → Azul Montessori */
 body.panel-padre-body #sidebar {
-  background: linear-gradient(180deg, #4ade80 0%, #2dd4bf 100%);
-  box-shadow: 4px 0 24px rgba(20,184,166,0.25);
-  border-right: 4px solid #14b8a6;
+  background: linear-gradient(160deg, #0B63C7 0%, #0850A0 60%, #063A80 100%);
+  box-shadow: 4px 0 24px rgba(11,99,199,0.28);
+  border-right: 4px solid #0B63C7;
 }
+
+/* Panel Maestra → Verde alegre */
 body.panel-maestra-body #sidebar {
-  background: linear-gradient(180deg, #ffb703 0%, #fb8500 100%);
-  box-shadow: 4px 0 24px rgba(217,119,6,0.25);
-  border-right: 4px solid #d97706;
+  background: linear-gradient(160deg, #28B54D 0%, #1A8035 60%, #115925 100%);
+  box-shadow: 4px 0 24px rgba(40,181,77,0.28);
+  border-right: 4px solid #28B54D;
 }
+
+/* Panel Directora → Azul oscuro premium */
 body.panel-directora-body #sidebar {
-  background: linear-gradient(180deg, #7c3aed 0%, #4f46e5 100%);
-  box-shadow: 4px 0 24px rgba(79,70,229,0.25);
-  border-right: 4px solid #6d28d9;
+  background: linear-gradient(160deg, #0850A0 0%, #063A80 60%, #042C60 100%);
+  box-shadow: 4px 0 24px rgba(8,80,160,0.3);
+  border-right: 4px solid #0B63C7;
 }
+
+/* Panel Asistente → Naranja vibrante */
 body.panel-asistente-body #sidebar {
-  background: linear-gradient(180deg, #0f766e 0%, #115e59 100%);
-  box-shadow: 4px 0 24px rgba(17,94,89,0.25);
-  border-right: 4px solid #0d9488;
+  background: linear-gradient(160deg, #FF7A00 0%, #D96500 60%, #B85500 100%);
+  box-shadow: 4px 0 24px rgba(255,122,0,0.28);
+  border-right: 4px solid #FF7A00;
 }
 
 .sidebar-btn {
@@ -185,41 +258,49 @@ body.panel-asistente-body #sidebar {
   gap: 0.5rem;
   border-radius: 1rem;
   font-size: 0.95rem;
-  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1); /* Bounce effect */
-  color: #e0f2fe; /* Sky-100 */
+  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  color: rgba(255,255,255,0.88);
   font-weight: 700;
   border: 2px solid transparent;
   margin-bottom: 0.5rem;
+  background: transparent;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
 }
 
 .sidebar-btn:hover {
-  background: #A7F3D0;
-  transform: translateX(6px) scale(1.02);
-  color: #064E3B;
+  background: rgba(255,255,255,0.18);
+  transform: translateX(5px) scale(1.02);
+  color: #fff;
 }
 
 .sidebar-btn.active {
-  background: #0b7934;
-  color: #064E3B;
-  transform: translateX(8px);
-  border-left: 6px solid #22C55E;
-  box-shadow: inset 0 0 0 2px #BAE6FD, 0 4px 12px rgba(0,0,0,0.1);
+  background: rgba(255,255,255,0.22);
+  color: #fff;
+  transform: translateX(7px);
+  border-left: 5px solid rgba(255,255,255,0.9);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
 }
 
-/* Colores por Sección (Active State) */
-.sidebar-btn[data-target="home"].active { color: #16a34a; /* Green */ }
-.sidebar-btn[data-target="tasks"].active { color: #2563eb; /* Blue */ }
-.sidebar-btn[data-target="class"].active { color: #7c3aed; /* Purple (Muro) */ }
-.sidebar-btn[data-target="live-attendance"].active { color: #db2777; /* Pink */ }
-.sidebar-btn[data-target="grades"].active { color: #ea580c; /* Orange */ }
-.sidebar-btn[data-target="payments"].active { color: #15803d; /* Dark Green */ }
-.sidebar-btn[data-target="profile"].active { color: #0ea5e9; /* Sky */ }
+/* Naranja para CTA dentro del sidebar */
+.sidebar-btn.cta-action {
+  background: var(--sc-orange);
+  color: white;
+  border-left: 5px solid var(--sc-orange-dark);
+  box-shadow: 0 6px 18px rgba(255,122,0,0.35);
+}
+.sidebar-btn.cta-action:hover {
+  background: var(--sc-orange-dark);
+  transform: translateX(5px) translateY(-2px);
+}
 
 /* Iconos del sidebar */
 .sidebar-btn i {
   stroke-width: 2.5px;
   filter: drop-shadow(0 2px 2px rgba(0,0,0,0.1));
   transition: transform .2s ease;
+  flex-shrink: 0;
 }
 .sidebar-btn:hover i { transform: scale(1.2) rotate(-3deg); }
 

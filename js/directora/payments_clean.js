@@ -1,10 +1,10 @@
 import { DirectorApi } from './api.js';
 import { AppState } from './state.js';
-import { Helpers } from '/js/shared/helpers.js';
+import { Helpers } from '../shared/helpers.js';
 import { UIHelpers } from './ui.module.js';
-import { supabase } from '/js/shared/supabase.js';
-import { auditLog } from '/js/shared/db-utils.js';
-import { UIPremium } from '/js/shared/ui-premium.js';
+import { supabase } from '../shared/supabase.js';
+import { auditLog } from '../shared/db-utils.js';
+import { UIPremium } from '../shared/ui-premium.js';
 
 const MES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
 const MES_LABEL = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];

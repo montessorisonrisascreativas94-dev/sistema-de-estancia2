@@ -671,7 +671,7 @@ app.post('/api/admin/update-user', async (req, res) => {
 app.get('/api/profiles/:role', (req, res) => {
   const role = req.params.role;
   if (role === 'teacher') return res.json({ name: 'Ana Pérez', email: 'ana@karpus.edu', bio: 'Educadora apasionada con experiencia en desarrollo infantil.', avatar: 'https://placehold.co/200x200' });
-  if (role === 'director') return res.json({ name: 'Karonlyn García', bio: 'Fundadora de Karpus Kids.', avatar: 'img/mundo.jpg' });
+  if (role === 'director') return res.json({ name: 'Directora', bio: 'Fundadora de Colegio Montessori Sonrisas Creativas.', avatar: 'img/monte.jpg' });
   res.status(404).json({ error: 'role inválido' });
 });
 
@@ -739,7 +739,7 @@ app.post('/api/parents/email', async (req, res) => {
 app.get('/api/profiles/:role', (req, res) => {
   const role = req.params.role;
   if (role === 'teacher') return res.json({ name: 'Ana Pérez', email: 'ana@karpus.edu', bio: 'Educadora apasionada con experiencia en desarrollo infantil.', avatar: 'https://placehold.co/200x200' });
-  if (role === 'director') return res.json({ name: 'Karonlyn García', bio: 'Fundadora de Karpus Kids.', avatar: 'img/mundo.jpg' });
+  if (role === 'director') return res.json({ name: 'Directora', bio: 'Fundadora de Colegio Montessori Sonrisas Creativas.', avatar: 'img/monte.jpg' });
   res.status(404).json({ error: 'role inválido' });
 });
 

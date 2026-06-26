@@ -183,8 +183,8 @@ body:not(.panel-padre-body) aside#sidebar::-webkit-scrollbar { display: none; }
   -webkit-tap-highlight-color: transparent;
 }
 .btn:active { transform: scale(0.96); }
-.btn-primary { background: linear-gradient(135deg, #5b5ef7, #7a7dfc); color: #fff; }
-.btn-success { background: #10b981; color: #fff; }
+.btn-primary { background: linear-gradient(135deg, #0B63C7, #0850A0); color: #fff; box-shadow: 0 4px 14px rgba(11,99,199,.25); }
+.btn-success { background: var(--sc-green, #28B54D); color: #fff; }
 .btn-danger  { background: #ef4444; color: #fff; }
 .btn-ghost   { background: #f1f5f9; color: #475569; }
 @media (max-width: 480px) {

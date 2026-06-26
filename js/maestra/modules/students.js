@@ -1,9 +1,9 @@
-import { supabase, sendPush } from '/js/shared/supabase.js';
-import { TABLES } from '/js/shared/constants.js';
+import { supabase, sendPush } from '../../shared/supabase.js';
+import { TABLES } from '../../shared/constants.js';
 import { AppState } from '../state.js';
 import { MaestraApi } from '../api.js';
 import { UI } from './ui.js';
-import { Helpers } from '/js/shared/helpers.js';
+import { Helpers } from '../../shared/helpers.js';
 
 const { safeToast, safeEscapeHTML, Modal } = UI;
 
@@ -34,7 +34,7 @@ export function openStudentProfile(studentId) {
         <div class="bg-gradient-to-br from-orange-50 to-amber-50 p-6 rounded-[2rem] border-2 border-orange-100 space-y-4">
           <h4 class="text-sm font-black text-orange-800 flex items-center gap-2">
             <div class="w-8 h-8 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center"><i data-lucide="qr-code" class="w-4 h-4"></i></div>
-            CARNET DIGITAL KARPUS KIDS
+            CARNET DIGITAL COLEGIO MONTESSORI SONRISAS CREATIVAS
           </h4>
           <div class="flex flex-col sm:flex-row items-center gap-6 bg-white p-6 rounded-3xl border border-orange-100 shadow-sm">
             <div id="student-qr-container" class="bg-white p-2 rounded-2xl border-2 border-slate-50 shadow-inner">

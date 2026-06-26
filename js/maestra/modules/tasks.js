@@ -1,10 +1,10 @@
-import { supabase, sendPush, emitEvent } from '/js/shared/supabase.js';
-import { TABLES } from '/js/shared/constants.js';
+import { supabase, sendPush, emitEvent } from '../../shared/supabase.js';
+import { TABLES } from '../../shared/constants.js';
 import { AppState } from '../state.js';
 import { MaestraApi } from '../api.js';
 import { UI } from './ui.js';
-import { notifyParents } from '/js/shared/notify-feedback.js';
-import { Helpers } from '/js/shared/helpers.js';
+import { notifyParents } from '../../shared/notify-feedback.js';
+import { Helpers } from '../../shared/helpers.js';
 
 const { safeToast, safeEscapeHTML, Modal } = UI;
 

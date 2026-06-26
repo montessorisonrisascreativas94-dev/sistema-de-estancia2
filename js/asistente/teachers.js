@@ -1,6 +1,6 @@
-import { supabase, sendEmail } from '/js/shared/supabase.js';
+import { supabase, sendEmail } from '../shared/supabase.js';
 import { AssistantApi } from './api.js';
-import { Helpers } from '/js/shared/helpers.js';
+import { Helpers } from '../shared/helpers.js';
 
 /**
  * M�dulo de Gesti�n de Maestros para Asistente

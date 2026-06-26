@@ -1,22 +1,22 @@
-import { ensureRole, supabase, initOneSignal } from '/js/shared/supabase.js';
+import { ensureRole, supabase, initOneSignal } from '../shared/supabase.js';
 import { AppState } from './state.js';
 import { AssistantApi } from './api.js';
 import { PaymentsModule } from './payments.js';
 import { AccessModule } from './access.js';
 import { TeachersModule } from './teachers.js';
-import { Helpers } from '/js/shared/helpers.js';
-import { WallModule } from '/js/shared/wall.js';
-import { ChatModule } from '/js/shared/chat.js';
+import { Helpers } from '../shared/helpers.js';
+import { WallModule } from '../shared/wall.js';
+import { ChatModule } from '../shared/chat.js';
 import { StudentsModule } from './modules/students.js';
-import { auditLog } from '/js/shared/db-utils.js';
+import { auditLog } from '../shared/db-utils.js';
 import { RoomsModule } from './modules/rooms.js';
 import { DashboardModule } from './modules/dashboard.js';
-import { BadgeSystem } from '/js/shared/badges.js';
-import { ImageLoader } from '/js/shared/image-loader.js';
-import { QueryCache } from '/js/shared/query-cache.js';
-import { RealtimeManager } from '/js/shared/realtime-manager.js';
-import { Security } from '/js/shared/security.js';
-import { UIPremium } from '/js/shared/ui-premium.js';
+import { BadgeSystem } from '../shared/badges.js';
+import { ImageLoader } from '../shared/image-loader.js';
+import { QueryCache } from '../shared/query-cache.js';
+import { RealtimeManager } from '../shared/realtime-manager.js';
+import { Security } from '../shared/security.js';
+import { UIPremium } from '../shared/ui-premium.js';
 
 // ?? Definir objeto App globalmente para evitar ReferenceError en onclicks del HTML
 // Global close modal fallback � always available even before openNewPostModal is called

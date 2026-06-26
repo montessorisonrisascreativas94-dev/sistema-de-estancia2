@@ -1,13 +1,13 @@
 {
-  "name": "Karpus Kids",
-  "short_name": "Karpus",
-  "description": "Panel educativo Karpus Kids — Padres, Maestras y Dirección",
-  "start_url": "/panel_padres.html",
+  "name": "Sonrisas Creativas — Montessori",
+  "short_name": "Sonrisas",
+  "description": "Portal educativo del Colegio Montessori Sonrisas Creativas — Padres, Maestras y Dirección",
+  "start_url": "/login.html",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#F0F9FF",
-  "theme_color": "#0f766e",
+  "background_color": "#FFFFFF",
+  "theme_color": "#0B63C7",
   "gcm_sender_id": "482941778795",
   "icons": [
     {

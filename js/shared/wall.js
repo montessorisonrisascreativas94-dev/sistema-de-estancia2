@@ -388,7 +388,7 @@ export const WallModule = {
             ${ImageLoader.img(p.display_media_url, {
               alt: 'Post media',
               cls: 'w-full h-full object-cover', // Aspect ratio fijo
-              fallback: 'img/mundo.jpg',
+              fallback: 'img/monte.jpg',
               priority: isFirstPost ? 'high' : 'low'
             })}
             <a href="${p.display_media_url}" download target="_blank" rel="noopener noreferrer"

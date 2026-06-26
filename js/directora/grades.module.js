@@ -559,7 +559,7 @@ export const GradesModule = {
       // Header
       doc.setFontSize(20);
       doc.setTextColor(79, 70, 229); // Indigo 600
-      doc.text('Karpus Kids — Reporte de Calificaciones', 14, 22);
+      doc.text('Colegio Montessori Sonrisas Creativas — Reporte de Calificaciones', 14, 22);
       
       doc.setFontSize(12);
       doc.setTextColor(100);

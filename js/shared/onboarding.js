@@ -1,11 +1,11 @@
 /**
- * 🎓 Karpus Kids — Onboarding Guide
+ * 🎓 Colegio Montessori Sonrisas Creativas — Onboarding Guide
  * - En móvil: aparece en la esquina superior derecha
  * - Al hacer clic en una sección, navega a ella automáticamente
  * - Persiste en Supabase para no mostrar de nuevo en otros dispositivos
  */
 
-const STORAGE_KEY_PREFIX = 'karpus_onboarding_';
+const STORAGE_KEY_PREFIX = 'sonrisas_onboarding_';
 
 export const OnboardingGuide = {
   _steps: [],
@@ -143,7 +143,7 @@ export const OnboardingGuide = {
     const isMobile = this._isMobile();
     const toast = document.createElement('div');
     toast.className = [(isMobile ? 'fixed top-4 right-4' : 'fixed bottom-6 right-4') + ' z-[9990]', 'bg-gradient-to-br from-emerald-500 to-teal-600 text-white', 'rounded-3xl shadow-2xl p-4 max-w-[260px] w-[calc(100vw-2rem)]', isMobile ? 'animate-slide-down-in' : 'animate-slide-up-in'].join(' ');
-    toast.innerHTML = '<div class="text-2xl mb-1">\uD83C\uDF89</div><p class="font-black text-sm">Recorrido completado!</p><p class="text-xs opacity-80 mt-1">Ya conoces lo basico para aprovechar Karpus Kids.</p><button onclick="this.parentElement.remove()" class="mt-2 w-full py-1.5 bg-white/20 hover:bg-white/30 rounded-2xl font-black text-xs uppercase transition-all">Entendido</button>';
+    toast.innerHTML = '<div class="text-2xl mb-1">\uD83C\uDF89</div><p class="font-black text-sm">Recorrido completado!</p><p class="text-xs opacity-80 mt-1">Ya conoces lo basico para aprovechar Colegio Montessori Sonrisas Creativas.</p><button onclick="this.parentElement.remove()" class="mt-2 w-full py-1.5 bg-white/20 hover:bg-white/30 rounded-2xl font-black text-xs uppercase transition-all">Entendido</button>';
     document.body.appendChild(toast);
     setTimeout(() => toast.remove(), 5000);
     this._complete();

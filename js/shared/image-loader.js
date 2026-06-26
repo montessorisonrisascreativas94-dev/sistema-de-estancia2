@@ -39,7 +39,7 @@ export const ImageLoader = {
 
   _loadImage(el) {
     let src = el.dataset.src;
-    const fallback = el.dataset.fallback || 'img/mundo.jpg';
+    const fallback = el.dataset.fallback || 'img/monte.jpg';
     if (!src) return;
 
     // ✅ OPTIMIZACIÓN CDN: Transformar URL de Supabase para carga ligera
@@ -89,7 +89,7 @@ export const ImageLoader = {
   },
 
   img(src, opts = {}) {
-    const { fallback = 'img/mundo.jpg', alt = '', cls = 'w-full h-full object-cover', priority = 'low' } = opts;
+    const { fallback = 'img/monte.jpg', alt = '', cls = 'w-full h-full object-cover', priority = 'low' } = opts;
     if (!src) return `<img src="${fallback}" alt="${alt}" class="${cls}" loading="lazy">`;
     // Primer post o imágenes críticas: cargar inmediatamente sin lazy
     if (priority === 'high') {

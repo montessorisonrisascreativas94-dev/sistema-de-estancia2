@@ -335,7 +335,7 @@ export const TeachersModule = {
         </style>
       </head><body>
         <div class="card">
-          <div class="header">STAFF � KARPUS KIDS</div>
+          <div class="header">STAFF • COLEGIO MONTESSORI SONRISAS CREATIVAS</div>
           <img src="${qrImg}" alt="QR">
           <div class="name">${name || 'Personal'}</div>
           <div class="role">${role || 'Maestra'}</div>

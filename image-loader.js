@@ -17,7 +17,7 @@ export const ImageLoader = {
   },
 
   /** Genera el HTML para una imagen con lazy loading nativo y clase de transición */
-  img(url, { alt = '', cls = '', fallback = 'img/mundo.jpg', priority = 'low' } = {}) {
+  img(url, { alt = '', cls = '', fallback = 'img/monte.jpg', priority = 'low' } = {}) {
     const optimized = this.getOptimizedUrl(url);
     return `
       <img 

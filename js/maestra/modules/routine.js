@@ -1,8 +1,8 @@
-import { supabase } from '/js/shared/supabase.js';
+import { supabase } from '../../shared/supabase.js';
 import { AppState } from '../state.js';
 import { MaestraApi } from '../api.js';
 import { UI } from './ui.js';
-import { Helpers } from '/js/shared/helpers.js';
+import { Helpers } from '../../shared/helpers.js';
 
 const { safeToast, safeEscapeHTML, Modal } = UI;
 

@@ -1,11 +1,11 @@
 {
-  "name": "Ponche Digital Karpus",
-  "short_name": "PoncheKarpus",
-  "description": "Terminal de asistencia para Karpus Kids",
+  "name": "Asistencia — Sonrisas Creativas",
+  "short_name": "Asistencia SC",
+  "description": "Terminal de asistencia del Colegio Montessori Sonrisas Creativas",
   "start_url": "/attendance-live.html",
   "display": "standalone",
-  "background_color": "#f0fdf4",
-  "theme_color": "#16a34a",
+  "background_color": "#FFFFFF",
+  "theme_color": "#0B63C7",
   "icons": [
     {
       "src": "logo/android-chrome-192x192.png",
@@ -16,7 +16,10 @@
     {
       "src": "logo/android-chrome-512x512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     }
-  ]
+  ],
+  "categories": ["education"],
+  "lang": "es"
 }

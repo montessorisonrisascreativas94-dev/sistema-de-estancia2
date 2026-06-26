@@ -227,7 +227,7 @@ export const Helpers = {
       <body>
         <div class="card">
           <div class="logo">
-            <span class="k1">K</span><span class="k2">a</span><span class="k3">r</span><span class="k4">p</span>us Kids
+            Colegio Montessori Sonrisas Creativas
           </div>
           <div class="qr-wrapper">
             <img src="${qrImg}" alt="QR Code">
@@ -545,7 +545,7 @@ export const Helpers = {
       return `<img
         src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/wAARCAABAAEDASIAAhEBAxEB/8QAFAABAAAAAAAAAAAAAAAAAAAACf/EABQQAQAAAAAAAAAAAAAAAAAAAAD/xAAUAQEAAAAAAAAAAAAAAAAAAAAA/8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAwDAQACEQMRAD8AJQAB/9k="
         data-src="${url}"
-        data-fallback="img/mundo.jpg"
+        data-fallback="img/monte.jpg"
         class="karpus-img karpus-img-loading w-full h-full object-cover"
         loading="lazy"
         decoding="async">`;

@@ -1026,7 +1026,7 @@ async function _initPadreQR(student) {
       img{width:192px;height:192px;}.name{font-size:16px;font-weight:900;color:#1e293b;margin-top:12px;}
       .mat{font-size:11px;color:#64748b;font-weight:700;margin-top:4px;}.hint{font-size:9px;color:#94a3b8;margin-top:8px;}</style>
     </head><body><div class="card">
-      <div class="logo">🎓 Karpus Kids</div>
+      <div class="logo">🎓 Colegio Montessori Sonrisas Creativas</div>
       <img src="${img}" alt="QR">
       <div class="name">${name}</div>
       <div class="mat">${matricula}</div>
@@ -1045,7 +1045,7 @@ async function _initPadreQR(student) {
           if (!blob) return;
           const file = new File([blob], `QR-${matricula}.png`, { type: 'image/png' });
           if (navigator.share && navigator.canShare?.({ files: [file] })) {
-            await navigator.share({ title: `QR Karpus Kids - ${name}`, text: `Código QR de ${name} para Karpus Kids`, files: [file] });
+            await navigator.share({ title: `QR Colegio Montessori Sonrisas Creativas - ${name}`, text: `Código QR de ${name} para Colegio Montessori Sonrisas Creativas`, files: [file] });
           } else {
             // Fallback: descargar
             const url = URL.createObjectURL(blob);
@@ -1056,7 +1056,7 @@ async function _initPadreQR(student) {
       } else if (img) {
         // Compartir como URL si no hay canvas
         if (navigator.share) {
-          await navigator.share({ title: `QR Karpus Kids - ${name}`, text: `Código QR de ${name}`, url: img.src });
+          await navigator.share({ title: `QR Colegio Montessori Sonrisas Creativas - ${name}`, text: `Código QR de ${name}`, url: img.src });
         }
       }
     } catch (_) {}

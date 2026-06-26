@@ -595,7 +595,7 @@ export const DirectorApi = {
           '<div style="max-width:560px;margin:32px auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">' +
             '<div style="background:linear-gradient(135deg,#16a34a,#15803d);padding:32px 40px;text-align:center;">' +
               '<h1 style="margin:0;color:#fff;font-size:22px;font-weight:800;">âœ… Pago Confirmado</h1>' +
-              '<p style="margin:8px 0 0;color:rgba(255,255,255,0.85);font-size:14px;">Karpus Kids â€” Recibo de Pago</p>' +
+              '<p style="margin:8px 0 0;color:rgba(255,255,255,0.85);font-size:14px;">Colegio Montessori Sonrisas Creativas — Recibo de Pago</p>' +
             '</div>' +
             '<div style="padding:32px 40px;">' +
               '<p style="margin:0 0 8px;color:#374151;font-size:15px;">Hola,</p>' +
@@ -609,7 +609,7 @@ export const DirectorApi = {
               '</div>' +
             '</div>' +
             '<div style="background:#f9fafb;border-top:1px solid #f0f0f0;padding:16px 40px;text-align:center;">' +
-              '<p style="margin:0;font-size:11px;color:#9ca3af;">Karpus Kids Â· Correo automÃ¡tico, por favor no respondas.</p>' +
+              '<p style="margin:0;font-size:11px;color:#9ca3af;">Colegio Montessori Sonrisas Creativas · Correo automático, por favor no respondas.</p>' +
             '</div>' +
           '</div></body></html>';
 

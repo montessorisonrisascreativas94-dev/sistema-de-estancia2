@@ -1,7 +1,7 @@
-import { ensureRole, supabase, initOneSignal } from '/js/shared/supabase.js';
+import { ensureRole, supabase, initOneSignal } from '../shared/supabase.js';
 import { AppState } from './state.js';
-import { Helpers } from '/js/shared/helpers.js';
-import { UIPremium } from '/js/shared/ui-premium.js';
+import { Helpers } from '../shared/helpers.js';
+import { UIPremium } from '../shared/ui-premium.js';
 import { WallModule } from './wall.module.js';
 import { DashboardService } from './dashboard.service.js';
 import { UIHelpers, DirectorUI } from './ui.module.js';
@@ -16,11 +16,11 @@ import { RoomsModule } from './rooms.module.js';
 import { AutomationModule } from './automation.js';
 import { AccessModule } from './access.module.js';
 import { AttendanceModule } from './attendance.module.js';
-import { BadgeSystem } from '/js/shared/badges.js';
-import { RealtimeManager } from '/js/shared/realtime-manager.js';
-import { QueryCache } from '/js/shared/query-cache.js';
-import { ImageLoader } from '/js/shared/image-loader.js';
-import { auditLog } from '/js/shared/db-utils.js';
+import { BadgeSystem } from '../shared/badges.js';
+import { RealtimeManager } from '../shared/realtime-manager.js';
+import { QueryCache } from '../shared/query-cache.js';
+import { ImageLoader } from '../shared/image-loader.js';
+import { auditLog } from '../shared/db-utils.js';
 const debounce = (fn, delay) => {
   let timeout;
   return (...args) => {
@@ -281,12 +281,12 @@ async function loadProfile() {
     // Actualizar avatares (usando los nuevos IDs �nicos)
     const sidebarAvatarImg = document.getElementById('sidebarProfileAvatar');
     if (sidebarAvatarImg) {
-      sidebarAvatarImg.src = profile.avatar_url || 'img/mundo.jpg';
+      sidebarAvatarImg.src = profile.avatar_url || 'img/monte.jpg';
     }
     
     const configAvatarImg = document.getElementById('configProfileAvatar');
     if (configAvatarImg) {
-      configAvatarImg.src = profile.avatar_url || 'img/mundo.jpg';
+      configAvatarImg.src = profile.avatar_url || 'img/monte.jpg';
     }
 
     // Inicializar ID de acceso QR de la directora
@@ -719,7 +719,7 @@ function _initAccesosSection() {
       img{width:160px;height:160px;}.name{font-size:14px;font-weight:900;color:#1e293b;margin-top:10px;}
       .mat{font-size:10px;color:#64748b;font-weight:700;margin-top:3px;}.hint{font-size:8px;color:#94a3b8;margin-top:6px;}</style>
     </head><body><div class="card">
-      <div class="logo">?? Karpus Kids</div>
+      <div class="logo">🎓 Colegio Montessori Sonrisas Creativas</div>
       <img src="${img}">
       <div class="name">${name}</div>
       <div class="mat">${matricula}</div>
@@ -802,7 +802,7 @@ async function _initDirectorAccessId(profile) {
     if (!img || !code) { Helpers.toast('Genera el QR primero', 'warning'); return; }
     const name = p?.name || 'Directora';
     const win = window.open('', '_blank');
-    win.document.write(`<!DOCTYPE html><html><head><title>Carnet ${name}</title><style>body{font-family:Arial,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;}.card{border:4px solid #7c3aed;border-radius:20px;padding:24px;text-align:center;max-width:260px;}.hdr{background:#7c3aed;color:white;margin:-24px -24px 16px;padding:12px;border-radius:16px 16px 0 0;font-weight:900;font-size:12px;text-transform:uppercase;}img{width:160px;height:160px;border-radius:8px;}.name{font-size:16px;font-weight:900;color:#1e293b;margin-top:12px;}.code{font-size:10px;color:#64748b;font-weight:700;margin-top:4px;}</style></head><body><div class="card"><div class="hdr">DIRECTORA � KARPUS KIDS</div><img src="${img}"><div class="name">${name}</div><div class="code">ID: ${code}</div></div><script>window.onload=()=>window.print()<\/script></body></html>`);
+    win.document.write(`<!DOCTYPE html><html><head><title>Carnet ${name}</title><style>body{font-family:Arial,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;}.card{border:4px solid #7c3aed;border-radius:20px;padding:24px;text-align:center;max-width:260px;}.hdr{background:#7c3aed;color:white;margin:-24px -24px 16px;padding:12px;border-radius:16px 16px 0 0;font-weight:900;font-size:12px;text-transform:uppercase;}img{width:160px;height:160px;border-radius:8px;}.name{font-size:16px;font-weight:900;color:#1e293b;margin-top:12px;}.code{font-size:10px;color:#64748b;font-weight:700;margin-top:4px;}</style></head><body><div class="card"><div class="hdr">DIRECTORA • COLEGIO MONTESSORI SONRISAS CREATIVAS</div><img src="${img}"><div class="name">${name}</div><div class="code">ID: ${code}</div></div><script>window.onload=()=>window.print()<\/script></body></html>`);
     win.document.close();
   };
 

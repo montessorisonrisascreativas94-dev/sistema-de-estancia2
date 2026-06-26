@@ -1,5 +1,5 @@
 /**
- * 📲 PWA Install Manager — Karpus Kids
+ * 📲 PWA Install Manager — Colegio Montessori Sonrisas Creativas
  * Detecta si la app está instalada y muestra banner de descarga si no lo está.
  * Funciona en login.html y en todos los paneles.
  */
@@ -48,7 +48,7 @@
     banner.innerHTML =
       '<div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center text-2xl flex-shrink-0">\uD83C\uDF93</div>' +
       '<div class="flex-1 min-w-0">' +
-        '<p class="font-black text-slate-800 text-sm leading-tight">Instala Karpus Kids</p>' +
+        '<p class="font-black text-slate-800 text-sm leading-tight">Instala Colegio Montessori Sonrisas Creativas</p>' +
         '<p class="text-[10px] font-bold text-slate-400 mt-0.5">Acceso r\u00E1pido desde tu pantalla de inicio</p>' +
       '</div>' +
       '<div class="flex flex-col gap-1.5 flex-shrink-0">' +

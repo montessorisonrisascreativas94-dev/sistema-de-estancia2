@@ -1,9 +1,9 @@
-import { supabase, sendPush } from '/js/shared/supabase.js';
+import { supabase, sendPush } from '../../shared/supabase.js';
 import { AppState } from '../state.js';
 import { MaestraApi } from '../api.js';
 import { UI } from './ui.js';
-import { notifyParents, showNotifyFeedback } from '/js/shared/notify-feedback.js';
-import { OfflineQueue } from '/js/shared/offline-queue.js';
+import { notifyParents, showNotifyFeedback } from '../../shared/notify-feedback.js';
+import { OfflineQueue } from '../../shared/offline-queue.js';
 
 const { safeToast, safeEscapeHTML, Modal } = UI;
 
@@ -217,7 +217,7 @@ export async function markAllPresent() {
       if (studentsToNotify.length > 0) {
         notifyParents({
           students: studentsToNotify,
-          title:   'Karpus Kids ✅',
+          title:   'Colegio Montessori Sonrisas Creativas ✅',
           message: 'Tu hijo/a ya se encuentra presente en su aula con su maestra.',
           type:    'attendance',
           link:    'panel_padres.html',

@@ -402,9 +402,9 @@ export const PaymentsModule = {
           <button onclick="document.getElementById('receiptModal').remove()"
             style="position:absolute;top:14px;right:14px;background:rgba(255,255,255,0.2);border:none;color:white;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;line-height:1;">×</button>
           <div style="width:56px;height:56px;background:rgba(255,255,255,0.95);border-radius:16px;margin:0 auto 12px;display:flex;align-items:center;justify-content:center;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.2);">
-            <img src="img/mundo.jpg" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none';this.parentElement.innerHTML='🎓'">
+            <img src="img/monte.jpg" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none';this.parentElement.innerHTML='🎓'">
           </div>
-          <h2 style="margin:0;color:white;font-family:sans-serif;font-size:20px;font-weight:900;letter-spacing:-0.3px;">Karpus Kids</h2>
+          <h2 style="margin:0;color:white;font-family:sans-serif;font-size:20px;font-weight:900;letter-spacing:-0.3px;">Colegio Montessori Sonrisas Creativas</h2>
           <p style="margin:4px 0 0;color:rgba(255,255,255,0.8);font-family:sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;">Recibo de Pago Oficial</p>
           <div style="margin-top:14px;background:rgba(255,255,255,0.15);border-radius:10px;padding:8px 16px;display:inline-block;">
             <span style="color:white;font-family:monospace;font-size:13px;font-weight:900;letter-spacing:2px;">${receiptNo}</span>
@@ -473,7 +473,7 @@ export const PaymentsModule = {
           <!-- Footer del recibo -->
           <div style="text-align:center;padding:12px;background:#f8fafc;border-radius:12px;border:1px dashed #e2e8f0;">
             <p style="margin:0;font-family:sans-serif;font-size:10px;color:#94a3b8;font-weight:600;">San Cristóbal, República Dominicana</p>
-            <p style="margin:4px 0 0;font-family:sans-serif;font-size:10px;color:#94a3b8;">Este recibo es un comprobante oficial de pago de Karpus Kids.</p>
+            <p style="margin:4px 0 0;font-family:sans-serif;font-size:10px;color:#94a3b8;">Este recibo es un comprobante oficial de pago de Colegio Montessori Sonrisas Creativas.</p>
             <p style="margin:4px 0 0;font-family:monospace;font-size:9px;color:#cbd5e1;">ID: ${receiptNo} · ${new Date().toLocaleDateString('es-DO')}</p>
           </div>
         </div>
@@ -533,7 +533,7 @@ export const PaymentsModule = {
       doc.setTextColor(255, 255, 255);
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(18);
-      doc.text('Karpus Kids', W / 2, 16, { align: 'center' });
+      doc.text('Colegio Montessori Sonrisas Creativas', W / 2, 16, { align: 'center' });
       doc.setFontSize(8);
       doc.setFont('helvetica', 'normal');
       doc.text('RECIBO DE PAGO OFICIAL', W / 2, 23, { align: 'center' });
@@ -619,7 +619,7 @@ export const PaymentsModule = {
       doc.setFontSize(7);
       doc.setFont('helvetica', 'normal');
       doc.text('San Cristóbal, República Dominicana', W / 2, y + 6, { align: 'center' });
-      doc.text('Este recibo es un comprobante oficial de pago de Karpus Kids.', W / 2, y + 11, { align: 'center' });
+      doc.text('Este recibo es un comprobante oficial de pago de Colegio Montessori Sonrisas Creativas.', W / 2, y + 11, { align: 'center' });
       doc.setFont('courier', 'normal');
       doc.text(`ID: ${data.receiptNo} · ${new Date().toLocaleDateString('es-DO')}`, W / 2, y + 16, { align: 'center' });
 

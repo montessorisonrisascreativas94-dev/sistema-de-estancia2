@@ -318,9 +318,6 @@ export const StudentsModule = {
     const password = document.getElementById('stPassword')?.value?.trim();
 
     if (!payload.name || payload.name.trim().length < 3) return Helpers.toast('Nombre inválido (min 3 caracteres)', 'warning');
-    // Solo validar datos del padre en creación sin hermano seleccionado
-    const hasSibling = !!payload._inheritedParentId;
-    if (!id && !hasSibling && (!payload.p1_name || !payload.p1_phone || !payload.p1_email)) return Helpers.toast('Datos del padre/madre 1 incompletos (o selecciona un hermano)', 'warning');
     
     UI.setLoading(true);
     try {

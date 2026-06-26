@@ -1,13 +1,13 @@
-import { ensureRole, supabase, initOneSignal, RealtimeUtils, emitEvent, sendPush } from '/js/shared/supabase.js';
-import { RealtimeManager } from '/js/shared/realtime-manager.js';
+import { ensureRole, supabase, initOneSignal, RealtimeUtils, emitEvent, sendPush } from '../shared/supabase.js';
+import { RealtimeManager } from '../shared/realtime-manager.js';
 import { AppState } from './state.js';
 import { MaestraApi } from './api.js';
-import { Helpers } from '/js/shared/helpers.js';
-import { WallModule } from '/js/shared/wall.js';
-import { ChatModule } from '/js/shared/chat.js';
-import { VideoCallModule } from '/js/shared/videocall.js';
-import { BadgeSystem } from '/js/shared/badges.js';
-import { ImageLoader } from '/js/shared/image-loader.js';
+import { Helpers } from '../shared/helpers.js';
+import { WallModule } from '../shared/wall.js';
+import { ChatModule } from '../shared/chat.js';
+import { VideoCallModule } from '../shared/videocall.js';
+import { BadgeSystem } from '../shared/badges.js';
+import { ImageLoader } from '../shared/image-loader.js';
 
 import * as Attendance from './modules/attendance.js';
 import * as Routine from './modules/routine.js';
@@ -17,7 +17,7 @@ import * as ChatApp from './modules/chat_app.js';
 import { PermitsModule } from './modules/permits.js';
 import { UI } from './modules/ui.js';
 
-import { UIPremium } from '/js/shared/ui-premium.js';
+import { UIPremium } from '../shared/ui-premium.js';
 
 window.safeToast = UI.safeToast;
 const { safeToast, safeEscapeHTML, Modal } = UI;
