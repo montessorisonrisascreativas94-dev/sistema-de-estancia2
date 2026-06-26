@@ -1,12 +1,14 @@
 ﻿﻿-- ============================================================
--- KARPUS KIDS — Schema Consolidado v2.0
+--MONTESSORIS — Schema Consolidado v2.0
 -- Incluye: tablas, RLS, funciones, triggers y migraciones
 -- Ejecutar en Supabase SQL Editor de arriba a abajo.
 -- Última actualización: 2026
+-- Supabase Project ID: yswizaskeftxpcphixiy
+-- Supabase REST API: https://yswizaskeftxpcphixiy.supabase.co/rest/v1/
 -- ============================================================
 
 -- ── 0. LIMPIEZA DE FUNCIONES ANTERIORES ──────────────────────
-DO $
+DO $$
 DECLARE fn record;
 BEGIN
   FOR fn IN
@@ -42,7 +44,7 @@ BEGIN
       fn.nspname, fn.proname,
       pg_get_function_identity_arguments(fn.oid));
   END LOOP;
-END $;
+END $$;
 
 -- ── 1. EXTENSIONES ──────────────────────────────────────────
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
@@ -1093,13 +1095,13 @@ CREATE TRIGGER trg_audit_payment AFTER INSERT OR UPDATE OR DELETE ON public.paym
 -- ── 8. POLÍTICAS RLS ─────────────────────────────────────────
 
 -- Eliminar políticas existentes
-DO $
+DO $$
 DECLARE pol record;
 BEGIN
   FOR pol IN SELECT policyname, tablename FROM pg_policies WHERE schemaname='public' LOOP
     EXECUTE format('DROP POLICY IF EXISTS %I ON public.%I', pol.policyname, pol.tablename);
   END LOOP;
-END $;
+END $$;
 
 -- PROFILES
 CREATE POLICY "profiles_select" ON public.profiles FOR SELECT USING (
