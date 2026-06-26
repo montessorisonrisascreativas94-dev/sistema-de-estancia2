@@ -23,14 +23,14 @@
       --green: #43A047;
       --yellow: #FFD54F;
       --white: #FFFFFF;
-      --beige: #FFF8ED;
+      --beige: #F5F5F5;
       --pink: #F06292;
       --purple: #9C27B0;
     }
     
     body {
       font-family: 'Fredoka', sans-serif;
-      background: var(--beige);
+      background: #FFFFFF;
       color: #333;
       overflow-x: hidden;
     }
@@ -138,7 +138,7 @@
       position: relative;
       padding: 160px 40px 80px;
       overflow: hidden;
-      background: linear-gradient(135deg, var(--beige) 0%, #FFF3E0 100%);
+      background: linear-gradient(135deg, #FFFFFF 0%, #F8F8F8 100%);
     }
     
     /* Brushstroke background */
@@ -196,6 +196,29 @@
     @keyframes twinkle {
       0%, 100% { transform: scale(1) rotate(0deg); opacity: 0.4; }
       50% { transform: scale(1.2) rotate(15deg); opacity: 0.7; }
+    }
+
+    /* Hero Logo Corner */
+    .hero-logo {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      width: 80px;
+      height: 80px;
+      background: white;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 6px 20px rgba(30, 90, 168, 0.12);
+      z-index: 20;
+    }
+
+    .hero-logo img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      padding: 8px;
     }
     
     .deco-heart {
@@ -533,6 +556,14 @@
     .feature-icon {
       font-size: 80px;
       margin-bottom: 24px;
+      display: inline-block;
+      width: 120px;
+      height: 120px;
+      background: linear-gradient(135deg, rgba(247,147,30,0.1), rgba(67,160,71,0.1));
+      border-radius: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
     
     .feature-card h3 {
@@ -549,7 +580,7 @@
     
     /* Programs Section */
     .programs-section {
-      background: linear-gradient(180deg, var(--beige) 0%, #E8F5E9 100%);
+      background: linear-gradient(180deg, #FFFFFF 0%, #F8F8F8 100%);
     }
     
     .programs-grid {
@@ -666,7 +697,7 @@
     
     /* About Section */
     .about-section {
-      background: linear-gradient(180deg, #E3F2FD 0%, var(--beige) 100%);
+      background: linear-gradient(180deg, #F5F5F5 0%, #FFFFFF 100%);
     }
     
     .about-container {
@@ -736,15 +767,16 @@
     }
     
     .check-list li i {
-      width: 40px;
-      height: 40px;
-      background: var(--yellow);
-      color: var(--blue);
-      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      background: linear-gradient(135deg, var(--green), #66BB6A);
+      color: white;
+      border-radius: 12px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 22px;
+      font-size: 26px;
+      box-shadow: 0 6px 16px rgba(67, 160, 71, 0.2);
     }
     
     /* Testimonials */
@@ -825,7 +857,7 @@
     
     /* Contact Section */
     .contact-section {
-      background: linear-gradient(180deg, var(--beige) 0%, #FFF3E0 100%);
+      background: linear-gradient(180deg, #FFFFFF 0%, #F8F8F8 100%);
     }
     
     .contact-container {
@@ -1253,6 +1285,11 @@
   
   <!-- Hero Section -->
   <section class="hero" id="inicio">
+    <!-- Logo in corner -->
+    <div class="hero-logo">
+      <img src="img/MONTES.PNG" alt="Colegio Montessori Sonrisas Creativas">
+    </div>
+
     <div class="brush-bg">
       <div class="brushstroke brush-1"></div>
       <div class="brushstroke brush-2"></div>
@@ -1297,43 +1334,65 @@
         <div class="triangle-mascot">
           <div class="triangle">
             <svg viewBox="0 0 200 200">
-              <defs>
-                <filter id="triangle-texture">
-                  <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="5" result="noise"/>
-                  <feDisplacementMap in="SourceGraphic" in2="noise" scale="3"/>
-                </filter>
-              </defs>
-              <polygon points="100,15 185,180 15,180" fill="#F7931E" stroke="#E67E22" stroke-width="5"/>
-              <circle cx="75" cy="110" r="16" fill="white"/>
-              <circle cx="125" cy="110" r="16" fill="white"/>
-              <circle cx="75" cy="110" r="8" fill="#333"/>
-              <circle cx="125" cy="110" r="8" fill="#333"/>
-              <circle cx="78" cy="107" r="3" fill="white"/>
-              <circle cx="128" cy="107" r="3" fill="white"/>
-              <path d="M 65 140 Q 100 170 135 140" stroke="#333" stroke-width="6" fill="none" stroke-linecap="round"/>
-              <line x1="55" y1="50" x2="40" y2="25" stroke="#E67E22" stroke-width="8" stroke-linecap="round"/>
-              <line x1="145" y1="50" x2="160" y2="25" stroke="#E67E22" stroke-width="8" stroke-linecap="round"/>
-              <rect x="25" y="10" width="35" height="8" rx="2" fill="#795548" transform="rotate(-30 42 14)"/>
-              <polygon points="55,5 50,20 60,20" fill="#FFD54F" transform="rotate(-30 55 12)"/>
+              <!-- Triangle body -->
+              <polygon points="100,20 185,180 15,180" fill="#F7931E" stroke="#E67E22" stroke-width="6"/>
+              <!-- Left eye white -->
+              <circle cx="70" cy="100" r="18" fill="white"/>
+              <!-- Right eye white -->
+              <circle cx="130" cy="100" r="18" fill="white"/>
+              <!-- Left eye pupil -->
+              <circle cx="70" cy="100" r="10" fill="#333"/>
+              <!-- Right eye pupil -->
+              <circle cx="130" cy="100" r="10" fill="#333"/>
+              <!-- Left eye shine -->
+              <circle cx="72" cy="97" r="4" fill="white"/>
+              <!-- Right eye shine -->
+              <circle cx="132" cy="97" r="4" fill="white"/>
+              <!-- Smile -->
+              <path d="M 60 135 Q 100 160 140 135" stroke="#333" stroke-width="7" fill="none" stroke-linecap="round"/>
+              <!-- Left arm -->
+              <line x1="15" y1="120" x2="-15" y2="90" stroke="#333" stroke-width="6" stroke-linecap="round"/>
+              <!-- Right arm -->
+              <line x1="185" y1="120" x2="215" y2="90" stroke="#333" stroke-width="6" stroke-linecap="round"/>
+              <!-- Left leg -->
+              <line x1="60" y1="180" x2="45" y2="220" stroke="#333" stroke-width="6" stroke-linecap="round"/>
+              <!-- Right leg -->
+              <line x1="140" y1="180" x2="155" y2="220" stroke="#333" stroke-width="6" stroke-linecap="round"/>
             </svg>
           </div>
         </div>
         
         <div class="hexagon-mascot">
           <div class="hexagon">
-            <svg viewBox="0 0 200 200">
-              <polygon points="100,10 170,45 170,115 100,150 30,115 30,45" fill="#43A047" stroke="#388E3C" stroke-width="5"/>
-              <ellipse cx="100" cy="28" rx="45" ry="18" fill="#1E5AA8"/>
-              <circle cx="75" cy="85" r="16" fill="white"/>
-              <circle cx="125" cy="85" r="16" fill="white"/>
-              <circle cx="75" cy="85" r="8" fill="#333"/>
-              <circle cx="125" cy="85" r="8" fill="#333"/>
-              <circle cx="78" cy="82" r="3" fill="white"/>
-              <circle cx="128" cy="82" r="3" fill="white"/>
-              <path d="M 65 110 Q 100 135 135 110" stroke="#333" stroke-width="6" fill="none" stroke-linecap="round"/>
-              <line x1="25" y1="75" x2="0" y2="65" stroke="#388E3C" stroke-width="8" stroke-linecap="round"/>
-              <line x1="25" y1="85" x2="0" y2="85" stroke="#388E3C" stroke-width="8" stroke-linecap="round"/>
-              <line x1="25" y1="95" x2="0" y2="105" stroke="#388E3C" stroke-width="8" stroke-linecap="round"/>
+            <svg viewBox="0 0 200 240">
+              <!-- Baseball cap -->
+              <ellipse cx="100" cy="15" rx="50" ry="18" fill="#1E5AA8" stroke="#0D3A7A" stroke-width="3"/>
+              <!-- Cap visor -->
+              <path d="M 60 25 Q 50 40 55 50 L 145 50 Q 150 40 140 25" fill="#1E5AA8" stroke="#0D3A7A" stroke-width="3"/>
+              <!-- Pentagon body -->
+              <polygon points="100,50 170,85 150,160 50,160 30,85" fill="#43A047" stroke="#388E3C" stroke-width="6"/>
+              <!-- Left eye white -->
+              <circle cx="75" cy="110" r="16" fill="white"/>
+              <!-- Right eye white -->
+              <circle cx="125" cy="110" r="16" fill="white"/>
+              <!-- Left eye pupil -->
+              <circle cx="75" cy="110" r="9" fill="#333"/>
+              <!-- Right eye pupil -->
+              <circle cx="125" cy="110" r="9" fill="#333"/>
+              <!-- Left eye shine -->
+              <circle cx="77" cy="108" r="3" fill="white"/>
+              <!-- Right eye shine -->
+              <circle cx="127" cy="108" r="3" fill="white"/>
+              <!-- Smile -->
+              <path d="M 65 140 Q 100 160 135 140" stroke="#333" stroke-width="6" fill="none" stroke-linecap="round"/>
+              <!-- Left arm -->
+              <line x1="30" y1="100" x2="-5" y2="85" stroke="#333" stroke-width="6" stroke-linecap="round"/>
+              <!-- Right arm -->
+              <line x1="170" y1="100" x2="205" y2="85" stroke="#333" stroke-width="6" stroke-linecap="round"/>
+              <!-- Left leg -->
+              <line x1="70" y1="160" x2="55" y2="205" stroke="#333" stroke-width="6" stroke-linecap="round"/>
+              <!-- Right leg -->
+              <line x1="130" y1="160" x2="145" y2="205" stroke="#333" stroke-width="6" stroke-linecap="round"/>
             </svg>
           </div>
         </div>
