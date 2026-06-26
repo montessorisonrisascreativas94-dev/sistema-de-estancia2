@@ -7,7 +7,7 @@
 -- Insertar o actualizar el perfil con rol admin
 INSERT INTO public.profiles (id, email, name, role, accepted_terms, created_at)
 VALUES (
-  'c1e72617-ab8f-44c0-b1eb-cdd92eda62e7',
+  '5b6e8359-1a65-4d26-aba4-ca48b6b66409',
   'impulsodigital@gmail.com',
   'Administrador',
   'admin',
@@ -21,4 +21,4 @@ ON CONFLICT (id) DO UPDATE SET
 
 -- Verificar que quedó bien
 SELECT id, email, name, role FROM public.profiles
-WHERE id = 'c1e72617-ab8f-44c0-b1eb-cdd92eda62e7';
+WHERE id = '5b6e8359-1a65-4d26-aba4-ca48b6b66409';
