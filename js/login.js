@@ -57,9 +57,9 @@ const RATE_LIMIT = {
 document.addEventListener('DOMContentLoaded', async () => {
   try { initOneSignal(); } catch (_) {}
 
-  const acceptTerms  = document.getElementById('acceptTerms');
-  const termsWrapper = document.getElementById('termsWrapper');
-  const loginForm    = document.getElementById('loginForm');
+  const acceptTerms  = document.getElementById('terms');
+  const termsWrapper = document.querySelector('.terms-row');
+  const loginForm    = document.getElementById('login-form');
 
   // ── Verificar si ya hay sesión activa ────────────────────────────────────
   const urlParams = new URLSearchParams(window.location.search);
@@ -142,14 +142,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const email    = document.getElementById('email').value.trim();
     const password = document.getElementById('password').value;
-    const submitBtn = document.getElementById('btnLogin');
-    const btnText   = document.getElementById('btnLoginText');
-    const btnIcon   = document.getElementById('btnLoginIcon');
-    const errorDiv  = document.getElementById('loginError');
-    const originalText = btnText?.textContent || 'Ingresar al Panel';
+    const submitBtn = document.getElementById('submitBtn');
+    const errorDiv  = document.getElementById('login-error');
+    const originalText = submitBtn?.innerHTML || 'Ingresar al Panel';
 
     const showError = (msg) => {
-      if (errorDiv) { errorDiv.textContent = msg; errorDiv.classList.remove('hidden'); }
+      if (errorDiv) { errorDiv.textContent = msg; errorDiv.classList.add('show'); }
       else alert(msg);
     };
 
@@ -176,10 +174,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
 
-    if (errorDiv) errorDiv.classList.add('hidden');
+    if (errorDiv) errorDiv.classList.remove('show');
     if (submitBtn) submitBtn.disabled = true;
-    if (btnText) btnText.textContent = 'Verificando...';
-    if (btnIcon) btnIcon.textContent = '⏳';
+    submitBtn.innerHTML = '<span style="display:inline-block;animation:spin .8s linear infinite;font-size:20px">⏳</span> Verificando...';
 
     try {
       // 1. Autenticación
@@ -243,13 +240,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
       }
 
-      const errorDiv = document.getElementById('loginError');
-      if (errorDiv) { errorDiv.textContent = errorMessage; errorDiv.classList.remove('hidden'); }
+      const errorDiv = document.getElementById('login-error');
+      if (errorDiv) { errorDiv.textContent = errorMessage; errorDiv.classList.add('show'); }
       else alert(errorMessage);
 
       if (submitBtn) submitBtn.disabled = false;
-      if (btnText) btnText.textContent = originalText;
-      if (btnIcon) btnIcon.textContent = '→';
+      submitBtn.innerHTML = originalText;
     }
   });
 });

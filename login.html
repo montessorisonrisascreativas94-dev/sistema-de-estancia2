@@ -553,7 +553,7 @@
 
     <!-- Photo frame -->
     <div class="photo-blob">
-      <img src="img/monte.png" alt="Niños Montessori">
+      <img src="img/monte.jpg" alt="Niños Montessori">
     </div>
 
     <!-- Triangle with paintbrush (bottom-left, jumping) -->
@@ -943,31 +943,14 @@ if(togglePw){
 /* ============================================================
    FORM SUBMIT
 ============================================================ */
-const form=document.getElementById('login-form');
-const errorDiv=document.getElementById('login-error');
-if(form){
-  form.addEventListener('submit',async(e)=>{
-    e.preventDefault();
-    errorDiv.classList.remove('show');
-    const terms=document.getElementById('terms');
-    if(!terms.checked){
-      errorDiv.textContent='Debes aceptar la Política de Privacidad y los Términos de Uso.';
-      errorDiv.classList.add('show');
-      return;
-    }
-    submitBtn.disabled=true;
-    submitBtn.innerHTML='<span style="display:inline-block;animation:spin .8s linear infinite;font-size:20px">⏳</span> Verificando...';
-    await new Promise(r=>setTimeout(r,400));
-    submitBtn.disabled=false;
-    submitBtn.innerHTML='<i class="bi bi-stars"></i> ✨ Entrar a Mi Mundo Montessori';
-    if(typeof window.handleLoginSubmit==='function') window.handleLoginSubmit(e);
-  });
-}
+
 
 /* Spin keyframe */
 const sk=document.createElement('style');
 sk.textContent='@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}';
 document.head.appendChild(sk);
 </script>
+<script src="js/shared/supabase-js.min.js"></script>
+<script type="module" src="js/login.js"></script>
 </body>
 </html>
