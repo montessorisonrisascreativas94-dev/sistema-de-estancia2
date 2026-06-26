@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Colegio Montessori Sonrisas Creativas - Acceso</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --blue: #1E5AA8;
+      --orange: #F7931E;
+      --green: #43A047;
+      --yellow: #FFD54F;
+      --white: #FFFFFF;
+      --beige: #FFF8ED;
+    }
+
+    body {
+      font-family: 'Fredoka', sans-serif;
+      background: linear-gradient(135deg, var(--beige) 0%, #FFEBD7 100%);
+      min-height: 100vh;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    .handwritten {
+      font-family: 'Patrick Hand', cursive;
+    }
+
+    /* Floating decorative elements */
+    .floating-element {
+      position: fixed;
+      pointer-events: none;
+      z-index: 1;
+      opacity: 0.3;
+      animation: float 6s ease-in-out infinite;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0) rotate(0deg); }
+      50% { transform: translateY(-20px) rotate(10deg); }
+    }
+
+    .container {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      position: relative;
+      z-index: 10;
+    }
+
+    .login-card {
+      background: rgba(255,255,255,0.92);
+      backdrop-filter: blur(6px);
+      border-radius: 40px;
+      padding: 46px 36px;
+      max-width: 460px;
+      width: 100%;
+      box-shadow: 0 30px 80px rgba(30, 90, 168, 0.12);
+      position: relative;
+      overflow: visible;
+      border: 2px solid rgba(255, 240, 220, 0.6);
+    }
+
+    .login-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 8px;
+      background: linear-gradient(90deg, var(--orange), var(--yellow), var(--green), var(--blue));
+    }
+
+    .logo-section {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .logo-container {
+      width: 110px;
+      height: 110px;
+      background: linear-gradient(135deg, var(--blue), var(--green));
+      border-radius: 26px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 18px;
+      box-shadow: 0 12px 36px rgba(30, 90, 168, 0.18);
+      overflow: hidden;
+      border: 6px solid rgba(255,255,255,0.12);
+    }
+
+    .logo-container img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .school-name {
+      font-size: 1.9rem;
+      font-weight: 700;
+      color: var(--blue);
+      margin-bottom: 6px;
+    }
+
+    .school-tagline {
+      font-size: 0.95rem;
+      color: #888;
+    }
+
+    .form-group {
+      margin-bottom: 28px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--blue);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 12px;
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 18px 22px;
+      border: 3px solid var(--beige);
+      border-radius: 18px;
+      font-size: 1rem;
+      font-weight: 500;
+      color: var(--blue);
+      background: var(--beige);
+      transition: all 0.3s ease;
+      font-family: 'Fredoka', sans-serif;
+    }
+
+    .form-input:focus {
+      outline: none;
+      border-color: var(--orange);
+      background: white;
+      box-shadow: 0 0 0 5px rgba(247, 147, 30, 0.1);
+    }
+
+    .password-wrapper {
+      position: relative;
+    }
+
+    .toggle-password {
+      position: absolute;
+      right: 18px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: #888;
+      font-size: 1.4rem;
+      cursor: pointer;
+      transition: color 0.3s ease;
+    }
+
+    .toggle-password:hover {
+      color: var(--orange);
+    }
+
+    .terms-wrapper {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      padding: 18px;
+      background: var(--beige);
+      border-radius: 18px;
+      margin-bottom: 28px;
+    }
+
+    .terms-checkbox {
+      margin-top: 4px;
+      width: 20px;
+      height: 20px;
+      accent-color: var(--green);
+      cursor: pointer;
+    }
+
+    .terms-text {
+      font-size: 0.9rem;
+      color: #666;
+      line-height: 1.6;
+    }
+
+    .terms-link {
+      color: var(--blue);
+      font-weight: 700;
+      text-decoration: none;
+      transition: color 0.3s ease;
+    }
+
+    .terms-link:hover {
+      color: var(--orange);
+      text-decoration: underline;
+    }
+
+    .btn-primary {
+      width: 100%;
+      padding: 18px;
+      background: linear-gradient(135deg, var(--orange), #FFB74D);
+      color: white;
+      font-size: 1.1rem;
+      font-weight: 700;
+      border: none;
+      border-radius: 18px;
+      cursor: pointer;
+      box-shadow: 0 10px 30px rgba(247, 147, 30, 0.35);
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      font-family: 'Fredoka', sans-serif;
+    }
+
+    /* Small decorative brushstroke behind card */
+    .card-brush {
+      position: absolute;
+      top: -40px;
+      right: -60px;
+      width: 220px;
+      height: 120px;
+      background: linear-gradient(90deg, rgba(247,147,30,0.18), rgba(67,160,71,0.12));
+      transform: rotate(-18deg);
+      border-radius: 30px;
+      filter: blur(10px);
+      z-index: 2;
+      pointer-events: none;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 18px 45px rgba(247, 147, 30, 0.45);
+    }
+
+    .btn-primary:active {
+      transform: translateY(-1px);
+    }
+
+    .forgot-password {
+      text-align: center;
+      margin-top: 24px;
+    }
+
+    .forgot-link {
+      font-size: 0.95rem;
+      color: #888;
+      font-weight: 600;
+      text-decoration: none;
+      transition: color 0.3s ease;
+    }
+
+    .forgot-link:hover {
+      color: var(--blue);
+    }
+
+    .back-to-site {
+      text-align: center;
+      margin-top: 32px;
+      padding-top: 28px;
+      border-top: 2px solid var(--beige);
+    }
+
+    .back-link {
+      font-size: 0.95rem;
+      color: #888;
+      font-weight: 600;
+      text-decoration: none;
+      transition: color 0.3s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .back-link:hover {
+      color: var(--green);
+    }
+
+    .error-message {
+      background: rgba(244, 67, 54, 0.1);
+      border: 2px solid rgba(244, 67, 54, 0.2);
+      border-radius: 16px;
+      padding: 14px 18px;
+      color: #D32F2F;
+      font-size: 0.9rem;
+      font-weight: 600;
+      margin-bottom: 24px;
+      display: none;
+    }
+
+    .error-message.show {
+      display: block;
+    }
+
+    /* Mascots */
+    .corner-mascot {
+      position: fixed;
+      width: 120px;
+      height: 120px;
+      animation: float 4s ease-in-out infinite;
+      z-index: 5;
+      opacity: 0.9;
+    }
+
+    .corner-mascot.bottom-left {
+      bottom: 30px;
+      left: 30px;
+    }
+
+    .corner-mascot.bottom-right {
+      bottom: 30px;
+      right: 30px;
+      animation-delay: 1s;
+    }
+
+    @media (max-width: 640px) {
+      .login-card {
+        padding: 40px 24px;
+      }
+
+      .school-name {
+        font-size: 1.5rem;
+      }
+
+      .corner-mascot {
+        width: 80px;
+        height: 80px;
+        bottom: 20px;
+      }
+
+      .corner-mascot.bottom-left {
+        left: 20px;
+      }
+
+      .corner-mascot.bottom-right {
+        right: 20px;
+      }
+    }
+
+    /* Tablet adjustments */
+    @media (max-width: 900px) {
+      .container { padding: 30px; }
+      .login-card { max-width: 560px; padding: 36px 28px; margin: 20px; }
+      .logo-container { width: 96px; height: 96px; }
+      .school-name { font-size: 1.8rem; }
+      .corner-mascot { width: 100px; height: 100px; }
+      .corner-mascot.bottom-left { left: 18px; bottom: 18px; }
+      .corner-mascot.bottom-right { right: 18px; bottom: 18px; }
+    }
+
+    /* Very small devices: simplify decorations */
+    @media (max-width: 420px) {
+      .floating-element { display: none; }
+      .card-brush { display: none; }
+      .corner-mascot { display: none; }
+      .login-card { padding: 26px 16px; border-radius: 22px; }
+      .logo-container { width: 78px; height: 78px; }
+      .school-name { font-size: 1.45rem; }
+      .btn-primary { padding: 14px; font-size: 1rem; }
+    }
+  </style>
+</head>
+<body>
+  
+  <!-- Floating decorative elements -->
+  <div class="floating-element" style="top: 15%; left: 5%; font-size: 40px;">⭐</div>
+  <div class="floating-element" style="top: 30%; right: 8%; font-size: 30px; animation-delay: 1s;">❤️</div>
+  <div class="floating-element" style="top: 60%; left: 8%; font-size: 35px; animation-delay: 2s;">✨</div>
+  <div class="floating-element" style="top: 75%; right: 5%; font-size: 28px; animation-delay: 0.5s;">🌟</div>
+
+  <!-- Sun decorative (top-right) -->
+  <div style="position: fixed; top: 18px; right: 18px; z-index: 2; opacity: 0.95; pointer-events: none;">
+    <svg width="84" height="84" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="50" cy="50" r="22" fill="#FFD54F" />
+      <g stroke="#FFD54F" stroke-width="4" stroke-linecap="round">
+        <line x1="50" y1="6" x2="50" y2="18" />
+        <line x1="50" y1="82" x2="50" y2="94" />
+        <line x1="6" y1="50" x2="18" y2="50" />
+        <line x1="82" y1="50" x2="94" y2="50" />
+        <line x1="20" y1="20" x2="30" y2="30" />
+        <line x1="70" y1="70" x2="80" y2="80" />
+        <line x1="20" y1="80" x2="30" y2="70" />
+        <line x1="70" y1="30" x2="80" y2="20" />
+      </g>
+    </svg>
+  </div>
+
+  <!-- Triangle mascot -->
+  <div class="corner-mascot bottom-left">
+    <svg viewBox="0 0 200 200">
+      <polygon points="100,15 185,180 15,180" fill="#F7931E" stroke="#E67E22" stroke-width="5"/>
+      <circle cx="75" cy="110" r="16" fill="white"/>
+      <circle cx="125" cy="110" r="16" fill="white"/>
+      <circle cx="75" cy="110" r="8" fill="#333"/>
+      <circle cx="125" cy="110" r="8" fill="#333"/>
+      <circle cx="78" cy="107" r="3" fill="white"/>
+      <circle cx="128" cy="107" r="3" fill="white"/>
+      <path d="M 65 140 Q 100 170 135 140" stroke="#333" stroke-width="6" fill="none" stroke-linecap="round"/>
+      <line x1="55" y1="50" x2="40" y2="25" stroke="#E67E22" stroke-width="8" stroke-linecap="round"/>
+      <line x1="145" y1="50" x2="160" y2="25" stroke="#E67E22" stroke-width="8" stroke-linecap="round"/>
+      <rect x="25" y="10" width="35" height="8" rx="2" fill="#795548" transform="rotate(-30 42 14)"/>
+      <polygon points="55,5 50,20 60,20" fill="#FFD54F" transform="rotate(-30 55 12)"/>
+    </svg>
+  </div>
+
+  <!-- Hexagon mascot -->
+  <div class="corner-mascot bottom-right">
+    <svg viewBox="0 0 200 200">
+      <polygon points="100,10 170,45 170,115 100,150 30,115 30,45" fill="#43A047" stroke="#388E3C" stroke-width="5"/>
+      <ellipse cx="100" cy="28" rx="45" ry="18" fill="#1E5AA8"/>
+      <circle cx="75" cy="85" r="16" fill="white"/>
+      <circle cx="125" cy="85" r="16" fill="white"/>
+      <circle cx="75" cy="85" r="8" fill="#333"/>
+      <circle cx="125" cy="85" r="8" fill="#333"/>
+      <circle cx="78" cy="82" r="3" fill="white"/>
+      <circle cx="128" cy="82" r="3" fill="white"/>
+      <path d="M 65 110 Q 100 135 135 110" stroke="#333" stroke-width="6" fill="none" stroke-linecap="round"/>
+      <line x1="25" y1="75" x2="0" y2="65" stroke="#388E3C" stroke-width="8" stroke-linecap="round"/>
+      <line x1="25" y1="85" x2="0" y2="85" stroke="#388E3C" stroke-width="8" stroke-linecap="round"/>
+      <line x1="25" y1="95" x2="0" y2="105" stroke="#388E3C" stroke-width="8" stroke-linecap="round"/>
+    </svg>
+  </div>
+
+  <div class="container">
+    <div class="login-card">
+      <div class="card-brush" aria-hidden="true"></div>
+      <div class="logo-section">
+        <div class="logo-container">
+          <img src="/img/monte.jpg" alt="Colegio Montessori Sonrisas Creativas">
+        </div>
+        <h1 class="school-name handwritten">Sonrisas Creativas</h1>
+        <p class="school-tagline">Colegio Montessori</p>
+      </div>
+
+      <div id="login-error" class="error-message"></div>
+
+      <form id="login-form">
+        <div class="form-group">
+          <label class="form-label" for="email">Correo Electrónico</label>
+          <input id="email" type="email" class="form-input" placeholder="tu@correo.com" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="password">Contraseña</label>
+          <div class="password-wrapper">
+            <input id="password" type="password" class="form-input" placeholder="••••••••" required>
+            <button type="button" id="toggle-password" class="toggle-password">
+              👁
+            </button>
+          </div>
+        </div>
+
+        <div class="terms-wrapper">
+          <input type="checkbox" id="terms" class="terms-checkbox" required>
+          <label for="terms" class="terms-text">
+            Acepto la 
+            <a href="politica-privacidad.html" class="terms-link" target="_blank">Política de Privacidad</a> 
+            y los 
+            <a href="terminos-uso.html" class="terms-link" target="_blank">Términos de Uso</a>
+          </label>
+        </div>
+
+        <button type="submit" class="btn-primary">
+          <i class="bi bi-person-check"></i>
+          Ingresar al Panel
+        </button>
+      </form>
+
+      <div class="forgot-password">
+        <a href="recuperar.html" class="forgot-link">¿Olvidaste tu contraseña?</a>
+      </div>
+
+      <div class="back-to-site">
+        <a href="index.html" class="back-link">
+          <i class="bi bi-arrow-left"></i>
+          Volver al sitio
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('toggle-password').addEventListener('click', () => {
+      const passwordInput = document.getElementById('password');
+      const toggleBtn = document.getElementById('toggle-password');
+
+      if (passwordInput.type === 'password') {
+        passwordInput.type = 'text';
+        toggleBtn.textContent = '🙈';
+      } else {
+        passwordInput.type = 'password';
+        toggleBtn.textContent = '👁';
+      }
+    });
+  </script>
+</body>
+</html>
