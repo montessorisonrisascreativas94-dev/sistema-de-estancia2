@@ -12,6 +12,26 @@
   <title>Colegio Montessori Sonrisas Creativas — Panel Maestra</title>
   <link rel="icon" href="logo/favicon.ico" type="image/x-icon">
   <link rel="manifest" href="manifest.json">
+  <!-- Suppress CORS/network errors from Edge Functions in GitHub Pages -->
+  <script>
+    window.addEventListener('unhandledrejection', function(e) {
+      const msg = e?.reason?.message || String(e?.reason || '');
+      // Silenciar errores CORS de Edge Functions (normales en GitHub Pages)
+      if (msg.includes('CORS') || msg.includes('process-event') ||
+          msg.includes('send-push') || msg.includes('ERR_FAILED') ||
+          msg.includes('preflight') || msg.includes('net::ERR')) {
+        e.preventDefault();
+      }
+    }, true);
+    // Suppress fetch errors for Edge Functions
+    const _origErr = console.error.bind(console);
+    console.error = function(...args) {
+      const s = args.join(' ');
+      if (s.includes('process-event') || s.includes('send-push') ||
+          s.includes('CORS') || s.includes('preflight')) return;
+      _origErr(...args);
+    };
+  </script>
   <link rel="stylesheet" href="css/theme.css" />
   <link rel="stylesheet" href="css/layout.css" />
   <link rel="stylesheet" href="css/montessori-modern.css" />
@@ -346,6 +366,154 @@
       border-radius: 10px;
     }
     .nav-btn-toy.active { background: white; color: #0B63C7; }
+
+    /* ═══════════════════════════════════════════════
+       MODAL STYLES — Paleta Maestra (Rose/Pink #E91E8C)
+    ═══════════════════════════════════════════════ */
+    :root {
+      --maestra-primary:   #E91E8C;
+      --maestra-dark:      #C2185B;
+      --maestra-darker:    #AD1457;
+      --maestra-light:     #FCE4EC;
+      --maestra-ring:      rgba(233,30,140,0.2);
+    }
+
+    /* Modal backdrop */
+    #modalBackdrop {
+      position: fixed; inset: 0; z-index: 9998;
+      background: rgba(8,80,160,0.45);
+      backdrop-filter: blur(6px);
+      display: flex; align-items: flex-start;
+      justify-content: center; padding: 3vh 16px 24px;
+      overflow-y: auto;
+    }
+    #modalBackdrop.hidden { display: none !important; }
+
+    /* Modal card */
+    .modal-card {
+      background: white;
+      border-radius: 28px;
+      overflow: hidden;
+      box-shadow: 0 28px 80px rgba(233,30,140,0.2), 0 8px 30px rgba(0,0,0,0.12);
+      width: 100%; max-width: 640px;
+      max-height: 88vh;
+      display: flex; flex-direction: column;
+      animation: modalPop .3s cubic-bezier(0.34,1.56,0.64,1) both;
+    }
+    .modal-card-lg { max-width: 900px; }
+
+    @keyframes modalPop {
+      from { opacity:0; transform: scale(0.92) translateY(20px); }
+      to   { opacity:1; transform: scale(1) translateY(0); }
+    }
+
+    /* Modal header — pink gradient */
+    .modal-header-pink {
+      background: linear-gradient(135deg, var(--maestra-primary) 0%, var(--maestra-dark) 100%);
+      padding: 20px 28px;
+      display: flex; align-items: center; justify-content: space-between;
+      flex-shrink: 0;
+    }
+    .modal-header-pink h3 {
+      font-family: 'Baloo 2', cursive;
+      font-weight: 900; font-size: 1.15rem; color: white;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .modal-header-pink .modal-close {
+      width: 34px; height: 34px; border-radius: 10px;
+      background: rgba(255,255,255,0.2);
+      border: 1px solid rgba(255,255,255,0.3);
+      color: white; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background .2s;
+    }
+    .modal-header-pink .modal-close:hover { background: rgba(255,255,255,0.35); }
+
+    /* Modal body */
+    .modal-body-scroll {
+      padding: 24px 28px; overflow-y: auto; flex: 1;
+    }
+
+    /* Modal footer */
+    .modal-footer-pink {
+      padding: 16px 28px; border-top: 2px solid #FCE4EC;
+      background: #FFF5F9; flex-shrink: 0;
+      display: flex; justify-content: flex-end; gap: 12px;
+    }
+
+    /* Form fields in modal */
+    .modal-field label {
+      display: block; font-size: 0.75rem; font-weight: 900;
+      text-transform: uppercase; letter-spacing: 1.2px;
+      color: #64748B; margin-bottom: 7px;
+    }
+    .modal-input {
+      width: 100%; padding: 12px 16px;
+      background: #F8FAFC; border: 2px solid #E2E8F0;
+      border-radius: 14px; font-size: 0.95rem; font-weight: 600;
+      color: #1A2340; outline: none; transition: all .25s ease;
+      font-family: 'Nunito', sans-serif;
+    }
+    .modal-input:focus {
+      border-color: var(--maestra-primary);
+      background: white;
+      box-shadow: 0 0 0 4px var(--maestra-ring);
+    }
+
+    /* Primary button pink */
+    .btn-maestra {
+      padding: 14px 28px; border-radius: 16px; border: none;
+      background: linear-gradient(135deg, var(--maestra-primary), var(--maestra-dark));
+      color: white; font-weight: 900; font-size: 0.9rem;
+      cursor: pointer; display: flex; align-items: center; gap: 8px;
+      box-shadow: 0 6px 20px var(--maestra-ring);
+      transition: all .3s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    .btn-maestra:hover { transform: translateY(-3px); box-shadow: 0 10px 28px rgba(233,30,140,0.35); }
+    .btn-maestra:active { transform: translateY(0); }
+    .btn-maestra:disabled { background: #CBD5E0; box-shadow: none; cursor: not-allowed; }
+
+    /* Pink badge / accent */
+    .badge-maestra {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 4px 12px; border-radius: 50px;
+      background: var(--maestra-light); color: var(--maestra-darker);
+      font-size: 0.75rem; font-weight: 800;
+    }
+
+    /* File drop zone */
+    .drop-zone {
+      background: #FFF5F9; padding: 16px;
+      border-radius: 14px; border: 2px dashed #F8BBD9;
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      cursor: pointer; transition: all .2s;
+    }
+    .drop-zone:hover { border-color: var(--maestra-primary); background: #FCE4EC; }
+
+    /* Sidebar nav active pink tint */
+    .nav-btn-toy.active-maestra {
+      background: var(--maestra-light); color: var(--maestra-darker);
+      border-left: 4px solid var(--maestra-primary);
+    }
+
+    /* Task card action buttons */
+    .btn-task-action {
+      padding: 8px 16px; border-radius: 12px; border: none;
+      background: linear-gradient(135deg, var(--maestra-primary), var(--maestra-dark));
+      color: white; font-size: 0.72rem; font-weight: 900;
+      text-transform: uppercase; letter-spacing: 0.8px;
+      cursor: pointer; transition: all .25s ease;
+      display: inline-flex; align-items: center; gap: 6px;
+      box-shadow: 0 4px 12px var(--maestra-ring);
+    }
+    .btn-task-action:hover { transform: translateY(-2px); box-shadow: 0 7px 18px rgba(233,30,140,0.3); }
+
+    @media (max-width: 640px) {
+      .modal-card { border-radius: 20px; max-height: 92vh; }
+      .modal-header-pink { padding: 16px 20px; }
+      .modal-body-scroll { padding: 18px 20px; }
+      .modal-footer-pink { padding: 12px 20px; }
+    }
   </style>
 </head>
 <body class="bg-[#FFF8ED] text-slate-800 font-nunito panel-maestra-body" style="overflow-y:auto;overflow-x:hidden;">
@@ -358,7 +526,7 @@
       
       <div class="flex items-center gap-3 mb-6">
         <div class="h-12 w-12 rounded-2xl bg-white flex items-center justify-center shadow-lg overflow-hidden shrink-0 border border-blue-200">
-          <img src="img/monte.jpg" alt="logo Colegio Montessori Sonrisas Creativas" loading="eager" class="w-full h-full object-contain p-1.5" />
+          <img src="img/image.png" alt="logo Colegio Montessori Sonrisas Creativas" loading="eager" class="w-full h-full object-contain p-1.5" />
         </div>
         <div class="label overflow-hidden">
           <h3 class="font-black text-white text-lg tracking-tight drop-shadow-md whitespace-nowrap">

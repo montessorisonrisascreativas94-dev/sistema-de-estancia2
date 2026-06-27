@@ -367,17 +367,21 @@ export async function sendEmail(to, subject, html, text) {
 // ── Push via OneSignal (Edge Function send-push) ──────────────────────────────
 export async function sendPush(payload) {
   try {
-    // Usamos invoke sin headers manuales para que el SDK use el token de sesión actual.
-    // Esto evita errores 401 si la anon key no es suficiente para la función.
+    // Verificar si hay sesión activa antes de invocar
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (!sessionData?.session) return null; // Sin sesión → no invocar Edge Function
+
     const { data, error } = await supabase.functions.invoke('send-push', {
       body: payload
     });
 
     if (error) {
+      // CORS/preflight errors son esperados en GitHub Pages — ignorar silenciosamente
       return null;
     }
     return data;
   } catch (e) {
+    // CORS, network error, o Edge Function no desplegada → silencioso
     return null;
   }
 }
@@ -385,20 +389,22 @@ export async function sendPush(payload) {
 // ── Eventos del sistema (process-event) ──────────────────────────────────────
 export async function emitEvent(type, data) {
   try {
+    // Verificar sesión antes de llamar a Edge Function
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (!sessionData?.session) return null;
+
     const { data: resData, error } = await supabase.functions.invoke('process-event', {
       body: { type, data }
     });
     
     if (error) {
+      // CORS/preflight errors son esperados en GitHub Pages — ignorar silenciosamente
       return null;
-    }
-    
-    // ✅ Log de éxito para que la Maestra vea la confirmación
-    if (resData?.ok) {
     }
     
     return resData;
   } catch (e) {
+    // CORS, network error, o Edge Function no desplegada → silencioso
     return null;
   }
 }

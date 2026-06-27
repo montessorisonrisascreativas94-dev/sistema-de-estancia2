@@ -1,4 +1,4 @@
-import { supabase } from '../shared/supabase.js';
+﻿import { supabase } from '../shared/supabase.js';
 import { TABLES } from '../shared/constants.js';
 
 /**
@@ -16,7 +16,7 @@ function getDisplayName(profile) {
 }
 
 /**
- * API Maestra (nivel producciÃ³n)
+ * API Maestra (nivel producción)
  */
 export const MaestraApi = {
 
@@ -114,7 +114,7 @@ export const MaestraApi = {
   },
 
   /**
-   * Tareas â€” filtradas por perÃ­odo activo del aula
+   * Tareas â€” filtradas por período activo del aula
    */
   async getTasksByClassroom(classroomId, periodId = null) {
     // Fallback directo para evitar 404 de RPC si no existe en BD
@@ -145,7 +145,7 @@ export const MaestraApi = {
   },
 
   /**
-   * Upsert rutina mejorado para bebÃ©s
+   * Upsert rutina mejorado para bebés
    */
   async upsertDailyLog(payload) {
     const cleanPayload = { ...payload };
@@ -231,7 +231,7 @@ export const MaestraApi = {
   },
 
   /**
-   * Crear tarea â€” vinculada al perÃ­odo activo del aula
+   * Crear tarea â€” vinculada al período activo del aula
    */
   async createTask(payload) {
     const cleanPayload = {
@@ -240,7 +240,7 @@ export const MaestraApi = {
     };
     delete cleanPayload.points;
 
-    // ðŸ”„ LÃ³gica Profesional de PerÃ­odo Activo
+    // ðŸ”„ Lógica Profesional de Período Activo
     try {
         const { data: periodData, error: periodErr } = await supabase
           .from('academic_periods')
@@ -287,7 +287,7 @@ export const MaestraApi = {
       .eq('id', taskId);
 
     handleError(error, 'deleteTask');
-    // Devolvemos un objeto para consistencia, aunque la operaciÃ³n de borrado no devuelve datos.
+    // Devolvemos un objeto para consistencia, aunque la operación de borrado no devuelve datos.
     return { success: !error };
   },
 

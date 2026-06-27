@@ -27,16 +27,48 @@ export const Modal = {
     document.getElementById(id)?.remove();
     const modal = document.createElement('div');
     modal.id = id;
-    modal.className = 'fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-fade-in';
-    modal.innerHTML = `<div id="${id}-inner" class="relative w-full max-w-2xl max-h-[92vh] overflow-y-auto">${content}</div>`;
-    
-    // Cerrar al hacer clic afuera
-    modal.onclick = (e) => {
+    // Pink-tinted backdrop with blur — Paleta Maestra
+    modal.className = [
+      'fixed inset-0 z-[9998]',
+      'flex items-start justify-center',
+      'pt-[3vh] pb-6 px-4',
+      'overflow-y-auto'
+    ].join(' ');
+    modal.style.cssText = 'background:rgba(8,80,160,0.42);backdrop-filter:blur(7px);';
+
+    modal.innerHTML = `
+      <div id="${id}-inner"
+           class="relative w-full max-w-2xl"
+           style="animation:modalPop .3s cubic-bezier(0.34,1.56,0.64,1) both;">
+        ${content}
+      </div>`;
+
+    // Cerrar al hacer clic fuera del contenido
+    modal.addEventListener('click', (e) => {
       if (e.target === modal) this.close(id);
-    };
+    });
 
     document.body.appendChild(modal);
     requestAnimationFrame(() => window.lucide?.createIcons());
+
+    // Inject keyframe if not yet present
+    if (!document.getElementById('_modalKeyframe')) {
+      const s = document.createElement('style');
+      s.id = '_modalKeyframe';
+      s.textContent = `
+        @keyframes modalPop {
+          from { opacity:0; transform:scale(0.92) translateY(20px); }
+          to   { opacity:1; transform:scale(1) translateY(0); }
+        }
+        /* Maestra modal card base */
+        #${id}-inner > div {
+          border-radius: 28px;
+          overflow: hidden;
+          box-shadow: 0 28px 80px rgba(233,30,140,0.18), 0 8px 30px rgba(0,0,0,0.12);
+        }
+      `;
+      document.head.appendChild(s);
+    }
   },
   close(id) {
     document.getElementById(id)?.remove();
