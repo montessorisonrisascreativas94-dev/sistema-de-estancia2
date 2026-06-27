@@ -227,7 +227,7 @@ async function loadProfile() {
       let settings = null;
       const { data: s1, error: e1 } = await supabase
         .from('school_settings')
-        .select('id, generation_day, due_day, phone, business_hours, open_time, close_time, work_days')
+        .select('id, generation_day, due_day, phone, business_hours, open_time, close_time, work_days, rnc')
         .eq('id', 1).single();
 
       if (e1 && e1.code === '42703') {
@@ -244,6 +244,7 @@ async function loadProfile() {
       if (settings) {
         if (settings.open_time)  { const el = document.getElementById('confOpenTime');  if (el) el.value = settings.open_time; }
         if (settings.close_time) { const el = document.getElementById('confCloseTime'); if (el) el.value = settings.close_time; }
+        if (settings.rnc) { const el = document.getElementById('confRNC'); if (el) el.value = settings.rnc; }
         if (settings.work_days) {
           try {
             const days = typeof settings.work_days === 'string' ? JSON.parse(settings.work_days) : settings.work_days;
@@ -375,10 +376,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       window.location.href = 'login.html';
     });
 
-    // 7. Mobile sidebar hamburger
+    // 7. Sidebar desktop y mobile
     const menuBtn = document.getElementById('menuBtn');
     const sidebar = document.getElementById('sidebar');
     const overlay = document.getElementById('sidebarOverlay');
+    const wrapper = document.querySelector('.app-content-wrapper');
+    const toggleBtn = document.getElementById('toggleSidebar');
+    const toggleIcon = document.getElementById('toggleSidebarIcon');
 
     const openSidebar = () => {
       if (sidebar) sidebar.classList.add('mobile-visible');
@@ -388,6 +392,53 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (sidebar) sidebar.classList.remove('mobile-visible');
       if (overlay) overlay.style.display = 'none';
     };
+
+    const applyDesktopSidebarState = (collapsed) => {
+      if (!sidebar || !wrapper) return;
+      if (window.innerWidth < 768) {
+        wrapper.classList.remove('sidebar-collapsed');
+        sidebar.classList.remove('sidebar-collapsed');
+        return;
+      }
+      wrapper.classList.toggle('sidebar-collapsed', collapsed);
+      sidebar.classList.toggle('sidebar-collapsed', collapsed);
+      if (toggleIcon) {
+        toggleIcon.style.transform = collapsed ? 'rotate(180deg)' : 'rotate(0deg)';
+      }
+      if (toggleBtn) {
+        toggleBtn.setAttribute('aria-expanded', String(!collapsed));
+      }
+      document.body.dataset.sidebarCollapsed = collapsed ? 'true' : 'false';
+    };
+
+    toggleBtn?.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (window.innerWidth < 768) return;
+      const isCollapsed = wrapper?.classList.contains('sidebar-collapsed');
+      applyDesktopSidebarState(!isCollapsed);
+    });
+
+    if (sidebar) {
+      sidebar.addEventListener('mouseenter', () => {
+        if (window.innerWidth >= 768) applyDesktopSidebarState(false);
+      });
+      sidebar.addEventListener('mouseleave', () => {
+        if (window.innerWidth >= 768) applyDesktopSidebarState(true);
+      });
+    }
+
+    window.addEventListener('resize', () => {
+      if (window.innerWidth < 768) {
+        wrapper?.classList.remove('sidebar-collapsed');
+        sidebar?.classList.remove('sidebar-collapsed');
+        if (toggleIcon) toggleIcon.style.transform = 'rotate(0deg)';
+      } else {
+        applyDesktopSidebarState(document.body.dataset.sidebarCollapsed === 'true');
+      }
+    });
+
+    applyDesktopSidebarState(false);
 
     // Remove any previous listener to avoid duplicates
     const newMenuBtn = menuBtn?.cloneNode(true);
@@ -434,14 +485,16 @@ document.addEventListener('DOMContentLoaded', async () => {
       const { error } = await supabase.from('profiles').update(updates).eq('id', auth.user.id);
       if (error) Helpers.toast('Error al guardar perfil: ' + error.message, 'error');
       else {
-        // Guardar horario en school_settings
+        // Guardar horario y RNC en school_settings
         const openTime  = document.getElementById('confOpenTime')?.value;
         const closeTime = document.getElementById('confCloseTime')?.value;
         const workDays  = [...document.querySelectorAll('.work-day-btn.bg-violet-600')].map(b => b.dataset.day);
+        const rncVal = document.getElementById('confRNC')?.value?.trim();
         const scheduleUpdates = {};
         if (openTime)  scheduleUpdates.open_time  = openTime;
         if (closeTime) scheduleUpdates.close_time = closeTime;
         if (workDays.length) scheduleUpdates.work_days = JSON.stringify(workDays);
+        if (rncVal) scheduleUpdates.rnc = rncVal;
         if (Object.keys(scheduleUpdates).length) {
           await supabase.from('school_settings').update(scheduleUpdates).eq('id', 1);
         }

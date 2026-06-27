@@ -347,7 +347,10 @@ export const StudentsModule = {
           const { data: authData, error: authError } = await tempClient.auth.signUp({
             email: emailUser,
             password: password,
-            options: { data: { name: payload.p1_name, role: 'padre', phone: payload.p1_phone } }
+            options: {
+              data: { name: payload.p1_name, role: 'padre', phone: payload.p1_phone },
+              emailRedirectTo: null
+            }
           });
 
           let parentId = null;

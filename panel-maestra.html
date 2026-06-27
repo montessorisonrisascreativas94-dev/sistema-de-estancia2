@@ -14,8 +14,8 @@
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="css/theme.css" />
   <link rel="stylesheet" href="css/layout.css" />
-  <link rel="stylesheet" href="css/karpus-modern.css" />
-  <link rel="stylesheet" href="css/karpus-tailwind.css">
+  <link rel="stylesheet" href="css/montessori-modern.css" />
+  <link rel="stylesheet" href="css/montessori-tailwind.css">
   <link rel="stylesheet" href="css/premium-mobile.css">
   <script src="js/shared/lucide.min.js"></script>
   
@@ -120,7 +120,7 @@
     .sb-blue   { background: linear-gradient(135deg, var(--blue-primary), #1E40AF); }
     .sb-green  { background: linear-gradient(135deg, var(--green-primary), #22c55e); }
     .sb-orange { background: linear-gradient(135deg, var(--orange-primary), #ea580c); }
-    .sb-purple { background: linear-gradient(135deg, #7c3aed, #6d28d9); }
+    .sb-purple { background: linear-gradient(135deg, #0B63C7, #0850A0); }
 
     /* ═══════════════════════════════════════════════
        TABS DE AULA — scroll horizontal sin romper body
@@ -316,7 +316,7 @@
       margin-bottom: 8px; cursor: pointer; -webkit-tap-highlight-color: transparent;
       touch-action: manipulation;
     }
-    .nav-btn-toy:hover { background: white; color: #F7931E; transform: translateX(6px); }
+    .nav-btn-toy:hover { background: white; color: #FF7A00; transform: translateX(6px); }
 
     /* ═══════════════════════════════════════════════
        ROUTINE UI IMPROVEMENTS (Mobile First)
@@ -345,13 +345,13 @@
       background: #e2e8f0;
       border-radius: 10px;
     }
-    .nav-btn-toy.active { background: white; color: #1E5AA8; }
+    .nav-btn-toy.active { background: white; color: #0B63C7; }
   </style>
 </head>
 <body class="bg-[#FFF8ED] text-slate-800 font-nunito panel-maestra-body" style="overflow-y:auto;overflow-x:hidden;">
   <div class="min-h-screen flex" style="overflow:visible;">
     <!-- SIDEBAR -->
-    <aside id="sidebar" class="bg-gradient-to-b from-[#1E5AA8] to-[#154380] shadow-2xl border-r-4 border-[#2563B9] p-4 fixed inset-y-0 left-0 z-50 rounded-r-3xl transition-transform duration-300">
+    <aside id="sidebar" class="bg-gradient-to-b from-[#0B63C7] to-[#0850A0] shadow-2xl border-r-4 border-[#2563B9] p-4 fixed inset-y-0 left-0 z-50 rounded-r-3xl transition-transform duration-300">
       <button id="toggleSidebar" class="absolute -right-3 top-6 bg-white rounded-full p-1 shadow-md border border-slate-100 text-slate-500 hover:text-orange-600 hidden md:block">
         <i data-lucide="chevron-left" id="toggleSidebarIcon" class="w-4 h-4"></i>
       </button>
@@ -370,7 +370,7 @@
 
       <!-- Perfil Debajo del Texto -->
       <div class="mb-6 px-2 flex items-center gap-3 bg-white/10 p-3 rounded-2xl backdrop-blur-sm border border-white/10">
-        <div class="w-10 h-10 rounded-full bg-white flex items-center justify-center text-[#F7931E] font-black shadow-md border-2 border-blue-200 overflow-hidden" id="sidebarAvatar">
+        <div class="w-10 h-10 rounded-full bg-white flex items-center justify-center text-[#FF7A00] font-black shadow-md border-2 border-blue-200 overflow-hidden" id="sidebarAvatar">
           <img src="img/1.jpg" class="w-full h-full object-cover" alt="Avatar">
         </div>
         <div class="label overflow-hidden">
@@ -413,7 +413,7 @@
       <div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-end gap-3 pointer-events-none">
         <!-- Triángulo Naranja -->
         <svg width="60" height="70" viewBox="0 0 180 200" class="animate-bounce" style="animation-duration: 2.5s;">
-          <polygon points="90,20 165,180 15,180" fill="#F7931E" stroke="#E67E22" stroke-width="4"/>
+          <polygon points="90,20 165,180 15,180" fill="#FF7A00" stroke="#D96500" stroke-width="4"/>
           <circle cx="68" cy="105" r="12" fill="white"/>
           <circle cx="112" cy="105" r="12" fill="white"/>
           <circle cx="68" cy="105" r="6" fill="#333"/>
@@ -422,8 +422,8 @@
         </svg>
         <!-- Hexágono Verde -->
         <svg width="60" height="60" viewBox="0 0 180 180" class="animate-bounce" style="animation-duration: 3s; animation-delay: 0.3s;">
-          <polygon points="90,10 155,45 155,115 90,150 25,115 25,45" fill="#43A047" stroke="#388E3C" stroke-width="4"/>
-          <ellipse cx="90" cy="28" rx="42" ry="16" fill="#1E5AA8"/>
+          <polygon points="90,10 155,45 155,115 90,150 25,115 25,45" fill="#28B54D" stroke="#1A8035" stroke-width="4"/>
+          <ellipse cx="90" cy="28" rx="42" ry="16" fill="#0B63C7"/>
           <circle cx="68" cy="80" r="12" fill="white"/>
           <circle cx="112" cy="80" r="12" fill="white"/>
           <circle cx="68" cy="80" r="6" fill="#333"/>
@@ -520,15 +520,15 @@
           </div>
 
           <!-- Widget: Tareas por Calificar -->
-          <div id="tasksToGradeWidget" class="bg-indigo-50 border border-indigo-100 rounded-[2.5rem] p-6 flex flex-col justify-center hidden">
+          <div id="tasksToGradeWidget" class="bg-indigo-50 border border-blue-200 rounded-[2.5rem] p-6 flex flex-col justify-center hidden">
             <div class="flex items-center gap-4 mb-3">
-              <div class="w-10 h-10 bg-indigo-500 text-white rounded-xl flex items-center justify-center shadow-lg shadow-indigo-200">
+              <div class="w-10 h-10 bg-[#0B63C7] text-white rounded-xl flex items-center justify-center shadow-lg shadow-blue-200">
                 <i data-lucide="award" class="w-5 h-5"></i>
               </div>
               <h4 class="font-black text-indigo-900 text-sm uppercase tracking-tighter">Tareas por Calificar</h4>
             </div>
-            <p id="tasksToGradeText" class="text-xs font-bold text-indigo-700/80 mb-4">Tienes 5 entregas pendientes de revisar.</p>
-            <button onclick="App.navigateTo('t-home', 'tasks')" class="w-full py-3 bg-white text-indigo-600 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-sm hover:shadow-md transition-all active:scale-95">Ir a Tareas</button>
+            <p id="tasksToGradeText" class="text-xs font-bold text-[#0850A0]/80 mb-4">Tienes 5 entregas pendientes de revisar.</p>
+            <button onclick="App.navigateTo('t-home', 'tasks')" class="w-full py-3 bg-white text-[#0B63C7] rounded-xl font-black text-[10px] uppercase tracking-widest shadow-sm hover:shadow-md transition-all active:scale-95">Ir a Tareas</button>
           </div>
         </div>
         

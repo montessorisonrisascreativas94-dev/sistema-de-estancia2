@@ -71,20 +71,22 @@ export const MaestraApi = {
 
   /**
    * Upsert asistencia (optimizado con periodo)
+   * academic_periods es OPCIONAL — si la tabla no existe, se ignora silenciosamente
    */
   async upsertAttendance(record) {
-    // Vincular autom\u00e1ticamente al periodo activo si la tabla existe (silencioso si falla)
+    // Vincular automáticamente al periodo activo si la tabla existe (silencioso si falla)
     if (!record.period_id) {
       try {
-        const { data: periodData } = await supabase
+        const { data: periodData, error: periodErr } = await supabase
           .from('academic_periods')
           .select('id')
           .eq('classroom_id', record.classroom_id)
           .eq('status', 'active')
           .limit(1)
           .maybeSingle();
-        if (periodData) record.period_id = periodData.id;
-      } catch (_) { /* 404 ignorado si no existe la tabla */ }
+        // Solo asignar si no hubo error (tabla puede no existir en producción)
+        if (!periodErr && periodData) record.period_id = periodData.id;
+      } catch (_) { /* 404/tabla no existe — continuar sin period_id */ }
     }
 
     const { data: existing, error: findError } = await supabase
@@ -239,19 +241,16 @@ export const MaestraApi = {
     delete cleanPayload.points;
 
     // ðŸ”„ LÃ³gica Profesional de PerÃ­odo Activo
-    if (!cleanPayload.period_id && cleanPayload.classroom_id) {
-      // Intento manual vÃ­a query en lugar de RPC para evitar 404
-      const { data: periodData } = await supabase
-        .from('academic_periods')
-        .select('id, name')
-        .eq('classroom_id', cleanPayload.classroom_id)
-        .eq('status', 'active')
-        .maybeSingle();
-
-      if (periodData) {
-        cleanPayload.period_id = periodData.id;
-      }
-    }
+    try {
+        const { data: periodData, error: periodErr } = await supabase
+          .from('academic_periods')
+          .select('id, name')
+          .eq('classroom_id', cleanPayload.classroom_id)
+          .eq('status', 'active')
+          .maybeSingle();
+        if (!periodErr && periodData) cleanPayload.period_id = periodData.id;
+      } catch (_) { /* academic_periods no existe — continuar sin period_id */ }
+    
 
     const { data, error } = await supabase
       .from('tasks')

@@ -50,6 +50,181 @@
       --green-primary: #28B54D;
       --yellow-accent: #FFD43B;
       --beige-bg: #F8FAFC;
+      --surface: #f4f7fb;
+      --panel: #ffffff;
+      --panel-soft: #f8fbff;
+      --text: #14213d;
+      --muted: #64748b;
+      --border: #e3ebf5;
+      --shadow: 0 20px 45px rgba(15, 23, 42, 0.08);
+    }
+
+    body {
+      background: var(--surface);
+      color: var(--text);
+    }
+
+    .main {
+      background: linear-gradient(180deg, #f8fbff 0%, #f3f7fb 100%);
+      padding: 1.5rem 1rem 2.5rem;
+    }
+
+    .section {
+      display: none;
+      overflow: visible;
+      padding: 0.25rem 0.25rem 2rem;
+    }
+
+    .section.active {
+      display: block;
+      overflow: visible;
+      animation: fadeInDir 0.3s ease-out;
+    }
+
+    .section-shell {
+      background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(248,251,255,0.95));
+      border: 1px solid var(--border);
+      border-radius: 28px;
+      box-shadow: var(--shadow);
+      padding: 1.4rem;
+      backdrop-filter: blur(8px);
+    }
+
+    .section-header {
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+      margin-bottom: 1.25rem;
+      padding: 1rem 1.1rem;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.04);
+    }
+
+    .section-title {
+      font-size: clamp(1.2rem, 1.8vw, 1.6rem);
+      font-weight: 800;
+      color: var(--text);
+      line-height: 1.2;
+      margin: 0;
+    }
+
+    .section-subtitle {
+      color: var(--muted);
+      font-size: 0.95rem;
+      font-weight: 500;
+      margin: 0;
+    }
+
+    .metric-card,
+    .quick-action-card,
+    .table-panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      box-shadow: 0 14px 35px rgba(15, 23, 42, 0.06);
+    }
+
+    .metric-card {
+      padding: 1rem 1rem 1.1rem;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      border-left: 4px solid var(--blue-primary);
+    }
+
+    .metric-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 20px 45px rgba(15, 23, 42, 0.09);
+    }
+
+    .metric-card--orange { border-left-color: var(--orange-primary); }
+    .metric-card--green { border-left-color: var(--green-primary); }
+    .metric-card--amber { border-left-color: var(--yellow-accent); }
+    .metric-card--slate { border-left-color: #64748b; }
+    .metric-card--rose { border-left-color: #ef4444; }
+
+    .metric-icon {
+      width: 2.6rem;
+      height: 2.6rem;
+      border-radius: 0.9rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--panel-soft);
+      color: var(--blue-primary);
+      margin-bottom: 0.8rem;
+    }
+
+    .metric-label {
+      font-size: 0.72rem;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 0.35rem;
+    }
+
+    .metric-value {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--text);
+      line-height: 1.1;
+    }
+
+    .quick-action-card {
+      padding: 1.2rem;
+      transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+      border-left: 4px solid var(--blue-primary);
+      cursor: pointer;
+    }
+
+    .quick-action-card:hover {
+      transform: translateY(-2px);
+      border-color: var(--orange-primary);
+      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.1);
+    }
+
+    .quick-action-card--orange { border-left-color: var(--orange-primary); }
+    .quick-action-card--green { border-left-color: var(--green-primary); }
+    .quick-action-card--amber { border-left-color: var(--yellow-accent); }
+    .quick-action-card--slate { border-left-color: #64748b; }
+    .quick-action-card--rose { border-left-color: #ef4444; }
+
+    .table-panel {
+      overflow: hidden;
+      padding: 1rem;
+    }
+
+    .table-panel .data-table thead th {
+      background: #f4f7fb;
+      color: #0f3f78;
+      font-size: 0.72rem;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 0.9rem 1rem;
+    }
+
+    .table-panel .data-table td {
+      padding: 0.95rem 1rem;
+      border-bottom: 1px solid #edf2f7;
+    }
+
+    .table-panel .data-table tr:hover {
+      background: #f8fbff;
+    }
+
+    .action-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.45rem 0.7rem;
+      border-radius: 999px;
+      background: #f4f7fb;
+      color: #33506c;
+      font-size: 0.76rem;
+      font-weight: 700;
+      border: 1px solid #e6edf4;
     }
     
     /* ═══════════════════════════════════════════════
@@ -109,9 +284,45 @@
       transition: margin-left .25s ease;
     }
     @media (min-width: 769px) {
-      .app-content-wrapper { margin-left: 288px; height: 100dvh; overflow: hidden; }
-      .app-content-wrapper.sidebar-collapsed aside#sidebar { width: 80px; }
-      .app-content-wrapper.sidebar-collapsed #layoutShell { margin-left: 80px; }
+      .app-content-wrapper {
+        margin-left: 288px;
+        height: 100dvh;
+        overflow: hidden;
+        transition: margin-left 0.25s ease;
+      }
+      .app-content-wrapper.sidebar-collapsed {
+        margin-left: 80px;
+      }
+      .app-content-wrapper.sidebar-collapsed aside#sidebar {
+        width: 80px;
+      }
+      .app-content-wrapper.sidebar-collapsed aside#sidebar .label,
+      .app-content-wrapper.sidebar-collapsed aside#sidebar .kk-nav-section,
+      .app-content-wrapper.sidebar-collapsed aside#sidebar .kk-sidebar-logo-text,
+      .app-content-wrapper.sidebar-collapsed aside#sidebar .kk-sidebar-profile-info,
+      .app-content-wrapper.sidebar-collapsed aside#sidebar .kk-sidebar-profile-name,
+      .app-content-wrapper.sidebar-collapsed aside#sidebar .sub {
+        display: none;
+      }
+      .app-content-wrapper.sidebar-collapsed aside#sidebar .kk-sidebar-logo,
+      .app-content-wrapper.sidebar-collapsed aside#sidebar .kk-sidebar-profile {
+        justify-content: center;
+        padding-left: 0;
+        padding-right: 0;
+      }
+      .app-content-wrapper.sidebar-collapsed aside#sidebar .kk-nav-item {
+        justify-content: center;
+        padding-left: 0;
+        padding-right: 0;
+      }
+      .app-content-wrapper.sidebar-collapsed aside#sidebar .kk-logout-btn {
+        justify-content: center;
+        padding-left: 0;
+        padding-right: 0;
+      }
+      .app-content-wrapper.sidebar-collapsed #toggleSidebarIcon {
+        transform: rotate(180deg);
+      }
     }
     @media (max-width: 767px) {
       /* 1. Reset Global Scroll */
@@ -180,12 +391,7 @@
     }
     .nav-btn [data-lucide], .kk-nav-item [data-lucide] { transition: color 0.2s ease; }
     .nav-btn:hover, .nav-btn.active, .kk-nav-item:hover, .kk-nav-item.active { background: rgba(255,255,255,0.15); color: white; }
-    .nav-btn .badge, .kk-nav-item .kk-badge {
-      position: absolute; top: 0.5rem; right: 0.5rem;
-      background: #e91e63; color: white; border-radius: 9999px;
-      font-size: 0.75rem; padding: 0.125rem 0.375rem;
-      min-width: 1.5rem; text-align: center;
-    }
+    .nav-btn .badge, .kk-nav-item .kk-badge { display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 5px;border-radius:50px;background:#FF7A00;color:white;font-size:9px;font-weight:900;line-height:1; }
 
     /* ═══════════════════════════════════════════════
        SECCIONES — ocultas por defecto, visibles con .active
@@ -208,11 +414,7 @@
       width: 100%; border-collapse: collapse; background: white;
       border-radius: 8px; border: 1px solid #e2e8f0;
     }
-    .data-table th {
-      background: #f1f5f9; padding: 12px 16px; text-align: left;
-      font-size: 12px; text-transform: uppercase; color: #64748b;
-      border-bottom: 1px solid #e2e8f0; white-space: nowrap;
-    }
+    
     .data-table td { padding: 12px 16px; border-bottom: 1px solid #f1f5f9; color: #334155; }
     .data-table tr:hover { background: #f8fafc; }
     /* Wrapper para scroll horizontal en tablas */
@@ -256,7 +458,7 @@
       padding: 10px 16px; border-radius: 20px; font-size: 14px;
       max-width: 80%; box-shadow: 0 1px 2px rgba(0,0,0,0.08); line-height: 1.5;
     }
-    .msg-me { background: #7c3aed; color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
+    .msg-me { background: #0B63C7; color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
     .msg-them { background: #f0f2f5; color: #1c1e21; align-self: flex-start; border-bottom-left-radius: 4px; }
     #chatInputArea {
       position: sticky; bottom: 0;
@@ -271,16 +473,90 @@
     }
 
     /* ═══════════════════════════════════════════════
-       MODALES — adaptables en móvil
+       MODALES — Paleta Sonrisas Creativas
     ═══════════════════════════════════════════════ */
     .modal-content {
-      background: white; border-radius: 24px;
-      width: 95% !important; max-width: 600px !important;
-      max-height: 90vh !important; overflow-y: auto !important;
+      background: white;
+      border-radius: 24px;
+      width: 95% !important;
+      max-width: 600px !important;
+      max-height: 90vh !important;
+      overflow-y: auto !important;
+      box-shadow: 0 25px 80px rgba(11,99,199,0.18);
+      animation: scaleIn 0.28s cubic-bezier(0.34,1.56,0.64,1);
     }
-    .modal-header { padding: 1.5rem; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; justify-content: space-between; }
+    .modal-header {
+      padding: 1.25rem 1.5rem;
+      border-bottom: 2px solid #E8F2FF;
+      display: flex; align-items: center; justify-content: space-between;
+      background: linear-gradient(135deg, #0B63C7 0%, #0850A0 100%);
+      border-radius: 22px 22px 0 0;
+      color: white;
+    }
+    .modal-header h2,
+    .modal-header h3 { color: white !important; font-weight: 900; }
+    .modal-header .close-btn,
+    .modal-header button[onclick*="close"],
+    .modal-header button[data-dismiss] {
+      background: rgba(255,255,255,0.18);
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 10px;
+      color: white;
+      padding: 6px 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .modal-header .close-btn:hover { background: rgba(255,255,255,0.3); }
     .modal-body { padding: 1.5rem; }
-    .modal-footer { padding: 1.5rem; border-top: 1px solid #e5e7eb; display: flex; justify-content: flex-end; gap: 0.75rem; }
+    .modal-body label {
+      font-size: 0.78rem; font-weight: 800; color: #4A5568;
+      text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 6px;
+    }
+    .modal-body input:not([type=checkbox]):not([type=radio]),
+    .modal-body select,
+    .modal-body textarea {
+      width: 100%; padding: 10px 14px;
+      border: 2px solid #E2E8F0; border-radius: 14px;
+      font-size: 0.95rem; font-weight: 600; color: #1A2340;
+      background: #F8FAFC; outline: none; transition: all 0.25s;
+    }
+    .modal-body input:focus,
+    .modal-body select:focus,
+    .modal-body textarea:focus {
+      border-color: #0B63C7;
+      background: white;
+      box-shadow: 0 0 0 4px rgba(11,99,199,0.1);
+    }
+    .modal-footer {
+      padding: 1rem 1.5rem;
+      border-top: 2px solid #F0F4F8;
+      display: flex; justify-content: flex-end; gap: 0.75rem;
+      background: #F8FAFC;
+      border-radius: 0 0 22px 22px;
+    }
+    .modal-footer .btn-cancel,
+    .modal-footer button[data-action="cancel"] {
+      padding: 10px 20px; border-radius: 14px;
+      border: 2px solid #E2E8F0; background: white;
+      color: #4A5568; font-weight: 800; cursor: pointer;
+      transition: all 0.2s;
+    }
+    .modal-footer .btn-cancel:hover { border-color: #CBD5E0; background: #F8FAFC; }
+    .modal-footer .btn-save,
+    .modal-footer button[data-action="save"],
+    .modal-footer button[type="submit"] {
+      padding: 10px 24px; border-radius: 14px;
+      background: #FF7A00; color: white;
+      border: none; font-weight: 900; cursor: pointer;
+      box-shadow: 0 4px 14px rgba(255,122,0,0.35);
+      transition: all 0.25s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    .modal-footer .btn-save:hover,
+    .modal-footer button[type="submit"]:hover {
+      background: #D96500;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(255,122,0,0.4);
+    }
     .modal-container.hidden { display: none !important; }
 
     /* ═══════════════════════════════════════════════
@@ -305,14 +581,14 @@
     .child-card:hover { transform: translateY(-3px); }
     .child-card.crayon { border-top-color: #ef4444; }
     .child-card.ruler { border-top-color: #eab308; background-image: repeating-linear-gradient(90deg, transparent, transparent 19px, #fefce8 20px); }
-    .child-card.notebook { border-top-color: #3b82f6; background-image: linear-gradient(#f0f9ff 1px, transparent 1px); background-size: 100% 24px; }
-    .child-card.toy { border-top-color: #22c55e; border-radius: 24px; border-style: dashed; }
+    .child-card.notebook { border-top-color: #0B63C7; background-image: linear-gradient(#f0f9ff 1px, transparent 1px); background-size: 100% 24px; }
+    .child-card.toy { border-top-color: #28B54D; border-radius: 24px; border-style: dashed; }
 
     /* ═══════════════════════════════════════════════
        ATTENDANCE TABS
     ═══════════════════════════════════════════════ */
     [data-att-mode] { transition: all .2s ease; }
-    [data-att-mode].active-att-tab { background: white; color: #4f46e5; font-weight: 900; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+    [data-att-mode].active-att-tab { background:white; color:#0B63C7; font-weight:900; box-shadow:0 2px 8px rgba(11,99,199,0.15); }
 
     /* ═══════════════════════════════════════════════
        REPORT DETAILS ANIMATION
@@ -345,17 +621,22 @@
     /* ═══════════════════════════════════════════════
        CHIPS
     ═══════════════════════════════════════════════ */
-    .chip { padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; }
-    .chip-blue { background-color: #dbeafe; color: #1e40af; }
-    .chip-green { background-color: #dcfce7; color: #166534; }
-    .chip-orange { background-color: #ffedd5; color: #9a3412; }
+    .chip { padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 700; }
+    .chip-blue   { background: #E8F2FF; color: #0B63C7; }
+    .chip-green  { background: #E6F7EB; color: #1A8035; }
+    .chip-orange { background: #FFF0E0; color: #D96500; }
+    .chip-yellow { background: #FFFBE6; color: #B8860B; }
 
     /* ═══════════════════════════════════════════════
        BOTONES DE ACCIÓN EN TABLAS
     ═══════════════════════════════════════════════ */
-    .btn-action { padding: 6px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; touch-action: manipulation; }
-    .btn-edit { color: #4f46e5; background: #eef2ff; }
-    .btn-delete { color: #e11d48; background: #fff1f2; }
+    .btn-action { padding: 6px 10px; border-radius: 10px; font-size: 12px; font-weight: 700; cursor: pointer; touch-action: manipulation; transition: all 0.2s; }
+    .btn-edit   { color: #0B63C7; background: #E8F2FF; border: 1px solid #DBEAFE; }
+    .btn-edit:hover   { background: #0B63C7; color: white; }
+    .btn-delete { color: #e11d48; background: #fff1f2; border: 1px solid #FFE4E8; }
+    .btn-delete:hover { background: #e11d48; color: white; }
+    .btn-approve { color: #1A8035; background: #E6F7EB; border: 1px solid #D1FAE5; }
+    .btn-approve:hover { background: #28B54D; color: white; }
 
     /* ═══════════════════════════════════════════════
        LOADER INICIAL
@@ -367,24 +648,153 @@
     }
     .loader-spin {
       width: 48px; height: 48px; border: 4px solid #e2e8f0;
-      border-top-color: #7c3aed; border-radius: 50%;
+      border-top-color: #0B63C7; border-radius: 50%;
       animation: spin 0.8s linear infinite;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
     /* ═══════════════════════════════════════════════
-       KARPUS COLORED LETTERS
+       SONRISAS CREATIVAS — Colored letters (sidebar brand)
     ═══════════════════════════════════════════════ */
-    .karpus-kids-inline .k-1 { color: #FF9800; }
-    .karpus-kids-inline .k-2 { color: #2196F3; }
-    .karpus-kids-inline .k-3 { color: #E91E63; }
-    .karpus-kids-inline .k-4 { color: #4CAF50; }
-    .karpus-kids-inline .k-5 { color: #FF9800; }
-    .karpus-kids-inline .k-6 { color: #2196F3; }
-    .karpus-kids-inline .k-7 { color: #4CAF50; }
-    .karpus-kids-inline .k-8 { color: #E91E63; }
-    .karpus-kids-inline .k-9 { color: #2196F3; }
-    .karpus-kids-inline .k-10 { color: #FF9800; }
+    .karpus-kids-inline .k-1  { color: #FF7A00; }
+    .karpus-kids-inline .k-2  { color: #0B63C7; }
+    .karpus-kids-inline .k-3  { color: #28B54D; }
+    .karpus-kids-inline .k-4  { color: #FFD43B; }
+    .karpus-kids-inline .k-5  { color: #FF7A00; }
+    .karpus-kids-inline .k-6  { color: #0B63C7; }
+    .karpus-kids-inline .k-7  { color: #28B54D; }
+    .karpus-kids-inline .k-8  { color: #FF7A00; }
+    .karpus-kids-inline .k-9  { color: #0B63C7; }
+    .karpus-kids-inline .k-10 { color: #FFD43B; }
+
+    /* ═══════════════════════════════════════════════
+       PALETA SONRISAS — Utility classes for JS-generated content
+    ═══════════════════════════════════════════════ */
+
+    /* Status badges (used by JS renderers) */
+    .badge-paid,   .status-paid   { background:#E6F7EB; color:#1A8035; border:1px solid #B7EFC5; }
+    .badge-pending,.status-pending { background:#FFFBE6; color:#B8860B; border:1px solid #FFE89A; }
+    .badge-review, .status-review  { background:#FFF0E0; color:#D96500; border:1px solid #FFD4A3; }
+    .badge-overdue,.status-overdue { background:#FFE4E8; color:#B91C1C; border:1px solid #FECDD3; }
+    .badge-absent                  { background:#FFE4E8; color:#B91C1C; }
+    .badge-present                 { background:#E6F7EB; color:#1A8035; }
+    .badge-late                    { background:#FFFBE6; color:#B8860B; }
+
+    /* KPI cards from JS */
+    .kpi-card-blue   { background:#E8F2FF; border:1px solid #DBEAFE; color:#0850A0; }
+    .kpi-card-orange { background:#FFF0E0; border:1px solid #FFD4A3; color:#D96500; }
+    .kpi-card-green  { background:#E6F7EB; border:1px solid #B7EFC5; color:#1A8035; }
+    .kpi-card-yellow { background:#FFFBE6; border:1px solid #FFE89A; color:#B8860B; }
+
+    /* Teacher/student cards from JS */
+    .staff-card {
+      background:white; border-radius:20px; padding:20px;
+      border:2px solid #E8F2FF; box-shadow:0 4px 16px rgba(11,99,199,0.07);
+      transition:all 0.25s cubic-bezier(.34,1.56,.64,1);
+    }
+    .staff-card:hover { transform:translateY(-4px); box-shadow:0 12px 32px rgba(11,99,199,0.13); border-color:#0B63C7; }
+
+    .student-card {
+      background:white; border-radius:20px; padding:18px;
+      border:2px solid transparent; box-shadow:0 4px 14px rgba(0,0,0,0.06);
+      transition:all 0.25s ease; position:relative; overflow:hidden;
+    }
+    .student-card:hover { transform:translateY(-3px); box-shadow:0 10px 28px rgba(11,99,199,0.12); border-color:#0B63C7; }
+    .student-card::before {
+      content:''; position:absolute; top:0; left:0; right:0; height:4px;
+      background:linear-gradient(90deg,#0B63C7,#FF7A00,#28B54D,#FFD43B);
+    }
+
+    /* Section page headers — unified */
+    .page-header {
+      display:flex; flex-direction:column; gap:4px; margin-bottom:1.5rem;
+    }
+    .page-header h1 {
+      font-size:1.5rem; font-weight:900; color:#1A2340; line-height:1.2;
+      display:flex; align-items:center; gap:12px;
+    }
+    .page-header .page-icon {
+      width:38px; height:38px; border-radius:12px;
+      background:#E8F2FF; color:#0B63C7;
+      display:flex; align-items:center; justify-content:center;
+      flex-shrink:0;
+    }
+    .page-header p { font-size:0.88rem; color:#718096; font-weight:600; margin-left:50px; }
+
+    /* Action bar */
+    .action-bar {
+      background:white; border-radius:16px; padding:14px 18px;
+      box-shadow:0 2px 12px rgba(11,99,199,0.07);
+      border:1px solid #E8F2FF;
+      display:flex; flex-wrap:wrap; align-items:center; gap:12px;
+      margin-bottom:1.5rem;
+    }
+
+    /* Table rows from JS */
+    .tr-hover:hover td { background:#F8FAFC; }
+    .td-name { font-weight:800; color:#1A2340; }
+    .td-meta { font-size:0.8rem; color:#718096; font-weight:600; }
+
+    /* Payment row status colors */
+    .row-paid    td:first-child { border-left:3px solid #28B54D; }
+    .row-pending td:first-child { border-left:3px solid #FFD43B; }
+    .row-review  td:first-child { border-left:3px solid #FF7A00; }
+    .row-overdue td:first-child { border-left:3px solid #EF4444; }
+
+    /* Sidebar nav active (overrides karpus-modern.css) */
+    .kk-nav-item.active,
+    .kk-nav-item[aria-current="page"] {
+      background:rgba(255,255,255,0.22) !important;
+      border-left:4px solid #FFD43B !important;
+      color:white !important;
+      transform:translateX(5px);
+      box-shadow:0 4px 14px rgba(0,0,0,0.1);
+    }
+    .kk-nav-item:hover:not(.active) {
+      background:rgba(255,255,255,0.14) !important;
+      color:white !important;
+    }
+
+    /* Modal header icon */
+    .modal-header-icon {
+      width:36px; height:36px; border-radius:10px;
+      background:rgba(255,255,255,0.22);
+      display:flex; align-items:center; justify-content:center;
+      margin-right:12px; flex-shrink:0;
+    }
+
+    /* Empty state */
+    .empty-state {
+      text-align:center; padding:3rem 1rem; color:#94A3B8;
+    }
+    .empty-state .empty-icon {
+      width:64px; height:64px; border-radius:20px;
+      background:#F1F5F9; margin:0 auto 16px;
+      display:flex; align-items:center; justify-content:center;
+    }
+    .empty-state h3 { font-weight:800; color:#64748B; margin-bottom:6px; }
+    .empty-state p  { font-size:0.85rem; }
+
+    /* Tabs pill style */
+    .tab-pill {
+      display:inline-flex; align-items:center; gap:6px;
+      padding:8px 18px; border-radius:50px;
+      font-size:0.78rem; font-weight:800; cursor:pointer;
+      border:none; background:transparent; color:#94A3B8;
+      transition:all 0.2s;
+    }
+    .tab-pill.active {
+      background:#0B63C7; color:white;
+      box-shadow:0 4px 14px rgba(11,99,199,0.3);
+    }
+    .tab-pill:hover:not(.active) { background:#F1F5F9; color:#1A2340; }
+
+    /* Print overrides */
+    @media print {
+      #sidebar, header, .no-print, #scrollTopBtn, .fab-wrap { display:none !important; }
+      .app-content-wrapper { margin:0 !important; }
+      body { background:white; }
+    }
 
     /* ═══════════════════════════════════════════════
        MOBILE OVERRIDES GENERALES
@@ -407,10 +817,10 @@
     #teachersGrid button.bg-slate-900,
     #teachersGrid button.bg-black,
     #teachersGrid button.bg-gray-800 {
-      background-color: #7c3aed !important;
-      border-color: #7c3aed !important;
+      background-color: #0B63C7 !important;
+      border-color: #0B63C7 !important;
     }
-    #teachersGrid button:hover { background-color: #6d28d9 !important; }
+    #teachersGrid button:hover { background-color: #0850A0 !important; }
 
     /* Sin bottom-nav en este panel — cancelar el padding reservado */
     body { padding-bottom: 0 !important; }
@@ -430,9 +840,9 @@
     <div id="sidebarOverlay" class="fixed inset-0 bg-black/50 z-40 backdrop-blur-sm transition-opacity" style="display:none;"></div>
     
     <!-- SIDEBAR -->
-    <aside id="sidebar" class="kk-sidebar bg-gradient-to-b from-[#1E5AA8] via-[#1E5AA8] to-[#154380] shadow-2xl fixed inset-y-0 left-0 z-50 w-72 flex flex-col" style="border-right:none;">
+    <aside id="sidebar" class="kk-sidebar bg-gradient-to-b from-[#0B63C7] via-[#0B63C7] to-[#042C60] shadow-2xl fixed inset-y-0 left-0 z-50 w-72 flex flex-col" style="border-right:none;">
       <!-- Toggle collapse -->
-      <button id="toggleSidebar" class="absolute -right-3 top-8 bg-white rounded-full p-1.5 shadow-lg border border-slate-100 text-slate-500 hover:text-violet-600 hidden md:flex items-center justify-center z-10 transition-all hover:scale-110">
+      <button id="toggleSidebar" class="absolute -right-3 top-8 bg-white rounded-full p-1.5 shadow-lg border border-slate-100 text-slate-500 hover:text-[#0B63C7] hidden md:flex items-center justify-center z-10 transition-all hover:scale-110">
         <i data-lucide="chevron-left" id="toggleSidebarIcon" class="w-3.5 h-3.5"></i>
       </button>
 
@@ -484,7 +894,7 @@
           <span id="badge-estudiantes" class="hidden kk-badge">0</span>
         </button>
         <button data-section="aulas" class="kk-nav-item" data-tooltip="Aulas">
-          <i data-lucide="school" class="text-purple-300"></i>
+          <i data-lucide="school" class="text-blue-300"></i>
           <span class="label">Aulas</span>
         </button>
 
@@ -495,7 +905,7 @@
           <span id="badge-asistencia" class="hidden kk-badge">0</span>
         </button>
         <button data-section="calificaciones" class="kk-nav-item relative" data-tooltip="Calificaciones">
-          <i data-lucide="star" class="text-teal-300"></i>
+          <i data-lucide="star" class="text-[#28B54D]"></i>
           <span class="label">Calificaciones</span>
           <span id="badge-calificaciones" class="hidden kk-badge">0</span>
         </button>
@@ -521,35 +931,12 @@
           <span class="label">Cerrar Sesión</span>
         </button>
       </div>
-
-      <!-- MASCOTAS DECORATIVAS -->
-      <div class="kk-sidebar-deco flex items-end justify-center gap-2">
-        <!-- Triángulo Naranja -->
-        <svg width="60" height="70" viewBox="0 0 180 200" class="animate-bounce" style="animation-duration: 2.5s;">
-          <polygon points="90,20 165,180 15,180" fill="#F7931E" stroke="#E67E22" stroke-width="4"/>
-          <circle cx="68" cy="105" r="12" fill="white"/>
-          <circle cx="112" cy="105" r="12" fill="white"/>
-          <circle cx="68" cy="105" r="6" fill="#333"/>
-          <circle cx="112" cy="105" r="6" fill="#333"/>
-          <path d="M 58 140 Q 90 160 122 140" stroke="#333" stroke-width="5" fill="none" stroke-linecap="round"/>
-        </svg>
-        <!-- Hexágono Verde -->
-        <svg width="60" height="60" viewBox="0 0 180 180" class="animate-bounce" style="animation-duration: 3s; animation-delay: 0.3s;">
-          <polygon points="90,10 155,45 155,115 90,150 25,115 25,45" fill="#43A047" stroke="#388E3C" stroke-width="4"/>
-          <ellipse cx="90" cy="28" rx="42" ry="16" fill="#1E5AA8"/>
-          <circle cx="68" cy="80" r="12" fill="white"/>
-          <circle cx="112" cy="80" r="12" fill="white"/>
-          <circle cx="68" cy="80" r="6" fill="#333"/>
-          <circle cx="112" cy="80" r="6" fill="#333"/>
-          <path d="M 58 105 Q 90 125 122 105" stroke="#333" stroke-width="5" fill="none" stroke-linecap="round"/>
-        </svg>
-      </div>
     </aside>
 
     <div class="app-content-wrapper">
       <!-- HEADER TIPO APP (FIJO Y LIMPIO) -->
       <header class="header">
-        <button id="menuBtn" class="md:hidden p-2.5 rounded-xl bg-white shadow-sm border border-slate-100 text-slate-600 hover:bg-purple-50 hover:text-purple-600 transition-colors active:scale-95"
+        <button id="menuBtn" class="md:hidden p-2.5 rounded-xl bg-white shadow-sm border border-slate-100 text-slate-600 hover:bg-[#E8F2FF] hover:text-[#0B63C7] transition-colors active:scale-95"
           style="position:relative;z-index:200;"
           data-managed="true"
           aria-label="Abrir menú">
@@ -563,228 +950,179 @@
       <main class="main" id="layoutShell">
         <!-- SECTIONS -->
         <section id="dashboard" class="section active">
-        <!-- Header con Filtros Globales -->
-        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-          <div>
-            <h1 class="text-3xl font-bold text-slate-800 tracking-tight">Panel General</h1>
-            <p class="text-slate-500 font-medium">Resumen administrativo de la estancia</p>
+        <div class="section-shell">
+          <div class="section-header">
+            <h1 class="section-title">Panel general</h1>
+            <p class="section-subtitle">Resumen ejecutivo y accesos rápidos para la gestión diaria.</p>
           </div>
-          <div class="flex gap-3 bg-white p-1.5 rounded-xl shadow-sm border border-slate-100">
+
+          <div id="dashboardAlerts" class="mb-6 hidden"></div>
+
+          <div class="kpi-grid mb-8">
+            <div class="metric-card metric-card--blue">
+              <div class="metric-icon"><i data-lucide="users" class="w-5 h-5"></i></div>
+              <div class="metric-label">Estudiantes</div>
+              <div class="metric-value" id="kpiStudents">0</div>
+              <div class="text-sm text-slate-500">Activos en la institución</div>
+            </div>
+            <div class="metric-card metric-card--orange">
+              <div class="metric-icon"><i data-lucide="graduation-cap" class="w-5 h-5"></i></div>
+              <div class="metric-label">Docentes</div>
+              <div class="metric-value" id="kpiTeachers">0</div>
+              <div class="text-sm text-slate-500">Personal académico</div>
+            </div>
+            <div class="metric-card metric-card--green">
+              <div class="metric-icon"><i data-lucide="home" class="w-5 h-5"></i></div>
+              <div class="metric-label">Aulas</div>
+              <div class="metric-value" id="kpiClassrooms">0</div>
+              <div class="text-sm text-slate-500">Operativas hoy</div>
+            </div>
+            <div class="metric-card metric-card--amber">
+              <div class="metric-icon"><i data-lucide="user-check" class="w-5 h-5"></i></div>
+              <div class="metric-label">Asistencia</div>
+              <div class="metric-value" id="kpiAttendance">0</div>
+              <div class="text-sm text-slate-500" id="kpiAttendanceRate"></div>
+            </div>
+            <div class="metric-card metric-card--slate">
+              <div class="metric-icon"><i data-lucide="alert-circle" class="w-5 h-5"></i></div>
+              <div class="metric-label">Por cobrar</div>
+              <div class="metric-value" id="kpiPendingMoney">RD$0.00</div>
+              <div class="text-sm text-slate-500">Cobros pendientes</div>
+            </div>
+            <div class="metric-card metric-card--rose">
+              <div class="metric-icon"><i data-lucide="alert-triangle" class="w-5 h-5"></i></div>
+              <div class="metric-label">Incidencias</div>
+              <div class="metric-value" id="kpiIncidents">0</div>
+              <div class="text-sm text-slate-500">Seguimiento activo</div>
+            </div>
+          </div>
+
+          <div id="smartAlertsContainer" class="mb-6">
+            <div class="flex items-center gap-2 py-4">
+              <div class="w-4 h-4 border-2 border-blue-200 border-t-transparent rounded-full animate-spin"></div>
+              <span class="text-xs text-slate-400 font-bold">Analizando datos...</span>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 mb-2">
+            <div id="cardReportes" data-action="go-section" data-section="reportes" class="quick-action-card quick-action-card--blue">
+              <div class="flex items-center gap-3 mb-3">
+                <div class="metric-icon"><i data-lucide="file-text" class="w-5 h-5"></i></div>
+                <h3 class="font-black text-slate-800 text-lg">Reportes</h3>
+              </div>
+              <p class="text-slate-500 text-sm">Gestión de incidencias y seguimiento de quejas.</p>
+            </div>
+            <div id="cardVideoconferencia" data-action="go-section" data-section="videoconferencia" class="quick-action-card quick-action-card--rose">
+              <div class="flex items-center gap-3 mb-3">
+                <div class="metric-icon"><i data-lucide="video" class="w-5 h-5"></i></div>
+                <h3 class="font-black text-slate-800 text-lg">Videoconferencia</h3>
+              </div>
+              <p class="text-slate-500 text-sm">Activación rápida de sesiones en vivo para aulas.</p>
+            </div>
+            <div id="cardComunicaciones" data-action="go-section" data-section="comunicacion" class="quick-action-card quick-action-card--blue relative">
+              <span id="badge-card-comunicacion" class="hidden absolute -top-2 -right-2 min-w-[22px] h-5 bg-rose-500 text-white text-[10px] font-black rounded-full flex items-center justify-center px-1.5 shadow-md animate-pulse z-10">0</span>
+              <div class="flex items-center gap-3 mb-3">
+                <div class="metric-icon"><i data-lucide="message-square" class="w-5 h-5"></i></div>
+                <h3 class="font-black text-slate-800 text-lg">Comunicaciones</h3>
+              </div>
+              <p class="text-slate-500 text-sm">Centro de mensajería con familias y docentes.</p>
+            </div>
+            <div id="cardMuro" data-action="go-section" data-section="muro" class="quick-action-card quick-action-card--slate relative">
+              <span id="badge-card-muro" class="hidden absolute -top-2 -right-2 min-w-[22px] h-5 bg-rose-500 text-white text-[10px] font-black rounded-full flex items-center justify-center px-1.5 shadow-md animate-pulse z-10">0</span>
+              <div class="flex items-center gap-3 mb-3">
+                <div class="metric-icon"><i data-lucide="layout" class="w-5 h-5"></i></div>
+                <h3 class="font-black text-slate-800 text-lg">Muro Escolar</h3>
+              </div>
+              <p class="text-slate-500 text-sm">Publicaciones institucionales y novedades.</p>
+            </div>
+            <div data-action="go-section" data-section="accesos" id="cardAcceso" class="quick-action-card quick-action-card--orange">
+              <div class="flex items-center gap-3 mb-3">
+                <div class="metric-icon"><i data-lucide="qr-code" class="w-5 h-5"></i></div>
+                <h3 class="font-black text-slate-800 text-lg">Control de Accesos</h3>
+              </div>
+              <p class="text-slate-500 text-sm">Monitoreo en tiempo real de entradas y salidas.</p>
+            </div>
+            <div data-action="go-section" data-section="staff-permits" class="quick-action-card quick-action-card--green">
+              <div class="flex items-center gap-3 mb-3">
+                <div class="metric-icon"><i data-lucide="calendar-check" class="w-5 h-5"></i></div>
+                <h3 class="font-black text-slate-800 text-lg">Permisos y Faltas</h3>
+              </div>
+              <p class="text-slate-500 text-sm">Control de ausencias y autorizaciones del personal.</p>
+            </div>
           </div>
         </div>
-
-        <!-- ALERTAS AUTOMÁTICAS (Notificaciones) -->
-        <div id="dashboardAlerts" class="mb-6 hidden"></div>
-
-        <!-- BLOQUE 1: KPIs (Tarjetas Pastel) -->
-        <div class="kpi-grid mb-8">
-          <!-- Estudiantes (Morado) -->
-          <div class="bg-purple-100 p-5 rounded-2xl border border-purple-200 shadow-md hover:shadow-md hover:-translate-y-1 transition-all duration-300 group">
-            <div class="flex justify-between items-start mb-2">
-              <div class="p-2 bg-purple-200 rounded-xl text-purple-700 shadow-sm group-hover:scale-110 transition-transform"><i data-lucide="users" class="w-6 h-6"></i></div>
-              <span class="text-xs font-bold text-purple-600 bg-white/60 px-2 py-1 rounded-full">Total</span>
-            </div>
-            <p class="text-3xl font-bold text-purple-800 mb-1" id="kpiStudents">0</p>
-            <p class="text-xs text-purple-600 font-medium">Estudiantes activos</p>
-          </div>
-
-          <!-- Docentes (Azul Cielo) -->
-          <div class="bg-sky-100 p-5 rounded-2xl border border-sky-200 shadow-md hover:shadow-md hover:-translate-y-1 transition-all duration-300 group">
-            <div class="flex justify-between items-start mb-2">
-              <div class="p-2 bg-sky-200 rounded-xl text-sky-700 shadow-sm group-hover:scale-110 transition-transform"><i data-lucide="graduation-cap" class="w-6 h-6"></i></div>
-            </div>
-            <p class="text-3xl font-bold text-sky-800 mb-1" id="kpiTeachers">0</p>
-            <p class="text-xs text-sky-600 font-medium">Docentes</p>
-          </div>
-
-          <!-- Aulas (Indigo) -->
-          <div class="bg-indigo-100 p-5 rounded-2xl border border-indigo-200 shadow-md hover:shadow-md hover:-translate-y-1 transition-all duration-300 group">
-            <div class="flex justify-between items-start mb-2">
-              <div class="p-2 bg-indigo-200 rounded-xl text-indigo-700 shadow-sm group-hover:scale-110 transition-transform"><i data-lucide="home" class="w-6 h-6"></i></div>
-            </div>
-            <p class="text-3xl font-bold text-indigo-800 mb-1" id="kpiClassrooms">0</p>
-            <p class="text-xs text-indigo-600 font-medium">Aulas activas</p>
-          </div>
-
-          <!-- Asistencia (Verde Menta) -->
-          <div class="bg-emerald-100 p-5 rounded-2xl border border-emerald-200 shadow-md hover:shadow-md hover:-translate-y-1 transition-all duration-300 group">
-            <div class="flex justify-between items-start mb-2">
-              <div class="p-2 bg-emerald-200 rounded-xl text-emerald-700 shadow-sm group-hover:scale-110 transition-transform"><i data-lucide="user-check" class="w-6 h-6"></i></div>
-              <span class="text-xs font-bold text-emerald-600 bg-white/60 px-2 py-1 rounded-full">Hoy</span>
-            </div>
-            <p class="text-3xl font-bold text-emerald-800 mb-1" id="kpiAttendance">0</p>
-            <p class="text-xs text-emerald-600 font-medium">Niños presentes</p>
-            <p class="text-[10px] text-emerald-500 font-bold mt-0.5" id="kpiAttendanceRate"></p>
-          </div>
-
-          <!-- Pagos Pendientes (Amarillo Pastel) -->
-          <div class="bg-amber-100 p-5 rounded-2xl border border-amber-200 shadow-md hover:shadow-md hover:-translate-y-1 transition-all duration-300 group">
-            <div class="flex justify-between items-start mb-2">
-              <div class="p-2 bg-amber-200 rounded-xl text-amber-700 shadow-sm group-hover:scale-110 transition-transform"><i data-lucide="alert-circle" class="w-6 h-6"></i></div>
-            </div>
-            <p class="text-xl font-bold text-amber-800 mb-1 truncate" id="kpiPendingMoney">RD$0.00</p>
-            <p class="text-xs text-amber-600 font-medium">Por cobrar</p>
-          </div>
-
-          <!-- Incidencias (Rosa Suave) -->
-          <div class="bg-pink-100 p-5 rounded-2xl border border-pink-200 shadow-md hover:shadow-md hover:-translate-y-1 transition-all duration-300 group">
-            <div class="flex justify-between items-start mb-2">
-              <div class="p-2 bg-pink-200 rounded-xl text-pink-700 shadow-sm group-hover:scale-110 transition-transform"><i data-lucide="alert-triangle" class="w-6 h-6"></i></div>
-            </div>
-            <p class="text-3xl font-bold text-pink-800 mb-1" id="kpiIncidents">0</p>
-            <p class="text-xs text-pink-600 font-medium">Incidencias</p>
-          </div>
-        </div>
-
-        <!-- BLOQUE 2: Alertas Inteligentes (Automatización) -->
-        <div id="smartAlertsContainer" class="mb-6">
-          <div class="flex items-center gap-2 py-4">
-            <div class="w-4 h-4 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin"></div>
-            <span class="text-xs text-slate-400 font-bold">Analizando datos...</span>
-          </div>
-        </div>
-
-        <!-- BLOQUE 3: Accesos Directos (NUEVO) -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <!-- Reportes -->
-          <div id="cardReportes" data-action="go-section" data-section="reportes" class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 hover:shadow-md hover:-translate-y-1 active:scale-95 transition-all duration-300 text-left group cursor-pointer">
-            <div class="w-14 h-14 bg-indigo-50 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-indigo-600 transition-colors">
-              <i data-lucide="file-text" class="w-7 h-7 text-indigo-600 group-hover:text-white transition-colors"></i>
-            </div>
-            <h3 class="font-black text-slate-800 text-lg">Reportes</h3>
-            <p class="text-slate-500 text-xs mt-1">Gestión de incidencias y quejas de padres.</p>
-          </div>
-
-          <!-- Videoconferencia -->
-          <!-- CORREGIDO: Redirige a la sección videoconferencia -->
-          <div id="cardVideoconferencia" data-action="go-section" data-section="videoconferencia" class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 hover:shadow-md hover:-translate-y-1 active:scale-95 transition-all duration-300 text-left group cursor-pointer">
-            <div class="w-14 h-14 bg-rose-50 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-rose-600 transition-colors">
-              <i data-lucide="video" class="w-7 h-7 text-rose-600 group-hover:text-white transition-colors"></i>
-            </div>
-            <h3 class="font-black text-slate-800 text-lg">Videoconferencia</h3>
-            <p class="text-slate-500 text-xs mt-1">Inicia clases en vivo para las aulas.</p>
-          </div>
-
-          <!-- Comunicaciones -->
-          <div id="cardComunicaciones" data-action="go-section" data-section="comunicacion" class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 hover:shadow-md hover:-translate-y-1 active:scale-95 transition-all duration-300 text-left group cursor-pointer relative">
-            <span id="badge-card-comunicacion" class="hidden absolute -top-2 -right-2 min-w-[22px] h-5 bg-rose-500 text-white text-[10px] font-black rounded-full flex items-center justify-center px-1.5 shadow-md animate-pulse z-10">0</span>
-            <div class="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-blue-600 transition-colors">
-              <i data-lucide="message-square" class="w-7 h-7 text-blue-600 group-hover:text-white transition-colors"></i>
-            </div>
-            <h3 class="font-black text-slate-800 text-lg">Comunicaciones</h3>
-            <p class="text-slate-500 text-xs mt-1">Centro de mensajes con los padres.</p>
-          </div>
-
-          <!-- Muro Escolar -->
-          <div id="cardMuro" data-action="go-section" data-section="muro" class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 hover:shadow-md hover:-translate-y-1 active:scale-95 transition-all duration-300 text-left group cursor-pointer relative">
-            <span id="badge-card-muro" class="hidden absolute -top-2 -right-2 min-w-[22px] h-5 bg-rose-500 text-white text-[10px] font-black rounded-full flex items-center justify-center px-1.5 shadow-md animate-pulse z-10">0</span>
-            <div class="w-14 h-14 bg-purple-50 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-purple-600 transition-colors">
-              <i data-lucide="layout" class="w-7 h-7 text-purple-600 group-hover:text-white transition-colors"></i>
-            </div>
-            <h3 class="font-black text-slate-800 text-lg">Muro Escolar</h3>
-            <p class="text-slate-500 text-xs mt-1">Publicaciones generales para la estancia.</p>
-          </div>
-
-          <!-- Sistema de Acceso -->
-          <div data-action="go-section" data-section="accesos" id="cardAcceso" class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 hover:shadow-md hover:-translate-y-1 active:scale-95 transition-all duration-300 text-left group cursor-pointer relative overflow-hidden block">
-            <div class="absolute top-0 right-0 w-24 h-24 bg-orange-500/5 rounded-full -mr-12 -mt-12 group-hover:bg-orange-500/10 transition-colors"></div>
-            <div class="w-14 h-14 bg-orange-50 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-orange-500 transition-colors relative z-10">
-              <i data-lucide="qr-code" class="w-7 h-7 text-orange-600 group-hover:text-white transition-colors"></i>
-            </div>
-            <h3 class="font-black text-slate-800 text-lg relative z-10">Control de Accesos</h3>
-            <p class="text-slate-500 text-xs mt-1 relative z-10">Monitoreo de asistencia de personal y estudiantes en tiempo real.</p>
-          </div>
-
-          <!-- Permisos y Faltas -->
-          <div data-action="go-section" data-section="staff-permits" class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 hover:shadow-md hover:-translate-y-1 active:scale-95 transition-all duration-300 text-left group cursor-pointer relative overflow-hidden block">
-            <div class="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 rounded-full -mr-12 -mt-12 group-hover:bg-emerald-500/10 transition-colors"></div>
-            <div class="w-14 h-14 bg-emerald-50 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-emerald-500 transition-colors relative z-10">
-              <i data-lucide="calendar-check" class="w-7 h-7 text-emerald-600 group-hover:text-white transition-colors"></i>
-            </div>
-            <h3 class="font-black text-slate-800 text-lg relative z-10">Permisos y Faltas</h3>
-            <p class="text-slate-500 text-xs mt-1 relative z-10">Gestión de ausencias, permisos médicos y faltas del personal.</p>
-          </div>
-        </div>
-
       </section>
 
       <!-- MAESTROS -->
       <section id="maestros" class="section">
-        <!-- BLOQUE 1: Resumen Superior (KPIs Pequeños) -->
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <div class="bg-purple-100 text-purple-800 rounded-2xl p-4 shadow-sm flex items-center gap-3">
-            <div class="bg-white p-2 rounded-xl"><i data-lucide="users" class="w-5 h-5 text-purple-600"></i></div>
-            <div>
-              <p class="text-xs font-bold uppercase opacity-70">Total Personal</p>
-              <p class="text-xl font-black" id="kpiStaffTotal">-</p>
+        <div class="section-shell">
+          <div class="section-header">
+            <h1 class="section-title">Gestión de personal</h1>
+            <p class="section-subtitle">Control del equipo docente y apoyo operativo.</p>
+          </div>
+
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div class="metric-card metric-card--blue">
+              <div class="metric-icon"><i data-lucide="users" class="w-5 h-5"></i></div>
+              <div class="metric-label">Total personal</div>
+              <div class="metric-value" id="kpiStaffTotal">-</div>
+            </div>
+            <div class="metric-card metric-card--green">
+              <div class="metric-icon"><i data-lucide="check-circle" class="w-5 h-5"></i></div>
+              <div class="metric-label">Activos</div>
+              <div class="metric-value" id="kpiStaffActive">-</div>
+            </div>
+            <div class="metric-card metric-card--blue">
+              <div class="metric-icon"><i data-lucide="book-open" class="w-5 h-5"></i></div>
+              <div class="metric-label">En aula</div>
+              <div class="metric-value" id="kpiStaffInClass">-</div>
+            </div>
+            <div class="metric-card metric-card--orange">
+              <div class="metric-icon"><i data-lucide="user-plus" class="w-5 h-5"></i></div>
+              <div class="metric-label">Asistentes</div>
+              <div class="metric-value" id="kpiStaffAssistants">-</div>
             </div>
           </div>
-          <div class="bg-green-100 text-green-800 rounded-2xl p-4 shadow-sm flex items-center gap-3">
-            <div class="bg-white p-2 rounded-xl"><i data-lucide="check-circle" class="w-5 h-5 text-green-600"></i></div>
-            <div>
-              <p class="text-xs font-bold uppercase opacity-70">Activos</p>
-              <p class="text-xl font-black" id="kpiStaffActive">-</p>
+
+          <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 mb-6 flex flex-col md:flex-row gap-4 items-center justify-between">
+            <div class="flex items-center gap-3 w-full md:w-auto">
+              <div class="relative w-full md:w-64">
+                <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"></i>
+                <input id="searchTeacher" placeholder="Buscar por nombre..." class="pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm w-full focus:ring-2 focus:ring-[#0B63C7] outline-none bg-slate-50 focus:bg-white transition-all">
+              </div>
+            </div>
+            <div class="flex gap-3 w-full md:w-auto justify-end">
+              <button id="btnAddAssistant" class="px-4 py-2.5 bg-blue-100 text-[#0850A0] hover:bg-blue-100 rounded-xl text-sm font-bold transition-colors flex items-center gap-2">
+                <i data-lucide="user-plus" class="w-4 h-4"></i> Asistente
+              </button>
+              <button onclick="App.teachers.openModal()" class="px-4 py-2.5 bg-[#0B63C7] text-white hover:bg-[#0850A0] rounded-xl text-sm font-bold shadow-md hover:shadow-lg transition-all flex items-center gap-2">
+                <i data-lucide="plus" class="w-4 h-4"></i> Nuevo Maestro
+              </button>
             </div>
           </div>
-          <div class="bg-blue-100 text-blue-800 rounded-2xl p-4 shadow-sm flex items-center gap-3">
-            <div class="bg-white p-2 rounded-xl"><i data-lucide="book-open" class="w-5 h-5 text-blue-600"></i></div>
-            <div>
-              <p class="text-xs font-bold uppercase opacity-70">En Aula</p>
-              <p class="text-xl font-black" id="kpiStaffInClass">-</p>
+
+          <div class="table-panel">
+            <div class="table-scroll-wrap rounded-2xl border border-slate-200">
+              <table class="data-table w-full text-sm text-left border-collapse">
+                <thead>
+                  <tr>
+                    <th>Nombre</th>
+                    <th>Correo</th>
+                    <th>Aula asignada</th>
+                    <th>Rol</th>
+                    <th class="text-right">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="teachersTableBody"></tbody>
+              </table>
             </div>
-          </div>
-          <div class="bg-orange-100 text-orange-800 rounded-2xl p-4 shadow-sm flex items-center gap-3">
-            <div class="bg-white p-2 rounded-xl"><i data-lucide="user-plus" class="w-5 h-5 text-orange-600"></i></div>
-            <div>
-              <p class="text-xs font-bold uppercase opacity-70">Asistentes</p>
-              <p class="text-xl font-black" id="kpiStaffAssistants">-</p>
+            <div id="teachersEmptyState" class="hidden text-center py-12">
+              <div class="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3"><i data-lucide="users" class="w-8 h-8 text-slate-400"></i></div>
+              <h3 class="text-slate-600 font-bold">No hay personal registrado</h3>
+              <p class="text-slate-400 text-sm">Comienza agregando maestros o asistentes.</p>
             </div>
           </div>
         </div>
-
-        <!-- BLOQUE 2: Filtros Modernos -->
-        <div class="bg-white rounded-2xl shadow-md p-4 mb-8 flex flex-col md:flex-row gap-4 items-center justify-between">
-          <div class="flex items-center gap-3 w-full md:w-auto">
-            <div class="relative w-full md:w-64">
-              <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"></i>
-              <input id="searchTeacher" placeholder="Buscar por nombre..." class="pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm w-full focus:ring-2 focus:ring-purple-500 outline-none bg-slate-50 focus:bg-white transition-all">
-            </div>
-          </div>
-          <div class="flex gap-3 w-full md:w-auto justify-end">
-            <button id="btnAddAssistant" class="px-4 py-2.5 bg-indigo-100 text-indigo-700 hover:bg-indigo-200 rounded-xl text-sm font-bold transition-colors flex items-center gap-2">
-              <i data-lucide="user-plus" class="w-4 h-4"></i> Asistente
-            </button>
-            <button onclick="App.teachers.openModal()" class="px-4 py-2.5 bg-purple-600 text-white hover:bg-purple-700 rounded-xl text-sm font-bold shadow-md hover:shadow-lg transition-all flex items-center gap-2">
-              <i data-lucide="plus" class="w-4 h-4"></i> Nuevo Maestro
-            </button>
-          </div>
-        </div>
-
-        <!-- BLOQUE 3: Tabla de Maestros y Asistentes -->
-        <div class="bg-white rounded-2xl shadow-md border border-slate-100 p-6">
-          <div class="table-scroll-wrap rounded-2xl border border-slate-200">
-            <table class="data-table">
-              <thead class="bg-slate-50 text-slate-500 font-black uppercase text-[10px] tracking-wider">
-                <tr>
-                  <th>Nombre</th>
-                  <th>Correo</th>
-                  <th>Aula Asignada</th>
-                  <th>Rol</th>
-                  <th class="text-right">Acciones</th>
-                </tr>
-              </thead>
-              <tbody id="teachersTableBody">
-                <!-- Filas inyectadas por JS -->
-              </tbody>
-            </table>
-          </div>
-          <div id="teachersEmptyState" class="hidden text-center py-12">
-            <div class="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3"><i data-lucide="users" class="w-8 h-8 text-slate-400"></i></div>
-            <h3 class="text-slate-600 font-bold">No hay personal registrado</h3>
-            <p class="text-slate-400 text-sm">Comienza agregando maestros o asistentes.</p>
-          </div>
-        </div>
-
       </section>
 
       </section>
@@ -823,7 +1161,7 @@
             <div class="table-scroll-wrap">
               <table class="w-full text-left">
                 <thead>
-                  <tr class="bg-slate-50 border-b border-slate-100 text-slate-400">
+                  <tr class="bg-[#E8F2FF] border-b border-blue-100 text-[#0850A0]">
                     <th class="px-6 py-4 text-[10px] font-black uppercase tracking-widest">Maestra</th>
                     <th class="px-6 py-4 text-[10px] font-black uppercase tracking-widest">Tipo</th>
                     <th class="px-6 py-4 text-[10px] font-black uppercase tracking-widest">Fecha</th>
@@ -839,7 +1177,7 @@
           </div>
 
           <div class="space-y-4">
-            <div class="bg-emerald-600 p-6 rounded-3xl text-white shadow-lg shadow-emerald-100">
+            <div class="bg-[#28B54D] p-6 rounded-3xl text-white shadow-lg shadow-green-100">
               <p class="text-[10px] font-black uppercase opacity-70 mb-1">Permisos Hoy</p>
               <p class="text-4xl font-black" id="statPermitsToday">0</p>
             </div>
@@ -862,65 +1200,49 @@
 
       <!-- ESTUDIANTES -->
       <section id="estudiantes" class="section">
-        <!-- BLOQUE 1 — KPIs Superiores -->
-        <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 mb-6">
-          <div class="bg-purple-100 text-purple-700 rounded-2xl p-4 shadow-sm">
-            <div class="text-xs font-bold uppercase opacity-70">Total estudiantes</div>
-            <div class="text-2xl font-black" id="totalStudents">-</div>
+        <div class="section-shell">
+          <div class="section-header">
+            <h1 class="section-title">Gestión de estudiantes</h1>
+            <p class="section-subtitle">Vista consolidada de matrícula, rendimiento y seguimiento.</p>
           </div>
-          <div class="bg-emerald-100 text-emerald-600 rounded-2xl p-4 shadow-sm">
-            <div class="text-xs font-bold uppercase opacity-70">Activos</div>
-            <div class="text-2xl font-black" id="activeStudents">-</div>
-          </div>
-          <div class="bg-pink-100 text-pink-600 rounded-2xl p-4 shadow-sm">
-            <div class="text-xs font-bold uppercase opacity-70">Incidencias</div>
-            <div class="text-2xl font-black" id="incidents">-</div>
-          </div>
-          <div class="bg-sky-100 text-sky-600 rounded-2xl p-4 shadow-sm">
-            <div class="text-xs font-bold uppercase opacity-70">Por aulas</div>
-            <div class="text-2xl font-black" id="classroomsCount">-</div>
-          </div>
-          <div class="bg-indigo-100 text-indigo-700 rounded-2xl p-4 shadow-sm">
-            <div class="text-xs font-bold uppercase opacity-70">Promedio general</div>
-            <div class="text-2xl font-black" id="avgGrade">-</div>
-          </div>
-          <div class="bg-amber-100 text-amber-700 rounded-2xl p-4 shadow-sm">
-            <div class="text-xs font-bold uppercase opacity-70">Asistencia prom.</div>
-            <div class="text-2xl font-black" id="avgAttendance">-</div>
-          </div>
-        </div>
 
-        <!-- BLOQUE 2 — Filtros -->
-        <div class="bg-white rounded-2xl shadow-md p-4 flex flex-wrap gap-3 items-center mb-6">
-          <div class="relative w-full md:w-64">
-            <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"></i>
-            <input id="searchStudent" placeholder="Buscar estudiante..." class="pl-10 pr-3 py-2.5 border border-slate-200 rounded-xl text-sm w-full focus:ring-2 focus:ring-purple-500 outline-none bg-slate-50 focus:bg-white" />
+          <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 mb-6">
+            <div class="metric-card metric-card--blue"><div class="metric-label">Total estudiantes</div><div class="metric-value" id="totalStudents">-</div></div>
+            <div class="metric-card metric-card--green"><div class="metric-label">Activos</div><div class="metric-value" id="activeStudents">-</div></div>
+            <div class="metric-card metric-card--rose"><div class="metric-label">Incidencias</div><div class="metric-value" id="incidents">-</div></div>
+            <div class="metric-card metric-card--blue"><div class="metric-label">Por aulas</div><div class="metric-value" id="classroomsCount">-</div></div>
+            <div class="metric-card metric-card--slate"><div class="metric-label">Promedio general</div><div class="metric-value" id="avgGrade">-</div></div>
+            <div class="metric-card metric-card--amber"><div class="metric-label">Asistencia prom.</div><div class="metric-value" id="avgAttendance">-</div></div>
           </div>
-          <div class="ml-auto flex items-center gap-2">
-            <button id="btnExportStudents" class="px-3 py-2 bg-green-100 text-green-700 border border-green-200 rounded-xl text-sm hover:bg-green-200 font-bold flex items-center gap-2">
-              <i data-lucide="sheet" class="w-4 h-4"></i> Excel
-            </button>
-            <button id="btnAddStudent" class="bg-purple-600 hover:bg-purple-700 text-white rounded-xl px-4 py-2 shadow-md flex items-center gap-2">
-              <i data-lucide="user-plus" class="w-4 h-4"></i> Nuevo Estudiante
-            </button>
-          </div>
-        </div>
 
-        <!-- BLOQUE 3 — Grid/List de Estudiantes -->
-        <div id="studentsGrid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-          <!-- Cards inyectadas por JS -->
-        </div>
-        <div id="studentsTableWrapper" class="hidden bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
-          <table class="w-full text-left border-collapse">
-            <thead>
-              <tr class="bg-slate-50/50 border-b border-slate-100">
-                <th class="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Estudiante</th>
-                <th class="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Aula</th>
-                <th class="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Acciones</th>
-              </tr>
-            </thead>
-            <tbody id="studentsTable"><!-- JS --></tbody>
-          </table>
+          <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 flex flex-wrap gap-3 items-center mb-6">
+            <div class="relative w-full md:w-64">
+              <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"></i>
+              <input id="searchStudent" placeholder="Buscar estudiante..." class="pl-10 pr-3 py-2.5 border border-slate-200 rounded-xl text-sm w-full focus:ring-2 focus:ring-[#0B63C7] outline-none bg-slate-50 focus:bg-white" />
+            </div>
+            <div class="ml-auto flex items-center gap-2">
+              <button id="btnExportStudents" class="px-3 py-2 bg-green-100 text-green-700 border border-green-200 rounded-xl text-sm hover:bg-green-200 font-bold flex items-center gap-2">
+                <i data-lucide="sheet" class="w-4 h-4"></i> Excel
+              </button>
+              <button id="btnAddStudent" class="bg-[#0B63C7] hover:bg-[#0850A0] text-white rounded-xl px-4 py-2 shadow-md flex items-center gap-2">
+                <i data-lucide="user-plus" class="w-4 h-4"></i> Nuevo Estudiante
+              </button>
+            </div>
+          </div>
+
+          <div id="studentsGrid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6"></div>
+          <div id="studentsTableWrapper" class="hidden table-panel mt-6">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="bg-[#E8F2FF]/60 border-b border-blue-100">
+                  <th class="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Estudiante</th>
+                  <th class="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Aula</th>
+                  <th class="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="studentsTable"></tbody>
+            </table>
+          </div>
         </div>
       </section>
 
@@ -929,11 +1251,11 @@
         <!-- Encabezado y acciones -->
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
           <div>
-            <h2 class="text-2xl font-bold text-slate-800">Centro Académico</h2>
+            <h2 class="text-2xl font-bold text-[#1A2340]">Centro Académico</h2>
             <p class="text-slate-500 text-sm">Vista moderna de aulas con métricas en tiempo real</p>
           </div>
           <div class="flex gap-3">
-            <button id="btnAddRoom" onclick="App.rooms.openModal()" class="px-4 py-2.5 bg-purple-600 text-white rounded-xl hover:bg-purple-700 flex items-center gap-2 shadow-md">
+            <button id="btnAddRoom" onclick="App.rooms.openModal()" class="px-4 py-2.5 bg-[#0B63C7] text-white rounded-xl hover:bg-[#0850A0] flex items-center gap-2 shadow-md">
               <i data-lucide="plus" class="w-4 h-4"></i>
               Nueva Aula
             </button>
@@ -943,7 +1265,7 @@
         <!-- BLOQUE 1 – Tabla de Aulas (sin cambios) -->
         <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden mb-8">
           <table class="w-full text-sm">
-            <thead class="bg-slate-50 text-left text-xs font-bold uppercase tracking-wider text-slate-600">
+            <thead class="bg-[#E8F2FF] text-left text-xs font-black uppercase tracking-wider text-[#0850A0]">
               <tr>
                 <th class="py-4 px-6">Nombre del Aula</th>
                 <th class="py-4 px-6">Maestra Asignada</th>
@@ -960,7 +1282,7 @@
         <!-- BLOQUE 2 – Panel Interno del Aula (Opcional, mantenido para detalle) -->
         <div id="classroomPanel" class="hidden mt-8">
           <div class="bg-white rounded-3xl shadow-md border border-slate-100 overflow-hidden">
-            <div class="p-6 bg-gradient-to-r from-purple-600 to-indigo-600 text-white flex items-center justify-between">
+            <div class="p-6 bg-gradient-to-r from-[#0B63C7] to-[#0850A0] text-white flex items-center justify-between">
               <div class="flex items-center gap-4">
                 <img id="cpTeacherPhoto" src="img/1.jpg" class="w-14 h-14 rounded-2xl object-cover border-2 border-white/30" alt="Maestro" loading="lazy" />
                 <div>
@@ -990,8 +1312,8 @@
                   <div class="text-xs font-bold text-amber-600 uppercase">Tareas</div>
                   <div class="text-2xl font-black text-slate-800" id="cpTasks">-</div>
                 </div>
-                <div class="bg-sky-50 rounded-2xl p-4 border border-sky-100">
-                  <div class="text-xs font-bold text-sky-600 uppercase">Avisos</div>
+                <div class="bg-[#E8F2FF] rounded-2xl p-4 border border-blue-100">
+                  <div class="text-xs font-bold text-[#0B63C7] uppercase">Avisos</div>
                   <div class="text-2xl font-black text-slate-800" id="cpNotices">-</div>
                 </div>
               </div>
@@ -1000,7 +1322,7 @@
               <div class="bg-slate-50 rounded-2xl p-4 border border-slate-200">
                 <div class="text-xs font-bold text-slate-600 uppercase mb-2">Acciones rápidas</div>
                 <div class="space-y-2">
-                  <button id="cpQuickAttendance" class="w-full py-2 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700">Registrar asistencia</button>
+                  <button id="cpQuickAttendance" class="w-full py-2 bg-[#0B63C7] text-white rounded-xl text-sm font-bold hover:bg-[#0850A0]">Registrar asistencia</button>
                   <button id="cpQuickNote" class="w-full py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold hover:bg-slate-50">Nota rápida</button>
                   <button id="cpQuickCalendar" class="w-full py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold hover:bg-slate-50">Ver calendario</button>
                 </div>
@@ -1024,14 +1346,14 @@
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
           <div>
             <h1 class="text-2xl font-black text-slate-800 tracking-tight flex items-center gap-2">
-              <span class="w-9 h-9 bg-indigo-100 text-indigo-600 rounded-xl flex items-center justify-center"><i data-lucide="calendar-check" class="w-5 h-5"></i></span>
+              <span class="w-9 h-9 bg-blue-100 text-[#0B63C7] rounded-xl flex items-center justify-center"><i data-lucide="calendar-check" class="w-5 h-5"></i></span>
               Control de Asistencia
             </h1>
             <p class="text-slate-400 text-sm font-medium mt-0.5">Seguimiento diario y por periodo de todos los estudiantes</p>
           </div>
           <div class="flex items-center gap-2">
-            <div id="attSpinner" class="hidden w-5 h-5 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-            <button id="btnAttExport" class="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-xl font-black text-xs uppercase tracking-wider hover:bg-emerald-700 shadow-sm transition-all">
+            <div id="attSpinner" class="hidden w-5 h-5 border-2 border-blue-200 border-t-transparent rounded-full animate-spin"></div>
+            <button id="btnAttExport" class="flex items-center gap-2 px-4 py-2.5 bg-[#28B54D] text-white rounded-xl font-black text-xs uppercase tracking-wider hover:bg-[#1A8035] shadow-sm transition-all">
               <i data-lucide="download" class="w-4 h-4"></i> Exportar CSV
             </button>
           </div>
@@ -1051,7 +1373,7 @@
         <div id="attPanelDay" class="mb-5">
           <div class="flex items-center gap-3 flex-wrap">
             <label class="text-xs font-black text-slate-400 uppercase tracking-wider">Fecha</label>
-            <input type="date" id="attDateSingle" class="px-4 py-2 border-2 border-slate-100 rounded-xl text-sm font-bold bg-white focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50 outline-none transition-all">
+            <input type="date" id="attDateSingle" class="px-4 py-2 border-2 border-slate-100 rounded-xl text-sm font-bold bg-white focus:border-blue-200 focus:ring-4 focus:ring-[#0B63C7] outline-none transition-all">
           </div>
         </div>
 
@@ -1059,9 +1381,9 @@
         <div id="attPanelRange" class="hidden mb-5">
           <div class="flex items-center gap-3 flex-wrap">
             <label class="text-xs font-black text-slate-400 uppercase tracking-wider">Desde</label>
-            <input type="date" id="attDateFrom" class="px-4 py-2 border-2 border-slate-100 rounded-xl text-sm font-bold bg-white focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50 outline-none transition-all">
+            <input type="date" id="attDateFrom" class="px-4 py-2 border-2 border-slate-100 rounded-xl text-sm font-bold bg-white focus:border-blue-200 focus:ring-4 focus:ring-[#0B63C7] outline-none transition-all">
             <label class="text-xs font-black text-slate-400 uppercase tracking-wider">Hasta</label>
-            <input type="date" id="attDateTo"   class="px-4 py-2 border-2 border-slate-100 rounded-xl text-sm font-bold bg-white focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50 outline-none transition-all">
+            <input type="date" id="attDateTo"   class="px-4 py-2 border-2 border-slate-100 rounded-xl text-sm font-bold bg-white focus:border-blue-200 focus:ring-4 focus:ring-[#0B63C7] outline-none transition-all">
           </div>
         </div>
 
@@ -1083,11 +1405,11 @@
             <p class="text-[10px] font-black text-amber-500 uppercase tracking-wider mb-1">Tardanzas</p>
             <p class="text-2xl font-black text-amber-700" id="attKpiLate">—</p>
           </div>
-          <div class="bg-indigo-50 rounded-2xl p-4 border border-indigo-100 shadow-sm col-span-2 md:col-span-1">
-            <p class="text-[10px] font-black text-indigo-500 uppercase tracking-wider mb-1">Tasa Asistencia</p>
-            <p class="text-2xl font-black text-indigo-700" id="attKpiRate">—</p>
-            <div class="mt-2 h-1.5 bg-indigo-100 rounded-full overflow-hidden">
-              <div id="attRateBar" class="h-full bg-indigo-500 rounded-full transition-all duration-500" style="width:0%"></div>
+          <div class="bg-[#E8F2FF] rounded-2xl p-4 border border-blue-200 shadow-sm col-span-2 md:col-span-1">
+            <p class="text-[10px] font-black text-[#0B63C7] uppercase tracking-wider mb-1">Tasa Asistencia</p>
+            <p class="text-2xl font-black text-[#0850A0]" id="attKpiRate">—</p>
+            <div class="mt-2 h-1.5 bg-blue-100 rounded-full overflow-hidden">
+              <div id="attRateBar" class="h-full bg-[#0B63C7] rounded-full transition-all duration-500" style="width:0%"></div>
             </div>
           </div>
         </div>
@@ -1111,12 +1433,12 @@
           <div class="flex flex-wrap gap-3 p-4 border-b border-slate-100">
             <div class="flex-1 min-w-[180px] relative">
               <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
-              <input id="attSearch" type="text" placeholder="Buscar estudiante..." class="w-full pl-9 pr-4 py-2 border-2 border-slate-100 rounded-xl text-sm font-medium bg-slate-50 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50 outline-none transition-all">
+              <input id="attSearch" type="text" placeholder="Buscar estudiante..." class="w-full pl-9 pr-4 py-2 border-2 border-slate-100 rounded-xl text-sm font-medium bg-slate-50 focus:border-blue-200 focus:ring-4 focus:ring-[#0B63C7] outline-none transition-all">
             </div>
-            <select id="attFilterRoom" class="px-4 py-2 border-2 border-slate-100 rounded-xl text-sm font-bold bg-slate-50 focus:border-indigo-400 outline-none transition-all">
+            <select id="attFilterRoom" class="px-4 py-2 border-2 border-slate-100 rounded-xl text-sm font-bold bg-slate-50 focus:border-blue-200 outline-none transition-all">
               <option value="">Todas las aulas</option>
             </select>
-            <select id="attFilterStatus" class="px-4 py-2 border-2 border-slate-100 rounded-xl text-sm font-bold bg-slate-50 focus:border-indigo-400 outline-none transition-all">
+            <select id="attFilterStatus" class="px-4 py-2 border-2 border-slate-100 rounded-xl text-sm font-bold bg-slate-50 focus:border-blue-200 outline-none transition-all">
               <option value="">Todos los estados</option>
               <option value="present">Presente</option>
               <option value="absent">Ausente</option>
@@ -1150,17 +1472,17 @@
         <!-- Header -->
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div>
-            <h1 class="text-3xl font-bold text-slate-800 tracking-tight">Centro de Calificaciones</h1>
+            <h1 class="text-2xl font-black text-[#1A2340] tracking-tight">Centro de Calificaciones</h1>
             <p class="text-slate-500 font-medium">Seguimiento del progreso académico por periodo.</p>
           </div>
           <div class="flex gap-2 flex-wrap">
-            <button id="btnNewPeriod" class="px-5 py-2.5 bg-indigo-600 text-white rounded-xl font-black text-xs uppercase tracking-wider hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition-all flex items-center gap-2 active:scale-95">
+            <button id="btnNewPeriod" class="px-5 py-2.5 bg-[#0B63C7] text-white rounded-xl font-black text-xs uppercase tracking-wider hover:bg-[#0850A0] shadow-lg shadow-blue-200 transition-all flex items-center gap-2 active:scale-95">
               <i data-lucide="calendar-plus" class="w-4 h-4"></i> Nuevo Periodo
             </button>
             <button id="btnClosePeriod" class="px-5 py-2.5 bg-rose-600 text-white rounded-xl font-black text-xs uppercase tracking-wider hover:bg-rose-700 shadow-lg shadow-rose-200 transition-all items-center gap-2 active:scale-95" style="display:none;">
               <i data-lucide="lock" class="w-4 h-4"></i> Cerrar Periodo
             </button>
-            <button id="btnExportGrades" class="px-5 py-2.5 bg-emerald-600 text-white rounded-xl font-black text-xs uppercase tracking-wider hover:bg-emerald-700 shadow-lg shadow-emerald-200 transition-all flex items-center gap-2 active:scale-95">
+            <button id="btnExportGrades" class="px-5 py-2.5 bg-[#28B54D] text-white rounded-xl font-black text-xs uppercase tracking-wider hover:bg-[#1A8035] shadow-lg shadow-green-200 transition-all flex items-center gap-2 active:scale-95">
               <i data-lucide="download" class="w-4 h-4"></i> Exportar CSV
             </button>
           </div>
@@ -1168,7 +1490,7 @@
 
         <!-- KPIs -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <div class="bg-blue-50 p-4 rounded-2xl border border-blue-100 shadow-sm">
+          <div class="bg-[#E8F2FF] p-4 rounded-2xl border border-blue-100 shadow-sm">
             <div class="flex items-center gap-3 mb-2"><div class="p-2 bg-blue-100 rounded-lg text-blue-600"><i data-lucide="award" class="w-5 h-5"></i></div><span class="text-xs font-bold text-blue-600 uppercase tracking-wider">Promedio General</span></div>
             <p class="text-2xl font-black text-slate-800" id="kpiAvgGrade">N/A</p>
           </div>
@@ -1190,18 +1512,18 @@
         <div class="bg-white rounded-2xl shadow-md border border-slate-100 p-6">
           <div class="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
             <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2 w-full md:w-auto">
-              <span class="w-2 h-6 bg-blue-600 rounded-full"></span>
+              <span class="w-2 h-6 bg-[#0B63C7] rounded-full"></span>
               Registros de Calificaciones
             </h3>
             <div class="flex flex-wrap gap-3 w-full md:w-auto">
-              <select id="gradesFilterPeriod" class="px-3 py-2 border rounded-xl text-sm bg-slate-50 font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-400">
+              <select id="gradesFilterPeriod" class="px-3 py-2 border rounded-xl text-sm bg-slate-50 font-bold text-slate-700 outline-none focus:ring-2 focus:ring-[#0B63C7]">
                 <option value="">Todos los periodos</option>
               </select>
               <div class="relative flex-1 md:w-56">
                 <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"></i>
-                <input id="searchGradeStudent" placeholder="Buscar estudiante..." class="pl-10 pr-4 py-2 border rounded-xl text-sm w-full bg-slate-50 focus:bg-white transition-all outline-none focus:ring-2 focus:ring-indigo-400">
+                <input id="searchGradeStudent" placeholder="Buscar estudiante..." class="pl-10 pr-4 py-2 border rounded-xl text-sm w-full bg-slate-50 focus:bg-white transition-all outline-none focus:ring-2 focus:ring-[#0B63C7]">
               </div>
-              <select id="gradesFilterClassroom" class="px-3 py-2 border rounded-xl text-sm bg-slate-50 font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-400">
+              <select id="gradesFilterClassroom" class="px-3 py-2 border rounded-xl text-sm bg-slate-50 font-bold text-slate-700 outline-none focus:ring-2 focus:ring-[#0B63C7]">
                 <option value="all">Todas las aulas</option>
               </select>
             </div>
@@ -1209,7 +1531,7 @@
 
           <div class="table-scroll-wrap rounded-2xl border border-slate-200">
             <table class="w-full text-sm text-left border-separate border-spacing-0" style="min-width:600px;">
-              <thead class="bg-slate-50 text-slate-500 font-black uppercase text-[10px] tracking-wider sticky top-0 z-10">
+              <thead class="bg-[#E8F2FF] text-[#0850A0] font-black uppercase text-[10px] tracking-wider sticky top-0 z-10">
                 <tr>
                   <th class="px-6 py-4 border-b border-slate-200">Estudiante</th>
                   <th class="px-6 py-4 text-center border-b border-slate-200">Promedio</th>
@@ -1230,7 +1552,7 @@
       <section id="reportes" class="section">
         <div class="flex items-center justify-between mb-6">
           <div>
-            <h2 class="text-2xl font-bold text-slate-800 flex items-center gap-2">
+            <h2 class="text-2xl font-bold text-[#1A2340] flex items-center gap-2">
               <i data-lucide="alert-triangle" class="w-6 h-6 text-pink-600"></i>
               Sistema Formal de Incidencias
             </h2>
@@ -1289,11 +1611,11 @@
             </div>
           </div>
           <div class="space-y-4">
-            <div class="bg-indigo-600 p-6 rounded-3xl text-white shadow-lg shadow-indigo-100">
+            <div class="bg-[#0B63C7] p-6 rounded-3xl text-white shadow-lg shadow-blue-200">
               <p class="text-[10px] font-black uppercase opacity-70 mb-1">Personal en Estancia</p>
               <p class="text-4xl font-black" id="statStaffIn">0</p>
             </div>
-            <div class="bg-emerald-500 p-6 rounded-3xl text-white shadow-lg shadow-emerald-100">
+            <div class="bg-[#28B54D] p-6 rounded-3xl text-white shadow-lg shadow-green-100">
               <p class="text-[10px] font-black uppercase opacity-70 mb-1">Alumnos en Estancia</p>
               <p class="text-4xl font-black" id="statStudentsIn">0</p>
             </div>
@@ -1305,7 +1627,7 @@
           <div class="table-scroll-wrap">
             <table class="w-full text-left">
               <thead>
-                <tr class="bg-slate-50 border-b border-slate-100 text-slate-400">
+                <tr class="bg-[#E8F2FF] border-b border-blue-100 text-[#0850A0]">
                   <th class="px-6 py-4 text-[10px] font-black uppercase tracking-widest">Nombre</th>
                   <th class="px-6 py-4 text-[10px] font-black uppercase tracking-widest">Rol / Aula</th>
                   <th class="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-center">Entrada</th>
@@ -1323,52 +1645,61 @@
 
       <!-- PAGOS -->
       <section id="pagos" class="section">
-        <!-- Header -->
-        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+        <!-- Header Pagos -->
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
           <div>
-            <h1 class="text-3xl font-bold text-slate-800 tracking-tight">Gestión Financiera</h1>
-            <p class="text-slate-500 font-medium">Control de ingresos, mensualidades y transferencias</p>
+            <div class="flex items-center gap-3 mb-1">
+              <div class="w-1 h-8 bg-[#0B63C7] rounded-full"></div>
+              <h1 class="text-2xl font-black text-slate-800 tracking-tight">Gestión Financiera</h1>
+            </div>
+            <p class="text-slate-500 font-medium ml-4">Control de ingresos, mensualidades y transferencias</p>
           </div>
-          <div>
-            <button id="btnNewPayment" class="px-6 py-3 bg-indigo-600 text-white rounded-xl font-black text-sm uppercase tracking-wider hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition-all flex items-center gap-2 active:scale-95">
-              <i data-lucide="plus-circle" class="w-5 h-5"></i> Registrar Pago
-            </button>
-          </div>
+          <button id="btnNewPayment" class="px-5 py-3 bg-[#FF7A00] text-white rounded-2xl font-black text-sm uppercase tracking-wide hover:bg-[#D96500] shadow-lg transition-all flex items-center gap-2 active:scale-95">
+            <i data-lucide="plus-circle" class="w-5 h-5"></i> Registrar Pago
+          </button>
         </div>
 
-        <!-- BLOQUE 1: KPIs Interactivos -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <!-- Ingresos del mes -->
-          <div class="bg-purple-50 p-4 rounded-2xl border border-purple-100 shadow-sm">
-             <div class="flex items-center gap-3 mb-2">
-               <div class="p-2 bg-purple-100 rounded-lg text-purple-600"><i data-lucide="trending-up" class="w-5 h-5"></i></div>
-               <span class="text-xs font-bold text-purple-600 uppercase tracking-wider">Ingresos Mes</span>
-             </div>
-             <p class="text-2xl font-black text-slate-800" id="kpiIncomeMonth">$0</p>
+        <!-- KPIs Financieros -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <!-- Ingresos -->
+          <div class="bg-[#E8F2FF] p-5 rounded-2xl border border-blue-100 shadow-sm hover:shadow-md transition-all">
+            <div class="flex items-center gap-3 mb-3">
+              <div class="w-10 h-10 bg-[#0B63C7] rounded-xl flex items-center justify-center">
+                <i data-lucide="trending-up" class="w-5 h-5 text-white"></i>
+              </div>
+              <span class="text-xs font-black text-[#0B63C7] uppercase tracking-wider">Ingresos Mes</span>
+            </div>
+            <p class="text-2xl font-black text-slate-800" id="kpiIncomeMonth">$0</p>
           </div>
-          <!-- Pagos Pendientes -->
-          <div onclick="App.payments.filterBy('pending')" class="bg-slate-50 p-4 rounded-2xl border border-slate-200 shadow-sm cursor-pointer hover:bg-white hover:shadow-md transition-all group">
-             <div class="flex items-center gap-3 mb-2">
-               <div class="p-2 bg-slate-200 rounded-lg text-slate-600 group-hover:bg-slate-300"><i data-lucide="clock" class="w-5 h-5"></i></div>
-               <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Pendientes</span>
-             </div>
-             <p class="text-2xl font-black text-slate-800" id="kpiPendingCount">0</p>
+          <!-- Pendientes -->
+          <div onclick="App.payments.filterBy('pending')" class="bg-[#FFFBE6] p-5 rounded-2xl border border-yellow-100 shadow-sm cursor-pointer hover:shadow-md transition-all group">
+            <div class="flex items-center gap-3 mb-3">
+              <div class="w-10 h-10 bg-[#FFD43B] rounded-xl flex items-center justify-center">
+                <i data-lucide="clock" class="w-5 h-5 text-slate-700"></i>
+              </div>
+              <span class="text-xs font-black text-yellow-700 uppercase tracking-wider">Pendientes</span>
+            </div>
+            <p class="text-2xl font-black text-slate-800" id="kpiPendingCount">0</p>
           </div>
-          <!-- En Revisión (Transferencias) -->
-          <div onclick="App.payments.filterBy('review')" class="bg-amber-50 p-4 rounded-2xl border border-amber-100 shadow-sm cursor-pointer hover:shadow-md transition-all group">
-             <div class="flex items-center gap-3 mb-2">
-               <div class="p-2 bg-amber-100 rounded-lg text-amber-600 group-hover:bg-amber-200"><i data-lucide="file-search" class="w-5 h-5"></i></div>
-               <span class="text-xs font-bold text-amber-600 uppercase tracking-wider">En Revisión</span>
-             </div>
-             <p class="text-2xl font-black text-slate-800" id="kpiReviewCount">0</p>
+          <!-- En Revisión -->
+          <div onclick="App.payments.filterBy('review')" class="bg-[#FFF0E0] p-5 rounded-2xl border border-orange-100 shadow-sm cursor-pointer hover:shadow-md transition-all group">
+            <div class="flex items-center gap-3 mb-3">
+              <div class="w-10 h-10 bg-[#FF7A00] rounded-xl flex items-center justify-center">
+                <i data-lucide="file-search" class="w-5 h-5 text-white"></i>
+              </div>
+              <span class="text-xs font-black text-[#D96500] uppercase tracking-wider">En Revisión</span>
+            </div>
+            <p class="text-2xl font-black text-slate-800" id="kpiReviewCount">0</p>
           </div>
           <!-- Vencidos -->
-          <div onclick="App.payments.filterBy('overdue')" class="bg-rose-50 p-4 rounded-2xl border border-rose-100 shadow-sm cursor-pointer hover:shadow-md transition-all group">
-             <div class="flex items-center gap-3 mb-2">
-               <div class="p-2 bg-rose-100 rounded-lg text-rose-600 group-hover:bg-rose-200"><i data-lucide="alert-triangle" class="w-5 h-5"></i></div>
-               <span class="text-xs font-bold text-rose-600 uppercase tracking-wider">Vencidos</span>
-             </div>
-             <p class="text-2xl font-black text-slate-800" id="kpiOverdueCount">0</p>
+          <div onclick="App.payments.filterBy('overdue')" class="bg-rose-50 p-5 rounded-2xl border border-rose-100 shadow-sm cursor-pointer hover:shadow-md transition-all group">
+            <div class="flex items-center gap-3 mb-3">
+              <div class="w-10 h-10 bg-rose-500 rounded-xl flex items-center justify-center">
+                <i data-lucide="alert-triangle" class="w-5 h-5 text-white"></i>
+              </div>
+              <span class="text-xs font-black text-rose-600 uppercase tracking-wider">Vencidos</span>
+            </div>
+            <p class="text-2xl font-black text-slate-800" id="kpiOverdueCount">0</p>
           </div>
         </div>
 
@@ -1398,30 +1729,30 @@
           <!-- Configuración de Ciclo de Pagos -->
           <div class="bg-slate-50 rounded-3xl border border-slate-200 p-6 flex flex-col justify-center">
             <h3 class="font-bold text-slate-800 mb-4 flex items-center gap-2">
-              <i data-lucide="settings-2" class="w-5 h-5 text-indigo-600"></i> Configuración de Cobro
+              <i data-lucide="settings-2" class="w-5 h-5 text-[#0B63C7]"></i> Configuración de Cobro
             </h3>
             <div class="space-y-4">
               <div>
                 <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Día Generación Automática</label>
                 <div class="flex items-center gap-2">
-                  <input type="number" id="confGenDay" min="1" max="28" value="25" class="w-full px-3 py-2 border rounded-xl text-sm font-bold bg-white outline-none focus:ring-2 focus:ring-indigo-500">
+                  <input type="number" id="confGenDay" min="1" max="28" value="25" class="w-full px-3 py-2 border rounded-xl text-sm font-bold bg-white outline-none focus:ring-2 focus:ring-[#0B63C7]">
                   <span class="text-xs text-slate-400 font-medium">del mes anterior</span>
                 </div>
               </div>
               <div>
                 <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Día Límite de Pago</label>
                 <div class="flex items-center gap-2">
-                  <input type="number" id="confDueDay" min="1" max="28" value="5" class="w-full px-3 py-2 border rounded-xl text-sm font-bold bg-white outline-none focus:ring-2 focus:ring-indigo-500">
+                  <input type="number" id="confDueDay" min="1" max="28" value="5" class="w-full px-3 py-2 border rounded-xl text-sm font-bold bg-white outline-none focus:ring-2 focus:ring-[#0B63C7]">
                   <span class="text-xs text-slate-400 font-medium">del mes actual</span>
                 </div>
               </div>
-              <button id="btnSavePaymentConfig" class="w-full py-2.5 bg-indigo-600 text-white rounded-xl font-bold text-xs uppercase tracking-wide hover:bg-indigo-700 transition-all shadow-md mt-2">
-                Guardar Configuración
+              <button id="btnSavePaymentConfig" class="w-full py-2.5 bg-[#0B63C7] text-white rounded-xl font-bold text-xs uppercase tracking-wide hover:bg-[#0850A0] transition-all shadow-md mt-2 flex items-center justify-center gap-2">
+                <i data-lucide="save" class="w-4 h-4"></i> Guardar Configuración
               </button>
-              <button id="btnGeneratePaymentsNow" class="w-full py-2.5 bg-emerald-500 text-white rounded-xl font-bold text-xs uppercase tracking-wide hover:bg-emerald-600 transition-all shadow-md mt-1 flex items-center justify-center gap-2">
+              <button id="btnGeneratePaymentsNow" class="w-full py-2.5 bg-[#28B54D] text-white rounded-xl font-bold text-xs uppercase tracking-wide hover:bg-[#1A8035] transition-all shadow-md mt-1 flex items-center justify-center gap-2">
                 <i data-lucide="play-circle" class="w-4 h-4"></i> Generar pagos ahora
               </button>
-              <button id="btnSendPaymentReminders" class="w-full py-2.5 bg-blue-500 text-white rounded-xl font-bold text-xs uppercase tracking-wide hover:bg-blue-600 transition-all shadow-md mt-1 flex items-center justify-center gap-2">
+              <button id="btnSendPaymentReminders" class="w-full py-2.5 bg-[#FF7A00] text-white rounded-xl font-bold text-xs uppercase tracking-wide hover:bg-[#D96500] transition-all shadow-md mt-1 flex items-center justify-center gap-2">
                 <i data-lucide="bell" class="w-4 h-4"></i> Enviar recordatorios ahora
               </button>
               <button id="btnExportMorosidad" class="w-full py-2.5 bg-slate-700 text-white rounded-xl font-bold text-xs uppercase tracking-wide hover:bg-slate-800 transition-all shadow-md mt-1 flex items-center justify-center gap-2">
@@ -1438,7 +1769,7 @@
         <div class="bg-white rounded-2xl shadow-md border border-slate-100 p-6">
           <div class="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
             <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2 w-full md:w-auto">
-              <span class="w-2 h-6 bg-indigo-600 rounded-full"></span>
+              <span class="w-2 h-6 bg-[#FF7A00] rounded-full"></span>
               Control de Pagos
             </h3>
             <div class="flex flex-wrap gap-3 w-full md:w-auto">
@@ -1483,7 +1814,7 @@
           <!-- TABLA DE PAGOS ESTRUCTURADA (Solicitado) -->
           <div class="table-scroll-wrap rounded-2xl border border-slate-200">
             <table class="w-full text-sm text-left" style="min-width:700px;">
-              <thead class="bg-slate-50 text-slate-500 font-black uppercase text-[10px] tracking-wider">
+              <thead class="bg-[#E8F2FF] text-[#0850A0] font-black uppercase text-[10px] tracking-wider">
                 <tr>
                   <th class="px-6 py-4">Estudiante</th>
                   <th class="px-6 py-4 text-center">Estado</th>
@@ -1507,7 +1838,7 @@
       <section id="comunicacion" class="section">
         <div class="flex items-center justify-between mb-6">
           <div>
-            <h2 class="text-2xl font-bold text-slate-800 flex items-center gap-2">
+            <h2 class="text-2xl font-bold text-[#1A2340] flex items-center gap-2">
               <i data-lucide="messages-square" class="w-6 h-6 text-blue-600"></i>
               Centro de Comunicación
             </h2>
@@ -1557,7 +1888,7 @@
             <div id="chatInputArea" class="p-4 border-t border-slate-100 bg-white hidden">
               <div class="flex gap-3 items-end">
                 <textarea id="chatMessageInput" rows="1" class="flex-1 bg-slate-100 border-none rounded-3xl px-5 py-3 focus:ring-2 focus:ring-blue-400 outline-none resize-none text-sm" placeholder="Aa"></textarea>
-                <button id="btnSendChatMessage" class="bg-blue-600 text-white p-3 rounded-full hover:bg-blue-700 transition-all active:scale-90">
+                <button id="btnSendChatMessage" class="bg-[#0B63C7] text-white p-3 rounded-full hover:bg-[#0850A0] transition-all active:scale-90">
                   <i data-lucide="send" class="w-5 h-5"></i>
                 </button>
               </div>
@@ -1572,7 +1903,7 @@
             <h1 class="text-3xl font-black text-slate-800">🎭 Muro Escolar</h1>
             <p class="text-slate-500 font-medium">Comunicación y actualizaciones de la comunidad educativa</p>
           </div>
-          <button id="btnNewPost" onclick="App.wall.openNewPostModal()" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2 font-medium shadow-sm">
+          <button id="btnNewPost" onclick="App.wall.openNewPostModal()" class="px-4 py-2 bg-[#0B63C7] text-white rounded-lg hover:bg-[#0850A0] transition-colors flex items-center gap-2 font-medium shadow-sm">
             <i data-lucide="plus" class="w-5 h-5"></i> Nueva Publicación
           </button>
         </header>
@@ -1620,10 +1951,10 @@
               <!-- Foto de perfil -->
               <div class="flex items-center gap-5 mb-6 p-4 bg-slate-50 rounded-2xl border border-slate-100">
                 <div class="relative group shrink-0">
-                  <div class="w-24 h-24 rounded-2xl overflow-hidden bg-violet-100 border-2 border-violet-200 shadow-md">
+                  <div class="w-24 h-24 rounded-2xl overflow-hidden bg-blue-100 border-2 border-blue-200 shadow-md">
                     <img id="configProfileAvatar" src="img/monte.jpg" alt="Foto de perfil" class="w-full h-full object-cover">
                   </div>
-                  <label for="configAvatarInput" class="absolute -bottom-2 -right-2 w-9 h-9 bg-violet-600 text-white rounded-xl flex items-center justify-center cursor-pointer shadow-lg hover:bg-violet-700 transition-all hover:scale-110 active:scale-95 border-2 border-white">
+                  <label for="configAvatarInput" class="absolute -bottom-2 -right-2 w-9 h-9 bg-[#0B63C7] text-white rounded-xl flex items-center justify-center cursor-pointer shadow-lg hover:bg-[#0850A0] transition-all hover:scale-110 active:scale-95 border-2 border-white">
                     <i data-lucide="camera" class="w-4 h-4"></i>
                     <input type="file" id="configAvatarInput" class="hidden" accept="image/jpeg,image/png,image/webp">
                   </label>
@@ -1631,22 +1962,22 @@
                 <div>
                   <p class="font-bold text-slate-800 text-sm">Foto de Perfil</p>
                   <p class="text-xs text-slate-500 mt-0.5">JPG, PNG o WEBP · Máx 5MB</p>
-                  <p class="text-xs text-violet-600 font-bold mt-1">Haz clic en la cámara para cambiarla</p>
+                  <p class="text-xs text-[#0B63C7] font-bold mt-1">Haz clic en la cámara para cambiarla</p>
                 </div>
               </div>
 
               <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label class="block text-sm font-medium text-slate-700 mb-1">Nombre Completo</label>
-                  <input id="confDirName" type="text" class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-purple-500 outline-none" placeholder="Cargando...">
+                  <input id="confDirName" type="text" class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-[#0B63C7] outline-none" placeholder="Cargando...">
                 </div>
                 <div>
                   <label class="block text-sm font-medium text-slate-700 mb-1">Título / Cargo</label>
-                  <input id="confDirTitle" type="text" class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-purple-500 outline-none" placeholder="Cargando...">
+                  <input id="confDirTitle" type="text" class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-[#0B63C7] outline-none" placeholder="Cargando...">
                 </div>
                 <div class="md:col-span-2">
                   <label class="block text-sm font-medium text-slate-700 mb-1">Presentación / Biografía</label>
-                  <textarea id="confDirBio" rows="4" class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-purple-500 outline-none" placeholder="Escribe una breve presentación..."></textarea>
+                  <textarea id="confDirBio" rows="4" class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-[#0B63C7] outline-none" placeholder="Escribe una breve presentación..."></textarea>
                   <p class="text-xs text-slate-500 mt-1">Esta información será visible en el perfil público para padres y maestros.</p>
                 </div>
               </div>
@@ -1656,36 +1987,40 @@
               <h3 class="text-lg font-semibold mb-4 border-b pb-2 flex items-center gap-2"><i data-lucide="building" class="w-5 h-5"></i> Información Institucional</h3>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
+                  <label class="block text-sm font-medium text-slate-700 mb-1">RNC / Comprobante Fiscal</label>
+                  <input id="confRNC" type="text" class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-[#0B63C7] outline-none" placeholder="1-23-45678-9">
+                </div>
+                <div>
                   <label class="block text-sm font-medium text-slate-700 mb-1">Teléfono Institucional</label>
-                  <input id="confPhone" type="tel" class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-purple-500 outline-none" placeholder="+1 (000) 000-0000">
+                  <input id="confPhone" type="tel" class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-[#0B63C7] outline-none" placeholder="+1 (000) 000-0000">
                 </div>
                 <div>
                   <label class="block text-sm font-medium text-slate-700 mb-1">Correo de Contacto</label>
-                  <input id="confEmail" type="email" class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-purple-500 outline-none" placeholder="contacto@ejemplo.com">
+                  <input id="confEmail" type="email" class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-[#0B63C7] outline-none" placeholder="contacto@ejemplo.com">
                 </div>
                 <div class="md:col-span-2">
                   <label class="block text-sm font-medium text-slate-700 mb-1">Dirección Física</label>
-                  <input id="confAddress" type="text" class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-purple-500 outline-none" placeholder="Dirección de la estancia">
+                  <input id="confAddress" type="text" class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-[#0B63C7] outline-none" placeholder="Dirección de la estancia">
                 </div>
               </div>
             </div>
 
             <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-6">
               <h3 class="text-sm font-black text-slate-800 mb-5 flex items-center gap-2">
-                <span class="w-8 h-8 bg-violet-100 text-violet-600 rounded-xl flex items-center justify-center"><i data-lucide="clock" class="w-4 h-4"></i></span>
+                <span class="w-8 h-8 bg-blue-100 text-[#0B63C7] rounded-xl flex items-center justify-center"><i data-lucide="clock" class="w-4 h-4"></i></span>
                 Horario de la Estancia
               </h3>
 
               <!-- Días laborables -->
               <p class="text-[10px] font-black text-slate-500 uppercase tracking-wider mb-2">Días laborables</p>
               <div class="flex flex-wrap gap-2 mb-5" id="workDaysContainer">
-                <button type="button" data-day="Lun" onclick="window.toggleWorkDay(this)" class="work-day-btn px-3 py-1.5 rounded-xl text-xs font-black border-2 border-slate-200 bg-white text-slate-500 transition-all hover:border-violet-400 hover:text-violet-600">Lun</button>
-                <button type="button" data-day="Mar" onclick="window.toggleWorkDay(this)" class="work-day-btn px-3 py-1.5 rounded-xl text-xs font-black border-2 border-slate-200 bg-white text-slate-500 transition-all hover:border-violet-400 hover:text-violet-600">Mar</button>
-                <button type="button" data-day="Mié" onclick="window.toggleWorkDay(this)" class="work-day-btn px-3 py-1.5 rounded-xl text-xs font-black border-2 border-slate-200 bg-white text-slate-500 transition-all hover:border-violet-400 hover:text-violet-600">Mié</button>
-                <button type="button" data-day="Jue" onclick="window.toggleWorkDay(this)" class="work-day-btn px-3 py-1.5 rounded-xl text-xs font-black border-2 border-slate-200 bg-white text-slate-500 transition-all hover:border-violet-400 hover:text-violet-600">Jue</button>
-                <button type="button" data-day="Vie" onclick="window.toggleWorkDay(this)" class="work-day-btn px-3 py-1.5 rounded-xl text-xs font-black border-2 border-slate-200 bg-white text-slate-500 transition-all hover:border-violet-400 hover:text-violet-600">Vie</button>
-                <button type="button" data-day="Sáb" onclick="window.toggleWorkDay(this)" class="work-day-btn px-3 py-1.5 rounded-xl text-xs font-black border-2 border-slate-200 bg-white text-slate-500 transition-all hover:border-violet-400 hover:text-violet-600">Sáb</button>
-                <button type="button" data-day="Dom" onclick="window.toggleWorkDay(this)" class="work-day-btn px-3 py-1.5 rounded-xl text-xs font-black border-2 border-slate-200 bg-white text-slate-500 transition-all hover:border-violet-400 hover:text-violet-600">Dom</button>
+                <button type="button" data-day="Lun" onclick="window.toggleWorkDay(this)" class="work-day-btn px-3 py-1.5 rounded-xl text-xs font-black border-2 border-slate-200 bg-white text-slate-500 transition-all hover:border-blue-200 hover:text-[#0B63C7]">Lun</button>
+                <button type="button" data-day="Mar" onclick="window.toggleWorkDay(this)" class="work-day-btn px-3 py-1.5 rounded-xl text-xs font-black border-2 border-slate-200 bg-white text-slate-500 transition-all hover:border-blue-200 hover:text-[#0B63C7]">Mar</button>
+                <button type="button" data-day="Mié" onclick="window.toggleWorkDay(this)" class="work-day-btn px-3 py-1.5 rounded-xl text-xs font-black border-2 border-slate-200 bg-white text-slate-500 transition-all hover:border-blue-200 hover:text-[#0B63C7]">Mié</button>
+                <button type="button" data-day="Jue" onclick="window.toggleWorkDay(this)" class="work-day-btn px-3 py-1.5 rounded-xl text-xs font-black border-2 border-slate-200 bg-white text-slate-500 transition-all hover:border-blue-200 hover:text-[#0B63C7]">Jue</button>
+                <button type="button" data-day="Vie" onclick="window.toggleWorkDay(this)" class="work-day-btn px-3 py-1.5 rounded-xl text-xs font-black border-2 border-slate-200 bg-white text-slate-500 transition-all hover:border-blue-200 hover:text-[#0B63C7]">Vie</button>
+                <button type="button" data-day="Sáb" onclick="window.toggleWorkDay(this)" class="work-day-btn px-3 py-1.5 rounded-xl text-xs font-black border-2 border-slate-200 bg-white text-slate-500 transition-all hover:border-blue-200 hover:text-[#0B63C7]">Sáb</button>
+                <button type="button" data-day="Dom" onclick="window.toggleWorkDay(this)" class="work-day-btn px-3 py-1.5 rounded-xl text-xs font-black border-2 border-slate-200 bg-white text-slate-500 transition-all hover:border-blue-200 hover:text-[#0B63C7]">Dom</button>
               </div>
 
               <!-- Horario apertura/cierre -->
@@ -1695,19 +2030,19 @@
                     <i data-lucide="sunrise" class="w-3 h-3 text-amber-500"></i> Apertura
                   </label>
                   <input id="confOpenTime" type="time" value="07:00"
-                    class="w-full border-2 border-slate-200 rounded-xl px-3 py-2 text-sm font-bold text-slate-700 bg-white focus:border-violet-400 focus:ring-2 focus:ring-violet-100 outline-none transition-all">
+                    class="w-full border-2 border-slate-200 rounded-xl px-3 py-2 text-sm font-bold text-slate-700 bg-white focus:border-blue-200 focus:ring-2 focus:ring-[#0B63C7] outline-none transition-all">
                 </div>
                 <div>
                   <label class="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1.5 flex items-center gap-1">
                     <i data-lucide="sunset" class="w-3 h-3 text-orange-500"></i> Cierre
                   </label>
                   <input id="confCloseTime" type="time" value="17:00"
-                    class="w-full border-2 border-slate-200 rounded-xl px-3 py-2 text-sm font-bold text-slate-700 bg-white focus:border-violet-400 focus:ring-2 focus:ring-violet-100 outline-none transition-all">
+                    class="w-full border-2 border-slate-200 rounded-xl px-3 py-2 text-sm font-bold text-slate-700 bg-white focus:border-blue-200 focus:ring-2 focus:ring-[#0B63C7] outline-none transition-all">
                 </div>
               </div>
 
               <!-- Preview dinámico -->
-              <div id="schedulePreview" class="p-3 bg-violet-50 rounded-xl border border-violet-100 text-xs font-bold text-violet-700 text-center hidden">
+              <div id="schedulePreview" class="p-3 bg-[#E8F2FF] rounded-xl border border-blue-200 text-xs font-bold text-[#0850A0] text-center hidden">
                 <!-- Generado por JS -->
               </div>
             </div>
@@ -1719,7 +2054,7 @@
               <h3 class="text-sm font-semibold mb-4">Foto de Perfil</h3>
               <div class="relative w-32 h-32 mx-auto mb-4 group">
                 <img id="configProfileAvatar" src="img/monte.jpg" alt="Avatar" class="w-full h-full object-cover rounded-full border-4 border-slate-100 shadow-sm group-hover:opacity-90 transition-opacity">
-                <button onclick="document.getElementById('configAvatarInput').click()" class="absolute bottom-0 right-0 bg-purple-600 text-white p-2 rounded-full shadow hover:bg-purple-700 transition-colors" title="Cambiar foto" aria-label="Cambiar foto de perfil">
+                <button onclick="document.getElementById('configAvatarInput').click()" class="absolute bottom-0 right-0 bg-[#0B63C7] text-white p-2 rounded-full shadow hover:bg-[#0850A0] transition-colors" title="Cambiar foto" aria-label="Cambiar foto de perfil">
                   <i data-lucide="camera" class="w-4 h-4"></i>
                 </button>
               </div>
@@ -1736,11 +2071,11 @@
             <!-- ID de Acceso QR (Directora) -->
             <div class="mt-4 pt-4 border-t border-slate-100">
               <h4 class="text-xs font-black text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                <i data-lucide="qr-code" class="w-3.5 h-3.5 text-violet-500"></i> Mi ID de Acceso
+                <i data-lucide="qr-code" class="w-3.5 h-3.5 text-[#0B63C7]"></i> Mi ID de Acceso
               </h4>
               <div class="flex gap-2 mb-3">
-                <input id="confDirAccessId" placeholder="Generar ID..." class="flex-1 border-2 border-slate-100 rounded-xl px-3 py-2 text-xs font-bold bg-slate-50 focus:border-violet-400 outline-none">
-                <button type="button" onclick="window._genDirectorId()" class="px-3 py-2 bg-violet-600 text-white rounded-xl font-black text-[9px] uppercase hover:bg-violet-700 transition-all">Gen</button>
+                <input id="confDirAccessId" placeholder="Generar ID..." class="flex-1 border-2 border-slate-100 rounded-xl px-3 py-2 text-xs font-bold bg-slate-50 focus:border-blue-200 outline-none">
+                <button type="button" onclick="window._genDirectorId()" class="px-3 py-2 bg-[#0B63C7] text-white rounded-xl font-black text-[9px] uppercase hover:bg-[#0850A0] transition-all">Gen</button>
               </div>
               <div id="dir-qr-container" class="bg-white p-2 rounded-xl border border-slate-100 min-h-[100px] flex items-center justify-center mb-2">
                 <p class="text-[9px] text-slate-400 font-bold text-center">Genera un ID para ver el QR</p>
@@ -1758,7 +2093,10 @@
   </div> <!-- Cierre de .app -->
 
   <!-- Contenedor Único de Modales -->
-  <div id="globalModalContainer" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999] overflow-y-auto" style="display:none;"></div>
+  <div id="globalModalContainer"
+    class="fixed inset-0 z-[9999] overflow-y-auto flex items-start justify-center pt-16 pb-8 px-4"
+    style="display:none; background:rgba(8,80,160,0.45); backdrop-filter:blur(6px);">
+  </div>
 
   <!-- TOAST CONTAINER — fuera de secciones para no duplicarse -->
   <div id="toast-container" class="fixed top-5 right-5 z-[9998] flex flex-col gap-2 pointer-events-none"></div>

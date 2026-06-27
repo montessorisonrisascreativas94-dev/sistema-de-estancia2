@@ -1,4 +1,4 @@
-﻿import { DirectorApi } from './api.js';
+import { DirectorApi } from './api.js';
 import { Helpers } from '../shared/helpers.js';
 import { UIHelpers } from './ui.module.js';
 import { supabase } from '../shared/supabase.js';
@@ -88,7 +88,7 @@ export const PaymentsModule = {
       // Query simple sin joins complejos
       let q = supabase
         .from('payments')
-        .select('id, student_id, amount, concept, status, due_date, created_at, paid_date, method, bank, reference, month_paid, evidence_url, proof_url')
+        .select('id, student_id, amount, concept, status, due_date, created_at, paid_date, method, bank, reference, month_paid, evidence_url, proof_url, fiscal_receipt')
         .order('created_at', { ascending: false })
         .limit(500);
 
@@ -342,7 +342,7 @@ export const PaymentsModule = {
     }).join('');
 
     window.openGlobalModal(
-      '<div class="bg-gradient-to-r from-purple-600 to-indigo-600 text-white p-6 rounded-t-3xl flex items-center gap-3">' +
+      '<div class="bg-gradient-to-r from-blue-700 to-blue-500 text-white p-6 rounded-t-3xl flex items-center gap-3">' +
         '<div class="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center text-2xl">&#128176;</div>' +
         '<div><h3 class="text-xl font-black">Registrar Pago</h3><p class="text-xs text-white/70 font-bold uppercase tracking-widest">Cobro Manual</p></div>' +
       '</div>' +
@@ -354,10 +354,11 @@ export const PaymentsModule = {
         '<div><label class="' + lc + '">Fecha Limite</label><input id="payDueDate" type="date" class="' + ic + '" value="' + dd + '"></div>' +
         '<div><label class="' + lc + '">Metodo</label><select id="payMethod" class="' + ic + '"><option value="efectivo">Efectivo</option><option value="transferencia">Transferencia</option><option value="tarjeta">Tarjeta</option></select></div>' +
         '<div><label class="' + lc + '">Estado</label><select id="payStatus" class="' + ic + '"><option value="paid">Pagado</option><option value="pending">Pendiente</option></select></div>' +
+        '<div class="md:col-span-2"><label class="' + lc + '">Comprobante Fiscal</label><input id="payFiscalReceipt" type="text" class="' + ic + '" placeholder="Número de factura / comprobante fiscal"></div>' +
       '</div></div>' +
       '<div class="bg-white p-5 rounded-b-3xl border-t border-slate-100 flex justify-end gap-3">' +
         '<button onclick="App.ui.closeModal()" class="px-6 py-2.5 text-slate-500 font-black text-xs uppercase hover:bg-slate-50 rounded-2xl transition-all">Cancelar</button>' +
-        '<button id="btnSavePaymentAction" class="px-8 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-2xl font-black text-xs uppercase shadow-lg hover:-translate-y-0.5 active:scale-95 transition-all">Registrar Pago</button>' +
+        '<button id="btnSavePaymentAction" class="px-8 py-2.5 bg-gradient-to-r from-blue-700 to-blue-500 text-white rounded-2xl font-black text-xs uppercase shadow-lg hover:-translate-y-0.5 active:scale-95 transition-all">Registrar Pago</button>' +
       '</div>'
     );
     try {
@@ -386,6 +387,7 @@ export const PaymentsModule = {
     const dd  = document.getElementById('payDueDate')?.value;
     const met = document.getElementById('payMethod')?.value || 'efectivo';
     const sta = document.getElementById('payStatus')?.value || 'paid';
+    const fiscalReceipt = document.getElementById('payFiscalReceipt')?.value?.trim() || null;
     const pd  = sta === 'paid' ? new Date().toISOString() : null;
     if (!sid) return Helpers.toast('Selecciona un estudiante', 'warning');
     if (!amt || amt <= 0) return Helpers.toast('Ingresa un monto valido', 'warning');
@@ -399,10 +401,10 @@ export const PaymentsModule = {
       let pay;
       if (ex) {
         if (ex.status === 'paid') { Helpers.toast('Pago ya aprobado para este mes', 'warning'); return; }
-        const { data: upd, error: upE } = await supabase.from('payments').update({ amount: amt, concept: con, method: met, status: sta, due_date: dd || null, paid_date: pd, month_paid: mp }).eq('id', ex.id).select().single();
+        const { data: upd, error: upE } = await supabase.from('payments').update({ amount: amt, concept: con, method: met, status: sta, due_date: dd || null, paid_date: pd, month_paid: mp, fiscal_receipt: fiscalReceipt }).eq('id', ex.id).select().single();
         if (upE) throw upE; pay = upd;
       } else {
-        const { data: ins, error: inE } = await supabase.from('payments').insert({ student_id: sid, amount: amt, concept: con, method: met, status: sta, month_paid: mp, due_date: dd || null, paid_date: pd, created_at: new Date().toISOString() }).select().single();
+        const { data: ins, error: inE } = await supabase.from('payments').insert({ student_id: sid, amount: amt, concept: con, method: met, status: sta, month_paid: mp, due_date: dd || null, paid_date: pd, created_at: new Date().toISOString(), fiscal_receipt: fiscalReceipt }).select().single();
         if (inE) { if (inE.code === '23505') throw new Error('Ya existe un registro para este mes.'); throw inE; }
         pay = ins;
       }

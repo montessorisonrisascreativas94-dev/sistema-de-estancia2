@@ -365,8 +365,9 @@ export const PaymentsModule = {
       if (data) payment = data;
     } catch (_) {}
 
-    // Obtener nombre de quien aprobó
+    // Obtener nombre de quien aprobó y RNC del colegio
     let approvedBy = 'Administración';
+    let rnc = '';
     if (payment.validated_by) {
       try {
         const { data: approver } = await supabase
@@ -377,6 +378,14 @@ export const PaymentsModule = {
         if (approver?.name) approvedBy = approver.name;
       } catch (_) {}
     }
+    try {
+      const { data: settings } = await supabase
+        .from('school_settings')
+        .select('rnc')
+        .eq('id', 1)
+        .maybeSingle();
+      if (settings?.rnc) rnc = settings.rnc;
+    } catch (_) {}
 
     const student    = payment.students || {};
     const studentName = student.name || 'Estudiante';
@@ -394,98 +403,109 @@ export const PaymentsModule = {
     // Construir modal
     const modal = document.createElement('div');
     modal.id = 'receiptModal';
-    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(8px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
     modal.innerHTML = `
-      <div style="background:#fff;border-radius:24px;width:100%;max-width:480px;max-height:90dvh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,0.25);">
+      <div style="background:#fff;border-radius:28px;width:100%;max-width:520px;max-height:90dvh;overflow-y:auto;box-shadow:0 32px 80px rgba(0,0,0,0.25);">
         <!-- Header corporativo -->
-        <div style="background:linear-gradient(135deg,#16a34a,#15803d);padding:28px 28px 20px;border-radius:24px 24px 0 0;text-align:center;position:relative;">
+        <div style="background:linear-gradient(135deg,#0B63C7,#1E40AF);padding:32px 28px 24px;border-radius:28px 28px 0 0;text-align:center;position:relative;">
           <button onclick="document.getElementById('receiptModal').remove()"
-            style="position:absolute;top:14px;right:14px;background:rgba(255,255,255,0.2);border:none;color:white;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;line-height:1;">×</button>
-          <div style="width:56px;height:56px;background:rgba(255,255,255,0.95);border-radius:16px;margin:0 auto 12px;display:flex;align-items:center;justify-content:center;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.2);">
+            style="position:absolute;top:16px;right:16px;background:rgba(255,255,255,0.25);border:none;color:white;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:20px;display:flex;align-items:center;justify-content:center;line-height:1;transition:all 0.2s;" onmouseover="this.style.transform='scale(1.1)';" onmouseout="this.style.transform='scale(1)';">×</button>
+          <div style="width:64px;height:64px;background:rgba(255,255,255,0.98);border-radius:20px;margin:0 auto 14px;display:flex;align-items:center;justify-content:center;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,0.2);animation:float 3s ease-in-out infinite;">
             <img src="img/monte.jpg" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none';this.parentElement.innerHTML='🎓'">
           </div>
-          <h2 style="margin:0;color:white;font-family:sans-serif;font-size:20px;font-weight:900;letter-spacing:-0.3px;">Colegio Montessori Sonrisas Creativas</h2>
-          <p style="margin:4px 0 0;color:rgba(255,255,255,0.8);font-family:sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;">Recibo de Pago Oficial</p>
-          <div style="margin-top:14px;background:rgba(255,255,255,0.15);border-radius:10px;padding:8px 16px;display:inline-block;">
-            <span style="color:white;font-family:monospace;font-size:13px;font-weight:900;letter-spacing:2px;">${receiptNo}</span>
+          <h2 style="margin:0;color:white;font-family:sans-serif;font-size:22px;font-weight:900;letter-spacing:-0.5px;">Colegio Montessori Sonrisas Creativas</h2>
+          <p style="margin:6px 0 0;color:rgba(255,255,255,0.85);font-family:sans-serif;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:2px;">Recibo de Pago Oficial</p>
+          <div style="margin-top:18px;background:rgba(255,255,255,0.2);border-radius:14px;padding:10px 20px;display:inline-block;border:1px solid rgba(255,255,255,0.3);">
+            <span style="color:white;font-family:monospace;font-size:14px;font-weight:900;letter-spacing:3px;">${receiptNo}</span>
           </div>
         </div>
 
         <!-- Sello de aprobado -->
-        <div style="background:#f0fdf4;border-bottom:1px solid #bbf7d0;padding:12px 28px;display:flex;align-items:center;gap:10px;">
-          <div style="width:36px;height:36px;background:#16a34a;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-            <span style="color:white;font-size:18px;">✓</span>
+        <div style="background:linear-gradient(135deg,#eff6ff,#dbeafe);border-bottom:1px solid #bfdbfe;padding:16px 28px;display:flex;align-items:center;gap:12px;">
+          <div style="width:42px;height:42px;background:linear-gradient(135deg,#0B63C7,#3B82F6);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 4px 12px rgba(11,99,199,0.3);">
+            <span style="color:white;font-size:20px;">✓</span>
           </div>
           <div>
-            <p style="margin:0;font-family:sans-serif;font-size:13px;font-weight:900;color:#15803d;">Pago Confirmado y Aprobado</p>
-            <p style="margin:2px 0 0;font-family:sans-serif;font-size:11px;color:#16a34a;font-weight:600;">Aprobado por: ${approvedBy}</p>
+            <p style="margin:0;font-family:sans-serif;font-size:14px;font-weight:900;color:#1e3a8a;">Pago Confirmado y Aprobado</p>
+            <p style="margin:3px 0 0;font-family:sans-serif;font-size:12px;color:#1e40af;font-weight:600;">Aprobado por: ${approvedBy}</p>
           </div>
         </div>
 
         <!-- Cuerpo del recibo -->
-        <div style="padding:24px 28px;">
+        <div style="padding:28px;">
           <!-- Info estudiante -->
-          <div style="background:#f8fafc;border-radius:14px;padding:16px;margin-bottom:16px;border:1px solid #e2e8f0;">
-            <p style="margin:0 0 10px;font-family:sans-serif;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:1px;color:#94a3b8;">Datos del Estudiante</p>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div style="background:linear-gradient(135deg,#f8fafc,#f1f5f9);border-radius:18px;padding:18px;margin-bottom:18px;border:1px solid #e2e8f0;">
+            <p style="margin:0 0 12px;font-family:sans-serif;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:1.5px;color:#64748b;">Datos del Estudiante</p>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
               <div>
-                <p style="margin:0;font-family:sans-serif;font-size:10px;color:#64748b;font-weight:600;">Estudiante</p>
-                <p style="margin:2px 0 0;font-family:sans-serif;font-size:13px;font-weight:800;color:#1e293b;">${studentName}</p>
+                <p style="margin:0;font-family:sans-serif;font-size:11px;color:#64748b;font-weight:600;">Estudiante</p>
+                <p style="margin:4px 0 0;font-family:sans-serif;font-size:14px;font-weight:800;color:#1e293b;">${studentName}</p>
               </div>
               <div>
-                <p style="margin:0;font-family:sans-serif;font-size:10px;color:#64748b;font-weight:600;">Aula</p>
-                <p style="margin:2px 0 0;font-family:sans-serif;font-size:13px;font-weight:800;color:#1e293b;">${classroom}</p>
+                <p style="margin:0;font-family:sans-serif;font-size:11px;color:#64748b;font-weight:600;">Aula</p>
+                <p style="margin:4px 0 0;font-family:sans-serif;font-size:14px;font-weight:800;color:#1e293b;">${classroom}</p>
               </div>
               <div>
-                <p style="margin:0;font-family:sans-serif;font-size:10px;color:#64748b;font-weight:600;">Padre/Tutor</p>
-                <p style="margin:2px 0 0;font-family:sans-serif;font-size:13px;font-weight:800;color:#1e293b;">${parentName}</p>
+                <p style="margin:0;font-family:sans-serif;font-size:11px;color:#64748b;font-weight:600;">Padre/Tutor</p>
+                <p style="margin:4px 0 0;font-family:sans-serif;font-size:14px;font-weight:800;color:#1e293b;">${parentName}</p>
               </div>
               <div>
-                <p style="margin:0;font-family:sans-serif;font-size:10px;color:#64748b;font-weight:600;">Fecha de Pago</p>
-                <p style="margin:2px 0 0;font-family:sans-serif;font-size:13px;font-weight:800;color:#1e293b;">${paidDate}</p>
+                <p style="margin:0;font-family:sans-serif;font-size:11px;color:#64748b;font-weight:600;">Fecha de Pago</p>
+                <p style="margin:4px 0 0;font-family:sans-serif;font-size:14px;font-weight:800;color:#1e293b;">${paidDate}</p>
               </div>
             </div>
           </div>
 
           <!-- Detalle del pago -->
-          <div style="border:1px solid #e2e8f0;border-radius:14px;overflow:hidden;margin-bottom:16px;">
-            <div style="background:#f8fafc;padding:10px 16px;border-bottom:1px solid #e2e8f0;">
-              <p style="margin:0;font-family:sans-serif;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:1px;color:#94a3b8;">Detalle del Pago</p>
+          <div style="border:1px solid #e2e8f0;border-radius:18px;overflow:hidden;margin-bottom:18px;">
+            <div style="background:linear-gradient(135deg,#0B63C7,#3B82F6);padding:12px 18px;border-bottom:1px solid #1d4ed8;">
+              <p style="margin:0;font-family:sans-serif;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:1.5px;color:white;">Detalle del Pago</p>
             </div>
-            <table style="width:100%;border-collapse:collapse;font-family:sans-serif;font-size:13px;">
-              <tr style="border-bottom:1px solid #f1f5f9;">
-                <td style="padding:10px 16px;color:#64748b;font-weight:600;">Concepto</td>
-                <td style="padding:10px 16px;text-align:right;font-weight:800;color:#1e293b;">${monthPaid}</td>
+            <table style="width:100%;border-collapse:collapse;font-family:sans-serif;font-size:14px;">
+              <tr style="border-bottom:1px solid #f1f5f9;background:#f8fafc;">
+                <td style="padding:12px 18px;color:#64748b;font-weight:700;">Concepto</td>
+                <td style="padding:12px 18px;text-align:right;font-weight:800;color:#1e293b;">${monthPaid}</td>
               </tr>
               <tr style="border-bottom:1px solid #f1f5f9;">
-                <td style="padding:10px 16px;color:#64748b;font-weight:600;">Método de Pago</td>
-                <td style="padding:10px 16px;text-align:right;font-weight:800;color:#1e293b;">${method}</td>
+                <td style="padding:12px 18px;color:#64748b;font-weight:700;">Método de Pago</td>
+                <td style="padding:12px 18px;text-align:right;font-weight:800;color:#1e293b;">${method}</td>
               </tr>
-              ${payment.bank ? `<tr style="border-bottom:1px solid #f1f5f9;"><td style="padding:10px 16px;color:#64748b;font-weight:600;">Banco</td><td style="padding:10px 16px;text-align:right;font-weight:800;color:#1e293b;">${payment.bank}</td></tr>` : ''}
-              ${payment.reference ? `<tr style="border-bottom:1px solid #f1f5f9;"><td style="padding:10px 16px;color:#64748b;font-weight:600;">Referencia</td><td style="padding:10px 16px;text-align:right;font-weight:700;color:#475569;font-size:11px;">${payment.reference}</td></tr>` : ''}
-              <tr style="background:#f0fdf4;">
-                <td style="padding:12px 16px;color:#15803d;font-weight:900;font-size:15px;">TOTAL PAGADO</td>
-                <td style="padding:12px 16px;text-align:right;font-weight:900;color:#15803d;font-size:18px;">${amountFmt}</td>
+              ${payment.bank ? `<tr style="border-bottom:1px solid #f1f5f9;"><td style="padding:12px 18px;color:#64748b;font-weight:700;">Banco</td><td style="padding:12px 18px;text-align:right;font-weight:800;color:#1e293b;">${payment.bank}</td></tr>` : ''}
+              ${payment.reference ? `<tr style="border-bottom:1px solid #f1f5f9;"><td style="padding:12px 18px;color:#64748b;font-weight:700;">Referencia</td><td style="padding:12px 18px;text-align:right;font-weight:700;color:#475569;font-size:12px;">${payment.reference}</td></tr>` : ''}
+              ${payment.fiscal_receipt ? `<tr style="border-bottom:1px solid #f1f5f9;"><td style="padding:12px 18px;color:#64748b;font-weight:700;">Comprobante Fiscal</td><td style="padding:12px 18px;text-align:right;font-weight:700;color:#1e293b;font-size:12px;">${payment.fiscal_receipt}</td></tr>` : ''}
+              <tr style="background:linear-gradient(135deg,#eff6ff,#dbeafe);">
+                <td style="padding:14px 18px;color:#1e40af;font-weight:900;font-size:16px;">TOTAL PAGADO</td>
+                <td style="padding:14px 18px;text-align:right;font-weight:900;color:#0B63C7;font-size:20px;">${amountFmt}</td>
               </tr>
             </table>
           </div>
 
+          <!-- Comprobante Fiscal -->
+          <div style="background:linear-gradient(135deg,#fffbeb,#fef3c7);border:1px solid #fcd34d;border-radius:18px;padding:16px;margin-bottom:18px;">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+              <span style="font-size:18px;">📄</span>
+              <p style="margin:0;font-family:sans-serif;font-size:12px;font-weight:900;color:#92400e;text-transform:uppercase;letter-spacing:1px;">Comprobante Fiscal</p>
+            </div>
+            ${rnc ? `<p style="margin:0 0 6px 0;font-family:sans-serif;font-size:14px;color:#78350f;text-align:center;font-weight:800;">RNC: ${rnc}</p>` : ''}
+            <p style="margin:0;font-family:sans-serif;font-size:12px;color:#78350f;text-align:center;font-weight:600;">Este documento es válido como comprobante fiscal para declaraciones tributarias</p>
+          </div>
+
           <!-- Footer del recibo -->
-          <div style="text-align:center;padding:12px;background:#f8fafc;border-radius:12px;border:1px dashed #e2e8f0;">
-            <p style="margin:0;font-family:sans-serif;font-size:10px;color:#94a3b8;font-weight:600;">San Cristóbal, República Dominicana</p>
-            <p style="margin:4px 0 0;font-family:sans-serif;font-size:10px;color:#94a3b8;">Este recibo es un comprobante oficial de pago de Colegio Montessori Sonrisas Creativas.</p>
-            <p style="margin:4px 0 0;font-family:monospace;font-size:9px;color:#cbd5e1;">ID: ${receiptNo} · ${new Date().toLocaleDateString('es-DO')}</p>
+          <div style="text-align:center;padding:16px;background:linear-gradient(135deg,#f8fafc,#f1f5f9);border-radius:16px;border:1px dashed #cbd5e1;">
+            <p style="margin:0;font-family:sans-serif;font-size:11px;color:#64748b;font-weight:600;">San Cristóbal, República Dominicana</p>
+            <p style="margin:6px 0 0;font-family:sans-serif;font-size:11px;color:#64748b;">Este recibo es un comprobante oficial de pago de Colegio Montessori Sonrisas Creativas.</p>
+            <p style="margin:8px 0 0;font-family:monospace;font-size:10px;color:#94a3b8;">ID: ${receiptNo} · ${new Date().toLocaleDateString('es-DO')}</p>
           </div>
         </div>
 
         <!-- Botones de acción -->
-        <div style="padding:16px 28px 24px;display:flex;gap:10px;">
+        <div style="padding:20px 28px 28px;display:flex;gap:12px;">
           <button id="btnDownloadPDF"
-            style="flex:1;padding:14px;background:linear-gradient(135deg,#16a34a,#15803d);color:white;border:none;border-radius:14px;font-family:sans-serif;font-size:13px;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 12px rgba(22,163,74,0.35);">
+            style="flex:1;padding:16px;background:linear-gradient(135deg,#0B63C7,#3B82F6);color:white;border:none;border-radius:16px;font-family:sans-serif;font-size:14px;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 8px 20px rgba(11,99,199,0.4);transition:all 0.2s;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 12px 28px rgba(11,99,199,0.45)';" onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 8px 20px rgba(11,99,199,0.4)';">
             📥 Descargar PDF
           </button>
           <button onclick="document.getElementById('receiptModal').remove()"
-            style="padding:14px 20px;background:#f1f5f9;color:#475569;border:none;border-radius:14px;font-family:sans-serif;font-size:13px;font-weight:800;cursor:pointer;">
+            style="padding:16px 24px;background:#f1f5f9;color:#475569;border:none;border-radius:16px;font-family:sans-serif;font-size:14px;font-weight:800;cursor:pointer;transition:all 0.2s;" onmouseover="this.style.background='#e2e8f0';">
             Cerrar
           </button>
         </div>
@@ -500,7 +520,8 @@ export const PaymentsModule = {
       this._downloadReceiptPDF({
         receiptNo, studentName, parentName, classroom, paidDate,
         method, bank: payment.bank, reference: payment.reference,
-        monthPaid, amountFmt, approvedBy, amount
+        monthPaid, amountFmt, approvedBy, amount,
+        fiscal_receipt: payment.fiscal_receipt, rnc
       });
     });
   },
@@ -524,104 +545,125 @@ export const PaymentsModule = {
       }
 
       const { jsPDF } = window.jspdf;
-      const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a5' });
-      const W = doc.internal.pageSize.getWidth();
+        const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a5' });
+        const W = doc.internal.pageSize.getWidth();
 
-      // ── Header verde ──────────────────────────────────────────
-      doc.setFillColor(22, 163, 74);
-      doc.roundedRect(0, 0, W, 42, 0, 0, 'F');
-      doc.setTextColor(255, 255, 255);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(18);
-      doc.text('Colegio Montessori Sonrisas Creativas', W / 2, 16, { align: 'center' });
-      doc.setFontSize(8);
-      doc.setFont('helvetica', 'normal');
-      doc.text('RECIBO DE PAGO OFICIAL', W / 2, 23, { align: 'center' });
-      doc.setFontSize(10);
-      doc.setFont('courier', 'bold');
-      doc.text(data.receiptNo, W / 2, 33, { align: 'center' });
+        // ── Header azul Colegio Montessori ──────────────────────────────────────────
+        doc.setFillColor(11, 99, 199);
+        doc.roundedRect(0, 0, W, 44, 0, 0, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(18);
+        doc.text('Colegio Montessori Sonrisas Creativas', W / 2, 16, { align: 'center' });
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'normal');
+        doc.text('RECIBO DE PAGO OFICIAL', W / 2, 23, { align: 'center' });
+        doc.setFontSize(10);
+        doc.setFont('courier', 'bold');
+        doc.text(data.receiptNo, W / 2, 34, { align: 'center' });
 
-      // ── Sello aprobado ────────────────────────────────────────
-      doc.setFillColor(240, 253, 244);
-      doc.rect(0, 42, W, 16, 'F');
-      doc.setTextColor(21, 128, 61);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(10);
-      doc.text('Pago Confirmado y Aprobado', 14, 51);
-      doc.setFontSize(8);
-      doc.setFont('helvetica', 'normal');
-      doc.text(`Aprobado por: ${data.approvedBy}`, 14, 57);
+        // ── Sello aprobado azul ────────────────────────────────────────
+        doc.setFillColor(239, 246, 255);
+        doc.rect(0, 44, W, 18, 'F');
+        doc.setTextColor(30, 64, 175);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(10);
+        doc.text('Pago Confirmado y Aprobado', 14, 54);
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Aprobado por: ${data.approvedBy}`, 14, 60);
 
-      // ── Datos del estudiante ──────────────────────────────────
-      let y = 68;
-      doc.setFillColor(248, 250, 252);
-      doc.roundedRect(10, y - 5, W - 20, 36, 3, 3, 'F');
-      doc.setTextColor(148, 163, 184);
-      doc.setFontSize(7);
-      doc.setFont('helvetica', 'bold');
-      doc.text('DATOS DEL ESTUDIANTE', 14, y);
-      y += 6;
+        // ── Datos del estudiante ──────────────────────────────────
+        let y = 72;
+        doc.setFillColor(248, 250, 252);
+        doc.roundedRect(10, y - 5, W - 20, 38, 3, 3, 'F');
+        doc.setTextColor(148, 163, 184);
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'bold');
+        doc.text('DATOS DEL ESTUDIANTE', 14, y);
+        y += 6;
 
-      const col2 = W / 2 + 2;
-      const infoRows = [
-        ['Estudiante', data.studentName, 'Aula', data.classroom],
-        ['Padre/Tutor', data.parentName, 'Fecha de Pago', data.paidDate]
-      ];
-      doc.setFontSize(8);
-      for (const [l1, v1, l2, v2] of infoRows) {
-        doc.setTextColor(100, 116, 139); doc.setFont('helvetica', 'normal');
-        doc.text(l1, 14, y); doc.text(l2, col2, y);
-        doc.setTextColor(30, 41, 59); doc.setFont('helvetica', 'bold');
-        doc.text(String(v1), 14, y + 4); doc.text(String(v2), col2, y + 4);
-        y += 11;
-      }
+        const col2 = W / 2 + 2;
+        const infoRows = [
+          ['Estudiante', data.studentName, 'Aula', data.classroom],
+          ['Padre/Tutor', data.parentName, 'Fecha de Pago', data.paidDate]
+        ];
+        doc.setFontSize(8);
+        for (const [l1, v1, l2, v2] of infoRows) {
+          doc.setTextColor(100, 116, 139); doc.setFont('helvetica', 'normal');
+          doc.text(l1, 14, y); doc.text(l2, col2, y);
+          doc.setTextColor(30, 41, 59); doc.setFont('helvetica', 'bold');
+          doc.text(String(v1), 14, y + 4); doc.text(String(v2), col2, y + 4);
+          y += 11;
+        }
 
-      // ── Detalle del pago ──────────────────────────────────────
-      y += 2;
-      doc.setTextColor(148, 163, 184);
-      doc.setFontSize(7);
-      doc.setFont('helvetica', 'bold');
-      doc.text('DETALLE DEL PAGO', 14, y);
-      y += 6;
+        // ── Detalle del pago ──────────────────────────────────────
+        y += 2;
+        doc.setTextColor(148, 163, 184);
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'bold');
+        doc.text('DETALLE DEL PAGO', 14, y);
+        y += 6;
 
-      const detailRows = [
-        ['Concepto', data.monthPaid],
-        ['Método de Pago', data.method],
-        ...(data.bank ? [['Banco', data.bank]] : []),
-        ...(data.reference ? [['Referencia', data.reference]] : [])
-      ];
+        const detailRows = [
+          ['Concepto', data.monthPaid],
+          ['Método de Pago', data.method],
+          ...(data.bank ? [['Banco', data.bank]] : []),
+          ...(data.reference ? [['Referencia', data.reference]] : []),
+          ...(data.fiscal_receipt ? [['Comprobante Fiscal', data.fiscal_receipt]] : [])
+        ];
 
-      doc.setFontSize(9);
-      for (const [label, value] of detailRows) {
-        doc.setTextColor(100, 116, 139); doc.setFont('helvetica', 'normal');
-        doc.text(label, 14, y);
-        doc.setTextColor(30, 41, 59); doc.setFont('helvetica', 'bold');
-        doc.text(String(value), W - 14, y, { align: 'right' });
-        doc.setDrawColor(241, 245, 249);
-        doc.line(14, y + 2, W - 14, y + 2);
-        y += 9;
-      }
+        doc.setFontSize(9);
+        for (const [label, value] of detailRows) {
+          doc.setTextColor(100, 116, 139); doc.setFont('helvetica', 'normal');
+          doc.text(label, 14, y);
+          doc.setTextColor(30, 41, 59); doc.setFont('helvetica', 'bold');
+          doc.text(String(value), W - 14, y, { align: 'right' });
+          doc.setDrawColor(241, 245, 249);
+          doc.line(14, y + 2, W - 14, y + 2);
+          y += 9;
+        }
 
-      // Total row
-      doc.setFillColor(240, 253, 244);
-      doc.roundedRect(10, y - 4, W - 20, 12, 2, 2, 'F');
-      doc.setTextColor(21, 128, 61);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(11);
-      doc.text('TOTAL PAGADO', 14, y + 4);
-      doc.text(data.amountFmt, W - 14, y + 4, { align: 'right' });
-      y += 18;
+        // Total row azul
+        doc.setFillColor(239, 246, 255);
+        doc.roundedRect(10, y - 4, W - 20, 12, 2, 2, 'F');
+        doc.setTextColor(11, 99, 199);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(11);
+        doc.text('TOTAL PAGADO', 14, y + 4);
+        doc.text(data.amountFmt, W - 14, y + 4, { align: 'right' });
+        y += 18;
 
-      // ── Footer ────────────────────────────────────────────────
-      doc.setFillColor(248, 250, 252);
-      doc.roundedRect(10, y, W - 20, 20, 3, 3, 'F');
-      doc.setTextColor(148, 163, 184);
-      doc.setFontSize(7);
-      doc.setFont('helvetica', 'normal');
-      doc.text('San Cristóbal, República Dominicana', W / 2, y + 6, { align: 'center' });
-      doc.text('Este recibo es un comprobante oficial de pago de Colegio Montessori Sonrisas Creativas.', W / 2, y + 11, { align: 'center' });
-      doc.setFont('courier', 'normal');
-      doc.text(`ID: ${data.receiptNo} · ${new Date().toLocaleDateString('es-DO')}`, W / 2, y + 16, { align: 'center' });
+        // ── Comprobante Fiscal ──────────────────────────────────────
+        doc.setFillColor(255, 251, 235);
+        const fiscalHeight = data.rnc ? 22 : 14;
+        doc.roundedRect(10, y, W - 20, fiscalHeight, 3, 3, 'F');
+        doc.setTextColor(161, 98, 7);
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'bold');
+        doc.text('COMPROBANTE FISCAL', W / 2, y + 5, { align: 'center' });
+        if (data.rnc) {
+          doc.setFontSize(9);
+          doc.text(`RNC: ${data.rnc}`, W / 2, y + 12, { align: 'center' });
+          doc.setFontSize(7);
+          doc.setFont('helvetica', 'normal');
+          doc.text('Este documento es válido para declaraciones tributarias', W / 2, y + 17, { align: 'center' });
+        } else {
+          doc.setFont('helvetica', 'normal');
+          doc.text('Este documento es válido para declaraciones tributarias', W / 2, y + 10, { align: 'center' });
+        }
+        y += fiscalHeight + 4;
+
+        // ── Footer ────────────────────────────────────────────────
+        doc.setFillColor(248, 250, 252);
+        doc.roundedRect(10, y, W - 20, 22, 3, 3, 'F');
+        doc.setTextColor(148, 163, 184);
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'normal');
+        doc.text('San Cristóbal, República Dominicana', W / 2, y + 7, { align: 'center' });
+        doc.text('Este recibo es un comprobante oficial de pago de Colegio Montessori Sonrisas Creativas.', W / 2, y + 12, { align: 'center' });
+        doc.setFont('courier', 'normal');
+        doc.text(`ID: ${data.receiptNo} · ${new Date().toLocaleDateString('es-DO')}`, W / 2, y + 17, { align: 'center' });
 
       doc.save(`Recibo-${data.receiptNo}.pdf`);
       Helpers.toast('Recibo descargado', 'success');

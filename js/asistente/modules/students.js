@@ -628,7 +628,10 @@ export const StudentsModule = {
           });
           const { data: authData, error: authError } = await tempClient.auth.signUp({
             email: emailUser, password,
-            options: { data: { name: payload.p1_name || 'Padre', role: 'padre' } }
+            options: {
+              data: { name: payload.p1_name || 'Padre', role: 'padre' },
+              emailRedirectTo: null
+            }
           });
 
           if (authError) throw authError;

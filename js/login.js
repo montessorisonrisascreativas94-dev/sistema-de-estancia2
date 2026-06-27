@@ -222,7 +222,17 @@ document.addEventListener('DOMContentLoaded', async () => {
       let errorMessage = 'Ocurrió un error inesperado. Intenta de nuevo.';
       if (isNetwork)                               errorMessage = 'Sin conexión. Verifica tu internet.';
       else if (msg.includes('Invalid login'))      errorMessage = 'Correo o contraseña incorrectos.';
-      else if (msg.includes('Email not confirmed')) errorMessage = 'Confirma tu correo antes de ingresar.';
+      else if (msg.includes('Email not confirmed')) {
+        // Try to get user anyway - maybe we can bypass email confirmation check
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          // Already logged in, redirect
+          RATE_LIMIT.recordSuccess();
+          await redirectByRole(session.user.id);
+          return;
+        }
+        errorMessage = 'Confirma tu correo antes de ingresar.';
+      }
 
       // Registrar intento fallido en Supabase para rate limiting server-side
       if (!isNetwork && msg.includes('Invalid login')) {
