@@ -1,4 +1,4 @@
-import { DirectorApi } from './api.js';
+﻿import { DirectorApi } from './api.js';
 import { Helpers } from '../shared/helpers.js';
 import { UI } from './ui.module.js';
 
@@ -9,7 +9,7 @@ export const InquiriesModule = {
     const container = document.getElementById('reportsList');
     if (!container) return;
     
-    container.innerHTML = '<div class="col-span-3 text-center p-8"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div></div>';
+    container.innerHTML = '<div class="col-span-3 text-center p-8"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0B63C7] mx-auto"></div></div>';
     try {
       const res = await DirectorApi.getInquiries();
       const inquiries = res?.data || [];
@@ -57,7 +57,7 @@ export const InquiriesModule = {
       if (!item) return Helpers.toast('Reporte no encontrado', 'warning');
       
       const modalHTML = `
-        <div class="modal-header p-6 bg-indigo-600 text-white rounded-t-3xl flex justify-between items-center">
+        <div class="modal-header p-6 bg-[#0B63C7] text-white rounded-t-3xl flex justify-between items-center">
           <h3 class="text-xl font-bold">Detalle de Reporte</h3>
         </div>
         <div class="modal-body p-8 space-y-4 bg-white">
@@ -67,7 +67,7 @@ export const InquiriesModule = {
           ${item.attachment_url ? `<div><label class="text-[10px] font-black text-slate-400 uppercase">Adjunto</label><img src="${item.attachment_url}" class="w-full rounded-2xl mt-2 border border-slate-100 shadow-sm"></div>` : ''}
         </div>
         <div class="modal-footer p-6 bg-slate-50 rounded-b-3xl border-t border-slate-100 flex justify-end gap-3">
-          <button onclick="App.inquiries.reply('${item.id}')" class="px-8 py-2.5 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-md">Responder</button>
+          <button onclick="App.inquiries.reply('${item.id}')" class="px-8 py-2.5 bg-[#0B63C7] text-white rounded-xl font-bold hover:bg-[#0850A0] transition-all shadow-md">Responder</button>
           <button onclick="App.ui.closeModal()" class="px-8 py-2.5 bg-white border border-slate-200 rounded-xl font-bold text-slate-600 hover:bg-slate-100 transition-all">Cerrar</button>
         </div>`;
       window.openGlobalModal(modalHTML);
@@ -84,3 +84,8 @@ export const InquiriesModule = {
     } catch (_) { Helpers.toast('Error al responder', 'error'); }
   }
 };
+
+
+
+
+

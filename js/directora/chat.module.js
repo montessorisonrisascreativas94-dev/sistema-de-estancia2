@@ -1,4 +1,4 @@
-import { DirectorApi } from './api.js';
+﻿import { DirectorApi } from './api.js';
 import { Helpers } from '../shared/helpers.js';
 import { supabase, sendPush } from '../shared/supabase.js';
 import { ChatModule as SharedChat } from '../shared/chat.js';
@@ -378,3 +378,4 @@ export const ChatModule = {
     ScrollModule.scrollToBottom(document.getElementById('chatMessagesContainer'));
   }
 };
+

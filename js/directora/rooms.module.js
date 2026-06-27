@@ -1,4 +1,4 @@
-import { DirectorApi } from './api.js';
+﻿import { DirectorApi } from './api.js';
 import { Helpers } from '../shared/helpers.js';
 import { UI } from './ui.module.js';
 import { supabase } from '../shared/supabase.js';
@@ -13,7 +13,7 @@ export const RoomsModule = {
     // Invalidar cache para obtener datos frescos
     QueryCache.invalidate('dir_classrooms_occ');
 
-    container.innerHTML = '<tr><td colspan="4" class="text-center py-8"><div class="animate-spin w-6 h-6 border-2 border-purple-500 rounded-full border-t-transparent mx-auto"></div></td></tr>';
+    container.innerHTML = '<tr><td colspan="4" class="text-center py-8"><div class="animate-spin w-6 h-6 border-2 border-[#0B63C7] rounded-full border-t-transparent mx-auto"></div></td></tr>';
     try {
       const res = await DirectorApi.getClassroomsWithOccupancy();
       const classrooms = res?.data || [];
@@ -81,11 +81,11 @@ export const RoomsModule = {
             </div>
           </div>
           <div class="flex items-center gap-2 shrink-0">
-            <select id="select-room-${s.id}" class="text-xs border-2 border-slate-100 rounded-xl px-3 py-2 bg-slate-50 focus:border-purple-400 focus:ring-2 focus:ring-purple-100 outline-none font-medium transition-all">
+            <select id="select-room-${s.id}" class="text-xs border-2 border-slate-100 rounded-xl px-3 py-2 bg-slate-50 focus:border-[#0B63C7] focus:ring-2 focus:ring-blue-100 outline-none font-medium transition-all">
               <option value="">-- Seleccionar aula --</option>
               ${roomOptions}
             </select>
-            <button onclick="App.rooms.assignStudent(${s.id})" class="px-4 py-2 bg-purple-600 text-white rounded-xl text-xs font-black hover:bg-purple-700 active:scale-95 transition-all shadow-sm">
+            <button onclick="App.rooms.assignStudent(${s.id})" class="px-4 py-2 bg-[#0B63C7] text-white rounded-xl text-xs font-black hover:bg-[#0850A0] active:scale-95 transition-all shadow-sm">
               Asignar
             </button>
           </div>
@@ -208,8 +208,8 @@ export const RoomsModule = {
 
   async deleteRoom(roomId, roomName) {
     const ok = window._karpusConfirmDelete
-      ? await window._karpusConfirmDelete('�Eliminar aula "' + roomName + '"?', 'Los estudiantes quedar�n sin aula asignada.')
-      : confirm('�Eliminar aula "' + roomName + '"? Los estudiantes quedar�n sin aula.');
+      ? await window._karpusConfirmDelete('ï¿½Eliminar aula "' + roomName + '"?', 'Los estudiantes quedarï¿½n sin aula asignada.')
+      : confirm('ï¿½Eliminar aula "' + roomName + '"? Los estudiantes quedarï¿½n sin aula.');
     if (!ok) return;
 
     try {
@@ -225,16 +225,16 @@ export const RoomsModule = {
   },
 
   async openModal(roomId = null) {
-    const IC = 'w-full px-4 py-2.5 border-2 border-slate-100 rounded-2xl outline-none focus:ring-4 focus:ring-purple-100 focus:border-purple-400 bg-slate-50/50 transition-all text-sm font-medium';
+    const IC = 'w-full px-4 py-2.5 border-2 border-slate-100 rounded-2xl outline-none focus:ring-4 focus:ring-blue-100 focus:border-[#0B63C7] bg-slate-50/50 transition-all text-sm font-medium';
     const LC = 'block text-[11px] font-black text-slate-400 uppercase tracking-wider mb-1.5 ml-1';
 
     const html = `
-      <div class="modal-header bg-gradient-to-r from-purple-600 to-indigo-600 text-white p-6 rounded-t-3xl flex items-center justify-between">
+      <div class="modal-header bg-gradient-to-r from-[#0B63C7] to-[#0850A0] text-white p-6 rounded-t-3xl flex items-center justify-between">
         <div class="flex items-center gap-3">
           <div class="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center text-2xl"><i data-lucide="home" class="w-6 h-6 text-white"></i></div>
           <div>
             <h3 class="text-xl font-black">${roomId ? 'Editar Aula' : 'Nueva Aula'}</h3>
-            <p class="text-xs text-white/70 font-bold uppercase tracking-widest">Configuración del aula</p>
+            <p class="text-xs text-white/70 font-bold uppercase tracking-widest">ConfiguraciÃ³n del aula</p>
           </div>
         </div>
       </div>
@@ -269,8 +269,8 @@ export const RoomsModule = {
       </div>
 
       <div class="modal-footer bg-white p-6 rounded-b-3xl border-t border-slate-100 flex justify-end gap-3">
-        <button onclick="App.ui.closeModal()" class="px-8 py-3 text-slate-500 font-black text-xs uppercase hover:bg-slate-50 rounded-2xl transition-all">Cancelar</button>
-        <button onclick="App.rooms.save()" class="px-10 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-2xl font-black text-xs uppercase shadow-lg hover:-translate-y-0.5 transition-all active:scale-95">Guardar Aula</button>
+        <button onclick="App.ui.closeModal()" class="px-8 py-3 text-slate-500 font-black text-xs uppercase hover:bg-slate-100 rounded-2xl transition-all">Cancelar</button>
+        <button onclick="App.rooms.save()" class="px-10 py-3 bg-gradient-to-r from-[#0B63C7] to-[#0850A0] text-white rounded-2xl font-black text-xs uppercase shadow-lg shadow-blue-200 hover:-translate-y-0.5 transition-all active:scale-95">Guardar Aula</button>
       </div>`;
 
     window.openGlobalModal(html);
@@ -285,7 +285,7 @@ export const RoomsModule = {
       }
     } catch (e) {  }
 
-    // Pre-llenar si es edici�n
+    // Pre-llenar si es ediciï¿½n
     if (roomId) {
       try {
         const { data: room } = await supabase.from('classrooms').select('id, name, level, capacity, teacher_id, is_live').eq('id', parseInt(roomId)).single();
@@ -330,14 +330,14 @@ export const RoomsModule = {
         const inThisRoom = rid && String(s.classroom_id) === rid;
         const inOtherRoom = s.classroom_id && !inThisRoom;
         return `
-          <label class="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-purple-50 transition-colors ${inOtherRoom ? 'opacity-50' : ''}">
-            <input type="checkbox" value="${s.id}" ${inThisRoom ? 'checked' : ''} ${inOtherRoom ? 'disabled title="Ya est� en otra aula"' : ''}
-              class="room-student-check w-4 h-4 rounded accent-purple-600 shrink-0">
-            <div class="w-7 h-7 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center font-black text-xs shrink-0">
+          <label class="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-[#E8F2FF] transition-colors ${inOtherRoom ? 'opacity-50' : ''}">
+            <input type="checkbox" value="${s.id}" ${inThisRoom ? 'checked' : ''} ${inOtherRoom ? 'disabled title="Ya estï¿½ en otra aula"' : ''}
+              class="room-student-check w-4 h-4 rounded accent-[#0B63C7] shrink-0">
+            <div class="w-7 h-7 rounded-lg bg-[#E8F2FF] text-[#0B63C7] flex items-center justify-center font-black text-xs shrink-0">
               ${(s.name || '?').charAt(0).toUpperCase()}
             </div>
             <span class="text-sm font-medium text-slate-700 flex-1">${Helpers.escapeHTML(s.name)}</span>
-            ${inThisRoom ? '<span class="text-[9px] bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-black">En esta aula</span>' : ''}
+            ${inThisRoom ? '<span class="text-[9px] bg-[#E8F2FF] text-[#0B63C7] px-2 py-0.5 rounded-full font-black">En esta aula</span>' : ''}
             ${inOtherRoom ? '<span class="text-[9px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-black">Otra aula</span>' : ''}
           </label>`;
       }).join('');
@@ -346,3 +346,5 @@ export const RoomsModule = {
     }
   }
 };
+
+

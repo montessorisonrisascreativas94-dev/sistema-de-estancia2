@@ -1,4 +1,4 @@
-import { supabase } from '../shared/supabase.js';
+﻿import { supabase } from '../shared/supabase.js';
 import { Helpers } from '../shared/helpers.js';
 
 export const AccessModule = {
@@ -106,7 +106,7 @@ export const AccessModule = {
       return `<tr class="hover:bg-slate-50 transition-colors">
         <td class="px-6 py-4">
           <div class="flex items-center gap-3">
-            <div class="w-8 h-8 rounded-lg ${p.isStaff ? 'bg-indigo-100 text-indigo-700' : 'bg-orange-100 text-orange-700'} flex items-center justify-center font-black text-xs uppercase">
+            <div class="w-8 h-8 rounded-lg ${p.isStaff ? 'bg-[#E8F2FF] text-[#0850A0]' : 'bg-orange-100 text-orange-700'} flex items-center justify-center font-black text-xs uppercase">
               ${p.name.charAt(0)}
             </div>
             <span class="font-bold text-slate-800 text-sm">${Helpers.escapeHTML(p.name)}</span>
@@ -225,3 +225,5 @@ export const AccessModule = {
     }
   }
 };
+
+

@@ -9,7 +9,7 @@ export const safeToast = (message, type = 'success') => {
       return window.Helpers.toast(message, type);
     }
   } catch (_) {
-    /* silencioso */
+    // silencioso
   }
 };
 
@@ -27,21 +27,22 @@ export const Modal = {
     document.getElementById(id)?.remove();
     const modal = document.createElement('div');
     modal.id = id;
-    // Soft purple backdrop with blur — Paleta Maestra Infantil
+    // Backdrop normal (sin color verde)
     modal.className = [
       'fixed inset-0 z-[9998]',
       'flex items-start justify-center',
       'pt-[3vh] pb-6 px-4',
       'overflow-y-auto'
     ].join(' ');
-    modal.style.cssText = 'background:rgba(147,51,234,0.35);backdrop-filter:blur(8px);';
+    modal.style.cssText = 'background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);';
 
     modal.innerHTML = `
       <div id="${id}-inner"
            class="relative w-full max-w-2xl"
            style="animation:modalPop .3s cubic-bezier(0.34,1.56,0.64,1) both;">
         ${content}
-      </div>`;
+      </div>
+    `;
 
     // Cerrar al hacer clic fuera del contenido
     modal.addEventListener('click', (e) => {
@@ -58,13 +59,13 @@ export const Modal = {
       s.textContent = `
         @keyframes modalPop {
           from { opacity:0; transform:scale(0.92) translateY(20px); }
-          to   { opacity:1; transform:scale(1) translateY(0); }
+          to { opacity:1; transform:scale(1) translateY(0); }
         }
-        /* Maestra modal card base — Infantil */
+        /* Maestra modal card base — Sonrisas Creativas */
         #${id}-inner > div {
           border-radius: 32px;
           overflow: hidden;
-          box-shadow: 0 28px 80px rgba(147,51,234,0.2), 0 8px 30px rgba(0,0,0,0.12);
+          box-shadow: 0 28px 80px rgba(40,181,77,0.2), 0 8px 30px rgba(0,0,0,0.12);
         }
       `;
       document.head.appendChild(s);

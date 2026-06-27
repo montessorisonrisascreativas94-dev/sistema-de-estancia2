@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 🎯 DASHBOARD SERVICE — Sincronización centralizada de datos
  * 
  * Responsabilidad: Orquestar carga de TODOS los datos del dashboard
@@ -141,3 +141,4 @@ export const DashboardService = {
     this.listeners.forEach(callback => callback());
   }
 };
+

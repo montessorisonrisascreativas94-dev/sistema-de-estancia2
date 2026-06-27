@@ -1,4 +1,4 @@
-import { SafeAppState } from '../shared/state.js';
+﻿import { SafeAppState } from '../shared/state.js';
 
 /**
  * 🧠 FACTORY PARA ESTADO INICIAL

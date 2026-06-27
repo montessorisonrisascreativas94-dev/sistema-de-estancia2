@@ -1,4 +1,4 @@
-import { supabase } from '../shared/supabase.js';
+﻿import { supabase } from '../shared/supabase.js';
 import { TABLES } from '../shared/constants.js';
 import { Helpers } from '../shared/helpers.js';
 
@@ -142,11 +142,11 @@ export const PermitsModule = {
             </div>
 
             <div class="grid grid-cols-2 gap-4">
-              <div class="bg-indigo-50 p-4 rounded-2xl border border-indigo-100 text-indigo-700">
+              <div class="bg-[#E8F2FF] p-4 rounded-2xl border border-blue-100 text-[#0850A0]">
                 <p class="text-[10px] font-black uppercase opacity-70 mb-1">Fecha Inicio</p>
                 <p class="text-lg font-black">${new Date(data.start_date).toLocaleDateString()}</p>
               </div>
-              <div class="bg-indigo-50 p-4 rounded-2xl border border-indigo-100 text-indigo-700">
+              <div class="bg-[#E8F2FF] p-4 rounded-2xl border border-blue-100 text-[#0850A0]">
                 <p class="text-[10px] font-black uppercase opacity-70 mb-1">Fecha Fin</p>
                 <p class="text-lg font-black">${new Date(data.end_date).toLocaleDateString()}</p>
               </div>
@@ -160,3 +160,6 @@ export const PermitsModule = {
     }
   }
 };
+
+
+

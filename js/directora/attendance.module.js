@@ -1,4 +1,4 @@
-import { supabase } from '../shared/supabase.js';
+﻿import { supabase } from '../shared/supabase.js';
 import { Helpers } from '../shared/helpers.js';
 import { RealtimeManager } from '../shared/realtime-manager.js';
 
@@ -202,7 +202,7 @@ export const AttendanceModule = {
       return `<tr class="hover:bg-slate-50 border-b border-slate-100 transition-colors">
         <td class="px-5 py-3.5">
           <div class="flex items-center gap-3">
-            <div class="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-black text-sm shrink-0 overflow-hidden">
+            <div class="w-9 h-9 rounded-xl bg-[#E8F2FF] text-[#0B63C7] flex items-center justify-center font-black text-sm shrink-0 overflow-hidden">
               ${r.student?.avatar_url ? `<img src="${r.student.avatar_url}" class="w-full h-full object-cover">` : ini}
             </div>
             <div>
@@ -268,7 +268,7 @@ export const AttendanceModule = {
       return `<tr class="hover:bg-slate-50 border-b border-slate-100 transition-colors">
         <td class="px-5 py-3.5">
           <div class="flex items-center gap-3">
-            <div class="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-black text-sm shrink-0 overflow-hidden">
+            <div class="w-9 h-9 rounded-xl bg-[#E8F2FF] text-[#0B63C7] flex items-center justify-center font-black text-sm shrink-0 overflow-hidden">
               ${g.student?.avatar_url ? `<img src="${g.student.avatar_url}" class="w-full h-full object-cover">` : ini}
             </div>
             <div>
@@ -392,3 +392,4 @@ export const AttendanceModule = {
     if (spinner) spinner.classList.toggle('hidden', !on);
   }
 };
+

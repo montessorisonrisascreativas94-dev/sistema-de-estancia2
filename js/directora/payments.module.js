@@ -1,4 +1,4 @@
-import { DirectorApi } from './api.js';
+﻿import { DirectorApi } from './api.js';
 import { Helpers } from '../shared/helpers.js';
 import { UIHelpers } from './ui.module.js';
 import { supabase } from '../shared/supabase.js';
@@ -76,7 +76,7 @@ export const PaymentsModule = {
   async loadPayments() {
     const tbody = document.getElementById('paymentsTableBody');
     if (!tbody) return;
-    tbody.innerHTML = '<tr><td colspan="8" class="text-center py-10"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto mb-2"></div><p class="text-xs text-slate-400">Cargando pagos...</p></td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" class="text-center py-10"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0B63C7] mx-auto mb-2"></div><p class="text-xs text-slate-400">Cargando pagos...</p></td></tr>';
     this.loadStats();
     this.loadIncomeChart();
     try {
@@ -222,14 +222,14 @@ export const PaymentsModule = {
     }
 
     const approveBtn = ip ? '<button onclick="App.payments.markPaid(\'' + p.id + '\')" class="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-100 transition-colors relative" title="Aprobar">' + (hasV ? '<span class="absolute -top-1 -right-1 flex h-3 w-3"><span class="animate-ping absolute h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span class="relative h-3 w-3 bg-emerald-500 rounded-full"></span></span>' : '') + '<i data-lucide="check" class="w-4 h-4"></i></button>' : '';
-    const waiveBtn   = moraTot > 0 ? '<button onclick="App.payments.waiveMora(\'' + p.id + '\')" class="p-1.5 bg-violet-50 text-violet-600 rounded-lg hover:bg-violet-100 transition-colors" title="Quitar Mora"><i data-lucide="shield-off" class="w-4 h-4"></i></button>' : '';
+    const waiveBtn   = moraTot > 0 ? '<button onclick="App.payments.waiveMora(\'' + p.id + '\')" class="p-1.5 bg-[#E8F2FF] text-[#0B63C7] rounded-lg hover:bg-blue-100 transition-colors" title="Quitar Mora"><i data-lucide="shield-off" class="w-4 h-4"></i></button>' : '';
     const delBtn     = '<button onclick="App.payments.delete(\'' + p.id + '\')" class="p-1.5 bg-rose-50 text-rose-500 rounded-lg hover:bg-rose-100 transition-colors" title="Eliminar"><i data-lucide="trash-2" class="w-4 h-4"></i></button>';
     const voucher    = hasV
       ? '<a href="' + (p.evidence_url || p.proof_url) + '" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 text-sky-600 text-xs font-bold"><i data-lucide="external-link" class="w-3 h-3"></i>Ver</a>'
       : '<span class="text-slate-300 text-xs">-</span>';
 
     return '<tr class="hover:bg-slate-50 border-b border-slate-100 transition-colors' + (sk === 'overdue' ? ' bg-rose-50/20' : '') + '">' +
-      '<td class="px-5 py-3.5"><div class="flex items-center gap-3"><div class="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-black text-sm">' + Helpers.escapeHTML((stu.name || '?').charAt(0).toUpperCase()) + '</div><div><div class="font-bold text-slate-800 text-sm">' + Helpers.escapeHTML(stu.name || '-') + '</div><div class="text-[10px] text-slate-400 uppercase">' + (stu.classrooms?.name || '-') + '</div></div></div></td>' +
+      '<td class="px-5 py-3.5"><div class="flex items-center gap-3"><div class="w-8 h-8 rounded-xl bg-[#E8F2FF] text-[#0B63C7] flex items-center justify-center font-black text-sm">' + Helpers.escapeHTML((stu.name || '?').charAt(0).toUpperCase()) + '</div><div><div class="font-bold text-slate-800 text-sm">' + Helpers.escapeHTML(stu.name || '-') + '</div><div class="text-[10px] text-slate-400 uppercase">' + (stu.classrooms?.name || '-') + '</div></div></div></td>' +
       '<td class="px-5 py-3.5 text-center"><span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase ' + st.c + '"><i data-lucide="' + st.i + '" class="w-3 h-3"></i>' + st.l + '</span></td>' +
       '<td class="px-5 py-3.5 text-right"><div class="font-black text-slate-800">' + af + '</div>' + (ub ? '<div class="mt-0.5">' + ub + '</div>' : '') + '</td>' +
       '<td class="px-5 py-3.5"><span class="text-[10px] font-black uppercase text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">' + (p.method || '-') + '</span></td>' +
@@ -329,7 +329,7 @@ export const PaymentsModule = {
   },
 
   async openPaymentModal(prefillStudentId = null) {
-    const ic = 'w-full px-4 py-2.5 border-2 border-slate-100 rounded-2xl outline-none focus:ring-4 focus:ring-purple-100 focus:border-purple-400 bg-slate-50/50 transition-all text-sm font-medium';
+    const ic = 'w-full px-4 py-2.5 border-2 border-slate-100 rounded-2xl outline-none focus:ring-4 focus:ring-blue-100 focus:border-[#0B63C7] bg-slate-50/50 transition-all text-sm font-medium';
     const lc = 'block text-[11px] font-black text-slate-400 uppercase tracking-wider mb-1.5 ml-1';
     const now = new Date();
     const dm  = now.getMonth() + 1;
@@ -503,3 +503,8 @@ export const PaymentsModule = {
     } catch (e) { Helpers.toast('Error: ' + e.message, 'error'); }
   }
 };
+
+
+
+
+

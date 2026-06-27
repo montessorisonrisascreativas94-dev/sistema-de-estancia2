@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 🤖 Karpus Kids — Módulo de Automatización Inteligente
  * Detecta anomalías, genera alertas y automatiza análisis para la directora.
  */
@@ -305,7 +305,7 @@ export const AutomationModule = {
     const container = document.getElementById(containerId);
     if (!container) return;
 
-    container.innerHTML = '<div class="flex items-center gap-2 py-4"><div class="w-4 h-4 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin"></div><span class="text-xs text-slate-400 font-bold">Analizando datos...</span></div>';
+    container.innerHTML = '<div class="flex items-center gap-2 py-4"><div class="w-4 h-4 border-2 border-[#0B63C7] border-t-transparent rounded-full animate-spin"></div><span class="text-xs text-slate-400 font-bold">Analizando datos...</span></div>';
 
     try {
       const [atRisk, academicAlerts, attAlert, upcomingDues, trend] = await Promise.all([
@@ -423,3 +423,5 @@ export const AutomationModule = {
     }
   }
 };
+
+

@@ -229,11 +229,21 @@ body.panel-padre-body #sidebar {
   border-right: 4px solid #0B63C7;
 }
 
-/* Panel Maestra → Verde alegre */
+/* Panel Maestra → Verde alegre original */
 body.panel-maestra-body #sidebar {
-  background: linear-gradient(160deg, #28B54D 0%, #1A8035 60%, #115925 100%);
+  background: #28B54D;
   box-shadow: 4px 0 24px rgba(40,181,77,0.28);
   border-right: 4px solid #28B54D;
+}
+
+/* Sidebar botones activos: borde blanco */
+body.panel-maestra-body .sidebar-btn.active {
+  border-left: 5px solid rgba(255,255,255,0.9);
+}
+
+/* Sidebar badges: rojo (original) */
+body.panel-maestra-body .nav-btn-toy .badge {
+  background: #EF4444;
 }
 
 /* Panel Directora → Azul oscuro premium */

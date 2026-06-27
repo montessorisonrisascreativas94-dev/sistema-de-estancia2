@@ -1,4 +1,4 @@
-import { DirectorApi } from './api.js';
+﻿import { DirectorApi } from './api.js';
 import { Helpers } from '../shared/helpers.js';
 import { UI } from './ui.module.js';
 import { AppState } from './state.js';
@@ -175,7 +175,7 @@ export const StudentsModule = {
         <tr class="hover:bg-slate-50 transition-colors border-b border-slate-100 cursor-pointer" ondblclick="App.students.openModal('${s.id}')">
           <td class="p-4">
             <div class="flex items-center gap-3">
-              <div class="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center text-sm font-black text-purple-600 overflow-hidden">
+              <div class="w-10 h-10 rounded-xl bg-[#E8F2FF] flex items-center justify-center text-sm font-black text-[#0B63C7] overflow-hidden">
                 ${s.avatar_url ? `<img src="${s.avatar_url}" class="w-full h-full object-cover">` : (s.name || '?').charAt(0)}
               </div>
               <div>
@@ -191,7 +191,7 @@ export const StudentsModule = {
           </td>
           <td class="p-4 text-right">
             <div class="flex justify-end gap-2">
-              <button onclick="App.students.openModal('${s.id}')" class="w-9 h-9 flex items-center justify-center bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white rounded-xl transition-all shadow-sm" title="Editar">
+              <button onclick="App.students.openModal('${s.id}')" class="w-9 h-9 flex items-center justify-center bg-[#E8F2FF] text-[#0B63C7] hover:bg-[#0B63C7] hover:text-white rounded-xl transition-all shadow-sm" title="Editar">
                 <i data-lucide="edit-3" class="w-4 h-4"></i>
               </button>
               <button onclick="App.students.delete('${s.id}')" class="w-9 h-9 flex items-center justify-center bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white rounded-xl transition-all shadow-sm" title="Eliminar">
@@ -206,10 +206,10 @@ export const StudentsModule = {
     if (gridContainer) {
       gridContainer.innerHTML = pageStudents.map(s => `
         <div class="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm hover:shadow-md transition-all group relative overflow-hidden">
-          <div class="absolute top-0 right-0 w-24 h-24 bg-purple-50 rounded-bl-[4rem] -mr-8 -mt-8 transition-transform group-hover:scale-110"></div>
+          <div class="absolute top-0 right-0 w-24 h-24 bg-[#E8F2FF] rounded-bl-[4rem] -mr-8 -mt-8 transition-transform group-hover:scale-110"></div>
           
           <div class="flex items-start gap-4 mb-4 relative">
-            <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-purple-100">
+            <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#0B63C7] to-[#0850A0] flex items-center justify-center shadow-lg shadow-blue-100">
               <i data-lucide="user" class="w-8 h-8 text-white"></i>
             </div>
             <div class="flex-1">
@@ -228,7 +228,7 @@ export const StudentsModule = {
           <div class="grid grid-cols-2 gap-3 mb-6 relative">
             <div class="bg-slate-50 p-3 rounded-2xl">
               <p class="text-[10px] font-black text-slate-400 uppercase mb-1">Promedio</p>
-              <p class="text-xl font-black text-indigo-600">${s.average_grade || '-'}</p>
+              <p class="text-xl font-black text-[#0B63C7]">${s.average_grade || '-'}</p>
             </div>
             <div class="bg-slate-50 p-3 rounded-2xl">
               <p class="text-[10px] font-black text-slate-400 uppercase mb-1">Asistencia</p>
@@ -241,7 +241,7 @@ export const StudentsModule = {
                <div class="w-8 h-8 rounded-full border-2 border-white bg-blue-100 flex items-center justify-center text-[10px]" title="Padre: ${Helpers.escapeHTML(s.p1_name || 'N/A')}"><i data-lucide="user" class="w-3.5 h-3.5 text-blue-500"></i></div>
             </div>
             <div class="flex gap-2">
-              <button onclick="App.students.openModal('${s.id}')" class="p-2.5 bg-slate-100 text-slate-600 hover:bg-purple-600 hover:text-white rounded-xl transition-all">
+              <button onclick="App.students.openModal('${s.id}')" class="p-2.5 bg-slate-100 text-slate-600 hover:bg-[#0B63C7] hover:text-white rounded-xl transition-all">
                 <i data-lucide="edit-3" class="w-4 h-4"></i>
               </button>
               <button onclick="App.students.delete('${s.id}')" class="p-2.5 bg-slate-100 text-slate-600 hover:bg-rose-600 hover:text-white rounded-xl transition-all">
@@ -273,9 +273,9 @@ export const StudentsModule = {
     container.innerHTML = `
       <span class="text-xs font-bold text-slate-400">${start}–${end} de ${total} estudiantes</span>
       <div class="flex gap-2">
-        <button id="dirBtnPrev" class="px-3 py-1.5 text-xs font-black rounded-xl border border-slate-200 text-slate-500 hover:bg-purple-50 hover:border-purple-300 hover:text-purple-600 transition-all disabled:opacity-40 disabled:cursor-not-allowed" ${page <= 1 ? 'disabled' : ''}>← Ant</button>
-        <span class="px-3 py-1.5 text-xs font-black text-purple-600 bg-purple-50 rounded-xl">${page} / ${totalPages}</span>
-        <button id="dirBtnNext" class="px-3 py-1.5 text-xs font-black rounded-xl border border-slate-200 text-slate-500 hover:bg-purple-50 hover:border-purple-300 hover:text-purple-600 transition-all disabled:opacity-40 disabled:cursor-not-allowed" ${page >= totalPages ? 'disabled' : ''}>Sig →</button>
+        <button id="dirBtnPrev" class="px-3 py-1.5 text-xs font-black rounded-xl border border-slate-200 text-slate-500 hover:bg-[#E8F2FF] hover:border-blue-300 hover:text-[#0B63C7] transition-all disabled:opacity-40 disabled:cursor-not-allowed" ${page <= 1 ? 'disabled' : ''}>← Ant</button>
+        <span class="px-3 py-1.5 text-xs font-black text-[#0B63C7] bg-[#E8F2FF] rounded-xl">${page} / ${totalPages}</span>
+        <button id="dirBtnNext" class="px-3 py-1.5 text-xs font-black rounded-xl border border-slate-200 text-slate-500 hover:bg-[#E8F2FF] hover:border-blue-300 hover:text-[#0B63C7] transition-all disabled:opacity-40 disabled:cursor-not-allowed" ${page >= totalPages ? 'disabled' : ''}>Sig →</button>
       </div>`;
     document.getElementById('dirBtnPrev')?.addEventListener('click', () => { this._dirPage--; this.init(); });
     document.getElementById('dirBtnNext')?.addEventListener('click', () => { this._dirPage++; this.init(); });
@@ -486,11 +486,11 @@ export const StudentsModule = {
   },
 
   async openModal(id = null) {
-    const inputClass = "w-full px-4 py-2.5 border-2 border-slate-100 rounded-2xl outline-none focus:ring-4 focus:ring-purple-100 focus:border-purple-400 bg-slate-50/50 transition-all text-sm font-medium";
+    const inputClass = "w-full px-4 py-2.5 border-2 border-slate-100 rounded-2xl outline-none focus:ring-4 focus:ring-blue-100 focus:border-[#0B63C7] bg-slate-50/50 transition-all text-sm font-medium";
     const labelClass = "block text-[11px] font-black text-slate-400 uppercase tracking-wider mb-1.5 ml-1";
     
     const modalHTML = `
-      <div class="modal-header bg-gradient-to-r from-purple-600 to-indigo-600 text-white p-6 rounded-t-3xl flex items-center">
+      <div class="modal-header bg-gradient-to-r from-[#0B63C7] to-[#0850A0] text-white p-6 rounded-t-3xl flex items-center">
         <div class="flex items-center gap-3">
           <div class="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center shadow-inner"><i data-lucide="user-plus" class="w-6 h-6 text-white"></i></div>
           <div>
@@ -507,7 +507,7 @@ export const StudentsModule = {
           <!-- 1. FOTO Y MATRÍCULA -->
           <div class="flex flex-col md:flex-row gap-6 items-center bg-white p-6 rounded-3xl border-2 border-slate-100 shadow-sm">
             <div class="relative group cursor-pointer">
-              <div id="stAvatarPreview" class="w-24 h-24 rounded-[2rem] bg-slate-100 border-4 border-dashed border-slate-200 flex flex-col items-center justify-center text-slate-400 group-hover:border-purple-400 group-hover:bg-purple-50 transition-all overflow-hidden">
+              <div id="stAvatarPreview" class="w-24 h-24 rounded-[2rem] bg-slate-100 border-4 border-dashed border-slate-200 flex flex-col items-center justify-center text-slate-400 group-hover:border-[#0B63C7] group-hover:bg-[#E8F2FF] transition-all overflow-hidden">
                 <i data-lucide="camera" class="w-8 h-8 mb-1"></i>
                 <span class="text-[9px] font-black uppercase">Foto</span>
               </div>
@@ -521,7 +521,7 @@ export const StudentsModule = {
                   <i data-lucide="hash" class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"></i>
               <input id="stMatricula" placeholder="Generar autom\u00e1tica..." class="${inputClass} pl-10 bg-white">
                 </div>
-                <button onclick="window.generateMatricula()" class="px-6 py-2 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase hover:bg-indigo-700 shadow-md transition-all active:scale-95">Generar</button>
+                <button onclick="window.generateMatricula()" class="px-6 py-2 bg-[#0B63C7] text-white rounded-2xl font-black text-xs uppercase hover:bg-[#0850A0] shadow-md transition-all active:scale-95">Generar</button>
               </div>
               <div class="grid grid-cols-2 gap-4 mt-3">
                  <div><label class="${labelClass}">Fecha inscripci\u00f3n</label><input type="date" id="stJoinedDate" class="${inputClass}"></div>
@@ -535,7 +535,7 @@ export const StudentsModule = {
           <!-- 2. INFORMACIÓN DEL ESTUDIANTE -->
           <div class="bg-white p-6 rounded-[2rem] border-2 border-slate-100 shadow-sm space-y-4">
             <h4 class="text-sm font-black text-slate-800 flex items-center gap-2 mb-4">
-              <span class="w-8 h-8 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center"><i data-lucide="user" class="w-4 h-4"></i></span>
+              <span class="w-8 h-8 rounded-xl bg-[#E8F2FF] text-[#0B63C7] flex items-center justify-center"><i data-lucide="user" class="w-4 h-4"></i></span>
               INFORMACIÓN DEL ESTUDIANTE
             </h4>
             <div>
@@ -547,7 +547,7 @@ export const StudentsModule = {
                 <label class="${labelClass}">Edad</label>
                 <div class="flex gap-2">
                   <input id="stAge" placeholder="Ej: 5" type="number" class="${inputClass} flex-1">
-                  <select id="stAgeType" class="w-24 px-2 py-2.5 border-2 border-slate-100 rounded-2xl outline-none focus:ring-4 focus:ring-purple-100 focus:border-purple-400 bg-slate-50/50 transition-all text-sm font-black">
+                  <select id="stAgeType" class="w-24 px-2 py-2.5 border-2 border-slate-100 rounded-2xl outline-none focus:ring-4 focus:ring-blue-100 focus:border-[#0B63C7] bg-slate-50/50 transition-all text-sm font-black">
                     <option value="años">Años</option>
                     <option value="meses">Meses</option>
                   </select>
@@ -568,14 +568,14 @@ export const StudentsModule = {
             <!-- 🔗 HERMANOS — vincular al mismo padre -->
             <div class="pt-2 border-t border-slate-100">
               <label class="${labelClass} flex items-center gap-1.5">
-                <i data-lucide="users" class="w-3.5 h-3.5 text-indigo-500"></i>
+                <i data-lucide="users" class="w-3.5 h-3.5 text-[#0B63C7]"></i>
                 ¿Tiene hermano(s) en la estancia?
               </label>
               <p class="text-[10px] text-slate-400 font-medium mb-2 ml-1">Al seleccionar un hermano, este estudiante compartirá el acceso del padre.</p>
               <select id="stSiblingId" class="${inputClass} appearance-none">
                 <option value="">-- Sin hermanos (nuevo padre) --</option>
               </select>
-              <p id="stSiblingInfo" class="text-[10px] text-indigo-600 font-bold mt-1.5 ml-1 hidden"></p>
+              <p id="stSiblingInfo" class="text-[10px] text-[#0B63C7] font-bold mt-1.5 ml-1 hidden"></p>
             </div>
           </div>
 
@@ -703,8 +703,8 @@ export const StudentsModule = {
       </div>
       
       <div class="modal-footer bg-white p-6 rounded-b-3xl border-t border-slate-100 flex justify-end gap-3">
-        <button onclick="App.ui.closeModal()" class="px-8 py-3 text-slate-500 font-black text-xs uppercase hover:bg-slate-50 rounded-2xl transition-all">Cancelar</button>
-        <button onclick="App.students.save()" class="px-10 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-2xl font-black text-xs uppercase shadow-lg shadow-purple-200 hover:shadow-purple-300 hover:-translate-y-0.5 transition-all active:scale-95">Guardar Estudiante</button>
+        <button onclick="App.ui.closeModal()" class="px-8 py-3 text-slate-500 font-black text-xs uppercase hover:bg-slate-100 rounded-2xl transition-all">Cancelar</button>
+        <button onclick="App.students.save()" class="px-10 py-3 bg-gradient-to-r from-[#0B63C7] to-[#0850A0] text-white rounded-2xl font-black text-xs uppercase shadow-lg shadow-blue-200 hover:shadow-blue-300 hover:-translate-y-0.5 transition-all active:scale-95">Guardar Estudiante</button>
       </div>`;
       
     window.openGlobalModal(modalHTML, true);
@@ -947,9 +947,9 @@ export const StudentsModule = {
                 const form = document.getElementById('studentForm');
                 if (!form) return;
                 const siblingsHTML = `
-                  <div class="bg-indigo-50 p-5 rounded-[2rem] border-2 border-indigo-100">
-                    <h4 class="text-sm font-black text-indigo-800 flex items-center gap-2 mb-4">
-                      <span class="w-8 h-8 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center">
+                  <div class="bg-[#E8F2FF] p-5 rounded-[2rem] border-2 border-blue-100">
+                    <h4 class="text-sm font-black text-[#0850A0] flex items-center gap-2 mb-4">
+                      <span class="w-8 h-8 rounded-xl bg-blue-100 text-[#0B63C7] flex items-center justify-center">
                         <i data-lucide="users" class="w-4 h-4"></i>
                       </span>
                       HERMANOS EN LA ESTANCIA (${siblings.length})
@@ -958,17 +958,17 @@ export const StudentsModule = {
                       ${siblings.map(sib => `
                         <button type="button"
                           onclick="App.students.openModal('${sib.id}')"
-                          class="flex items-center gap-2.5 px-4 py-2.5 bg-white rounded-2xl border border-indigo-100 hover:border-indigo-400 hover:bg-indigo-50 transition-all shadow-sm active:scale-95 group">
-                          <div class="w-8 h-8 rounded-full bg-indigo-100 overflow-hidden flex items-center justify-center shrink-0">
+                          class="flex items-center gap-2.5 px-4 py-2.5 bg-white rounded-2xl border border-blue-100 hover:border-[#0B63C7] hover:bg-[#E8F2FF] transition-all shadow-sm active:scale-95 group">
+                          <div class="w-8 h-8 rounded-full bg-[#E8F2FF] overflow-hidden flex items-center justify-center shrink-0">
                             ${sib.avatar_url
                               ? `<img src="${sib.avatar_url}" class="w-full h-full object-cover">`
-                              : `<span class="text-xs font-black text-indigo-600">${(sib.name || '?').charAt(0)}</span>`}
+                              : `<span class="text-xs font-black text-[#0B63C7]">${(sib.name || '?').charAt(0)}</span>`}
                           </div>
                           <div class="text-left">
-                            <div class="text-xs font-black text-slate-700 group-hover:text-indigo-700">${Helpers.escapeHTML(sib.name)}</div>
+                            <div class="text-xs font-black text-slate-700 group-hover:text-[#0B63C7]">${Helpers.escapeHTML(sib.name)}</div>
                             <div class="text-[9px] font-bold text-slate-400 uppercase">${sib.classrooms?.name || 'Sin aula'}</div>
                           </div>
-                          <i data-lucide="arrow-right" class="w-3.5 h-3.5 text-slate-300 group-hover:text-indigo-500"></i>
+                          <i data-lucide="arrow-right" class="w-3.5 h-3.5 text-slate-300 group-hover:text-[#0B63C7]"></i>
                         </button>`).join('')}
                     </div>
                   </div>`;
@@ -987,3 +987,4 @@ export const StudentsModule = {
     if (window.lucide) lucide.createIcons();
   }
 };
+

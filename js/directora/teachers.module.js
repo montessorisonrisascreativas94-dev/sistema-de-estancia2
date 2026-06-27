@@ -1,4 +1,4 @@
-import { DirectorApi } from './api.js';
+﻿import { DirectorApi } from './api.js';
 import { Helpers } from '../shared/helpers.js';
 import { UI } from './ui.module.js';
 import { AppState } from './state.js';
@@ -67,10 +67,10 @@ export const TeachersModule = {
           <td class="p-4 font-bold text-slate-700">${Helpers.escapeHTML(t.name)}</td>
           <td class="p-4 text-slate-500">${t.email}</td>
           <td class="p-4"><span class="px-3 py-1 bg-slate-100 rounded-full text-[10px] font-black uppercase text-slate-500">${t.classrooms?.name || 'Sin Aula'}</span></td>
-          <td class="p-4"><span class="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full text-[10px] font-black uppercase tracking-wider">${t.role}</span></td>
+          <td class="p-4"><span class="px-3 py-1 bg-[#E8F2FF] text-[#0B63C7] rounded-full text-[10px] font-black uppercase tracking-wider">${t.role}</span></td>
           <td class="p-4 text-right">
             <div class="flex justify-end gap-2">
-              <button onclick="App.teachers.openModal('${t.id}')" class="w-9 h-9 flex items-center justify-center bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white rounded-xl transition-all" title="Editar">
+              <button onclick="App.teachers.openModal('${t.id}')" class="w-9 h-9 flex items-center justify-center bg-[#E8F2FF] text-[#0B63C7] hover:bg-[#0B63C7] hover:text-white rounded-xl transition-all" title="Editar">
                 <i data-lucide="settings" class="w-4 h-4"></i>
               </button>
               <button onclick="App.teachers.delete('${t.id}')" class="w-9 h-9 flex items-center justify-center bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white rounded-xl transition-all" title="Eliminar">
@@ -167,11 +167,11 @@ export const TeachersModule = {
   },
 
   async openModal(id = null) {
-    const inputClass = "w-full px-4 py-2.5 border-2 border-slate-100 rounded-2xl outline-none focus:ring-4 focus:ring-purple-100 focus:border-purple-400 bg-slate-50/50 transition-all text-sm font-medium";
+    const inputClass = "w-full px-4 py-2.5 border-2 border-slate-100 rounded-2xl outline-none focus:ring-4 focus:ring-blue-100 focus:border-[#0B63C7] bg-slate-50/50 transition-all text-sm font-medium";
     const labelClass = "block text-[11px] font-black text-slate-400 uppercase tracking-wider mb-1.5 ml-1";
 
     const modalHTML = `
-      <div class="modal-header bg-gradient-to-r from-purple-600 to-indigo-600 text-white p-6 rounded-t-3xl flex items-center">
+      <div class="modal-header bg-gradient-to-r from-[#0B63C7] to-[#0850A0] text-white p-6 rounded-t-3xl flex items-center">
         <div class="flex items-center gap-3">
           <div class="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center shadow-inner"><i data-lucide="users" class="w-6 h-6 text-white"></i></div>
           <div>
@@ -249,15 +249,15 @@ export const TeachersModule = {
           </div>
           <div class="col-span-2">
             <label class="flex items-center gap-3 p-3 bg-white border border-slate-100 rounded-xl cursor-pointer">
-              <input type="checkbox" id="tActive" checked class="w-5 h-5 rounded text-purple-600 focus:ring-purple-200">
+              <input type="checkbox" id="tActive" checked class="w-5 h-5 rounded text-[#0B63C7] focus:ring-blue-200">
               <span class="text-sm font-bold text-slate-700">Cuenta Activa</span>
             </label>
           </div>
         </div>
       </div>
       <div class="modal-footer bg-white p-6 rounded-b-3xl border-t border-slate-100 flex justify-end gap-3">
-        <button onclick="App.ui.closeModal()" class="px-8 py-3 text-slate-500 font-black text-xs uppercase hover:bg-slate-50 rounded-2xl transition-all">Cancelar</button>
-        <button onclick="App.teachers.save()" class="px-10 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-2xl font-black text-xs uppercase shadow-lg shadow-purple-200 hover:shadow-purple-300 hover:-translate-y-0.5 transition-all active:scale-95">Guardar Personal</button>
+        <button onclick="App.ui.closeModal()" class="px-8 py-3 text-slate-500 font-black text-xs uppercase hover:bg-slate-100 rounded-2xl transition-all">Cancelar</button>
+        <button onclick="App.teachers.save()" class="px-10 py-3 bg-gradient-to-r from-[#0B63C7] to-[#0850A0] text-white rounded-2xl font-black text-xs uppercase shadow-lg shadow-blue-200 hover:shadow-blue-300 hover:-translate-y-0.5 transition-all active:scale-95">Guardar Personal</button>
       </div>`;
 
     window.openGlobalModal(modalHTML);
@@ -397,7 +397,7 @@ export const TeachersModule = {
     const container = document.getElementById(`qr-placeholder-${id}`);
     if (!container) return;
 
-    container.innerHTML = '<div class="animate-spin w-6 h-6 border-2 border-indigo-500 rounded-full border-t-transparent"></div>';
+    container.innerHTML = '<div class="animate-spin w-6 h-6 border-2 border-[#0B63C7] rounded-full border-t-transparent"></div>';
     
     // Generación diferida para ahorrar recursos
     setTimeout(() => {
@@ -409,3 +409,4 @@ export const TeachersModule = {
     }, 300);
   }
 };
+

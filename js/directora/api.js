@@ -1,4 +1,4 @@
-import { supabase } from '../shared/supabase.js';
+﻿import { supabase } from '../shared/supabase.js';
 import { QueryCache } from '../shared/query-cache.js';
 import { safeHandle } from '../shared/db-utils.js';
 
@@ -622,3 +622,4 @@ export const DirectorApi = {
       }
     }
 };
+

@@ -15,8 +15,8 @@ export async function initTasks() {
 
   container.innerHTML = `
     <div class="flex justify-between items-center mb-8">
-      <h3 class="text-2xl font-black text-slate-800 flex items-center gap-3">Mochila de Tareas</h3>
-      <button onclick="App.openNewTaskModal()" class="px-6 py-3 bg-gradient-to-br from-[#E91E8C] to-[#C2185B] text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-pink-200 hover:from-[#C2185B] hover:to-[#AD1457] transition-all flex items-center gap-2">
+      <h3 class="text-2xl font-black text-slate-800 flex items-center gap-3 section-title-green">Mochila de Tareas</h3>
+      <button onclick="App.openNewTaskModal()" class="px-6 py-3 btn-green-orange text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg hover:shadow-xl transition-all flex items-center gap-2">
         <i data-lucide="plus-circle" class="w-5 h-5"></i> Nueva Tarea
       </button>
     </div>
@@ -54,14 +54,17 @@ export async function initTasks() {
       const dueDate = new Date(t.due_date).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
       const pendingCount = pendingMap[t.id] || 0;
       return `
-      <div class="bg-white p-6 rounded-3xl border-2 border-slate-50 shadow-sm hover:shadow-md transition-all group">
+      <div class="bg-white p-6 rounded-3xl border-2 border-[#FF7A00] shadow-sm hover:shadow-lg hover:border-[#28B54D] transition-all group section-orange-green">
         <div class="flex justify-between items-start mb-4">
-          <div>
-            <h4 class="font-black text-slate-800 text-base mb-1">${safeEscapeHTML(t.title)}</h4>
+          <div class="flex-1">
+            <div class="flex items-center gap-2 mb-2">
+              <div class="w-2 h-8 rounded-full bg-[#28B54D]"></div>
+              <h4 class="font-black text-slate-800 text-base">${safeEscapeHTML(t.title)}</h4>
+            </div>
             <p class="text-xs font-bold text-slate-400 flex items-center gap-1.5"><i data-lucide="calendar" class="w-3 h-3"></i> Entrega: ${dueDate}</p>
           </div>
           <div class="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-            <button onclick="App.openEditTaskModal('${t.id}')" class="p-2 bg-slate-100 text-slate-500 rounded-lg hover:bg-blue-100 hover:text-blue-600 transition-colors" title="Editar Tarea">
+            <button onclick="App.openEditTaskModal('${t.id}')" class="p-2 bg-[#FFF0E0] text-[#FF7A00] rounded-lg hover:bg-[#FF7A00] hover:text-white transition-colors" title="Editar Tarea">
               <i data-lucide="edit" class="w-4 h-4"></i>
             </button>
             <button onclick="App.deleteTask('${t.id}')" class="p-2 bg-slate-100 text-slate-500 rounded-lg hover:bg-red-100 hover:text-red-600 transition-colors" title="Eliminar Tarea">
@@ -69,14 +72,14 @@ export async function initTasks() {
             </button>
           </div>
         </div>
-        <p class="text-sm text-slate-600 line-clamp-2">${safeEscapeHTML(t.description)}</p>
-        <div class="flex justify-between items-center pt-4 border-t border-slate-50 mt-4">
+        <p class="text-sm text-slate-600 line-clamp-2 pl-3">${safeEscapeHTML(t.description)}</p>
+        <div class="flex justify-between items-center pt-4 border-t border-slate-50 mt-4 pl-3">
           <div>
-            ${t.file_url ? '<span class="px-2 py-1 bg-blue-50 text-blue-600 text-[10px] font-bold rounded-full flex items-center gap-1"><i data-lucide="paperclip" class="w-3 h-3"></i> Adjunto</span>' : ''}
+            ${t.file_url ? '<span class="px-2 py-1 bg-[#E6F7EB] text-[#28B54D] text-[10px] font-bold rounded-full flex items-center gap-1"><i data-lucide="paperclip" class="w-3 h-3"></i> Adjunto</span>' : ''}
           </div>
-          <button onclick="App.viewTaskSubmissions('${t.id}')" class="relative px-4 py-2 bg-gradient-to-br from-[#E91E8C] to-[#C2185B] text-white rounded-xl text-[10px] font-black uppercase hover:from-[#C2185B] transition-all shadow-sm flex items-center gap-2">
+          <button onclick="App.viewTaskSubmissions('${t.id}')" class="relative px-4 py-2 bg-[#28B54D] text-white rounded-xl text-[10px] font-black uppercase hover:bg-[#FF7A00] transition-all shadow-sm flex items-center gap-2 border-2 border-[#FF7A00]">
             Ver Entregas
-            ${pendingCount > 0 ? `<span class="absolute -top-2 -right-2 w-5 h-5 bg-rose-500 text-white text-[9px] font-black rounded-full flex items-center justify-center shadow-sm animate-pulse">${pendingCount}</span>` : ''}
+            ${pendingCount > 0 ? `<span class="absolute -top-2 -right-2 w-5 h-5 bg-[#FF7A00] text-white text-[9px] font-black rounded-full flex items-center justify-center shadow-sm animate-pulse">${pendingCount}</span>` : ''}
           </button>
         </div>
       </div>
@@ -116,31 +119,31 @@ export async function openNewTaskModal(taskToEdit = null) {
   const buttonText = isEditing ? 'Guardar Cambios' : 'Asignar y Notificar';
 
   const content = `
-    <div class="bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl animate-fadeIn flex flex-col max-h-[90vh] overflow-hidden">
-      <div class="bg-gradient-to-r from-[#E91E8C] to-[#C2185B] px-8 py-5 flex justify-between items-center">
+    <div class="bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl animate-fadeIn flex flex-col max-h-[92vh] overflow-hidden">
+      <div class="bg-[#28B54D] px-8 py-5 flex justify-between items-center border-b-2 border-[#FF7A00]">
         <h3 class="text-lg font-black text-white flex items-center gap-2"><span>✏️</span>${modalTitle}</h3>
-        <button onclick="Modal.close('${modalId}')" class="p-2 hover:bg-slate-100 rounded-full transition-colors">
-          <i data-lucide="x" class="w-6 h-6 text-slate-400"></i>
+        <button onclick="Modal.close('${modalId}')" class="p-2 hover:bg-white/20 rounded-full transition-colors">
+          <i data-lucide="x" class="w-6 h-6 text-white"></i>
         </button>
       </div>
       <form id="taskForm" class="space-y-5 overflow-y-auto px-8 py-6 pr-10 flex-1">
         <div>
-          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Ti­tulo de la Tarea</label>
-          <input type="text" id="taskTitle" class="w-full p-3 bg-slate-50 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-[#E91E8C] outline-none" required>
+          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Título de la Tarea</label>
+          <input type="text" id="taskTitle" class="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl text-sm font-bold focus:border-[#FF7A00] outline-none transition-all" required>
         </div>
         <div>
-          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Descripcion / Instrucciones</label>
-          <textarea id="taskDesc" rows="5" class="w-full p-3 bg-slate-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-[#E91E8C] outline-none resize-none" placeholder="Explica qué deben hacer los alumnos..." required></textarea>
+          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Descripción / Instrucciones</label>
+          <textarea id="taskDesc" rows="4" class="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl text-sm focus:border-[#FF7A00] outline-none resize-none transition-all" placeholder="Explica qué deben hacer los alumnos..." required></textarea>
         </div>
         <div>
           <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Fecha de Entrega</label>
-          <input type="date" id="taskDueDate" class="w-full p-3 bg-slate-50 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-[#E91E8C] outline-none" required>
+          <input type="date" id="taskDueDate" class="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl text-sm font-bold focus:border-[#FF7A00] outline-none transition-all" required>
         </div>
         <div>
           <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Adjuntar Archivo (Opcional)</label>
           <div class="relative">
             <input type="file" id="taskFileInput" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" accept="image/*,video/*,.pdf,.doc,.docx">
-            <div class="bg-slate-50 p-4 rounded-xl border-2 border-dashed border-slate-200 hover:border-[#E91E8C] transition-all flex items-center justify-center gap-3">
+            <div class="bg-slate-50 p-4 rounded-xl border-2 border-dashed border-slate-200 hover:border-[#FF7A00] transition-all flex items-center justify-center gap-3">
               <i data-lucide="paperclip" class="w-5 h-5 text-slate-400"></i>
               <span id="taskFileName" class="text-sm font-medium text-slate-500">Seleccionar archivo...</span>
             </div>
@@ -148,7 +151,7 @@ export async function openNewTaskModal(taskToEdit = null) {
         </div>
       </form>
       <div class="px-8 pb-7 pt-5 border-t border-slate-100">
-        <button id="btnSaveTask" class="w-full py-4 bg-gradient-to-br from-[#E91E8C] to-[#C2185B] text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-pink-200 hover:from-[#C2185B] hover:to-[#AD1457] transition-all flex items-center justify-center gap-2">
+        <button id="btnSaveTask" class="w-full py-4 bg-[#FF7A00] text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg hover:bg-[#28B54D] active:scale-95 transition-all flex items-center justify-center gap-2 border-2 border-[#28B54D]">
           <i data-lucide="${isEditing ? 'save' : 'send'}" class="w-5 h-5"></i> ${buttonText}
         </button>
       </div>
@@ -269,7 +272,7 @@ export async function openNewTaskModal(taskToEdit = null) {
   };
 }
 
-//  Helper: verificar si el período activo del aula est abierto 
+//  Helper: verificar si el período activo del aula está abierto 
 async function _getPeriodStatus(classroomId) {
   try {
     const { data, error } = await supabase.rpc('get_active_period', { p_classroom_id: classroomId });
@@ -306,19 +309,19 @@ export async function viewTaskSubmissions(taskId) {
         <span class="text-xl">🔒</span>
         <div>
           <p class="text-xs font-black text-amber-800 uppercase tracking-wide">período cerrado</p>
-          <p class="text-[10px] text-amber-600 font-medium">Las calificaciones estÃƒ¡n bloqueadas. Solo la directora puede reabrirlo.</p>
+          <p class="text-[10px] text-amber-600 font-medium">Las calificaciones están bloqueadas. Solo la directora puede reabrirlo.</p>
         </div>
       </div>` : '';
 
     const content = `
-      <div class="bg-white w-full max-w-4xl rounded-[2.5rem] shadow-2xl animate-fadeIn flex flex-col max-h-[90vh] overflow-hidden">
-        <div class="flex justify-between items-start mb-6">
+      <div class="bg-white w-full max-w-4xl rounded-[2.5rem] shadow-2xl animate-fadeIn flex flex-col max-h-[92vh] overflow-hidden">
+        <div class="bg-[#FF7A00] px-8 py-5 flex justify-between items-center border-b-2 border-[#28B54D]">
           <div>
-            <h3 class="text-2xl font-black text-slate-800">RevisiÃƒ³n de Entregas</h3>
-            ${period ? `<p class="text-xs font-bold text-slate-400 mt-1">período: ${safeEscapeHTML(period.name)} ${periodOpen ? 'Ã°Å¸Å¸¢ Abierto' : 'Ã°Å¸â€â€™ Cerrado'}</p>` : ''}
+            <h3 class="text-2xl font-black text-white">Revisión de Entregas</h3>
+            ${period ? `<p class="text-xs font-bold text-white/80 mt-1">período: ${safeEscapeHTML(period.name)} ${periodOpen ? '🟢 Abierto' : '🔒 Cerrado'}</p>` : ''}
           </div>
-          <button onclick="Modal.close('${modalId}')" class="p-2 hover:bg-slate-100 rounded-full transition-colors">
-            <i data-lucide="x" class="w-6 h-6 text-slate-400"></i>
+          <button onclick="Modal.close('${modalId}')" class="p-2 hover:bg-white/20 rounded-full transition-colors">
+            <i data-lucide="x" class="w-6 h-6 text-white"></i>
           </button>
         </div>
         ${closedBanner}
@@ -331,31 +334,31 @@ export async function viewTaskSubmissions(taskId) {
             // Deshabilitar inputs si período cerrado
             const disabled = !periodOpen ? 'disabled class="opacity-50 cursor-not-allowed"' : '';
             const disabledSelect = !periodOpen ? 'disabled' : '';
-            const btnDisabled = !periodOpen ? 'disabled title="período cerrado" class="p-2 bg-slate-300 text-slate-500 rounded-lg cursor-not-allowed self-end"' : 'class="p-2 bg-gradient-to-br from-[#E91E8C] to-[#C2185B] text-white rounded-lg hover:from-[#C2185B] transition-all self-end" title="Guardar CalificaciÃƒ³n"';
+            const btnDisabled = !periodOpen ? 'disabled title="período cerrado" class="p-2 bg-slate-300 text-slate-500 rounded-lg cursor-not-allowed self-end"' : 'class="p-2 bg-[#28B54D] text-white rounded-lg hover:bg-[#FF7A00] transition-all self-end border-2 border-[#FF7A00]" title="Guardar Calificación"';
 
             return `
-              <div class="p-5 bg-slate-50 rounded-2xl border ${isGraded ? 'border-green-200 bg-green-50/30' : 'border-slate-100'}">
+              <div class="p-5 bg-slate-50 rounded-2xl border-2 border-slate-200 ${isGraded ? 'border-[#28B54D] bg-[#E6F7EB]' : ''}">
                 <div class="flex items-center justify-between mb-4">
                   <div class="font-bold text-slate-800">${safeEscapeHTML(s.name)}</div>
                   ${hasSubmission 
-                    ? `<a href="${safeUrl}" target="_blank" class="px-3 py-1.5 bg-blue-100 text-blue-600 rounded-lg text-xs font-bold hover:bg-blue-200 transition-colors flex items-center gap-2">
-                         <i data-lucide="download" class="w-3 h-3"></i> Ver Entrega
-                       </a>`
-                    : `<span class="px-3 py-1.5 bg-slate-100 text-slate-400 rounded-lg text-xs font-bold">Sin entregar</span>`
+                    ? `<a href="${safeUrl}" target="_blank" class="px-4 py-2 bg-[#E6F7EB] text-[#28B54D] rounded-lg text-xs font-bold hover:bg-[#28B54D] hover:text-white transition-colors flex items-center gap-2 border border-[#28B54D]">
+                        <i data-lucide="download" class="w-3 h-3"></i> Ver Entrega
+                      </a>`
+                    : `<span class="px-4 py-2 bg-slate-100 text-slate-400 rounded-lg text-xs font-bold border border-slate-200">Sin entregar</span>`
                   }
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
                   <div class="md:col-span-2">
-                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">RetroalimentaciÃƒ³n</label>
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Retroalimentación</label>
                     <textarea id="feedback-${s.id}" ${disabled} rows="2"
-                      class="w-full p-2 bg-white rounded-lg text-xs border border-slate-200 focus:ring-1 focus:ring-[#E91E8C] outline-none ${!periodOpen ? 'opacity-50 cursor-not-allowed' : ''}"
+                      class="w-full px-4 py-3 bg-white rounded-xl text-sm border-2 border-slate-200 focus:border-[#FF7A00] outline-none transition-all ${!periodOpen ? 'opacity-50 cursor-not-allowed' : ''}"
                       placeholder="Escribe un comentario...">${safeEscapeHTML(sub?.comment || '')}</textarea>
                   </div>
                   <div class="flex items-center gap-2">
                     <div class="flex-1">
                       <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Nota</label>
                       <select id="grade-${s.id}" ${disabledSelect}
-                        class="w-full p-2 rounded-lg text-xs font-bold bg-white border border-slate-200 ${!periodOpen ? 'opacity-50 cursor-not-allowed' : ''}">
+                        class="w-full px-4 py-3 rounded-xl text-sm font-bold bg-white border-2 border-slate-200 focus:border-[#FF7A00] outline-none transition-all ${!periodOpen ? 'opacity-50 cursor-not-allowed' : ''}">
                         <option value="">-</option>
                         <option value="A" ${sub?.grade_letter === 'A' ? 'selected' : ''}>A (Excelente)</option>
                         <option value="B" ${sub?.grade_letter === 'B' ? 'selected' : ''}>B (Bien)</option>
@@ -366,7 +369,7 @@ export async function viewTaskSubmissions(taskId) {
                     <div class="flex-1">
                       <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Estrellas</label>
                       <select id="stars-${s.id}" ${disabledSelect}
-                        class="w-full p-2 rounded-lg text-xs font-bold bg-white border border-slate-200 ${!periodOpen ? 'opacity-50 cursor-not-allowed' : ''}">
+                        class="w-full px-4 py-3 rounded-xl text-sm font-bold bg-white border-2 border-slate-200 focus:border-[#FF7A00] outline-none transition-all ${!periodOpen ? 'opacity-50 cursor-not-allowed' : ''}">
                         ${[0,1,2,3,4,5].map(n => `<option value="${n}" ${sub?.stars === n ? 'selected' : ''}>${'⭐'.repeat(n) || 'Ninguna'}</option>`).join('')}
                       </select>
                     </div>
@@ -375,10 +378,10 @@ export async function viewTaskSubmissions(taskId) {
                     </button>
                   </div>
                 </div>
-                ${isGraded ? `<div class="text-xs text-green-600 font-bold mt-2 flex items-center gap-1"><i data-lucide="check-circle" class="w-3 h-3"></i> Calificado</div>` : ''}
+                ${isGraded ? `<div class="text-xs text-[#28B54D] font-bold mt-2 flex items-center gap-1"><i data-lucide="check-circle" class="w-3 h-3"></i> Calificado</div>` : ''}
               </div>
             `;
-          }).join('') : '<div class="text-center p-4 text-slate-400">No hay alumnos en la clase.</div>'}
+          }).join('') : '<div class="text-center p-8 text-slate-500">No hay alumnos en la clase.</div>'}
         </div>
       </div>
     `;
@@ -393,7 +396,7 @@ export async function submitGrade(taskId, studentId) {
   const classroom = AppState.get('classroom');
   const { open: periodOpen } = await _getPeriodStatus(classroom?.id);
   if (!periodOpen) {
-    safeToast('El período estÃƒ¡ cerrado. No se pueden modificar calificaciones.', 'warning');
+    safeToast('El período está cerrado. No se pueden modificar calificaciones.', 'warning');
     return;
   }
 
@@ -410,7 +413,7 @@ export async function submitGrade(taskId, studentId) {
     if (student?.parent_id) {
       sendPush({
         user_id: student.parent_id,
-        title: 'Tarea Calificada Ã°Å¸â€ ',
+        title: 'Tarea Calificada 🏆',
         message: `La maestra ha calificado una tarea de ${student.name}. Nota: ${grade}`,
         link: 'panel_padres.html#grades'
       }).catch(() => {});
@@ -421,8 +424,8 @@ export async function submitGrade(taskId, studentId) {
     if (el) {
       const card = el.closest('.p-5');
       if (card) {
-        card.classList.add('border-green-300', 'bg-emerald-50');
-        setTimeout(() => card.classList.remove('border-green-300', 'bg-emerald-50'), 1500);
+        card.classList.add('border-[#28B54D]', 'bg-[#E6F7EB]');
+        setTimeout(() => card.classList.remove('border-[#28B54D]', 'bg-[#E6F7EB]'), 1500);
       }
     }
   } catch (e) {

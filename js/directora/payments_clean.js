@@ -1,4 +1,4 @@
-import { DirectorApi } from './api.js';
+﻿import { DirectorApi } from './api.js';
 import { AppState } from './state.js';
 import { Helpers } from '../shared/helpers.js';
 import { UIHelpers } from './ui.module.js';
@@ -111,7 +111,7 @@ export const PaymentsModule = {
 
       const currentDate = new Date();
       const today  = currentDate.getDate();
-      const genDay = this.settings.generation_day || 25; // Día de generación
+      const genDay = this.settings.generation_day || 25; // DÃ­a de generaciÃ³n
 
       // El mes actual solo es visible si hoy es >= 25.
       const currentYear  = currentDate.getFullYear();
@@ -128,15 +128,15 @@ export const PaymentsModule = {
 
       const monthKey = yv && mv ? `${yv}-${String(mv).padStart(2,'0')}` : maxVisibleMonthKey;
 
-      // Si el usuario selecciona un mes que aún no debe ser visible
+      // Si el usuario selecciona un mes que aÃºn no debe ser visible
       if (monthKey > maxVisibleMonthKey) {
         const mi = parseInt(mv, 10) - 1;
         const label = MES_LABEL[mi] || mv;
         tbody.innerHTML = `<tr><td colspan="8" class="text-center py-16">
           <div class="flex flex-col items-center gap-3">
-            <div class="w-14 h-14 bg-indigo-50 rounded-full flex items-center justify-center text-2xl">📅</div>
-            <p class="font-black text-slate-600 text-sm">Los cobros de ${label} ${yv} se generan el día ${genDay}</p>
-            <p class="text-xs text-slate-400 font-medium">Vuelve a partir del día ${genDay} para ver este periodo.</p>
+            <div class="w-14 h-14 bg-[#E8F2FF] rounded-full flex items-center justify-center text-2xl">ðŸ“…</div>
+            <p class="font-black text-slate-600 text-sm">Los cobros de ${label} ${yv} se generan el dÃ­a ${genDay}</p>
+            <p class="text-xs text-slate-400 font-medium">Vuelve a partir del dÃ­a ${genDay} para ver este periodo.</p>
           </div></td></tr>`;
         if (window.lucide) lucide.createIcons();
         return;
@@ -189,7 +189,7 @@ export const PaymentsModule = {
       }
       if (currentMonthItems.length > 0) {
         const monthLabel = MES_LABEL[parseInt(mv || (maxVisibleMonthKey.split('-')[1]), 10) - 1]?.toUpperCase() || 'MES SELECCIONADO';
-        html += `<tr class="bg-indigo-50/50"><td colspan="8" class="px-5 py-2 text-[10px] font-black text-indigo-500 uppercase tracking-[0.2em] border-y border-indigo-100">\uD83D\uDCC5 ${monthLabel} ${yv || maxVisibleMonthKey.split('-')[0]}</td></tr>`;
+        html += `<tr class="bg-[#E8F2FF]/50"><td colspan="8" class="px-5 py-2 text-[10px] font-black text-[#0B63C7] uppercase tracking-[0.2em] border-y border-blue-100">\uD83D\uDCC5 ${monthLabel} ${yv || maxVisibleMonthKey.split('-')[0]}</td></tr>`;
         html += currentMonthItems.map(p => this._row(p)).join('');
       }
       if (otherItems.length > 0 && sf !== 'all') {
@@ -199,7 +199,7 @@ export const PaymentsModule = {
 
       tbody.innerHTML = html;
 
-      // ✨ Inicializar Gestos Swipe
+      // âœ¨ Inicializar Gestos Swipe
       UIPremium.initSwipeActions('paymentsTableBody', {
         onRight: (id) => {
           Helpers.vibrate('medium');
@@ -225,9 +225,9 @@ export const PaymentsModule = {
     if (s === 'review') return 'review';
     if (s === 'overdue') return 'overdue';
     if (s === 'rejected') return 'rechazado';
-    // Si tiene comprobante subido → mostrar como en revisión aunque el status sea pending
+    // Si tiene comprobante subido â†’ mostrar como en revisiÃ³n aunque el status sea pending
     if (p.evidence_url) return 'review';
-    // Si el due_date ya pasó y sigue pending → mostrar como overdue en UI
+    // Si el due_date ya pasÃ³ y sigue pending â†’ mostrar como overdue en UI
     if (s === 'pending' && p.due_date) {
       const todayDate = new Date(); todayDate.setHours(0,0,0,0);
       if (new Date(p.due_date + 'T00:00:00') < todayDate) return 'overdue';
@@ -275,7 +275,7 @@ export const PaymentsModule = {
 
     const approveBtn  = ip ? '<button onclick="App.payments.markPaid(\'' + p.id + '\')" class="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-100 transition-colors" title="Aprobar"><i data-lucide="check" class="w-4 h-4"></i></button>' : '';
     const waiveMoraBtn = (mora > 0)
-      ? '<button onclick="App.payments.waiveMora(\'' + p.id + '\')" class="p-1.5 bg-violet-50 text-violet-600 rounded-lg hover:bg-violet-100 transition-colors" title="Quitar Mora"><i data-lucide="shield-off" class="w-4 h-4"></i></button>'
+      ? '<button onclick="App.payments.waiveMora(\'' + p.id + '\')" class="p-1.5 bg-[#E8F2FF] text-[#0B63C7] rounded-lg hover:bg-blue-100 transition-colors" title="Quitar Mora"><i data-lucide="shield-off" class="w-4 h-4"></i></button>'
       : '';
     const deleteBtn   = '<button onclick="App.payments.delete(\'' + p.id + '\')" class="p-1.5 bg-rose-50 text-rose-500 rounded-lg hover:bg-rose-100 transition-colors" title="Eliminar"><i data-lucide="trash-2" class="w-4 h-4"></i></button>';
     const voucherCell = p.evidence_url
@@ -291,7 +291,7 @@ export const PaymentsModule = {
         '<div class="swipe-content bg-white flex w-full">' +
           '<table class="w-full table-fixed">' +
             '<tr>' +
-              '<td class="px-5 py-3.5 w-1/4"><div class="flex items-center gap-3"><div class="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-black text-sm flex-shrink-0">' + Helpers.escapeHTML((stu.name || '?').charAt(0).toUpperCase()) + '</div><div><div class="font-bold text-slate-800 text-sm truncate">' + Helpers.escapeHTML(stu.name || '-') + '</div><div class="text-[10px] text-slate-400 font-bold uppercase truncate">' + (stu.classrooms?.name || 'Sin aula') + '</div></div></div></td>' +
+              '<td class="px-5 py-3.5 w-1/4"><div class="flex items-center gap-3"><div class="w-8 h-8 rounded-xl bg-[#E8F2FF] text-[#0B63C7] flex items-center justify-center font-black text-sm flex-shrink-0">' + Helpers.escapeHTML((stu.name || '?').charAt(0).toUpperCase()) + '</div><div><div class="font-bold text-slate-800 text-sm truncate">' + Helpers.escapeHTML(stu.name || '-') + '</div><div class="text-[10px] text-slate-400 font-bold uppercase truncate">' + (stu.classrooms?.name || 'Sin aula') + '</div></div></div></td>' +
               '<td class="px-5 py-3.5 text-center w-1/6"><span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase ' + st.c + '"><i data-lucide="' + st.i + '" class="w-3 h-3"></i>' + st.l + '</span></td>' +
               '<td class="px-5 py-3.5 text-right w-1/6"><div class="font-black text-slate-800 text-base">' + af + '</div>' + (ip ? '<div class="flex flex-col items-end gap-0.5 mt-0.5">' + ub + '</div>' : '') + '</td>' +
               '<td class="px-5 py-3.5 w-1/8"><span class="text-[10px] font-black uppercase text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">' + (p.method || '-') + '</span></td>' +
@@ -311,7 +311,7 @@ export const PaymentsModule = {
       const mv = document.getElementById('filterPaymentMonth')?.value;
       const yv = document.getElementById('filterPaymentYear')?.value;
 
-      // Lógica de visibilidad (idéntica a loadPayments)
+      // LÃ³gica de visibilidad (idÃ©ntica a loadPayments)
       const currentDate = new Date();
       const today  = currentDate.getDate();
       const genDay = this.settings.generation_day || 25;
@@ -327,7 +327,7 @@ export const PaymentsModule = {
         maxVisibleMonthKey = `${prevY}-${String(prevM).padStart(2, '0')}`;
       }
 
-      // Si el mes seleccionado es mayor al máximo visible, no mostrar estadísticas (o mostrar 0)
+      // Si el mes seleccionado es mayor al mÃ¡ximo visible, no mostrar estadÃ­sticas (o mostrar 0)
       const selectedMonthKey = yv && mv ? `${yv}-${String(mv).padStart(2,'0')}` : maxVisibleMonthKey;
       
       if (selectedMonthKey > maxVisibleMonthKey) {
@@ -371,7 +371,7 @@ export const PaymentsModule = {
   },
 
   async openPaymentModal(prefillStudentId = null) {
-    const ic = 'w-full px-4 py-2.5 border-2 border-slate-100 rounded-2xl outline-none focus:ring-4 focus:ring-purple-100 focus:border-purple-400 bg-slate-50/50 transition-all text-sm font-bold text-slate-700';
+    const ic = 'w-full px-4 py-2.5 border-2 border-slate-100 rounded-2xl outline-none focus:ring-4 focus:ring-blue-100 focus:border-[#0B63C7] bg-slate-50/50 transition-all text-sm font-bold text-slate-700';
     const lc = 'block text-[11px] font-black text-slate-400 uppercase tracking-wider mb-1.5 ml-1';
     const modalDate = new Date();
     const curMonth = modalDate.getMonth();
@@ -385,7 +385,7 @@ export const PaymentsModule = {
     }).join('');
 
     window.openGlobalModal(
-      '<div class="bg-gradient-to-r from-purple-600 to-indigo-600 text-white p-6 rounded-t-3xl flex items-center justify-between">' +
+      '<div class="bg-gradient-to-r from-[#0B63C7] to-[#0850A0] text-white p-6 rounded-t-3xl flex items-center justify-between">' +
         '<div class="flex items-center gap-3"><div class="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center text-2xl">\uD83D\uDCB0</div>' +
         '<div><h3 class="text-xl font-black">Registrar Pago</h3><p class="text-xs text-white/70 font-bold uppercase tracking-widest">Cobro Manual</p></div></div>' +
       '</div>' +
@@ -403,7 +403,7 @@ export const PaymentsModule = {
       '</div></div>' +
       '<div class="bg-white p-5 rounded-b-3xl border-t border-slate-100 flex justify-end gap-3">' +
         '<button onclick="App.ui.closeModal()" class="px-6 py-2.5 text-slate-500 font-black text-xs uppercase hover:bg-slate-50 rounded-2xl">Cancelar</button>' +
-        '<button id="btnSavePaymentAction" class="px-10 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-2xl font-black text-xs uppercase shadow-lg shadow-purple-100 transition-all hover:-translate-y-0.5 active:scale-95">Registrar Pago</button>' +
+        '<button id="btnSavePaymentAction" class="px-10 py-2.5 bg-gradient-to-r from-[#0B63C7] to-[#0850A0] text-white rounded-2xl font-black text-xs uppercase shadow-lg shadow-blue-100 transition-all hover:-translate-y-0.5 active:scale-95">Registrar Pago</button>' +
       '</div>'
     );
 
@@ -420,7 +420,7 @@ export const PaymentsModule = {
         if (!pendingPayments?.length) {
           select.innerHTML = '<option value="">-- No hay pagos pendientes --</option>';
         } else {
-          // Deduplicar por estudiante (tomar el más urgente)
+          // Deduplicar por estudiante (tomar el mÃ¡s urgente)
           const studentMap = new Map();
           for (const p of pendingPayments) {
             const sid = p.student_id;
@@ -432,7 +432,7 @@ export const PaymentsModule = {
             Array.from(studentMap.values()).map(p => {
               const s = p.students;
               const isOverdue = p.status === 'overdue';
-              const label = `${s?.name || 'Estudiante'} (${s?.classrooms?.name || 'Sin aula'}) ${isOverdue ? '⚠️ Vencido' : '⏳ Pendiente'}`;
+              const label = `${s?.name || 'Estudiante'} (${s?.classrooms?.name || 'Sin aula'}) ${isOverdue ? 'âš ï¸ Vencido' : 'â³ Pendiente'}`;
               const selected = prefillStudentId && String(p.student_id) === String(prefillStudentId) ? ' selected' : '';
               return `<option value="${p.student_id}" data-fee="${s?.monthly_fee || 0}" data-due="${p.due_date || ''}" data-month="${p.month_paid || ''}" data-status="${p.status}" data-payment-id="${p.id || ''}"${selected}>${Helpers.escapeHTML(label)}</option>`;
             }).join('');
@@ -469,8 +469,8 @@ export const PaymentsModule = {
           const total = fee + mora;
           if (amtInput) {
             amtInput.value = total > 0 ? total.toFixed(2) : '';
-            amtInput.classList.add('ring-2', 'ring-purple-100');
-            setTimeout(() => amtInput.classList.remove('ring-2', 'ring-purple-100'), 1000);
+            amtInput.classList.add('ring-2', 'ring-blue-100');
+            setTimeout(() => amtInput.classList.remove('ring-2', 'ring-blue-100'), 1000);
           }
 
           // Mostrar info de mora si aplica
@@ -489,7 +489,7 @@ export const PaymentsModule = {
             if (opt2) monthSelect.value = monthPaid;
           }
 
-          // Sincronizar fecha límite
+          // Sincronizar fecha lÃ­mite
           if (dueDate) {
             const dueDateInput = document.getElementById('payDueDate');
             if (dueDateInput) dueDateInput.value = dueDate;
@@ -522,7 +522,7 @@ export const PaymentsModule = {
 
     UIHelpers.setLoading(true, '#modalPayment');
     try {
-      // Buscar pago existente por YYYY-MM y también por nombre de mes (legacy)
+      // Buscar pago existente por YYYY-MM y tambiÃ©n por nombre de mes (legacy)
       const mesNombre = MES[parseInt(mp.split('-')[1], 10) - 1];
       const { data: existingList } = await supabase
         .from('payments')
@@ -561,7 +561,7 @@ export const PaymentsModule = {
         pay = inserted;
       }
 
-      // Si está pagado, activar estudiante
+      // Si estÃ¡ pagado, activar estudiante
       if (sta === 'paid') {
         await supabase.from('students').update({ is_active: true, status: 'activo' }).eq('id', sid);
       }
@@ -596,7 +596,7 @@ export const PaymentsModule = {
   async markPaid(id) {
     try {
       Helpers.vibrate('success');
-      // Aprobar directamente — funciona para efectivo y transferencia sin depender de RPC
+      // Aprobar directamente â€” funciona para efectivo y transferencia sin depender de RPC
       const { error } = await supabase.from('payments')
         .update({ status: 'paid', paid_date: new Date().toISOString() })
         .eq('id', id);
@@ -633,9 +633,9 @@ export const PaymentsModule = {
   },
 
   async delete(id) {
-    if (!confirm('¿Eliminar este registro de pago?\n\nEsta acción quedará registrada en el historial de auditoría.')) return;
+    if (!confirm('Â¿Eliminar este registro de pago?\n\nEsta acciÃ³n quedarÃ¡ registrada en el historial de auditorÃ­a.')) return;
     try {
-      // Usar RPC seguro (soft delete + auditoría)
+      // Usar RPC seguro (soft delete + auditorÃ­a)
       const { data, error } = await supabase.rpc('delete_payment', { 
         p_payment_id: id,
         p_reason: 'Eliminado desde el panel de Directora'
@@ -652,8 +652,8 @@ export const PaymentsModule = {
   async showCyclePreview() {
     Helpers.showLoader('Calculando resumen del ciclo...');
     try {
-      // ✅ OBTENCIÓN DE DATOS DESDE EL SERVIDOR (RPC)
-      // Centraliza la lógica de previsualización para que coincida con la ejecución real
+      // âœ… OBTENCIÃ“N DE DATOS DESDE EL SERVIDOR (RPC)
+      // Centraliza la lÃ³gica de previsualizaciÃ³n para que coincida con la ejecuciÃ³n real
       const { data, error } = await supabase.rpc('preview_payment_cycle');
       if (error) throw error;
 
@@ -663,17 +663,17 @@ export const PaymentsModule = {
 
       window.openGlobalModal(`
         <div class="bg-white rounded-[2.5rem] overflow-hidden shadow-2xl animate-scaleIn w-full max-w-md">
-          <div class="bg-gradient-to-r from-indigo-600 to-purple-600 p-8 text-white text-center">
-            <div class="w-20 h-20 bg-white/20 rounded-3xl flex items-center justify-center mx-auto mb-4 text-3xl shadow-lg backdrop-blur-md">📅</div>
+          <div class="bg-gradient-to-r from-[#0B63C7] to-[#0850A0] p-8 text-white text-center">
+            <div class="w-20 h-20 bg-white/20 rounded-3xl flex items-center justify-center mx-auto mb-4 text-3xl shadow-lg backdrop-blur-md">ðŸ“…</div>
             <h3 class="text-2xl font-black">Resumen del Ciclo</h3>
-            <p class="text-indigo-100 font-bold uppercase tracking-widest text-[10px] mt-1">Periodo: ${target_month_label}</p>
+            <p class="text-blue-100 font-bold uppercase tracking-widest text-[10px] mt-1">Periodo: ${target_month_label}</p>
           </div>
           
           <div class="p-8 space-y-6 bg-slate-50/50">
             <div class="grid grid-cols-2 gap-4">
               <div class="bg-white p-4 rounded-3xl border border-slate-100 shadow-sm">
                 <p class="text-[9px] font-black text-slate-400 uppercase tracking-wider mb-1">Nuevos Cobros</p>
-                <p class="text-2xl font-black text-indigo-600">${count}</p>
+                <p class="text-2xl font-black text-[#0B63C7]">${count}</p>
               </div>
               <div class="bg-white p-4 rounded-3xl border border-slate-100 shadow-sm">
                 <p class="text-[9px] font-black text-slate-400 uppercase tracking-wider mb-1">Total Estimado</p>
@@ -692,16 +692,16 @@ export const PaymentsModule = {
               </div>
             </div>
 
-            <div class="p-4 bg-indigo-50 rounded-2xl border border-indigo-100">
-              <p class="text-[10px] text-indigo-700 font-bold leading-relaxed">
-                ℹ️ Los cobros se generan automáticamente para estudiantes activos. La fecha de vencimiento será el día ${this.settings.due_day} del mes próximo.
+            <div class="p-4 bg-[#E8F2FF] rounded-2xl border border-blue-100">
+              <p class="text-[10px] text-[#0850A0] font-bold leading-relaxed">
+                â„¹ï¸ Los cobros se generan automÃ¡ticamente para estudiantes activos. La fecha de vencimiento serÃ¡ el dÃ­a ${this.settings.due_day} del mes prÃ³ximo.
               </p>
             </div>
           </div>
 
           <div class="p-6 bg-white border-t border-slate-100 flex gap-3">
             <button onclick="App.ui.closeModal()" class="flex-1 py-4 text-slate-400 font-black text-xs uppercase hover:bg-slate-50 rounded-2xl transition-all">Cancelar</button>
-            <button id="confirmRunCycle" class="flex-[2] py-4 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase shadow-lg shadow-indigo-100 active:scale-95 transition-all">Confirmar y Ejecutar</button>
+            <button id="confirmRunCycle" class="flex-[2] py-4 bg-[#0B63C7] text-white rounded-2xl font-black text-xs uppercase shadow-lg shadow-blue-100 active:scale-95 transition-all">Confirmar y Ejecutar</button>
           </div>
         </div>
       `);
@@ -721,8 +721,8 @@ export const PaymentsModule = {
     try {
       Helpers.showLoader('Generando cobros en el servidor...');
       
-      // ✅ EJECUCIÓN 100% SERVIDOR (RPC)
-      // Centraliza la lógica de redondeo, duplicados y periodo de gracia en Postgres
+      // âœ… EJECUCIÃ“N 100% SERVIDOR (RPC)
+      // Centraliza la lÃ³gica de redondeo, duplicados y periodo de gracia en Postgres
       const { data, error } = await supabase.rpc('run_payment_cycle');
       
       Helpers.hideLoader();
@@ -734,12 +734,12 @@ export const PaymentsModule = {
 
       if (gen > 0) {
         Helpers.vibrate('success');
-        Helpers.toast(`✅ ¡Ciclo completado! Se generaron ${gen} cobros.`, 'success');
+        Helpers.toast(`âœ… Â¡Ciclo completado! Se generaron ${gen} cobros.`, 'success');
         if (window.confetti) confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
       } else if (exp > 0) {
-        Helpers.toast(`ℹ️ Se marcaron ${exp} pago(s) como vencidos. No se generaron nuevos cobros.`, 'info');
+        Helpers.toast(`â„¹ï¸ Se marcaron ${exp} pago(s) como vencidos. No se generaron nuevos cobros.`, 'info');
       } else {
-        Helpers.toast('ℹ️ El ciclo ya está al día. No se requirieron acciones.', 'info');
+        Helpers.toast('â„¹ï¸ El ciclo ya estÃ¡ al dÃ­a. No se requirieron acciones.', 'info');
       }
 
       await this.loadPayments();
@@ -748,18 +748,18 @@ export const PaymentsModule = {
     } catch (e) {
       Helpers.hideLoader();
       console.error('[Payments] runCycle error:', e);
-      Helpers.toast('Error crítico en el servidor: ' + (e.message || 'Consulta al administrador'), 'error');
+      Helpers.toast('Error crÃ­tico en el servidor: ' + (e.message || 'Consulta al administrador'), 'error');
     }
   },
 
   /**
-   * Quitar mora a un pago específico
+   * Quitar mora a un pago especÃ­fico
    */
   async waiveMora(id) {
-    const reason = prompt('Motivo de la exoneración de mora (requerido):');
+    const reason = prompt('Motivo de la exoneraciÃ³n de mora (requerido):');
     if (reason === null) return; // cancelado
     if (!reason || reason.trim().length < 3) {
-      Helpers.toast('Ingresa un motivo válido', 'warning');
+      Helpers.toast('Ingresa un motivo vÃ¡lido', 'warning');
       return;
     }
     try {
@@ -777,18 +777,18 @@ export const PaymentsModule = {
   },
 
   /**
-   * 🔧 sendReminders — Llamada delegada a Edge Function
+   * ðŸ”§ sendReminders â€” Llamada delegada a Edge Function
    * 
-   * ✅ Ventajas:
+   * âœ… Ventajas:
    *  - Procesamiento en servidor (no congela navegador)
    *  - Manejo seguro de lotes grandes
-   *  - Reintentos automáticos en caso de falla
-   *  - Auditoría en el servidor
+   *  - Reintentos automÃ¡ticos en caso de falla
+   *  - AuditorÃ­a en el servidor
    * 
-   * Nota: La Edge Function 'payment-reminders' puede configurarse como cron automático
+   * Nota: La Edge Function 'payment-reminders' puede configurarse como cron automÃ¡tico
    */
   async sendReminders() {
-    if (!confirm('¿Enviar recordatorios de pago ahora?\n\nEsta acción se procesará en el servidor y puede tomar unos minutos.')) return;
+    if (!confirm('Â¿Enviar recordatorios de pago ahora?\n\nEsta acciÃ³n se procesarÃ¡ en el servidor y puede tomar unos minutos.')) return;
     const btn = document.getElementById('btnSendPaymentReminders');
     if (btn) { btn.disabled = true; btn.textContent = 'Enviando...'; }
     
@@ -811,12 +811,12 @@ export const PaymentsModule = {
       if (processed === 0 && total === 0) {
         Helpers.toast('No hay pagos pendientes o vencidos este mes', 'info');
       } else if (processed > 0 && (results.emails_sent || 0) === 0 && (results.pushes_sent || 0) === 0) {
-        Helpers.toast(`⚠️ ${processed} pago(s) encontrados pero los estudiantes no tienen correo ni notificaciones configuradas`, 'warning');
+        Helpers.toast(`âš ï¸ ${processed} pago(s) encontrados pero los estudiantes no tienen correo ni notificaciones configuradas`, 'warning');
       } else {
-        const msg = `✅ ${processed} recordatorio(s) procesados\n📧 ${results.emails_sent || 0} correos enviados\n🔔 ${results.pushes_sent || 0} notificaciones push`;
+        const msg = `âœ… ${processed} recordatorio(s) procesados\nðŸ“§ ${results.emails_sent || 0} correos enviados\nðŸ”” ${results.pushes_sent || 0} notificaciones push`;
         Helpers.toast(msg, 'success');
 
-        // Auditar la acción
+        // Auditar la acciÃ³n
         await auditLog('payment_reminders_sent', {
           processed,
           emails_sent: results.emails_sent,
@@ -842,7 +842,7 @@ export const PaymentsModule = {
       if (error) throw error;
       if (!data?.length) { Helpers.toast('No hay pagos pendientes para exportar', 'info'); return; }
 
-      const headers = ['Estudiante','Aula','Padre/Madre','Email','Teléfono','Mes','Monto','Estado','Vence','Días vencido'];
+      const headers = ['Estudiante','Aula','Padre/Madre','Email','TelÃ©fono','Mes','Monto','Estado','Vence','DÃ­as vencido'];
       const rows = data.map(r => [
         r.student_name, r.classroom, r.parent_name, r.parent_email, r.parent_phone,
         r.month_paid, r.amount, r.status, r.due_date, r.days_overdue
@@ -885,3 +885,6 @@ export const PaymentsModule = {
     } catch (e) { Helpers.toast('Error: ' + e.message, 'error'); }
   }
 };
+
+
+

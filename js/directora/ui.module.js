@@ -1,4 +1,4 @@
-import { Helpers } from '../shared/helpers.js';
+﻿import { Helpers } from '../shared/helpers.js';
 import { UIPremium } from '../shared/ui-premium.js';
 
 const UIHelpers = {
@@ -9,7 +9,7 @@ const UIHelpers = {
       const loader = document.createElement('div');
       loader.id = 'ui-loading-overlay';
       loader.className = 'absolute inset-0 bg-white/60 backdrop-blur-[2px] z-[100] flex items-center justify-center rounded-3xl';
-      loader.innerHTML = '<div class="flex flex-col items-center gap-3"><div class="w-12 h-12 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin"></div><span class="text-[10px] font-black text-indigo-600 uppercase tracking-widest animate-pulse">Procesando...</span></div>';
+      loader.innerHTML = '<div class="flex flex-col items-center gap-3"><div class="w-12 h-12 border-4 border-blue-100 border-t-[#0B63C7] rounded-full animate-spin"></div><span class="text-[10px] font-black text-[#0B63C7] uppercase tracking-widest animate-pulse">Procesando...</span></div>';
       container.style.position = 'relative';
       container.appendChild(loader);
       if (btnSelector) {
@@ -129,7 +129,7 @@ const DirectorUI = {
         '</td>' +
         '<td class="py-4 px-6">' +
           '<div class="flex items-center gap-3">' +
-            '<div class="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center text-xs font-bold">' + (r.profiles?.name || '?').charAt(0) + '</div>' +
+            '<div class="w-8 h-8 rounded-lg bg-[#E8F2FF] text-[#0B63C7] flex items-center justify-center text-xs font-bold">' + (r.profiles?.name || '?').charAt(0) + '</div>' +
             '<div class="text-sm font-medium text-slate-600">' + Helpers.escapeHTML(r.profiles?.name || 'Sin asignar') + '</div>' +
           '</div>' +
         '</td>' +
@@ -143,7 +143,7 @@ const DirectorUI = {
         '</td>' +
         '<td class="py-4 px-6 text-center">' +
           '<div class="flex items-center justify-center gap-1">' +
-          '<button onclick="App.rooms.openModal(\'' + r.id + '\')" class="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="Editar">' +
+          '<button onclick="App.rooms.openModal(\'' + r.id + '\')" class="p-2 text-slate-400 hover:text-[#0B63C7] hover:bg-[#E8F2FF] rounded-lg transition-all" title="Editar">' +
             '<i data-lucide="edit-3" class="w-4 h-4"></i>' +
           '</button>' +
           '<button onclick="App.rooms.deleteRoom(\'' + r.id + '\',\'' + Helpers.escapeHTML(r.name) + '\')" class="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all" title="Eliminar">' +
@@ -176,7 +176,7 @@ const DirectorUI = {
             '<div class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-600">' + (item.parent?.name || '?').charAt(0) + '</div>' +
             '<div class="text-[10px] font-bold text-slate-600">' + Helpers.escapeHTML(item.parent?.name || 'Padre') + '</div>' +
           '</div>' +
-          '<button data-id="' + item.id + '" class="btn-inquiry-detail text-indigo-600 hover:text-indigo-800 font-bold text-xs">Ver Detalle</button>' +
+          '<button data-id="' + item.id + '" class="btn-inquiry-detail text-[#0B63C7] hover:text-[#0850A0] font-bold text-xs">Ver Detalle</button>' +
         '</div>' +
       '</div>'
     );
@@ -185,3 +185,4 @@ const DirectorUI = {
 
 export const UI = { ...UIHelpers, ...DirectorUI };
 export { UIHelpers, DirectorUI };
+

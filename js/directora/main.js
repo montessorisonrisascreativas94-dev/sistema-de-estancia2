@@ -1,4 +1,4 @@
-import { ensureRole, supabase, initOneSignal } from '../shared/supabase.js';
+﻿import { ensureRole, supabase, initOneSignal } from '../shared/supabase.js';
 import { AppState } from './state.js';
 import { Helpers } from '../shared/helpers.js';
 import { UIPremium } from '../shared/ui-premium.js';
@@ -159,8 +159,8 @@ export function goToSection(sectionId) {
       case 'muro':
         import('./wall.module.js').then(m => {
           m.WallModule.init('muroPostsContainer', { 
-            accentColor: 'indigo', 
-            likeColor: 'indigo' 
+            accentColor: 'blue', 
+            likeColor: 'blue' 
           }, AppState);
         });
         break;
@@ -250,7 +250,7 @@ async function loadProfile() {
             const days = typeof settings.work_days === 'string' ? JSON.parse(settings.work_days) : settings.work_days;
             document.querySelectorAll('.work-day-btn').forEach(btn => {
               if (days.includes(btn.dataset.day)) {
-                btn.classList.add('bg-violet-600', 'text-white', 'border-violet-600');
+                btn.classList.add('bg-[#0B63C7]', 'text-white', 'border-[#0B63C7]');
                 btn.classList.remove('bg-white', 'text-slate-500', 'border-slate-200');
               }
             });
@@ -262,12 +262,12 @@ async function loadProfile() {
 
     // Inicializar toggle de d�as y preview
     window.toggleWorkDay = (btn) => {
-      const active = btn.classList.contains('bg-violet-600');
+      const active = btn.classList.contains('bg-[#0B63C7]');
       if (active) {
-        btn.classList.remove('bg-violet-600', 'text-white', 'border-violet-600');
+        btn.classList.remove('bg-[#0B63C7]', 'text-white', 'border-[#0B63C7]');
         btn.classList.add('bg-white', 'text-slate-500', 'border-slate-200');
       } else {
-        btn.classList.add('bg-violet-600', 'text-white', 'border-violet-600');
+        btn.classList.add('bg-[#0B63C7]', 'text-white', 'border-[#0B63C7]');
         btn.classList.remove('bg-white', 'text-slate-500', 'border-slate-200');
       }
       _updateSchedulePreview();
@@ -488,7 +488,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Guardar horario y RNC en school_settings
         const openTime  = document.getElementById('confOpenTime')?.value;
         const closeTime = document.getElementById('confCloseTime')?.value;
-        const workDays  = [...document.querySelectorAll('.work-day-btn.bg-violet-600')].map(b => b.dataset.day);
+        const workDays  = [...document.querySelectorAll('.work-day-btn.bg-[#0B63C7]')].map(b => b.dataset.day);
         const rncVal = document.getElementById('confRNC')?.value?.trim();
         const scheduleUpdates = {};
         if (openTime)  scheduleUpdates.open_time  = openTime;
@@ -789,7 +789,7 @@ function _updateSchedulePreview() {
   const preview = document.getElementById('schedulePreview');
   if (!preview) return;
 
-  const days = [...document.querySelectorAll('.work-day-btn.bg-violet-600')].map(b => b.dataset.day);
+  const days = [...document.querySelectorAll('.work-day-btn.bg-[#0B63C7]')].map(b => b.dataset.day);
   const open  = document.getElementById('confOpenTime')?.value  || '';
   const close = document.getElementById('confCloseTime')?.value || '';
 
@@ -799,7 +799,7 @@ function _updateSchedulePreview() {
   const timeText = open && close ? `${open} � ${close}` : '';
 
   preview.classList.remove('hidden');
-  preview.innerHTML = `<span class="text-violet-600">?? ${daysText}</span>${timeText ? `<span class="mx-2 text-violet-300">|</span><span class="text-violet-800">?? ${timeText}</span>` : ''}`;
+  preview.innerHTML = `<span class="text-[#0B63C7]">?? ${daysText}</span>${timeText ? `<span class="mx-2 text-blue-300">|</span><span class="text-[#0850A0]">?? ${timeText}</span>` : ''}`;
 }
 
 // -- ID de Acceso QR de la Directora ------------------------------------------
@@ -867,3 +867,7 @@ async function _initDirectorAccessId(profile) {
     window._dirQrDebounce = setTimeout(() => _renderQR(e.target.value.trim()), 600);
   });
 }
+
+
+
+

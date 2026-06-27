@@ -1,4 +1,4 @@
-import { DirectorApi } from './api.js';
+﻿import { DirectorApi } from './api.js';
 import { Helpers } from '../shared/helpers.js';
 import { supabase } from '../shared/supabase.js';
 import { AppState } from './state.js';
@@ -211,7 +211,7 @@ export const GradesModule = {
           <div class="w-14 h-14 bg-rose-100 rounded-full flex items-center justify-center text-2xl">⚠️</div>
           <p class="font-bold text-slate-700">Error al cargar calificaciones</p>
           <p class="text-xs text-slate-400 max-w-sm text-center">${Helpers.escapeHTML(errMsg)}</p>
-          <button onclick="App.grades.loadGrades()" class="px-4 py-2 bg-indigo-600 text-white rounded-xl font-black text-xs uppercase hover:bg-indigo-700 transition-all">Reintentar</button>
+          <button onclick="App.grades.loadGrades()" class="px-4 py-2 bg-[#0B63C7] text-white rounded-xl font-black text-xs uppercase hover:bg-[#0850A0] transition-all">Reintentar</button>
         </div>
       </td></tr>`;
       if (window.lucide) lucide.createIcons();
@@ -248,7 +248,7 @@ export const GradesModule = {
             ondblclick="App.grades.openStudentDetail('${s.sid}')">
           <td class="px-6 py-4">
             <div class="flex items-center gap-4">
-              <div class="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-black text-sm group-hover:scale-110 transition-transform">
+              <div class="w-10 h-10 rounded-2xl bg-[#E8F2FF] text-[#0B63C7] flex items-center justify-center font-black text-sm group-hover:scale-110 transition-transform">
                 ${s.name.charAt(0)}
               </div>
               <div>
@@ -274,7 +274,7 @@ export const GradesModule = {
           </td>
           <td class="px-6 py-4">
             <div class="flex items-center gap-3">
-              <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black bg-indigo-50 text-indigo-600 border border-indigo-100 shrink-0">
+              <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black bg-[#E8F2FF] text-[#0B63C7] border border-blue-100 shrink-0">
                 <i data-lucide="file-check" class="w-3 h-3"></i>${taskCount} tarea${taskCount !== 1 ? 's' : ''}
               </span>
               <div class="min-w-0">
@@ -282,7 +282,7 @@ export const GradesModule = {
                 <div class="text-[9px] text-slate-400 font-bold uppercase">${s.lastTask ? new Date(s.lastTask.created_at).toLocaleDateString() : '—'}</div>
               </div>
               <button onclick="event.stopPropagation();App.grades.openStudentHistory('${s.sid}','${Helpers.escapeHTML(s.name).replace(/'/g,"\\'")}');"
-                class="ml-auto p-1.5 bg-violet-50 text-violet-600 rounded-lg hover:bg-violet-100 transition-colors shrink-0" title="Ver historial académico">
+                class="ml-auto p-1.5 bg-[#E8F2FF] text-[#0B63C7] rounded-lg hover:bg-blue-100 transition-colors shrink-0" title="Ver historial académico">
                 <i data-lucide="history" class="w-3.5 h-3.5"></i>
               </button>
             </div>
@@ -312,12 +312,12 @@ export const GradesModule = {
 
     const modalHtml = `
       <div class="bg-white rounded-3xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
-        <div class="bg-indigo-600 p-6 text-white flex justify-between items-center">
+        <div class="bg-[#0B63C7] p-6 text-white flex justify-between items-center">
           <div class="flex items-center gap-4">
             <div class="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center text-2xl">🎓</div>
             <div>
               <h3 class="text-2xl font-black">${Helpers.escapeHTML(data.name)}</h3>
-              <p class="text-sm font-bold text-indigo-100 uppercase tracking-widest">${data.classroom} • Promedio: ${data.avg != null ? data.avg.toFixed(1) : 'N/A'}</p>
+              <p class="text-sm font-bold text-blue-100 uppercase tracking-widest">${data.classroom} • Promedio: ${data.avg != null ? data.avg.toFixed(1) : 'N/A'}</p>
             </div>
           </div>
         </div>
@@ -335,13 +335,13 @@ export const GradesModule = {
               </thead>
               <tbody class="divide-y divide-slate-50">
                 ${data.evidences.map(ev => `
-                  <tr class="hover:bg-indigo-50/30 transition-colors">
+                  <tr class="hover:bg-[#E8F2FF]/30 transition-colors">
                     <td class="px-6 py-4">
                       <div class="font-bold text-slate-800 text-sm">${Helpers.escapeHTML(ev.tasks?.title || 'Tarea')}</div>
                       <div class="text-[10px] text-slate-400 font-medium truncate max-w-xs">${Helpers.escapeHTML(ev.comment || 'Sin comentarios')}</div>
                     </td>
                     <td class="px-6 py-4 text-center">
-                      <span class="px-3 py-1 rounded-lg bg-white border border-slate-200 font-black text-indigo-600 shadow-sm">
+                      <span class="px-3 py-1 rounded-lg bg-white border border-slate-200 font-black text-[#0B63C7] shadow-sm">
                         ${ev.score != null ? ev.score.toFixed(1) : '—'}
                       </span>
                     </td>
@@ -349,7 +349,7 @@ export const GradesModule = {
                       ${new Date(ev.created_at).toLocaleDateString()}
                     </td>
                     <td class="px-6 py-4 text-right">
-                      <button onclick="App.grades.viewEvidence('${ev.id}')" class="px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl font-bold text-xs hover:bg-indigo-600 hover:text-white transition-all shadow-sm">
+                      <button onclick="App.grades.viewEvidence('${ev.id}')" class="px-4 py-2 bg-[#E8F2FF] text-[#0B63C7] rounded-xl font-bold text-xs hover:bg-[#0B63C7] hover:text-white transition-all shadow-sm">
                         Ver Evidencia
                       </button>
                     </td>
@@ -389,7 +389,7 @@ export const GradesModule = {
             </div>
             <div class="text-right">
                <div class="text-[10px] font-black text-slate-400 uppercase mb-1">Nota</div>
-               <div class="text-2xl font-black text-indigo-600">${evidence.score != null ? evidence.score.toFixed(1) : '—'}</div>
+               <div class="text-2xl font-black text-[#0B63C7]">${evidence.score != null ? evidence.score.toFixed(1) : '—'}</div>
             </div>
           </div>
           <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100 mb-6">
@@ -455,13 +455,13 @@ export const GradesModule = {
   },
 
   _openPeriodModal() {
-    const ic = 'w-full px-4 py-2.5 border-2 border-slate-100 rounded-2xl outline-none focus:ring-4 focus:ring-indigo-100 focus:border-indigo-400 bg-slate-50/50 transition-all text-sm font-medium';
+    const ic = 'w-full px-4 py-2.5 border-2 border-slate-100 rounded-2xl outline-none focus:ring-4 focus:ring-blue-100 focus:border-[#0B63C7] bg-slate-50/50 transition-all text-sm font-medium';
     const lc = 'block text-[11px] font-black text-slate-400 uppercase tracking-wider mb-1.5 ml-1';
     const y = new Date().getFullYear();
     
     const modalHtml = `
       <div class="w-full max-w-md overflow-hidden">
-        <div class="bg-indigo-600 p-6 text-white flex justify-between items-center">
+        <div class="bg-[#0B63C7] p-6 text-white flex justify-between items-center">
           <h3 class="text-xl font-black">Nuevo Trimestre</h3>
         </div>
         <div class="p-6 space-y-4">
@@ -471,13 +471,13 @@ export const GradesModule = {
             <div><label class="${lc}">Fecha Fin</label><input id="periodEnd" type="date" class="${ic}"></div>
           </div>
           <div class="flex items-center gap-2 px-1">
-            <input type="checkbox" id="periodIsActive" class="w-4 h-4 text-indigo-600 rounded border-slate-300">
+            <input type="checkbox" id="periodIsActive" class="w-4 h-4 text-[#0B63C7] rounded border-slate-300">
             <label for="periodIsActive" class="text-xs font-bold text-slate-600 uppercase">Establecer como activo</label>
           </div>
         </div>
         <div class="p-6 bg-slate-50 flex justify-end gap-3">
           <button onclick="App.ui.closeModal()" class="px-6 py-2.5 text-xs font-black uppercase text-slate-400">Cancelar</button>
-          <button id="btnSavePeriod" class="px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-black text-xs uppercase shadow-lg shadow-indigo-200">Crear Trimestre</button>
+          <button id="btnSavePeriod" class="px-6 py-2.5 bg-[#0B63C7] text-white rounded-xl font-black text-xs uppercase shadow-lg shadow-blue-200">Crear Trimestre</button>
         </div>
       </div>
     `;
@@ -558,7 +558,7 @@ export const GradesModule = {
 
       // Header
       doc.setFontSize(20);
-      doc.setTextColor(79, 70, 229); // Indigo 600
+      doc.setTextColor(11, 99, 199); // Indigo 600
       doc.text('Colegio Montessori Sonrisas Creativas — Reporte de Calificaciones', 14, 22);
       
       doc.setFontSize(12);
@@ -582,7 +582,7 @@ export const GradesModule = {
         head: [['Estudiante', 'Aula', 'Promedio', 'Nivel', 'Tareas']],
         body: tableData,
         theme: 'grid',
-        headStyles: { fillColor: [79, 70, 229], textColor: 255, fontStyle: 'bold' },
+        headStyles: { fillColor: [11, 99, 199], textColor: 255, fontStyle: 'bold' },
         styles: { fontSize: 9, font: 'helvetica' },
         columnStyles: {
           2: { halign: 'center', fontStyle: 'bold' },
@@ -625,7 +625,7 @@ export const GradesModule = {
             <td class="px-4 py-3 text-center text-sm font-bold">${h.task_avg != null ? Number(h.task_avg).toFixed(1) : '-'}</td>
             <td class="px-4 py-3 text-center text-sm font-bold">${h.formal_avg != null ? Number(h.formal_avg).toFixed(1) : '-'}</td>
             <td class="px-4 py-3 text-center">
-              <span class="text-base font-black ${score !== '-' ? 'text-indigo-700' : 'text-slate-400'}">${score}</span>
+              <span class="text-base font-black ${score !== '-' ? 'text-[#0850A0]' : 'text-slate-400'}">${score}</span>
             </td>
             <td class="px-4 py-3 text-center">
               <span class="px-2 py-1 rounded-full text-[10px] font-black uppercase ${levelCls}">${h.level || '-'}</span>
@@ -639,7 +639,7 @@ export const GradesModule = {
 
       window.openGlobalModal(`
         <div class="bg-white rounded-3xl shadow-2xl w-full max-w-4xl overflow-hidden">
-          <div class="bg-gradient-to-r from-indigo-600 to-violet-600 p-6 text-white flex items-center justify-between">
+          <div class="bg-gradient-to-r from-[#0B63C7] to-[#0850A0] p-6 text-white flex items-center justify-between">
             <div>
               <h3 class="text-xl font-black">Historial Académico</h3>
               <p class="text-sm text-white/70 font-medium mt-0.5">${Helpers.escapeHTML(studentName)} — Todos los períodos</p>
@@ -675,3 +675,9 @@ export const GradesModule = {
     }
   }
 };
+
+
+
+
+
+

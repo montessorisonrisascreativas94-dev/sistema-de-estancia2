@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 📰 WALL MODULE - Módulo de Muro/Forum (Sincronizado con WallModule compartido)
  */
 
@@ -13,9 +13,9 @@ export const WallModule = {
    * Sobrescribir init para manejar lógica específica de Directora si es necesario
    */
   async init(containerId, options = {}, appState = null) {
-    // Forzar color de acento índigo para directora
-    options.accentColor = 'indigo';
-    options.likeColor = 'indigo';
+    // Forzar color de acento azul para directora
+    options.accentColor = 'blue';
+    options.likeColor = 'blue';
     
     // Asignar _appState ANTES de llamar al shared init
     this._appState = appState;
@@ -29,7 +29,7 @@ export const WallModule = {
    */
   openNewPostModal() {
     const html = `
-      <div class="modal-header bg-gradient-to-r from-purple-600 to-indigo-600 text-white p-6 rounded-t-3xl flex justify-between items-center">
+      <div class="modal-header bg-gradient-to-r from-[#0B63C7] to-[#0850A0] text-white p-6 rounded-t-3xl flex justify-between items-center">
         <div class="flex items-center gap-3">
           <div class="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center text-2xl shadow-inner">📝</div>
           <div>
@@ -42,19 +42,19 @@ export const WallModule = {
       <div class="p-8 bg-white space-y-6">
         <div>
           <label class="block text-[11px] font-black text-slate-400 uppercase tracking-wider mb-2 ml-1">Contenido del Mensaje</label>
-          <textarea id="postContent" rows="4" class="w-full px-4 py-3 border-2 border-slate-100 rounded-2xl outline-none focus:ring-4 focus:ring-purple-100 focus:border-purple-400 bg-slate-50/50 transition-all text-sm font-medium resize-none" placeholder="¿Qué quieres compartir hoy con los padres?"></textarea>
+          <textarea id="postContent" rows="4" class="w-full px-4 py-3 border-2 border-slate-100 rounded-2xl outline-none focus:ring-4 focus:ring-blue-100 focus:border-[#0B63C7] bg-slate-50/50 transition-all text-sm font-medium resize-none" placeholder="¿Qué quieres compartir hoy con los padres?"></textarea>
         </div>
 
         <div>
           <label class="block text-[11px] font-black text-slate-400 uppercase tracking-wider mb-2 ml-1">Aula (Opcional)</label>
-          <select id="postClassroom" class="w-full px-4 py-3 border-2 border-slate-100 rounded-2xl outline-none focus:ring-4 focus:ring-purple-100 focus:border-purple-400 bg-slate-50/50 transition-all text-sm font-medium appearance-none">
+          <select id="postClassroom" class="w-full px-4 py-3 border-2 border-slate-100 rounded-2xl outline-none focus:ring-4 focus:ring-blue-100 focus:border-[#0B63C7] bg-slate-50/50 transition-all text-sm font-medium appearance-none">
             <option value="">General (Todos)</option>
           </select>
         </div>
 
         <div class="flex flex-col md:flex-row gap-6 items-center bg-slate-50 p-6 rounded-3xl border-2 border-slate-100">
           <div class="relative group cursor-pointer">
-            <div id="postMediaPreview" class="w-24 h-24 rounded-[2rem] bg-white border-4 border-dashed border-slate-200 flex flex-col items-center justify-center text-slate-400 group-hover:border-purple-400 group-hover:bg-purple-50 transition-all overflow-hidden">
+            <div id="postMediaPreview" class="w-24 h-24 rounded-[2rem] bg-white border-4 border-dashed border-slate-200 flex flex-col items-center justify-center text-slate-400 group-hover:border-[#0B63C7] group-hover:bg-[#E8F2FF] transition-all overflow-hidden">
               <i data-lucide="camera" class="w-8 h-8 mb-1"></i>
               <span class="text-[9px] font-black uppercase">Media</span>
             </div>
@@ -68,8 +68,8 @@ export const WallModule = {
       </div>
 
       <div class="p-6 border-t bg-slate-50 rounded-b-3xl flex justify-end gap-3">
-        <button onclick="App.ui.closeModal()" class="px-8 py-3 text-slate-500 font-black text-xs uppercase hover:bg-slate-50 rounded-2xl transition-all">Cancelar</button>
-        <button id="btnSubmitPost" onclick="WallModule.submitNewPost()" class="px-10 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-2xl font-black text-xs uppercase shadow-lg shadow-purple-200 hover:shadow-purple-300 hover:-translate-y-0.5 transition-all active:scale-95">Publicar Ahora</button>
+        <button onclick="App.ui.closeModal()" class="px-8 py-3 text-slate-500 font-black text-xs uppercase hover:bg-slate-100 rounded-2xl transition-all">Cancelar</button>
+        <button id="btnSubmitPost" onclick="WallModule.submitNewPost()" class="px-10 py-3 bg-gradient-to-r from-[#0B63C7] to-[#0850A0] text-white rounded-2xl font-black text-xs uppercase shadow-lg shadow-blue-200 hover:shadow-blue-300 hover:-translate-y-0.5 transition-all active:scale-95">Publicar Ahora</button>
       </div>
     `;
 
@@ -181,3 +181,4 @@ export const WallModule = {
     }
   }
 };
+
