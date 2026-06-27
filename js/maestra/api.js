@@ -1,4 +1,4 @@
-﻿import { supabase } from '../shared/supabase.js';
+import { supabase } from '../shared/supabase.js';
 import { TABLES } from '../shared/constants.js';
 
 /**
@@ -74,20 +74,7 @@ export const MaestraApi = {
    * academic_periods es OPCIONAL — si la tabla no existe, se ignora silenciosamente
    */
   async upsertAttendance(record) {
-    // Vincular automáticamente al periodo activo si la tabla existe (silencioso si falla)
-    if (!record.period_id) {
-      try {
-        const { data: periodData, error: periodErr } = await supabase
-          .from('academic_periods')
-          .select('id')
-          .eq('classroom_id', record.classroom_id)
-          .eq('status', 'active')
-          .limit(1)
-          .maybeSingle();
-        // Solo asignar si no hubo error (tabla puede no existir en producción)
-        if (!periodErr && periodData) record.period_id = periodData.id;
-      } catch (_) { /* 404/tabla no existe — continuar sin period_id */ }
-    }
+    // No usar academic_periods (tabla no existe)
 
     const { data: existing, error: findError } = await supabase
       .from(TABLES.ATTENDANCE)
@@ -240,16 +227,7 @@ export const MaestraApi = {
     };
     delete cleanPayload.points;
 
-    // ðŸ”„ Lógica Profesional de Período Activo
-    try {
-        const { data: periodData, error: periodErr } = await supabase
-          .from('academic_periods')
-          .select('id, name')
-          .eq('classroom_id', cleanPayload.classroom_id)
-          .eq('status', 'active')
-          .maybeSingle();
-        if (!periodErr && periodData) cleanPayload.period_id = periodData.id;
-      } catch (_) { /* academic_periods no existe — continuar sin period_id */ }
+    // No usar academic_periods (tabla no existe)
     
 
     const { data, error } = await supabase

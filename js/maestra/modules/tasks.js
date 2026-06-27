@@ -1,4 +1,4 @@
-﻿import { supabase, sendPush, emitEvent } from '../../shared/supabase.js';
+import { supabase, sendPush, emitEvent } from '../../shared/supabase.js';
 import { TABLES } from '../../shared/constants.js';
 import { AppState } from '../state.js';
 import { MaestraApi } from '../api.js';
@@ -164,7 +164,7 @@ export async function openNewTaskModal(taskToEdit = null) {
     if (taskToEdit.file_url) {
         const fileName = taskToEdit.file_url.split('/').pop().split('?')[0];
         document.getElementById('taskFileName').textContent = decodeURIComponent(fileName);
-        document.getElementById('taskFileName').classList.add('text-orange-600', 'font-bold');
+        document.getElementById('taskFileName').classList.add('text-[#FF7A00]', 'font-bold');
     }
   }
 
@@ -173,10 +173,10 @@ export async function openNewTaskModal(taskToEdit = null) {
   fileInput.onchange = () => {
     if (fileInput.files.length > 0) {
       fileNameEl.textContent = fileInput.files[0].name;
-      fileNameEl.classList.add('text-orange-600', 'font-bold');
+      fileNameEl.classList.add('text-[#FF7A00]', 'font-bold');
     } else {
       fileNameEl.textContent = 'Seleccionar archivo...';
-      fileNameEl.classList.remove('text-orange-600', 'font-bold');
+      fileNameEl.classList.remove('text-[#FF7A00]', 'font-bold');
     }
   };
 
@@ -303,7 +303,7 @@ export async function viewTaskSubmissions(taskId) {
     // Banner de período cerrado
     const closedBanner = !periodOpen ? `
       <div class="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-2xl flex items-center gap-3">
-        <span class="text-xl">Ã°Å¸â€â€™</span>
+        <span class="text-xl">🔒</span>
         <div>
           <p class="text-xs font-black text-amber-800 uppercase tracking-wide">período cerrado</p>
           <p class="text-[10px] text-amber-600 font-medium">Las calificaciones estÃƒ¡n bloqueadas. Solo la directora puede reabrirlo.</p>

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Módulo de Interfaz de Usuario para el Panel de Maestra
  */
 
@@ -27,14 +27,14 @@ export const Modal = {
     document.getElementById(id)?.remove();
     const modal = document.createElement('div');
     modal.id = id;
-    // Pink-tinted backdrop with blur — Paleta Maestra
+    // Soft purple backdrop with blur — Paleta Maestra Infantil
     modal.className = [
       'fixed inset-0 z-[9998]',
       'flex items-start justify-center',
       'pt-[3vh] pb-6 px-4',
       'overflow-y-auto'
     ].join(' ');
-    modal.style.cssText = 'background:rgba(8,80,160,0.42);backdrop-filter:blur(7px);';
+    modal.style.cssText = 'background:rgba(147,51,234,0.35);backdrop-filter:blur(8px);';
 
     modal.innerHTML = `
       <div id="${id}-inner"
@@ -60,11 +60,11 @@ export const Modal = {
           from { opacity:0; transform:scale(0.92) translateY(20px); }
           to   { opacity:1; transform:scale(1) translateY(0); }
         }
-        /* Maestra modal card base */
+        /* Maestra modal card base — Infantil */
         #${id}-inner > div {
-          border-radius: 28px;
+          border-radius: 32px;
           overflow: hidden;
-          box-shadow: 0 28px 80px rgba(233,30,140,0.18), 0 8px 30px rgba(0,0,0,0.12);
+          box-shadow: 0 28px 80px rgba(147,51,234,0.2), 0 8px 30px rgba(0,0,0,0.12);
         }
       `;
       document.head.appendChild(s);
