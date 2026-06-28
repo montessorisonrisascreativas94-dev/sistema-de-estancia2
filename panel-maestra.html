@@ -37,6 +37,7 @@
   <link rel="stylesheet" href="css/montessori-modern.css" />
   <link rel="stylesheet" href="css/montessori-tailwind.css">
   <link rel="stylesheet" href="css/premium-mobile.css">
+  <link rel="stylesheet" href="css/maestra-design-system.css">
   <script src="js/shared/lucide.min.js"></script>
   
   <style>
@@ -116,48 +117,41 @@
 
     /* ═══════════════════════════════════════════════
        PALETA OFICIAL — SONRISAS CREATIVAS
-       Azul #0B63C7 · Naranja #FF7A00 · Verde #28B54D · Rojo #EF4444 · Blanco
+       (tokens centralizados en maestra-design-system.css)
     ═══════════════════════════════════════════════ */
     :root {
-      --sc-blue:     #0B63C7;
-      --sc-blue-d:   #0850A0;
-      --sc-blue-lt:  #E8F2FF;
-      --sc-orange:   #FF7A00;
-      --sc-orange-d: #D96500;
-      --sc-orange-lt:#FFF0E0;
-      --sc-green:    #28B54D;
-      --sc-green-d:  #1A8035;
-      --sc-green-lt: #E6F7EB;
-      --sc-red:      #EF4444;
-      --sc-red-lt:   #FEE2E2;
-      --sc-yellow:   #FFD43B;
-      --sc-white:    #FFFFFF;
-      --sc-gray:     #F8FAFC;
-      /* Alias para compatibilidad con código existente */
-      --maestra-primary:   var(--sc-blue);
-      --maestra-dark:      var(--sc-blue-d);
-      --maestra-darker:    #063A80;
-      --maestra-light:     var(--sc-blue-lt);
-      --maestra-ring:      rgba(11,99,199,0.15);
+      --sc-green:      #28B54D;
+      --sc-green-dark: #239943;
+      --sc-green-lt:   #E6F7EB;
+      --sc-orange:     #FF8A00;
+      --sc-orange-d:   #E07900;
+      --sc-orange-lt:  #FFF3E0;
+      --sc-red:        #EF4444;
+      --sc-red-lt:     #FEE2E2;
+      --sc-yellow:     #FFD43B;
+      --sc-white:      #FFFFFF;
+      --sc-gray-bg:    #F7F9FB;
+      --sc-border:     #EEF2F4;
+      --sc-blue:       #28B54D;
+      --sc-blue-d:     #239943;
+      --sc-blue-lt:    #E6F7EB;
+      --maestra-primary: var(--sc-green);
+      --maestra-dark:    var(--sc-green-dark);
+      --maestra-light:   var(--sc-green-lt);
+      --maestra-ring:    rgba(40,181,77,0.15);
     }
 
     /* ═══════════════════════════════════════════════
-       STAT BLOCKS — paleta Sonrisas Creativas
+       STAT BLOCKS — base (colores en maestra-design-system.css)
     ═══════════════════════════════════════════════ */
     .stat-block {
-      border-radius: 28px; padding: 1.5rem; color: white;
+      border-radius: 20px; padding: 24px; color: white;
       position: relative; overflow: hidden;
-      box-shadow: 0 12px 20px -4px rgba(11,99,199,0.12);
-      transition: transform 0.3s; border-bottom: 5px solid rgba(0,0,0,0.12);
+      transition: transform 0.2s;
       min-height: 120px;
     }
-    .stat-block:hover { transform: translateY(-6px); }
-    .stat-block i { opacity: 0.85; transform: rotate(-10deg); position: absolute; right: -10px; bottom: -10px; width: 80px; height: 80px; }
-    /* Azul = Clases, Naranja = Alumnos, Verde = Asistencia, Rojo = Incidentes */
-    .sb-blue   { background: linear-gradient(135deg, #0B63C7, #0850A0); box-shadow: 0 12px 24px rgba(11,99,199,0.25); }
-    .sb-green  { background: linear-gradient(135deg, #28B54D, #1A8035); box-shadow: 0 12px 24px rgba(40,181,77,0.25); }
-    .sb-orange { background: linear-gradient(135deg, #FF7A00, #D96500); box-shadow: 0 12px 24px rgba(255,122,0,0.25); }
-    .sb-purple { background: linear-gradient(135deg, #EF4444, #DC2626);  box-shadow: 0 12px 24px rgba(239,68,68,0.25); }
+    .stat-block:hover { transform: translateY(-4px); }
+    .stat-block svg { opacity: 0.85; transform: rotate(-10deg); position: absolute; right: -10px; bottom: -10px; width: 80px; height: 80px; }
 
     /* ═══════════════════════════════════════════════
        TABS DE AULA — scroll horizontal sin romper body
@@ -324,7 +318,7 @@
     /* ═══════════════════════════════════════════════
        MISC
     ═══════════════════════════════════════════════ */
-    #meet iframe { border-radius: 16px; border: 3px solid #0B63C7; }
+    #meet iframe { border-radius: 16px; border: 3px solid var(--sc-green, #28B54D); }
     .toast-notification {
       position: fixed; bottom: 24px; right: 24px;
       padding: 12px 24px; border-radius: 12px; color: white;
@@ -334,15 +328,13 @@
 
 
 
-    /* Nav buttons */
+    /* Nav buttons base — sobreescritos por maestra-design-system.css */
     .nav-btn-toy {
-      background: rgba(255,255,255,0.15); color: white;
-      border-radius: 14px; padding: 12px 18px; font-weight: 600;
-      transition: all .25s ease; display: flex; align-items: center; gap: 12px;
-      margin-bottom: 8px; cursor: pointer; -webkit-tap-highlight-color: transparent;
-      touch-action: manipulation;
+      border-radius: 12px; padding: 11px 16px; font-weight: 600;
+      transition: all .18s ease; display: flex; align-items: center; gap: 11px;
+      margin-bottom: 4px; cursor: pointer; -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation; width: 100%; text-align: left;
     }
-    .nav-btn-toy:hover { background: rgba(255,255,255,0.25); transform: translateX(6px); }
 
     /* ═══════════════════════════════════════════════
        ROUTINE UI IMPROVEMENTS (Mobile First)
@@ -360,217 +352,54 @@
     .custom-scrollbar::-webkit-scrollbar { width: 4px; }
     .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
     .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
-    .nav-btn-toy.active { background: rgba(255,255,255,0.3); border-left: 4px solid rgba(255,255,255,0.8); color: white; font-weight: 800; }
+    .nav-btn-toy.active { background: #FFFFFF; color: #28B54D; border-left: 3px solid #28B54D; font-weight: 800; }
 
     /* ═══════════════════════════════════════════════
-       MODAL STYLES — Paleta Oficial Sonrisas Creativas
-       Azul #0B63C7 como color principal del panel Maestra
+       MODAL STYLES — base estructural
+       (colores y aspecto en maestra-design-system.css)
     ═══════════════════════════════════════════════ */
-
-    /* Modal backdrop */
     #modalBackdrop {
       position: fixed; inset: 0; z-index: 9998;
-      background: rgba(8,80,160,0.45);
-      backdrop-filter: blur(8px);
       display: flex; align-items: flex-start;
       justify-content: center; padding: 3vh 16px 24px;
       overflow-y: auto;
     }
     #modalBackdrop.hidden { display: none !important; }
-
-    /* Modal card */
     .modal-card {
-      background: white;
-      border-radius: 32px;
-      overflow: hidden;
-      box-shadow: 0 28px 80px rgba(11,99,199,0.18), 0 8px 30px rgba(0,0,0,0.12);
-      width: 100%; max-width: 640px;
-      max-height: 88vh;
+      width: 100%; max-height: 88vh;
       display: flex; flex-direction: column;
       animation: modalPop .3s cubic-bezier(0.34,1.56,0.64,1) both;
     }
     .modal-card-lg { max-width: 900px; }
-
     @keyframes modalPop {
       from { opacity:0; transform: scale(0.92) translateY(20px); }
       to   { opacity:1; transform: scale(1) translateY(0); }
     }
-
-    /* Modal header — green gradient for Maestra */
     .modal-header-pink {
-      background: linear-gradient(135deg, var(--sc-green) 0%, var(--sc-green-dark) 100%);
-      padding: 20px 28px;
       display: flex; align-items: center; justify-content: space-between;
       flex-shrink: 0;
     }
-    .modal-header-pink h3 {
-      font-family: 'Nunito', sans-serif;
-      font-weight: 800; font-size: 1.15rem; color: white;
-      display: flex; align-items: center; gap: 10px;
-    }
-    .modal-header-pink .modal-close {
-      width: 34px; height: 34px; border-radius: 10px;
-      background: rgba(255,255,255,0.2);
-      border: 1px solid rgba(255,255,255,0.3);
-      color: white; cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      transition: background .2s;
-    }
-    .modal-header-pink .modal-close:hover { background: rgba(255,255,255,0.35); }
-
-    /* Modal body */
-    .modal-body-scroll {
-      padding: 24px 28px; overflow-y: auto; flex: 1;
-    }
-
-    /* Modal footer */
+    .modal-body-scroll { flex: 1; overflow-y: auto; }
     .modal-footer-pink {
-      padding: 16px 28px; border-top: 2px solid #F3E8FF;
-      background: #F8F5FF; flex-shrink: 0;
+      flex-shrink: 0;
       display: flex; justify-content: flex-end; gap: 12px;
     }
-
-    /* Form fields in modal */
     .modal-field label {
       display: block; font-size: 0.75rem; font-weight: 800;
       text-transform: uppercase; letter-spacing: 1.2px;
       color: #64748B; margin-bottom: 7px;
     }
-    .modal-input {
-      width: 100%; padding: 12px 16px;
-      background: #F8FAFC; border: 2px solid #E2E8F0;
-      border-radius: 14px; font-size: 0.95rem; font-weight: 600;
-      color: #1A2340; outline: none; transition: all .25s ease;
-      font-family: 'Nunito', sans-serif;
-    }
-    .modal-input:focus {
-      border-color: #0B63C7;
-      background: white;
-      box-shadow: 0 0 0 4px rgba(11,99,199,0.12);
-    }
-
-    /* Primary button green-orange */
-    .btn-maestra {
-      padding: 14px 28px; border-radius: 16px; border: none;
-      background: linear-gradient(135deg, var(--sc-green), var(--sc-orange));
-      color: white; font-weight: 800; font-size: 0.9rem;
-      cursor: pointer; display: flex; align-items: center; gap: 8px;
-      box-shadow: 0 6px 20px rgba(40,181,77,0.2);
-      transition: all .3s cubic-bezier(0.34,1.56,0.64,1);
-    }
-    .btn-maestra:hover { transform: translateY(-3px); box-shadow: 0 10px 28px rgba(255,122,0,0.4); }
-    .btn-maestra:active { transform: translateY(0); }
-    .btn-maestra:disabled { background: #CBD5E0; box-shadow: none; cursor: not-allowed; }
 
     /* ═══════════════════════════════════════════════
-       ESTILOS PERSONALIZADOS VERDE + NARANJA (SONRISAS CREATIVAS)
-       ═══════════════════════════════════════════════ */
-    
-    /* Tabs de secciones (Muro, Rutina, Alumnos, etc.) */
-    .class-tab-btn {
-        transition: all 0.2s ease;
-    }
-    .class-tab-btn.active {
-        background: #28B54D;
-        color: white;
-        border: 2px solid #FF7A00;
-    }
-    .class-tab-btn:not(.active):hover {
-        background: #FFF0E0;
-        color: #FF7A00;
-        border: 2px solid #28B54D;
-    }
-    
-    /* Botones principales verde/naranja */
-    .btn-green-orange {
-        background: #28B54D;
-        color: white;
-        border: 2px solid #FF7A00;
-    }
-    .btn-green-orange:hover {
-        background: #FF7A00;
-        border-color: #28B54D;
-    }
-    
-    /* Botones con texto verde y fondo naranja */
-    .btn-orange-text-green {
-        background: #FF7A00;
-        color: white;
-    }
-    .btn-orange-text-green:hover {
-        background: #D96500;
-    }
-    
-    /* Botones con texto naranja y fondo verde */
-    .btn-green-text-orange {
-        background: #28B54D;
-        color: white;
-    }
-    .btn-green-text-orange:hover {
-        background: #1A8035;
-    }
-    
-    /* Secciones con borde naranja y texto verde */
-    .section-orange-green {
-        border: 2px solid #FF7A00;
-        background: white;
-    }
-    .section-orange-green:hover {
-        border-color: #28B54D;
-        box-shadow: 0 8px 24px rgba(40, 181, 77, 0.15);
-    }
-    
-    /* Secciones con borde verde y texto naranja */
-    .section-green-orange {
-        border: 2px solid #28B54D;
-        background: white;
-    }
-    .section-green-orange:hover {
-        border-color: #FF7A00;
-        box-shadow: 0 8px 24px rgba(255, 122, 0, 0.15);
-    }
-    
-    /* Textos verde y naranja */
+       ESTILOS PERSONALIZADOS — manejados por maestra-design-system.css
+       Solo se conservan utilidades de texto y fondo
+    ═══════════════════════════════════════════════ */
     .text-green { color: #28B54D; }
-    .text-orange { color: #FF7A00; }
+    .text-orange { color: #FF8A00; }
     .bg-green { background-color: #28B54D; }
-    .bg-orange { background-color: #FF7A00; }
+    .bg-orange { background-color: #FF8A00; }
     .bg-green-light { background-color: #E6F7EB; }
-    .bg-orange-light { background-color: #FFF0E0; }
-    
-    /* Tarjetas con acento verde/naranja */
-    .card-accent-green {
-        border-left: 4px solid #28B54D;
-    }
-    .card-accent-orange {
-        border-left: 4px solid #FF7A00;
-    }
-    
-    /* Focus en inputs con color naranja (sin gradiente) */
-    input:focus, textarea:focus, select:focus {
-        border-color: #FF7A00 !important;
-        box-shadow: 0 0 0 4px rgba(255, 122, 0, 0.15) !important;
-    }
-    
-    /* Botones hover con combinación verde/naranja */
-    .hover-orange-green:hover {
-        background-color: #E6F7EB;
-        color: #FF7A00;
-    }
-    .hover-green-orange:hover {
-        background-color: #FFF0E0;
-        color: #28B54D;
-    }
-    
-    /* Títulos de sección con combinación */
-    .section-title-green {
-        color: #28B54D;
-        border-bottom: 2px solid #FF7A00;
-    }
-    .section-title-orange {
-        color: #FF7A00;
-        border-bottom: 2px solid #28B54D;
-    }
+    .bg-orange-light { background-color: #FFF3E0; }
 
     /* Badge / accent */
     .badge-maestra {
@@ -595,17 +424,17 @@
       border-left: 4px solid rgba(255,255,255,0.9);
     }
 
-    /* Task card action buttons */
+    /* Task card action buttons — verde */
     .btn-task-action {
-      padding: 8px 16px; border-radius: 12px; border: none;
-      background: linear-gradient(135deg, var(--sc-green), var(--sc-orange));
+      padding: 8px 16px; border-radius: 10px; border: none;
+      background: #28B54D;
       color: white; font-size: 0.72rem; font-weight: 900;
       text-transform: uppercase; letter-spacing: 0.8px;
-      cursor: pointer; transition: all .25s ease;
+      cursor: pointer; transition: background .2s, transform .2s;
       display: inline-flex; align-items: center; gap: 6px;
       box-shadow: 0 4px 12px rgba(40,181,77,0.2);
     }
-    .btn-task-action:hover { transform: translateY(-2px); box-shadow: 0 7px 18px rgba(255,122,0,0.3); }
+    .btn-task-action:hover { background: #239943; transform: translateY(-2px); }
 
     @media (max-width: 640px) {
       .modal-card { border-radius: 20px; max-height: 92vh; }
@@ -615,7 +444,7 @@
     }
   </style>
 </head>
-<body class="bg-[var(--sc-gray-bg)] text-slate-800 font-nunito panel-maestra-body" style="overflow-y:auto;overflow-x:hidden;">
+<body class="bg-[var(--sc-gray-bg)] text-slate-800 font-nunito panel-maestra-body" style="background:#F7F9FB;overflow-y:auto;overflow-x:hidden;">
   <div class="min-h-screen flex" style="overflow:visible;">
     <!-- SIDEBAR -->
     <aside id="sidebar" class="shadow-2xl border-r-4 border-[var(--sc-green)] p-4 fixed inset-y-0 left-0 z-50 rounded-r-3xl transition-transform duration-300">
@@ -812,43 +641,43 @@
           </div>
         </div>
 
-        <!-- 🚀 NUEVOS WIDGETS DE AUTOMATIZACIÓN -->
+        <!-- 🚀 WIDGETS DE AUTOMATIZACIÓN -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           <!-- Widget: Actividad Próxima -->
-          <div id="nextActivityWidget" class="lg:col-span-2 bg-white rounded-[2.5rem] p-6 border border-slate-100 shadow-sm flex flex-col md:flex-row items-center gap-6">
+          <div id="nextActivityWidget" class="lg:col-span-2 bg-white rounded-[2.5rem] p-6 border-2 border-[#FF8A00] shadow-sm flex flex-col md:flex-row items-center gap-6">
             <div class="w-20 h-20 bg-[var(--sc-green-light)] text-[var(--sc-green)] rounded-[2rem] flex items-center justify-center shrink-0 animate-bounce-subtle">
               <i data-lucide="clock" class="w-10 h-10"></i>
             </div>
             <div class="text-center md:text-left flex-1">
               <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Actividad en curso / Próxima</p>
-              <h4 id="nextActivityTitle" class="text-xl font-black text-slate-800">Cargando horario...</h4>
+              <h4 id="nextActivityTitle" class="text-xl font-black text-[var(--sc-green)]">Cargando horario...</h4>
               <p id="nextActivityTime" class="text-sm font-bold text-[var(--sc-orange)] mt-1">--:--</p>
             </div>
-            <button onclick="App.navigateTo('t-home', 'daily-routine')" class="px-6 py-3 bg-slate-50 hover:bg-[var(--sc-green-light)] text-slate-600 hover:text-[var(--sc-orange)] rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all border border-slate-100">Ver Rutina</button>
+            <button onclick="App.navigateTo('t-home', 'daily-routine')" class="px-6 py-3 bg-[var(--sc-green)] text-white rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all hover:bg-[var(--sc-green-dark)] shadow-sm">Ver Rutina</button>
           </div>
 
           <!-- Widget: Alerta de Ponche -->
-          <div id="punchAlertWidget" class="bg-[var(--sc-orange-light)] border border-[var(--sc-orange)] rounded-[2.5rem] p-6 flex flex-col justify-center hidden">
+          <div id="punchAlertWidget" class="bg-[var(--sc-orange-lt)] border-2 border-[var(--sc-orange)] rounded-[2.5rem] p-6 flex flex-col justify-center hidden">
             <div class="flex items-center gap-4 mb-3">
               <div class="w-10 h-10 bg-[var(--sc-orange)] text-white rounded-xl flex items-center justify-center shadow-lg shadow-orange-200">
                 <i data-lucide="user-minus" class="w-5 h-5"></i>
               </div>
-              <h4 class="font-black text-[var(--sc-orange-dark)] text-sm uppercase tracking-tighter">Faltan por Ponchar</h4>
+              <h4 class="font-black text-[var(--sc-orange-d)] text-sm uppercase tracking-tighter">Faltan por Ponchar</h4>
             </div>
-            <p id="punchAlertText" class="text-xs font-bold text-[var(--sc-orange-dark)]/80 mb-4">3 niños aún no han marcado entrada hoy.</p>
-            <button onclick="App.sendAbsenceAlerts()" class="w-full py-3 bg-white text-[var(--sc-orange)] rounded-xl font-black text-[10px] uppercase tracking-widest shadow-sm hover:shadow-md transition-all active:scale-95">Enviar Avisos</button>
+            <p id="punchAlertText" class="text-xs font-bold text-[var(--sc-orange-d)] mb-4">3 niños aún no han marcado entrada hoy.</p>
+            <button onclick="App.sendAbsenceAlerts()" class="w-full py-3 bg-[var(--sc-orange)] text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-sm hover:bg-[var(--sc-orange-d)] transition-all active:scale-95">Enviar Avisos</button>
           </div>
 
           <!-- Widget: Tareas por Calificar -->
-          <div id="tasksToGradeWidget" class="bg-[var(--sc-green-light)] border border-[var(--sc-green)] rounded-[2.5rem] p-6 flex flex-col justify-center hidden">
+          <div id="tasksToGradeWidget" class="bg-[var(--sc-green-lt)] border-2 border-[var(--sc-green)] rounded-[2.5rem] p-6 flex flex-col justify-center hidden">
             <div class="flex items-center gap-4 mb-3">
               <div class="w-10 h-10 bg-[var(--sc-green)] text-white rounded-xl flex items-center justify-center shadow-lg shadow-green-200">
                 <i data-lucide="award" class="w-5 h-5"></i>
               </div>
               <h4 class="font-black text-[var(--sc-green-dark)] text-sm uppercase tracking-tighter">Tareas por Calificar</h4>
             </div>
-            <p id="tasksToGradeText" class="text-xs font-bold text-[var(--sc-green-dark)]/80 mb-4">Tienes 5 entregas pendientes de revisar.</p>
-            <button onclick="App.navigateTo('t-home', 'tasks')" class="w-full py-3 bg-white text-[var(--sc-green)] rounded-xl font-black text-[10px] uppercase tracking-widest shadow-sm hover:shadow-md transition-all active:scale-95">Ir a Tareas</button>
+            <p id="tasksToGradeText" class="text-xs font-bold text-[var(--sc-green-dark)] mb-4">Tienes 5 entregas pendientes de revisar.</p>
+            <button onclick="App.navigateTo('t-home', 'tasks')" class="w-full py-3 bg-[var(--sc-green)] text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-sm hover:bg-[var(--sc-green-dark)] transition-all active:scale-95">Ir a Tareas</button>
           </div>
         </div>
         
@@ -869,7 +698,7 @@
             <p class="text-sm text-slate-500">Vista detallada</p>
           </div>
           <div class="flex gap-2 shrink-0">
-            <button id="btnGenerateReport" onclick="document.getElementById('dailyReportModal').classList.remove('hidden'); document.getElementById('dailyReportModal').classList.add('flex');" class="flex items-center gap-2 px-4 py-2 bg-[#FFF0E0] border border-[#FF7A00] rounded-xl text-sm font-bold text-[#FF7A00] hover:bg-[#28B54D] hover:text-white hover:border-[#28B54D] transition-colors">
+            <button id="btnGenerateReport" onclick="document.getElementById('dailyReportModal').classList.remove('hidden'); document.getElementById('dailyReportModal').classList.add('flex');" class="btn-secondary-maestra flex items-center gap-2 px-4 py-2 text-sm">
               <i data-lucide="clipboard-list" class="w-4 h-4"></i>
               <span class="hidden sm:inline">Reporte</span>
             </button>
@@ -880,43 +709,43 @@
         <div class="mb-4">
           <!-- Mobile: 3x2 grid -->
           <div class="grid grid-cols-3 gap-2 md:hidden">
-            <button class="class-tab-btn active flex flex-col items-center gap-1 py-2.5 px-2 rounded-2xl font-black text-[10px] uppercase tracking-wider bg-[#28B54D] text-white border-2 border-[#FF7A00] transition-all" data-tab="feed">
+            <button class="class-tab-btn active flex flex-col items-center gap-1 py-2.5 px-2 rounded-2xl font-black text-[10px] uppercase tracking-wider transition-all" data-tab="feed">
               <i data-lucide="layout" class="w-4 h-4"></i><span>Muro</span>
             </button>
-            <button class="class-tab-btn flex flex-col items-center gap-1 py-2.5 px-2 rounded-2xl font-black text-[10px] uppercase tracking-wider bg-[#E6F7EB] text-[#28B54D] border-2 border-[#FF7A00] hover:bg-[#FF7A00] hover:text-white transition-all" data-tab="daily-routine">
+            <button class="class-tab-btn flex flex-col items-center gap-1 py-2.5 px-2 rounded-2xl font-black text-[10px] uppercase tracking-wider transition-all" data-tab="daily-routine">
               <i data-lucide="clipboard-list" class="w-4 h-4"></i><span>Rutina</span>
             </button>
-            <button class="class-tab-btn flex flex-col items-center gap-1 py-2.5 px-2 rounded-2xl font-black text-[10px] uppercase tracking-wider bg-[#FFF0E0] text-[#FF7A00] border-2 border-[#28B54D] hover:bg-[#28B54D] hover:text-white transition-all" data-tab="students">
+            <button class="class-tab-btn flex flex-col items-center gap-1 py-2.5 px-2 rounded-2xl font-black text-[10px] uppercase tracking-wider transition-all" data-tab="students">
               <i data-lucide="users" class="w-4 h-4"></i><span>Alumnos</span>
             </button>
-            <button class="class-tab-btn flex flex-col items-center gap-1 py-2.5 px-2 rounded-2xl font-black text-[10px] uppercase tracking-wider bg-[#E6F7EB] text-[#28B54D] border-2 border-[#FF7A00] hover:bg-[#FF7A00] hover:text-white transition-all" data-tab="attendance">
+            <button class="class-tab-btn flex flex-col items-center gap-1 py-2.5 px-2 rounded-2xl font-black text-[10px] uppercase tracking-wider transition-all" data-tab="attendance">
               <i data-lucide="calendar-check" class="w-4 h-4"></i><span>Asistencia</span>
             </button>
-            <button class="class-tab-btn flex flex-col items-center gap-1 py-2.5 px-2 rounded-2xl font-black text-[10px] uppercase tracking-wider bg-[#FFF0E0] text-[#FF7A00] border-2 border-[#28B54D] hover:bg-[#28B54D] hover:text-white transition-all" data-tab="tasks">
+            <button class="class-tab-btn flex flex-col items-center gap-1 py-2.5 px-2 rounded-2xl font-black text-[10px] uppercase tracking-wider transition-all" data-tab="tasks">
               <i data-lucide="backpack" class="w-4 h-4"></i><span>Tareas</span>
             </button>
-            <button class="class-tab-btn flex flex-col items-center gap-1 py-2.5 px-2 rounded-2xl font-black text-[10px] uppercase tracking-wider bg-[#E6F7EB] text-[#28B54D] border-2 border-[#FF7A00] hover:bg-[#FF7A00] hover:text-white transition-all" data-tab="videocall">
+            <button class="class-tab-btn flex flex-col items-center gap-1 py-2.5 px-2 rounded-2xl font-black text-[10px] uppercase tracking-wider transition-all" data-tab="videocall">
               <i data-lucide="video" class="w-4 h-4"></i><span>Video</span>
             </button>
           </div>
           <!-- Desktop: horizontal tabs -->
           <div class="hidden md:flex gap-1 border-b border-slate-200 overflow-x-auto" style="scrollbar-width:none">
-            <button class="class-tab-btn active shrink-0 px-4 py-2.5 rounded-t-xl font-black text-xs uppercase tracking-wider bg-[#28B54D] text-white border-2 border-[#FF7A00] transition-colors" data-tab="feed">
+            <button class="class-tab-btn active shrink-0 px-4 py-2.5 rounded-t-xl font-black text-xs uppercase tracking-wider transition-colors" data-tab="feed">
               <i data-lucide="layout" class="w-3.5 h-3.5 inline mr-1"></i>Muro
             </button>
-            <button class="class-tab-btn shrink-0 px-4 py-2.5 rounded-t-xl font-black text-xs uppercase tracking-wider text-[#28B54D] bg-[#E6F7EB] border-2 border-[#FF7A00] hover:bg-[#FF7A00] hover:text-white transition-colors" data-tab="daily-routine">
+            <button class="class-tab-btn shrink-0 px-4 py-2.5 rounded-t-xl font-black text-xs uppercase tracking-wider transition-colors" data-tab="daily-routine">
               <i data-lucide="clipboard-list" class="w-3.5 h-3.5 inline mr-1"></i>Rutina
             </button>
-            <button class="class-tab-btn shrink-0 px-4 py-2.5 rounded-t-xl font-black text-xs uppercase tracking-wider text-[#FF7A00] bg-[#FFF0E0] border-2 border-[#28B54D] hover:bg-[#28B54D] hover:text-white transition-colors" data-tab="students">
+            <button class="class-tab-btn shrink-0 px-4 py-2.5 rounded-t-xl font-black text-xs uppercase tracking-wider transition-colors" data-tab="students">
               <i data-lucide="users" class="w-3.5 h-3.5 inline mr-1"></i>Alumnos
             </button>
-            <button class="class-tab-btn shrink-0 px-4 py-2.5 rounded-t-xl font-black text-xs uppercase tracking-wider text-[#28B54D] bg-[#E6F7EB] border-2 border-[#FF7A00] hover:bg-[#FF7A00] hover:text-white transition-colors" data-tab="attendance">
+            <button class="class-tab-btn shrink-0 px-4 py-2.5 rounded-t-xl font-black text-xs uppercase tracking-wider transition-colors" data-tab="attendance">
               <i data-lucide="calendar-check" class="w-3.5 h-3.5 inline mr-1"></i>Asistencia
             </button>
-            <button class="class-tab-btn shrink-0 px-4 py-2.5 rounded-t-xl font-black text-xs uppercase tracking-wider text-[#FF7A00] bg-[#FFF0E0] border-2 border-[#28B54D] hover:bg-[#28B54D] hover:text-white transition-colors" data-tab="tasks">
+            <button class="class-tab-btn shrink-0 px-4 py-2.5 rounded-t-xl font-black text-xs uppercase tracking-wider transition-colors" data-tab="tasks">
               <i data-lucide="backpack" class="w-3.5 h-3.5 inline mr-1"></i>Tareas
             </button>
-            <button class="class-tab-btn shrink-0 px-4 py-2.5 rounded-t-xl font-black text-xs uppercase tracking-wider text-[#28B54D] bg-[#E6F7EB] border-2 border-[#FF7A00] hover:bg-[#FF7A00] hover:text-white transition-colors" data-tab="videocall">
+            <button class="class-tab-btn shrink-0 px-4 py-2.5 rounded-t-xl font-black text-xs uppercase tracking-wider transition-colors" data-tab="videocall">
               <i data-lucide="video" class="w-3.5 h-3.5 inline mr-1"></i>Video
             </button>
           </div>
@@ -926,7 +755,7 @@
         <div id="tab-feed" class="class-tab-content">
           <div class="flex justify-between items-center mb-6">
             <h3 class="text-2xl font-black text-slate-800">📢 Muro del Aula</h3>
-            <button id="btnNewPost" onclick="App.openNewPostModal()" class="px-6 py-2.5 bg-[#28B54D] text-white rounded-xl font-bold shadow-md hover:bg-[#FF7A00] transition-all flex items-center gap-2 border-2 border-[#FF7A00]">
+            <button id="btnNewPost" onclick="App.openNewPostModal()" class="btn-maestra px-6 py-2.5 text-sm">
               <i data-lucide="plus-circle" class="w-5 h-5"></i> Nueva Publicación
             </button>
           </div>
@@ -1073,7 +902,7 @@
                   <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Motivo / Raz\u00f3n</label>
                   <textarea id="permitReason" required rows="3" placeholder="Explique brevemente el motivo..." class="w-full px-4 py-3 bg-slate-50 border-2 border-slate-50 rounded-2xl outline-none focus:border-[#FF7A00] focus:bg-white transition-all text-sm font-bold resize-none"></textarea>
               </div>
-              <button type="submit" class="w-full py-4 bg-[#28B54D] text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg hover:bg-[#FF7A00] active:scale-95 transition-all flex items-center justify-center gap-2 border-2 border-[#FF7A00]">
+              <button type="submit" class="btn-maestra w-full py-4 justify-center text-xs uppercase tracking-widest">
                 <i data-lucide="send" class="w-4 h-4"></i> Enviar Solicitud
               </button>
             </form>
@@ -1165,7 +994,7 @@
                 </div>
 
                 <div class="pt-4 flex justify-end">
-                  <button type="submit" id="btnSaveProfile" class="bg-[#28B54D] text-white px-8 py-3 rounded-xl font-bold shadow-lg hover:bg-[#FF7A00] transition-transform active:scale-95 flex items-center gap-2 border-2 border-[#FF7A00]">
+                  <button type="submit" id="btnSaveProfile" class="btn-maestra px-8 py-3">
                     <i data-lucide="save" class="w-5 h-5"></i> Guardar Cambios
                   </button>
                 </div>
@@ -1187,7 +1016,7 @@
                         <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">ID Empleado</p>
                         <p id="maestra-qr-matricula" class="text-lg font-black text-slate-700 leading-none">--</p>
                       </div>
-                      <button onclick="window.App?.printMaestraQR?.()" class="px-6 py-2 bg-[#FF7A00] text-white rounded-xl font-black text-[10px] uppercase tracking-wider hover:bg-[#28B54D] transition-all flex items-center gap-2 border-2 border-[#28B54D]">
+                      <button onclick="window.App?.printMaestraQR?.()" class="btn-alert-maestra px-6 py-2 flex items-center gap-2 text-[10px] uppercase tracking-wider">
                         <i data-lucide="printer" class="w-3.5 h-3.5"></i> Imprimir QR
                       </button>
                     </div>

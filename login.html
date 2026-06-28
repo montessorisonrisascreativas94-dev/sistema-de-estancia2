@@ -306,7 +306,7 @@
   .err-box.show{display:block}
 
   /* Fields */
-  .field { margin-bottom:18px; }
+  .field { margin-bottom:18px; width: 100%; }
   .field label {
     display:block;font-size:.75rem;font-weight:900;
     text-transform:uppercase;letter-spacing:1.4px;
@@ -317,6 +317,7 @@
     border:2.5px solid #E2E8F0;border-radius:18px;
     background:var(--gray);overflow:hidden;
     transition:all .3s cubic-bezier(.34,1.56,.64,1);
+    width: 100%;
   }
   .input-shell:focus-within {
     border-color:var(--blue);background:white;
@@ -331,7 +332,8 @@
   .field-input {
     flex:1;height:56px;border:none;background:transparent;
     font-family:'Nunito',sans-serif;font-size:.97rem;font-weight:700;
-    color:#1E293B;outline:none;padding:0 4px;
+    color:#1E293B;outline:none;padding:0 12px;
+    width: 100%;
   }
   .field-input::placeholder{color:#CBD5E1;font-weight:600}
   .eye-btn {
@@ -449,11 +451,16 @@
     }
 
     /* Mobile: card takes full width */
-    .form-card {
-      width:100%;max-width:none;border-radius:28px;
-      padding:32px 24px 100px; /* bottom pad for mobile mascot */
-      margin-top:-40px;box-shadow:0 -8px 40px rgba(11,99,199,.15);
-    }
+      .form-card {
+        width:100%;max-width:none;border-radius:28px;
+        padding:28px 18px 100px; /* bottom pad for mobile mascot */
+        margin-top:-40px;box-shadow:0 -8px 40px rgba(11,99,199,.15);
+      }
+      @media (max-width: 400px) {
+        .form-card {
+          padding: 24px 14px 100px;
+        }
+      }
     /* Ground line for mobile mascot */
     .mobile-ground {
       display:block !important;

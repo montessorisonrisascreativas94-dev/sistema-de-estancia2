@@ -288,7 +288,7 @@ function _renderInfantRoutineUI(student, log, modalId) {
 
   return `
     <div class="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden animate-fadeIn flex flex-col max-h-[95vh]">
-      <div class="bg-gradient-to-r from-blue-500 to-indigo-600 p-6 text-white relative">
+      <div class="bg-gradient-to-r from-[#28B54D] to-[#239943] p-6 text-white relative">
         <button onclick="Modal.close('${modalId}')" class="absolute top-4 right-4 p-2 bg-white/20 rounded-full hover:bg-white/30 transition-colors">
           <i data-lucide="x" class="w-5 h-5"></i>
         </button>
@@ -298,7 +298,7 @@ function _renderInfantRoutineUI(student, log, modalId) {
           </div>
           <div>
             <h3 class="text-xl font-black">${safeEscapeHTML(student.name)}</h3>
-            <p class="text-xs font-bold text-blue-100 uppercase tracking-widest">Registro del Bebé 🍼</p>
+            <p class="text-xs font-bold text-green-100 uppercase tracking-widest">Registro del Bebé 🍼</p>
           </div>
         </div>
       </div>
@@ -382,7 +382,7 @@ function _renderInfantRoutineUI(student, log, modalId) {
 
       <div class="p-6 bg-white border-t border-slate-100">
         <button onclick="App.saveInfantEntry('${student.id}')" id="btnSaveInfant"
-          class="w-full py-4 bg-blue-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-100 flex items-center justify-center gap-2 active:scale-95">
+          class="w-full py-4 bg-[#FF8A00] text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-[#E07900] transition-all shadow-lg shadow-orange-100 flex items-center justify-center gap-2 active:scale-95">
           <i data-lucide="save" class="w-4 h-4"></i> Guardar Registro
         </button>
       </div>
@@ -403,8 +403,8 @@ function _renderStandardRoutineUI(student, log, modalId) {
 
   return `
     <div class="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden animate-fadeIn flex flex-col max-h-[90vh]">
-      <!-- Header Colorido -->
-      <div class="bg-gradient-to-r from-orange-500 to-pink-500 p-6 text-white relative">
+      <!-- Header Verde -->
+      <div class="bg-gradient-to-r from-[#28B54D] to-[#239943] p-6 text-white relative">
         <button onclick="Modal.close('${modalId}')" class="absolute top-4 right-4 p-2 bg-white/20 rounded-full hover:bg-white/30 transition-colors">
           <i data-lucide="x" class="w-5 h-5"></i>
         </button>
@@ -414,7 +414,7 @@ function _renderStandardRoutineUI(student, log, modalId) {
           </div>
           <div>
             <h3 class="text-xl font-black">${safeEscapeHTML(student.name)}</h3>
-            <p class="text-xs font-bold text-orange-100 uppercase tracking-widest">Reporte de Rutina</p>
+            <p class="text-xs font-bold text-green-100 uppercase tracking-widest">Reporte de Rutina</p>
           </div>
         </div>
       </div>
@@ -479,7 +479,7 @@ function _renderStandardRoutineUI(student, log, modalId) {
 
       <div class="p-6 pt-0 mt-auto">
         <button onclick="App.saveRoutineInModal('${student.id}')" id="btnSaveModalRoutine"
-          class="w-full py-4 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-800 transition-all shadow-lg shadow-slate-200 flex items-center justify-center gap-2">
+          class="w-full py-4 bg-[#FF8A00] text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-[#E07900] transition-all shadow-lg shadow-orange-100 flex items-center justify-center gap-2 active:scale-95">
           <i data-lucide="check-circle" class="w-4 h-4"></i> Guardar y Cerrar
         </button>
       </div>
@@ -637,39 +637,43 @@ export async function saveRoutineInModal(sid) {
 export async function openBulkRoutineModal() {
   const modalId = 'bulkRoutineModal';
   const content = `
-    <div class="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl p-8 animate-fadeIn">
-      <h3 class="text-2xl font-black text-slate-800 mb-2">Rutina General</h3>
-      <p class="text-sm text-slate-500 mb-6">Aplica el mismo reporte para todos los estudiantes presentes hoy.</p>
-      
-      <div class="space-y-6">
-        <div class="grid grid-cols-2 gap-4">
-          <div class="space-y-2">
-            <label class="text-[10px] font-black uppercase text-slate-400 ml-1">Ánimo 😊</label>
-            <select id="bulkMood" class="w-full p-3 bg-slate-50 border-2 border-slate-100 rounded-xl font-bold text-sm outline-none focus:border-orange-400">
-              <option value="feliz">Feliz 😊</option>
-              <option value="normal">Normal 😐</option>
-            </select>
+    <div class="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden animate-fadeIn">
+      <div class="bg-gradient-to-r from-[#28B54D] to-[#239943] px-8 py-5 flex justify-between items-center">
+        <h3 class="text-lg font-black text-white flex items-center gap-2"><span>📋</span> Rutina General</h3>
+        <button onclick="Modal.close('${modalId}')" class="p-2 bg-white/20 rounded-full hover:bg-white/30 transition-colors">
+          <i data-lucide="x" class="w-5 h-5 text-white"></i>
+        </button>
+      </div>
+      <div class="p-8">
+        <p class="text-sm text-slate-500 mb-6">Aplica el mismo reporte para todos los estudiantes presentes hoy.</p>
+        <div class="space-y-6">
+          <div class="grid grid-cols-2 gap-4">
+            <div class="space-y-2">
+              <label class="text-[10px] font-black uppercase text-slate-400 ml-1">Ánimo 😊</label>
+              <select id="bulkMood" class="w-full p-3 bg-slate-50 border-2 border-slate-100 rounded-xl font-bold text-sm outline-none focus:border-[#28B54D]">
+                <option value="feliz">Feliz 😊</option>
+                <option value="normal">Normal 😐</option>
+              </select>
+            </div>
+            <div class="space-y-2">
+              <label class="text-[10px] font-black uppercase text-slate-400 ml-1">Comida 🍽️</label>
+              <select id="bulkFood" class="w-full p-3 bg-slate-50 border-2 border-slate-100 rounded-xl font-bold text-sm outline-none focus:border-[#28B54D]">
+                <option value="todo">Todo 😋</option>
+                <option value="poco">Poco 🍲</option>
+              </select>
+            </div>
           </div>
           <div class="space-y-2">
-            <label class="text-[10px] font-black uppercase text-slate-400 ml-1">Comida 🍽️</label>
-            <select id="bulkFood" class="w-full p-3 bg-slate-50 border-2 border-slate-100 rounded-xl font-bold text-sm outline-none focus:border-orange-400">
-              <option value="todo">Todo 😋</option>
-              <option value="poco">Poco 🍲</option>
+            <label class="text-[10px] font-black uppercase text-slate-400 ml-1">Siesta 💤</label>
+            <select id="bulkSleep" class="w-full p-3 bg-slate-50 border-2 border-slate-100 rounded-xl font-bold text-sm outline-none focus:border-[#28B54D]">
+              <option value="si">Durmió 💤</option>
+              <option value="no">No durmió ☀️</option>
             </select>
           </div>
-        </div>
-
-        <div class="space-y-2">
-          <label class="text-[10px] font-black uppercase text-slate-400 ml-1">Siesta 💤</label>
-          <select id="bulkSleep" class="w-full p-3 bg-slate-50 border-2 border-slate-100 rounded-xl font-bold text-sm outline-none focus:border-orange-400">
-            <option value="si">Durmió 💤</option>
-            <option value="no">No durmió ☀️</option>
-          </select>
-        </div>
-
-        <div class="flex gap-3 pt-4">
-          <button onclick="Modal.close('${modalId}')" class="flex-1 py-4 text-slate-400 font-black text-xs uppercase tracking-widest hover:bg-slate-50 rounded-2xl">Cancelar</button>
-          <button onclick="App.applyBulkRoutine()" id="btnBulkSave" class="flex-[2] py-4 bg-blue-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-blue-100 hover:bg-blue-700 active:scale-95 transition-all">Aplicar a Todos</button>
+          <div class="flex gap-3 pt-4">
+            <button onclick="Modal.close('${modalId}')" class="flex-1 py-4 text-slate-400 font-black text-xs uppercase tracking-widest hover:bg-slate-50 rounded-2xl">Cancelar</button>
+            <button onclick="App.applyBulkRoutine()" id="btnBulkSave" class="flex-[2] py-4 bg-[#FF8A00] text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-orange-100 hover:bg-[#E07900] active:scale-95 transition-all">Aplicar a Todos</button>
+          </div>
         </div>
       </div>
     </div>

@@ -5,28 +5,31 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Recuperar Contraseña — Colegio Montessori Sonrisas Creativas</title>
   <meta name="robots" content="noindex, nofollow">
-  <style>html{display:none;}</style>
-  <script>if(self===top){document.documentElement.style.display='block';}else{top.location=self.location;}</script>
   <link rel="stylesheet" href="css/karpus-tailwind.css">
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
-  <link rel="icon" href="logo/favicon.ico" sizes="any">
   <style>
     * { font-family: 'Nunito', sans-serif; }
+    body{
+      background: linear-gradient(135deg, #F7F9FB 0%, #E6F7EB 100%);
+    }
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+    .float-anim { animation: float 4s ease-in-out infinite; }
+    .float-delayed { animation: float 4s ease-in-out infinite 1s; }
     @keyframes fadeUp { from { opacity:0; transform:translateY(24px); } to { opacity:1; transform:translateY(0); } }
     .fade-up { animation: fadeUp .5s ease both; }
-    .kk .k1{color:#f97316} .kk .k2{color:#3b82f6} .kk .k3{color:#ec4899}
-    .kk .k4{color:#22c55e} .kk .k5{color:#f97316} .kk .k6{color:#3b82f6}
-    .kk .k7{color:#22c55e} .kk .k8{color:#ec4899} .kk .k9{color:#3b82f6} .kk .k10{color:#f97316}
   </style>
 </head>
-<body class="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 flex items-center justify-center p-4">
+<body class="min-h-screen flex items-center justify-center p-4">
 
   <div class="w-full max-w-sm relative z-10 fade-up">
 
     <!-- Logo -->
     <div class="text-center mb-8">
-      <div class="inline-flex items-center justify-center w-20 h-20 bg-white rounded-3xl shadow-lg border-2 border-green-100 mb-4">
-        <img src="img/monte.jpg" alt="Colegio Montessori Sonrisas Creativas" class="w-14 h-14 rounded-2xl object-cover">
+      <div class="inline-flex items-center justify-center w-20 h-20 bg-white rounded-[2.5rem] shadow-xl border-2 border-green-100 mb-4">
+        <img src="img/monte.jpg" alt="Colegio Montessori Sonrisas Creativas" class="w-14 h-14 rounded-[1.5rem] object-cover">
       </div>
       <h1 class="text-2xl font-black tracking-tight text-slate-800">
         Colegio Montessori Sonrisas Creativas
@@ -34,12 +37,34 @@
     </div>
 
     <!-- Card -->
-    <div class="bg-white rounded-3xl shadow-xl border border-slate-100 p-7">
+    <div class="bg-white rounded-[2.5rem] shadow-xl border-2 border-slate-100 p-7 relative overflow-hidden">
+      <!-- Decorative Mascots (only on larger screens) -->
+      <div class="absolute bottom-2 right-2 hidden sm:flex gap-1 pointer-events-none">
+        <!-- Triangle -->
+        <svg width="40" height="48" viewBox="0 0 180 200" class="float-anim">
+          <polygon points="90,20 165,180 15,180" fill="#FF7A00" stroke="#E06900" stroke-width="4"/>
+          <circle cx="68" cy="105" r="12" fill="white"/>
+          <circle cx="112" cy="105" r="12" fill="white"/>
+          <circle cx="68" cy="105" r="6" fill="#333"/>
+          <circle cx="112" cy="105" r="6" fill="#333"/>
+          <path d="M 58 140 Q 90 160 122 140" stroke="#333" stroke-width="5" fill="none" stroke-linecap="round"/>
+        </svg>
+        <!-- Pentagon -->
+        <svg width="40" height="48" viewBox="0 0 180 180" class="float-delayed">
+          <polygon points="90,10 155,45 155,115 90,150 25,115 25,45" fill="#28B54D" stroke="#239943" stroke-width="4"/>
+          <ellipse cx="90" cy="28" rx="42" ry="16" fill="#0B63C7"/>
+          <circle cx="68" cy="80" r="12" fill="white"/>
+          <circle cx="112" cy="80" r="12" fill="white"/>
+          <circle cx="68" cy="80" r="6" fill="#333"/>
+          <circle cx="112" cy="80" r="6" fill="#333"/>
+          <path d="M 58 105 Q 90 125 122 105" stroke="#333" stroke-width="5" fill="none" stroke-linecap="round"/>
+        </svg>
+      </div>
 
       <!-- Estado: Cambio de contraseña directo -->
       <div id="stateRequest">
         <div class="text-center mb-6">
-          <div class="w-14 h-14 bg-green-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
+          <div class="w-14 h-14 bg-green-100 rounded-[1.5rem] flex items-center justify-center mx-auto mb-3">
             <span class="text-2xl">🔄</span>
           </div>
           <h2 class="text-xl font-black text-slate-800">Actualizar Contraseña</h2>
@@ -50,28 +75,28 @@
           <div>
             <label class="block text-xs font-black text-slate-500 uppercase tracking-wider mb-1.5">Correo electrónico</label>
             <input id="email" type="email" placeholder="tu@correo.com" required
-              class="w-full px-4 py-3 rounded-2xl border-2 border-slate-100 bg-slate-50 text-slate-800 font-bold text-sm focus:outline-none focus:border-green-400 focus:bg-white focus:ring-4 focus:ring-green-50 transition-all">
+              class="w-full px-4 py-3 rounded-[1.25rem] border-2 border-slate-100 bg-slate-50 text-slate-800 font-bold text-sm focus:outline-none focus:border-green-400 focus:bg-white focus:ring-4 focus:ring-green-50 transition-all">
           </div>
           <div>
             <label class="block text-xs font-black text-slate-500 uppercase tracking-wider mb-1.5">Contraseña anterior</label>
             <input id="oldPassword" type="password" placeholder="Tu contraseña actual" required
-              class="w-full px-4 py-3 rounded-2xl border-2 border-slate-100 bg-slate-50 text-slate-800 font-bold text-sm focus:outline-none focus:border-green-400 focus:bg-white focus:ring-4 focus:ring-green-50 transition-all">
+              class="w-full px-4 py-3 rounded-[1.25rem] border-2 border-slate-100 bg-slate-50 text-slate-800 font-bold text-sm focus:outline-none focus:border-green-400 focus:bg-white focus:ring-4 focus:ring-green-50 transition-all">
           </div>
           <div class="pt-2 border-t border-slate-100">
             <label class="block text-xs font-black text-slate-500 uppercase tracking-wider mb-1.5">Nueva contraseña</label>
             <input id="newPasswordDirect" type="password" placeholder="Mínimo 8 caracteres" required minlength="8"
-              class="w-full px-4 py-3 rounded-2xl border-2 border-slate-100 bg-slate-50 text-slate-800 font-bold text-sm focus:outline-none focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-50 transition-all">
+              class="w-full px-4 py-3 rounded-[1.25rem] border-2 border-slate-100 bg-slate-50 text-slate-800 font-bold text-sm focus:outline-none focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-50 transition-all">
           </div>
           <div>
             <label class="block text-xs font-black text-slate-500 uppercase tracking-wider mb-1.5">Confirmar nueva contraseña</label>
             <input id="confirmPasswordDirect" type="password" placeholder="Repite la nueva clave" required
-              class="w-full px-4 py-3 rounded-2xl border-2 border-slate-100 bg-slate-50 text-slate-800 font-bold text-sm focus:outline-none focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-50 transition-all">
+              class="w-full px-4 py-3 rounded-[1.25rem] border-2 border-slate-100 bg-slate-50 text-slate-800 font-bold text-sm focus:outline-none focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-50 transition-all">
           </div>
 
-          <div id="reqError" class="hidden text-xs font-bold text-rose-600 bg-rose-50 border border-rose-100 rounded-xl px-3 py-2"></div>
+          <div id="reqError" class="hidden text-xs font-bold text-rose-600 bg-rose-50 border-2 border-rose-100 rounded-xl px-3 py-2"></div>
           
           <button type="submit" id="btnDirectReset"
-            class="w-full py-3.5 bg-green-600 hover:bg-green-700 active:scale-95 text-white font-black rounded-2xl shadow-lg shadow-green-200 transition-all text-sm">
+            class="w-full py-3.5 bg-gradient-to-r from-[#28B54D] to-[#239943] hover:from-[#239943] hover:to-[#1A8035] active:scale-95 text-white font-black rounded-[1.25rem] shadow-lg shadow-green-200 transition-all text-sm">
             Actualizar mi contraseña ahora
           </button>
         </form>
@@ -80,7 +105,7 @@
       <!-- Estado: token recibido (URL con #access_token) - Mantenemos por compatibilidad si llegara un enlace -->
       <div id="stateReset" class="hidden">
         <div class="text-center mb-6">
-          <div class="w-14 h-14 bg-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
+          <div class="w-14 h-14 bg-blue-100 rounded-[1.5rem] flex items-center justify-center mx-auto mb-3">
             <span class="text-2xl">🔒</span>
           </div>
           <h2 class="text-xl font-black text-slate-800">Nueva Contraseña</h2>
@@ -91,12 +116,12 @@
           <div>
             <label class="block text-xs font-black text-slate-500 uppercase tracking-wider mb-1.5">Nueva contraseña</label>
             <input id="newPassword" type="password" placeholder="Mínimo 8 caracteres" required minlength="8"
-              class="w-full px-4 py-3 rounded-2xl border-2 border-slate-100 bg-slate-50 text-slate-800 font-bold text-sm focus:outline-none focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-50 transition-all">
+              class="w-full px-4 py-3 rounded-[1.25rem] border-2 border-slate-100 bg-slate-50 text-slate-800 font-bold text-sm focus:outline-none focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-50 transition-all">
           </div>
           <div>
             <label class="block text-xs font-black text-slate-500 uppercase tracking-wider mb-1.5">Confirmar contraseña</label>
             <input id="confirmPassword" type="password" placeholder="Repite la contraseña" required
-              class="w-full px-4 py-3 rounded-2xl border-2 border-slate-100 bg-slate-50 text-slate-800 font-bold text-sm focus:outline-none focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-50 transition-all">
+              class="w-full px-4 py-3 rounded-[1.25rem] border-2 border-slate-100 bg-slate-50 text-slate-800 font-bold text-sm focus:outline-none focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-50 transition-all">
           </div>
 
           <!-- Indicador de fortaleza -->
@@ -110,9 +135,9 @@
             <p id="strengthLabel" class="text-[10px] font-bold text-slate-400"></p>
           </div>
 
-          <div id="resetError" class="hidden text-xs font-bold text-rose-600 bg-rose-50 border border-rose-100 rounded-xl px-3 py-2"></div>
+          <div id="resetError" class="hidden text-xs font-bold text-rose-600 bg-rose-50 border-2 border-rose-100 rounded-xl px-3 py-2"></div>
           <button type="submit" id="btnReset"
-            class="w-full py-3.5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-black rounded-2xl shadow-lg shadow-blue-200 transition-all text-sm">
+            class="w-full py-3.5 bg-gradient-to-r from-[#0B63C7] to-[#084E9E] hover:from-[#084E9E] hover:to-[#063D7B] active:scale-95 text-white font-black rounded-[1.25rem] shadow-lg shadow-blue-200 transition-all text-sm">
             Guardar nueva contraseña
           </button>
         </form>
@@ -123,16 +148,16 @@
         <div class="text-5xl mb-4">✅</div>
         <h2 class="text-xl font-black text-slate-800 mb-2">¡Contraseña actualizada!</h2>
         <p class="text-sm text-slate-500 font-medium mb-6">Tu contraseña fue cambiada correctamente.</p>
-        <a href="login.html"
-          class="inline-block w-full py-3.5 bg-green-600 hover:bg-green-700 text-white font-black rounded-2xl shadow-lg shadow-green-200 transition-all text-sm text-center">
-          Ir al inicio de sesión →
+        <a href="panel_padres.html"
+          class="inline-block w-full py-3.5 bg-gradient-to-r from-[#28B54D] to-[#239943] hover:from-[#239943] hover:to-[#1A8035] text-white font-black rounded-[1.25rem] shadow-lg shadow-green-200 transition-all text-sm text-center">
+          Ir al Panel →
         </a>
       </div>
 
     </div>
 
     <p class="text-center text-xs text-slate-400 font-bold mt-5">
-      <a href="login.html" class="hover:text-green-600 transition-colors">← Volver al login</a>
+      <a href="panel_padres.html" class="hover:text-[#28B54D] transition-colors">← Volver al Panel</a>
       &nbsp;·&nbsp; Colegio Montessori Sonrisas Creativas © 2026
     </p>
   </div>
@@ -263,7 +288,7 @@
       if (/[0-9]/.test(pwd)) score++;
       if (/[^A-Za-z0-9]/.test(pwd)) score++;
 
-      const colors = ['bg-rose-500','bg-orange-400','bg-amber-400','bg-emerald-500'];
+      const colors = ['bg-rose-500','bg-orange-400','bg-amber-400','bg-green-500'];
       const labels = ['Muy débil','Débil','Buena','Fuerte'];
       for (let i = 1; i <= 4; i++) {
         const seg = document.getElementById(`s${i}`);
@@ -299,5 +324,4 @@
       }
     });
   </script>
-</body>
-</html>
+</body></html>

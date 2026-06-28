@@ -16,7 +16,7 @@ export async function initTasks() {
   container.innerHTML = `
     <div class="flex justify-between items-center mb-8">
       <h3 class="text-2xl font-black text-slate-800 flex items-center gap-3 section-title-green">Mochila de Tareas</h3>
-      <button onclick="App.openNewTaskModal()" class="px-6 py-3 btn-green-orange text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg hover:shadow-xl transition-all flex items-center gap-2">
+      <button onclick="App.openNewTaskModal()" class="px-6 py-3 bg-[#28B54D] text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-green-100 hover:bg-[#239943] transition-all flex items-center gap-2 active:scale-95">
         <i data-lucide="plus-circle" class="w-5 h-5"></i> Nueva Tarea
       </button>
     </div>
@@ -120,7 +120,7 @@ export async function openNewTaskModal(taskToEdit = null) {
 
   const content = `
     <div class="bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl animate-fadeIn flex flex-col max-h-[92vh] overflow-hidden">
-      <div class="bg-[#28B54D] px-8 py-5 flex justify-between items-center border-b-2 border-[#FF7A00]">
+      <div class="bg-gradient-to-r from-[#28B54D] to-[#239943] px-8 py-5 flex justify-between items-center">
         <h3 class="text-lg font-black text-white flex items-center gap-2"><span>✏️</span>${modalTitle}</h3>
         <button onclick="Modal.close('${modalId}')" class="p-2 hover:bg-white/20 rounded-full transition-colors">
           <i data-lucide="x" class="w-6 h-6 text-white"></i>
@@ -151,7 +151,7 @@ export async function openNewTaskModal(taskToEdit = null) {
         </div>
       </form>
       <div class="px-8 pb-7 pt-5 border-t border-slate-100">
-        <button id="btnSaveTask" class="w-full py-4 bg-[#FF7A00] text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg hover:bg-[#28B54D] active:scale-95 transition-all flex items-center justify-center gap-2 border-2 border-[#28B54D]">
+        <button id="btnSaveTask" class="w-full py-4 bg-[#FF8A00] text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-orange-100 hover:bg-[#E07900] active:scale-95 transition-all flex items-center justify-center gap-2">
           <i data-lucide="${isEditing ? 'save' : 'send'}" class="w-5 h-5"></i> ${buttonText}
         </button>
       </div>

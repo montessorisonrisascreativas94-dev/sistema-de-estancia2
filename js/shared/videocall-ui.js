@@ -58,11 +58,11 @@ export const VideoCallUI = {
           ${isHost ? `
           <div class="flex gap-2 flex-wrap">
             <button id="btn-instant-meeting"
-              class="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white rounded-2xl font-black text-xs uppercase tracking-wider shadow-lg shadow-orange-200 active:scale-95 transition-all">
+              class="flex items-center gap-2 px-5 py-2.5 bg-[#FF7A00] hover:bg-[#E06900] text-white rounded-2xl font-black text-xs uppercase tracking-wider shadow-lg shadow-orange-200 active:scale-95 transition-all">
               <i data-lucide="video" class="w-4 h-4"></i> Reunión instantánea
             </button>
             <button id="btn-schedule-meeting"
-              class="flex items-center gap-2 px-5 py-2.5 bg-violet-600 hover:bg-violet-700 text-white rounded-2xl font-black text-xs uppercase tracking-wider shadow-lg shadow-violet-200 active:scale-95 transition-all">
+              class="flex items-center gap-2 px-5 py-2.5 bg-[#28B54D] hover:bg-[#239943] text-white rounded-2xl font-black text-xs uppercase tracking-wider shadow-lg shadow-green-200 active:scale-95 transition-all">
               <i data-lucide="calendar-plus" class="w-4 h-4"></i> Programar
             </button>
           </div>` : ''}
@@ -159,7 +159,7 @@ export const VideoCallUI = {
         ${isHost ? `
         <div class="flex gap-2 shrink-0">
           <button data-room="${m.room_name}" data-meeting-id="${m.id}"
-            class="btn-start-meeting px-3 py-2 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-xl font-black text-xs uppercase hover:from-orange-600 hover:to-amber-600 transition-all active:scale-95 shadow-sm flex items-center gap-1.5">
+            class="btn-start-meeting px-3 py-2 bg-[#28B54D] text-white rounded-xl font-black text-xs uppercase hover:bg-[#239943] transition-all active:scale-95 shadow-sm flex items-center gap-1.5">
             <i data-lucide="video" class="w-3.5 h-3.5"></i> Iniciar
           </button>
           <button data-room="${m.room_name}" data-meeting-id="${m.id}"
@@ -427,7 +427,7 @@ export const VideoCallUI = {
     modal.className = 'fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999] flex items-center justify-center p-4';
     modal.innerHTML = `
       <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden">
-        <div class="bg-gradient-to-r from-violet-600 to-purple-600 p-5 text-white flex items-center justify-between">
+        <div class="bg-gradient-to-r from-[#28B54D] to-[#239943] p-5 text-white flex items-center justify-between">
           <div class="flex items-center gap-3">
             <div class="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center text-xl">📅</div>
             <div>
@@ -440,20 +440,20 @@ export const VideoCallUI = {
         <div class="p-5 space-y-4">
           <div>
             <label class="block text-[11px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Título de la reunión</label>
-            <input id="meeting-title" placeholder="Ej: Reunión de padres — Abril" class="w-full px-4 py-2.5 border-2 border-slate-100 rounded-2xl outline-none focus:border-violet-400 text-sm font-medium bg-slate-50">
+            <input id="meeting-title" placeholder="Ej: Reunión de padres — Abril" class="w-full px-4 py-2.5 border-2 border-slate-100 rounded-2xl outline-none focus:border-[#28B54D] text-sm font-medium bg-slate-50">
           </div>
           <div>
             <label class="block text-[11px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Fecha y hora</label>
-            <input id="meeting-time" type="datetime-local" class="w-full px-4 py-2.5 border-2 border-slate-100 rounded-2xl outline-none focus:border-violet-400 text-sm font-medium bg-slate-50">
+            <input id="meeting-time" type="datetime-local" class="w-full px-4 py-2.5 border-2 border-slate-100 rounded-2xl outline-none focus:border-[#28B54D] text-sm font-medium bg-slate-50">
           </div>
           <div>
             <label class="block text-[11px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Descripción (opcional)</label>
-            <textarea id="meeting-desc" rows="2" placeholder="Tema a tratar..." class="w-full px-4 py-2.5 border-2 border-slate-100 rounded-2xl outline-none focus:border-violet-400 text-sm font-medium bg-slate-50 resize-none"></textarea>
+            <textarea id="meeting-desc" rows="2" placeholder="Tema a tratar..." class="w-full px-4 py-2.5 border-2 border-slate-100 rounded-2xl outline-none focus:border-[#28B54D] text-sm font-medium bg-slate-50 resize-none"></textarea>
           </div>
         </div>
         <div class="p-4 border-t border-slate-100 flex gap-3">
           <button onclick="document.getElementById('schedule-modal').remove()" class="flex-1 py-2.5 bg-slate-100 text-slate-500 rounded-2xl font-black text-xs uppercase">Cancelar</button>
-          <button id="btn-confirm-schedule" class="flex-1 py-2.5 bg-orange-600 text-white rounded-2xl font-black text-xs uppercase shadow-lg active:scale-95 transition-all">Programar</button>
+          <button id="btn-confirm-schedule" class="flex-1 py-2.5 bg-[#28B54D] text-white rounded-2xl font-black text-xs uppercase shadow-lg active:scale-95 transition-all">Programar</button>
         </div>
       </div>`;
 

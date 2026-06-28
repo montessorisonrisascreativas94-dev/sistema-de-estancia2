@@ -128,10 +128,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // Mostrar skeletons inmediatamente
-    const grid    = document.getElementById('dashboardGrid');
-    const summary = document.getElementById('dailySummaryCard');
-    if (grid)    grid.innerHTML    = Helpers.skeleton(5, 'h-28');
-    if (summary) summary.innerHTML = Helpers.skeleton(1, 'h-40');
+  const summary = document.getElementById('dailySummaryCard');
+  if (summary) summary.innerHTML = Helpers.skeleton(1, 'h-40');
 
     // Carga paralela — no bloquea UI
     refreshDashboard().then(() => {
@@ -215,11 +213,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Realtime: actualizar rutina diaria cuando la maestra la guarda
     _initDailyLogRealtime(currentStudent.id);
 
-  } catch (err) {
+  } catch (e) {
 
     Helpers.toast('Error al iniciar el panel', 'error');
   } finally {
     AppState.set('loading', false);
+    // Hide initial loading screen
+    const initialLoading = document.getElementById('initialLoading');
+    if (initialLoading) {
+      initialLoading.style.display = 'none';
+    }
   }
 });
 
@@ -235,20 +238,28 @@ async function refreshDashboard() {
     String(now.getDate()).padStart(2, '0');
 
   // Carga paralela — allSettled para que un fallo no bloquee el resto
-  const [financeRes, academicRes, logsRes, todayAttRes] = await Promise.allSettled([
+  const [financeRes, academicRes, logsRes, todayAttRes, postsRes] = await Promise.allSettled([
     Api.getStudentFinancialStatus(student.id),
     Api.getStudentGrades(student.id),
     Api.getDailyLog(student.id, today),
-    supabase.from('attendance').select('status').eq('student_id', student.id).eq('date', today).maybeSingle()
+    supabase.from('attendance').select('status').eq('student_id', student.id).eq('date', today).maybeSingle(),
+    // Cargar últimos 3 posts para la sección de inicio
+    supabase
+      .from('posts')
+      .select('*, teacher:profiles(id, name, avatar_url)')
+      .or(`classroom_id.is.null,classroom_id.eq.${student.classroom_id}`)
+      .order('created_at', { ascending: false })
+      .limit(3)
   ]);
 
   const finance  = financeRes.status  === 'fulfilled' ? financeRes.value  : null;
   const academic = academicRes.status === 'fulfilled' ? academicRes.value : null;
   let   logs     = logsRes.status     === 'fulfilled' ? logsRes.value     : null;
   const todayAtt = todayAttRes.status === 'fulfilled' ? todayAttRes.value?.data : null;
+  const latestPosts = postsRes.status === 'fulfilled' ? (postsRes.value?.data || []) : [];
 
   // Registrar errores si fallaron promesas críticas
-  [financeRes, academicRes, logsRes, todayAttRes].forEach((res, i) => {
+  [financeRes, academicRes, logsRes, todayAttRes, postsRes].forEach((res, i) => {
     if (res.status === 'rejected') {
       import('../shared/db-utils.js').then(({ safeHandle }) => {
         safeHandle(res.reason, `refreshDashboard.Promise[${i}]`);
@@ -260,8 +271,9 @@ async function refreshDashboard() {
   if (finance?.history) AppState.set('financeHistory', finance.history);
   AppState.set('todayAttendance', todayAtt?.status || null);
 
-  renderHomeCards(student, { finance, academic, todayAtt: todayAtt?.status });
   renderDailySummary(logs);
+  renderLatestPosts(latestPosts); // Nueva función para renderizar posts en home
+  renderGradesChart(academic?.evidences || []); // Renderizar gráfico de calificaciones
 
   // 🚨 Banner de deuda vencida
   _updateDebtBanner(finance);
@@ -339,15 +351,6 @@ function renderHomeCards(student, data) {
       color: todayAtt ? 'border-emerald-300' : 'border-emerald-200',
       iconBg: todayAtt ? 'bg-emerald-500 text-white' : 'bg-emerald-100 text-emerald-700',
       target: 'live-attendance'
-    },
-    {
-      title: 'Chat',
-      value: 'Mensajes',
-      sub: 'Con el personal',
-      icon: ICONS.chat,
-      color: 'border-sky-200',
-      iconBg: 'bg-sky-100 text-sky-700',
-      target: 'notifications'
     },
     {
       title: isLive ? 'Clase en Vivo' : 'Videollamada',
@@ -487,6 +490,89 @@ function renderDailySummary(log) {
   if (window.lucide) lucide.createIcons();
 }
 
+// ── Últimas publicaciones en home ─────────────────────────────────────────────
+function renderLatestPosts(posts) {
+  const container = document.getElementById('latestPostsContainer');
+  if (!container) return; // el elemento es opcional en el HTML
+
+  if (!posts?.length) {
+    container.innerHTML =
+      '<p class="text-xs text-slate-400 text-center py-4">Sin publicaciones recientes.</p>';
+    return;
+  }
+
+  container.innerHTML = posts.map(p => {
+    const teacher = Array.isArray(p.teacher) ? p.teacher[0] : (p.teacher || {});
+    const name    = teacher.name || p.teacher_name || 'Maestra';
+    const date    = Helpers.formatDate(p.created_at);
+    const content = (p.content || '').substring(0, 120) + ((p.content?.length > 120) ? '…' : '');
+    return `
+      <div class="flex gap-3 items-start py-3 border-b border-slate-50 last:border-0 cursor-pointer hover:bg-slate-50 -mx-2 px-2 rounded-xl transition-colors"
+           onclick="App.navigateTo('class')">
+        <div class="w-9 h-9 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center font-black text-sm shrink-0">
+          ${name.charAt(0).toUpperCase()}
+        </div>
+        <div class="min-w-0 flex-1">
+          <p class="text-xs font-black text-slate-700 truncate">${name}</p>
+          <p class="text-xs text-slate-500 leading-snug mt-0.5">${content}</p>
+          <p class="text-[10px] text-slate-400 mt-1">${date}</p>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ── Gráfico de calificaciones en home ─────────────────────────────────────────
+function renderGradesChart(evidences) {
+  const canvas = document.getElementById('gradesChart');
+  if (!canvas || !evidences?.length) return;
+
+  // Destruir instancia previa si existe
+  if (canvas._chartInstance) {
+    canvas._chartInstance.destroy();
+    canvas._chartInstance = null;
+  }
+
+  if (!window.Chart) return; // Chart.js no cargado aún
+
+  const last6 = evidences.slice(-6);
+  const labels = last6.map(e => e.subject || e.title || 'Materia');
+  const values = last6.map(e => Number(e.score ?? e.grade ?? e.value ?? 0));
+  const colors = values.map(v =>
+    v >= 9  ? 'rgba(46,187,87,0.7)'  :
+    v >= 7  ? 'rgba(255,138,0,0.7)'  :
+              'rgba(239,68,68,0.7)'
+  );
+
+  canvas._chartInstance = new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        data: values,
+        backgroundColor: colors,
+        borderRadius: 8,
+        borderSkipped: false
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: {
+          min: 0, max: 10,
+          ticks: { stepSize: 2, font: { size: 10 } },
+          grid: { color: 'rgba(0,0,0,0.04)' }
+        },
+        x: {
+          ticks: { font: { size: 10 }, maxRotation: 30 },
+          grid: { display: false }
+        }
+      }
+    }
+  });
+}
+
 // ── Navegación ────────────────────────────────────────────────────────────────
 export async function navigateTo(targetId) {
   if (!targetId) return;
@@ -567,19 +653,66 @@ export async function navigateTo(targetId) {
   });
   
   // Cerrar sidebar en móvil al navegar
-  if (window.innerWidth < 768) {
-    const sidebar = document.getElementById('sidebar');
-    const overlay = document.getElementById('sidebarOverlay');
-    if (sidebar?.classList.contains('mobile-visible')) {
-      sidebar.classList.remove('mobile-visible');
-      overlay?.classList.add('hidden');
-    }
+  if (window.innerWidth < 768 && closeSidebar) {
+    closeSidebar(); // Usar la nueva función para cerrar el sidebar
   }
 }
+
+// --- Funciones globales para sidebar ---
+let openSidebar, closeSidebar;
 
 function setupNavigation() {
   Helpers.delegate(document.body, '[data-target]', 'click', (_e, el) => {
     navigateTo(el.dataset.target);
+  });
+
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('sidebarOverlay');
+  const menuToggleBtn = document.getElementById('menuToggleBtn');
+  const closeSidebarBtn = document.getElementById('closeSidebarBtn');
+
+  openSidebar = () => {
+    if (!sidebar || !overlay) return;
+    sidebar.classList.add('open', 'animate-slide-in');
+    sidebar.classList.remove('animate-slide-out');
+    overlay.classList.remove('hidden');
+  };
+
+  closeSidebar = () => {
+    if (!sidebar || !overlay) return;
+    sidebar.classList.remove('open');
+    sidebar.classList.add('animate-slide-out');
+    overlay.classList.add('hidden');
+    setTimeout(() => sidebar.classList.remove('animate-slide-out', 'animate-slide-in'), 300);
+  };
+
+  // Toggle sidebar
+  if (menuToggleBtn) menuToggleBtn.addEventListener('click', openSidebar);
+  if (closeSidebarBtn) closeSidebarBtn.addEventListener('click', closeSidebar);
+  if (overlay) overlay.addEventListener('click', closeSidebar);
+
+  // Category dropdowns
+  document.querySelectorAll('.sidebar-category').forEach(categoryBtn => {
+    categoryBtn.addEventListener('click', () => {
+      const submenu = categoryBtn.closest('.sidebar-category-group')?.querySelector('.submenu');
+      const chevron = categoryBtn.querySelector('.category-chevron');
+      if (!submenu) return;
+      
+      // Toggle current
+      submenu.classList.toggle('open');
+      if (chevron) chevron.style.transform = submenu.classList.contains('open') ? 'rotate(180deg)' : 'rotate(0deg)';
+      
+      // Optional: Close others on mobile
+      if (window.innerWidth < 768) {
+        document.querySelectorAll('.submenu').forEach(other => {
+          if (other !== submenu && other.classList.contains('open')) {
+            other.classList.remove('open');
+            const otherChevron = other.closest('.sidebar-category-group')?.querySelector('.category-chevron');
+            if (otherChevron) otherChevron.style.transform = 'rotate(0deg)';
+          }
+        });
+      }
+    });
   });
 }
 
@@ -711,11 +844,16 @@ function updateHeaderProfile(profile, student, allStudents = []) {
   const studentName = student?.name || 'Estudiante';
 
   // Sidebar — nombre + avatar del estudiante
-  const sidebarName = document.getElementById('sidebar-student-name');
+  const sidebarName = document.getElementById('sidebarStudentName');
   if (sidebarName) sidebarName.textContent = studentName;
 
+  const sidebarClassroom = document.getElementById('sidebarClassroomName');
+  if (sidebarClassroom) {
+    sidebarClassroom.textContent = student?.classrooms?.name || 'Sin aula asignada';
+  }
+
   // UX: Añadir indicador visual y disparador si hay múltiples estudiantes
-  const switcherTrigger = document.getElementById('student-switcher-trigger');
+  const switcherTrigger = document.getElementById('studentSwitcherTrigger');
   if (switcherTrigger && allStudents.length > 1) {
     const label = switcherTrigger.querySelector('p');
     if (label && !label.innerHTML.includes('chevron')) {
@@ -742,13 +880,13 @@ function updateHeaderProfile(profile, student, allStudents = []) {
     });
     const chipsHTML = '<div class="flex flex-wrap gap-2">' + chipsInner + '</div>';
 
-    const desktopEl = document.getElementById('siblings-chips-desktop');
-    const mobileEl  = document.getElementById('siblings-chips-mobile');
+    const desktopEl = document.getElementById('siblingsChipsDesktop');
+    const mobileEl  = document.getElementById('siblingsChipsMobile');
     if (desktopEl) desktopEl.innerHTML = chipsHTML;
     if (mobileEl)  mobileEl.innerHTML  = chipsHTML;
   } else {
-    const desktopEl = document.getElementById('siblings-chips-desktop');
-    const mobileEl  = document.getElementById('siblings-chips-mobile');
+    const desktopEl = document.getElementById('siblingsChipsDesktop');
+    const mobileEl  = document.getElementById('siblingsChipsMobile');
     if (desktopEl) desktopEl.innerHTML = '';
     if (mobileEl)  mobileEl.innerHTML  = '';
   }
@@ -773,13 +911,7 @@ function updateHeaderProfile(profile, student, allStudents = []) {
     el.textContent = student?.classrooms?.name || 'Sin aula';
   });
 
-  // Desktop header avatar
-  const avatarContainer = document.getElementById('headerStudentAvatar');
-  if (avatarContainer) {
-    avatarContainer.innerHTML = student?.avatar_url
-      ? '<img src="' + student.avatar_url + '" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML=\'<span class=\\\"text-lg font-black text-green-700\\\">' + studentName.charAt(0) + '</span>\'">'
-      : '<span class="text-lg font-black text-green-700">' + studentName.charAt(0) + '</span>';
-  }
+
 
   // Mobile header avatar
   if (mobileAvatar) {

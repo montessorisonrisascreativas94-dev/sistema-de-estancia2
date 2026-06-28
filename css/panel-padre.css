@@ -1,36 +1,48 @@
 /* ============================================================
-   🌿 PANEL PADRE — VERDE PROFESIONAL
-   Verde principal: #22c55e | Verde profundo: #166534
-   Verde borde: #14532d | Fondo: #f1f5f9
-   Contenedores: blanco | Botones: verde + texto blanco
+   PANEL PADRE — IDENTIDAD VISUAL SONRISAS CREATIVAS
+   Azul  #1565C0 → Sidebar, navegación, información, mensajería
+   Verde #2EBB57 → Botones primarios, estados positivos, asistencia
+   Naranja #FF8A00 → Tareas, pagos, alertas, badges, CTAs
+   Blanco #FFFFFF → Tarjetas, tablas, modales, formularios
+   Gris  #F6F8FB → Fondo general
+   Esquinas 20–24px · Sombras suaves · Cuadrícula 8px
 ============================================================ */
 
-/* ── Variables ─────────────────────────────────────────── */
+/* ── TOKENS ─────────────────────────────────────────────── */
 :root {
-  --green:        #22c55e;
-  --green-deep:   #166534;
-  --green-border: #14532d;
-  --green-light:  #dcfce7;
-  --green-soft:   #f0fdf4;
-  --bg:           #f1f5f9;
-  --card:         #ffffff;
-  --shadow-sm:    0 2px 8px rgba(34,197,94,0.10);
-  --shadow-md:    0 6px 20px rgba(34,197,94,0.14);
-  --shadow-lg:    0 12px 32px rgba(34,197,94,0.18);
-  --radius:       1.5rem;
-  --transition:   all 0.25s cubic-bezier(0.4,0,0.2,1);
+  --p-blue:        #1565C0;
+  --p-blue-h:      #0D47A1;
+  --p-blue-lt:     #E3EEFF;
+  --p-green:       #2EBB57;
+  --p-green-h:     #239943;
+  --p-green-lt:    #E8F8EF;
+  --p-orange:      #FF8A00;
+  --p-orange-h:    #E07900;
+  --p-orange-lt:   #FFF3E0;
+  --p-red:         #EF4444;
+  --p-red-lt:      #FEE2E2;
+  --p-white:       #FFFFFF;
+  --p-bg:          #F6F8FB;
+  --p-border:      #E8EDF2;
+  --p-text:        #1A2340;
+  --p-text-mid:    #4A5568;
+  --p-text-light:  #8A9BB0;
+  --p-shadow-sm:   0 4px 12px rgba(0,0,0,.05);
+  --p-shadow-md:   0 8px 24px rgba(0,0,0,.08);
+  --p-radius:      22px;
+  --p-radius-btn:  12px;
+  --p-radius-input:14px;
+  --p-transition:  all .2s cubic-bezier(0.4,0,0.2,1);
 }
 
-/* ── Reset / Base ──────────────────────────────────────── */
+/* ── BASE ────────────────────────────────────────────────── */
 body.panel-padre-body {
-  background: var(--bg) !important;
+  background: var(--p-bg) !important;
   font-family: 'Quicksand', 'Nunito', sans-serif;
-  color: #1e293b;
+  color: var(--p-text);
   min-height: 100vh;
   overflow-x: hidden;
 }
-
-/* Eliminar fondo gradiente del body */
 body.panel-padre-body::before,
 body.panel-padre-body::after { display: none !important; }
 
@@ -40,246 +52,654 @@ body.panel-padre-body > .fixed.bottom-20,
 body.panel-padre-body > .fixed.top-1\/3,
 body.panel-padre-body > .fixed.bottom-10 { display: none !important; }
 
-/* ── Karpus Logo ───────────────────────────────────────── */
-.karpus-kids-inline { font-weight: 800; }
-.karpus-kids-inline .k-1,.karpus-kids-inline .k-5,.karpus-kids-inline .k-10 { color: #f59e0b; }
-.karpus-kids-inline .k-2,.karpus-kids-inline .k-6,.karpus-kids-inline .k-9  { color: #3b82f6; }
-.karpus-kids-inline .k-3,.karpus-kids-inline .k-8                            { color: #ec4899; }
-.karpus-kids-inline .k-4,.karpus-kids-inline .k-7                            { color: #22c55e; }
-
-/* ── Loader ────────────────────────────────────────────── */
-#initial-loading {
-  background: linear-gradient(135deg, #dcfce7, #f0fdf4) !important;
-}
-
-/* ── SIDEBAR — Mochila Verde ───────────────────────────── */
+/* ── SIDEBAR ─────────────────────────────────────────────
+   Azul con degradado suave. Elemento más fuerte.
+──────────────────────────────────────────────────────────── */
 body.panel-padre-body #sidebar {
-  background: linear-gradient(180deg, #22c55e 0%, #166534 100%) !important;
-  border-right: 4px solid #14532d !important;
-  border-top-right-radius: 2.5rem;
-  border-bottom-right-radius: 2.5rem;
-  box-shadow: 5px 0 30px rgba(22,101,52,0.25) !important;
-  border-top: none !important;
-  border-bottom: none !important;
-  border-left: none !important;
+  background: linear-gradient(180deg, #1565C0 0%, #0D47A1 100%) !important;
+  box-shadow: 2px 0 16px rgba(21,101,192,.18) !important;
+  border-right: none !important;
+  border-top-right-radius: 24px;
+  border-bottom-right-radius: 24px;
 }
 
-/* Costura lateral */
-body.panel-padre-body #sidebar::after {
-  content: '';
-  position: absolute;
-  right: 10px; top: 20px; bottom: 20px;
-  border-right: 2px dashed rgba(255,255,255,0.35);
-  pointer-events: none;
-  z-index: 0;
-}
-
-/* Logo area */
-body.panel-padre-body #sidebar .karpus-kids-inline .k-1,
-body.panel-padre-body #sidebar .karpus-kids-inline .k-2,
-body.panel-padre-body #sidebar .karpus-kids-inline .k-3,
-body.panel-padre-body #sidebar .karpus-kids-inline .k-4,
-body.panel-padre-body #sidebar .karpus-kids-inline .k-5,
-body.panel-padre-body #sidebar .karpus-kids-inline .k-6,
-body.panel-padre-body #sidebar .karpus-kids-inline .k-7,
-body.panel-padre-body #sidebar .karpus-kids-inline .k-8,
-body.panel-padre-body #sidebar .karpus-kids-inline .k-9,
-body.panel-padre-body #sidebar .karpus-kids-inline .k-10 { color: white !important; }
-
+/* Textos en sidebar */
 body.panel-padre-body #sidebar h1,
 body.panel-padre-body #sidebar p,
 body.panel-padre-body #sidebar .text-slate-400,
-body.panel-padre-body #sidebar .text-slate-700 { color: rgba(255,255,255,0.85) !important; }
+body.panel-padre-body #sidebar .text-slate-700 {
+  color: rgba(255,255,255,0.85) !important;
+}
+body.panel-padre-body #sidebar #sidebar-student-name { color: #fff !important; }
 
-/* Card estudiante en sidebar */
+/* Card del estudiante en sidebar */
 body.panel-padre-body #sidebar .bg-emerald-50\/40,
 body.panel-padre-body #sidebar .bg-white\/40 {
-  background: rgba(255,255,255,0.15) !important;
-  border-color: rgba(255,255,255,0.25) !important;
+  background: rgba(255,255,255,0.12) !important;
+  border-color: rgba(255,255,255,0.18) !important;
 }
-body.panel-padre-body #sidebar #sidebar-student-name { color: white !important; }
 
-/* ── Botones Sidebar ───────────────────────────────────── */
+/* Pastillas de nav — 3 estados */
 .sidebar-node {
   display: flex;
   align-items: center;
-  gap: 0.65rem;
-  padding: 0.75rem 1rem;
-  border-radius: 0.875rem;
-  font-weight: 700;
-  font-size: 0.9rem;
-  color: rgba(255,255,255,0.85) !important;
-  background: rgba(255,255,255,0.12) !important;
-  border: 1.5px solid transparent;
-  margin-bottom: 0.3rem;
-  transition: var(--transition);
+  gap: 10px;
+  padding: 11px 16px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: rgba(255,255,255,0.88) !important;
+  background: transparent !important;
+  border: none;
+  border-left: 3px solid transparent;
+  margin-bottom: 4px;
+  transition: var(--p-transition);
   cursor: pointer;
+  width: 100%;
+  text-align: left;
   position: relative;
 }
+.sidebar-node svg,
+.sidebar-node i { color: rgba(255,255,255,0.88) !important; }
 
-.sidebar-node i { color: white !important; }
-
+/* Hover */
 .sidebar-node:hover {
-  background: rgba(255,255,255,0.22) !important;
-  transform: translateX(3px);
-}
-
-.sidebar-node.active {
-  background: white !important;
-  color: var(--green-deep) !important;
-  font-weight: 800;
-  transform: translateX(6px);
-  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
-}
-.sidebar-node.active i { color: var(--green-deep) !important; }
-
-/* Botón logout */
-body.panel-padre-body #btnLogout {
   background: rgba(255,255,255,0.12) !important;
-  color: rgba(255,255,255,0.85) !important;
-  border: 1.5px solid rgba(255,255,255,0.25) !important;
-  border-radius: 0.875rem;
+  transform: scale(1.02);
+  color: #fff !important;
+}
+
+/* Activo: blanco con texto azul */
+.sidebar-node.active {
+  background: #FFFFFF !important;
+  color: var(--p-blue) !important;
+  font-weight: 800;
+  border-left: 3px solid var(--p-blue);
+  transform: none;
+  box-shadow: 0 2px 8px rgba(0,0,0,.1);
+}
+.sidebar-node.active svg,
+.sidebar-node.active i { color: var(--p-blue) !important; }
+
+/* Badges de sidebar: naranja */
+.sidebar-node .badge-count {
+  background: var(--p-orange) !important;
+  color: #fff !important;
+  font-size: 9px;
+  font-weight: 900;
+  min-width: 18px; height: 18px;
+  border-radius: 50px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+}
+
+/* Logout */
+body.panel-padre-body #btnLogout {
+  background: rgba(255,255,255,0.08) !important;
+  color: rgba(255,255,255,0.75) !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  border-radius: 12px;
   font-weight: 700;
-  transition: var(--transition);
+  transition: var(--p-transition);
 }
 body.panel-padre-body #btnLogout:hover {
-  background: rgba(239,68,68,0.85) !important;
-  color: white !important;
+  background: rgba(239,68,68,.25) !important;
+  border-color: rgba(239,68,68,.4) !important;
+  color: #fca5a5 !important;
 }
 
-/* ── Mobile nav ────────────────────────────────────────── */
+/* Mobile nav */
 @media (max-width: 767px) {
   body.panel-padre-body #sidebar {
-    border-radius: 2rem !important;
+    border-radius: 20px !important;
     border-right: none !important;
-    border-bottom: 3px solid #14532d !important;
+    border-bottom: 2px solid rgba(255,255,255,.1) !important;
   }
   .sidebar-node {
     flex-direction: column;
     font-size: 9px;
-    min-width: 64px;
+    min-width: 60px;
     padding: 8px 6px;
     text-align: center;
+    gap: 5px;
+    border-left: none !important;
     transform: none !important;
   }
   .sidebar-node:hover { transform: translateY(-2px) !important; }
   .sidebar-node.active {
-    transform: translateY(-4px) !important;
-    box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+    transform: translateY(-3px) !important;
+    box-shadow: 0 6px 16px rgba(0,0,0,.18);
+    border-left: none !important;
+    border-bottom: 3px solid var(--p-blue) !important;
   }
 }
 
-/* ── Contenido principal ───────────────────────────────── */
-#layoutShell { background: transparent; }
-
-/* ── Tarjetas / Contenedores ───────────────────────────── */
-.patio-card {
-  background: var(--card) !important;
-  border-radius: var(--radius);
-  border: 1.5px solid #e2e8f0;
-  box-shadow: var(--shadow-sm);
-  transition: var(--transition);
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-}
-.patio-card:hover {
-  box-shadow: var(--shadow-md);
-  transform: translateY(-3px);
-  border-color: var(--green-light);
-}
-.patio-card:active { transform: scale(0.98); }
-
-.card-base {
-  background: var(--card);
-  border-radius: var(--radius);
-  border: 1.5px solid #e2e8f0;
-  box-shadow: var(--shadow-sm);
-  padding: 1.5rem;
-}
-
-/* Secciones con fondo blanco */
+/* ── TARJETAS ────────────────────────────────────────────
+   Todas blancas, uniformes, sin mezclar colores en bordes
+──────────────────────────────────────────────────────────── */
+.patio-card,
+.card-base,
 body.panel-padre-body section .bg-white {
-  box-shadow: var(--shadow-sm);
-  border: 1.5px solid #e2e8f0;
+  background: #FFFFFF !important;
+  border-radius: var(--p-radius) !important;
+  border: 1px solid var(--p-border) !important;
+  box-shadow: var(--p-shadow-sm) !important;
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+.patio-card:hover { transform: translateY(-3px); box-shadow: var(--p-shadow-md) !important; }
+.patio-card:active { transform: scale(0.99); }
+
+.card-base { padding: 24px; }
+
+/* ── STAT / KPI CARDS ────────────────────────────────────
+   Semánticos: azul info, verde éxito, naranja alerta, rojo crítico
+──────────────────────────────────────────────────────────── */
+.stat-card-blue {
+  background: linear-gradient(135deg, #1565C0, #0D47A1) !important;
+  color: white; border-radius: 20px; padding: 24px;
+  box-shadow: 0 8px 24px rgba(21,101,192,.22);
+  position: relative; overflow: hidden; transition: transform .2s;
+}
+.stat-card-green {
+  background: linear-gradient(135deg, #2EBB57, #239943) !important;
+  color: white; border-radius: 20px; padding: 24px;
+  box-shadow: 0 8px 24px rgba(46,187,87,.22);
+  position: relative; overflow: hidden; transition: transform .2s;
+}
+.stat-card-orange {
+  background: linear-gradient(135deg, #FF8A00, #E07900) !important;
+  color: white; border-radius: 20px; padding: 24px;
+  box-shadow: 0 8px 24px rgba(255,138,0,.22);
+  position: relative; overflow: hidden; transition: transform .2s;
+}
+.stat-card-red {
+  background: linear-gradient(135deg, #EF4444, #DC2626) !important;
+  color: white; border-radius: 20px; padding: 24px;
+  box-shadow: 0 8px 24px rgba(239,68,68,.22);
+  position: relative; overflow: hidden; transition: transform .2s;
+}
+.stat-card-blue:hover,
+.stat-card-green:hover,
+.stat-card-orange:hover,
+.stat-card-red:hover { transform: translateY(-4px); }
+
+/* ── ENCABEZADOS DE SECCIÓN ──────────────────────────────
+   Icono naranja · Texto oscuro · Nunca título azul completo
+──────────────────────────────────────────────────────────── */
+body.panel-padre-body section > header h1,
+body.panel-padre-body .section-title {
+  color: var(--p-text) !important;
+  font-weight: 800;
+}
+body.panel-padre-body section > header h1 svg,
+body.panel-padre-body section > header h1 i {
+  color: var(--p-orange) !important;
+}
+/* Nombre del alumno en naranja */
+body.panel-padre-body .guardian-name-display,
+body.panel-padre-body .student-name-highlight {
+  color: var(--p-orange) !important;
 }
 
-/* ── Botones principales ───────────────────────────────── */
+/* ── BOTONES ─────────────────────────────────────────────
+   Primario → verde  |  Info/acción → azul  |
+   CTA/pago/tarea → naranja  |  Peligro → rojo
+──────────────────────────────────────────────────────────── */
+
+/* Primario: verde */
+.btn-padre-primary,
 body.panel-padre-body button[type="submit"],
 body.panel-padre-body #btnSubmitPayment,
 body.panel-padre-body #btnSaveChanges,
 body.panel-padre-body #btnSubmitTask,
 body.panel-padre-body .btn-green {
-  background: var(--green) !important;
-  color: #ffffff !important;
+  background: var(--p-green) !important;
+  color: #fff !important;
   border: none !important;
-  border-radius: 0.875rem;
-  font-weight: 800;
-  box-shadow: 0 4px 14px rgba(34,197,94,0.35);
-  transition: var(--transition);
+  border-radius: var(--p-radius-btn) !important;
+  font-weight: 700 !important;
+  box-shadow: 0 4px 14px rgba(46,187,87,.22) !important;
+  transition: var(--p-transition) !important;
+  display: inline-flex; align-items: center; gap: 8px;
+  cursor: pointer;
 }
 body.panel-padre-body button[type="submit"]:hover,
 body.panel-padre-body #btnSubmitPayment:hover,
 body.panel-padre-body #btnSaveChanges:hover,
 body.panel-padre-body #btnSubmitTask:hover,
-body.panel-padre-body .btn-green:hover {
-  background: var(--green-deep) !important;
-  box-shadow: 0 6px 20px rgba(22,101,52,0.4);
-  transform: translateY(-1px);
+body.panel-padre-body .btn-green:hover,
+.btn-padre-primary:hover {
+  background: var(--p-green-h) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 8px 20px rgba(46,187,87,.3) !important;
 }
 
-/* Botón reportar ausencia */
-body.panel-padre-body .bg-rose-500 { background: #ef4444 !important; }
-
-/* ── Grid Dashboard ────────────────────────────────────── */
-#dashboardGrid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 0.875rem;
+/* Naranja: tareas, pagos, CTAs */
+.btn-padre-orange {
+  background: var(--p-orange);
+  color: #fff;
+  border: none;
+  border-radius: var(--p-radius-btn);
+  font-weight: 700;
+  box-shadow: 0 4px 12px rgba(255,138,0,.2);
+  transition: var(--p-transition);
+  display: inline-flex; align-items: center; gap: 8px;
+  cursor: pointer;
 }
-@media (min-width: 640px)  { #dashboardGrid { grid-template-columns: repeat(3, 1fr); } }
-@media (min-width: 1024px) { #dashboardGrid { grid-template-columns: repeat(5, 1fr); } }
+.btn-padre-orange:hover {
+  background: var(--p-orange-h);
+  transform: translateY(-2px);
+}
 
-/* ── Inputs ────────────────────────────────────────────── */
+/* Azul: informativo, mensajes */
+.btn-padre-blue {
+  background: var(--p-blue);
+  color: #fff;
+  border: none;
+  border-radius: var(--p-radius-btn);
+  font-weight: 700;
+  box-shadow: 0 4px 12px rgba(21,101,192,.2);
+  transition: var(--p-transition);
+  display: inline-flex; align-items: center; gap: 8px;
+  cursor: pointer;
+}
+.btn-padre-blue:hover {
+  background: var(--p-blue-h);
+  transform: translateY(-2px);
+}
+
+/* Secundario: borde */
+.btn-padre-secondary {
+  background: #fff;
+  color: var(--p-blue);
+  border: 2px solid var(--p-blue);
+  border-radius: var(--p-radius-btn);
+  font-weight: 700;
+  transition: var(--p-transition);
+  display: inline-flex; align-items: center; gap: 8px;
+  cursor: pointer;
+}
+.btn-padre-secondary:hover { background: var(--p-blue-lt); }
+
+/* Peligro */
+.btn-padre-danger,
+body.panel-padre-body .bg-rose-500 {
+  background: var(--p-red) !important;
+  color: #fff !important;
+  border: none !important;
+  border-radius: var(--p-radius-btn) !important;
+}
+.btn-padre-danger:hover { background: #DC2626 !important; }
+
+/* ── TABLAS ──────────────────────────────────────────────
+   Cabecera azul muy claro, hover suave, separadores finos
+──────────────────────────────────────────────────────────── */
+body.panel-padre-body table thead tr {
+  background: #EEF4FB !important;
+}
+body.panel-padre-body table thead th {
+  color: var(--p-text-mid) !important;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--p-border);
+}
+body.panel-padre-body table tbody tr {
+  border-bottom: 1px solid var(--p-border) !important;
+  transition: background .12s;
+}
+body.panel-padre-body table tbody tr:hover {
+  background: #F3F8FF !important;
+}
+body.panel-padre-body table tbody td {
+  padding: 12px 16px;
+  vertical-align: middle;
+  font-size: 0.875rem;
+  color: var(--p-text);
+}
+
+/* ── BADGES DE ESTADO ────────────────────────────────────
+   Píldoras semánticas, nunca texto plano
+──────────────────────────────────────────────────────────── */
+.badge-presente, .badge-activa {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 12px; border-radius: 50px;
+  background: var(--p-green-lt); color: var(--p-green-h);
+  font-size: 0.72rem; font-weight: 800;
+}
+.badge-pendiente {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 12px; border-radius: 50px;
+  background: var(--p-orange-lt); color: var(--p-orange-h);
+  font-size: 0.72rem; font-weight: 800;
+}
+.badge-ausente, .badge-vencida {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 12px; border-radius: 50px;
+  background: var(--p-red-lt); color: #B91C1C;
+  font-size: 0.72rem; font-weight: 800;
+}
+.badge-info, .badge-revisando {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 12px; border-radius: 50px;
+  background: var(--p-blue-lt); color: var(--p-blue-h);
+  font-size: 0.72rem; font-weight: 800;
+}
+
+/* ── FORMULARIOS / INPUTS ────────────────────────────────
+   Altura 50px, borde sutil, focus verde
+──────────────────────────────────────────────────────────── */
+body.panel-padre-body input[type="text"],
+body.panel-padre-body input[type="date"],
+body.panel-padre-body input[type="email"],
+body.panel-padre-body input[type="tel"],
+body.panel-padre-body input[type="number"],
+body.panel-padre-body input[type="password"],
+body.panel-padre-body textarea,
+body.panel-padre-body select {
+  min-height: 50px;
+  border: 1px solid #D0D9E4 !important;
+  border-radius: var(--p-radius-input) !important;
+  padding: 12px 16px !important;
+  background: #fff !important;
+  color: var(--p-text) !important;
+  font-size: 0.9rem;
+  font-weight: 600;
+  outline: none !important;
+  transition: border-color .18s, box-shadow .18s;
+  box-shadow: none !important;
+}
 body.panel-padre-body input:focus,
 body.panel-padre-body textarea:focus,
 body.panel-padre-body select:focus {
-  outline: none !important;
-  box-shadow: 0 0 0 2px var(--green) !important;
-  border-color: var(--green) !important;
+  border-color: var(--p-green) !important;
+  box-shadow: 0 0 0 4px rgba(46,187,87,.12) !important;
+  background: #fff !important;
+}
+body.panel-padre-body input[readonly] {
+  background: var(--p-bg) !important;
+  color: var(--p-text-light) !important;
+  cursor: not-allowed;
+}
+body.panel-padre-body input[readonly]:focus {
+  border-color: #D0D9E4 !important;
+  box-shadow: none !important;
 }
 
-/* ── Scrollbar ─────────────────────────────────────────── */
+/* ── MODALES ─────────────────────────────────────────────
+   Card blanca, cabecera blanca + círculo naranja,
+   un botón primario verde, sin fondos de colores
+──────────────────────────────────────────────────────────── */
+body.panel-padre-body .modal-backdrop,
+body.panel-padre-body [id*="modal"] > .fixed,
+body.panel-padre-body .fixed.inset-0.bg-black\/60,
+body.panel-padre-body .fixed.inset-0.bg-black {
+  background: rgba(0,0,0,0.38) !important;
+  backdrop-filter: blur(6px) !important;
+}
+body.panel-padre-body .modal-content,
+body.panel-padre-body [id*="modal"] .bg-white {
+  background: #fff !important;
+  border-radius: 24px !important;
+  box-shadow: 0 24px 64px rgba(0,0,0,.14) !important;
+  border: none !important;
+}
+/* Cabecera de modal: blanca, sin gradientes */
+body.panel-padre-body [id*="modal"] .modal-header,
+body.panel-padre-body [id*="modal"] .bg-gradient-to-r,
+body.panel-padre-body [id*="modal"] [class*="bg-blue"],
+body.panel-padre-body [id*="modal"] [class*="bg-emerald"] {
+  background: #fff !important;
+  color: var(--p-text) !important;
+  border-bottom: 1px solid var(--p-border) !important;
+  padding: 20px 24px !important;
+}
+
+/* ── ASISTENCIA — calendario ─────────────────────────────
+   Días presentes en verde, ausentes en rojo
+──────────────────────────────────────────────────────────── */
+#calendarGrid .present-day {
+  background: var(--p-green) !important;
+  color: white !important;
+  box-shadow: 0 4px 12px rgba(46,187,87,.3);
+}
+#calendarGrid .absent-day {
+  background: var(--p-red-lt) !important;
+  color: #B91C1C !important;
+}
+
+/* ── PAGOS — borde acento azul ───────────────────────────── */
+#paymentsHistory .payment-card {
+  border-left: 4px solid var(--p-blue) !important;
+}
+/* Pago pendiente: naranja */
+#paymentsHistory .payment-card.pending {
+  border-left-color: var(--p-orange) !important;
+}
+/* Pago vencido: rojo */
+#paymentsHistory .payment-card.overdue {
+  border-left-color: var(--p-red) !important;
+}
+
+/* ── CHAT / MENSAJERÍA ───────────────────────────────────
+   Azul como color de identidad, botón enviar naranja
+──────────────────────────────────────────────────────────── */
+body.panel-padre-body #btnSendMessage,
+body.panel-padre-body [id*="send-btn"],
+body.panel-padre-body .btn-send-chat {
+  background: var(--p-orange) !important;
+  border-radius: 14px !important;
+  color: #fff !important;
+}
+body.panel-padre-body #btnSendMessage:hover,
+body.panel-padre-body .btn-send-chat:hover {
+  background: var(--p-orange-h) !important;
+}
+body.panel-padre-body #chatMessageInput:focus,
+body.panel-padre-body [id*="chat-input"]:focus {
+  box-shadow: 0 0 0 3px rgba(46,187,87,.15) !important;
+  border-color: var(--p-green) !important;
+}
+
+/* ── GRID DASHBOARD ─────────────────────────────────────── */
+#dashboardGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+@media (min-width: 640px)  { #dashboardGrid { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 1024px) { #dashboardGrid { grid-template-columns: repeat(4, 1fr); } }
+
+/* ── SEPARADORES ────────────────────────────────────────── */
+body.panel-padre-body hr { border-color: var(--p-border) !important; }
+body.panel-padre-body .divide-y > * + * { border-top-color: var(--p-border) !important; }
+
+/* ── SCROLLBAR ──────────────────────────────────────────── */
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+body.panel-padre-body ::-webkit-scrollbar { width: 4px; height: 4px; }
+body.panel-padre-body ::-webkit-scrollbar-track { background: transparent; }
+body.panel-padre-body ::-webkit-scrollbar-thumb { background: #D0D9E4; border-radius: 4px; }
 
-/* ── Animaciones ───────────────────────────────────────── */
-@keyframes float        { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
-@keyframes float-delayed{ 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
-@keyframes breathe      { 0%,100%{transform:scale(1)} 50%{transform:scale(1.02)} }
-@keyframes shimmer      { 0%{background-position:-200% 0} 100%{background-position:200% 0} }
+/* ── ANIMACIONES ────────────────────────────────────────── */
+@keyframes p-float        { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
+@keyframes p-float-delayed{ 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
+@keyframes p-breathe      { 0%,100%{transform:scale(1)} 50%{transform:scale(1.02)} }
+@keyframes p-shimmer      { 0%{background-position:-200% 0} 100%{background-position:200% 0} }
+@keyframes p-fadeIn       { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
 
-.animate-float         { animation: float 6s ease-in-out infinite; }
-.animate-float-delayed { animation: float-delayed 5s ease-in-out infinite; animation-delay:1s; }
-.animate-breathe       { animation: breathe 3s ease-in-out infinite; }
+.animate-float          { animation: p-float 6s ease-in-out infinite; }
+.animate-float-delayed  { animation: p-float-delayed 5s ease-in-out infinite 1s; }
+.animate-breathe        { animation: p-breathe 3s ease-in-out infinite; }
+.p-fade-in              { animation: p-fadeIn .35s ease-out both; }
 
 .skeleton-shimmer {
-  background: linear-gradient(90deg, #f0fdf4 25%, #dcfce7 50%, #f0fdf4 75%);
+  background: linear-gradient(90deg, #EEF4FB 25%, #dde8f5 50%, #EEF4FB 75%);
   background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
+  animation: p-shimmer 1.5s infinite;
 }
 
-/* ── Sección Asistencia ────────────────────────────────── */
-#calendarGrid .present-day {
-  background: var(--green) !important;
-  color: white !important;
-  box-shadow: 0 4px 12px rgba(34,197,94,0.4);
+/* ── ICONOS POR CONTEXTO ────────────────────────────────
+   Azul = info/nav  Verde = acción/éxito  Naranja = alerta  Gris = decoración
+──────────────────────────────────────────────────────────── */
+.icon-info   { color: var(--p-blue)       !important; }
+.icon-action { color: var(--p-green)      !important; }
+.icon-alert  { color: var(--p-orange)     !important; }
+.icon-decor  { color: var(--p-text-light) !important; }
+
+/* ── LOADER ─────────────────────────────────────────────── */
+#initial-loading {
+  background: linear-gradient(135deg, var(--p-blue-lt), var(--p-bg)) !important;
 }
 
-/* ── Sección Pagos ─────────────────────────────────────── */
-#paymentsHistory .payment-card {
-  border-left: 4px solid var(--green);
+/* ── SIDEBAR DESKTOP — mejorado ──────────────────────────────────── */
+body.panel-padre-body #sidebar {
+  width: 272px;
+  display: flex;
+  flex-direction: column;
 }
 
-/* ── Header ────────────────────────────────────────────── */
-body.panel-padre-body .guardian-name-display,
-body.panel-padre-body .text-emerald-600 { color: var(--green-deep) !important; }
+/* Sidebar scroll hasta el fondo */
+body.panel-padre-body #sidebar nav.flex-1 {
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+body.panel-padre-body #sidebar nav.flex-1::-webkit-scrollbar { display: none; }
+
+/* sidebar-item mejorado */
+body.panel-padre-body .sidebar-item {
+  background: rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.88);
+  border-radius: 14px;
+  padding: 12px 16px;
+  margin-bottom: 4px;
+  transition: background .18s ease, transform .18s ease;
+  border: none;
+  border-left: 3px solid transparent;
+  font-weight: 600;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+}
+body.panel-padre-body .sidebar-item:hover {
+  background: rgba(255,255,255,0.15) !important;
+  transform: translateX(3px);
+  color: #fff !important;
+}
+body.panel-padre-body .sidebar-item.active {
+  background: #FFFFFF !important;
+  color: var(--p-blue) !important;
+  border-left: 3px solid var(--p-blue) !important;
+  font-weight: 800;
+  transform: none;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+body.panel-padre-body .sidebar-item.active svg,
+body.panel-padre-body .sidebar-item.active i {
+  color: var(--p-blue) !important;
+  stroke: var(--p-blue) !important;
+}
+
+/* Submenu items */
+body.panel-padre-body .submenu-item {
+  padding: 9px 14px 9px 44px;
+  background: transparent;
+  color: rgba(255,255,255,0.75);
+  border-radius: 10px;
+  margin-bottom: 2px;
+  font-weight: 600;
+  font-size: 0.82rem;
+  transition: background .15s, color .15s;
+}
+body.panel-padre-body .submenu-item:hover {
+  background: rgba(255,255,255,0.12);
+  color: #fff;
+}
+body.panel-padre-body .submenu-item.active {
+  background: rgba(255,255,255,0.2);
+  color: #fff;
+  font-weight: 800;
+}
+
+/* ── SIDEBAR MÓVIL ──────────────────────────────────────────────── */
+@media (max-width: 767px) {
+  body.panel-padre-body #sidebar {
+    width: 280px;
+    height: 100dvh;
+    overflow-y: auto;
+    border-radius: 0 24px 24px 0;
+    box-shadow: 4px 0 32px rgba(21,101,192,.25);
+  }
+  body.panel-padre-body .sidebar-item {
+    padding: 13px 16px;
+    font-size: 0.9rem;
+    border-radius: 12px;
+  }
+  /* Botón X de cierre — mayor tamaño en móvil */
+  body.panel-padre-body #closeSidebarBtn {
+    width: 36px !important;
+    height: 36px !important;
+    border-radius: 12px !important;
+    background: rgba(255,255,255,0.18) !important;
+    flex-shrink: 0;
+    z-index: 10;
+  }
+  body.panel-padre-body #closeSidebarBtn:hover {
+    background: rgba(255,255,255,0.28) !important;
+  }
+}
+
+/* ── TASKS — contenedores mejorados ─────────────────────────────── */
+body.panel-padre-body #tasksListContainer .task-card,
+body.panel-padre-body #tasksContainer .task-card,
+body.panel-padre-body [id*="task"] .bg-white {
+  background: #FFFFFF;
+  border-radius: 20px;
+  border: 2px solid var(--p-border);
+  box-shadow: var(--p-shadow-sm);
+  transition: transform .2s ease, box-shadow .2s ease, border-color .2s;
+  overflow: hidden;
+}
+body.panel-padre-body #tasksListContainer .task-card:hover,
+body.panel-padre-body #tasksContainer .task-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--p-shadow-md);
+  border-color: var(--p-orange);
+}
+
+/* Task badge de estado */
+body.panel-padre-body .task-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 50px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+body.panel-padre-body .task-status-active   { background: var(--p-green-lt); color: var(--p-green-h); }
+body.panel-padre-body .task-status-pending  { background: var(--p-orange-lt); color: var(--p-orange-h); }
+body.panel-padre-body .task-status-overdue  { background: var(--p-red-lt); color: #B91C1C; }
+
+/* cloud-card mejora general */
+body.panel-padre-body .cloud-card {
+  border-radius: 24px;
+  border: 1px solid var(--p-border);
+  box-shadow: var(--p-shadow-sm);
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+body.panel-padre-body .cloud-card:hover {
+  transform: translateY(-3px) rotate(0deg);
+  box-shadow: var(--p-shadow-md);
+  border-color: var(--p-blue);
+}

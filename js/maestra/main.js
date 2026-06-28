@@ -494,31 +494,31 @@ async function initDashboard() {
     if (grid) {
       grid.innerHTML = `
         <div onclick="App.showClassroomDetail('${classroom.id}')"
-             class="p-6 bg-white rounded-[2rem] border-2 border-[#E8F2FF] shadow-sm hover:shadow-xl hover:border-[#0B63C7] transition-all cursor-pointer group relative overflow-hidden">
+             class="p-6 bg-white rounded-[2rem] border-2 border-[#FF8A00] shadow-sm hover:shadow-xl hover:border-[#28B54D] transition-all cursor-pointer group relative overflow-hidden">
           <!-- Decorative splash top-right -->
-          <div class="absolute top-0 right-0 w-24 h-24 rounded-full opacity-8"
-               style="background:radial-gradient(circle,rgba(11,99,199,0.08) 0%,transparent 70%);transform:translate(30%,-30%)"></div>
+          <div class="absolute top-0 right-0 w-24 h-24 rounded-full"
+               style="background:radial-gradient(circle,rgba(40,181,77,0.08) 0%,transparent 70%);transform:translate(30%,-30%)"></div>
           <!-- Mini mascot decoration -->
           <div class="absolute bottom-3 right-3 pointer-events-none opacity-70">
             <svg width="38" height="46" viewBox="0 0 220 270">
-              <polygon points="110,18 200,205 20,205" fill="#FF7A00" stroke="#D96500" stroke-width="5"/>
+              <polygon points="110,18 200,205 20,205" fill="#FF8A00" stroke="#E07900" stroke-width="5"/>
               <circle cx="84" cy="125" r="18" fill="white"/><circle cx="136" cy="125" r="18" fill="white"/>
               <circle cx="85" cy="126" r="9" fill="#333"/><circle cx="137" cy="126" r="9" fill="#333"/>
               <path d="M 74 158 Q 110 180 146 158" stroke="#333" stroke-width="7" fill="none" stroke-linecap="round"/>
             </svg>
           </div>
           <div class="flex items-center gap-5 relative z-10">
-            <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#0B63C7] to-[#0850A0] text-white flex items-center justify-center font-black text-2xl shadow-lg shadow-blue-200">${classroom.name.charAt(0)}</div>
+            <div class="w-16 h-16 rounded-2xl bg-[#E6F7EB] text-[#28B54D] flex items-center justify-center font-black text-2xl shadow-lg shadow-green-200 border-2 border-[#28B54D]">${classroom.name.charAt(0)}</div>
             <div>
-              <h3 class="font-black text-slate-800 text-xl tracking-tight">${safeEscapeHTML(classroom.name)}</h3>
-              <p class="text-xs font-black text-[#0B63C7] uppercase tracking-widest">Aula Principal</p>
+              <h3 class="font-black text-[#28B54D] text-xl tracking-tight">${safeEscapeHTML(classroom.name)}</h3>
+              <p class="text-xs font-black text-[#28B54D] uppercase tracking-widest">Aula Principal</p>
             </div>
           </div>
           <div class="mt-8 flex justify-between items-center relative z-10">
-            <span class="text-[10px] font-black text-[#FF7A00] uppercase tracking-widest flex items-center gap-1">
+            <span class="py-2 px-5 bg-[#28B54D] text-white rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-1 shadow-sm group-hover:bg-[#239943] transition-all">
               Entrar <i data-lucide="arrow-right" class="w-4 h-4"></i>
             </span>
-            <span class="px-3 py-1 bg-[#E8F2FF] text-[#0B63C7] text-[9px] font-black rounded-full uppercase tracking-wide">
+            <span class="px-3 py-1 bg-[#E6F7EB] text-[#28B54D] text-[9px] font-black rounded-full uppercase tracking-wide border border-[#FF8A00]">
               Mi Aula
             </span>
           </div>
@@ -537,19 +537,19 @@ async function initDashboard() {
         `;
       } else {
         classGrid.innerHTML = students.map(s => `
-          <div class="p-6 bg-white rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-xl hover:border-[#0B63C7] transition-all group">
+          <div class="p-6 bg-white rounded-[2rem] border-2 border-[#FF8A00] shadow-sm hover:shadow-xl hover:border-[#28B54D] transition-all group">
             <div class="flex items-center gap-4 mb-6">
-              <div class="w-16 h-16 rounded-2xl bg-[#E8F2FF] text-[#0B63C7] flex items-center justify-center font-bold text-2xl overflow-hidden">
+              <div class="w-16 h-16 rounded-2xl bg-[#E6F7EB] text-[#28B54D] flex items-center justify-center font-bold text-2xl overflow-hidden border-2 border-[#28B54D]">
                 ${s.avatar_url ? `<img src="${s.avatar_url}" class="w-full h-full object-cover">` : s.name.charAt(0)}
               </div>
               <div class="min-w-0">
                 <div class="font-black text-slate-800 text-lg truncate">${safeEscapeHTML(s.name)}</div>
-                <div class="text-[10px] font-black uppercase tracking-widest text-[#0B63C7]">Estudiante</div>
+                <div class="text-[10px] font-black uppercase tracking-widest text-[#28B54D]">Estudiante</div>
               </div>
             </div>
             <div class="grid grid-cols-2 gap-2">
               <button onclick="App.openStudentProfile('${s.id}')"
-                      class="py-2.5 bg-[#E8F2FF] text-[#0B63C7] rounded-xl text-[10px] font-black uppercase hover:bg-[#0B63C7] hover:text-white transition-all">
+                      class="py-2.5 bg-[#28B54D] text-white rounded-xl text-[10px] font-black uppercase hover:bg-[#239943] transition-all shadow-sm">
                 Ver Perfil
               </button>
               <button onclick="App.registerIncidentModal('${s.id}')"
@@ -952,13 +952,13 @@ function initVideocall() {
       <h4 class="text-xl font-black text-slate-800 mb-2">Aula Virtual: ${classroom?.name}</h4>
       
       <div class="flex gap-4 mt-6">
-        <button onclick="App.startJitsi()" class="px-8 py-4 bg-[#FF7A00] text-white rounded-2xl font-black shadow-xl shadow-orange-100 hover:scale-105 transition-all flex items-center gap-3">
-            <i data-lucide="radio"></i> Iniciar Clase Ahora
-        </button>
-        <button onclick="App.scheduleClassMeeting()" class="px-8 py-4 bg-white border-2 border-[#FF7A00] text-[#FF7A00] rounded-2xl font-black hover:bg-[#FF7A00] transition-all flex items-center gap-3">
-            <i data-lucide="calendar-plus"></i> Programar Futura
-        </button>
-      </div>
+            <button onclick="App.startJitsi()" class="px-8 py-4 bg-[#FF7A00] text-white rounded-2xl font-black shadow-xl shadow-orange-100 hover:scale-105 transition-all flex items-center gap-3">
+              <i data-lucide="radio"></i> Iniciar Clase Ahora
+            </button>
+            <button onclick="App.scheduleClassMeeting()" class="px-8 py-4 bg-[#28B54D] text-white rounded-2xl font-black shadow-xl shadow-green-100 hover:bg-[#239943] transition-all flex items-center gap-3">
+              <i data-lucide="calendar-plus"></i> Programar Futura
+            </button>
+          </div>
     </div>
   `;
   if (window.lucide) window.lucide.createIcons();

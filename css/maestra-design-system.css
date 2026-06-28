@@ -1,0 +1,863 @@
+/* ═══════════════════════════════════════════════════════════════════
+   PANEL MAESTRA — SISTEMA DE DISEÑO SONRISAS CREATIVAS
+   Filosofía: 70% Blanco · 20% Verde · 10% Naranja
+   Verde #28B54D → sidebar, botones primarios, acciones positivas
+   Naranja #FF8A00 → CTAs, badges, notificaciones, iconos destacados
+   Blanco → tarjetas, modales, tablas, formularios (base)
+   Gris muy claro #F7F9FB → fondo general
+   Esquinas 20–24px · Sombras suaves · Cuadrícula 8px
+═══════════════════════════════════════════════════════════════════ */
+
+/* ── TOKENS ─────────────────────────────────────────────────────── */
+:root {
+  --m-green:        #28B54D;
+  --m-green-h:      #239943;
+  --m-green-lt:     #E6F7EB;
+  --m-orange:       #FF8A00;
+  --m-orange-h:     #E07900;
+  --m-orange-lt:    #FFF3E0;
+  --m-red:          #EF4444;
+  --m-red-lt:       #FEE2E2;
+  --m-white:        #FFFFFF;
+  --m-bg:           #F7F9FB;
+  --m-border:       #EEF2F4;
+  --m-text:         #1A2340;
+  --m-text-mid:     #4A5568;
+  --m-text-light:   #8A9BB0;
+  --m-shadow-card:  0 8px 20px rgba(0,0,0,.04);
+  --m-radius-card:  22px;
+  --m-radius-input: 14px;
+  --m-radius-btn:   12px;
+}
+
+/* ── FONDO GENERAL ──────────────────────────────────────────────── */
+body.panel-maestra-body {
+  background: var(--m-bg) !important;
+  color: var(--m-text);
+}
+
+/* ── SIDEBAR ─────────────────────────────────────────────────────
+   Elemento más fuerte: degradado verde puro, sin sombras exageradas
+─────────────────────────────────────────────────────────────────── */
+body.panel-maestra-body #sidebar {
+  background: linear-gradient(180deg, #28B54D 0%, #23A847 100%) !important;
+  box-shadow: 2px 0 12px rgba(40,181,77,0.14) !important;
+  border-right: none !important;
+}
+
+/* Pastillas de menú — estado normal */
+body.panel-maestra-body .nav-btn-toy {
+  background: transparent;
+  color: rgba(255,255,255,0.90);
+  border-radius: 12px;
+  padding: 11px 16px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin-bottom: 4px;
+  transition: background .18s ease, transform .18s ease;
+  border: none;
+  border-left: 3px solid transparent;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  box-shadow: none !important;
+}
+
+/* Hover: fondo blanco 12%, escala leve */
+body.panel-maestra-body .nav-btn-toy:hover {
+  background: rgba(255,255,255,0.12) !important;
+  transform: scale(1.02);
+  color: #fff !important;
+  border-left-color: transparent;
+}
+
+/* Activo: fondo blanco, texto verde, icono verde */
+body.panel-maestra-body .nav-btn-toy.active,
+body.panel-maestra-body .nav-btn-toy[aria-selected="true"] {
+  background: #FFFFFF !important;
+  color: var(--m-green) !important;
+  border-left: 3px solid var(--m-green) !important;
+  font-weight: 800;
+  transform: none !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08) !important;
+}
+body.panel-maestra-body .nav-btn-toy.active svg,
+body.panel-maestra-body .nav-btn-toy[aria-selected="true"] svg {
+  color: var(--m-green) !important;
+  stroke: var(--m-green) !important;
+}
+
+/* Badges del sidebar: naranja */
+body.panel-maestra-body .nav-btn-toy span[id^="badge-"] {
+  background: var(--m-orange) !important;
+  color: #fff !important;
+  font-size: 9px;
+  font-weight: 900;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 50px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── TARJETAS ────────────────────────────────────────────────────
+   Todas blancas, uniformes. El color va en pequeños detalles.
+   No mezclar bordes naranjas/verdes en la tarjeta misma.
+─────────────────────────────────────────────────────────────────── */
+body.panel-maestra-body .card,
+body.panel-maestra-body .toy-card {
+  background: #FFFFFF !important;
+  border-radius: var(--m-radius-card) !important;
+  border: 1px solid var(--m-border) !important;
+  box-shadow: var(--m-shadow-card) !important;
+}
+
+/* Tarjetas de aula en el grid */
+body.panel-maestra-body #classesGrid > div {
+  background: #FFFFFF !important;
+  border-radius: var(--m-radius-card) !important;
+  border: 1px solid var(--m-border) !important;
+  box-shadow: var(--m-shadow-card) !important;
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+body.panel-maestra-body #classesGrid > div:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 32px rgba(0,0,0,.08) !important;
+}
+
+/* Eliminar bordes naranjas/verdes en tarjetas genéricas */
+body.panel-maestra-body .section-orange-green,
+body.panel-maestra-body .section-green-orange {
+  border: 1px solid var(--m-border) !important;
+  border-radius: var(--m-radius-card) !important;
+  background: #fff !important;
+}
+
+/* Acentos de borde: solo en accesorios pequeños, no en la tarjeta */
+body.panel-maestra-body .card-accent-orange { border-left: 4px solid var(--m-orange) !important; }
+body.panel-maestra-body .card-accent-green  { border-left: 4px solid var(--m-green)  !important; }
+
+/* ── STAT BLOCKS ─────────────────────────────────────────────────
+   Semánticos con gradiente, sombra suave, sin borde inferior pesado
+─────────────────────────────────────────────────────────────────── */
+body.panel-maestra-body .stat-block {
+  border-radius: 20px !important;
+  padding: 24px !important;
+  box-shadow: 0 8px 20px rgba(0,0,0,.08) !important;
+  border-bottom: none !important;
+  color: #fff !important;
+}
+body.panel-maestra-body .stat-block h3,
+body.panel-maestra-body .stat-block p {
+  color: #fff !important;
+}
+body.panel-maestra-body .sb-blue {
+  background: linear-gradient(135deg, #28B54D 0%, #239943 100%) !important;
+  box-shadow: 0 8px 24px rgba(40,181,77,.22) !important;
+}
+body.panel-maestra-body .sb-green {
+  background: linear-gradient(135deg, #239943 0%, #1A8035 100%) !important;
+  box-shadow: 0 8px 24px rgba(35,153,67,.22) !important;
+}
+body.panel-maestra-body .sb-orange {
+  background: linear-gradient(135deg, #FF8A00 0%, #E07900 100%) !important;
+  box-shadow: 0 8px 24px rgba(255,138,0,.22) !important;
+}
+body.panel-maestra-body .sb-purple {
+  background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%) !important;
+  box-shadow: 0 8px 24px rgba(239,68,68,.22) !important;
+}
+
+/* ── ENCABEZADOS DE SECCIÓN ─────────────────────────────────────
+   Icono naranja · Texto negro/oscuro · Nunca título completamente verde
+─────────────────────────────────────────────────────────────────── */
+body.panel-maestra-body .section > header h1,
+body.panel-maestra-body .section header h1 {
+  color: var(--m-text) !important;
+  font-weight: 800;
+}
+/* El nombre de la maestra en naranja */
+body.panel-maestra-body .user-name-display {
+  color: var(--m-orange) !important;
+}
+/* Iconos de encabezado de sección: naranja */
+body.panel-maestra-body .section > header h1 svg,
+body.panel-maestra-body .section header h1 i {
+  color: var(--m-orange) !important;
+}
+
+/* ── BOTONES ─────────────────────────────────────────────────────
+   Primario → verde  |  Secundario → borde verde  |
+   Alerta → naranja  |  Danger → rojo
+─────────────────────────────────────────────────────────────────── */
+
+/* Primario: verde sólido */
+body.panel-maestra-body .btn-maestra,
+body.panel-maestra-body .btn-primary-maestra {
+  background: var(--m-green) !important;
+  color: #fff !important;
+  border: none !important;
+  border-radius: var(--m-radius-btn) !important;
+  font-weight: 700 !important;
+  padding: 12px 24px;
+  cursor: pointer;
+  transition: background .18s, transform .18s, box-shadow .18s !important;
+  box-shadow: 0 4px 12px rgba(40,181,77,.2) !important;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+body.panel-maestra-body .btn-maestra:hover,
+body.panel-maestra-body .btn-primary-maestra:hover {
+  background: var(--m-green-h) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 8px 20px rgba(40,181,77,.3) !important;
+}
+body.panel-maestra-body .btn-maestra:disabled {
+  background: #CBD5E0 !important;
+  box-shadow: none !important;
+  cursor: not-allowed !important;
+  transform: none !important;
+}
+
+/* Secundario: borde verde */
+.btn-secondary-maestra {
+  background: #fff;
+  color: var(--m-green);
+  border: 2px solid var(--m-green);
+  border-radius: var(--m-radius-btn);
+  font-weight: 700;
+  padding: 10px 20px;
+  cursor: pointer;
+  transition: background .18s, color .18s;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.btn-secondary-maestra:hover {
+  background: var(--m-green-lt);
+}
+
+/* Alerta: naranja */
+.btn-alert-maestra {
+  background: var(--m-orange);
+  color: #fff;
+  border: none;
+  border-radius: var(--m-radius-btn);
+  font-weight: 700;
+  padding: 10px 20px;
+  cursor: pointer;
+  transition: background .18s, transform .18s;
+  box-shadow: 0 4px 12px rgba(255,138,0,.2);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.btn-alert-maestra:hover {
+  background: var(--m-orange-h);
+  transform: translateY(-2px);
+}
+
+/* Peligro: rojo */
+.btn-danger-maestra {
+  background: #EF4444;
+  color: #fff;
+  border: none;
+  border-radius: var(--m-radius-btn);
+  font-weight: 700;
+  padding: 10px 20px;
+  cursor: pointer;
+  transition: background .18s;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.btn-danger-maestra:hover { background: #DC2626; }
+
+/* Botón de tarea (tabla): verde compacto */
+body.panel-maestra-body .btn-task-action {
+  background: var(--m-green) !important;
+  color: #fff !important;
+  border: none !important;
+  border-radius: 10px !important;
+  padding: 6px 14px !important;
+  font-size: 0.72rem !important;
+  font-weight: 800 !important;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  cursor: pointer;
+  box-shadow: 0 3px 8px rgba(40,181,77,.18) !important;
+  transition: background .18s, transform .18s !important;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+body.panel-maestra-body .btn-task-action:hover {
+  background: var(--m-green-h) !important;
+  transform: translateY(-1px) !important;
+}
+
+/* ── Override: limpiar botones con bordes dobles verde+naranja ── */
+body.panel-maestra-body button.border-2.border-\[#FF7A00\],
+body.panel-maestra-body button.border-2.border-\[#28B54D\] {
+  border: none !important;
+}
+
+/* ── TABS DE AULA ─────────────────────────────────────────────── */
+body.panel-maestra-body .class-tab-btn {
+  border-radius: 12px !important;
+  font-weight: 700 !important;
+  font-size: 0.72rem !important;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  padding: 10px 16px !important;
+  border: none !important;
+  background: transparent !important;
+  color: var(--m-text-mid) !important;
+  transition: background .15s, color .15s;
+  cursor: pointer;
+}
+body.panel-maestra-body .class-tab-btn:hover {
+  background: var(--m-green-lt) !important;
+  color: var(--m-green) !important;
+}
+body.panel-maestra-body .class-tab-btn.active {
+  background: var(--m-green) !important;
+  color: #fff !important;
+  border: none !important;
+  box-shadow: 0 4px 12px rgba(40,181,77,.2) !important;
+}
+
+/* ── TABLAS ──────────────────────────────────────────────────────
+   Cabecera verde muy claro, hover suave, separadores finos
+─────────────────────────────────────────────────────────────────── */
+body.panel-maestra-body table thead tr {
+  background: #F6FAF7 !important;
+}
+body.panel-maestra-body table thead th {
+  color: var(--m-text-mid) !important;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--m-border);
+  background: transparent;
+}
+body.panel-maestra-body table tbody tr {
+  border-bottom: 1px solid var(--m-border) !important;
+  transition: background .12s;
+}
+body.panel-maestra-body table tbody tr:hover {
+  background: #F9FCFA !important;
+}
+body.panel-maestra-body table tbody td {
+  padding: 12px 16px;
+  vertical-align: middle;
+  color: var(--m-text);
+  font-size: 0.875rem;
+}
+
+/* ── BADGES DE ESTADO ────────────────────────────────────────────
+   Nunca texto plano; siempre píldoras con color semántico
+─────────────────────────────────────────────────────────────────── */
+.badge-activa {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 12px; border-radius: 50px;
+  background: var(--m-green-lt); color: var(--m-green-h);
+  font-size: 0.72rem; font-weight: 800;
+}
+.badge-pendiente {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 12px; border-radius: 50px;
+  background: var(--m-orange-lt); color: var(--m-orange-h);
+  font-size: 0.72rem; font-weight: 800;
+}
+.badge-vencida {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 12px; border-radius: 50px;
+  background: #FEE2E2; color: #B91C1C;
+  font-size: 0.72rem; font-weight: 800;
+}
+.badge-revisando {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 12px; border-radius: 50px;
+  background: #EFF6FF; color: #1D4ED8;
+  font-size: 0.72rem; font-weight: 800;
+}
+/* Badge genérico naranja (notificaciones, acciones) */
+.badge-maestra {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 12px; border-radius: 50px;
+  background: var(--m-orange-lt); color: var(--m-orange-h);
+  font-size: 0.72rem; font-weight: 800;
+}
+
+/* ── MODALES ─────────────────────────────────────────────────────
+   Premium: card blanca, cabecera blanca + círculo naranja,
+   un solo botón primario verde, sin fondos verdes en header
+─────────────────────────────────────────────────────────────────── */
+body.panel-maestra-body #modalBackdrop {
+  background: rgba(0,0,0,0.38) !important;
+  backdrop-filter: blur(6px) !important;
+  padding: 3vh 16px 24px !important;
+  align-items: flex-start !important;
+}
+
+body.panel-maestra-body .modal-card {
+  background: #fff !important;
+  border-radius: 24px !important;
+  box-shadow: 0 24px 64px rgba(0,0,0,.14) !important;
+  overflow: hidden !important;
+  max-width: 560px !important;
+}
+body.panel-maestra-body .modal-card-lg { max-width: 860px !important; }
+
+/* Cabecera del modal: blanca, icono en círculo naranja */
+body.panel-maestra-body .modal-header-pink {
+  background: #fff !important;
+  border-bottom: 1px solid var(--m-border) !important;
+  padding: 20px 24px !important;
+}
+body.panel-maestra-body .modal-header-pink h3 {
+  color: var(--m-text) !important;
+  font-weight: 800 !important;
+  font-size: 1rem !important;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+body.panel-maestra-body .modal-header-pink h3 .modal-icon-wrap {
+  width: 36px; height: 36px;
+  background: var(--m-orange-lt) !important;
+  color: var(--m-orange) !important;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+body.panel-maestra-body .modal-header-pink .modal-close {
+  background: var(--m-bg) !important;
+  border: 1px solid var(--m-border) !important;
+  color: var(--m-text-mid) !important;
+  border-radius: 10px !important;
+  width: 32px; height: 32px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  transition: background .15s;
+}
+body.panel-maestra-body .modal-header-pink .modal-close:hover {
+  background: var(--m-border) !important;
+}
+
+/* Cuerpo del modal */
+body.panel-maestra-body .modal-body-scroll {
+  padding: 24px !important;
+  overflow-y: auto;
+}
+
+/* Footer del modal: gris muy claro, un solo botón verde */
+body.panel-maestra-body .modal-footer-pink {
+  background: var(--m-bg) !important;
+  border-top: 1px solid var(--m-border) !important;
+  padding: 16px 24px !important;
+}
+
+/* ── FORMULARIOS / INPUTS ────────────────────────────────────────
+   height 50px, borde sutil #DDE4E8, focus verde
+─────────────────────────────────────────────────────────────────── */
+body.panel-maestra-body input[type="text"],
+body.panel-maestra-body input[type="date"],
+body.panel-maestra-body input[type="email"],
+body.panel-maestra-body input[type="tel"],
+body.panel-maestra-body input[type="number"],
+body.panel-maestra-body input[type="password"],
+body.panel-maestra-body textarea,
+body.panel-maestra-body select,
+body.panel-maestra-body .modal-input {
+  min-height: 50px;
+  border: 1px solid #DDE4E8 !important;
+  border-radius: var(--m-radius-input) !important;
+  padding: 12px 16px !important;
+  background: #fff !important;
+  color: var(--m-text) !important;
+  font-size: 0.9rem;
+  font-weight: 600;
+  outline: none !important;
+  transition: border-color .18s, box-shadow .18s;
+  width: 100%;
+  box-shadow: none !important;
+}
+body.panel-maestra-body input:focus,
+body.panel-maestra-body textarea:focus,
+body.panel-maestra-body select:focus,
+body.panel-maestra-body .modal-input:focus {
+  border-color: var(--m-green) !important;
+  box-shadow: 0 0 0 4px rgba(40,181,77,.12) !important;
+  background: #fff !important;
+}
+/* Readonly: tono gris, sin focus */
+body.panel-maestra-body input[readonly] {
+  background: var(--m-bg) !important;
+  color: var(--m-text-light) !important;
+  cursor: not-allowed;
+}
+body.panel-maestra-body input[readonly]:focus {
+  border-color: #DDE4E8 !important;
+  box-shadow: none !important;
+}
+
+/* ── ICONOS POR CONTEXTO ─────────────────────────────────────────
+   Verde = acciones · Naranja = información/alerta · Gris = decoración
+─────────────────────────────────────────────────────────────────── */
+.icon-action { color: var(--m-green)      !important; }
+.icon-info   { color: var(--m-orange)     !important; }
+.icon-decor  { color: var(--m-text-light) !important; }
+
+/* ── WIDGETS DEL DASHBOARD ──────────────────────────────────────
+   Blancas con borde sutil, widgets de alerta con tono propio
+─────────────────────────────────────────────────────────────────── */
+body.panel-maestra-body #nextActivityWidget {
+  background: #fff !important;
+  border: 2px solid var(--m-orange) !important;
+  border-radius: var(--m-radius-card) !important;
+  box-shadow: var(--m-shadow-card) !important;
+}
+body.panel-maestra-body #punchAlertWidget {
+  background: var(--m-orange-lt) !important;
+  border: 1px solid rgba(255,138,0,.25) !important;
+  border-radius: var(--m-radius-card) !important;
+}
+body.panel-maestra-body #tasksToGradeWidget {
+  background: var(--m-green-lt) !important;
+  border: 1px solid rgba(40,181,77,.25) !important;
+  border-radius: var(--m-radius-card) !important;
+}
+
+/* ── CHAT ────────────────────────────────────────────────────────
+   Input focus verde, botón enviar naranja
+─────────────────────────────────────────────────────────────────── */
+body.panel-maestra-body #chatMessageInput:focus {
+  box-shadow: 0 0 0 3px rgba(40,181,77,.15) !important;
+  border-color: var(--m-green) !important;
+}
+body.panel-maestra-body #btnSendChatMessage {
+  background: var(--m-orange) !important;
+  border-radius: 14px !important;
+  box-shadow: 0 4px 12px rgba(255,138,0,.2) !important;
+}
+body.panel-maestra-body #btnSendChatMessage:hover {
+  background: var(--m-orange-h) !important;
+}
+
+/* ── PERFIL DOCENTE ──────────────────────────────────────────────
+   Banner verde, iconos naranja en subtítulos
+─────────────────────────────────────────────────────────────────── */
+body.panel-maestra-body #t-profile .bg-\[#28B54D\] {
+  background: var(--m-green) !important;
+  border-radius: 22px 22px 0 0;
+}
+body.panel-maestra-body #t-profile h3 svg,
+body.panel-maestra-body #t-profile h3 i {
+  color: var(--m-orange) !important;
+}
+
+/* ── SEPARADORES ─────────────────────────────────────────────────
+   Solo bordes finos, nada más
+─────────────────────────────────────────────────────────────────── */
+body.panel-maestra-body hr {
+  border-color: var(--m-border) !important;
+}
+body.panel-maestra-body .divide-y > * + * {
+  border-top-color: var(--m-border) !important;
+}
+
+/* ── ESPACIADO — cuadrícula de 8px ──────────────────────────────
+   Utilidades para mantener consistencia
+─────────────────────────────────────────────────────────────────── */
+.gap-8px  { gap: 8px;  }
+.gap-16px { gap: 16px; }
+.gap-24px { gap: 24px; }
+.gap-32px { gap: 32px; }
+
+/* ── SCROLLBAR mínimo ────────────────────────────────────────── */
+body.panel-maestra-body ::-webkit-scrollbar { width: 4px; height: 4px; }
+body.panel-maestra-body ::-webkit-scrollbar-track { background: transparent; }
+body.panel-maestra-body ::-webkit-scrollbar-thumb {
+  background: #DDE4E8;
+  border-radius: 4px;
+}
+
+/* ── ANIMACIÓN fadeIn de secciones ──────────────────────────── */
+body.panel-maestra-body .section.active {
+  animation: m-fadeIn 0.3s ease-out both;
+}
+@keyframes m-fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── PANTALLAS VACÍAS (empty states) ────────────────────────────
+   Los personajes solo en estas tres zonas
+─────────────────────────────────────────────────────────────────── */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 48px 24px;
+  text-align: center;
+  color: var(--m-text-light);
+}
+.empty-state .empty-icon {
+  width: 56px; height: 56px;
+  color: var(--m-text-light);
+  opacity: .5;
+}
+.empty-state p {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--m-text-mid);
+}
+
+/* ── btn-maestra standalone (para uso directo en HTML) ──────────── */
+.btn-maestra {
+  padding: 12px 24px;
+  border-radius: var(--m-radius-btn);
+  border: none;
+  background: var(--m-green);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 14px rgba(40,181,77,.2);
+  transition: background .18s, transform .18s, box-shadow .18s;
+}
+.btn-maestra:hover {
+  background: var(--m-green-h);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 22px rgba(40,181,77,.3);
+}
+.btn-maestra:active { transform: translateY(0); }
+.btn-maestra:disabled {
+  background: #CBD5E0;
+  box-shadow: none;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* btn-secondary-maestra standalone */
+.btn-secondary-maestra {
+  padding: 10px 20px;
+  border-radius: var(--m-radius-btn);
+  border: 2px solid var(--m-green);
+  background: #fff;
+  color: var(--m-green);
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: background .18s, color .18s;
+}
+.btn-secondary-maestra:hover { background: var(--m-green-lt); }
+
+/* btn-alert-maestra standalone */
+.btn-alert-maestra {
+  padding: 10px 20px;
+  border-radius: var(--m-radius-btn);
+  border: none;
+  background: var(--m-orange);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 12px rgba(255,138,0,.2);
+  transition: background .18s, transform .18s;
+}
+.btn-alert-maestra:hover {
+  background: var(--m-orange-h);
+  transform: translateY(-2px);
+}
+
+/* Drop zone */
+.drop-zone {
+  background: var(--m-green-lt);
+  padding: 16px;
+  border-radius: 14px;
+  border: 2px dashed var(--m-green);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: all .2s;
+}
+.drop-zone:hover {
+  border-color: var(--m-green-h);
+}
+
+/* ── TARJETAS DE AULA (classesGrid) — borde naranja, texto verde ─── */
+body.panel-maestra-body #classesGrid > div {
+  border: 2px solid var(--m-orange) !important;
+}
+body.panel-maestra-body #classesGrid > div:hover {
+  border-color: var(--m-green) !important;
+  box-shadow: 0 16px 32px rgba(40,181,77,.12) !important;
+}
+/* Nombre del aula y nivel: texto verde */
+body.panel-maestra-body #classesGrid .classroom-name,
+body.panel-maestra-body #classesGrid h3,
+body.panel-maestra-body #classesGrid h4,
+body.panel-maestra-body #classesGrid .classroom-level {
+  color: var(--m-green) !important;
+}
+
+/* ── TABS DE AULA — borde verde medio-grueso ─────────────────────── */
+body.panel-maestra-body .class-tab-btn {
+  border: 2px solid var(--m-green) !important;
+  margin-right: 4px;
+}
+body.panel-maestra-body .class-tab-btn.active {
+  background: var(--m-green) !important;
+  color: #fff !important;
+  border-color: var(--m-green) !important;
+}
+body.panel-maestra-body .class-tab-btn:not(.active):hover {
+  background: var(--m-green-lt) !important;
+  color: var(--m-green) !important;
+  border-color: var(--m-green) !important;
+}
+
+/* ── MODALES MAESTRA — header verde, footer con botón naranja ─────── */
+/* Cualquier modal generado por Modal.open() o el modalBackdrop */
+body.panel-maestra-body [id$="-inner"] > div > div:first-child,
+body.panel-maestra-body .modal-header-pink {
+  background: var(--m-green) !important;
+  color: #fff !important;
+  border-bottom: none !important;
+}
+body.panel-maestra-body .modal-header-pink h3,
+body.panel-maestra-body [id$="-inner"] > div > div:first-child h3,
+body.panel-maestra-body [id$="-inner"] > div > div:first-child p {
+  color: #fff !important;
+}
+body.panel-maestra-body .modal-header-pink .modal-icon-wrap {
+  background: rgba(255,255,255,0.2) !important;
+  color: #fff !important;
+}
+body.panel-maestra-body .modal-header-pink .modal-close {
+  background: rgba(255,255,255,0.18) !important;
+  border-color: rgba(255,255,255,0.3) !important;
+  color: #fff !important;
+}
+body.panel-maestra-body .modal-header-pink .modal-close:hover {
+  background: rgba(255,255,255,0.3) !important;
+}
+/* Botón guardar/primario en modales: naranja */
+body.panel-maestra-body .modal-footer-pink .btn-maestra,
+body.panel-maestra-body [id$="-inner"] button[id^="btnSave"],
+body.panel-maestra-body [id$="-inner"] button#btnSaveTask,
+body.panel-maestra-body [id$="-inner"] button#btnSaveModalRoutine,
+body.panel-maestra-body [id$="-inner"] button#btnBulkSave,
+body.panel-maestra-body [id$="-inner"] button#btnSaveInfant {
+  background: var(--m-orange) !important;
+  box-shadow: 0 4px 14px rgba(255,138,0,.25) !important;
+  border: none !important;
+  color: #fff !important;
+}
+body.panel-maestra-body .modal-footer-pink .btn-maestra:hover,
+body.panel-maestra-body [id$="-inner"] button[id^="btnSave"]:hover,
+body.panel-maestra-body [id$="-inner"] button#btnSaveTask:hover,
+body.panel-maestra-body [id$="-inner"] button#btnSaveModalRoutine:hover,
+body.panel-maestra-body [id$="-inner"] button#btnBulkSave:hover,
+body.panel-maestra-body [id$="-inner"] button#btnSaveInfant:hover {
+  background: var(--m-orange-h) !important;
+}
+
+/* ── BOTÓN NUEVA TAREA — verde sólido ────────────────────────────── */
+body.panel-maestra-body .btn-green-orange,
+body.panel-maestra-body button.btn-green-orange {
+  background: var(--m-green) !important;
+  color: #fff !important;
+  border: none !important;
+  box-shadow: 0 4px 14px rgba(40,181,77,.22) !important;
+}
+body.panel-maestra-body .btn-green-orange:hover,
+body.panel-maestra-body button.btn-green-orange:hover {
+  background: var(--m-green-h) !important;
+  transform: translateY(-2px);
+}
+
+/* ── WIDGETS DEL DASHBOARD — override inline ─────────────────────── */
+body.panel-maestra-body #nextActivityWidget h4 {
+  color: var(--m-green) !important;
+}
+
+/* ── TODOS LOS CONTENEDORES — borde naranja permanente ──────────────
+   Tarjetas blancas con borde naranja sin necesidad de hover
+──────────────────────────────────────────────────────────── */
+body.panel-maestra-body .bg-white.rounded-\[2\.5rem\],
+body.panel-maestra-body .bg-white.rounded-\[2rem\],
+body.panel-maestra-body .bg-white.rounded-3xl,
+body.panel-maestra-body .bg-white.rounded-2xl,
+body.panel-maestra-body .patio-card,
+body.panel-maestra-body .toy-card {
+  border: 2px solid var(--m-orange) !important;
+}
+
+/* Excepción: inputs, botones, badges, headers y elementos que no son tarjetas */
+body.panel-maestra-body input.bg-white,
+body.panel-maestra-body textarea.bg-white,
+body.panel-maestra-body select.bg-white,
+body.panel-maestra-body button.bg-white,
+body.panel-maestra-body .modal-header-pink.bg-white,
+body.panel-maestra-body nav.bg-white,
+body.panel-maestra-body header.bg-white {
+  border: 1px solid #DDE4E8 !important;
+}
+
+/* Publicaciones del muro — borde naranja */
+body.panel-maestra-body #muroPostsContainer > div,
+body.panel-maestra-body [id^="post-"] {
+  border: 2px solid var(--m-orange) !important;
+}
+body.panel-maestra-body #muroPostsContainer > div:hover,
+body.panel-maestra-body [id^="post-"]:hover {
+  border-color: var(--m-green) !important;
+  box-shadow: 0 8px 24px rgba(40,181,77,.1) !important;
+}
+
+/* Sección Alumnos — tarjetas con borde naranja fijo (sin hover requerido) */
+body.panel-maestra-body #classroomStudentsGrid > div {
+  border: 2px solid var(--m-orange) !important;
+}
+body.panel-maestra-body #classroomStudentsGrid > div:hover {
+  border-color: var(--m-green) !important;
+}
+
+/* Texto verde en contenidos principales de tarjetas */
+body.panel-maestra-body .section h3.font-black,
+body.panel-maestra-body .section h4.font-black {
+  color: var(--m-green) !important;
+}
+/* Excepción: títulos dentro de botones y headers no se colorean */
+body.panel-maestra-body button h3,
+body.panel-maestra-body button h4,
+body.panel-maestra-body .modal-header-pink h3 { color: inherit !important; }
+
+/* Stat blocks — sin borde naranja (tienen gradiente propio) */
+body.panel-maestra-body .stat-block {
+  border: none !important;
+}
