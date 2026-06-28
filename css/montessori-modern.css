@@ -558,17 +558,11 @@ a > svg[data-lucide] {
   body:not(.panel-padre-body) aside#sidebar {
     width: 288px;
   }
-  .panel-asistente-body aside#sidebar { width: 280px !important; }
+  .panel-asistente-body aside#sidebar { width: 280px; }
 }
 
 /* ── Sidebar collapsed state ─────────────────────────────── */
 @media (min-width: 768px) {
-  body:not(.panel-padre-body) aside#sidebar.collapsed {
-    width: 80px !important;
-  }
-  .panel-asistente-body aside#sidebar.collapsed {
-    width: 90px !important;
-  }
   aside#sidebar.collapsed .kk-sidebar-logo-text,
   aside#sidebar.collapsed .kk-sidebar-profile-info,
   aside#sidebar.collapsed .kk-nav-section,

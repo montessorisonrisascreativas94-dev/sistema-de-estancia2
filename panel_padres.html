@@ -270,46 +270,11 @@
         position: sticky;
         top: 0;
         height: 100dvh;
-        width: 288px;
         transform: translateX(0) !important;
         flex-shrink: 0;
-        transition: width 0.25s ease;
       }
       #sidebarOverlay, #menuToggleBtn {
         display: none !important;
-      }
-      /* ── Colapso desktop ── */
-      #sidebar.collapsed {
-        width: 80px !important;
-      }
-      #sidebar.collapsed .sidebar-label,
-      #sidebar.collapsed .sidebar-item span,
-      #sidebar.collapsed .submenu-item span,
-      #sidebar.collapsed .sidebar-category-group .submenu,
-      #sidebar.collapsed #sidebarStudentName,
-      #sidebar.collapsed #sidebarClassroomName,
-      #sidebar.collapsed #siblingsChipsDesktop,
-      #sidebar.collapsed h1,
-      #sidebar.collapsed p {
-        display: none !important;
-      }
-      #sidebar.collapsed .sidebar-item {
-        justify-content: center;
-        padding-left: 0;
-        padding-right: 0;
-      }
-      #sidebar.collapsed #btnLogoutDesktop span {
-        display: none !important;
-      }
-      #sidebar.collapsed #btnLogoutDesktop {
-        justify-content: center;
-        padding: 12px;
-      }
-      #sidebar.collapsed #toggleSidebarPadre i {
-        transform: rotate(180deg);
-      }
-      #layoutShell {
-        transition: margin-left 0.25s ease;
       }
     }
   </style>
@@ -362,10 +327,6 @@
       
       <!-- Logo y Branding -->
       <div class="pt-10 pb-5 px-5 flex items-center gap-4 border-b border-white/10 relative">
-        <!-- Botón toggle desktop -->
-        <button id="toggleSidebarPadre" class="absolute -right-3 top-8 bg-white rounded-full p-1.5 shadow-lg border border-slate-100 text-slate-500 hover:text-[#0B63C7] hidden md:flex items-center justify-center z-10 transition-all hover:scale-110" aria-label="Colapsar menú">
-          <i data-lucide="chevron-left" id="toggleSidebarPadreIcon" class="w-3.5 h-3.5 transition-transform duration-300"></i>
-        </button>
         <div class="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center shrink-0">
           <img id="sidebarAvatar" src="img/monte.jpg" class="w-9 h-9 object-contain rounded-xl" alt="Logo Sonrisas Creativas" loading="eager" decoding="async">
         </div>

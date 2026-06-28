@@ -691,28 +691,6 @@ function setupNavigation() {
   if (closeSidebarBtn) closeSidebarBtn.addEventListener('click', closeSidebar);
   if (overlay) overlay.addEventListener('click', closeSidebar);
 
-  // ── Toggle colapso desktop ──────────────────────────────────────────────
-  const togglePadre = document.getElementById('toggleSidebarPadre');
-  if (togglePadre && sidebar) {
-    togglePadre.addEventListener('click', () => {
-      if (window.innerWidth < 768) return;
-      const isCollapsed = sidebar.classList.toggle('collapsed');
-      try { localStorage.setItem('sidebarCollapsed', isCollapsed); } catch(e) {}
-    });
-    // Restaurar estado guardado
-    if (window.innerWidth >= 768) {
-      const saved = localStorage.getItem('sidebarCollapsed') === 'true';
-      if (saved) sidebar.classList.add('collapsed');
-    }
-  }
-
-  // Reiniciar en resize
-  window.addEventListener('resize', () => {
-    if (window.innerWidth < 768) {
-      sidebar?.classList.remove('collapsed');
-    }
-  }, { passive: true });
-
   // Category dropdowns
   document.querySelectorAll('.sidebar-category').forEach(categoryBtn => {
     categoryBtn.addEventListener('click', () => {

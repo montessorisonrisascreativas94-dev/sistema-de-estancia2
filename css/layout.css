@@ -34,13 +34,10 @@ html, body {
 
 /* Desktop: compensar sidebar fijo */
 @media (min-width: 768px) {
-  .app-content-wrapper          { margin-left: 288px; height: 100dvh; overflow: hidden; transition: margin-left 0.25s ease; }
+  .app-content-wrapper          { margin-left: 288px; height: 100dvh; overflow: hidden; }
   .panel-asistente-body
-    .app-content-wrapper         { margin-left: 280px !important; }
-  /* Estado colapsado por panel */
-  .panel-asistente-body
-    .app-content-wrapper.sidebar-collapsed { margin-left: 90px !important; }
-  .app-content-wrapper.sidebar-collapsed   { margin-left: 80px; }
+    .app-content-wrapper         { margin-left: 280px; }
+  .app-content-wrapper.sidebar-collapsed { margin-left: 90px; }
 }
 
 /* Móvil: sin margin, sin overflow hidden */

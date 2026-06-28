@@ -340,42 +340,37 @@
         overflow: hidden;
         transition: margin-left 0.25s ease;
       }
-      /* ── Sidebar: transición de ancho ── */
-      aside#sidebar {
-        transition: width 0.25s ease;
-      }
-      /* ── Estado colapsado: sidebar ── */
-      aside#sidebar.collapsed {
-        width: 80px !important;
-      }
       .app-content-wrapper.sidebar-collapsed {
         margin-left: 80px;
       }
-      aside#sidebar.collapsed .label,
-      aside#sidebar.collapsed .kk-nav-section,
-      aside#sidebar.collapsed .kk-sidebar-logo-text,
-      aside#sidebar.collapsed .kk-sidebar-profile-info,
-      aside#sidebar.collapsed .kk-sidebar-profile-name,
-      aside#sidebar.collapsed .sub {
+      .app-content-wrapper.sidebar-collapsed aside#sidebar {
+        width: 80px;
+      }
+      .app-content-wrapper.sidebar-collapsed aside#sidebar .label,
+      .app-content-wrapper.sidebar-collapsed aside#sidebar .kk-nav-section,
+      .app-content-wrapper.sidebar-collapsed aside#sidebar .kk-sidebar-logo-text,
+      .app-content-wrapper.sidebar-collapsed aside#sidebar .kk-sidebar-profile-info,
+      .app-content-wrapper.sidebar-collapsed aside#sidebar .kk-sidebar-profile-name,
+      .app-content-wrapper.sidebar-collapsed aside#sidebar .sub {
         display: none;
       }
-      aside#sidebar.collapsed .kk-sidebar-logo,
-      aside#sidebar.collapsed .kk-sidebar-profile {
+      .app-content-wrapper.sidebar-collapsed aside#sidebar .kk-sidebar-logo,
+      .app-content-wrapper.sidebar-collapsed aside#sidebar .kk-sidebar-profile {
         justify-content: center;
         padding-left: 0;
         padding-right: 0;
       }
-      aside#sidebar.collapsed .kk-nav-item {
+      .app-content-wrapper.sidebar-collapsed aside#sidebar .kk-nav-item {
         justify-content: center;
         padding-left: 0;
         padding-right: 0;
       }
-      aside#sidebar.collapsed .kk-logout-btn {
+      .app-content-wrapper.sidebar-collapsed aside#sidebar .kk-logout-btn {
         justify-content: center;
         padding-left: 0;
         padding-right: 0;
       }
-      aside#sidebar.collapsed #toggleSidebarIcon {
+      .app-content-wrapper.sidebar-collapsed #toggleSidebarIcon {
         transform: rotate(180deg);
       }
     }

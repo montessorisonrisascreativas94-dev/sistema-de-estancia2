@@ -75,7 +75,6 @@
     @media (min-width: 769px) {
       #layoutShell { margin-left: 280px; }
       #layoutShell.sidebar-collapsed { margin-left: 80px !important; }
-      aside#sidebar { transition: width 0.25s ease; }
       aside#sidebar.collapsed:hover { width: 280px; z-index: 60; }
       aside#sidebar.collapsed:hover .label { opacity: 1; visibility: visible; position: static; width: auto; height: auto; }
     }
@@ -556,7 +555,7 @@
     </aside>
 
     <!-- OVERLAY MOBILE -->
-    <div id="sidebarOverlay" class="fixed inset-0 bg-black/50 z-40 backdrop-blur-sm transition-opacity" style="display:none;opacity:0;"></div>
+    <div id="sidebarOverlay" class="fixed inset-0 bg-black/50 z-40 backdrop-blur-sm transition-opacity"></div>
 
     <!-- Hamburger — FIXED so it never scrolls away on mobile -->
     <button
@@ -1172,6 +1171,9 @@
       const sidebar = document.getElementById('sidebar');
       const overlay = document.getElementById('sidebarOverlay');
       const mobileBtns = document.querySelectorAll('.menu-btn-mobile');
+      const toggleDesktop = document.getElementById('toggleSidebar');
+      const layoutShell = document.getElementById('layoutShell');
+      const sidebarIcon = document.getElementById('toggleSidebarIcon');
 
       // Abrir/Cerrar en Móvil
       const toggleMobile = () => {
@@ -1191,6 +1193,20 @@
           }
         });
       });
+
+      // Colapso en Desktop
+      if (toggleDesktop) {
+        toggleDesktop.addEventListener('click', () => {
+          sidebar.classList.toggle('collapsed');
+          layoutShell.classList.toggle('sidebar-collapsed');
+          
+          if (sidebarIcon) { // Asegúrate de que estas llaves existan
+            const isCollapsed = sidebar.classList.contains('collapsed');
+            sidebarIcon.setAttribute('data-lucide', isCollapsed ? 'chevron-right' : 'chevron-left');
+            if (window.lucide) lucide.createIcons();
+          }
+        });
+      }
     });
   </script>
 </body>
