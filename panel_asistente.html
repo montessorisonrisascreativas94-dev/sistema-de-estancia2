@@ -39,27 +39,20 @@
     
     /* ── Sidebar desktop: ancho y colapso ── */
     @media (min-width: 768px) {
-      aside#sidebar { width: 280px; }
-      aside#sidebar.collapsed { width: 90px; }
-      aside#sidebar.collapsed:hover { width: 280px; box-shadow: 10px 0 30px rgba(0,0,0,0.15); }
+      aside#sidebar { width: 280px !important; transition: width 0.25s ease; }
+      aside#sidebar.collapsed { width: 90px !important; }
 
-      .app-content-wrapper.sidebar-collapsed { margin-left: 90px; }
-      aside#sidebar.collapsed:hover ~ .app-content-wrapper { margin-left: 280px !important; }
+      .app-content-wrapper { margin-left: 280px; transition: margin-left 0.25s ease; }
+      .app-content-wrapper.sidebar-collapsed { margin-left: 90px !important; }
 
       /* Ocultar texto al colapsar */
       aside#sidebar.collapsed .label,
       aside#sidebar.collapsed .montessori-inline,
       aside#sidebar.collapsed #sidebarUserName { opacity: 0; pointer-events: none; display: none; }
 
-      aside#sidebar.collapsed:hover .label,
-      aside#sidebar.collapsed:hover .montessori-inline,
-      aside#sidebar.collapsed:hover #sidebarUserName { display: block; opacity: 1; }
-
       /* Iconos */
       aside#sidebar.collapsed .kk-nav-item [data-lucide] { width: 26px; height: 26px; }
-      aside#sidebar.collapsed:hover .kk-nav-item [data-lucide] { width: 20px; height: 20px; }
       aside#sidebar.collapsed .kk-nav-item { justify-content: center; padding-left: 0; padding-right: 0; }
-      aside#sidebar.collapsed:hover .kk-nav-item { justify-content: flex-start; padding-left: 12px; padding-right: 12px; }
       
       /* Botón toggle */
       #toggleSidebar i { transition: transform 0.3s; }

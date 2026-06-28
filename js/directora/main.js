@@ -396,49 +396,43 @@ document.addEventListener('DOMContentLoaded', async () => {
     const applyDesktopSidebarState = (collapsed) => {
       if (!sidebar || !wrapper) return;
       if (window.innerWidth < 768) {
+        sidebar.classList.remove('collapsed');
         wrapper.classList.remove('sidebar-collapsed');
-        sidebar.classList.remove('sidebar-collapsed');
         return;
       }
+      sidebar.classList.toggle('collapsed', collapsed);
       wrapper.classList.toggle('sidebar-collapsed', collapsed);
-      sidebar.classList.toggle('sidebar-collapsed', collapsed);
       if (toggleIcon) {
         toggleIcon.style.transform = collapsed ? 'rotate(180deg)' : 'rotate(0deg)';
       }
       if (toggleBtn) {
         toggleBtn.setAttribute('aria-expanded', String(!collapsed));
       }
-      document.body.dataset.sidebarCollapsed = collapsed ? 'true' : 'false';
+      try { localStorage.setItem('sidebarCollapsed', collapsed); } catch(e) {}
     };
 
     toggleBtn?.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
       if (window.innerWidth < 768) return;
-      const isCollapsed = wrapper?.classList.contains('sidebar-collapsed');
+      const isCollapsed = sidebar?.classList.contains('collapsed');
       applyDesktopSidebarState(!isCollapsed);
     });
 
-    if (sidebar) {
-      sidebar.addEventListener('mouseenter', () => {
-        if (window.innerWidth >= 768) applyDesktopSidebarState(false);
-      });
-      sidebar.addEventListener('mouseleave', () => {
-        if (window.innerWidth >= 768) applyDesktopSidebarState(true);
-      });
-    }
-
     window.addEventListener('resize', () => {
       if (window.innerWidth < 768) {
+        sidebar?.classList.remove('collapsed');
         wrapper?.classList.remove('sidebar-collapsed');
-        sidebar?.classList.remove('sidebar-collapsed');
         if (toggleIcon) toggleIcon.style.transform = 'rotate(0deg)';
       } else {
-        applyDesktopSidebarState(document.body.dataset.sidebarCollapsed === 'true');
+        const saved = localStorage.getItem('sidebarCollapsed') === 'true';
+        applyDesktopSidebarState(saved);
       }
     });
 
-    applyDesktopSidebarState(false);
+    // Restaurar estado guardado
+    const savedCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+    applyDesktopSidebarState(savedCollapsed);
 
     // Remove any previous listener to avoid duplicates
     const newMenuBtn = menuBtn?.cloneNode(true);

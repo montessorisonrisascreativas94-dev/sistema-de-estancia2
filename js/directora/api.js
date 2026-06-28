@@ -1,4 +1,4 @@
-﻿import { supabase } from '../shared/supabase.js';
+import { supabase, sendEmail } from '../shared/supabase.js';
 import { QueryCache } from '../shared/query-cache.js';
 import { safeHandle } from '../shared/db-utils.js';
 
@@ -14,8 +14,8 @@ const TABLES = {
   REPORT_CARDS: 'report_cards'
 };
 
-// Local timeout helper â€” accepts a promise OR a function returning a promise
-const withTimeout = (promiseOrFn, ms = 10000) => {
+// Local timeout helper — accepts a promise OR a function returning a promise
+const withTimeout = (promiseOrFn, ms = 30000) => { // Increased timeout from 10s to 30s
   const p = typeof promiseOrFn === 'function' ? promiseOrFn() : promiseOrFn;
   const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), ms));
   return Promise.race([p, timeout]);
@@ -209,29 +209,25 @@ export const DirectorApi = {
       const now   = new Date();
       const year  = filterYear  ? String(filterYear)  : String(now.getFullYear());
       const month = filterMonth ? String(filterMonth).padStart(2, '0') : String(now.getMonth() + 1).padStart(2, '0');
-      const monthKey   = `${year}-${month}`;
-      const rangeStart = `${year}-${month}-01`;
-      // Calculate real last day of month â€” avoids invalid dates like 04-31
-      const lastDay    = new Date(parseInt(year), parseInt(month), 0).getDate();
-      const rangeEnd   = `${year}-${month}-${String(lastDay).padStart(2, '0')}`;
+      const monthKey = `${year}-${month}`;
 
-      // Helper: count payments by status for this month (handles both YYYY-MM and Spanish formats)
+      // Helper: count payments by status using only month_paid (YYYY-MM format)
       const countByStatus = async (status) => {
-        const [r1, r2] = await Promise.all([
-          supabase.from('payments').select('id', { count: 'exact', head: true }).eq('status', status).eq('month_paid', monthKey),
-          supabase.from('payments').select('id', { count: 'exact', head: true }).eq('status', status).gte('created_at', rangeStart).lte('created_at', rangeEnd + 'T23:59:59')
-        ]);
-        return Math.max(r1.count || 0, r2.count || 0);
+        const { count, error } = await supabase
+          .from('payments')
+          .select('id', { count: 'exact', head: true })
+          .eq('status', status)
+          .eq('month_paid', monthKey);
+        return count || 0;
       };
 
       const sumPaid = async () => {
-        const [r1, r2] = await Promise.all([
-          supabase.from('payments').select('amount').eq('status', 'paid').eq('month_paid', monthKey),
-          supabase.from('payments').select('amount').eq('status', 'paid').gte('created_at', rangeStart).lte('created_at', rangeEnd + 'T23:59:59')
-        ]);
-        const d1 = r1.data || []; const d2 = r2.data || [];
-        const combined = d1.length >= d2.length ? d1 : d2;
-        return combined.reduce((s, p) => s + Number(p.amount || 0), 0);
+        const { data, error } = await supabase
+          .from('payments')
+          .select('amount')
+          .eq('status', 'paid')
+          .eq('month_paid', monthKey);
+        return (data || []).reduce((s, p) => s + Number(p.amount || 0), 0);
       };
 
       const [income, pending, overdue, toApprove] = await Promise.all([
@@ -613,11 +609,10 @@ export const DirectorApi = {
             '</div>' +
           '</div></body></html>';
 
-        const { sendEmail } = await import('../shared/supabase.js');
-        const result = await sendEmail(emails, 'Recibo de Pago â€” ' + month + ' Â· ' + studentName, html);
+        const result = await sendEmail(emails, 'Recibo de Pago — ' + month + ' · ' + studentName, html);
         return !!result;
       } catch (e) {
-
+        console.error('Error sending payment receipt:', e);
         return false;
       }
     }

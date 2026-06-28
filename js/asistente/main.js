@@ -487,9 +487,18 @@ function initNavigation() {
   const wrapper     = sidebar?.closest('.app-content-wrapper') || document.querySelector('.app-content-wrapper');
   if (toggleBtn && sidebar) {
     toggleBtn.addEventListener('click', () => {
-      sidebar.classList.toggle('collapsed');
-      wrapper?.classList.toggle('sidebar-collapsed');
+      const isCollapsed = sidebar.classList.toggle('collapsed');
+      wrapper?.classList.toggle('sidebar-collapsed', isCollapsed);
+      try { localStorage.setItem('sidebarCollapsed', isCollapsed); } catch(e) {}
     });
+    // Restaurar estado guardado
+    if (window.innerWidth >= 768) {
+      const saved = localStorage.getItem('sidebarCollapsed') === 'true';
+      if (saved) {
+        sidebar.classList.add('collapsed');
+        wrapper?.classList.add('sidebar-collapsed');
+      }
+    }
   }
 }
 

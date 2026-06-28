@@ -347,25 +347,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     BadgeSystem.init(auth.user.id);
 
     // ── Botón hamburguesa móvil ────────────────────────────────────────────────────────
-    const menuBtn = document.getElementById('menuBtn');
     const sidebar  = document.getElementById('sidebar');
     const overlay  = document.getElementById('sidebarOverlay');
 
     const _openSidebar = () => {
       sidebar?.classList.add('mobile-visible');
-      if (overlay) overlay.style.display = 'block';
+      if (overlay) { overlay.style.display = 'block'; overlay.style.opacity = '1'; }
     };
     const _closeSidebar = () => {
       sidebar?.classList.remove('mobile-visible');
-      if (overlay) overlay.style.display = 'none';
+      if (overlay) { overlay.style.display = 'none'; overlay.style.opacity = '0'; }
     };
 
-    if (menuBtn && sidebar) {
-      menuBtn.addEventListener('click', (e) => {
+    // Botones hamburguesa (hay dos: fixed y en el header)
+    document.querySelectorAll('.menu-btn-mobile').forEach(btn => {
+      btn.addEventListener('click', (e) => {
         e.stopPropagation();
-        sidebar.classList.contains('mobile-visible') ? _closeSidebar() : _openSidebar();
+        sidebar?.classList.contains('mobile-visible') ? _closeSidebar() : _openSidebar();
       });
-    }
+    });
+
     if (overlay) {
       overlay.addEventListener('click', _closeSidebar);
     }
@@ -382,9 +383,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     const layoutShell = document.getElementById('layoutShell');
     if (toggleBtn && sidebar && layoutShell) {
       toggleBtn.addEventListener('click', () => {
-        sidebar.classList.toggle('collapsed');
-        layoutShell.classList.toggle('sidebar-collapsed');
+        const isCollapsed = sidebar.classList.toggle('collapsed');
+        layoutShell.classList.toggle('sidebar-collapsed', isCollapsed);
+        try { localStorage.setItem('sidebarCollapsed', isCollapsed); } catch(e) {}
       });
+      // Restaurar estado guardado
+      if (window.innerWidth >= 768) {
+        const saved = localStorage.getItem('sidebarCollapsed') === 'true';
+        if (saved) {
+          sidebar.classList.add('collapsed');
+          layoutShell.classList.add('sidebar-collapsed');
+        }
+      }
     }
     
     WallModule.init('muroPostsContainer', { 

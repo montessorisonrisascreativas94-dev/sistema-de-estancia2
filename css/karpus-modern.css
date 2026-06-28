@@ -563,6 +563,13 @@ a > svg[data-lucide] {
 
 /* ── Sidebar collapsed state ─────────────────────────────── */
 @media (min-width: 768px) {
+  /* Forzar al sidebar a reducir su ancho cuando está colapsado */
+  body:not(.panel-padre-body) aside#sidebar.collapsed { 
+    width: 90px !important; 
+  }
+  .panel-asistente-body aside#sidebar.collapsed { 
+    width: 90px !important; 
+  }
   aside#sidebar.collapsed .kk-sidebar-logo-text,
   aside#sidebar.collapsed .kk-sidebar-profile-info,
   aside#sidebar.collapsed .kk-nav-section,
@@ -575,7 +582,7 @@ a > svg[data-lucide] {
     justify-content: center;
     padding-left: 0;
     padding-right: 0;
-  }
+    }
   aside#sidebar.collapsed .kk-nav-item i {
     width: 24px;
     height: 24px;
