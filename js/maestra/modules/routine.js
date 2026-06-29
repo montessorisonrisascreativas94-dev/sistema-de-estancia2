@@ -254,7 +254,13 @@ export async function openStudentRoutine(studentId) {
   if (!student) return;
 
   const today = new Date().toISOString().split('T')[0];
-  const { data: log } = await supabase.from('daily_logs').select('*').eq('student_id', studentId).eq('date', today).maybeSingle();
+  // FIX select('*'): fetch only the columns needed by the routine modal
+  const { data: log } = await supabase
+    .from('daily_logs')
+    .select('id, student_id, date, mood, food, nap, eating, sleeping, activities, notes, infant_data, status')
+    .eq('student_id', studentId)
+    .eq('date', today)
+    .maybeSingle();
   
   const isInfant = student.age_type === 'meses' || student.age_type === 'mes';
   const modalId = 'routineStudentModal';

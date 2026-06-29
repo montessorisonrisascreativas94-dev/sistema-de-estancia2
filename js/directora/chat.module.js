@@ -32,7 +32,11 @@ export const ChatModule = {
       });
     }
 
-    document.getElementById('chatSearchInput')?.addEventListener('input', () => this._renderContacts());
+    // FIX debounce: chat contact search re-renders on every keystroke without it
+    document.getElementById('chatSearchInput')?.addEventListener(
+      'input',
+      Helpers.debounce(() => this._renderContacts(), 250)
+    );
     document.getElementById('chatRoleFilter')?.addEventListener('change', () => this._loadContacts());
     document.getElementById('chatBackBtn')?.addEventListener('click', () => {
       document.getElementById('chatAppContainer')?.classList.remove('show-chat');

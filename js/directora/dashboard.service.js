@@ -26,7 +26,10 @@ export const DashboardService = {
       const [counts, attendance, inquiries, pendingPaymentsData] = await Promise.all([
         DirectorApi.getDashboardKPIs(),
         supabase.from('attendance').select('status').eq('date', today).limit(500),
-        supabase.from('inquiries').select('*').eq('status', 'pending').limit(5),
+        // FIX select('*'): only fetch fields needed for dashboard alerts
+        supabase.from('inquiries')
+          .select('id, status, title, created_at, student_id')
+          .eq('status', 'pending').limit(5),
         // Obtener suma de pagos pendientes, vencidos y en revisión
         supabase.from('payments').select('amount, status').in('status', ['pending', 'overdue', 'review']).limit(1000)
       ]);

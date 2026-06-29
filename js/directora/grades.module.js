@@ -42,7 +42,8 @@ export const GradesModule = {
     const searchInput = document.getElementById('searchGradeStudent');
     if (searchInput && !searchInput._bound) {
       searchInput._bound = true;
-      searchInput.addEventListener('input', () => this.applyFilters());
+      // FIX debounce: prevent re-render on every keystroke
+      searchInput.addEventListener('input', Helpers.debounce(() => this.applyFilters(), 300));
     }
 
     const classFilter = document.getElementById('gradesFilterClassroom');

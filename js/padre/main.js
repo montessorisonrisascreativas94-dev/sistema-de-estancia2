@@ -968,10 +968,13 @@ async function switchStudent(studentId) {
     AppState.set('currentPayments', null);
 
     // 2. Desuscribir Canales Realtime actuales de forma exhaustiva
+    // FIX orphaned channels: use removeChannel() (not just unsubscribe) to fully release socket slots
     const channels = ['_dailyLogChannel', '_chatChannel', '_classroomChannel', '_notificationChannel', '_padreUnreadChannel'];
     channels.forEach(ch => {
       if (window[ch]) {
-        try { supabase.removeChannel(window[ch]); } catch(_) {}
+        try { supabase.removeChannel(window[ch]); } catch(err) {
+          console.warn('[Realtime] removeChannel failed for', ch, ':', err?.message);
+        }
         window[ch] = null;
       }
     });
@@ -1034,12 +1037,17 @@ function _showStudentSwitcher(students) {
 }
 
 function _initDailyLogRealtime(studentId) {
-  // Cancelar el canal anterior si existe
+  // FIX orphaned channels: always clean up before creating a new subscription
+  // Using supabase.removeChannel() (not just .unsubscribe()) to fully release the socket slot
   if (window._dailyLogChannel) {
     try {
-      window._dailyLogChannel.unsubscribe();
-    } catch (_) {}
+      supabase.removeChannel(window._dailyLogChannel);
+    } catch (err) {
+      console.warn('[Realtime] Could not remove _dailyLogChannel:', err?.message);
+    }
+    window._dailyLogChannel = null;
   }
+
   window._dailyLogChannel = supabase
     .channel('daily_log_' + studentId)
     .on('postgres_changes', {
@@ -1057,7 +1065,9 @@ function _initDailyLogRealtime(studentId) {
       try {
         const log = await Api.getDailyLog(studentId, today);
         renderDailySummary(log);
-      } catch (_) {}
+      } catch (err) {
+        console.warn('[Realtime] dailyLog callback error:', err?.message);
+      }
     })
     .subscribe();
 }

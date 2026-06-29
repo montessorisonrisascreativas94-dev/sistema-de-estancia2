@@ -1,4 +1,4 @@
-﻿import { ensureRole, supabase, initOneSignal } from '../shared/supabase.js';
+import { ensureRole, supabase, initOneSignal } from '../shared/supabase.js';
 import { AppState } from './state.js';
 import { Helpers } from '../shared/helpers.js';
 import { UIPremium } from '../shared/ui-premium.js';
@@ -8,6 +8,9 @@ import { UIHelpers, DirectorUI } from './ui.module.js';
 import { StudentsModule } from './students.module.js';
 import { TeachersModule } from './teachers.module.js';
 import { PaymentsModule } from './payments_clean.js';
+
+// ── Tenant config row — única fila de configuración del tenant ─────────────────
+const SCHOOL_SETTINGS_ID = 1;
 import { GradesModule } from './grades.module.js';
 import { PermitsModule } from './permits.module.js';
 import { InquiriesModule } from './inquiries.module.js';
@@ -205,8 +208,9 @@ export function goToSection(sectionId) {
     if (overlay) { overlay.style.display = 'none'; }
   }
 
-  // Re-inicializar iconos Lucide tras cambio de sección
-  setTimeout(() => { if (window.lucide) lucide.createIcons(); }, 50);
+  // FIX setTimeout→requestAnimationFrame: icons are in the DOM at this point,
+  // rAF guarantees paint before re-processing — no arbitrary 50ms guess needed.
+  if (window.lucide) requestAnimationFrame(() => lucide.createIcons());
 }
 
 
@@ -228,14 +232,14 @@ async function loadProfile() {
       const { data: s1, error: e1 } = await supabase
         .from('school_settings')
         .select('id, generation_day, due_day, phone, business_hours, open_time, close_time, work_days, rnc')
-        .eq('id', 1).single();
+        .eq('id', SCHOOL_SETTINGS_ID).single();
 
       if (e1 && e1.code === '42703') {
         // Columnas nuevas no existen � usar solo las base
         const { data: s2 } = await supabase
           .from('school_settings')
           .select('id, generation_day, due_day, phone, business_hours')
-          .eq('id', 1).single();
+          .eq('id', SCHOOL_SETTINGS_ID).single();
         settings = s2;
       } else {
         settings = s1;
@@ -493,10 +497,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         const scheduleUpdates = {};
         if (openTime)  scheduleUpdates.open_time  = openTime;
         if (closeTime) scheduleUpdates.close_time = closeTime;
+        // FIX weak types: work_days stored as JSON string (DB column is text; migrate to jsonb when possible)
         if (workDays.length) scheduleUpdates.work_days = JSON.stringify(workDays);
         if (rncVal) scheduleUpdates.rnc = rncVal;
         if (Object.keys(scheduleUpdates).length) {
-          await supabase.from('school_settings').update(scheduleUpdates).eq('id', 1);
+          await supabase.from('school_settings').update(scheduleUpdates).eq('id', SCHOOL_SETTINGS_ID);
         }
         Helpers.toast('Configuraci�n guardada correctamente', 'success');
         AppState.set('profile', { ...auth.profile, ...updates });

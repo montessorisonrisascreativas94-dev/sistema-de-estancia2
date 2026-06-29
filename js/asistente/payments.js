@@ -4,6 +4,9 @@ import { AppState } from './state.js';
 import { sendEmail } from '../shared/supabase.js';
 import { calcMora } from '../shared/payment-service.js';
 
+// ── Tenant config row — single source of truth ────────────────────────────────
+const SCHOOL_SETTINGS_ID = 1;
+
 const MONTH_NAMES_ES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
 const MONTH_LABELS   = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
@@ -36,12 +39,20 @@ export const PaymentsModule = {
     document.getElementById('filterPaymentMonth')?.addEventListener('change', () => { this.loadPayments(); this.loadIncomeChart(); });
     document.getElementById('filterPaymentYear')?.addEventListener('change',  () => { this.loadPayments(); this.loadIncomeChart(); });
     document.getElementById('filterPaymentStatus')?.addEventListener('change', () => this.loadPayments());
-    document.getElementById('searchPaymentStudent')?.addEventListener('input', (e) => {
-      const q = e.target.value.toLowerCase().trim();
+    // FIX debounce: prevent DB/render thrash on every keystroke
+    const _searchDebounced = Helpers.debounce((q) => {
       const cached = AppState.get('paymentsData');
-      if (cached && q) { this._renderPaymentRows(cached.filter(p => p.students?.name?.toLowerCase().includes(q))); }
-      else { this.loadPayments(); }
-    });
+      if (cached && q) {
+        this._renderPaymentRows(cached.filter(p =>
+          p.students?.name?.toLowerCase().includes(q)
+        ));
+      } else {
+        this.loadPayments();
+      }
+    }, 300);
+    document.getElementById('searchPaymentStudent')?.addEventListener('input', (e) =>
+      _searchDebounced(e.target.value.toLowerCase().trim())
+    );
     document.getElementById('btnNewPayment')?.addEventListener('click',       () => this.openPaymentModal());
     document.getElementById('btnGeneratePayments')?.addEventListener('click', () => this.runCycle());
     document.getElementById('btnRefreshPayments')?.addEventListener('click',  () => this.loadPayments());
@@ -83,9 +94,19 @@ export const PaymentsModule = {
 
   async _loadSettings() {
     try {
-      const { data } = await supabase.from('school_settings').select('id, generation_day, due_day').eq('id', 1).maybeSingle();
-      if (data) { this.settings.generation_day = data.generation_day || 25; this.settings.due_day = data.due_day || 5; }
-    } catch (_) {}
+      // FIX hardcoded id=1: use named constant
+      const { data } = await supabase
+        .from('school_settings')
+        .select('id, generation_day, due_day')
+        .eq('id', SCHOOL_SETTINGS_ID)
+        .maybeSingle();
+      if (data) {
+        this.settings.generation_day = data.generation_day || 25;
+        this.settings.due_day        = data.due_day        || 5;
+      }
+    } catch (err) {
+      console.warn('[PaymentsModule] _loadSettings failed, using defaults:', err?.message);
+    }
   },
 
   filterBy(status) {

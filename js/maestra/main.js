@@ -1,6 +1,10 @@
 import { ensureRole, supabase, initOneSignal, RealtimeUtils, emitEvent, sendPush } from '../shared/supabase.js';
 import { RealtimeManager } from '../shared/realtime-manager.js';
 import { AppState } from './state.js';
+
+// ── SCHOOL_SETTINGS ROW ID — única fila de configuración del tenant ───────────
+// Si en el futuro hay multi-tenant, reemplazar por el ID del tenant activo.
+const SCHOOL_SETTINGS_ID = 1;
 import { MaestraApi } from './api.js';
 import { Helpers } from '../shared/helpers.js';
 import { WallModule } from '../shared/wall.js';
@@ -675,27 +679,29 @@ window.App.sendAbsenceAlerts = async () => {
   const students = AppState.get('students') || [];
   const today = new Date().toISOString().split('T')[0];
   const attendance = await MaestraApi.getAttendance(AppState.get('classroom').id, today);
-  const presentIds = (attendance || []).map(a => a.student_id);
-  
-  const missing = students.filter(s => !presentIds.includes(s.id));
+  const presentIds = new Set((attendance || []).map(a => a.student_id));
+
+  const missing = students.filter(s => !presentIds.has(s.id));
   if (missing.length === 0) return safeToast('Todos los alumnos están presentes');
 
-  const confirm = await Helpers.confirm(`¿Enviar aviso de ausencia a los padres de ${missing.length} niños?`);
-  if (!confirm) return;
+  const confirmed = await Helpers.confirm(`¿Enviar aviso de ausencia a los padres de ${missing.length} niños?`);
+  if (!confirmed) return;
 
   safeToast('Enviando notificaciones...', 'info');
-  let sent = 0;
-  for (const s of missing) {
-    if (s.parent_id) {
-      await sendPush({
+
+  // FIX N+1: fire all pushes in parallel instead of sequentially
+  const results = await Promise.allSettled(
+    missing
+      .filter(s => s.parent_id)
+      .map(s => sendPush({
         user_id: s.parent_id,
-        title: 'Aviso de Ausencia ❓',
+        title:   'Aviso de Ausencia ❓',
         message: `Hola, notamos que ${s.name} no ha llegado hoy. Por favor confírmanos si asistirá o si tiene algún inconveniente.`,
-        link: 'panel_padres.html'
-      }).catch(() => {});
-      sent++;
-    }
-  }
+        link:    'panel_padres.html'
+      }))
+  );
+
+  const sent = results.filter(r => r.status === 'fulfilled').length;
   safeToast(`Se enviaron ${sent} avisos de ausencia`);
 };
 
@@ -806,8 +812,11 @@ function initNavigation() {
 
       // Si no tenemos los datos o el ID es diferente, cargamos en paralelo
       if (!classroom || classroom.id != classroomId || !students) {
+      // FIX select('*'): only fetch required columns
         const [classroomRes, studentsRes] = await Promise.all([
-          supabase.from('classrooms').select('*').eq('id', classroomId).maybeSingle(),
+          supabase.from('classrooms')
+            .select('id, name, level, capacity, teacher_id, is_live')
+            .eq('id', classroomId).maybeSingle(),
           MaestraApi.getStudentsByClassroom(classroomId)
         ]);
 

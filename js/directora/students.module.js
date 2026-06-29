@@ -69,7 +69,8 @@ export const StudentsModule = {
       const searchInput = document.getElementById('searchStudent');
       if (searchInput && !searchInput._bound) {
         searchInput._bound = true;
-        searchInput.addEventListener('input', () => this.applyFilters());
+        // FIX debounce: prevent re-render on every keystroke
+        searchInput.addEventListener('input', Helpers.debounce(() => this.applyFilters(), 300));
       }
 
       const filterClassroom = document.getElementById('filterClassroom');
