@@ -257,11 +257,14 @@
   }
 
   /* Back link */
-  .back-link {
-    display:inline-flex;align-items:center;gap:6px;
-    color:#94A3B8;text-decoration:none;font-weight:700;font-size:.85rem;
-    transition:color .3s;margin-bottom:28px;
-  }
+    .back-link {
+      display:inline-flex;align-items:center;gap:6px;
+      color:#94A3B8;text-decoration:none;font-weight:700;font-size:.85rem;
+      transition:color .3s;margin-bottom:28px;
+      min-width: 44px;
+      min-height: 44px;
+      padding: 8px 0;
+    }
   .back-link:hover{color:var(--blue)}
 
   /* Greeting */
@@ -403,7 +406,8 @@
     .scene-panel { display:none; }
     .form-panel {
       background: linear-gradient(180deg,#0B63C7 0%,#1368D4 32%,var(--gray) 32%);
-      padding:0 20px 40px; align-items:flex-start; min-height:100vh;
+      padding:0 20px 40px; align-items:flex-start; min-height:100dvh;
+      padding-top: max(0px, env(safe-area-inset-top));
     }
     .form-panel::before,.form-panel::after { display:none; }
 
@@ -412,6 +416,7 @@
       display:flex !important;
       flex-direction:column;align-items:center;
       padding:40px 20px 70px;text-align:center;position:relative;width:100%;
+      padding-top: max(40px, env(safe-area-inset-top) + 20px);
     }
     .mob-logo {
       width:72px;height:72px;border-radius:18px;object-fit:contain;
@@ -428,6 +433,7 @@
       display:flex !important;
       position:fixed;bottom:0;left:0;right:0;height:90px;
       pointer-events:none;z-index:100;overflow:hidden;
+      bottom: env(safe-area-inset-bottom);
     }
     .mobile-tri-stage svg {
       position:absolute;bottom:0;width:80px;
@@ -455,6 +461,8 @@
         width:100%;max-width:none;border-radius:28px;
         padding:28px 18px 100px; /* bottom pad for mobile mascot */
         margin-top:-40px;box-shadow:0 -8px 40px rgba(11,99,199,.15);
+        position: relative;
+        z-index: 10;
       }
       @media (max-width: 400px) {
         .form-card {
@@ -467,12 +475,14 @@
       position:fixed;bottom:0;left:0;right:0;height:12px;
       background:linear-gradient(135deg,var(--green),#5DD87A);
       z-index:99;border-radius:6px 6px 0 0;
+      bottom: env(safe-area-inset-bottom);
     }
     /* Flowers on ground */
     .mob-flowers {
       display:flex !important;
       position:fixed;bottom:10px;left:0;right:0;z-index:101;
       pointer-events:none;justify-content:space-around;padding:0 10px;
+      bottom: calc(env(safe-area-inset-bottom) + 10px);
     }
     .mob-flower { font-size:16px; animation:flowerSway 3s ease-in-out infinite; }
     .mob-flower:nth-child(2){animation-delay:.5s}
@@ -480,6 +490,13 @@
     .mob-flower:nth-child(4){animation-delay:1.5s}
     .mob-flower:nth-child(5){animation-delay:2s}
     @keyframes flowerSway{0%,100%{transform:rotate(-5deg)}50%{transform:rotate(5deg)}}
+
+    /* Back link improvements for mobile */
+    .back-link {
+      position: relative;
+      z-index: 20;
+      margin-bottom: 20px;
+    }
   }
 
   /* Hide mobile-only elements on desktop */
