@@ -32,8 +32,8 @@
       --shadow-md: 0 8px 32px rgba(11,99,199,0.12);
       --shadow-lg: 0 20px 60px rgba(11,99,199,0.16);
     }
-    html { scroll-behavior: smooth; }
-    body { font-family: 'Nunito', sans-serif; background: var(--white); color: var(--text-dark); overflow-x: hidden; }
+    html { scroll-behavior: smooth; overflow-x: hidden; width: 100%; }
+    body { font-family: 'Nunito', sans-serif; background: var(--white); color: var(--text-dark); overflow-x: hidden; width: 100%; position: relative; }
     .display-font { font-family: 'Baloo 2', cursive; }
 
     /* ============ UTILITIES ============ */
@@ -456,22 +456,71 @@
     @media(max-width:640px){ .footer-inner { grid-template-columns: 1fr; gap: 40px; } .footer-bottom { flex-direction: column; text-align: center; } }
 
     /* ============ FAB ============ */
-    .fab-wrap { position: fixed; bottom: 28px; right: 28px; display: flex; flex-direction: column; gap: 12px; z-index: 998; }
+    .fab-wrap { 
+      position: fixed; 
+      bottom: max(28px, env(safe-area-inset-bottom)); 
+      right: max(16px, env(safe-area-inset-right)); 
+      display: flex; 
+      flex-direction: column; 
+      gap: 12px; 
+      z-index: 998;
+    }
     .fab {
-      width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center;
-      justify-content: center; font-size: 26px; color: white; text-decoration: none;
-      box-shadow: 0 8px 28px rgba(0,0,0,0.25); transition: all 0.3s cubic-bezier(.34,1.56,.64,1);
+      width: 56px; 
+      height: 56px; 
+      border-radius: 50%; 
+      display: flex; 
+      align-items: center;
+      justify-content: center; 
+      font-size: 24px; 
+      color: white; 
+      text-decoration: none;
+      box-shadow: 0 8px 28px rgba(0,0,0,0.25); 
+      transition: all 0.3s cubic-bezier(.34,1.56,.64,1);
     }
     .fab:hover { transform: scale(1.18) translateY(-4px); }
     .fab-wa { background: linear-gradient(135deg, #25D366, #128C7E); }
     .fab-ig { background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); }
 
+    @media(max-width: 640px) {
+      .fab-wrap {
+        right: max(12px, env(safe-area-inset-right));
+        bottom: max(20px, env(safe-area-inset-bottom));
+      }
+      .fab {
+        width: 50px;
+        height: 50px;
+        font-size: 22px;
+      }
+    }
+
     /* ============ SCROLL TO TOP ============ */
     #scrollTop {
-      position: fixed; bottom: 28px; left: 28px; width: 46px; height: 46px;
-      background: var(--blue); color: white; border: none; border-radius: 14px;
-      font-size: 20px; cursor: pointer; z-index: 997; opacity: 0; transition: all 0.3s;
-      box-shadow: var(--shadow-md); display: flex; align-items: center; justify-content: center;
+      position: fixed; 
+      bottom: max(28px, env(safe-area-inset-bottom)); 
+      left: max(16px, env(safe-area-inset-left)); 
+      width: 46px; 
+      height: 46px;
+      background: var(--blue); 
+      color: white; 
+      border: none; 
+      border-radius: 14px;
+      font-size: 20px; 
+      cursor: pointer; 
+      z-index: 997; 
+      opacity: 0; 
+      transition: all 0.3s;
+      box-shadow: var(--shadow-md); 
+      display: flex; 
+      align-items: center; 
+      justify-content: center;
+    }
+
+    @media(max-width: 640px) {
+      #scrollTop {
+        left: max(12px, env(safe-area-inset-left));
+        bottom: max(20px, env(safe-area-inset-bottom));
+      }
     }
     #scrollTop.show { opacity: 1; }
     #scrollTop:hover { background: var(--orange); transform: translateY(-3px); }

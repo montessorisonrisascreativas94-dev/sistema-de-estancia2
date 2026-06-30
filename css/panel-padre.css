@@ -40,8 +40,28 @@ body.panel-padre-body {
   background: var(--p-bg) !important;
   font-family: 'Quicksand', 'Nunito', sans-serif;
   color: var(--p-text);
-  min-height: 100vh;
+  min-height: 100dvh;
   overflow-x: hidden;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch;
+  position: relative;
+}
+
+/* Asegurar scroll en móvil */
+@media (max-width: 767px) {
+  body.panel-padre-body {
+    height: auto !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Evitar overflow en contenedores */
+  body.panel-padre-body .app,
+  body.panel-padre-body .app-content-wrapper,
+  body.panel-padre-body .main {
+    overflow: visible !important;
+    height: auto !important;
+  }
 }
 body.panel-padre-body::before,
 body.panel-padre-body::after { display: none !important; }
