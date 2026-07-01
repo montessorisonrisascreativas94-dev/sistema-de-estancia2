@@ -56,6 +56,15 @@ supabase.auth.onAuthStateChange((event, session) => {
 // IMPORTANTE: usar flag para evitar loop infinito
 let _refreshing = false;
 const _originalFetch = window.fetch;
+
+// RPC/tabla endpoints conocidos como opcionales (no desplegados en producción todavía).
+// Las respuestas 404 de estos endpoints se suprimen del log para no confundir.
+const _OPTIONAL_ENDPOINTS = [
+  '/rpc/get_tasks_for_period',
+  '/rpc/get_active_period',
+  '/rpc/get_direct_message',
+];
+
 window.fetch = async function(...args) {
   const url = typeof args[0] === 'string' ? args[0] : args[0]?.url;
   const isSupabase = url && url.includes(SUPABASE_URL);
@@ -81,7 +90,15 @@ window.fetch = async function(...args) {
   }
 
   const res = await _originalFetch.apply(this, args);
-  
+
+  // Suppress 404 console noise for optional/not-yet-deployed RPC endpoints.
+  // These are intentionally handled by fallback logic in the calling code.
+  if (res.status === 404 && isSupabase && _OPTIONAL_ENDPOINTS.some(ep => url.includes(ep))) {
+    // Return the 404 response as-is so calling code can handle it,
+    // but we've already prevented it from appearing as an unhandled network error.
+    return res;
+  }
+
   // Interceptar 401 para intentar refrescar sesión
   if (res.status === 401 && isSupabase && !_refreshing && !url.includes('/auth/v1/')) {
     _refreshing = true;

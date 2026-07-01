@@ -278,10 +278,11 @@
     }
     
     /* ═══════════════════════════════════════════════
-       SIDEBAR
+       SIDEBAR — gestionado por css/karpus-modern.css
+       (sistema unificado body.sidebar-collapsed)
     ═══════════════════════════════════════════════ */
     aside#sidebar {
-      width: 288px;
+      width: 288px; /* directora usa 288px en lugar de 280px */
       background: linear-gradient(160deg, #0B63C7 0%, #0850A0 60%, #042C60 100%);
       color: white;
       position: fixed;
@@ -291,29 +292,16 @@
       overflow-y: auto;
       overflow-x: hidden;
       scrollbar-width: none;
-      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                  transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       box-shadow: 4px 0 24px rgba(0,0,0,0.1);
     }
     aside#sidebar::-webkit-scrollbar { display: none; }
 
-    @media (max-width: 767px) {
-      aside#sidebar {
-        transform: translateX(-100%);
-        width: 85%;
-        max-width: 300px;
-      }
-      aside#sidebar.mobile-visible {
-        transform: translateX(0);
-      }
-      #sidebarOverlay {
-        position: fixed;
-        inset: 0;
-        background: rgba(0,0,0,0.5);
-        backdrop-filter: blur(4px);
-        z-index: 1040;
-        display: none;
-        animation: fadeIn 0.3s ease;
-      }
+    /* Directora sidebar is 288px — karpus-modern.css handles flex layout */
+    @media (min-width: 769px) {
+      body.panel-directora-body aside#sidebar { width: 288px; }
+      body.sidebar-collapsed.panel-directora-body aside#sidebar { width: 80px !important; }
     }
 
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -335,43 +323,9 @@
     }
     @media (min-width: 769px) {
       .app-content-wrapper {
-        margin-left: 288px;
         height: 100dvh;
         overflow: hidden;
-        transition: margin-left 0.25s ease;
-      }
-      .app-content-wrapper.sidebar-collapsed {
-        margin-left: 80px;
-      }
-      .app-content-wrapper.sidebar-collapsed aside#sidebar {
-        width: 80px;
-      }
-      .app-content-wrapper.sidebar-collapsed aside#sidebar .label,
-      .app-content-wrapper.sidebar-collapsed aside#sidebar .kk-nav-section,
-      .app-content-wrapper.sidebar-collapsed aside#sidebar .kk-sidebar-logo-text,
-      .app-content-wrapper.sidebar-collapsed aside#sidebar .kk-sidebar-profile-info,
-      .app-content-wrapper.sidebar-collapsed aside#sidebar .kk-sidebar-profile-name,
-      .app-content-wrapper.sidebar-collapsed aside#sidebar .sub {
-        display: none;
-      }
-      .app-content-wrapper.sidebar-collapsed aside#sidebar .kk-sidebar-logo,
-      .app-content-wrapper.sidebar-collapsed aside#sidebar .kk-sidebar-profile {
-        justify-content: center;
-        padding-left: 0;
-        padding-right: 0;
-      }
-      .app-content-wrapper.sidebar-collapsed aside#sidebar .kk-nav-item {
-        justify-content: center;
-        padding-left: 0;
-        padding-right: 0;
-      }
-      .app-content-wrapper.sidebar-collapsed aside#sidebar .kk-logout-btn {
-        justify-content: center;
-        padding-left: 0;
-        padding-right: 0;
-      }
-      .app-content-wrapper.sidebar-collapsed #toggleSidebarIcon {
-        transform: rotate(180deg);
+        transition: margin-left 0.25s cubic-bezier(0.4, 0, 0.2, 1);
       }
     }
     @media (max-width: 767px) {
@@ -936,7 +890,7 @@
     <div id="sidebarOverlay" class="fixed inset-0 bg-black/50 z-40 backdrop-blur-sm transition-opacity" style="display:none;"></div>
     
     <!-- SIDEBAR -->
-    <aside id="sidebar" class="kk-sidebar bg-gradient-to-b from-[#0B63C7] via-[#0B63C7] to-[#042C60] shadow-2xl fixed inset-y-0 left-0 z-50 w-72 flex flex-col" style="border-right:none;">
+    <aside id="sidebar" class="kk-sidebar bg-gradient-to-b from-[#0B63C7] via-[#0B63C7] to-[#042C60] shadow-2xl flex flex-col flex-shrink-0" style="border-right:none;">
       <!-- Toggle collapse -->
       <button id="toggleSidebar" class="absolute -right-3 top-8 bg-white rounded-full p-1.5 shadow-lg border border-slate-100 text-slate-500 hover:text-[#0B63C7] hidden md:flex items-center justify-center z-10 transition-all hover:scale-110">
         <i data-lucide="chevron-left" id="toggleSidebarIcon" class="w-3.5 h-3.5"></i>
@@ -1611,9 +1565,37 @@
             </h2>
             <p class="text-slate-500 text-sm">Gestione quejas con estados, prioridad, adjuntos y respuesta oficial</p>
           </div>
+          <div class="flex gap-3">
+            <select id="statusFilter" class="px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+              <option value="">Todos los estados</option>
+              <option value="pending">Pendientes</option>
+              <option value="in_review">En Revisión</option>
+              <option value="resolved">Resueltos</option>
+              <option value="closed">Cerrados</option>
+            </select>
+          </div>
         </div>
 
-        <div id="reportsList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-2"><!-- JS --></div>
+        <div class="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden">
+          <div class="table-scroll-wrap">
+            <table class="w-full text-left">
+              <thead>
+                <tr class="bg-[#E8F2FF] border-b border-blue-100 text-[#0850A0]">
+                  <th class="px-6 py-4 text-[10px] font-black uppercase tracking-widest">Tipo</th>
+                  <th class="px-6 py-4 text-[10px] font-black uppercase tracking-widest">Reportado por</th>
+                  <th class="px-6 py-4 text-[10px] font-black uppercase tracking-widest">Objetivo</th>
+                  <th class="px-6 py-4 text-[10px] font-black uppercase tracking-widest">Severidad</th>
+                  <th class="px-6 py-4 text-[10px] font-black uppercase tracking-widest">Estado</th>
+                  <th class="px-6 py-4 text-[10px] font-black uppercase tracking-widest">Fecha</th>
+                  <th class="px-6 py-4 text-[10px] font-black uppercase tracking-widest">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="reportsList" class="divide-y divide-slate-50">
+                <!-- Inyectado por JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
       </section>
 
       <!-- SECCIÓN DE ACCESOS — QRs de Estudiantes -->

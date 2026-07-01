@@ -10,6 +10,7 @@ import { ChatModule }      from './chat.js';
 import { FeedModule }      from './feed.js';
 import { ProfileModule }   from './profile.js';
 import { GradesModule }    from './grades.js';
+import { ReportsModule }   from './reports.js';
 import { initLiveClassListener } from './attendance_live.js';
 import { NotifyPermission } from '../shared/notify-permission.js';
 import { BadgeSystem } from '../shared/badges.js';
@@ -118,6 +119,31 @@ document.addEventListener('DOMContentLoaded', async () => {
     updateHeaderProfile(auth.profile, currentStudent, students);
     setupNavigation();
     setupGlobalListeners();
+    
+    // Sidebar Manager
+    import('../shared/sidebar-manager.js')
+      .then(({ initSidebar }) => initSidebar())
+      .catch(() => {
+        // Fallback mínimo
+        const menuBtn = document.getElementById('menuBtn');
+        const sidebar  = document.getElementById('sidebar');
+        const overlay  = document.getElementById('sidebarOverlay');
+        const _openSidebar = () => {
+          sidebar?.classList.add('mobile-visible');
+          if (overlay) overlay.style.display = 'block';
+        };
+        const _closeSidebar = () => {
+          sidebar?.classList.remove('mobile-visible');
+          if (overlay) overlay.style.display = 'none';
+        };
+        if (menuBtn && sidebar) {
+          menuBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            sidebar.classList.contains('mobile-visible') ? _closeSidebar() : _openSidebar();
+          });
+        }
+        if (overlay) overlay.addEventListener('click', _closeSidebar);
+      });
 
     // Activar sección home inmediatamente
     document.querySelectorAll('.section').forEach(s => s.classList.add('hidden'));
@@ -631,6 +657,7 @@ export async function navigateTo(targetId) {
       case 'class':           FeedModule.init(student?.classroom_id); break;
       case 'profile':         ProfileModule.init(); _initPadreQR(student); NotifyPermission.requestIfNeeded(); break;
       case 'grades':          GradesModule.init(student?.id); break;
+      case 'reports':         ReportsModule.init(); break;
       case 'qr-access':       _initPadreQR(student); break;
       case 'videocall': {
         const student = AppState.get('currentStudent');

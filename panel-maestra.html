@@ -19,7 +19,8 @@
       // Silenciar errores CORS de Edge Functions (normales en GitHub Pages)
       if (msg.includes('CORS') || msg.includes('process-event') ||
           msg.includes('send-push') || msg.includes('ERR_FAILED') ||
-          msg.includes('preflight') || msg.includes('net::ERR')) {
+sigue          msg.includes('preflight') || msg.includes('net::ERR') ||
+          msg.includes('get_tasks_for_period') || msg.includes('get_active_period')) {
         e.preventDefault();
       }
     }, true);
@@ -37,54 +38,33 @@
   <link rel="stylesheet" href="css/montessori-modern.css" />
   <link rel="stylesheet" href="css/montessori-tailwind.css">
   <link rel="stylesheet" href="css/premium-mobile.css">
+  <link rel="stylesheet" href="css/karpus-modern.css">
   <link rel="stylesheet" href="css/maestra-design-system.css">
   <script src="js/shared/lucide.min.js"></script>
   
   <style>
     /* ═══════════════════════════════════════════════
-       SIDEBAR
+       SIDEBAR — gestionado por css/karpus-modern.css
+       (sistema unificado body.sidebar-collapsed)
     ═══════════════════════════════════════════════ */
     aside#sidebar {
-      width: 280px;
-      transition: all .3s cubic-bezier(0.34, 1.56, 0.64, 1);
       overflow-y: auto;
       overflow-x: hidden;
       scrollbar-width: none;
     }
     aside#sidebar::-webkit-scrollbar { display: none; }
-    aside#sidebar.collapsed { width: 80px; }
-    aside#sidebar .label { transition: opacity .2s ease, visibility .2s; }
-    aside#sidebar.collapsed .label { opacity: 0; visibility: hidden; pointer-events: none; width: 0; height: 0; position: absolute; }
-    aside#sidebar nav i { transition: all .15s ease; }
-    aside#sidebar.collapsed nav i { width: 28px; height: 28px; }
 
     /* ═══════════════════════════════════════════════
        LAYOUT SHELL — scroll libre, nunca bloqueado
     ═══════════════════════════════════════════════ */
     #layoutShell {
-      transition: margin-left .3s ease;
-      /* ✅ FIX: nunca height fija, siempre scroll natural */
+      transition: margin-left .3s cubic-bezier(0.4,0,0.2,1);
       min-height: 100dvh;
       display: flex;
       flex-direction: column;
       overflow-y: auto;
       overflow-x: hidden;
       -webkit-overflow-scrolling: touch;
-    }
-
-    @media (min-width: 769px) {
-      #layoutShell { margin-left: 280px; }
-      #layoutShell.sidebar-collapsed { margin-left: 80px !important; }
-      aside#sidebar.collapsed:hover { width: 280px; z-index: 60; }
-      aside#sidebar.collapsed:hover .label { opacity: 1; visibility: visible; position: static; width: auto; height: auto; }
-    }
-
-    @media (max-width: 768px) {
-      #layoutShell { margin-left: 0 !important; }
-      aside#sidebar { transform: translateX(-100%); width: 280px !important; z-index: 100; }
-      aside#sidebar.mobile-visible { transform: translateX(0); }
-      aside#sidebar.collapsed .label { opacity: 1; visibility: visible; position: static; width: auto; height: auto; }
-      #sidebarOverlay.visible { display: block; opacity: 1; }
     }
 
     /* ═══════════════════════════════════════════════
@@ -447,7 +427,7 @@
 <body class="bg-[var(--sc-gray-bg)] text-slate-800 font-nunito panel-maestra-body" style="background:#F7F9FB;overflow-y:auto;overflow-x:hidden;">
   <div class="min-h-screen flex" style="overflow:visible;">
     <!-- SIDEBAR -->
-    <aside id="sidebar" class="shadow-2xl border-r-4 border-[var(--sc-green)] p-4 fixed inset-y-0 left-0 z-50 rounded-r-3xl transition-transform duration-300">
+    <aside id="sidebar" class="shadow-2xl border-r-4 border-[var(--sc-green)] p-4 flex-shrink-0 rounded-r-3xl">
       <button id="toggleSidebar" class="absolute -right-3 top-6 bg-white rounded-full p-1 shadow-md border border-slate-100 text-slate-500 hover:text-[var(--sc-green)] hidden md:block">
         <i data-lucide="chevron-left" id="toggleSidebarIcon" class="w-4 h-4"></i>
       </button>
@@ -1165,49 +1145,26 @@
     }
 
     // ═══════════════════════════════════════════════
-    // GESTIÓN DE SIDEBAR (Móvil y Desktop)
+    // SIDEBAR — delegado a sidebar-manager.js (unificado)
     // ═══════════════════════════════════════════════
-    document.addEventListener('DOMContentLoaded', () => {
-      const sidebar = document.getElementById('sidebar');
-      const overlay = document.getElementById('sidebarOverlay');
-      const mobileBtns = document.querySelectorAll('.menu-btn-mobile');
-      const toggleDesktop = document.getElementById('toggleSidebar');
-      const layoutShell = document.getElementById('layoutShell');
-      const sidebarIcon = document.getElementById('toggleSidebarIcon');
-
-      // Abrir/Cerrar en Móvil
-      const toggleMobile = () => {
-        sidebar.classList.toggle('mobile-visible');
-        overlay.classList.toggle('visible');
-      };
-
-      mobileBtns.forEach(btn => btn.addEventListener('click', toggleMobile));
-      overlay.addEventListener('click', toggleMobile);
-
-      // Cerrar sidebar al hacer click en opciones (móvil)
-      sidebar.querySelectorAll('button').forEach(btn => {
-        btn.addEventListener('click', () => {
-          if (window.innerWidth <= 768 && !btn.id.includes('toggleSidebar')) {
-            sidebar.classList.remove('mobile-visible');
-            overlay.classList.remove('visible');
-          }
+    import('../js/shared/sidebar-manager.js')
+      .then(({ initSidebar }) => initSidebar())
+      .catch(() => {
+        // Fallback mínimo si el módulo no carga
+        document.querySelectorAll('#menuBtn, .menu-btn-mobile').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const sb = document.getElementById('sidebar');
+            const ov = document.getElementById('sidebarOverlay');
+            if (!sb) return;
+            const open = sb.classList.toggle('mobile-visible');
+            if (ov) ov.style.display = open ? 'block' : 'none';
+          });
+        });
+        document.getElementById('sidebarOverlay')?.addEventListener('click', () => {
+          document.getElementById('sidebar')?.classList.remove('mobile-visible');
+          document.getElementById('sidebarOverlay').style.display = 'none';
         });
       });
-
-      // Colapso en Desktop
-      if (toggleDesktop) {
-        toggleDesktop.addEventListener('click', () => {
-          sidebar.classList.toggle('collapsed');
-          layoutShell.classList.toggle('sidebar-collapsed');
-          
-          if (sidebarIcon) { // Asegúrate de que estas llaves existan
-            const isCollapsed = sidebar.classList.contains('collapsed');
-            sidebarIcon.setAttribute('data-lucide', isCollapsed ? 'chevron-right' : 'chevron-left');
-            if (window.lucide) lucide.createIcons();
-          }
-        });
-      }
-    });
   </script>
 </body>
 </html>

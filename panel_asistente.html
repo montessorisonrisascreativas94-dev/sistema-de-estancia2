@@ -37,34 +37,8 @@
       --beige-bg: #F8FAFC;
     }
     
-    /* ── Sidebar desktop: ancho y colapso ── */
-    @media (min-width: 768px) {
-      aside#sidebar { width: 280px; }
-      aside#sidebar.collapsed { width: 90px; }
-      aside#sidebar.collapsed:hover { width: 280px; box-shadow: 10px 0 30px rgba(0,0,0,0.15); }
-
-      .app-content-wrapper.sidebar-collapsed { margin-left: 90px; }
-      aside#sidebar.collapsed:hover ~ .app-content-wrapper { margin-left: 280px !important; }
-
-      /* Ocultar texto al colapsar */
-      aside#sidebar.collapsed .label,
-      aside#sidebar.collapsed .montessori-inline,
-      aside#sidebar.collapsed #sidebarUserName { opacity: 0; pointer-events: none; display: none; }
-
-      aside#sidebar.collapsed:hover .label,
-      aside#sidebar.collapsed:hover .montessori-inline,
-      aside#sidebar.collapsed:hover #sidebarUserName { display: block; opacity: 1; }
-
-      /* Iconos */
-      aside#sidebar.collapsed .kk-nav-item [data-lucide] { width: 26px; height: 26px; }
-      aside#sidebar.collapsed:hover .kk-nav-item [data-lucide] { width: 20px; height: 20px; }
-      aside#sidebar.collapsed .kk-nav-item { justify-content: center; padding-left: 0; padding-right: 0; }
-      aside#sidebar.collapsed:hover .kk-nav-item { justify-content: flex-start; padding-left: 12px; padding-right: 12px; }
-      
-      /* Botón toggle */
-      #toggleSidebar i { transition: transform 0.3s; }
-      aside#sidebar.collapsed #toggleSidebar i { transform: rotate(180deg); }
-    }
+    /* ── Sidebar desktop — gestionado por css/karpus-modern.css (body.sidebar-collapsed) ── */
+    /* Los 3 sistemas conflictivos anteriores fueron removidos y unificados */
 
     /* ── Específicos del panel asistente ── */
     #attendanceModal { -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
@@ -135,9 +109,9 @@
     <div id="sidebarOverlay" class="fixed inset-0 bg-black/50 z-40 backdrop-blur-sm" style="display:none;"></div>
 
     <!-- SIDEBAR -->
-    <aside id="sidebar" class="kk-sidebar bg-gradient-to-b from-[#0B63C7] via-[#0B63C7] to-[#0850A0] shadow-2xl flex flex-col" style="border-right:none;">
+    <aside id="sidebar" class="kk-sidebar bg-gradient-to-b from-[#0B63C7] via-[#0B63C7] to-[#0850A0] shadow-2xl flex flex-col flex-shrink-0" style="border-right:none;">
       <button id="toggleSidebar" class="absolute -right-3 top-8 bg-white rounded-full p-1.5 shadow-lg border border-slate-100 text-slate-500 hover:text-teal-600 hidden md:flex items-center justify-center z-10 transition-all hover:scale-110">
-        <i data-lucide="chevron-left" class="w-3.5 h-3.5"></i>
+        <i data-lucide="chevron-left" id="toggleSidebarIcon" class="w-3.5 h-3.5"></i>
       </button>
 
       <!-- Logo Sonrisas Creativas -->
@@ -1115,11 +1089,11 @@
           </a>
         </div>
         
-        <div class="bg-indigo-50 border-2 border-blue-200 p-8 rounded-[2.5rem] text-center">
+        <div class="bg-[#E8F2FF] border-2 border-blue-100 p-8 rounded-[2.5rem] text-center">
           <div class="w-20 h-20 bg-white rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-sm text-[#0B63C7]">
             <i data-lucide="qr-code" class="w-10 h-10"></i>
           </div>
-          <h3 class="text-xl font-black text-indigo-900 mb-2">Generador de Carnets Masivo</h3>
+          <h3 class="text-xl font-black text-[#0850A0] mb-2">Generador de Carnets Masivo</h3>
           <p class="text-[#0850A0]/70 text-sm max-w-md mx-auto mb-8 font-medium">
             Utiliza nuestra herramienta profesional para generar todos los QRs de la estancia en un solo clic, descargarlos o imprimirlos para los carnets.
           </p>

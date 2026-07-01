@@ -28,6 +28,7 @@
   <link rel="preload" href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600;700&family=Nunito:wght@400;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
   <noscript><link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet"></noscript>
   <link rel="stylesheet" href="css/panel-padre.css" />
+  <link rel="stylesheet" href="css/karpus-modern.css" />
   <link rel="stylesheet" href="css/layout.css" />
   <link rel="stylesheet" href="css/montessori-modern.css" />
   <script src="js/shared/chart.min.js"></script>
@@ -276,6 +277,35 @@
       #sidebarOverlay, #menuToggleBtn {
         display: none !important;
       }
+      
+      /* Sidebar Collapsed */
+      body.sidebar-collapsed #sidebar {
+        width: 80px;
+      }
+      body.sidebar-collapsed #sidebar .label,
+      body.sidebar-collapsed #sidebar h1,
+      body.sidebar-collapsed #sidebar p,
+      body.sidebar-collapsed #sidebar span:not(.lucide) {
+        display: none;
+      }
+      /* Hover expand */
+      body.sidebar-collapsed #sidebar:hover,
+      #sidebar.hover-expanded {
+        width: 288px;
+      }
+      body.sidebar-collapsed #sidebar:hover .label,
+      body.sidebar-collapsed #sidebar:hover h1,
+      body.sidebar-collapsed #sidebar:hover p,
+      body.sidebar-collapsed #sidebar:hover span:not(.lucide),
+      #sidebar.hover-expanded .label,
+      #sidebar.hover-expanded h1,
+      #sidebar.hover-expanded p,
+      #sidebar.hover-expanded span:not(.lucide) {
+        display: block;
+      }
+      /* Layout shell margin — defined in css/panel-padre.css
+         (must match sidebar w-72 = 288px, collapses to 80px) */
+      /* See panel-padre.css @media (min-width: 768px) #layoutShell */
     }
   </style>
 </head>
@@ -327,6 +357,10 @@
       
       <!-- Logo y Branding -->
       <div class="pt-10 pb-5 px-5 flex items-center gap-4 border-b border-white/10 relative">
+        <!-- Botón Toggle (desktop only) -->
+        <button id="toggleSidebar" class="absolute -right-3 top-6 bg-white rounded-full p-1 shadow-md border border-slate-100 text-slate-500 hover:text-[#FF7A00] hidden md:block">
+          <i data-lucide="chevron-left" id="toggleSidebarIcon" class="w-4 h-4"></i>
+        </button>
         <div class="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center shrink-0">
           <img id="sidebarAvatar" src="img/monte.jpg" class="w-9 h-9 object-contain rounded-xl" alt="Logo Sonrisas Creativas" loading="eager" decoding="async">
         </div>
@@ -437,6 +471,12 @@
           <span class="flex-1 text-left">Comunicación</span>
         </button>
         
+        <!-- Mis Reportes -->
+        <button type="button" data-target="reports" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 font-bold text-sm" aria-label="Mis Reportes">
+          <i data-lucide="file-alert" class="w-5 h-5 shrink-0"></i>
+          <span class="flex-1 text-left">Mis Reportes</span>
+        </button>
+        
         <!-- Mi Cuenta -->
         <button type="button" data-target="profile" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 font-bold text-sm" aria-label="Mi Cuenta">
           <i data-lucide="user" class="w-5 h-5 shrink-0"></i>
@@ -454,7 +494,7 @@
     </aside>
     
     <!-- CONTENIDO PRINCIPAL -->
-    <main id="layoutShell" class="flex-1 md:ml-0 lg:ml-0 transition-all duration-300 min-h-screen">
+      <main id="layoutShell" class="flex-1 transition-all duration-300 min-h-screen">
       
       <!-- Header Móvil -->
       <div class="sticky top-0 z-30 bg-white/80 backdrop-blur-lg border-b border-[#E2E8F0] px-4 py-4 flex items-center gap-4 md:hidden">
@@ -1073,6 +1113,35 @@
             </div>
           </section>
 
+          <!-- MIS REPORTES -->
+          <section id="reports" class="section hidden">
+            <div class="flex flex-col gap-6">
+              <!-- Header -->
+              <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <h3 class="text-2xl md:text-3xl font-black text-[#1A2340] tracking-tight flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-xl bg-[#FF7A00] text-white flex items-center justify-center shadow-lg shadow-[#FF7A00]/20">
+                    <i data-lucide="file-alert" class="w-5 h-5"></i>
+                  </div>
+                  Mis Reportes
+                </h3>
+                <button id="btnNewReport" class="px-6 py-3 bg-[#0B63C7] text-white rounded-xl font-black text-sm hover:bg-[#0850A0] active:scale-95 transition-all flex items-center gap-2 shadow-lg shadow-[#0B63C7]/20">
+                  <i data-lucide="plus" class="w-4 h-4"></i> Nuevo Reporte
+                </button>
+              </div>
+
+              <!-- Reports List -->
+              <div class="cloud-card">
+                <div id="reportsList" class="space-y-4">
+                  <div class="p-8 text-center text-[#64748B]">
+                    <i data-lucide="inbox" class="w-16 h-16 mx-auto mb-4 text-[#E2E8F0]"></i>
+                    <p class="font-bold">No tienes reportes aún</p>
+                    <p class="text-sm mt-1">Crea tu primer reporte haciendo clic en "Nuevo Reporte"</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
           <!-- PERFIL -->
           <section id="profile" class="section hidden">
             <div id="notifPermissionSlot"></div>
@@ -1310,6 +1379,95 @@
           </button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- MODAL: Nuevo Reporte -->
+  <div id="modalNewReport" class="fixed inset-0 z-[60] hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+    <div class="bg-white w-full max-w-lg rounded-[2rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+      <div class="bg-[#0B63C7] px-6 py-4 flex items-center justify-between">
+        <div>
+          <h3 class="font-black text-lg text-white">Nuevo Reporte</h3>
+          <p class="text-xs text-white/80 font-bold">Crea un reporte o incidente</p>
+        </div>
+        <button onclick="document.getElementById('modalNewReport').classList.add('hidden')" class="p-2 hover:bg-white/20 rounded-full transition-colors text-white">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      
+      <form id="newReportForm" class="p-6 space-y-4 overflow-y-auto flex-1">
+        <div>
+          <label class="block text-xs font-black text-[#64748B] uppercase tracking-[0.2em] mb-1.5">Tipo de Reporte</label>
+          <select id="reportType" required class="w-full px-4 py-3 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-sm font-bold text-[#1A2340] outline-none focus:ring-2 focus:ring-[#0B63C7] focus:border-[#0B63C7] transition-all">
+            <option value="">Seleccionar...</option>
+            <option value="queja_maestra">Queja sobre Maestra</option>
+            <option value="queja_directora">Queja sobre Directora</option>
+            <option value="incidente_estudiante">Incidente de Estudiante</option>
+            <option value="otro">Otro</option>
+          </select>
+        </div>
+
+        <div id="targetTeacherSection" class="hidden">
+          <label class="block text-xs font-black text-[#64748B] uppercase tracking-[0.2em] mb-1.5">Maestra</label>
+          <select id="targetTeacher" class="w-full px-4 py-3 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-sm font-bold text-[#1A2340] outline-none focus:ring-2 focus:ring-[#0B63C7] focus:border-[#0B63C7] transition-all">
+            <option value="">Seleccionar maestra...</option>
+          </select>
+        </div>
+
+        <div id="targetStudentSection" class="hidden">
+          <label class="block text-xs font-black text-[#64748B] uppercase tracking-[0.2em] mb-1.5">Estudiante</label>
+          <select id="targetStudent" class="w-full px-4 py-3 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-sm font-bold text-[#1A2340] outline-none focus:ring-2 focus:ring-[#0B63C7] focus:border-[#0B63C7] transition-all">
+            <option value="">Seleccionar estudiante...</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-black text-[#64748B] uppercase tracking-[0.2em] mb-1.5">Categoría</label>
+          <input type="text" id="reportCategory" required class="w-full px-4 py-3 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-sm font-bold text-[#1A2340] outline-none focus:ring-2 focus:ring-[#0B63C7] focus:border-[#0B63C7] transition-all" placeholder="Ej: Comunicación, Seguridad, etc.">
+        </div>
+
+        <div>
+          <label class="block text-xs font-black text-[#64748B] uppercase tracking-[0.2em] mb-1.5">Descripción</label>
+          <textarea id="reportDescription" required rows="4" class="w-full px-4 py-3 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-sm outline-none focus:ring-2 focus:ring-[#0B63C7] focus:border-[#0B63C7] transition-all resize-none" placeholder="Describe detalladamente el problema o incidente..."></textarea>
+        </div>
+
+        <div>
+          <label class="block text-xs font-black text-[#64748B] uppercase tracking-[0.2em] mb-1.5">Severidad</label>
+          <select id="reportSeverity" required class="w-full px-4 py-3 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-sm font-bold text-[#1A2340] outline-none focus:ring-2 focus:ring-[#0B63C7] focus:border-[#0B63C7] transition-all">
+            <option value="leve">Leve</option>
+            <option value="media" selected>Media</option>
+            <option value="alta">Alta</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" id="reportAnonymous" class="w-4 h-4 rounded text-[#0B63C7] focus:ring-[#0B63C7]">
+            <span class="text-sm font-bold text-[#64748B]">Reportar de forma anónima</span>
+          </label>
+        </div>
+
+        <div>
+          <label class="block text-xs font-black text-[#64748B] uppercase tracking-[0.2em] mb-2">Evidencia (opcional)</label>
+          <div class="relative">
+            <input type="file" id="reportEvidence" accept="image/*,.pdf,.doc,.docx" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+            <div class="bg-[#F8FAFC] border-2 border-dashed border-[#E2E8F0] rounded-xl p-6 text-center hover:border-[#0B63C7] hover:bg-[#E8F2FF] transition-all">
+              <i data-lucide="upload-cloud" class="w-10 h-10 text-[#64748B] mx-auto mb-2"></i>
+              <p id="evidenceFileName" class="text-sm font-bold text-[#64748B]">Toca para subir evidencia</p>
+              <p class="text-xs text-[#64748B]/70 mt-1">Imágenes, PDF, Word (Max 10MB)</p>
+            </div>
+          </div>
+        </div>
+      </form>
+
+      <div class="p-6 border-t border-[#E2E8F0] flex gap-3">
+        <button type="button" onclick="document.getElementById('modalNewReport').classList.add('hidden')" class="flex-1 py-3 bg-[#E2E8F0] text-[#64748B] rounded-xl font-bold hover:bg-[#CBD5E1] transition-all">
+          Cancelar
+        </button>
+        <button type="submit" form="newReportForm" class="flex-1 py-3 bg-[#0B63C7] text-white rounded-xl font-bold hover:bg-[#0850A0] active:scale-95 transition-all shadow-lg shadow-[#0B63C7]/20">
+          Enviar Reporte
+        </button>
+      </div>
     </div>
   </div>
   

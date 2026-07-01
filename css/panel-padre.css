@@ -703,3 +703,61 @@ body.panel-padre-body .cloud-card:hover {
   box-shadow: var(--p-shadow-md);
   border-color: var(--p-blue);
 }
+
+
+
+/* ════════════════════════════════════════════════════
+   PANEL PADRES — DESKTOP LAYOUT (Flexbox v3)
+   Sidebar: position:sticky, in-flow flex child
+   Content: flex:1 — auto fills, no margin-left needed
+   ════════════════════════════════════════════════════ */
+@media (min-width: 768px) {
+  /* Outer wrapper is already flex row from panel HTML */
+  body.panel-padre-body #sidebar {
+    position: sticky !important;
+    top: 0;
+    height: 100dvh;
+    flex-shrink: 0;
+    width: 18rem; /* w-72 */
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    transform: none !important;
+  }
+
+  /* Content fills rest — no margin-left */
+  body.panel-padre-body #layoutShell {
+    flex: 1 1 0%;
+    min-width: 0;
+    margin-left: 0 !important;
+    transition: none;
+  }
+
+  /* Collapsed: sidebar shrinks, content auto-expands */
+  body.panel-padre-body.sidebar-collapsed #sidebar {
+    width: 80px !important;
+  }
+
+  /* Hover-expand (overlay, no content shift) */
+  body.panel-padre-body.sidebar-collapsed #sidebar:hover {
+    width: 18rem !important;
+    z-index: 1060;
+    margin-right: -calc(18rem - 80px);
+    box-shadow: 4px 0 32px rgba(11,99,199,0.2) !important;
+  }
+
+  /* Hide labels when collapsed */
+  body.panel-padre-body.sidebar-collapsed #sidebar .label,
+  body.panel-padre-body.sidebar-collapsed #sidebar h1,
+  body.panel-padre-body.sidebar-collapsed #sidebar p,
+  body.panel-padre-body.sidebar-collapsed #sidebar .flex-1.min-w-0 {
+    opacity: 0; visibility: hidden; width: 0; overflow: hidden; pointer-events: none;
+  }
+  body.panel-padre-body.sidebar-collapsed #sidebar:hover .label,
+  body.panel-padre-body.sidebar-collapsed #sidebar:hover h1,
+  body.panel-padre-body.sidebar-collapsed #sidebar:hover p,
+  body.panel-padre-body.sidebar-collapsed #sidebar:hover .flex-1.min-w-0 {
+    opacity: 1; visibility: visible; width: auto; pointer-events: auto;
+  }
+
+  body.panel-padre-body #toggleSidebar { right: -14px; top: 24px; z-index: 10; }
+  body.panel-padre-body.sidebar-collapsed #toggleSidebarIcon { transform: rotate(180deg); }
+}

@@ -350,46 +350,35 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 🔴 Sistema de badges por sección
     BadgeSystem.init(auth.user.id);
 
-    // ── Botón hamburguesa móvil ────────────────────────────────────────────────────────
-    const menuBtn = document.getElementById('menuBtn');
-    const sidebar  = document.getElementById('sidebar');
-    const overlay  = document.getElementById('sidebarOverlay');
-
-    const _openSidebar = () => {
-      sidebar?.classList.add('mobile-visible');
-      if (overlay) overlay.style.display = 'block';
-    };
-    const _closeSidebar = () => {
-      sidebar?.classList.remove('mobile-visible');
-      if (overlay) overlay.style.display = 'none';
-    };
-
-    if (menuBtn && sidebar) {
-      menuBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        sidebar.classList.contains('mobile-visible') ? _closeSidebar() : _openSidebar();
+    // ── Sidebar Manager (mobile + desktop) ───────────────────────────────────
+    import('../shared/sidebar-manager.js')
+      .then(({ initSidebar }) => initSidebar())
+      .catch(() => {
+        // Fallback mínimo
+        const menuBtn = document.getElementById('menuBtn');
+        const sidebar  = document.getElementById('sidebar');
+        const overlay  = document.getElementById('sidebarOverlay');
+        const _openSidebar = () => {
+          sidebar?.classList.add('mobile-visible');
+          if (overlay) overlay.style.display = 'block';
+        };
+        const _closeSidebar = () => {
+          sidebar?.classList.remove('mobile-visible');
+          if (overlay) overlay.style.display = 'none';
+        };
+        if (menuBtn && sidebar) {
+          menuBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            sidebar.classList.contains('mobile-visible') ? _closeSidebar() : _openSidebar();
+          });
+        }
+        if (overlay) overlay.addEventListener('click', _closeSidebar);
+        sidebar?.querySelectorAll('button[data-section]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            if (window.innerWidth <= 768) _closeSidebar();
+          });
+        });
       });
-    }
-    if (overlay) {
-      overlay.addEventListener('click', _closeSidebar);
-    }
-
-    // Cerrar sidebar al hacer click en un link (móvil)
-    sidebar?.querySelectorAll('button[data-section]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        if (window.innerWidth <= 768) _closeSidebar();
-      });
-    });
-
-    // ── Botón colapsar sidebar desktop ─────────────────────────────────────────
-    const toggleBtn  = document.getElementById('toggleSidebar');
-    const layoutShell = document.getElementById('layoutShell');
-    if (toggleBtn && sidebar && layoutShell) {
-      toggleBtn.addEventListener('click', () => {
-        sidebar.classList.toggle('collapsed');
-        layoutShell.classList.toggle('sidebar-collapsed');
-      });
-    }
     
     WallModule.init('muroPostsContainer', { 
       accentColor: 'blue',

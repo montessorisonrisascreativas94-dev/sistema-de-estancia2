@@ -7,6 +7,10 @@ import { Helpers, escapeHtml } from './helpers.js';
 import { calcMora, getMoraBreakdown, normalizeStatus, daysUntilDue } from '../shared/payment-service.js';
 import { emitEvent } from '../shared/supabase.js';
 
+// Tenant config row
+const SCHOOL_SETTINGS_ID = 1;
+
+
 export const PaymentsModule = {
   _studentId: null,
   _payments:  [],
@@ -382,7 +386,7 @@ export const PaymentsModule = {
       const { data: settings } = await supabase
         .from('school_settings')
         .select('rnc')
-        .eq('id', 1)
+        .eq('id', SCHOOL_SETTINGS_ID)
         .maybeSingle();
       if (settings?.rnc) rnc = settings.rnc;
     } catch (_) {}

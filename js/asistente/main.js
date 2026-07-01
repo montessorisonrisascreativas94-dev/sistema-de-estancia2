@@ -451,46 +451,26 @@ function initNavigation() {
   DashboardModule.init().then(() => loadedSections.add('dashboard'));
   showSection('dashboard');
 
-  // -- Hamburger m�vil ------------------------------------------------------
-  const menuBtn = document.getElementById('menuBtn');
-  const sidebar  = document.getElementById('sidebar');
-  const overlay  = document.getElementById('sidebarOverlay');
-
-  const _openSidebar = () => {
-    sidebar?.classList.add('mobile-visible');
-    if (overlay) overlay.style.display = 'block';
-  };
-  const _closeSidebar = () => {
-    sidebar?.classList.remove('mobile-visible');
-    if (overlay) overlay.style.display = 'none';
-  };
-
-  if (menuBtn) {
-    menuBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      sidebar?.classList.contains('mobile-visible') ? _closeSidebar() : _openSidebar();
+  // -- Sidebar (mobile + desktop collapse) delegado al módulo unificado ------
+  import('../shared/sidebar-manager.js')
+    .then(({ initSidebar }) => initSidebar())
+    .catch(() => {
+      // Fallback mínimo
+      document.getElementById('menuBtn')?.addEventListener('click', () => {
+        const sb = document.getElementById('sidebar');
+        const ov = document.getElementById('sidebarOverlay');
+        if (!sb) return;
+        const open = sb.classList.toggle('mobile-visible');
+        if (ov) ov.style.display = open ? 'block' : 'none';
+      });
+      document.getElementById('sidebarOverlay')?.addEventListener('click', () => {
+        document.getElementById('sidebar')?.classList.remove('mobile-visible');
+        const ov = document.getElementById('sidebarOverlay');
+        if (ov) ov.style.display = 'none';
+      });
     });
-  }
-  if (overlay) {
-    overlay.addEventListener('click', _closeSidebar);
-  }
+}
 
-  // Cerrar sidebar al hacer click en el main (m�vil)
-  document.getElementById('layoutShell')?.addEventListener('click', () => {
-    if (window.innerWidth < 768 && sidebar?.classList.contains('mobile-visible')) {
-      _closeSidebar();
-    }
-  });
-
-  // -- Colapsar sidebar desktop ---------------------------------------------
-  const toggleBtn   = document.getElementById('toggleSidebar');
-  const wrapper     = sidebar?.closest('.app-content-wrapper') || document.querySelector('.app-content-wrapper');
-  if (toggleBtn && sidebar) {
-    toggleBtn.addEventListener('click', () => {
-      sidebar.classList.toggle('collapsed');
-      wrapper?.classList.toggle('sidebar-collapsed');
-    });
-  }
 }
 
 

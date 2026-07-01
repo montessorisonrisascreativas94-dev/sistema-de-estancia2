@@ -126,16 +126,38 @@ export const TasksModule = {
 
       const { data: { publicUrl } } = supabase.storage.from('classroom_media').getPublicUrl(path);
 
-      const { error } = await supabase.from(TABLES.TASK_EVIDENCES).insert({
-        task_id: taskId,
-        student_id: student.id,
-        parent_id: user.id,
-        file_url: publicUrl,
-        comment,
-        status: 'submitted'
-      });
+      // FIX 409: Check if evidence already exists for this student+task.
+      // Use upsert on (task_id, student_id) to avoid unique-constraint conflicts.
+      const { data: existing } = await supabase
+        .from(TABLES.TASK_EVIDENCES)
+        .select('id')
+        .eq('task_id', taskId)
+        .eq('student_id', student.id)
+        .maybeSingle();
 
-      if (error) throw error;
+      const payload = {
+        task_id:    taskId,
+        student_id: student.id,
+        parent_id:  user.id,
+        file_url:   publicUrl,
+        comment,
+        status:     'submitted'
+      };
+
+      let evidenceError;
+      if (existing?.id) {
+        // Already submitted — update instead of inserting a duplicate
+        const { error } = await supabase
+          .from(TABLES.TASK_EVIDENCES)
+          .update({ file_url: publicUrl, comment, status: 'submitted' })
+          .eq('id', existing.id);
+        evidenceError = error;
+      } else {
+        const { error } = await supabase.from(TABLES.TASK_EVIDENCES).insert(payload);
+        evidenceError = error;
+      }
+
+      if (evidenceError) throw evidenceError;
 
       // ✅ ÉXITO: Confetti y Mensaje Motivador
       if (window.confetti) {
@@ -236,20 +258,19 @@ export const TasksModule = {
         return;
       }
 
-      // Intentar RPC que filtra por período activo automáticamente
-      let tasks = [];
+      // FIX 404: Wrap RPC call — PGRST202 code for missing function,
+      // but some Supabase versions return a 404 HTTP status with a different code.
+      // Catch ALL errors from the RPC and silently fall through to the direct query.
       try {
         const { data: rpcData, error: rpcErr } = await supabase.rpc('get_tasks_for_period', {
           p_classroom_id: student.classroom_id,
           p_period_id:    null
         });
-        // Solo usar si el RPC existe (no 404/PGRST202)
         if (!rpcErr && rpcData?.tasks) {
           tasks = rpcData.tasks;
-        } else if (rpcErr?.code === 'PGRST202' || rpcErr?.message?.includes('function') || rpcErr?.message?.includes('404')) {
-          // RPC no desplegado aún — usar fallback silenciosamente
         }
-      } catch (_) { /* fallback */ }
+        // Any error (404, PGRST202, network) → fall through to direct query silently
+      } catch (_) { /* RPC not deployed — use fallback below */ }
 
       // Fallback: query directa sin filtro de período
       if (!tasks.length) {

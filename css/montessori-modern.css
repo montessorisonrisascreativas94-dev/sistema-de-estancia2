@@ -553,38 +553,15 @@ a > svg[data-lucide] {
 .montessori-inline .k-4,
 .montessori-inline .k-7  { color: #3B82F6; }
 
-/* ── Sidebar desktop: ancho base (usado por directora/asistente) ── */
+/* ── Sidebar desktop: ancho base ── */
+/* Width and collapse behavior now fully controlled by the unified
+   body.sidebar-collapsed system in the SIDEBAR DESKTOP block below.
+   Only set the base width here for panels that need a specific value. */
 @media (min-width: 768px) {
-  body:not(.panel-padre-body) aside#sidebar {
-    width: 288px;
-  }
-  .panel-asistente-body aside#sidebar { width: 280px; }
-}
-
-/* ── Sidebar collapsed state ─────────────────────────────── */
-@media (min-width: 768px) {
-  aside#sidebar.collapsed .kk-sidebar-logo-text,
-  aside#sidebar.collapsed .kk-sidebar-profile-info,
-  aside#sidebar.collapsed .kk-nav-section,
-  aside#sidebar.collapsed .kk-nav-item span,
-  aside#sidebar.collapsed .kk-logout-btn span,
-  aside#sidebar.collapsed .label {
-    display: none;
-  }
-  aside#sidebar.collapsed .kk-nav-item {
-    justify-content: center;
-    padding-left: 0;
-    padding-right: 0;
-  }
-  aside#sidebar.collapsed .kk-nav-item i {
-    width: 24px;
-    height: 24px;
-  }
-  aside#sidebar.collapsed .kk-logout-btn {
-    justify-content: center;
-    padding-left: 0;
-    padding-right: 0;
-  }
+  body:not(.panel-padre-body) aside#sidebar { width: 288px; }
+  .panel-padre-body aside#sidebar           { width: 272px; }
+  .panel-asistente-body aside#sidebar       { width: 280px; }
+  .panel-maestra-body aside#sidebar         { width: 280px; }
 }
 
 /* ── Badge animations ────────────────────────────────────── */
@@ -661,3 +638,109 @@ a > svg[data-lucide] {
 .card-glow-blue   { animation: kk-card-glow-blue   1.8s ease-out both; }
 .card-glow-yellow  { animation: kk-card-glow-yellow  1.8s ease-out both; }
 .card-glow-red    { animation: kk-card-glow-red    1.8s ease-out both; }
+
+
+/* ╔══════════════════════════════════════════════════════════╗
+   ║  SIDEBAR DESKTOP — Sistema Flexbox Unificado v3          ║
+   ║  FIX: usa position:sticky en lugar de position:fixed     ║
+   ║  El sidebar encoge/crece como flex-child → sin margin-left║
+   ╚══════════════════════════════════════════════════════════╝ */
+
+/* ── App shell: flex row, full height ── */
+body:not(.panel-padre-body) .app {
+  display: flex !important;
+  flex-direction: row !important;
+  min-height: 100dvh;
+}
+
+/* ── Sidebar: in-flow flex child, sticky ── */
+@media (min-width: 769px) {
+  body:not(.panel-padre-body) aside#sidebar {
+    position: sticky !important;
+    top: 0;
+    height: 100dvh;
+    flex-shrink: 0;
+    width: 280px;
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 50;
+    transform: none !important; /* override any translateX */
+  }
+
+  /* Directora uses 288px */
+  body.panel-directora-body aside#sidebar { width: 288px; }
+
+  /* Content wrapper fills remaining space automatically — NO margin-left */
+  body:not(.panel-padre-body) .app-content-wrapper {
+    flex: 1 1 0%;
+    min-width: 0;
+    margin-left: 0 !important;
+    overflow: hidden;
+    height: 100dvh;
+    transition: none; /* no layout shift animation needed with flexbox */
+  }
+
+  /* Collapsed: sidebar shrinks, content expands automatically */
+  body.sidebar-collapsed:not(.panel-padre-body) aside#sidebar {
+    width: 80px !important;
+  }
+
+  /* Hover-expand: sidebar temporarily widens (z-index overlay, no content shift) */
+  body.sidebar-collapsed:not(.panel-padre-body) aside#sidebar:hover {
+    width: 280px !important;
+    z-index: 1060;
+    box-shadow: 4px 0 32px rgba(0,0,0,0.18);
+    /* Prevent flex from shifting content during hover */
+    margin-right: -200px;
+  }
+  body.sidebar-collapsed.panel-directora-body aside#sidebar:hover {
+    width: 288px !important;
+    margin-right: -208px;
+  }
+
+  /* Toggle button icon */
+  #toggleSidebar i,
+  #toggleSidebarIcon {
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  body.sidebar-collapsed #toggleSidebarIcon,
+  body.sidebar-collapsed #toggleSidebar i {
+    transform: rotate(180deg);
+  }
+}
+
+/* ── Mobile: sidebar slides in from left (not in flex flow) ── */
+@media (max-width: 768px) {
+  body:not(.panel-padre-body) aside#sidebar {
+    position: fixed !important;
+    top: 0; left: 0; bottom: 0;
+    height: 100dvh !important;
+    width: 280px !important;
+    transform: translateX(-100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: transform;
+    z-index: 1050;
+  }
+  body:not(.panel-padre-body) aside#sidebar.mobile-visible {
+    transform: translateX(0) !important;
+    box-shadow: 8px 0 32px rgba(0,0,0,0.25);
+  }
+  body:not(.panel-padre-body) .app-content-wrapper {
+    margin-left: 0 !important;
+  }
+  /* On mobile, never show collapsed state */
+  body.sidebar-collapsed:not(.panel-padre-body) aside#sidebar {
+    width: 280px !important;
+  }
+  #sidebarOverlay {
+    position: fixed !important;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 1040;
+    display: none;
+    transition: opacity 0.3s ease;
+  }
+  #sidebarOverlay.visible { display: block; }
+}
+}

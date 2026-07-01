@@ -2,6 +2,10 @@ import { supabase, sendEmail } from '../shared/supabase.js';
 import { QueryCache } from '../shared/query-cache.js';
 import { safeHandle } from '../shared/db-utils.js';
 
+// Tenant config row
+const SCHOOL_SETTINGS_ID = 1;
+
+
 const TABLES = {
   PROFILES: 'profiles',
   CLASSROOMS: 'classrooms',
@@ -279,12 +283,12 @@ export const DirectorApi = {
   async getSchoolSettings() {
     try {
       // .maybeSingle() devuelve null si no hay fila, en lugar de Error 406
-      return await supabase.from('school_settings').select('id, generation_day, due_day, open_time, close_time, work_days, phone, business_hours').eq('id', 1).maybeSingle();
+      return await supabase.from('school_settings').select('id, generation_day, due_day, open_time, close_time, work_days, phone, business_hours').eq('id', SCHOOL_SETTINGS_ID).maybeSingle();
     } catch (e) { return logError('getSchoolSettings', e); }
   },
 
   async updateSchoolSettings(updates) {
-    return await supabase.from('school_settings').update(updates).eq('id', 1);
+    return await supabase.from('school_settings').update(updates).eq('id', SCHOOL_SETTINGS_ID);
   },
 
   // --- CLASSROOMS ---

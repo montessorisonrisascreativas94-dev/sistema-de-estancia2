@@ -220,8 +220,14 @@ export const Api = {
    */
   async getStudentGrades(studentId) {
     const [tasks, reports] = await Promise.all([
+      // FIX 404: Explicit columns instead of select('*, task:task_id(*)')
+      // Wildcard join fails if the FK relation isn't registered in PostgREST schema cache.
       handle(
-        db(TABLES.TASK_EVIDENCES).select('*, task:task_id(title)').eq('student_id', studentId).not('grade_letter', 'is', null).order('created_at', { ascending: false }), 
+        db(TABLES.TASK_EVIDENCES)
+          .select('id, task_id, student_id, status, grade_letter, stars, file_url, comment, created_at, task:tasks!task_evidences_task_id_fkey(id, title)')
+          .eq('student_id', studentId)
+          .not('grade_letter', 'is', null)
+          .order('created_at', { ascending: false }),
         'getTaskGrades'
       ),
       handle(db(TABLES.GRADES).select('id, subject, score, period, notes, created_at').eq('student_id', studentId).order('period', { ascending: true }), 'getReportGrades')

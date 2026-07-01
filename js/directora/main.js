@@ -171,7 +171,7 @@ export function goToSection(sectionId) {
         import('./access.module.js').then(m => m.AccessModule.init());
         break;
       case 'reportes':
-        import('./inquiries.module.js').then(m => m.InquiriesModule.init());
+        import('./reports.module.js').then(m => m.ReportsModule.init());
         break;
       case 'staff-permits':
         import('./permits.module.js').then(m => m.PermitsModule.init());
@@ -380,97 +380,27 @@ document.addEventListener('DOMContentLoaded', async () => {
       window.location.href = 'login.html';
     });
 
-    // 7. Sidebar desktop y mobile
-    const menuBtn = document.getElementById('menuBtn');
-    const sidebar = document.getElementById('sidebar');
-    const overlay = document.getElementById('sidebarOverlay');
-    const wrapper = document.querySelector('.app-content-wrapper');
-    const toggleBtn = document.getElementById('toggleSidebar');
-    const toggleIcon = document.getElementById('toggleSidebarIcon');
 
-    const openSidebar = () => {
-      if (sidebar) sidebar.classList.add('mobile-visible');
-      if (overlay) overlay.style.display = 'block';
-    };
-    const closeSidebar = () => {
-      if (sidebar) sidebar.classList.remove('mobile-visible');
-      if (overlay) overlay.style.display = 'none';
-    };
-
-    const applyDesktopSidebarState = (collapsed) => {
-      if (!sidebar || !wrapper) return;
-      if (window.innerWidth < 768) {
-        wrapper.classList.remove('sidebar-collapsed');
-        sidebar.classList.remove('sidebar-collapsed');
-        return;
-      }
-      wrapper.classList.toggle('sidebar-collapsed', collapsed);
-      sidebar.classList.toggle('sidebar-collapsed', collapsed);
-      if (toggleIcon) {
-        toggleIcon.style.transform = collapsed ? 'rotate(180deg)' : 'rotate(0deg)';
-      }
-      if (toggleBtn) {
-        toggleBtn.setAttribute('aria-expanded', String(!collapsed));
-      }
-      document.body.dataset.sidebarCollapsed = collapsed ? 'true' : 'false';
-    };
-
-    toggleBtn?.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      if (window.innerWidth < 768) return;
-      const isCollapsed = wrapper?.classList.contains('sidebar-collapsed');
-      applyDesktopSidebarState(!isCollapsed);
-    });
-
-    if (sidebar) {
-      sidebar.addEventListener('mouseenter', () => {
-        if (window.innerWidth >= 768) applyDesktopSidebarState(false);
+    // 7. Sidebar — delegado al módulo unificado sidebar-manager.js
+    import('../shared/sidebar-manager.js')
+      .then(({ initSidebar }) => initSidebar())
+      .catch((err) => {
+        console.warn('[Sidebar] sidebar-manager.js no cargó, usando fallback:', err?.message);
+        document.getElementById('menuBtn')?.addEventListener('click', () => {
+          const sb = document.getElementById('sidebar');
+          const ov = document.getElementById('sidebarOverlay');
+          if (!sb) return;
+          const open = sb.classList.toggle('mobile-visible');
+          if (ov) ov.style.display = open ? 'block' : 'none';
+        });
+        document.getElementById('sidebarOverlay')?.addEventListener('click', () => {
+          document.getElementById('sidebar')?.classList.remove('mobile-visible');
+          const ov = document.getElementById('sidebarOverlay');
+          if (ov) ov.style.display = 'none';
+        });
       });
-      sidebar.addEventListener('mouseleave', () => {
-        if (window.innerWidth >= 768) applyDesktopSidebarState(true);
-      });
-    }
 
-    window.addEventListener('resize', () => {
-      if (window.innerWidth < 768) {
-        wrapper?.classList.remove('sidebar-collapsed');
-        sidebar?.classList.remove('sidebar-collapsed');
-        if (toggleIcon) toggleIcon.style.transform = 'rotate(0deg)';
-      } else {
-        applyDesktopSidebarState(document.body.dataset.sidebarCollapsed === 'true');
-      }
-    });
-
-    applyDesktopSidebarState(false);
-
-    // Remove any previous listener to avoid duplicates
-    const newMenuBtn = menuBtn?.cloneNode(true);
-    if (menuBtn && newMenuBtn) menuBtn.parentNode.replaceChild(newMenuBtn, menuBtn);
-
-    newMenuBtn?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const sb = document.getElementById('sidebar');
-      const ov = document.getElementById('sidebarOverlay');
-      if (sb?.classList.contains('mobile-visible')) {
-        sb.classList.remove('mobile-visible');
-        if (ov) ov.style.display = 'none';
-      } else {
-        sb?.classList.add('mobile-visible');
-        if (ov) ov.style.display = 'block';
-      }
-    });
-
-    overlay?.addEventListener('click', closeSidebar);
-
-    // Cerrar sidebar al hacer click en cualquier link (m�vil)
-    sidebar?.querySelectorAll('.nav-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        if (window.innerWidth <= 768) closeSidebar();
-      });
-    });
-
-    // 7. Configurar guardado de perfil
+    // 7b. Configurar guardado de perfil
     document.getElementById('btnSaveMainConfig')?.addEventListener('click', async () => {
       // Solo actualizar columnas que existen en profiles (name, bio, phone)
       // title y address no existen � causan 400
