@@ -1,4 +1,4 @@
-﻿import { DirectorApi } from './api.js';
+import { DirectorApi } from './api.js';
 import { Helpers } from '../shared/helpers.js';
 import { UI } from './ui.module.js';
 import { AppState } from './state.js';
@@ -10,7 +10,7 @@ export const TeachersModule = {
     const container = document.getElementById(renderTargetId);
     if (!container) return;
 
-    const loadingHtml = '<tr><td colspan="5" class="text-center py-8">Cargando...</td></tr>';
+    const loadingHtml = '<tr><td colspan="6" class="text-center py-8">Cargando...</td></tr>';
     container.innerHTML = loadingHtml;
 
     try {
@@ -59,7 +59,7 @@ export const TeachersModule = {
     if (!container) return;
 
     if (!staff.length) {
-      container.innerHTML = '<tr><td colspan="5" class="text-center py-8 text-slate-500">No hay personal que coincida.</td></tr>';
+      container.innerHTML = '<tr><td colspan="6" class="text-center py-8 text-slate-500">No hay personal que coincida.</td></tr>';
       return;
     }
     container.innerHTML = staff.map(t => `
@@ -68,6 +68,7 @@ export const TeachersModule = {
           <td class="p-4 text-slate-500">${t.email}</td>
           <td class="p-4"><span class="px-3 py-1 bg-slate-100 rounded-full text-[10px] font-black uppercase text-slate-500">${t.classrooms?.name || 'Sin Aula'}</span></td>
           <td class="p-4"><span class="px-3 py-1 bg-[#E8F2FF] text-[#0B63C7] rounded-full text-[10px] font-black uppercase tracking-wider">${t.role}</span></td>
+          <td class="p-4"><span class="px-3 py-1 ${t.is_active !== false ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-500'} rounded-full text-[10px] font-black uppercase tracking-wider">${t.is_active !== false ? 'Activo' : 'Inactivo'}</span></td>
           <td class="p-4 text-right">
             <div class="flex justify-end gap-2">
               <button onclick="App.teachers.openModal('${t.id}')" class="w-9 h-9 flex items-center justify-center bg-[#E8F2FF] text-[#0B63C7] hover:bg-[#0B63C7] hover:text-white rounded-xl transition-all" title="Editar">

@@ -1,4 +1,4 @@
-﻿import { DirectorApi } from './api.js';
+import { DirectorApi } from './api.js';
 import { Helpers } from '../shared/helpers.js';
 import { UI } from './ui.module.js';
 import { AppState } from './state.js';
@@ -163,7 +163,7 @@ export const StudentsModule = {
     const gridContainer = document.getElementById('studentsGrid');
     
     if (!students?.length) {
-      if (tableContainer) tableContainer.innerHTML = '<tr><td colspan="6" class="text-center py-8 text-slate-500">No hay estudiantes.</td></tr>';
+      if (tableContainer) tableContainer.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-slate-500">No hay estudiantes.</td></tr>';
       if (gridContainer) gridContainer.innerHTML = '<div class="col-span-3 text-center py-8 text-slate-500">No hay estudiantes.</div>';
       return;
     }
@@ -188,6 +188,11 @@ export const StudentsModule = {
           <td class="p-4 text-sm font-medium text-slate-600">
             <span class="px-3 py-1 bg-slate-100 rounded-full text-[10px] font-black uppercase text-slate-500">
               ${s.classrooms?.name || 'No asignada'}
+            </span>
+          </td>
+          <td class="p-4">
+            <span class="px-3 py-1 ${s.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'} rounded-full text-[10px] font-black uppercase tracking-widest">
+              ${s.is_active ? 'Activo' : 'Inactivo'}
             </span>
           </td>
           <td class="p-4 text-right">

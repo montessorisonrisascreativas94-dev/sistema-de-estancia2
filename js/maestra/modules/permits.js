@@ -54,7 +54,8 @@ export const PermitsModule = {
       const user = (await supabase.auth.getUser()).data.user;
       const { data, error } = await supabase
         .from(TABLES.STAFF_PERMITS)
-        .select('*')
+        // FIX select('*'): only fetch fields needed by the permits table UI
+        .select('id, staff_id, type, reason, start_date, end_date, status, created_at, approved_by, approved_at, notes')
         .eq('staff_id', user.id)
         .order('created_at', { ascending: false });
 

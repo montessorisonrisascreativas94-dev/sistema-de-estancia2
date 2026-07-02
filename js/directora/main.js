@@ -7,7 +7,7 @@ import { DashboardService } from './dashboard.service.js';
 import { UIHelpers, DirectorUI } from './ui.module.js';
 import { StudentsModule } from './students.module.js';
 import { TeachersModule } from './teachers.module.js';
-import { PaymentsModule } from './payments_clean.js';
+import { PaymentsModule } from './payments.module.js';
 
 // ── Tenant config row — única fila de configuración del tenant ─────────────────
 const SCHOOL_SETTINGS_ID = 1;
@@ -143,7 +143,7 @@ export function goToSection(sectionId) {
         import('./grades.module.js').then(m => m.GradesModule.init());
         break;
       case 'pagos':
-        import('./payments_clean.js').then(m => m.PaymentsModule.init());
+        import('./payments.module.js').then(m => m.PaymentsModule.init());
         break;
       case 'comunicacion':
         import('./chat.module.js').then(m => m.ChatModule.init());
@@ -232,14 +232,14 @@ async function loadProfile() {
       const { data: s1, error: e1 } = await supabase
         .from('school_settings')
         .select('id, generation_day, due_day, phone, business_hours, open_time, close_time, work_days, rnc')
-        .eq('id', SCHOOL_SETTINGS_ID).single();
+        .eq('id', SCHOOL_SETTINGS_ID).maybeSingle();
 
       if (e1 && e1.code === '42703') {
-        // Columnas nuevas no existen � usar solo las base
+        // Columnas nuevas no existen — usar solo las base
         const { data: s2 } = await supabase
           .from('school_settings')
           .select('id, generation_day, due_day, phone, business_hours')
-          .eq('id', SCHOOL_SETTINGS_ID).single();
+          .eq('id', SCHOOL_SETTINGS_ID).maybeSingle();
         settings = s2;
       } else {
         settings = s1;
@@ -249,6 +249,7 @@ async function loadProfile() {
         if (settings.open_time)  { const el = document.getElementById('confOpenTime');  if (el) el.value = settings.open_time; }
         if (settings.close_time) { const el = document.getElementById('confCloseTime'); if (el) el.value = settings.close_time; }
         if (settings.rnc) { const el = document.getElementById('confRNC'); if (el) el.value = settings.rnc; }
+
         if (settings.work_days) {
           try {
             const days = typeof settings.work_days === 'string' ? JSON.parse(settings.work_days) : settings.work_days;

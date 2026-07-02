@@ -135,7 +135,7 @@ export const DirectorApi = {
         supabase.from('profiles').select('*', { count: 'exact', head: true }).in('role', ['maestra', 'asistente']),
         supabase.from('classrooms').select('*', { count: 'exact', head: true }),
         supabase.from('attendance').select('*', { count: 'exact', head: true }).eq('date', today).in('status', ['present', 'late']),
-        supabase.from('inquiries').select('*', { count: 'exact', head: true }).not('status', 'in', '("resolved","closed")'),
+        supabase.from('inquiries').select('*', { count: 'exact', head: true }).not('status', 'in', ['resolved', 'closed']),
         // Para pagos pendientes, vencidos y en revisión, necesitamos la suma de montos
         supabase.from('payments').select('amount').in('status', ['pending', 'overdue', 'review']).limit(1000)
       ]);
@@ -502,7 +502,7 @@ export const DirectorApi = {
       try {
         const { data, error } = await withTimeout(() =>
           supabase.from(TABLES.PROFILES)
-            .select('id, name, role, email, phone, avatar_url, classrooms!classrooms_teacher_id_fkey(id, name)')
+            .select('id, name, role, email, phone, avatar_url, is_active, classrooms!classrooms_teacher_id_fkey(id, name)')
             .in('role', ['maestra', 'asistente'])
             .order('name')
         );
@@ -526,7 +526,7 @@ export const DirectorApi = {
       }
     }
     // Only send columns that exist in profiles table â€” exclude email (can't update via profiles)
-    const ALLOWED = ['name', 'phone', 'role', 'bio', 'notes', 'access_code', 'avatar_url', 'onesignal_player_id'];
+    const ALLOWED = ['name', 'phone', 'role', 'bio', 'notes', 'access_code', 'avatar_url', 'onesignal_player_id', 'is_active'];
     const safeData = Object.fromEntries(Object.entries(profileData).filter(([k]) => ALLOWED.includes(k)));
     const result = await supabase.from(TABLES.PROFILES).update(safeData).eq('id', id);
     QueryCache.invalidate('dir_teachers');

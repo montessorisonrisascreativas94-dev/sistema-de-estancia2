@@ -136,7 +136,7 @@ export const MaestraApi = {
    */
   async upsertDailyLog(payload) {
     const cleanPayload = { ...payload };
-    if (!cleanPayload.status) cleanPayload.status = 'draft'; // Por defecto es borrador
+    if (!cleanPayload.status) cleanPayload.status = 'published'; // Por defecto es publicado
 
     // 1. Buscar log existente
     const { data: existing, error: findError } = await supabase

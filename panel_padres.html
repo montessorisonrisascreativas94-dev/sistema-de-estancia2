@@ -270,13 +270,33 @@
       #sidebar {
         position: sticky;
         top: 0;
+        /* FIX: sidebar stays at full height, only content scrolls */
         height: 100dvh;
+        overflow-y: auto;          /* sidebar itself can scroll internally */
+        overflow-x: hidden;
         transform: translateX(0) !important;
         flex-shrink: 0;
+        align-self: flex-start;    /* don't stretch to content height */
       }
       #sidebarOverlay, #menuToggleBtn {
         display: none !important;
       }
+
+      /* FIX: only #layoutShell scrolls on desktop, sidebar stays */
+      body.panel-padre-body {
+        overflow: hidden !important; /* no page scroll */
+      }
+      #layoutShell {
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        height: 100dvh !important;
+        /* scrollbar subtle */
+        scrollbar-width: thin;
+        scrollbar-color: rgba(11,99,199,0.2) transparent;
+      }
+      #layoutShell::-webkit-scrollbar { width: 4px; }
+      #layoutShell::-webkit-scrollbar-track { background: transparent; }
+      #layoutShell::-webkit-scrollbar-thumb { background: rgba(11,99,199,0.2); border-radius: 4px; }
       
       /* Sidebar Collapsed */
       body.sidebar-collapsed #sidebar {
@@ -303,9 +323,7 @@
       #sidebar.hover-expanded span:not(.lucide) {
         display: block;
       }
-      /* Layout shell margin — defined in css/panel-padre.css
-         (must match sidebar w-72 = 288px, collapses to 80px) */
-      /* See panel-padre.css @media (min-width: 768px) #layoutShell */
+      /* Layout shell margin — defined in css/panel-padre.css */
     }
   </style>
 </head>
@@ -551,15 +569,15 @@
             </div>
           </div>
           
-          <!-- 🚨 Banner de deuda vencida — se muestra dinámicamente por JS -->
-          <div id="debtBanner" class="hidden mb-8 rounded-[1.5rem] overflow-hidden shadow-lg border w-full max-w-full box-border">
-            <div class="bg-gradient-to-br from-[#FF7A00] via-[#FF7A00] to-[#D96500] p-5 md:p-6 flex flex-col lg:flex-row items-center gap-4">
-              <div class="w-12 h-12 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center text-2xl shrink-0 animate-bounce">⚠️</div>
+          <!-- 🚨 Banner de deuda vencida — verde sólido, bien visible -->
+          <div id="debtBanner" class="hidden mb-8 rounded-[1.5rem] overflow-hidden shadow-lg w-full max-w-full box-border">
+            <div style="background:linear-gradient(135deg,#28B54D 0%,#1A8035 100%)" class="p-5 md:p-6 flex flex-col lg:flex-row items-center gap-4">
+              <div class="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-2xl shrink-0 shadow-md">💰</div>
               <div class="flex-1 text-center lg:text-left min-w-0 w-full">
                 <p class="font-black text-white text-base md:text-lg leading-tight break-words">Tienes un saldo pendiente</p>
                 <p id="debtBannerMsg" class="text-white/90 text-xs md:text-sm font-bold mt-1 break-words">Saldo pendiente: $0.00. Evita recargos pagando a tiempo.</p>
               </div>
-              <button onclick="App.navigateTo('payments')" class="w-full lg:w-auto shrink-0 bg-white text-[#FF7A00] font-black text-sm px-6 py-3 rounded-2xl hover:bg-[#FFF0E0] transition-all active:scale-95 shadow-md">
+              <button onclick="App.navigateTo('payments')" class="w-full lg:w-auto shrink-0 bg-white text-[#1A8035] font-black text-sm px-6 py-3 rounded-2xl hover:bg-green-50 transition-all active:scale-95 shadow-md">
                 Pagar Ahora
               </button>
             </div>

@@ -1,4 +1,4 @@
-import { supabase, ensureRole } from '../shared/supabase.js';
+﻿import { supabase, ensureRole } from '../shared/supabase.js';
 import { logError, auditLog } from '../shared/db-utils.js';
 
 // Bloquear redirección por SIGNED_OUT desde el primer momento
@@ -1109,7 +1109,8 @@ window.renderBruteForce = async function() {
     // Intentar usar la vista v_brute_force_attempts
     const { data, error } = await supabase
       .from('v_brute_force_attempts')
-      .select('*')
+      // FIX select('*'): explicit columns for this security view
+      .select('user_id, email, failed_attempts, last_attempt, ip_address, is_blocked')
       .order('failed_attempts', { ascending: false })
       .limit(50);
 

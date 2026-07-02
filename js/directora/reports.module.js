@@ -13,7 +13,8 @@ export const ReportsModule = {
     try {
       const { data: dashboard, error } = await supabase
         .from('v_reports_dashboard')
-        .select('*');
+        // FIX select('*'): v_reports_dashboard is a view — select specific fields
+        .select('total_reports, open_reports, resolved_reports, pending_reports, overdue_reports');
 
       if (error) throw error;
 

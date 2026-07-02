@@ -106,7 +106,8 @@ export async function getReportsDashboard() {
   try {
     const { data, error } = await supabase
       .from('v_reports_dashboard')
-      .select('*');
+      // FIX select('*'): explicit columns for v_reports_dashboard view
+      .select('total_reports, open_reports, resolved_reports, pending_reports, overdue_reports, avg_resolution_days');
 
     if (error) throw error;
     return data?.[0] || {};

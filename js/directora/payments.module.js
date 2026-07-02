@@ -1,4 +1,4 @@
-﻿import { DirectorApi } from './api.js';
+import { DirectorApi } from './api.js';
 import { Helpers } from '../shared/helpers.js';
 import { UIHelpers } from './ui.module.js';
 import { supabase } from '../shared/supabase.js';
@@ -26,7 +26,8 @@ export const PaymentsModule = {
       on('btnNewPaymentAction',    'click',  () => this.openPaymentModal());
       on('btnNewPayment',          'click',  () => this.openPaymentModal());
       on('btnGenerateCharges',     'click',  () => this.runCycle());
-      on('btnGeneratePaymentsNow', 'click',  () => this.runCycle());
+      on('btnGeneratePaymentsNow', 'click', () => this.runCycle());
+      on('btnGenerateSpecificMonth', 'click', () => this.openGenerateSpecificMonthModal());
       on('btnSavePaymentConfig',   'click',  () => this.savePaymentConfig());
       on('btnSendPaymentReminders','click',  () => this.sendReminders());
     }
@@ -458,6 +459,62 @@ export const PaymentsModule = {
       Helpers.toast('Ciclo completado: ' + (r.generated || 0) + ' generados, ' + (r.expired || 0) + ' vencidos', 'success');
       await this.loadPayments();
     } catch (e) { Helpers.toast('Error en ciclo: ' + e.message, 'error'); }
+  },
+
+  async openGenerateSpecificMonthModal() {
+    const now = new Date();
+    const years = [];
+    for (let y = now.getFullYear() + 1; y >= now.getFullYear() - 3; y--) {
+      years.push(y);
+    }
+    const monthOptions = MES_LABEL.map((lbl, i) => 
+      `<option value="${i + 1}" ${i === now.getMonth() ? ' selected' : ''}>${lbl}</option>`
+    ).join('');
+    const yearOptions = years.map(y => 
+      `<option value="${y}" ${y === now.getFullYear() ? ' selected' : ''}>${y}</option>`
+    ).join('');
+
+    window.openGlobalModal(
+      '<div class="bg-gradient-to-r from-blue-700 to-blue-500 text-white p-6 rounded-t-3xl flex items-center gap-3">' +
+        '<div class="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center text-2xl">&#128178;</div>' +
+        '<div><h3 class="text-xl font-black">Generar Pagos Mes Específico</h3><p class="text-xs text-white/70 font-bold uppercase tracking-widest">Selecciona mes y año</p></div>' +
+      '</div>' +
+      '<div class="p-6 bg-slate-50/30" id="modalGenerateSpecificMonth">' +
+        '<div class="grid grid-cols-1 md:grid-cols-2 gap-4">' +
+          '<div><label class="block text-[11px] font-black text-slate-400 uppercase tracking-wider mb-1.5 ml-1">Mes</label><select id="genSpecificMonth" class="w-full px-4 py-2.5 border-2 border-slate-100 rounded-2xl outline-none focus:ring-4 focus:ring-blue-100 focus:border-[#0B63C7] bg-slate-50/50 transition-all text-sm font-medium">' + monthOptions + '</select></div>' +
+          '<div><label class="block text-[11px] font-black text-slate-400 uppercase tracking-wider mb-1.5 ml-1">Año</label><select id="genSpecificYear" class="w-full px-4 py-2.5 border-2 border-slate-100 rounded-2xl outline-none focus:ring-4 focus:ring-blue-100 focus:border-[#0B63C7] bg-slate-50/50 transition-all text-sm font-medium">' + yearOptions + '</select></div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="bg-white p-5 rounded-b-3xl border-t border-slate-100 flex justify-end gap-3">' +
+        '<button onclick="App.ui.closeModal()" class="px-6 py-2.5 text-slate-500 font-black text-xs uppercase hover:bg-slate-50 rounded-2xl transition-all">Cancelar</button>' +
+        '<button id="btnGenerateSpecificMonth" class="px-8 py-2.5 bg-gradient-to-r from-blue-700 to-blue-500 text-white rounded-2xl font-black text-xs uppercase shadow-lg hover:-translate-y-0.5 active:scale-95 transition-all">Generar Pagos</button>' +
+      '</div>'
+    );
+    
+    document.getElementById('btnGenerateSpecificMonth')?.addEventListener('click', () => this.generateSpecificMonthCharges());
+  },
+
+  async generateSpecificMonthCharges() {
+    const month = parseInt(document.getElementById('genSpecificMonth')?.value, 10);
+    const year = parseInt(document.getElementById('genSpecificYear')?.value, 10);
+    if (!month || !year) return Helpers.toast('Selecciona mes y año', 'warning');
+    
+    const btn = document.getElementById('btnGenerateSpecificMonth');
+    if (btn) btn.disabled = true;
+    UIHelpers.setLoading(true, '#modalGenerateSpecificMonth');
+    try {
+      Helpers.toast('Generando pagos...', 'info');
+      const { data, error } = await supabase.rpc('generate_monthly_charges', { p_month: month, p_year: year });
+      if (error) throw error;
+      const r = (typeof data === 'string') ? JSON.parse(data) : (data || {});
+      Helpers.toast('Completado: ' + (r.generated || 0) + ' pagos generados para ' + MES_LABEL[month - 1] + ' ' + year, 'success');
+      UIHelpers.closeModal();
+      await this.loadPayments();
+    } catch (e) { Helpers.toast('Error: ' + e.message, 'error'); }
+    finally {
+      UIHelpers.setLoading(false, '#modalGenerateSpecificMonth');
+      if (btn) btn.disabled = false;
+    }
   },
 
   async waiveMora(id) {

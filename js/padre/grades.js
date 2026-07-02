@@ -1,4 +1,4 @@
-﻿import { supabase } from '../shared/supabase.js';
+import { supabase } from '../shared/supabase.js';
 import { AppState, TABLES } from './appState.js';
 import { Helpers, escapeHtml } from './helpers.js';
 
@@ -24,7 +24,7 @@ export const GradesModule = {
     container.innerHTML = Helpers.skeleton(3, 'h-24');
 
     try {
-      const [gradesRes, taskRes] = await Promise.all([
+      const [gradesRes, taskRes, historyRes] = await Promise.all([
         supabase
           .from(TABLES.GRADES)
           .select('id, subject, score, period, notes, created_at')
@@ -35,7 +35,8 @@ export const GradesModule = {
           .select(`*, tasks:task_id (title, description)`)
           .eq('student_id', studentId)
           .not('grade_letter', 'is', null)
-          .order('created_at', { ascending: false })
+          .order('created_at', { ascending: false }),
+        supabase.rpc('get_student_history', { p_student_id: studentId })
       ]);
 
       if (gradesRes.error) throw gradesRes.error;
@@ -43,14 +44,41 @@ export const GradesModule = {
 
       const grades = gradesRes.data || [];
       const taskEvidences = taskRes.data || [];
+      const history = historyRes.data || [];
 
-      if (grades.length === 0 && taskEvidences.length === 0) {
+      if (grades.length === 0 && taskEvidences.length === 0 && history.length === 0) {
         container.innerHTML = Helpers.emptyState('No hay registros académicos aún.', '🏆');
         return;
       }
 
       const gpa = this.calculateGPA(grades, taskEvidences);
       const { label: gpaLabel, color: gpaLabelColor } = this.getGPALabel(gpa);
+
+      const historyRows = history.length > 0 ? history.map(h => {
+        const score = h.final_score != null ? Number(h.final_score).toFixed(2) : '-';
+        const levelCls = {
+          'Excelente':      'bg-emerald-100 text-emerald-700',
+          'Bueno':          'bg-blue-100 text-blue-700',
+          'En proceso':     'bg-amber-100 text-amber-700',
+          'Requiere apoyo': 'bg-rose-100 text-rose-700',
+          'Sin calificar':  'bg-slate-100 text-slate-500'
+        }[h.level] || 'bg-slate-100 text-slate-500';
+
+        return `
+          <tr class="border-b border-slate-50 hover:bg-slate-50 transition-colors">
+            <td class="px-4 py-3 text-sm font-bold text-slate-800">${escapeHtml(h.period_name)}</td>
+            <td class="px-4 py-3 text-xs text-slate-500">${escapeHtml(h.classroom_name || '-')}</td>
+            <td class="px-4 py-3 text-center text-sm font-bold">${h.task_avg != null ? Number(h.task_avg).toFixed(1) : '-'}</td>
+            <td class="px-4 py-3 text-center text-sm font-bold">${h.formal_avg != null ? Number(h.formal_avg).toFixed(1) : '-'}</td>
+            <td class="px-4 py-3 text-center">
+              <span class="text-base font-black ${score !== '-' ? 'text-[#0850A0]' : 'text-slate-400'}">${score}</span>
+            </td>
+            <td class="px-4 py-3 text-center">
+              <span class="px-2 py-1 rounded-full text-[10px] font-black uppercase ${levelCls}">${h.level || '-'}</span>
+            </td>
+            <td class="px-4 py-3 text-xs text-slate-400 max-w-[160px] truncate">${escapeHtml(h.teacher_comment || '-')}</td>
+          </tr>`;
+      }).join('') : '';
 
       container.innerHTML = `
         <div class="w-full space-y-8 animate-fade-in">
@@ -76,6 +104,35 @@ export const GradesModule = {
               </div>
             </div>
           </div>
+
+          <!-- Historial Académico -->
+          ${historyRows ? `
+          <div class="grid grid-cols-1 gap-8">
+            <div class="space-y-4">
+              <h4 class="font-black text-slate-800 text-sm px-4 flex items-center gap-2">
+                <i data-lucide="history" class="w-4 h-4 text-[#0B63C7]"></i> Historial Académico
+              </h4>
+              <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                <div class="overflow-x-auto">
+                  <table class="w-full text-sm min-w-[600px]">
+                    <thead class="bg-slate-50 border-b border-slate-100">
+                      <tr>
+                        <th class="px-4 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider">Período</th>
+                        <th class="px-4 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider">Aula</th>
+                        <th class="px-4 py-3 text-center text-[10px] font-black text-slate-400 uppercase tracking-wider">Tareas</th>
+                        <th class="px-4 py-3 text-center text-[10px] font-black text-slate-400 uppercase tracking-wider">Formal</th>
+                        <th class="px-4 py-3 text-center text-[10px] font-black text-slate-400 uppercase tracking-wider">Final</th>
+                        <th class="px-4 py-3 text-center text-[10px] font-black text-slate-400 uppercase tracking-wider">Nivel</th>
+                        <th class="px-4 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider">Comentario</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-50">${historyRows}</tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+          ` : ''}
 
           <!-- Desglose -->
           <div class="grid grid-cols-1 gap-8">

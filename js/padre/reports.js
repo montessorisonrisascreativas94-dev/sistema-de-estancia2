@@ -1,4 +1,4 @@
-
+﻿
 import { supabase } from '../shared/supabase.js';
 import { Helpers } from './helpers.js';
 
@@ -220,27 +220,61 @@ export const ReportsModule = {
         evidenceUrl = await this.uploadEvidence(evidenceFile);
       }
 
-      const reportType = formData.get('reportType');
+      const reportType    = formData.get('reportType');
       const targetTeacherId = formData.get('targetTeacher') || null;
       const targetStudentId = formData.get('targetStudent') || null;
-      const category = formData.get('category');
-      const description = formData.get('description');
-      const severity = formData.get('severity');
-      const isAnonymous = document.getElementById('reportAnonymous')?.checked || false;
+      const category      = formData.get('category');
+      const description   = formData.get('description');
+      const severity      = formData.get('severity') || 'medium';
+      const isAnonymous   = document.getElementById('reportAnonymous')?.checked || false;
 
-      const { data: result, error } = await supabase.rpc('create_report', {
-        p_report_type: reportType,
-        p_target_teacher_id: targetTeacherId,
-        p_target_student_id: targetStudentId,
-        p_classroom_id: null,
-        p_category: category,
-        p_description: description,
-        p_severity: severity,
-        p_is_anonymous: isAnonymous,
-        p_evidence_url: evidenceUrl
+      // Try the RPC first; if it fails with 400/PGRST202, fall back to direct insert
+      let submitError = null;
+      const { error: rpcError } = await supabase.rpc('create_report', {
+        p_report_type:        reportType,
+        p_target_teacher_id:  targetTeacherId,
+        p_target_student_id:  targetStudentId,
+        p_classroom_id:       null,
+        p_category:           category,
+        p_description:        description,
+        p_severity:           severity,
+        p_is_anonymous:       isAnonymous,
+        p_evidence_url:       evidenceUrl
       });
 
-      if (error) throw error;
+      if (rpcError) {
+        // Log for debugging
+        console.warn('[Reports] RPC create_report failed:', rpcError?.message, rpcError?.code);
+
+        // FIX 400: Fallback to direct insert if RPC is missing or has param mismatch
+        if (
+          rpcError.code === 'PGRST202' ||
+          rpcError.message?.includes('function') ||
+          rpcError.message?.includes('does not exist') ||
+          rpcError.code === '42883'
+        ) {
+          const { data: authData } = await supabase.auth.getUser();
+          const userId = authData?.user?.id;
+
+          const { error: insertError } = await supabase.from('reports').insert({
+            report_type:        reportType,
+            target_teacher_id:  targetTeacherId || undefined,
+            target_student_id:  targetStudentId || undefined,
+            category,
+            description,
+            severity,
+            is_anonymous:       isAnonymous,
+            evidence_url:       evidenceUrl || undefined,
+            parent_id:          userId,
+            status:             'open'
+          });
+          submitError = insertError;
+        } else {
+          submitError = rpcError;
+        }
+      }
+
+      if (submitError) throw submitError;
 
       Helpers.toast('Reporte enviado exitosamente', 'success');
       
@@ -255,8 +289,8 @@ export const ReportsModule = {
       // Reload reports
       await this.loadReports();
     } catch (error) {
-      console.error('Error submitting report:', error);
-      Helpers.toast('Error al enviar el reporte', 'error');
+      console.error('Error submitting report:', error?.message || error);
+      Helpers.toast(`Error al enviar el reporte: ${error?.message || 'intenta de nuevo'}`, 'error');
     }
   },
 

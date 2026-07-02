@@ -65,6 +65,11 @@ body.panel-maestra-body .nav-btn-toy {
   text-align: left;
   box-shadow: none !important;
 }
+body.panel-maestra-body .nav-btn-toy svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
 
 /* Hover: fondo blanco 12%, escala leve */
 body.panel-maestra-body .nav-btn-toy:hover {
@@ -88,6 +93,16 @@ body.panel-maestra-body .nav-btn-toy.active svg,
 body.panel-maestra-body .nav-btn-toy[aria-selected="true"] svg {
   color: var(--m-green) !important;
   stroke: var(--m-green) !important;
+}
+
+/* Focus styles for accessibility */
+body.panel-maestra-body .nav-btn-toy:focus,
+body.panel-maestra-body button:focus,
+body.panel-maestra-body input:focus,
+body.panel-maestra-body textarea:focus,
+body.panel-maestra-body select:focus {
+  outline: none !important;
+  box-shadow: 0 0 0 3px rgba(255, 138, 0, 0.4) !important;
 }
 
 /* Badges del sidebar: naranja */
@@ -146,30 +161,47 @@ body.panel-maestra-body .card-accent-green  { border-left: 4px solid var(--m-gre
 ─────────────────────────────────────────────────────────────────── */
 body.panel-maestra-body .stat-block {
   border-radius: 20px !important;
-  padding: 24px !important;
-  box-shadow: 0 8px 20px rgba(0,0,0,.08) !important;
+  padding: 20px !important;
+  box-shadow: 0 4px 16px rgba(0,0,0,.06) !important;
   border-bottom: none !important;
   color: #fff !important;
+  position: relative;
+  overflow: hidden;
 }
-body.panel-maestra-body .stat-block h3,
+body.panel-maestra-body .stat-block h3 {
+  font-size: 1.875rem !important;
+  line-height: 1 !important;
+  font-weight: 900 !important;
+}
 body.panel-maestra-body .stat-block p {
-  color: #fff !important;
+  font-size: 0.875rem !important;
+  font-weight: 700 !important;
+  opacity: 0.9 !important;
+  margin-top: 6px !important;
+}
+body.panel-maestra-body .stat-block svg {
+  position: absolute;
+  right: -10px;
+  bottom: -10px;
+  width: 72px;
+  height: 72px;
+  opacity: 0.25;
 }
 body.panel-maestra-body .sb-blue {
   background: linear-gradient(135deg, #28B54D 0%, #239943 100%) !important;
-  box-shadow: 0 8px 24px rgba(40,181,77,.22) !important;
+  box-shadow: 0 4px 16px rgba(40,181,77,.15) !important;
 }
 body.panel-maestra-body .sb-green {
-  background: linear-gradient(135deg, #239943 0%, #1A8035 100%) !important;
-  box-shadow: 0 8px 24px rgba(35,153,67,.22) !important;
+  background: linear-gradient(135deg, #2B7FF3 0%, #1E5DD0 100%) !important;
+  box-shadow: 0 4px 16px rgba(43,127,243,.15) !important;
 }
 body.panel-maestra-body .sb-orange {
   background: linear-gradient(135deg, #FF8A00 0%, #E07900 100%) !important;
-  box-shadow: 0 8px 24px rgba(255,138,0,.22) !important;
+  box-shadow: 0 4px 16px rgba(255,138,0,.15) !important;
 }
 body.panel-maestra-body .sb-purple {
-  background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%) !important;
-  box-shadow: 0 8px 24px rgba(239,68,68,.22) !important;
+  background: linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%) !important;
+  box-shadow: 0 4px 16px rgba(139,92,246,.15) !important;
 }
 
 /* ── ENCABEZADOS DE SECCIÓN ─────────────────────────────────────

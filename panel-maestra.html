@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="utf-8" />
@@ -19,7 +19,7 @@
       // Silenciar errores CORS de Edge Functions (normales en GitHub Pages)
       if (msg.includes('CORS') || msg.includes('process-event') ||
           msg.includes('send-push') || msg.includes('ERR_FAILED') ||
-sigue          msg.includes('preflight') || msg.includes('net::ERR') ||
+          msg.includes('preflight') || msg.includes('net::ERR') ||
           msg.includes('get_tasks_for_period') || msg.includes('get_active_period')) {
         e.preventDefault();
       }
@@ -123,13 +123,16 @@ sigue          msg.includes('preflight') || msg.includes('net::ERR') ||
 
     /* ═══════════════════════════════════════════════
        STAT BLOCKS — base (colores en maestra-design-system.css)
-    ═══════════════════════════════════════════════ */
+       ═══════════════════════════════════════════════ */
     .stat-block {
-      border-radius: 20px; padding: 24px; color: white;
+      border-radius: 20px; padding: 24px; color: white !important;
       position: relative; overflow: hidden;
       transition: transform 0.2s;
       min-height: 120px;
     }
+    .stat-block h3,
+    .stat-block p,
+    .stat-block * { color: white !important; }
     .stat-block:hover { transform: translateY(-4px); }
     .stat-block svg { opacity: 0.85; transform: rotate(-10deg); position: absolute; right: -10px; bottom: -10px; width: 80px; height: 80px; }
 
@@ -335,6 +338,17 @@ sigue          msg.includes('preflight') || msg.includes('net::ERR') ||
     .nav-btn-toy.active { background: #FFFFFF; color: #28B54D; border-left: 3px solid #28B54D; font-weight: 800; }
 
     /* ═══════════════════════════════════════════════
+       OVERRIDE: FORCE ALL STAT BLOCK CONTENT TO BE WHITE!
+    ═══════════════════════════════════════════════ */
+    .stat-block,
+    .stat-block *,
+    .stat-block h1, .stat-block h2, .stat-block h3, .stat-block h4, .stat-block h5, .stat-block h6,
+    .stat-block p, .stat-block span, .stat-block div {
+      color: #FFFFFF !important;
+      fill: #FFFFFF !important;
+    }
+
+    /* ═══════════════════════════════════════════════
        MODAL STYLES — base estructural
        (colores y aspecto en maestra-design-system.css)
     ═══════════════════════════════════════════════ */
@@ -425,11 +439,13 @@ sigue          msg.includes('preflight') || msg.includes('net::ERR') ||
   </style>
 </head>
 <body class="bg-[var(--sc-gray-bg)] text-slate-800 font-nunito panel-maestra-body" style="background:#F7F9FB;overflow-y:auto;overflow-x:hidden;">
-  <div class="min-h-screen flex" style="overflow:visible;">
+  <div class="app">
+    <!-- OVERLAY MOBILE -->
+    <div id="sidebarOverlay" class="fixed inset-0 bg-black/50 z-40 backdrop-blur-sm transition-opacity" style="display:none;"></div>
     <!-- SIDEBAR -->
-    <aside id="sidebar" class="shadow-2xl border-r-4 border-[var(--sc-green)] p-4 flex-shrink-0 rounded-r-3xl">
-      <button id="toggleSidebar" class="absolute -right-3 top-6 bg-white rounded-full p-1 shadow-md border border-slate-100 text-slate-500 hover:text-[var(--sc-green)] hidden md:block">
-        <i data-lucide="chevron-left" id="toggleSidebarIcon" class="w-4 h-4"></i>
+    <aside id="sidebar" class="kk-sidebar shadow-2xl border-r-4 border-[var(--sc-green)] p-4 flex-shrink-0 rounded-r-3xl">
+      <button id="toggleSidebar" class="absolute -right-3 top-6 bg-white rounded-full p-1.5 shadow-md border border-slate-100 text-slate-500 hover:text-[var(--sc-green)] hidden md:flex items-center justify-center z-10 transition-all hover:scale-110">
+        <i data-lucide="chevron-left" id="toggleSidebarIcon" class="w-3.5 h-3.5"></i>
       </button>
       
       <div class="flex items-center gap-3 mb-6">
@@ -534,9 +550,6 @@ sigue          msg.includes('preflight') || msg.includes('net::ERR') ||
       </style>
     </aside>
 
-    <!-- OVERLAY MOBILE -->
-    <div id="sidebarOverlay" class="fixed inset-0 bg-black/50 z-40 backdrop-blur-sm transition-opacity"></div>
-
     <!-- Hamburger — FIXED so it never scrolls away on mobile -->
     <button
       class="menu-btn-mobile md:hidden fixed top-4 left-4 z-[200] w-11 h-11 flex items-center justify-center bg-white rounded-xl shadow-lg border border-slate-100 text-slate-600 hover:bg-[#E8F2FF] hover:text-[#FF7A00] transition-colors active:scale-95"
@@ -544,6 +557,7 @@ sigue          msg.includes('preflight') || msg.includes('net::ERR') ||
       <i data-lucide="menu" class="w-5 h-5"></i>
     </button>
 
+    <div class="app-content-wrapper">
     <!-- MAIN -->
     <main class="flex-1 transition-all duration-300" id="layoutShell">
       <!-- HEADER STICKY MÓVIL — igual que panel asistente -->
@@ -598,25 +612,25 @@ sigue          msg.includes('preflight') || msg.includes('net::ERR') ||
         </header>
 
         <!-- Top Cards (Bloques) -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
           <div class="stat-block sb-blue">
-            <h3 class="text-3xl font-black" id="statClasses">-</h3>
-            <p class="font-bold text-white/85">Mis Clases</p>
+            <h3 id="statClasses">-</h3>
+            <p>Mis Clases</p>
             <i data-lucide="library"></i>
           </div>
           <div class="stat-block sb-green">
-            <h3 class="text-3xl font-black" id="statStudents">-</h3>
-            <p class="font-bold text-white/80">Total Alumnos</p>
+            <h3 id="statStudents">-</h3>
+            <p>Total Alumnos</p>
             <i data-lucide="users"></i>
           </div>
           <div class="stat-block sb-orange">
-            <h3 class="text-3xl font-black" id="statIncidents">-</h3>
-            <p class="font-bold text-white/80">Incidentes Hoy</p>
+            <h3 id="statIncidents">-</h3>
+            <p>Incidentes Hoy</p>
             <i data-lucide="alert-circle"></i>
           </div>
-          <div class="stat-block sb-orange">
-            <h3 class="text-3xl font-black" id="statPresent">-</h3>
-            <p class="font-bold text-white/80">Asistencia Hoy</p>
+          <div class="stat-block sb-purple">
+            <h3 id="statPresent">-</h3>
+            <p>Asistencia Hoy</p>
             <i data-lucide="calendar-check"></i>
           </div>
         </div>
@@ -637,27 +651,27 @@ sigue          msg.includes('preflight') || msg.includes('net::ERR') ||
           </div>
 
           <!-- Widget: Alerta de Ponche -->
-          <div id="punchAlertWidget" class="bg-[var(--sc-orange-lt)] border-2 border-[var(--sc-orange)] rounded-[2.5rem] p-6 flex flex-col justify-center hidden">
+          <div id="punchAlertWidget" class="stat-block sb-orange rounded-[2.5rem] flex flex-col justify-center hidden">
             <div class="flex items-center gap-4 mb-3">
-              <div class="w-10 h-10 bg-[var(--sc-orange)] text-white rounded-xl flex items-center justify-center shadow-lg shadow-orange-200">
+              <div class="w-10 h-10 bg-white text-[var(--sc-orange)] rounded-xl flex items-center justify-center shadow-lg">
                 <i data-lucide="user-minus" class="w-5 h-5"></i>
               </div>
-              <h4 class="font-black text-[var(--sc-orange-d)] text-sm uppercase tracking-tighter">Faltan por Ponchar</h4>
+              <h4 class="font-black text-white text-sm uppercase tracking-tighter">Faltan por Ponchar</h4>
             </div>
-            <p id="punchAlertText" class="text-xs font-bold text-[var(--sc-orange-d)] mb-4">3 niños aún no han marcado entrada hoy.</p>
-            <button onclick="App.sendAbsenceAlerts()" class="w-full py-3 bg-[var(--sc-orange)] text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-sm hover:bg-[var(--sc-orange-d)] transition-all active:scale-95">Enviar Avisos</button>
+            <p id="punchAlertText" class="text-xs font-bold text-white/90 mb-4">3 niños aún no han marcado entrada hoy.</p>
+            <button onclick="App.sendAbsenceAlerts()" class="w-full py-3 bg-white text-[var(--sc-orange)] rounded-xl font-black text-[10px] uppercase tracking-widest shadow-sm hover:bg-opacity-90 transition-all active:scale-95">Enviar Avisos</button>
           </div>
 
           <!-- Widget: Tareas por Calificar -->
-          <div id="tasksToGradeWidget" class="bg-[var(--sc-green-lt)] border-2 border-[var(--sc-green)] rounded-[2.5rem] p-6 flex flex-col justify-center hidden">
+          <div id="tasksToGradeWidget" class="stat-block sb-green rounded-[2.5rem] flex flex-col justify-center hidden">
             <div class="flex items-center gap-4 mb-3">
-              <div class="w-10 h-10 bg-[var(--sc-green)] text-white rounded-xl flex items-center justify-center shadow-lg shadow-green-200">
+              <div class="w-10 h-10 bg-white text-[var(--sc-green)] rounded-xl flex items-center justify-center shadow-lg">
                 <i data-lucide="award" class="w-5 h-5"></i>
               </div>
-              <h4 class="font-black text-[var(--sc-green-dark)] text-sm uppercase tracking-tighter">Tareas por Calificar</h4>
+              <h4 class="font-black text-white text-sm uppercase tracking-tighter">Tareas por Calificar</h4>
             </div>
-            <p id="tasksToGradeText" class="text-xs font-bold text-[var(--sc-green-dark)] mb-4">Tienes 5 entregas pendientes de revisar.</p>
-            <button onclick="App.navigateTo('t-home', 'tasks')" class="w-full py-3 bg-[var(--sc-green)] text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-sm hover:bg-[var(--sc-green-dark)] transition-all active:scale-95">Ir a Tareas</button>
+            <p id="tasksToGradeText" class="text-xs font-bold text-white/90 mb-4">Tienes 5 entregas pendientes de revisar.</p>
+            <button onclick="App.navigateTo('t-home', 'tasks')" class="w-full py-3 bg-white text-[var(--sc-green)] rounded-xl font-black text-[10px] uppercase tracking-widest shadow-sm hover:bg-opacity-90 transition-all active:scale-95">Ir a Tareas</button>
           </div>
         </div>
         
@@ -1009,7 +1023,8 @@ sigue          msg.includes('preflight') || msg.includes('net::ERR') ||
       </section>
       </div><!-- end scrollable content -->
     </main>
-  </div>
+    </div><!-- close app-content-wrapper -->
+  </div><!-- close app -->
 
   <!-- MODAL: Student Profile (Copied from panel_directora.html) -->
   <div id="studentProfileModal" class="fixed inset-0 bg-black/60 hidden items-center justify-center z-50 p-4 backdrop-blur-sm">
@@ -1144,27 +1159,6 @@ sigue          msg.includes('preflight') || msg.includes('net::ERR') ||
       });
     }
 
-    // ═══════════════════════════════════════════════
-    // SIDEBAR — delegado a sidebar-manager.js (unificado)
-    // ═══════════════════════════════════════════════
-    import('../js/shared/sidebar-manager.js')
-      .then(({ initSidebar }) => initSidebar())
-      .catch(() => {
-        // Fallback mínimo si el módulo no carga
-        document.querySelectorAll('#menuBtn, .menu-btn-mobile').forEach(btn => {
-          btn.addEventListener('click', () => {
-            const sb = document.getElementById('sidebar');
-            const ov = document.getElementById('sidebarOverlay');
-            if (!sb) return;
-            const open = sb.classList.toggle('mobile-visible');
-            if (ov) ov.style.display = open ? 'block' : 'none';
-          });
-        });
-        document.getElementById('sidebarOverlay')?.addEventListener('click', () => {
-          document.getElementById('sidebar')?.classList.remove('mobile-visible');
-          document.getElementById('sidebarOverlay').style.display = 'none';
-        });
-      });
   </script>
 </body>
 </html>
