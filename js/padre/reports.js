@@ -1,4 +1,4 @@
-﻿
+
 import { supabase } from '../shared/supabase.js';
 import { Helpers } from './helpers.js';
 
@@ -211,7 +211,6 @@ export const ReportsModule = {
 
   async handleSubmitReport(e) {
     try {
-      const formData = new FormData(e.target);
       let evidenceUrl = null;
 
       // Upload evidence if exists
@@ -220,26 +219,35 @@ export const ReportsModule = {
         evidenceUrl = await this.uploadEvidence(evidenceFile);
       }
 
-      const reportType    = formData.get('reportType');
-      const targetTeacherId = formData.get('targetTeacher') || null;
-      const targetStudentId = formData.get('targetStudent') || null;
-      const category      = formData.get('category');
-      const description   = formData.get('description');
-      const severity      = formData.get('severity') || 'medium';
-      const isAnonymous   = document.getElementById('reportAnonymous')?.checked || false;
+      // FIX: form fields use id= not name=, so read via getElementById not formData.get()
+      const reportType      = document.getElementById('reportType')?.value || '';
+      const targetTeacherId = document.getElementById('targetTeacher')?.value || null;
+      const targetStudentId = document.getElementById('targetStudent')?.value || null;
+      const category        = document.getElementById('reportCategory')?.value || '';
+      const description     = document.getElementById('reportDescription')?.value || '';
+      const severity        = document.getElementById('reportSeverity')?.value || 'media';
+      const isAnonymous     = document.getElementById('reportAnonymous')?.checked || false;
 
-      // Try the RPC first; if it fails with 400/PGRST202, fall back to direct insert
+      // Validate required fields
+      if (!reportType) {
+        Helpers.toast('Selecciona un tipo de reporte', 'warning');
+        return;
+      }
+      if (!description.trim()) {
+        Helpers.toast('Escribe una descripción del reporte', 'warning');
+        return;
+      }
       let submitError = null;
       const { error: rpcError } = await supabase.rpc('create_report', {
         p_report_type:        reportType,
-        p_target_teacher_id:  targetTeacherId,
-        p_target_student_id:  targetStudentId,
+        p_target_teacher_id:  targetTeacherId || null,
+        p_target_student_id:  targetStudentId || null,
         p_classroom_id:       null,
-        p_category:           category,
+        p_category:           category || null,
         p_description:        description,
         p_severity:           severity,
         p_is_anonymous:       isAnonymous,
-        p_evidence_url:       evidenceUrl
+        p_evidence_url:       evidenceUrl || null
       });
 
       if (rpcError) {

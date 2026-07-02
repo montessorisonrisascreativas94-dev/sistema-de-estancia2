@@ -651,27 +651,33 @@
           </div>
 
           <!-- Widget: Alerta de Ponche -->
-          <div id="punchAlertWidget" class="stat-block sb-orange rounded-[2.5rem] flex flex-col justify-center hidden">
+          <div id="punchAlertWidget" class="alert-banner-punch p-6 flex flex-col justify-center hidden">
             <div class="flex items-center gap-4 mb-3">
-              <div class="w-10 h-10 bg-white text-[var(--sc-orange)] rounded-xl flex items-center justify-center shadow-lg">
-                <i data-lucide="user-minus" class="w-5 h-5"></i>
+              <div class="w-12 h-12 bg-white/90 text-orange-600 rounded-2xl flex items-center justify-center shadow-lg">
+                <i data-lucide="user-check" class="w-7 h-7"></i>
               </div>
-              <h4 class="font-black text-white text-sm uppercase tracking-tighter">Faltan por Ponchar</h4>
+              <h4 class="font-bold text-white text-lg tracking-tight">Faltan por Ponchar</h4>
             </div>
-            <p id="punchAlertText" class="text-xs font-bold text-white/90 mb-4">3 niños aún no han marcado entrada hoy.</p>
-            <button onclick="App.sendAbsenceAlerts()" class="w-full py-3 bg-white text-[var(--sc-orange)] rounded-xl font-black text-[10px] uppercase tracking-widest shadow-sm hover:bg-opacity-90 transition-all active:scale-95">Enviar Avisos</button>
+            <p id="punchAlertText" class="text-sm font-semibold text-white/90 mb-4">2 niños aún no han marcado entrada hoy.</p>
+            <button onclick="App.sendAbsenceAlerts()" class="w-full py-3 bg-white text-orange-600 rounded-xl font-bold text-sm uppercase tracking-wider shadow-lg hover:bg-white/90 transition-all active:scale-95 flex items-center justify-center gap-2">
+              <i data-lucide="send" class="w-4 h-4"></i>
+              Enviar Avisos
+            </button>
           </div>
 
           <!-- Widget: Tareas por Calificar -->
-          <div id="tasksToGradeWidget" class="stat-block sb-green rounded-[2.5rem] flex flex-col justify-center hidden">
+          <div id="tasksToGradeWidget" class="alert-banner-tasks p-6 flex flex-col justify-center hidden">
             <div class="flex items-center gap-4 mb-3">
-              <div class="w-10 h-10 bg-white text-[var(--sc-green)] rounded-xl flex items-center justify-center shadow-lg">
-                <i data-lucide="award" class="w-5 h-5"></i>
+              <div class="w-12 h-12 bg-white/90 text-emerald-600 rounded-2xl flex items-center justify-center shadow-lg">
+                <i data-lucide="book-open-check" class="w-7 h-7"></i>
               </div>
-              <h4 class="font-black text-white text-sm uppercase tracking-tighter">Tareas por Calificar</h4>
+              <h4 class="font-bold text-white text-lg tracking-tight">Tareas por Calificar</h4>
             </div>
-            <p id="tasksToGradeText" class="text-xs font-bold text-white/90 mb-4">Tienes 5 entregas pendientes de revisar.</p>
-            <button onclick="App.navigateTo('t-home', 'tasks')" class="w-full py-3 bg-white text-[var(--sc-green)] rounded-xl font-black text-[10px] uppercase tracking-widest shadow-sm hover:bg-opacity-90 transition-all active:scale-95">Ir a Tareas</button>
+            <p id="tasksToGradeText" class="text-sm font-semibold text-white/90 mb-4">Tienes 1 entrega pendiente de revisar (más de 24h).</p>
+            <button onclick="App.navigateTo('t-home', 'tasks')" class="w-full py-3 bg-white text-emerald-600 rounded-xl font-bold text-sm uppercase tracking-wider shadow-lg hover:bg-white/90 transition-all active:scale-95 flex items-center justify-center gap-2">
+              <i data-lucide="arrow-right" class="w-4 h-4"></i>
+              Ir a Tareas
+            </button>
           </div>
         </div>
         
@@ -699,48 +705,33 @@
           </div>
         </header>
 
-        <!-- Tabs — compact grid on mobile, horizontal on desktop -->
+        <!-- Tabs — nueva navegación colorida y amigable -->
         <div class="mb-4">
-          <!-- Mobile: 3x2 grid -->
-          <div class="grid grid-cols-3 gap-2 md:hidden">
-            <button class="class-tab-btn active flex flex-col items-center gap-1 py-2.5 px-2 rounded-2xl font-black text-[10px] uppercase tracking-wider transition-all" data-tab="feed">
-              <i data-lucide="layout" class="w-4 h-4"></i><span>Muro</span>
+          <!-- Tabs (mismo diseño para móvil y desktop) -->
+          <div class="flex gap-3 overflow-x-auto pb-2" style="scrollbar-width: none;">
+            <button class="class-tab-btn active shrink-0" data-tab="feed">
+              <i data-lucide="layout"></i>
+              <span>Muro</span>
             </button>
-            <button class="class-tab-btn flex flex-col items-center gap-1 py-2.5 px-2 rounded-2xl font-black text-[10px] uppercase tracking-wider transition-all" data-tab="daily-routine">
-              <i data-lucide="clipboard-list" class="w-4 h-4"></i><span>Rutina</span>
+            <button class="class-tab-btn shrink-0" data-tab="daily-routine">
+              <i data-lucide="calendar-clock"></i>
+              <span>Rutina</span>
             </button>
-            <button class="class-tab-btn flex flex-col items-center gap-1 py-2.5 px-2 rounded-2xl font-black text-[10px] uppercase tracking-wider transition-all" data-tab="students">
-              <i data-lucide="users" class="w-4 h-4"></i><span>Alumnos</span>
+            <button class="class-tab-btn shrink-0" data-tab="students">
+              <i data-lucide="users"></i>
+              <span>Alumnos</span>
             </button>
-            <button class="class-tab-btn flex flex-col items-center gap-1 py-2.5 px-2 rounded-2xl font-black text-[10px] uppercase tracking-wider transition-all" data-tab="attendance">
-              <i data-lucide="calendar-check" class="w-4 h-4"></i><span>Asistencia</span>
+            <button class="class-tab-btn shrink-0" data-tab="attendance">
+              <i data-lucide="list-checks"></i>
+              <span>Asistencia</span>
             </button>
-            <button class="class-tab-btn flex flex-col items-center gap-1 py-2.5 px-2 rounded-2xl font-black text-[10px] uppercase tracking-wider transition-all" data-tab="tasks">
-              <i data-lucide="backpack" class="w-4 h-4"></i><span>Tareas</span>
+            <button class="class-tab-btn shrink-0" data-tab="tasks">
+              <i data-lucide="notebook-pen"></i>
+              <span>Tareas</span>
             </button>
-            <button class="class-tab-btn flex flex-col items-center gap-1 py-2.5 px-2 rounded-2xl font-black text-[10px] uppercase tracking-wider transition-all" data-tab="videocall">
-              <i data-lucide="video" class="w-4 h-4"></i><span>Video</span>
-            </button>
-          </div>
-          <!-- Desktop: horizontal tabs -->
-          <div class="hidden md:flex gap-1 border-b border-slate-200 overflow-x-auto" style="scrollbar-width:none">
-            <button class="class-tab-btn active shrink-0 px-4 py-2.5 rounded-t-xl font-black text-xs uppercase tracking-wider transition-colors" data-tab="feed">
-              <i data-lucide="layout" class="w-3.5 h-3.5 inline mr-1"></i>Muro
-            </button>
-            <button class="class-tab-btn shrink-0 px-4 py-2.5 rounded-t-xl font-black text-xs uppercase tracking-wider transition-colors" data-tab="daily-routine">
-              <i data-lucide="clipboard-list" class="w-3.5 h-3.5 inline mr-1"></i>Rutina
-            </button>
-            <button class="class-tab-btn shrink-0 px-4 py-2.5 rounded-t-xl font-black text-xs uppercase tracking-wider transition-colors" data-tab="students">
-              <i data-lucide="users" class="w-3.5 h-3.5 inline mr-1"></i>Alumnos
-            </button>
-            <button class="class-tab-btn shrink-0 px-4 py-2.5 rounded-t-xl font-black text-xs uppercase tracking-wider transition-colors" data-tab="attendance">
-              <i data-lucide="calendar-check" class="w-3.5 h-3.5 inline mr-1"></i>Asistencia
-            </button>
-            <button class="class-tab-btn shrink-0 px-4 py-2.5 rounded-t-xl font-black text-xs uppercase tracking-wider transition-colors" data-tab="tasks">
-              <i data-lucide="backpack" class="w-3.5 h-3.5 inline mr-1"></i>Tareas
-            </button>
-            <button class="class-tab-btn shrink-0 px-4 py-2.5 rounded-t-xl font-black text-xs uppercase tracking-wider transition-colors" data-tab="videocall">
-              <i data-lucide="video" class="w-3.5 h-3.5 inline mr-1"></i>Video
+            <button class="class-tab-btn shrink-0" data-tab="videocall">
+              <i data-lucide="video"></i>
+              <span>Video</span>
             </button>
           </div>
         </div>

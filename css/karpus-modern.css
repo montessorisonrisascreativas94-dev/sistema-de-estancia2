@@ -668,6 +668,9 @@ body:not(.panel-padre-body) .app {
 
   /* Directora uses 288px */
   body.panel-directora-body aside#sidebar { width: 288px; }
+  
+  /* Maestra uses 280px */
+  body.panel-maestra-body aside#sidebar { width: 280px; }
 
   /* Content wrapper fills remaining space automatically — NO margin-left */
   body:not(.panel-padre-body) .app-content-wrapper {
@@ -695,6 +698,35 @@ body:not(.panel-padre-body) .app {
   body.sidebar-collapsed.panel-directora-body aside#sidebar:hover {
     width: 288px !important;
     margin-right: -208px;
+  }
+  body.sidebar-collapsed.panel-maestra-body aside#sidebar:hover {
+    width: 280px !important;
+    margin-right: -200px;
+  }
+
+  /* Hide labels when collapsed (for all non-padre panels) */
+  body.sidebar-collapsed:not(.panel-padre-body) #sidebar .label,
+  body.sidebar-collapsed:not(.panel-padre-body) #sidebar h1,
+  body.sidebar-collapsed:not(.panel-padre-body) #sidebar h2,
+  body.sidebar-collapsed:not(.panel-padre-body) #sidebar h3,
+  body.sidebar-collapsed:not(.panel-padre-body) #sidebar p,
+  body.sidebar-collapsed:not(.panel-padre-body) #sidebar .flex-1.min-w-0 {
+    opacity: 0;
+    visibility: hidden;
+    width: 0;
+    overflow: hidden;
+    pointer-events: none;
+  }
+  body.sidebar-collapsed:not(.panel-padre-body) #sidebar:hover .label,
+  body.sidebar-collapsed:not(.panel-padre-body) #sidebar:hover h1,
+  body.sidebar-collapsed:not(.panel-padre-body) #sidebar:hover h2,
+  body.sidebar-collapsed:not(.panel-padre-body) #sidebar:hover h3,
+  body.sidebar-collapsed:not(.panel-padre-body) #sidebar:hover p,
+  body.sidebar-collapsed:not(.panel-padre-body) #sidebar:hover .flex-1.min-w-0 {
+    opacity: 1;
+    visibility: visible;
+    width: auto;
+    pointer-events: auto;
   }
 
   /* Toggle button icon */

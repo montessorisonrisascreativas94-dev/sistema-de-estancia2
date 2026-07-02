@@ -482,38 +482,48 @@ async function initDashboard() {
     _updatePunchAlertWidget(students, attendance);
     _updateTasksToGradeWidget(classroom.id);
 
-    // Grid de Aulas (Home) — Paleta Sonrisas Creativas
+    // Grid de Aulas (Home) — Diseño cálido y educativo
     const grid = document.getElementById('classesGrid');
     if (grid) {
       grid.innerHTML = `
         <div onclick="App.showClassroomDetail('${classroom.id}')"
-             class="p-6 bg-white rounded-[2rem] border-2 border-[#FF8A00] shadow-sm hover:shadow-xl hover:border-[#28B54D] transition-all cursor-pointer group relative overflow-hidden">
-          <!-- Decorative splash top-right -->
-          <div class="absolute top-0 right-0 w-24 h-24 rounded-full"
-               style="background:radial-gradient(circle,rgba(40,181,77,0.08) 0%,transparent 70%);transform:translate(30%,-30%)"></div>
-          <!-- Mini mascot decoration -->
-          <div class="absolute bottom-3 right-3 pointer-events-none opacity-70">
-            <svg width="38" height="46" viewBox="0 0 220 270">
-              <polygon points="110,18 200,205 20,205" fill="#FF8A00" stroke="#E07900" stroke-width="5"/>
-              <circle cx="84" cy="125" r="18" fill="white"/><circle cx="136" cy="125" r="18" fill="white"/>
-              <circle cx="85" cy="126" r="9" fill="#333"/><circle cx="137" cy="126" r="9" fill="#333"/>
-              <path d="M 74 158 Q 110 180 146 158" stroke="#333" stroke-width="7" fill="none" stroke-linecap="round"/>
-            </svg>
-          </div>
-          <div class="flex items-center gap-5 relative z-10">
-            <div class="w-16 h-16 rounded-2xl bg-[#E6F7EB] text-[#28B54D] flex items-center justify-center font-black text-2xl shadow-lg shadow-green-200 border-2 border-[#28B54D]">${classroom.name.charAt(0)}</div>
-            <div>
-              <h3 class="font-black text-[#28B54D] text-xl tracking-tight">${safeEscapeHTML(classroom.name)}</h3>
-              <p class="text-xs font-black text-[#28B54D] uppercase tracking-widest">Aula Principal</p>
+             class="p-6 rounded-[2.5rem] border-0 shadow-lg hover:shadow-2xl transition-all cursor-pointer group relative overflow-hidden"
+             style="background: linear-gradient(135deg, #A78BFA 0%, #C4B5FD 60%, #F3E8FF 100%);">
+          <!-- Decoración de fondo amigable -->
+          <div class="absolute top-0 right-0 w-40 h-40 rounded-full opacity-20 pointer-events-none"
+               style="background: radial-gradient(circle, white 0%, transparent 70%); transform: translate(30%, -20%);"></div>
+          <div class="absolute bottom-0 left-0 w-32 h-32 rounded-full opacity-15 pointer-events-none"
+               style="background: radial-gradient(circle, white 0%, transparent 70%); transform: translate(-20%, 30%);"></div>
+          
+          <div class="relative z-10">
+            <!-- Cabecera con icono grande -->
+            <div class="flex items-center gap-6 mb-8">
+              <div class="w-20 h-20 bg-white rounded-3xl flex items-center justify-center shadow-xl group-hover:scale-110 transition-transform duration-300">
+                <i data-lucide="door-open" class="w-10 h-10 text-purple-600"></i>
+              </div>
+              <div>
+                <h3 class="font-extrabold text-white text-2xl drop-shadow-md">${safeEscapeHTML(classroom.name)}</h3>
+                <p class="text-purple-100 font-semibold text-sm mt-1">Kinder • Aula Principal</p>
+              </div>
             </div>
-          </div>
-          <div class="mt-8 flex justify-between items-center relative z-10">
-            <span class="py-2 px-5 bg-[#28B54D] text-white rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-1 shadow-sm group-hover:bg-[#239943] transition-all">
-              Entrar <i data-lucide="arrow-right" class="w-4 h-4"></i>
-            </span>
-            <span class="px-3 py-1 bg-[#E6F7EB] text-[#28B54D] text-[9px] font-black rounded-full uppercase tracking-wide border border-[#FF8A00]">
-              Mi Aula
-            </span>
+
+            <!-- Badges -->
+            <div class="flex items-center justify-between gap-4 mb-6">
+              <span class="bg-white/90 text-purple-700 px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 shadow-md">
+                <i data-lucide="users" class="w-4 h-4"></i>
+                ${(students || []).length} estudiantes
+              </span>
+              <span class="bg-emerald-400/90 text-white px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 shadow-md">
+                <i data-lucide="check-circle" class="w-4 h-4"></i>
+                Activo
+              </span>
+            </div>
+
+            <!-- Botón principal -->
+            <button class="w-full py-4 bg-white text-purple-600 rounded-2xl font-extrabold text-lg flex items-center justify-center gap-2 shadow-2xl group-hover:scale-[1.02] transition-all duration-300">
+              🚪 Entrar a Mi Aula
+              <i data-lucide="arrow-right" class="w-5 h-5"></i>
+            </button>
           </div>
         </div>
       `;

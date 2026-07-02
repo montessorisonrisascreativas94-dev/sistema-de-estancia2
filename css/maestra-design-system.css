@@ -204,6 +204,57 @@ body.panel-maestra-body .sb-purple {
   box-shadow: 0 4px 16px rgba(139,92,246,.15) !important;
 }
 
+/* ── ALERT BANNERS ──────────────────────────────────────────────────
+   Calidos y educativos con colores suaves
+─────────────────────────────────────────────────────────────────── */
+body.panel-maestra-body .alert-banner-punch {
+  background: linear-gradient(135deg, #FCD34D 0%, #FBBF24 100%) !important;
+  border-radius: 24px !important;
+  box-shadow: 0 8px 24px rgba(252,211,77,.35) !important;
+}
+body.panel-maestra-body .alert-banner-tasks {
+  background: linear-gradient(135deg, #34D399 0%, #10B981 100%) !important;
+  border-radius: 24px !important;
+  box-shadow: 0 8px 24px rgba(52,211,153,.35) !important;
+}
+
+/* ── INTERNAL TABS ──────────────────────────────────────────────────
+   Pildoras grandes, coloridas y con iconos
+─────────────────────────────────────────────────────────────────── */
+body.panel-maestra-body .class-tab-btn {
+  border-radius: 20px !important;
+  font-weight: 700 !important;
+  font-size: 0.9375rem !important;
+  text-transform: capitalize;
+  letter-spacing: 0.025em;
+  padding: 14px 20px !important;
+  border: none !important;
+  background: transparent !important;
+  color: var(--m-text-mid) !important;
+  transition: all .2s ease;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+body.panel-maestra-body .class-tab-btn:hover {
+  background: #F3F4F6 !important;
+  color: #374151 !important;
+  transform: translateY(-2px);
+}
+body.panel-maestra-body .class-tab-btn.active {
+  background: linear-gradient(135deg, #A78BFA 0%, #C4B5FD 100%) !important;
+  color: white !important;
+  border: none !important;
+  box-shadow: 0 6px 20px rgba(167,139,250,.35) !important;
+  transform: translateY(-2px);
+}
+body.panel-maestra-body .class-tab-btn svg {
+  width: 24px;
+  height: 24px;
+}
+
 /* ── ENCABEZADOS DE SECCIÓN ─────────────────────────────────────
    Icono naranja · Texto negro/oscuro · Nunca título completamente verde
 ─────────────────────────────────────────────────────────────────── */
