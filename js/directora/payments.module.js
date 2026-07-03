@@ -5,6 +5,7 @@ import { supabase } from '../shared/supabase.js';
 import { auditLog } from '../shared/db-utils.js';
 import { RealtimeManager } from '../shared/realtime-manager.js';
 import { InvoicingModule } from './invoicing.module.js';
+import { InvoiceModule } from '../shared/invoice.js';
 
 const MES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
 const MES_LABEL = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
@@ -115,17 +116,19 @@ export const PaymentsModule = {
       // Query simple sin joins complejos
       let q = supabase
         .from('payments')
-        .select('id, student_id, amount, concept, status, due_date, created_at, paid_date, method, bank, reference, month_paid, evidence_url, proof_url, fiscal_receipt')
+        .select('id, student_id, amount, concept, status, due_date, created_at, paid_date, method, bank, reference, month_paid, evidence_url, proof_url')
         .order('created_at', { ascending: false })
         .limit(500);
 
-      // Filter by year
-      const yStart = yv + '-01-01';
-      const yEnd = yv + '-12-31';
-      q = q.gte('created_at', yStart + 'T00:00:00')
-           .lte('created_at', yEnd + 'T23:59:59');
+      // Filter by year — solo aplica cuando NO hay mes específico seleccionado
+      if (!mv || mv === 'all') {
+        const yStart = yv + '-01-01';
+        const yEnd   = yv + '-12-31';
+        q = q.gte('created_at', yStart + 'T00:00:00')
+             .lte('created_at', yEnd   + 'T23:59:59');
+      }
 
-      // Filter by month if specified
+      // Filter by month — usa month_paid directamente (formato YYYY-MM)
       if (mv && mv !== 'all') {
         const monthKey = yv + '-' + String(parseInt(mv, 10)).padStart(2, '0');
         q = q.eq('month_paid', monthKey);
@@ -138,21 +141,6 @@ export const PaymentsModule = {
       if (error) throw error;
 
       let allData = payments || [];
-
-      // Fallback por created_at si no hay resultados con month_paid
-      if (allData.length === 0 && mv && mv !== 'all') {
-        const mi2 = parseInt(mv, 10) - 1;
-        const pad = String(mi2 + 1).padStart(2, '0');
-        const { data: fb } = await supabase
-          .from('payments')
-          .select('id, student_id, amount, concept, status, due_date, created_at, paid_date, method, bank, reference, month_paid, evidence_url, proof_url')
-          .is('deleted_at', null)
-          .gte('created_at', yv + '-' + pad + '-01T00:00:00')
-          .lte('created_at', yv + '-' + pad + '-31T23:59:59')
-          .order('created_at', { ascending: false })
-          .limit(500);
-        allData = fb || [];
-      }
 
       // Enriquecer con nombres de estudiantes en queries separadas
       if (allData.length > 0) {
@@ -383,7 +371,6 @@ export const PaymentsModule = {
         '<div><label class="' + lc + '">Fecha Limite</label><input id="payDueDate" type="date" class="' + ic + '" value="' + dd + '"></div>' +
         '<div><label class="' + lc + '">Metodo</label><select id="payMethod" class="' + ic + '"><option value="efectivo">Efectivo</option><option value="transferencia">Transferencia</option><option value="tarjeta">Tarjeta</option></select></div>' +
         '<div><label class="' + lc + '">Estado</label><select id="payStatus" class="' + ic + '"><option value="paid">Pagado</option><option value="pending">Pendiente</option></select></div>' +
-        '<div class="md:col-span-2"><label class="' + lc + '">Comprobante Fiscal</label><input id="payFiscalReceipt" type="text" class="' + ic + '" placeholder="Número de factura / comprobante fiscal"></div>' +
       '</div></div>' +
       '<div class="bg-white p-5 rounded-b-3xl border-t border-slate-100 flex justify-end gap-3">' +
         '<button onclick="App.ui.closeModal()" class="px-6 py-2.5 text-slate-500 font-black text-xs uppercase hover:bg-slate-50 rounded-2xl transition-all">Cancelar</button>' +
@@ -416,7 +403,6 @@ export const PaymentsModule = {
     const dd  = document.getElementById('payDueDate')?.value;
     const met = document.getElementById('payMethod')?.value || 'efectivo';
     const sta = document.getElementById('payStatus')?.value || 'paid';
-    const fiscalReceipt = document.getElementById('payFiscalReceipt')?.value?.trim() || null;
     const pd  = sta === 'paid' ? new Date().toISOString() : null;
     if (!sid) return Helpers.toast('Selecciona un estudiante', 'warning');
     if (!amt || amt <= 0) return Helpers.toast('Ingresa un monto valido', 'warning');
@@ -430,10 +416,10 @@ export const PaymentsModule = {
       let pay;
       if (ex) {
         if (ex.status === 'paid') { Helpers.toast('Pago ya aprobado para este mes', 'warning'); return; }
-        const { data: upd, error: upE } = await supabase.from('payments').update({ amount: amt, concept: con, method: met, status: sta, due_date: dd || null, paid_date: pd, month_paid: mp, fiscal_receipt: fiscalReceipt }).eq('id', ex.id).select().single();
+        const { data: upd, error: upE } = await supabase.from('payments').update({ amount: amt, concept: con, method: met, status: sta, due_date: dd || null, paid_date: pd, month_paid: mp }).eq('id', ex.id).select().single();
         if (upE) throw upE; pay = upd;
       } else {
-        const { data: ins, error: inE } = await supabase.from('payments').insert({ student_id: sid, amount: amt, concept: con, method: met, status: sta, month_paid: mp, due_date: dd || null, paid_date: pd, created_at: new Date().toISOString(), fiscal_receipt: fiscalReceipt }).select().single();
+        const { data: ins, error: inE } = await supabase.from('payments').insert({ student_id: sid, amount: amt, concept: con, method: met, status: sta, month_paid: mp, due_date: dd || null, paid_date: pd, created_at: new Date().toISOString() }).select().single();
         if (inE) { if (inE.code === '23505') throw new Error('Ya existe un registro para este mes.'); throw inE; }
         pay = ins;
       }

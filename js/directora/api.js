@@ -113,16 +113,20 @@ export const DirectorApi = {
   // --- DASHBOARD & KPIs ---
   async getDashboardKPIs(monthText = '') {
     try {
-      // Intentar usar el RPC si existe
-      const { data: rpcData, error: rpcError } = await supabase.rpc('get_dashboard_kpis');
-      
-      if (!rpcError && rpcData) {
-        return { 
+      // Intentar usar el RPC si existe (puede no existir en algunos entornos)
+      let rpcData = null;
+      try {
+        const { data, error } = await supabase.rpc('get_dashboard_kpis');
+        if (!error && data) rpcData = data;
+      } catch (_) { /* RPC no existe — usar fallback */ }
+
+      if (rpcData) {
+        return {
           data: {
             ...rpcData,
             pending_payments: rpcData.pending_amount || rpcData.pending_payments || 0
-          }, 
-          error: null 
+          },
+          error: null
         };
       }
 

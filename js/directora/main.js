@@ -280,8 +280,10 @@ async function loadProfile() {
             const days = typeof settings.work_days === 'string' ? JSON.parse(settings.work_days) : settings.work_days;
             document.querySelectorAll('.work-day-btn').forEach(btn => {
               if (days.includes(btn.dataset.day)) {
-                btn.classList.add('bg-[#0B63C7]', 'text-white', 'border-[#0B63C7]');
-                btn.classList.remove('bg-white', 'text-slate-500', 'border-slate-200');
+                btn.dataset.active = 'true';
+                btn.style.background = '#0B63C7';
+                btn.style.color = 'white';
+                btn.style.borderColor = '#0B63C7';
               }
             });
           } catch (_) {}
@@ -292,13 +294,17 @@ async function loadProfile() {
 
     // Inicializar toggle de d�as y preview
     window.toggleWorkDay = (btn) => {
-      const active = btn.classList.contains('bg-[#0B63C7]');
+      const active = btn.dataset.active === 'true';
       if (active) {
-        btn.classList.remove('bg-[#0B63C7]', 'text-white', 'border-[#0B63C7]');
-        btn.classList.add('bg-white', 'text-slate-500', 'border-slate-200');
+        btn.dataset.active = 'false';
+        btn.style.background = '';
+        btn.style.color = '';
+        btn.style.borderColor = '';
       } else {
-        btn.classList.add('bg-[#0B63C7]', 'text-white', 'border-[#0B63C7]');
-        btn.classList.remove('bg-white', 'text-slate-500', 'border-slate-200');
+        btn.dataset.active = 'true';
+        btn.style.background = '#0B63C7';
+        btn.style.color = 'white';
+        btn.style.borderColor = '#0B63C7';
       }
       _updateSchedulePreview();
     };
@@ -486,16 +492,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Configuración de facturación
         const currencyVal = document.getElementById('confCurrency')?.value;
         const taxRateVal = parseFloat(document.getElementById('confTaxRate')?.value);
-        const invoicePrefixVal = document.getElementById('confInvoicePrefix')?.value?.trim();
-        const invoiceCounterVal = parseInt(document.getElementById('confInvoiceCounter')?.value);
-        const footerNoteVal = document.getElementById('confFooterNote')?.value?.trim();
         const termsConditionsVal = document.getElementById('confTermsConditions')?.value?.trim();
-        
+
         if (currencyVal) schoolUpdates.currency = currencyVal;
         if (!isNaN(taxRateVal)) schoolUpdates.tax_rate = taxRateVal;
-        if (invoicePrefixVal) schoolUpdates.invoice_prefix = invoicePrefixVal;
-        if (!isNaN(invoiceCounterVal) && invoiceCounterVal > 0) schoolUpdates.invoice_counter = invoiceCounterVal;
-        if (footerNoteVal) schoolUpdates.footer_note = footerNoteVal;
         if (termsConditionsVal) schoolUpdates.terms_conditions = termsConditionsVal;
         
         // Logo
@@ -505,7 +505,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Horario
         const openTime  = document.getElementById('confOpenTime')?.value;
         const closeTime = document.getElementById('confCloseTime')?.value;
-        const workDays  = [...document.querySelectorAll('.work-day-btn.bg-[#0B63C7]')].map(b => b.dataset.day);
+        const workDays  = [...document.querySelectorAll('.work-day-btn[data-active="true"]')].map(b => b.dataset.day);
         
         if (openTime)  schoolUpdates.open_time  = openTime;
         if (closeTime) schoolUpdates.close_time = closeTime;
@@ -822,7 +822,7 @@ function _updateSchedulePreview() {
   const preview = document.getElementById('schedulePreview');
   if (!preview) return;
 
-  const days = [...document.querySelectorAll('.work-day-btn.bg-[#0B63C7]')].map(b => b.dataset.day);
+  const days = [...document.querySelectorAll('.work-day-btn[data-active="true"]')].map(b => b.dataset.day);
   const open  = document.getElementById('confOpenTime')?.value  || '';
   const close = document.getElementById('confCloseTime')?.value || '';
 
