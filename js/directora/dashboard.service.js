@@ -23,44 +23,65 @@ export const DashboardService = {
     try {
       const d = new Date();
       const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-      const [counts, attendance, inquiries, pendingPaymentsData] = await Promise.all([
-        DirectorApi.getDashboardKPIs(),
-        supabase.from('attendance').select('status').eq('date', today).limit(500),
-        // FIX select('*'): only fetch fields needed for dashboard alerts
-        supabase.from('inquiries')
-          .select('id, status, title, created_at, student_id')
-          .eq('status', 'pending').limit(5),
-        // Obtener suma de pagos pendientes, vencidos y en revisión
+
+      // Queries directas en paralelo — no dependen de RPC
+      const [studentsRes, teachersRes, classroomsRes, attendanceRes, pendingPaymentsData] = await Promise.allSettled([
+        supabase.from('students').select('id').is('deleted_at', null).limit(2000),
+        supabase.from('profiles').select('id').in('role', ['maestra', 'asistente', 'admin']).limit(200),
+        supabase.from('classrooms').select('id').limit(200),
+        supabase.from('attendance').select('status').eq('date', today).limit(1000),
         supabase.from('payments').select('amount, status').in('status', ['pending', 'overdue', 'review']).limit(1000)
       ]);
 
-      const att = attendance.data || [];
-      const presentCount = att.filter(a => ['present', 'presente', 'late', 'tarde'].includes(a.status?.toLowerCase())).length;
-      const kpis = counts.data || {};
+      const safe = (r) => r.status === 'fulfilled' ? r.value : { count: 0, data: [] };
+      const [stu, tea, cls, att, pay] = [studentsRes, teachersRes, classroomsRes, attendanceRes, pendingPaymentsData].map(safe);
 
-      // Calcular total pendiente (pendientes + vencidos + en revisión)
-      const pendingPayments = pendingPaymentsData.data || [];
-      const totalPending = pendingPayments.reduce((sum, p) => sum + Number(p.amount || 0), 0);
+      const stuCount = (stu.data?.length) ?? stu.count ?? 0;
+      const teaCount = (tea.data?.length) ?? tea.count ?? 0;
+      const clsCount = (cls.data?.length) ?? cls.count ?? 0;
+
+      const attData = att.data || [];
+      const presentCount = attData.filter(a => ['present','presente','late','tarde'].includes((a.status||'').toLowerCase())).length;
+      const totalPending  = (pay.data || []).reduce((s, p) => s + Number(p.amount || 0), 0);
+
+      // Intentar RPC como enriquecimiento opcional (no bloquea)
+      let rpcKpis = {};
+      try {
+        const { data, error } = await supabase.rpc('get_dashboard_kpis');
+        if (!error && data) rpcKpis = data;
+      } catch (_) {}
 
       const dashboardData = {
         stats: {
-          students: kpis.total || 0,
-          active: kpis.active || 0,
-          teachers: kpis.teachers || 0,
-          classrooms: kpis.classrooms || 0,
-          present: kpis.attendance_today ?? presentCount,
-          attendance: kpis.attendance_pct || 0,
-          pendingInquiries: kpis.inquiries || 0,
-          pending_amount: totalPending,
-          pending_payments: totalPending
+          students:        rpcKpis.total      || stuCount,
+          active:          rpcKpis.active     || stuCount,
+          teachers:        rpcKpis.teachers   || teaCount,
+          classrooms:      rpcKpis.classrooms || clsCount,
+          present:         rpcKpis.attendance_today ?? presentCount,
+          attendance:      rpcKpis.attendance_pct   || 0,
+          pendingInquiries: rpcKpis.inquiries || 0,
+          pending_amount:  totalPending,
+          pending_payments: totalPending,
         },
-        recentInquiries: inquiries.data || []
+        recentInquiries: []
       };
+
+      // Inquiries por separado (no crítico)
+      try {
+        const { data: inq } = await supabase.from('inquiries').select('id,status,title,created_at').eq('status','pending').limit(5);
+        dashboardData.recentInquiries = inq || [];
+        dashboardData.stats.pendingInquiries = inq?.length || rpcKpis.inquiries || 0;
+      } catch (_) {}
+
       AppState.set('dashboardData', dashboardData);
       return dashboardData;
     } catch (e) {
       console.error('[DashboardService] Error:', e);
-      return null;
+      // Retornar estructura vacía válida en lugar de null para que la UI no quede en blanco
+      return {
+        stats: { students: 0, active: 0, teachers: 0, classrooms: 0, present: 0, attendance: 0, pendingInquiries: 0, pending_amount: 0, pending_payments: 0 },
+        recentInquiries: []
+      };
     }
   },
 

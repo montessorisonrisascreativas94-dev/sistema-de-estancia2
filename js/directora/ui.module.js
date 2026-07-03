@@ -41,9 +41,11 @@ const DirectorUI = {
    * Renderiza los KPI cards del dashboard
    */
   renderDashboard(data) {
+    if (!data) return; // guard — no renderizar si no hay datos
+
     const set = (id, val) => {
       const el = document.getElementById(id);
-      if (el) el.textContent = val;
+      if (el) el.textContent = val ?? '0';
     };
 
     const kpis = data?.stats || data?.kpis || {};
