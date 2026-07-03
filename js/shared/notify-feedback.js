@@ -66,15 +66,19 @@ export async function notifyParents({ students, title, message, type, link, labe
   const targets = (students || []).filter(s => s.parent_id);
   if (!targets.length) return 0;
 
-  const { sendPush } = await import('./supabase.js');
+  try {
+    const { sendPush } = await import('./supabase.js');
 
-  const results = await Promise.allSettled(
-    targets.map(s => sendPush({ user_id: s.parent_id, title, message, type, link }))
-  );
+    const results = await Promise.allSettled(
+      targets.map(s => sendPush({ user_id: s.parent_id, title, message, type, link }))
+    );
 
-  const sent = results.filter(r => r.status === 'fulfilled' && r.value?.ok !== false).length;
-  showNotifyFeedback({ sent, type, label });
-  return sent;
+    const sent = results.filter(r => r.status === 'fulfilled' && r.value?.ok !== false).length;
+    if (sent > 0) showNotifyFeedback({ sent, type, label });
+    return sent;
+  } catch (e) {
+    return 0;
+  }
 }
 
 // CSS animation

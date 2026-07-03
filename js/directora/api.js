@@ -114,7 +114,7 @@ export const DirectorApi = {
   async getDashboardKPIs(monthText = '') {
     try {
       // Intentar usar el RPC si existe
-      const { data: rpcData, error: rpcError } = await supabase.rpc('get_dashboard_kpis', { p_month: monthText || '%' });
+      const { data: rpcData, error: rpcError } = await supabase.rpc('get_dashboard_kpis');
       
       if (!rpcError && rpcData) {
         return { 
@@ -135,7 +135,7 @@ export const DirectorApi = {
         supabase.from('profiles').select('*', { count: 'exact', head: true }).in('role', ['maestra', 'asistente']),
         supabase.from('classrooms').select('*', { count: 'exact', head: true }),
         supabase.from('attendance').select('*', { count: 'exact', head: true }).eq('date', today).in('status', ['present', 'late']),
-        supabase.from('inquiries').select('*', { count: 'exact', head: true }).not('status', 'in', ['resolved', 'closed']),
+        supabase.from('inquiries').select('*', { count: 'exact', head: true }).in('status', ['pending', 'in_progress', 'open']),
         // Para pagos pendientes, vencidos y en revisión, necesitamos la suma de montos
         supabase.from('payments').select('amount').in('status', ['pending', 'overdue', 'review']).limit(1000)
       ]);

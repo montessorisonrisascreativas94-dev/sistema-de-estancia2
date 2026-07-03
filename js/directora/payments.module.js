@@ -3,6 +3,8 @@ import { Helpers } from '../shared/helpers.js';
 import { UIHelpers } from './ui.module.js';
 import { supabase } from '../shared/supabase.js';
 import { auditLog } from '../shared/db-utils.js';
+import { RealtimeManager } from '../shared/realtime-manager.js';
+import { InvoicingModule } from './invoicing.module.js';
 
 const MES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
 const MES_LABEL = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
@@ -11,6 +13,7 @@ export const PaymentsModule = {
   settings: { due_day: 5, generation_day: 25 },
   _chart: null,
   _ready: false,
+  _realtimeSubscribed: false,
 
   async init() {
     this._initSelectors();
@@ -30,8 +33,31 @@ export const PaymentsModule = {
       on('btnGenerateSpecificMonth', 'click', () => this.openGenerateSpecificMonthModal());
       on('btnSavePaymentConfig',   'click',  () => this.savePaymentConfig());
       on('btnSendPaymentReminders','click',  () => this.sendReminders());
+      on('btnExportInvoices',      'click',  () => this._openExportModal());
     }
+    
+    // ✅ Suscribirse a cambios en tiempo real
+    if (!this._realtimeSubscribed) {
+      this._subscribeRealtime();
+    }
+    
     await this.loadPayments();
+  },
+
+  _subscribeRealtime() {
+    this._realtimeSubscribed = true;
+    
+    RealtimeManager.subscribe('directora-payments', (channel) => {
+      channel
+        .on('postgres_changes', 
+          { event: '*', schema: 'public', table: 'payments' },
+          () => {
+            // Actualizar automáticamente cuando haya cambios en pagos
+            this.loadPayments();
+            this.loadStats();
+          }
+        );
+    });
   },
 
   _initSelectors() {
@@ -102,7 +128,7 @@ export const PaymentsModule = {
       // Filter by month if specified
       if (mv && mv !== 'all') {
         const monthKey = yv + '-' + String(parseInt(mv, 10)).padStart(2, '0');
-        q = q.ilike('month_paid', monthKey + '%');
+        q = q.eq('month_paid', monthKey);
       }
       
       // Filter by status
@@ -177,6 +203,7 @@ export const PaymentsModule = {
 
       const pri = { overdue: 1, pending: 2, review: 3, paid: 4 };
       list.sort((a, b) => (pri[this._st(a)] || 99) - (pri[this._st(b)] || 99));
+      this._lastList = list; // caché para exportación
       tbody.innerHTML = list.map(p => this._row(p)).join('');
       const rc = list.filter(p => this._st(p) === 'review').length;
       if (window.BadgeSystem) BadgeSystem.setCount('pagos', rc);
@@ -225,6 +252,7 @@ export const PaymentsModule = {
     const approveBtn = ip ? '<button onclick="App.payments.markPaid(\'' + p.id + '\')" class="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-100 transition-colors relative" title="Aprobar">' + (hasV ? '<span class="absolute -top-1 -right-1 flex h-3 w-3"><span class="animate-ping absolute h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span class="relative h-3 w-3 bg-emerald-500 rounded-full"></span></span>' : '') + '<i data-lucide="check" class="w-4 h-4"></i></button>' : '';
     const waiveBtn   = moraTot > 0 ? '<button onclick="App.payments.waiveMora(\'' + p.id + '\')" class="p-1.5 bg-[#E8F2FF] text-[#0B63C7] rounded-lg hover:bg-blue-100 transition-colors" title="Quitar Mora"><i data-lucide="shield-off" class="w-4 h-4"></i></button>' : '';
     const delBtn     = '<button onclick="App.payments.delete(\'' + p.id + '\')" class="p-1.5 bg-rose-50 text-rose-500 rounded-lg hover:bg-rose-100 transition-colors" title="Eliminar"><i data-lucide="trash-2" class="w-4 h-4"></i></button>';
+    const invoiceBtn = '<button onclick="App.payments.downloadInvoice(\'' + p.id + '\')" class="p-1.5 bg-violet-50 text-violet-600 rounded-lg hover:bg-violet-100 transition-colors" title="Descargar Factura"><i data-lucide="file-down" class="w-4 h-4"></i></button>';
     const voucher    = hasV
       ? '<a href="' + (p.evidence_url || p.proof_url) + '" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 text-sky-600 text-xs font-bold"><i data-lucide="external-link" class="w-3 h-3"></i>Ver</a>'
       : '<span class="text-slate-300 text-xs">-</span>';
@@ -237,7 +265,7 @@ export const PaymentsModule = {
       '<td class="px-5 py-3.5"><div class="text-[10px] font-bold text-slate-600 uppercase truncate max-w-[110px]">' + (p.bank || '-') + '</div><div class="text-[9px] text-slate-400">' + (p.reference || '') + '</div></td>' +
       '<td class="px-5 py-3.5"><div class="text-[11px] font-bold text-slate-700">' + (p.paid_date ? new Date(p.paid_date).toLocaleDateString('es-ES') : ds) + '</div><div class="text-[9px] text-slate-400 uppercase">' + (p.paid_date ? 'Pagado' : 'Vence') + '</div></td>' +
       '<td class="px-5 py-3.5 text-center">' + voucher + '</td>' +
-      '<td class="px-5 py-3.5 text-center"><div class="flex justify-center gap-1.5">' + approveBtn + waiveBtn + delBtn + '</div></td>' +
+      '<td class="px-5 py-3.5 text-center"><div class="flex justify-center gap-1.5">' + invoiceBtn + approveBtn + waiveBtn + delBtn + '</div></td>' +
       '</tr>';
   },
 
@@ -255,7 +283,7 @@ export const PaymentsModule = {
       // Filter by month if specified
       if (mv && mv !== 'all') {
         const monthKey = yv + '-' + String(parseInt(mv, 10)).padStart(2, '0');
-        q = q.ilike('month_paid', monthKey + '%');
+        q = q.eq('month_paid', monthKey);
       }
       
       const { data: pays } = await q;
@@ -428,6 +456,20 @@ export const PaymentsModule = {
       await supabase.from('payments').update({ status: 'paid', paid_date: new Date().toISOString() }).eq('id', id);
       Helpers.toast('Pago aprobado', 'success');
       this.loadPayments(); this.loadStats();
+      
+      // Generar factura automáticamente
+      try {
+        const { data: authData } = await supabase.auth.getUser();
+        const userId = authData?.user?.id;
+        
+        const result = await InvoicingModule.generateInvoice(id, userId);
+        if (result && result.success) {
+          Helpers.toast(`Factura ${result.invoice_number} generada!`, 'success');
+        }
+      } catch (invoiceErr) {
+        console.error('Error generando factura:', invoiceErr);
+      }
+      
       try {
         const { data: p } = await DirectorApi.getPaymentById(id);
         if (p) {
@@ -558,6 +600,101 @@ export const PaymentsModule = {
       this.settings.generation_day = g; this.settings.due_day = d;
       Helpers.toast('Configuracion guardada', 'success');
     } catch (e) { Helpers.toast('Error: ' + e.message, 'error'); }
+  },
+
+  // ── Factura individual ────────────────────────────────────────────
+  async downloadInvoice(id) {
+    // Primero intentar obtener las facturas existentes para este pago
+    const invoices = await InvoicingModule.getPaymentInvoices(id);
+    
+    if (invoices && invoices.length > 0) {
+      // Si hay facturas, abrir la más reciente
+      await InvoicingModule.openInvoiceModal(invoices[0].id);
+      return;
+    }
+    
+    // Si no hay facturas, preguntar si quiere generar una
+    if (confirm('No hay factura generada para este pago. ¿Desea generarla ahora?')) {
+      try {
+        const { data: authData } = await supabase.auth.getUser();
+        const userId = authData?.user?.id;
+        
+        const result = await InvoicingModule.generateInvoice(id, userId);
+        if (result && result.success) {
+          // Abrir la factura recién generada
+          await InvoicingModule.openInvoiceModal(result.invoice_id);
+        }
+      } catch (err) {
+        Helpers.toast('Error al generar factura', 'error');
+      }
+    }
+  },
+
+  // ── Modal de exportación batch ────────────────────────────────────
+  _openExportModal() {
+    // Usar la lista ya cargada en el tbody (reconstruida desde el DOM state)
+    const tbody = document.getElementById('paymentsTableBody');
+    const rows  = tbody ? Array.from(tbody.querySelectorAll('tr[class]')) : [];
+    // Mejor: leer desde AppState si está disponible
+    const AppState = window.AppState;
+    const list = AppState?.get?.('paymentsData') || this._lastList || [];
+
+    const counts = { all: 0, paid: 0, pending: 0, review: 0, overdue: 0, mora: 0 };
+    list.forEach(p => {
+      counts.all++;
+      const s = InvoiceModule._resolveStatus(p);
+      if (counts[s] !== undefined) counts[s]++;
+      if (InvoiceModule._calcMoraClient(p.due_date) > 0 && s !== 'paid') counts.mora++;
+    });
+
+    const row = (status, label, color, count) =>
+      `<button onclick="App.payments._doExport('${status}')"
+        class="flex items-center justify-between w-full px-4 py-3.5 rounded-2xl border-2 border-slate-100 hover:border-[#0B63C7] hover:bg-blue-50 transition-all text-left">
+        <div class="flex items-center gap-3">
+          <span class="w-3 h-3 rounded-full flex-shrink-0" style="background:${color}"></span>
+          <span class="font-bold text-slate-700 text-sm">${label}</span>
+        </div>
+        <span class="text-xs font-black px-2.5 py-1 rounded-full" style="background:${color}20;color:${color}">${count} registros</span>
+      </button>`;
+
+    window.openGlobalModal(
+      '<div class="bg-gradient-to-r from-violet-600 to-purple-600 text-white p-6 rounded-t-3xl flex items-center gap-3">' +
+        '<div class="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center text-2xl">📊</div>' +
+        '<div><h3 class="text-xl font-black">Exportar Facturas Electrónicas</h3><p class="text-xs text-white/70 font-bold uppercase tracking-widest">Descarga CSV con filtro</p></div>' +
+      '</div>' +
+      '<div class="p-6 space-y-2">' +
+        '<p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Selecciona qué facturas exportar:</p>' +
+        row('all',     'Todas las facturas',    '#6366f1', counts.all) +
+        row('paid',    'Aprobadas / Pagadas',   '#16a34a', counts.paid) +
+        row('pending', 'Pendientes de pago',    '#d97706', counts.pending) +
+        row('review',  'En revisión',           '#2563eb', counts.review) +
+        row('overdue', 'Vencidas',              '#dc2626', counts.overdue) +
+        row('mora',    'Con mora aplicada',     '#b91c1c', counts.mora) +
+      '</div>' +
+      '<div class="px-6 pb-5 flex justify-end">' +
+        '<button onclick="App.ui.closeModal()" class="px-6 py-2.5 text-slate-500 font-black text-xs uppercase hover:bg-slate-50 rounded-2xl">Cerrar</button>' +
+      '</div>'
+    );
+    if (window.lucide) lucide.createIcons();
+  },
+
+  _doExport(statusFilter) {
+    const AppState = window.AppState;
+    let list = AppState?.get?.('paymentsData') || this._lastList || [];
+    if (statusFilter === 'mora') {
+      list = list.filter(p => InvoiceModule._calcMoraClient(p.due_date) > 0 && InvoiceModule._resolveStatus(p) !== 'paid');
+    }
+    const mv = document.getElementById('filterPaymentMonth')?.value || '';
+    const yv = document.getElementById('filterPaymentYear')?.value  || String(new Date().getFullYear());
+    const filename = `facturas_${statusFilter}_${yv}${mv ? '-' + mv : ''}_${new Date().toISOString().split('T')[0]}.csv`;
+    const count = InvoiceModule.exportBatch(list, {
+      statusFilter: statusFilter === 'mora' ? 'all' : statusFilter,
+      filename
+    });
+    if (count) {
+      UIHelpers.closeModal();
+      Helpers.toast(`${count} facturas exportadas`, 'success');
+    }
   }
 };
 

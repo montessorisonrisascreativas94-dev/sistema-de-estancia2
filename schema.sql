@@ -1,13 +1,13 @@
-﻿﻿﻿﻿﻿﻿-- ============================================================
---MONTESSORIS — Schema Consolidado v2.0
--- Incluye: tablas, RLS, funciones, triggers y migraciones
--- Ejecutar en Supabase SQL Editor de arriba a abajo.
--- Última actualización: 2026
--- Supabase Project ID: yswizaskeftxpcphixiy
--- Supabase REST API: https://yswizaskeftxpcphixiy.supabase.co/rest/v1/
+﻿﻿-- ============================================================
+-- 🎓 Colegio Montessori Sonrisas Creativas — Schema Consolidado v3.0
+-- ============================================================
+-- Este archivo contiene TODO el esquema de la base de datos en un solo lugar.
+-- Es idempotente: se puede ejecutar múltiples veces sin errores.
 -- ============================================================
 
--- ── 0. LIMPIEZA DE FUNCIONES ANTERIORES ──────────────────────
+-- ============================================================
+-- 1. LIMPIEZA DE FUNCIONES ANTIGUAS (para evitar conflictos)
+-- ============================================================
 DO $$
 DECLARE fn record;
 BEGIN
@@ -15,30 +15,30 @@ BEGIN
     SELECT p.oid, p.proname, n.nspname
     FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
     WHERE n.nspname = 'public'
-      AND p.proname IN (
-        'financial_summary_month','generate_report_card','close_period',
-        'mark_conversation_read','user_is_participant','generate_monthly_charges',
-        'get_current_period','get_tasks_for_period','get_posts_for_period',
-        'activate_period','get_student_history','is_period_open','get_active_period',
-        'get_student_total_debt','is_teacher_of_classroom','is_parent_of_student',
-        'is_parent_of_classroom','is_teacher_of_student','get_my_classroom_ids',
-        'run_payment_cycle','get_unread_counts','get_dashboard_kpis',
-        'get_monthly_financial_report_by_classroom','attendance_last_7_days',
-        'find_or_create_private_conversation','get_direct_messages',
-        'send_notification','get_my_role','can_access_app','handle_new_user',
-        'handle_new_post_teacher_info','update_post_comments_count',
-        'update_post_likes_count','handle_student_chat_creation',
-        'notify_parent_on_new_charge','create_students_snapshot',
-        'create_payments_snapshot','cleanup_old_login_attempts',
-        'assign_student_to_classroom','assign_students_bulk','set_updated_at',
-        'upload_payment_proof','generate_monthly_charges','calculate_mora',
-        'preview_payment_cycle','check_payment_cycle_health',
-        'process_door_punch','process_student_punch','approve_payment',
-        'delete_payment','waive_payment_mora','reset_payment_to_pending',
-        'calc_mora','is_email_under_attack','activate_period',
-        'get_posts_for_parent','get_posts_for_period','mark_messages_read',
-        'search_students','update_staff_permits_timestamp'
-      )
+    AND p.proname IN (
+      'financial_summary_month','generate_report_card','close_period',
+      'mark_conversation_read','user_is_participant','generate_monthly_charges',
+      'get_current_period','get_tasks_for_period','get_posts_for_period',
+      'activate_period','get_student_history','is_period_open','get_active_period',
+      'get_student_total_debt','is_teacher_of_classroom','is_parent_of_student',
+      'is_parent_of_classroom','is_teacher_of_student','get_my_classroom_ids',
+      'run_payment_cycle','get_unread_counts','get_dashboard_kpis',
+      'get_monthly_financial_report_by_classroom','attendance_last_7_days',
+      'find_or_create_private_conversation','get_direct_messages',
+      'send_notification','get_my_role','can_access_app','handle_new_user',
+      'handle_new_post_teacher_info','update_post_comments_count',
+      'update_post_likes_count','handle_student_chat_creation',
+      'notify_parent_on_new_charge','create_students_snapshot',
+      'create_payments_snapshot','cleanup_old_login_attempts',
+      'assign_student_to_classroom','assign_students_bulk','set_updated_at',
+      'upload_payment_proof','generate_monthly_charges','calculate_mora',
+      'preview_payment_cycle','check_payment_cycle_health',
+      'process_door_punch','process_student_punch','approve_payment',
+      'delete_payment','waive_payment_mora','reset_payment_to_pending',
+      'calc_mora','is_email_under_attack','activate_period',
+      'get_posts_for_parent','get_posts_for_period','mark_messages_read',
+      'search_students','update_staff_permits_timestamp'
+    )
   LOOP
     EXECUTE format('DROP FUNCTION IF EXISTS %I.%I(%s) CASCADE',
       fn.nspname, fn.proname,
@@ -46,11 +46,27 @@ BEGIN
   END LOOP;
 END $$;
 
--- ── 1. EXTENSIONES ──────────────────────────────────────────
+-- ============================================================
+-- 2. EXTENSIONES REQUERIDAS
+-- ============================================================
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- ── 2. TABLAS ────────────────────────────────────────────────
+-- ============================================================
+-- 3. TIPOS PERSONALIZADOS (ENUMs)
+-- ============================================================
+DO $$ BEGIN
+  CREATE TYPE permit_status AS ENUM ('pending','approved','rejected');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
+DO $$ BEGIN
+  CREATE TYPE permit_type AS ENUM ('permission','absence','medical','other');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+-- ============================================================
+-- 4. TABLAS DE DATOS (orden por dependencia)
+-- ============================================================
+
+-- Tabla de perfiles de usuario
 CREATE TABLE IF NOT EXISTS public.profiles (
   id                  uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   email               text UNIQUE,
@@ -68,12 +84,14 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   accepted_terms      boolean DEFAULT false,
   accepted_terms_at   timestamp with time zone,
   last_sign_in_at     timestamp with time zone,
+  is_active           boolean DEFAULT true,
   search_vector       tsvector GENERATED ALWAYS AS (
     to_tsvector('simple', coalesce(name,'') || ' ' || coalesce(email,'') || ' ' || coalesce(phone,''))
   ) STORED,
   created_at          timestamp with time zone DEFAULT now() NOT NULL
 );
 
+-- Tabla de salones
 CREATE TABLE IF NOT EXISTS public.classrooms (
   id                bigint GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
   name              text NOT NULL,
@@ -81,11 +99,12 @@ CREATE TABLE IF NOT EXISTS public.classrooms (
   capacity          integer DEFAULT 20,
   teacher_id        uuid REFERENCES public.profiles(id) ON DELETE SET NULL,
   is_live           boolean DEFAULT false,
-  active_period_id  bigint REFERENCES public.periods(id) ON DELETE SET NULL,
+  active_period_id  bigint,
   deleted_at        timestamp with time zone,
   created_at        timestamp with time zone DEFAULT now() NOT NULL
 );
 
+-- Tabla de estudiantes
 CREATE TABLE IF NOT EXISTS public.students (
   id                      bigint GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
   name                    text NOT NULL,
@@ -121,30 +140,10 @@ CREATE TABLE IF NOT EXISTS public.students (
   created_at              timestamp with time zone DEFAULT now() NOT NULL
 );
 
+-- Índice único para matrículas de estudiantes
 CREATE UNIQUE INDEX IF NOT EXISTS idx_students_matricula ON public.students(matricula) WHERE matricula IS NOT NULL;
 
-CREATE TABLE IF NOT EXISTS public.attendance (
-  id           bigint GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
-  student_id   bigint REFERENCES public.students(id) ON DELETE CASCADE,
-  classroom_id bigint REFERENCES public.classrooms(id),
-  date         date DEFAULT current_date,
-  status       text CHECK (status IN ('present','absent','late','retirado')),
-  check_in     timestamp with time zone,
-  check_out    timestamp with time zone,
-  created_at   timestamp with time zone DEFAULT now() NOT NULL,
-  UNIQUE(student_id, date)
-);
-
-CREATE TABLE IF NOT EXISTS public.attendance_requests (
-  id         bigint GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
-  student_id bigint REFERENCES public.students(id) ON DELETE CASCADE,
-  date       date NOT NULL,
-  reason     text NOT NULL,
-  note       text,
-  status     text DEFAULT 'pending' CHECK (status IN ('pending','approved','rejected')),
-  created_at timestamp with time zone DEFAULT now() NOT NULL
-);
-
+-- Tabla de periodos académicos
 CREATE TABLE IF NOT EXISTS public.periods (
   id           bigint GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
   name         text NOT NULL,
@@ -157,6 +156,51 @@ CREATE TABLE IF NOT EXISTS public.periods (
   created_at   timestamp with time zone DEFAULT now() NOT NULL
 );
 
+-- Agregar foreign key para active_period_id en classrooms (ahora que periods existe)
+DO $$ BEGIN
+  -- Agregar columna active_period_id si no existe
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'classrooms' AND column_name = 'active_period_id'
+  ) THEN
+    ALTER TABLE public.classrooms ADD COLUMN active_period_id bigint;
+  END IF;
+  
+  -- Agregar foreign key constraint si no existe
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'fk_classrooms_active_period'
+  ) THEN
+    ALTER TABLE public.classrooms
+      ADD CONSTRAINT fk_classrooms_active_period
+      FOREIGN KEY (active_period_id) REFERENCES public.periods(id) ON DELETE SET NULL;
+  END IF;
+END $$;
+
+-- Tabla de asistencia
+CREATE TABLE IF NOT EXISTS public.attendance (
+  id           bigint GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+  student_id   bigint REFERENCES public.students(id) ON DELETE CASCADE,
+  classroom_id bigint REFERENCES public.classrooms(id),
+  date         date DEFAULT current_date,
+  status       text CHECK (status IN ('present','absent','late','retirado')),
+  check_in     timestamp with time zone,
+  check_out    timestamp with time zone,
+  created_at   timestamp with time zone DEFAULT now() NOT NULL,
+  UNIQUE(student_id, date)
+);
+
+-- Tabla de solicitudes de asistencia
+CREATE TABLE IF NOT EXISTS public.attendance_requests (
+  id         bigint GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+  student_id bigint REFERENCES public.students(id) ON DELETE CASCADE,
+  date       date NOT NULL,
+  reason     text NOT NULL,
+  note       text,
+  status     text DEFAULT 'pending' CHECK (status IN ('pending','approved','rejected')),
+  created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+-- Tabla de tareas
 CREATE TABLE IF NOT EXISTS public.tasks (
   id             bigint GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
   classroom_id   bigint REFERENCES public.classrooms(id) ON DELETE CASCADE,
@@ -170,6 +214,7 @@ CREATE TABLE IF NOT EXISTS public.tasks (
   created_at     timestamp with time zone DEFAULT now() NOT NULL
 );
 
+-- Tabla de evidencias de tareas
 CREATE TABLE IF NOT EXISTS public.task_evidences (
   id           bigint GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
   task_id      bigint REFERENCES public.tasks(id) ON DELETE CASCADE,
@@ -184,6 +229,7 @@ CREATE TABLE IF NOT EXISTS public.task_evidences (
   UNIQUE(task_id, student_id)
 );
 
+-- Tabla de publicaciones del muro
 CREATE TABLE IF NOT EXISTS public.posts (
   id             bigint GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
   classroom_id   bigint REFERENCES public.classrooms(id) ON DELETE CASCADE,
@@ -203,6 +249,7 @@ CREATE TABLE IF NOT EXISTS public.posts (
   created_at     timestamp with time zone DEFAULT now() NOT NULL
 );
 
+-- Tabla de comentarios
 CREATE TABLE IF NOT EXISTS public.comments (
   id         bigint GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
   post_id    bigint REFERENCES public.posts(id) ON DELETE CASCADE,
@@ -212,6 +259,7 @@ CREATE TABLE IF NOT EXISTS public.comments (
   created_at timestamp with time zone DEFAULT now() NOT NULL
 );
 
+-- Tabla de likes
 CREATE TABLE IF NOT EXISTS public.likes (
   id            bigint GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
   post_id       bigint REFERENCES public.posts(id) ON DELETE CASCADE,
@@ -221,6 +269,7 @@ CREATE TABLE IF NOT EXISTS public.likes (
   UNIQUE(post_id, user_id)
 );
 
+-- Tabla de conversaciones de chat
 CREATE TABLE IF NOT EXISTS public.conversations (
   id           bigint GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
   type         text DEFAULT 'direct_message'
@@ -230,6 +279,7 @@ CREATE TABLE IF NOT EXISTS public.conversations (
   created_at   timestamp with time zone DEFAULT now() NOT NULL
 );
 
+-- Tabla de participantes en conversaciones
 CREATE TABLE IF NOT EXISTS public.conversation_participants (
   conversation_id bigint REFERENCES public.conversations(id) ON DELETE CASCADE,
   user_id         uuid REFERENCES public.profiles(id) ON DELETE CASCADE,
@@ -237,6 +287,7 @@ CREATE TABLE IF NOT EXISTS public.conversation_participants (
   PRIMARY KEY(conversation_id, user_id)
 );
 
+-- Tabla de mensajes de chat
 CREATE TABLE IF NOT EXISTS public.messages (
   id              bigint GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
   conversation_id bigint REFERENCES public.conversations(id) ON DELETE CASCADE,
@@ -248,6 +299,7 @@ CREATE TABLE IF NOT EXISTS public.messages (
   created_at      timestamp with time zone DEFAULT now() NOT NULL
 );
 
+-- Tabla de notificaciones
 CREATE TABLE IF NOT EXISTS public.notifications (
   id         bigint GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
   user_id    uuid REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
@@ -259,50 +311,119 @@ CREATE TABLE IF NOT EXISTS public.notifications (
   created_at timestamp with time zone DEFAULT now() NOT NULL
 );
 
+-- Tabla de pagos
 CREATE TABLE IF NOT EXISTS public.payments (
-  id            bigint GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
-  student_id    bigint REFERENCES public.students(id) ON DELETE CASCADE,
-  amount        numeric(10,2) NOT NULL,
-  concept       text DEFAULT 'Mensualidad',
-  status        text DEFAULT 'pending',
-  month_paid    text,
-  due_date      date,
-  paid_date     timestamp with time zone,
-  method        text,
-  bank          text,
-  reference     text,
-  transfer_date date,
-  proof_url     text,
-  evidence_url  text,
-  notes         text,
-  validated_by  uuid REFERENCES public.profiles(id) ON DELETE SET NULL,
-  recorded_by   uuid REFERENCES public.profiles(id) ON DELETE SET NULL,
+  id                 bigint GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+  student_id         bigint REFERENCES public.students(id) ON DELETE CASCADE,
+  amount             numeric(10,2) NOT NULL,
+  concept            text DEFAULT 'Mensualidad',
+  status             text DEFAULT 'pending',
+  month_paid         text,
+  due_date           date,
+  paid_date          timestamp with time zone,
+  method             text,
+  bank               text,
+  reference          text,
+  transfer_date      date,
+  proof_url          text,
+  evidence_url       text,
+  notes              text,
+  validated_by       uuid REFERENCES public.profiles(id) ON DELETE SET NULL,
+  recorded_by        uuid REFERENCES public.profiles(id) ON DELETE SET NULL,
   last_reminder_sent timestamp with time zone,
-  deleted_at    timestamp with time zone,
-  updated_at    timestamp with time zone DEFAULT now(),
-  created_at    timestamp with time zone DEFAULT now() NOT NULL
+  deleted_at         timestamp with time zone,
+  updated_at         timestamp with time zone DEFAULT now(),
+  created_at         timestamp with time zone DEFAULT now() NOT NULL
 );
+
+-- Índice único para pagos por estudiante y mes
 CREATE UNIQUE INDEX IF NOT EXISTS idx_payments_unique_student_month
   ON public.payments(student_id, month_paid) WHERE month_paid IS NOT NULL AND deleted_at IS NULL;
 
+-- Tabla de facturas
+CREATE TABLE IF NOT EXISTS public.invoices (
+  id               bigint GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+  invoice_number   text UNIQUE NOT NULL,
+  payment_id       bigint REFERENCES public.payments(id) ON DELETE SET NULL,
+  student_id       bigint REFERENCES public.students(id) ON DELETE CASCADE,
+  student_name     text,
+  student_matricula text,
+  classroom_name   text,
+  parent_name      text,
+  parent_phone     text,
+  concept          text,
+  amount           numeric(10,2) NOT NULL,
+  subtotal         numeric(10,2) DEFAULT 0,
+  tax_amount       numeric(10,2) DEFAULT 0,
+  total            numeric(10,2) NOT NULL,
+  tax_rate         numeric(5,2) DEFAULT 0,
+  currency         text DEFAULT 'RD$',
+  status           text DEFAULT 'issued' CHECK (status IN ('issued','paid','cancelled','void')),
+  payment_method   text,
+  payment_date     timestamp with time zone,
+  issued_date      timestamp with time zone DEFAULT now(),
+  due_date         date,
+  school_name      text,
+  school_rnc       text,
+  school_address   text,
+  school_phone     text,
+  school_email     text,
+  school_website   text,
+  school_logo_url  text,
+  issued_by        uuid REFERENCES public.profiles(id),
+  issued_by_name   text,
+  notes            text,
+  footer_note      text,
+  terms            text,
+  pdf_url          text,
+  created_at       timestamp with time zone DEFAULT now() NOT NULL,
+  updated_at       timestamp with time zone DEFAULT now()
+);
+
+-- Función para generar número de factura único
+CREATE OR REPLACE FUNCTION public.generate_invoice_number()
+RETURNS text LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  v_prefix text;
+  v_counter bigint;
+  v_year text;
+  v_month text;
+  v_invoice_number text;
+BEGIN
+  -- Obtener configuración
+  SELECT invoice_prefix, invoice_counter INTO v_prefix, v_counter
+  FROM public.school_settings WHERE id = 1;
+  
+  -- Obtener año y mes actuales
+  v_year := to_char(now(), 'YYYY');
+  v_month := to_char(now(), 'MM');
+  
+  -- Generar número con formato: FAC-YYYY-MM-00001
+  v_invoice_number := v_prefix || v_year || '-' || v_month || '-' || lpad(v_counter::text, 5, '0');
+  
+  -- Incrementar contador
+  UPDATE public.school_settings 
+  SET invoice_counter = invoice_counter + 1,
+      updated_at = now()
+  WHERE id = 1;
+  
+  RETURN v_invoice_number;
+END;
+$$;
+
+-- Tabla de auditoría de pagos
 CREATE TABLE IF NOT EXISTS public.payment_audit_log (
   id          bigint GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
   payment_id  bigint,
-  action      text NOT NULL,
+  action      text,
   old_status  text,
   new_status  text,
   changed_by  uuid REFERENCES public.profiles(id),
   changed_at  timestamp with time zone DEFAULT now() NOT NULL,
   details     jsonb DEFAULT '{}'
 );
-ALTER TABLE public.payment_audit_log ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "audit_log_staff" ON public.payment_audit_log;
-CREATE POLICY "audit_log_staff" ON public.payment_audit_log FOR SELECT
-  USING (
-    (SELECT role FROM public.profiles WHERE id = auth.uid() LIMIT 1)
-    IN ('directora','asistente','admin')
-  );
 
+-- Tabla de incidentes
 CREATE TABLE IF NOT EXISTS public.incidents (
   id           bigint GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
   student_id   bigint REFERENCES public.students(id) ON DELETE CASCADE,
@@ -316,6 +437,7 @@ CREATE TABLE IF NOT EXISTS public.incidents (
   created_at   timestamp with time zone DEFAULT now() NOT NULL
 );
 
+-- Tabla de registros diarios
 CREATE TABLE IF NOT EXISTS public.daily_logs (
   id           bigint GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
   student_id   bigint REFERENCES public.students(id) ON DELETE CASCADE,
@@ -329,6 +451,7 @@ CREATE TABLE IF NOT EXISTS public.daily_logs (
   UNIQUE(student_id, date)
 );
 
+-- Tabla de galería de salones
 CREATE TABLE IF NOT EXISTS public.classroom_gallery (
   id           bigint GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
   classroom_id bigint REFERENCES public.classrooms(id) ON DELETE CASCADE,
@@ -338,6 +461,7 @@ CREATE TABLE IF NOT EXISTS public.classroom_gallery (
   created_at   timestamp with time zone DEFAULT now() NOT NULL
 );
 
+-- Tabla de chat de salones
 CREATE TABLE IF NOT EXISTS public.classroom_chat (
   id           bigint GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
   classroom_id bigint REFERENCES public.classrooms(id) ON DELETE CASCADE,
@@ -346,6 +470,7 @@ CREATE TABLE IF NOT EXISTS public.classroom_chat (
   created_at   timestamp with time zone DEFAULT now() NOT NULL
 );
 
+-- Tabla de calificaciones
 CREATE TABLE IF NOT EXISTS public.grades (
   id           bigint GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
   student_id   bigint REFERENCES public.students(id) ON DELETE CASCADE,
@@ -357,6 +482,7 @@ CREATE TABLE IF NOT EXISTS public.grades (
   created_at   timestamp with time zone DEFAULT now() NOT NULL
 );
 
+-- Tabla de boletas de calificaciones
 CREATE TABLE IF NOT EXISTS public.report_cards (
   id              bigint GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
   student_id      bigint REFERENCES public.students(id) ON DELETE CASCADE,
@@ -368,6 +494,7 @@ CREATE TABLE IF NOT EXISTS public.report_cards (
   UNIQUE(student_id, period_id)
 );
 
+-- Tabla de consultas/inquietudes
 CREATE TABLE IF NOT EXISTS public.inquiries (
   id           bigint GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
   parent_id    uuid REFERENCES public.profiles(id) NOT NULL,
@@ -380,6 +507,7 @@ CREATE TABLE IF NOT EXISTS public.inquiries (
   created_at   timestamp with time zone DEFAULT now() NOT NULL
 );
 
+-- Tabla de configuraciones del colegio
 CREATE TABLE IF NOT EXISTS public.school_settings (
   id               int PRIMARY KEY DEFAULT 1,
   phone            text DEFAULT '(829) 803-8424',
@@ -393,10 +521,30 @@ CREATE TABLE IF NOT EXISTS public.school_settings (
   open_time        time DEFAULT '07:00:00',
   close_time       time DEFAULT '18:00:00',
   work_days        text DEFAULT '["Lun","Mar","Mié","Jue","Vie"]',
+  rnc              text,
+  school_name      text DEFAULT 'Colegio Montessori Sonrisas Creativas',
+  address          text,
+  address_line_2   text,
+  city             text,
+  state            text,
+  zip_code         text,
+  country          text DEFAULT 'República Dominicana',
+  email            text,
+  website          text,
+  logo_url         text,
+  tax_rate         numeric(5,2) DEFAULT 0.00,
+  currency         text DEFAULT 'RD$',
+  invoice_prefix   text DEFAULT 'FAC-',
+  invoice_counter  bigint DEFAULT 1,
+  footer_note      text DEFAULT 'Gracias por su preferencia',
+  terms_conditions text,
   updated_at       timestamp with time zone DEFAULT now()
 );
+
+-- Insertar/actualizar configuración inicial
 INSERT INTO public.school_settings (id) VALUES (1) ON CONFLICT (id) DO NOTHING;
 
+-- Tabla de eventos del sistema
 CREATE TABLE IF NOT EXISTS public.system_events (
   id           bigint GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
   type         text NOT NULL, payload jsonb,
@@ -405,6 +553,19 @@ CREATE TABLE IF NOT EXISTS public.system_events (
   created_at   timestamp with time zone DEFAULT now() NOT NULL
 );
 
+-- Tabla de errores del sistema
+CREATE TABLE IF NOT EXISTS public.system_errors (
+  id          bigint GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+  panel       text,
+  user_id     uuid REFERENCES public.profiles(id) ON DELETE SET NULL,
+  message     text,
+  stack       text,
+  url         text,
+  user_agent  text,
+  created_at  timestamp with time zone DEFAULT now() NOT NULL
+);
+
+-- Tabla de aceptación de términos
 CREATE TABLE IF NOT EXISTS public.terms_acceptance (
   id            bigint GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
   user_id       uuid REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
@@ -413,6 +574,7 @@ CREATE TABLE IF NOT EXISTS public.terms_acceptance (
   UNIQUE(user_id, terms_version)
 );
 
+-- Tabla de reuniones
 CREATE TABLE IF NOT EXISTS public.meetings (
   id          bigint GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
   title       text NOT NULL, description text, room_name text NOT NULL,
@@ -423,6 +585,7 @@ CREATE TABLE IF NOT EXISTS public.meetings (
   created_at  timestamp with time zone DEFAULT now() NOT NULL
 );
 
+-- Tabla de auditoría general
 CREATE TABLE IF NOT EXISTS public.audit_logs (
   id         bigint GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
   user_id    uuid REFERENCES public.profiles(id) ON DELETE SET NULL,
@@ -431,6 +594,7 @@ CREATE TABLE IF NOT EXISTS public.audit_logs (
   created_at timestamp with time zone DEFAULT now() NOT NULL
 );
 
+-- Tabla de instantáneas de datos
 CREATE TABLE IF NOT EXISTS public.data_snapshots (
   id          bigint GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
   type        text NOT NULL,
@@ -438,12 +602,14 @@ CREATE TABLE IF NOT EXISTS public.data_snapshots (
   created_at  timestamp with time zone DEFAULT now() NOT NULL
 );
 
+-- Tabla de intentos de inicio de sesión
 CREATE TABLE IF NOT EXISTS public.login_attempts (
   id         bigint GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
   email      text, ip_hash text, success boolean DEFAULT false,
   created_at timestamp with time zone DEFAULT now()
 );
 
+-- Tabla de ponches de puerta (asistencia QR)
 CREATE TABLE IF NOT EXISTS public.door_punches (
   id           bigint GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
   student_id   bigint REFERENCES public.students(id) ON DELETE CASCADE,
@@ -461,14 +627,10 @@ CREATE TABLE IF NOT EXISTS public.door_punches (
   CONSTRAINT door_punches_one_subject CHECK (
     (student_id IS NOT NULL AND staff_id IS NULL) OR
     (student_id IS NULL AND staff_id IS NOT NULL)
+  )
 );
 
 -- Tabla de permisos de personal
-DO $$ BEGIN
-  CREATE TYPE permit_status AS ENUM ('pending','approved','rejected');
-  CREATE TYPE permit_type   AS ENUM ('permission','absence','medical','other');
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-
 CREATE TABLE IF NOT EXISTS public.staff_permits (
   id          uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
   staff_id    uuid REFERENCES public.profiles(id) ON DELETE CASCADE,
@@ -484,38 +646,79 @@ CREATE TABLE IF NOT EXISTS public.staff_permits (
   updated_at  timestamp with time zone DEFAULT now()
 );
 
-GRANT ALL ON public.staff_permits TO authenticated;
+-- ============================================================
+-- 5. ÍNDICES DE RENDIMIENTO
+-- ============================================================
 
--- ── 3. ÍNDICES DE RENDIMIENTO ────────────────────────────────
+-- Índices para students
 CREATE INDEX IF NOT EXISTS idx_students_search_vector     ON public.students USING GIN (search_vector);
-CREATE INDEX IF NOT EXISTS idx_profiles_search_vector     ON public.profiles USING GIN (search_vector);
 CREATE INDEX IF NOT EXISTS idx_students_name_lower        ON public.students (lower(name));
 CREATE INDEX IF NOT EXISTS idx_students_parent            ON public.students (parent_id);
 CREATE INDEX IF NOT EXISTS idx_students_classroom         ON public.students (classroom_id);
 CREATE INDEX IF NOT EXISTS idx_students_active_fee        ON public.students (is_active, monthly_fee) WHERE is_active = true AND monthly_fee > 0;
+
+-- Índices para payments
 CREATE INDEX IF NOT EXISTS idx_payments_month_paid        ON public.payments (month_paid);
 CREATE INDEX IF NOT EXISTS idx_payments_student_month     ON public.payments (student_id, month_paid);
 CREATE INDEX IF NOT EXISTS idx_payments_status            ON public.payments (status);
 CREATE INDEX IF NOT EXISTS idx_payments_month_status      ON public.payments (month_paid, status) WHERE deleted_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_payments_overdue_reminder  ON public.payments (status, due_date, last_reminder_sent) WHERE status = 'overdue';
+CREATE INDEX IF NOT EXISTS idx_payments_student_id        ON public.payments (student_id) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_payments_created_at        ON public.payments (created_at DESC) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_payments_due_date          ON public.payments (due_date) WHERE deleted_at IS NULL AND status IN ('pending', 'overdue');
+
+-- Índices para profiles
+CREATE INDEX IF NOT EXISTS idx_profiles_search_vector     ON public.profiles USING GIN (search_vector);
 CREATE INDEX IF NOT EXISTS idx_profiles_role              ON public.profiles (role);
 CREATE INDEX IF NOT EXISTS idx_profiles_name_lower        ON public.profiles (lower(name));
+
+-- Índices para notifications
 CREATE INDEX IF NOT EXISTS idx_notifications_user_unread  ON public.notifications (user_id, is_read) WHERE is_read = false;
+
+-- Índices para messages
 CREATE INDEX IF NOT EXISTS idx_messages_conversation      ON public.messages (conversation_id, created_at DESC);
+
+-- Índices para attendance
 CREATE INDEX IF NOT EXISTS idx_attendance_classroom_date  ON public.attendance (classroom_id, date);
 CREATE INDEX IF NOT EXISTS idx_attendance_student_date    ON public.attendance (student_id, date);
+
+-- Índices para posts
 CREATE INDEX IF NOT EXISTS idx_posts_created_at           ON public.posts (created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_posts_classroom_id         ON public.posts (classroom_id) WHERE classroom_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_posts_period               ON public.posts (period_id, classroom_id);
+
+-- Índices para door_punches
 CREATE INDEX IF NOT EXISTS idx_door_punches_date          ON public.door_punches (date);
 CREATE INDEX IF NOT EXISTS idx_door_punches_student       ON public.door_punches (student_id, date);
 CREATE INDEX IF NOT EXISTS idx_door_punches_staff         ON public.door_punches (staff_id, date);
-CREATE INDEX IF NOT EXISTS idx_tasks_period               ON public.tasks (period_id, classroom_id);
-CREATE INDEX IF NOT EXISTS idx_posts_period               ON public.posts (period_id, classroom_id);
-CREATE INDEX IF NOT EXISTS idx_grades_period              ON public.grades (period_id, student_id);
-CREATE INDEX IF NOT EXISTS idx_login_attempts_email_time  ON public.login_attempts (email, created_at DESC, success);
-CREATE INDEX IF NOT EXISTS idx_audit_logs_payload         ON public.audit_logs USING GIN (payload jsonb_path_ops) WHERE payload IS NOT NULL;
 
--- ── 4. RLS ENABLE ────────────────────────────────────────────
+-- Índices para tasks
+CREATE INDEX IF NOT EXISTS idx_tasks_period               ON public.tasks (period_id, classroom_id);
+
+-- Índices para grades
+CREATE INDEX IF NOT EXISTS idx_grades_period              ON public.grades (period_id, student_id);
+
+-- Índices para login_attempts
+CREATE INDEX IF NOT EXISTS idx_login_attempts_email_time  ON public.login_attempts (email, created_at DESC, success);
+
+-- Índices para audit_logs
+CREATE INDEX IF NOT EXISTS idx_audit_logs_payload         ON public.audit_logs USING GIN (payload jsonb_path_ops) WHERE payload IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_audit_payment_id           ON public.audit_logs ((payload->>'payment_id'), created_at DESC) WHERE action LIKE 'payment.%';
+
+-- Índices para system_errors
+CREATE INDEX IF NOT EXISTS idx_system_errors_created_at   ON public.system_errors (created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_system_errors_user_id      ON public.system_errors (user_id);
+
+-- Índices para system_events
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'system_events') THEN
+    EXECUTE 'CREATE INDEX IF NOT EXISTS idx_system_events_payload ON public.system_events USING GIN (payload jsonb_path_ops) WHERE payload IS NOT NULL';
+  END IF;
+END $$;
+
+-- ============================================================
+-- 6. HABILITAR ROW LEVEL SECURITY (RLS)
+-- ============================================================
 ALTER TABLE public.profiles              ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.classrooms            ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.students              ENABLE ROW LEVEL SECURITY;
@@ -531,6 +734,7 @@ ALTER TABLE public.conversation_participants ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.messages              ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.notifications         ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.payments              ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.payment_audit_log     ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.incidents             ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.daily_logs            ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.classroom_gallery     ENABLE ROW LEVEL SECURITY;
@@ -541,6 +745,7 @@ ALTER TABLE public.report_cards          ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.inquiries             ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.school_settings       ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.system_events         ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.system_errors         ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.terms_acceptance      ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.meetings              ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.audit_logs            ENABLE ROW LEVEL SECURITY;
@@ -549,29 +754,37 @@ ALTER TABLE public.login_attempts        ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.door_punches          ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.staff_permits         ENABLE ROW LEVEL SECURITY;
 
--- ── 5. FUNCIONES AUXILIARES ───────────────────────────────────
+-- ============================================================
+-- 7. FUNCIONES AUXILIARES
+-- ============================================================
 
+-- Obtener el rol del usuario actual
+-- COALESCE evita que NULL rompa la policy RLS en INSERT de posts
 CREATE OR REPLACE FUNCTION public.get_my_role()
 RETURNS text LANGUAGE sql SECURITY DEFINER STABLE SET search_path = public AS $$
-  SELECT role FROM public.profiles WHERE id = auth.uid() LIMIT 1;
+  SELECT COALESCE(role, '') FROM public.profiles WHERE id = auth.uid() LIMIT 1;
 $$;
 GRANT EXECUTE ON FUNCTION public.get_my_role() TO authenticated, anon;
 
+-- Verificar si el usuario es maestra de un salón
 CREATE OR REPLACE FUNCTION public.is_teacher_of_classroom(p_classroom_id bigint)
 RETURNS boolean LANGUAGE sql SECURITY DEFINER STABLE SET search_path = public AS $$
   SELECT EXISTS (SELECT 1 FROM public.classrooms WHERE id = p_classroom_id AND teacher_id = auth.uid());
 $$;
 
+-- Verificar si el usuario es padre de un estudiante
 CREATE OR REPLACE FUNCTION public.is_parent_of_student(p_student_id bigint)
 RETURNS boolean LANGUAGE sql SECURITY DEFINER STABLE SET search_path = public AS $$
   SELECT EXISTS (SELECT 1 FROM public.students WHERE id = p_student_id AND parent_id = auth.uid());
 $$;
 
+-- Verificar si el usuario es padre de algún estudiante de un salón
 CREATE OR REPLACE FUNCTION public.is_parent_of_classroom(p_classroom_id bigint)
 RETURNS boolean LANGUAGE sql SECURITY DEFINER STABLE SET search_path = public AS $$
   SELECT EXISTS (SELECT 1 FROM public.students WHERE classroom_id = p_classroom_id AND parent_id = auth.uid());
 $$;
 
+-- Verificar si el usuario es maestra de un estudiante
 CREATE OR REPLACE FUNCTION public.is_teacher_of_student(p_student_id bigint)
 RETURNS boolean LANGUAGE sql SECURITY DEFINER STABLE SET search_path = public AS $$
   SELECT EXISTS (
@@ -581,12 +794,14 @@ RETURNS boolean LANGUAGE sql SECURITY DEFINER STABLE SET search_path = public AS
   );
 $$;
 
+-- Obtener IDs de salones del padre actual
 CREATE OR REPLACE FUNCTION public.get_my_classroom_ids()
 RETURNS TABLE(ret_id bigint) LANGUAGE sql SECURITY DEFINER STABLE SET search_path = public AS $$
   SELECT s.classroom_id::bigint FROM public.students s
   WHERE s.parent_id = auth.uid() AND s.classroom_id IS NOT NULL AND s.deleted_at IS NULL;
 $$;
 
+-- Verificar si un usuario es participante de una conversación
 CREATE OR REPLACE FUNCTION public.user_is_participant(p_conversation_id bigint, p_user_id uuid)
 RETURNS boolean LANGUAGE sql SECURITY DEFINER STABLE SET search_path = public AS $$
   SELECT EXISTS (
@@ -595,117 +810,229 @@ RETURNS boolean LANGUAGE sql SECURITY DEFINER STABLE SET search_path = public AS
   );
 $$;
 
+-- Verificar si un período está abierto
 CREATE OR REPLACE FUNCTION public.is_period_open(p_period_id bigint)
 RETURNS boolean LANGUAGE sql SECURITY DEFINER STABLE SET search_path = public AS $$
   SELECT EXISTS (SELECT 1 FROM public.periods WHERE id = p_period_id AND status = 'open');
 $$;
 
+-- Asignar estudiante a salón
 CREATE OR REPLACE FUNCTION public.assign_student_to_classroom(p_student_id bigint, p_classroom_id bigint)
 RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path = public AS $$
   UPDATE public.students SET classroom_id = p_classroom_id WHERE id = p_student_id;
 $$;
 GRANT EXECUTE ON FUNCTION public.assign_student_to_classroom(bigint, bigint) TO authenticated;
 
+-- Asignar estudiantes en masa
 CREATE OR REPLACE FUNCTION public.assign_students_bulk(p_student_ids bigint[], p_classroom_id bigint)
 RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path = public AS $$
   UPDATE public.students SET classroom_id = p_classroom_id WHERE id = ANY(p_student_ids);
 $$;
 GRANT EXECUTE ON FUNCTION public.assign_students_bulk(bigint[], bigint) TO authenticated;
 
--- ── 6. FUNCIONES DE NEGOCIO ───────────────────────────────────
+-- ============================================================
+-- 8. FUNCIONES DE MORA Y PAGOS
+-- ============================================================
 
--- Mora calculada en servidor: RD$50/día, cada 7 días = bloque de RD$500
+-- Calcular mora (RD$50/día, cada 7 días = bloque de RD$500)
 CREATE OR REPLACE FUNCTION public.calc_mora(p_due_date date)
 RETURNS numeric LANGUAGE plpgsql IMMUTABLE AS $$
-DECLARE v_days int; BEGIN
-  v_days := (CURRENT_DATE - p_due_date)::int;
-  IF v_days <= 0 THEN RETURN 0; END IF;
-  RETURN (v_days / 7) * 500 + (v_days % 7) * 50;
+DECLARE
+  v_days_late int;
+  v_blocks    int;
+  v_remainder int;
+BEGIN
+  v_days_late := (CURRENT_DATE - p_due_date)::int;
+  IF v_days_late <= 0 THEN RETURN 0; END IF;
+  v_blocks    := v_days_late / 7;
+  v_remainder := v_days_late % 7;
+  RETURN (v_blocks * 500) + (v_remainder * 50);
 END;
 $$;
 
 -- Vista de pagos con mora calculada
 CREATE OR REPLACE VIEW public.v_payments_with_mora AS
-SELECT p.*, public.calc_mora(p.due_date) AS mora_amount,
+SELECT
+  p.*,
+  public.calc_mora(p.due_date) AS mora_amount,
   p.amount + public.calc_mora(p.due_date) AS total_due,
   (CURRENT_DATE - p.due_date)::int AS days_late,
-  s.name AS student_name, s.p1_name AS parent_name, s.p1_email AS parent_email,
-  c.name AS classroom_name
+  s.name AS student_name,
+  s.p1_name AS parent_name,
+  s.p1_email AS parent_email,
+  c.name AS classroom_name,
+  ap.name AS approved_by_name
 FROM public.payments p
-LEFT JOIN public.students s ON s.id = p.student_id
+LEFT JOIN public.students  s  ON s.id = p.student_id
 LEFT JOIN public.classrooms c ON c.id = s.classroom_id
+LEFT JOIN public.profiles  ap ON ap.id = p.validated_by
 WHERE p.deleted_at IS NULL;
 GRANT SELECT ON public.v_payments_with_mora TO authenticated;
 
--- Ciclo de pagos con regla de gracia
+-- ============================================================
+-- 9. CICLO DE PAGOS CON REGLA DE GRACIA
+-- ============================================================
 CREATE OR REPLACE FUNCTION public.run_payment_cycle()
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 DECLARE
-  v_gen_day int; v_due_day int;
-  v_today   int := extract(day from current_date)::int;
-  v_cur_m   int := extract(month from current_date)::int;
-  v_cur_y   int := extract(year  from current_date)::int;
-  v_tgt_m   int; v_tgt_y int; v_due_m int; v_due_y int;
-  v_gen_cnt int := 0; v_exp_cnt int := 0;
-  v_due_date date; v_month_key text;
-  v_role text;
+  v_now           date := current_date;
+  v_gen_day       int;
+  v_due_day       int;
+  v_target_month  text;
+  v_due_date      date;
+  v_generated     int := 0;
+  v_expired       int := 0;
+  v_student       record;
+  v_start_day     int;
+  v_first_billing text;
+  v_first_m       int;
+  v_first_y       int;
+  v_role          text;
 BEGIN
   SELECT role INTO v_role FROM public.profiles WHERE id = auth.uid();
   IF v_role NOT IN ('directora','asistente','admin') THEN
     RAISE EXCEPTION 'Acceso denegado';
   END IF;
-  SELECT COALESCE(generation_day,25), COALESCE(due_day,5) INTO v_gen_day, v_due_day
+
+  SELECT COALESCE(generation_day, 25), COALESCE(due_day, 5) INTO v_gen_day, v_due_day
   FROM public.school_settings WHERE id = 1;
-  IF v_gen_day IS NULL THEN RETURN jsonb_build_object('error','school_settings no encontrado'); END IF;
-  v_tgt_m := v_cur_m + 1; v_tgt_y := v_cur_y;
-  IF v_tgt_m > 12 THEN v_tgt_m := 1; v_tgt_y := v_tgt_y + 1; END IF;
-  v_month_key := v_tgt_y || '-' || LPAD(v_tgt_m::text,2,'0');
-  v_due_m := v_tgt_m + 1; v_due_y := v_tgt_y;
-  IF v_due_m > 12 THEN v_due_m := 1; v_due_y := v_due_y + 1; END IF;
-  v_due_date := make_date(v_due_y, v_due_m, v_due_day);
-  INSERT INTO public.payments (student_id, amount, status, due_date, month_paid, concept)
-  SELECT s.id, s.monthly_fee, 'pending', v_due_date, v_month_key, 'Mensualidad'
-  FROM public.students s
-  WHERE s.is_active = true AND s.monthly_fee > 0 AND s.deleted_at IS NULL
-    AND (s.start_date IS NULL OR (
-      CASE WHEN extract(day from s.start_date) < v_gen_day
-        THEN make_date(extract(year from s.start_date)::int, extract(month from s.start_date)::int, 1) + interval '1 month'
-        ELSE make_date(extract(year from s.start_date)::int, extract(month from s.start_date)::int, 1) + interval '2 months'
-      END <= make_date(v_tgt_y, v_tgt_m, 1)))
-    AND NOT EXISTS (SELECT 1 FROM public.payments p
-      WHERE p.student_id = s.id AND p.month_paid = v_month_key AND p.deleted_at IS NULL);
-  GET DIAGNOSTICS v_gen_cnt = ROW_COUNT;
-  UPDATE public.payments SET status = 'overdue'
-  WHERE status = 'pending' AND due_date < CURRENT_DATE AND deleted_at IS NULL;
-  GET DIAGNOSTICS v_exp_cnt = ROW_COUNT;
-  RETURN jsonb_build_object('generated', v_gen_cnt, 'expired', v_exp_cnt, 'month', v_month_key);
+
+  v_target_month := to_char(v_now + interval '1 month', 'YYYY-MM');
+  v_due_date := (date_trunc('month', v_now + interval '2 months') + (v_due_day - 1) * interval '1 day')::date;
+
+  FOR v_student IN
+    SELECT s.id, s.monthly_fee, s.start_date
+    FROM public.students s
+    WHERE s.is_active = true
+      AND s.monthly_fee > 0
+      AND s.deleted_at IS NULL
+      AND NOT EXISTS (
+        SELECT 1 FROM public.payments p
+        WHERE p.student_id = s.id AND p.month_paid = v_target_month
+      )
+  LOOP
+    IF v_student.start_date IS NOT NULL THEN
+      v_start_day := EXTRACT(DAY FROM v_student.start_date)::int;
+      IF v_start_day < v_gen_day THEN
+        v_first_m := EXTRACT(MONTH FROM v_student.start_date)::int;
+        v_first_y := EXTRACT(YEAR FROM v_student.start_date)::int;
+        IF v_first_m = 12 THEN
+          v_first_m := 1; v_first_y := v_first_y + 1;
+        ELSE
+          v_first_m := v_first_m + 1;
+        END IF;
+      ELSE
+        v_first_m := EXTRACT(MONTH FROM v_student.start_date)::int + 2;
+        v_first_y := EXTRACT(YEAR FROM v_student.start_date)::int;
+        IF v_first_m > 12 THEN
+          v_first_m := v_first_m - 12; v_first_y := v_first_y + 1;
+        END IF;
+      END IF;
+      v_first_billing := v_first_y || '-' || LPAD(v_first_m::text, 2, '0');
+      IF v_target_month < v_first_billing THEN
+        CONTINUE;
+      END IF;
+    END IF;
+
+    INSERT INTO public.payments (student_id, amount, status, due_date, month_paid, concept, created_at)
+    VALUES (v_student.id, v_student.monthly_fee, 'pending', v_due_date, v_target_month, 'Mensualidad', now())
+    ON CONFLICT DO NOTHING;
+    v_generated := v_generated + 1;
+  END LOOP;
+
+  UPDATE public.payments
+  SET status = 'overdue', updated_at = now()
+  WHERE status = 'pending' AND due_date < v_now;
+  GET DIAGNOSTICS v_expired = ROW_COUNT;
+
+  RETURN jsonb_build_object(
+    'generated', v_generated,
+    'expired', v_expired,
+    'month', v_target_month,
+    'due_date', v_due_date::text,
+    'gen_day', v_gen_day
+  );
 END;
 $$;
 GRANT EXECUTE ON FUNCTION public.run_payment_cycle() TO authenticated;
 
--- Exoneración de mora
+-- Exonerar mora de un pago
 CREATE OR REPLACE FUNCTION public.waive_payment_mora(p_payment_id bigint, p_reason text DEFAULT 'Mora exonerada')
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  v_role text;
 BEGIN
-  UPDATE public.payments SET due_date = CURRENT_DATE, last_reminder_sent = NULL,
-    notes = COALESCE(notes || ' | ', '') || p_reason || ' (' || to_char(now(),'DD/MM/YYYY') || ')'
+  SELECT role INTO v_role FROM public.profiles WHERE id = auth.uid();
+  IF v_role NOT IN ('directora','asistente','admin') THEN
+    RETURN jsonb_build_object('error', 'No autorizado');
+  END IF;
+
+  UPDATE public.payments
+  SET due_date = CURRENT_DATE,
+      last_reminder_sent = NULL,
+      notes = COALESCE(notes || ' | ', '') || p_reason || ' (' || to_char(now(), 'DD/MM/YYYY') || ')'
   WHERE id = p_payment_id;
-  IF NOT FOUND THEN RETURN jsonb_build_object('error','Pago no encontrado'); END IF;
+
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('error', 'Pago no encontrado');
+  END IF;
+
   RETURN jsonb_build_object('success', true, 'payment_id', p_payment_id);
 END;
 $$;
 GRANT EXECUTE ON FUNCTION public.waive_payment_mora(bigint, text) TO authenticated;
 
+-- Reiniciar pago a pendiente (sin mora)
+CREATE OR REPLACE FUNCTION public.reset_payment_to_pending(p_payment_id bigint, p_reason text DEFAULT 'Reiniciado por administración')
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  v_role text;
+BEGIN
+  SELECT role INTO v_role FROM public.profiles WHERE id = auth.uid();
+  IF v_role NOT IN ('directora','asistente','admin') THEN
+    RETURN jsonb_build_object('error', 'No autorizado');
+  END IF;
+
+  UPDATE public.payments
+  SET status = 'pending',
+      due_date = CURRENT_DATE + INTERVAL '7 days',
+      last_reminder_sent = NULL,
+      notes = COALESCE(notes || ' | ', '') || p_reason || ' (' || to_char(now(), 'DD/MM/YYYY HH24:MI') || ')'
+  WHERE id = p_payment_id;
+
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('error', 'Pago no encontrado');
+  END IF;
+
+  RETURN jsonb_build_object('success', true, 'payment_id', p_payment_id);
+END;
+$$;
+GRANT EXECUTE ON FUNCTION public.reset_payment_to_pending(bigint, text) TO authenticated;
+
 -- Aprobar pago (RPC seguro)
 CREATE OR REPLACE FUNCTION public.approve_payment(p_payment_id bigint, p_notes text DEFAULT NULL)
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
-DECLARE v_role text; BEGIN
-  SELECT role INTO v_role FROM public.profiles WHERE id = auth.uid();
-  IF v_role NOT IN ('directora','asistente','admin') THEN RETURN jsonb_build_object('error','No autorizado'); END IF;
-  UPDATE public.payments SET status='paid', paid_date=now(), validated_by=auth.uid(), notes=COALESCE(p_notes,notes)
+DECLARE
+  v_user_id uuid;
+  v_role text;
+  v_payment payments%ROWTYPE;
+BEGIN
+  v_user_id := auth.uid();
+  SELECT role INTO v_role FROM public.profiles WHERE id = v_user_id;
+  IF v_role NOT IN ('directora','asistente','admin') THEN
+    RETURN jsonb_build_object('error', 'No autorizado');
+  END IF;
+
+  SELECT * INTO v_payment FROM public.payments WHERE id = p_payment_id;
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('error', 'Pago no encontrado');
+  END IF;
+
+  UPDATE public.payments
+  SET status = 'paid', paid_date = now(), validated_by = v_user_id, notes = COALESCE(p_notes, notes)
   WHERE id = p_payment_id;
-  IF NOT FOUND THEN RETURN jsonb_build_object('error','Pago no encontrado'); END IF;
-  RETURN jsonb_build_object('success', true, 'payment_id', p_payment_id);
+
+  RETURN jsonb_build_object('success', true, 'payment_id', p_payment_id, 'approved_by', v_user_id, 'approved_at', now());
 END;
 $$;
 GRANT EXECUTE ON FUNCTION public.approve_payment(bigint, text) TO authenticated;
@@ -713,40 +1040,62 @@ GRANT EXECUTE ON FUNCTION public.approve_payment(bigint, text) TO authenticated;
 -- Eliminar pago (soft delete)
 CREATE OR REPLACE FUNCTION public.delete_payment(p_payment_id bigint, p_reason text DEFAULT 'Eliminado')
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
-DECLARE v_role text; BEGIN
-  SELECT role INTO v_role FROM public.profiles WHERE id = auth.uid();
-  IF v_role NOT IN ('directora','asistente','admin') THEN RETURN jsonb_build_object('error','No autorizado'); END IF;
-  UPDATE public.payments SET deleted_at=now(), notes=COALESCE(notes||' | ','')||p_reason WHERE id=p_payment_id;
-  IF NOT FOUND THEN RETURN jsonb_build_object('error','Pago no encontrado'); END IF;
+DECLARE
+  v_user_id uuid;
+  v_role text;
+BEGIN
+  v_user_id := auth.uid();
+  SELECT role INTO v_role FROM public.profiles WHERE id = v_user_id;
+  IF v_role NOT IN ('directora','asistente','admin') THEN
+    RETURN jsonb_build_object('error', 'No autorizado');
+  END IF;
+
+  UPDATE public.payments
+  SET deleted_at = now(),
+      notes = COALESCE(notes || ' | ', '') || p_reason || ' (' || to_char(now(), 'DD/MM/YYYY HH24:MI') || ')'
+  WHERE id = p_payment_id;
+
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('error', 'Pago no encontrado');
+  END IF;
+
   RETURN jsonb_build_object('success', true, 'payment_id', p_payment_id);
 END;
 $$;
 GRANT EXECUTE ON FUNCTION public.delete_payment(bigint, text) TO authenticated;
 
--- Chat: buscar o crear conversación privada
+-- ============================================================
+-- 10. FUNCIONES DE CHAT
+-- ============================================================
+
+-- Buscar o crear conversación privada
 CREATE OR REPLACE FUNCTION public.find_or_create_private_conversation(p_user1 uuid, p_user2 uuid)
 RETURNS bigint LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
-DECLARE v_conv_id bigint; BEGIN
+DECLARE v_conv_id bigint;
+BEGIN
   SELECT cp1.conversation_id INTO v_conv_id
   FROM public.conversation_participants cp1
   JOIN public.conversation_participants cp2 ON cp2.conversation_id = cp1.conversation_id AND cp2.user_id = p_user2
   JOIN public.conversations c ON c.id = cp1.conversation_id AND c.type = 'direct_message'
   WHERE cp1.user_id = p_user1 LIMIT 1;
+
   IF v_conv_id IS NOT NULL THEN RETURN v_conv_id; END IF;
+
   INSERT INTO public.conversations (type) VALUES ('direct_message') RETURNING id INTO v_conv_id;
-  INSERT INTO public.conversation_participants (conversation_id, user_id) VALUES (v_conv_id, p_user1),(v_conv_id, p_user2) ON CONFLICT DO NOTHING;
+  INSERT INTO public.conversation_participants (conversation_id, user_id) VALUES (v_conv_id, p_user1), (v_conv_id, p_user2) ON CONFLICT DO NOTHING;
   RETURN v_conv_id;
 END;
 $$;
 GRANT EXECUTE ON FUNCTION public.find_or_create_private_conversation(uuid, uuid) TO authenticated;
 
--- Chat: mensajes directos con info del sender
+-- Obtener mensajes directos
 DROP FUNCTION IF EXISTS public.get_direct_messages(uuid);
 CREATE OR REPLACE FUNCTION public.get_direct_messages(p_other_user_id uuid)
-RETURNS TABLE (id bigint, conversation_id bigint, sender_id uuid, receiver_id uuid,
+RETURNS TABLE (
+  id bigint, conversation_id bigint, sender_id uuid, receiver_id uuid,
   content text, is_read boolean, created_at timestamp with time zone,
-  sender_name text, sender_avatar text)
-LANGUAGE sql SECURITY DEFINER SET search_path = public AS $$
+  sender_name text, sender_avatar text
+) LANGUAGE sql SECURITY DEFINER SET search_path = public AS $$
   SELECT m.id, m.conversation_id, m.sender_id, m.receiver_id, m.content, m.is_read, m.created_at,
     p.name AS sender_name, p.avatar_url AS sender_avatar
   FROM public.messages m
@@ -763,7 +1112,7 @@ LANGUAGE sql SECURITY DEFINER SET search_path = public AS $$
 $$;
 GRANT EXECUTE ON FUNCTION public.get_direct_messages(uuid) TO authenticated;
 
--- Chat: marcar mensajes como leídos
+-- Marcar mensajes como leídos
 CREATE OR REPLACE FUNCTION public.mark_messages_read(p_conversation_id bigint)
 RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 BEGIN
@@ -774,48 +1123,77 @@ END;
 $$;
 GRANT EXECUTE ON FUNCTION public.mark_messages_read(bigint) TO authenticated;
 
--- Chat: conteo de mensajes no leídos
+-- Obtener conteo de mensajes no leídos
 CREATE OR REPLACE FUNCTION public.get_unread_counts()
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
-DECLARE v_user_id uuid := auth.uid(); v_result jsonb; BEGIN
-  IF v_user_id IS NULL THEN RETURN '{}'::jsonb; END IF;
-  SELECT jsonb_object_agg(m.sender_id, m.cnt) INTO v_result
+DECLARE
+  v_user_id uuid := auth.uid();
+  v_result  jsonb := '{}'::jsonb;
+BEGIN
+  IF v_user_id IS NULL THEN RETURN v_result; END IF;
+
+  SELECT jsonb_object_agg(m.sender_id, m.count) INTO v_result
   FROM (
-    SELECT m.sender_id, count(*) AS cnt
+    SELECT m.sender_id, count(*) AS count
     FROM public.messages m
-    JOIN public.conversation_participants cp ON cp.conversation_id = m.conversation_id AND cp.user_id = v_user_id
+    JOIN public.conversation_participants cp
+      ON cp.conversation_id = m.conversation_id AND cp.user_id = v_user_id
     WHERE m.sender_id <> v_user_id AND (m.is_read IS NULL OR m.is_read = false)
     GROUP BY m.sender_id
   ) m;
-  v_result := jsonb_set(COALESCE(v_result,'{}'), '{total}',
-    to_jsonb(COALESCE((SELECT SUM(value::bigint) FROM jsonb_each_text(COALESCE(v_result,'{}'))),0)));
+
+  v_result := jsonb_set(
+    coalesce(v_result, '{}'::jsonb),
+    '{total}',
+    to_jsonb(
+      coalesce(
+        (SELECT sum(count::bigint) FROM jsonb_each_text(coalesce(v_result, '{}'::jsonb)) as t(key, count)),
+        0
+      )
+    )
+  );
+
   RETURN v_result;
 END;
 $$;
 GRANT EXECUTE ON FUNCTION public.get_unread_counts() TO authenticated;
 
--- Ponche de puerta (asistencia QR) con zona horaria RD
+-- ============================================================
+-- 11. FUNCIONES DE PONCHE DE PUERTA (ASISTENCIA QR)
+-- ============================================================
 CREATE OR REPLACE FUNCTION public.process_door_punch(p_code text)
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 DECLARE
-  v_student record; v_staff record; v_settings record;
-  v_today   date := (now() AT TIME ZONE 'America/Santo_Domingo')::date;
-  v_now     timestamp with time zone := now();
-  v_local   time := (v_now AT TIME ZONE 'America/Santo_Domingo')::time;
-  v_type    text; v_name text; v_role text; v_parent uuid;
-  v_exist   record; v_att record; v_status text := 'present';
+  v_student  record;
+  v_staff    record;
+  v_settings record;
+  v_today    date := (now() AT TIME ZONE 'America/Santo_Domingo')::date;
+  v_now      timestamp with time zone := now();
+  v_local    time := (v_now AT TIME ZONE 'America/Santo_Domingo')::time;
+  v_type     text;
+  v_name     text;
+  v_role     text;
+  v_parent   uuid;
+  v_exist    record;
+  v_att      record;
+  v_status   text := 'present';
 BEGIN
   IF p_code IS NULL OR length(trim(p_code)) < 3 THEN
-    RETURN jsonb_build_object('success',false,'message','Código QR inválido');
+    RETURN jsonb_build_object('success', false, 'message', 'Código QR inválido');
   END IF;
+
   SELECT * INTO v_student FROM public.students WHERE matricula = trim(p_code) AND is_active = true LIMIT 1;
   IF FOUND THEN
     v_name := v_student.name; v_role := 'Estudiante'; v_parent := v_student.parent_id;
     SELECT * INTO v_settings FROM public.school_settings WHERE id = 1;
+
     SELECT * INTO v_exist FROM public.door_punches WHERE student_id = v_student.id AND date = v_today AND punch_type = 'check_in';
     IF NOT FOUND THEN
       v_type := 'check_in';
-      IF v_settings.check_in_end IS NOT NULL AND v_local > v_settings.check_in_end THEN v_status := 'late'; END IF;
+      IF v_settings.check_in_end IS NOT NULL AND v_local > v_settings.check_in_end THEN
+        v_status := 'late';
+      END IF;
+
       SELECT * INTO v_att FROM public.attendance WHERE student_id = v_student.id AND date = v_today;
       IF v_att.id IS NULL THEN
         INSERT INTO public.attendance (student_id, classroom_id, date, status, check_in)
@@ -823,505 +1201,1189 @@ BEGIN
       ELSE
         UPDATE public.attendance SET status = v_status, check_in = v_now WHERE id = v_att.id;
       END IF;
-      INSERT INTO public.door_punches (student_id, punch_type, punched_at, date) VALUES (v_student.id,'check_in',v_now,v_today) ON CONFLICT DO NOTHING;
+
+      INSERT INTO public.door_punches (student_id, punch_type, punched_at, date)
+      VALUES (v_student.id, 'check_in', v_now, v_today) ON CONFLICT DO NOTHING;
     ELSE
       SELECT * INTO v_exist FROM public.door_punches WHERE student_id = v_student.id AND date = v_today AND punch_type = 'check_out';
       IF NOT FOUND THEN
-        v_type := 'check_out'; v_status := 'retirado';
+        v_type := 'check_out';
+        v_status := 'retirado';
         SELECT * INTO v_att FROM public.attendance WHERE student_id = v_student.id AND date = v_today;
-        IF v_att.id IS NOT NULL THEN UPDATE public.attendance SET check_out = v_now, status = 'retirado' WHERE id = v_att.id; END IF;
-        INSERT INTO public.door_punches (student_id, punch_type, punched_at, date) VALUES (v_student.id,'check_out',v_now,v_today) ON CONFLICT DO NOTHING;
+        IF v_att.id IS NOT NULL THEN
+          UPDATE public.attendance SET check_out = v_now, status = 'retirado' WHERE id = v_att.id;
+        END IF;
+        INSERT INTO public.door_punches (student_id, punch_type, punched_at, date)
+        VALUES (v_student.id, 'check_out', v_now, v_today) ON CONFLICT DO NOTHING;
       ELSE
-        RETURN jsonb_build_object('success',false,'message',v_name||' ya registró entrada y salida hoy');
+        RETURN jsonb_build_object('success', false, 'message', v_name || ' ya registró entrada y salida hoy');
       END IF;
     END IF;
-    INSERT INTO public.system_events (type, payload) VALUES ('student_punch',
-      jsonb_build_object('student_id',v_student.id,'parent_id',v_parent,'type',v_type,'status',v_status));
-    RETURN jsonb_build_object('success',true,'type',v_type,'name',v_name,'role',v_role,
-      'status',v_status,'student_id',v_student.id,'parent_id',v_parent,
-      'time',to_char(v_now AT TIME ZONE 'America/Santo_Domingo','HH12:MI AM'));
+
+    RETURN jsonb_build_object(
+      'success', true, 'type', v_type, 'name', v_name, 'role', v_role,
+      'status', v_status, 'student_id', v_student.id, 'parent_id', v_parent,
+      'time', to_char(v_now AT TIME ZONE 'America/Santo_Domingo', 'HH12:MI AM')
+    );
   END IF;
+
   SELECT * INTO v_staff FROM public.profiles
-  WHERE (notes=trim(p_code) OR matricula=trim(p_code) OR access_code=trim(p_code))
+  WHERE (notes = p_code OR matricula = p_code OR access_code = p_code)
     AND role IN ('maestra','asistente','directora','admin') LIMIT 1;
-  IF NOT FOUND THEN BEGIN SELECT * INTO v_staff FROM public.profiles WHERE id=trim(p_code)::uuid AND role IN ('maestra','asistente','directora','admin') LIMIT 1; EXCEPTION WHEN OTHERS THEN NULL; END; END IF;
+  IF NOT FOUND THEN
+    BEGIN
+      SELECT * INTO v_staff FROM public.profiles WHERE id = p_code::uuid AND role IN ('maestra','asistente','directora','admin') LIMIT 1;
+    EXCEPTION WHEN OTHERS THEN NULL; END;
+  END IF;
+
   IF FOUND THEN
     v_name := v_staff.name; v_role := initcap(v_staff.role);
     SELECT * INTO v_exist FROM public.door_punches WHERE staff_id = v_staff.id AND date = v_today AND punch_type = 'check_in';
     IF NOT FOUND THEN
       v_type := 'check_in';
-      INSERT INTO public.door_punches (staff_id,punch_type,punched_at,date) VALUES (v_staff.id,'check_in',v_now,v_today) ON CONFLICT DO NOTHING;
+      INSERT INTO public.door_punches (staff_id, punch_type, punched_at, date)
+      VALUES (v_staff.id, 'check_in', v_now, v_today) ON CONFLICT DO NOTHING;
     ELSE
       SELECT * INTO v_exist FROM public.door_punches WHERE staff_id = v_staff.id AND date = v_today AND punch_type = 'check_out';
       IF NOT FOUND THEN
         v_type := 'check_out';
-        INSERT INTO public.door_punches (staff_id,punch_type,punched_at,date) VALUES (v_staff.id,'check_out',v_now,v_today) ON CONFLICT DO NOTHING;
-      ELSE RETURN jsonb_build_object('success',false,'message',v_name||' ya registró entrada y salida hoy'); END IF;
+        INSERT INTO public.door_punches (staff_id, punch_type, punched_at, date)
+        VALUES (v_staff.id, 'check_out', v_now, v_today) ON CONFLICT DO NOTHING;
+      ELSE
+        RETURN jsonb_build_object('success', false, 'message', v_name || ' ya registró entrada y salida hoy');
+      END IF;
     END IF;
-    RETURN jsonb_build_object('success',true,'type',v_type,'name',v_name,'role',v_role,
-      'student_id',null,'parent_id',null,'time',to_char(v_now AT TIME ZONE 'America/Santo_Domingo','HH12:MI AM'));
+
+    RETURN jsonb_build_object(
+      'success', true, 'type', v_type, 'name', v_name, 'role', v_role,
+      'status', 'present', 'student_id', null, 'parent_id', null,
+      'time', to_char(v_now AT TIME ZONE 'America/Santo_Domingo', 'HH12:MI AM')
+    );
   END IF;
-  RETURN jsonb_build_object('success',false,'message','QR no registrado en el sistema');
+
+  RETURN jsonb_build_object('success', false, 'message', 'QR no registrado en el sistema');
 END;
 $$;
 GRANT EXECUTE ON FUNCTION public.process_door_punch(text) TO authenticated, anon;
 
--- Notificación de nuevo pago
-CREATE OR REPLACE FUNCTION public.send_notification(p_user_id uuid, p_type text, p_message text, p_data jsonb DEFAULT '{}', p_link text DEFAULT NULL)
-RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+-- ============================================================
+-- 12. FUNCIONES DE CICLO ACADÉMICO
+-- ============================================================
+
+-- Obtener período activo global
+CREATE OR REPLACE FUNCTION public.get_current_period()
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE v_period periods%ROWTYPE;
 BEGIN
-  INSERT INTO public.notifications (user_id, title, message, type, link, is_read, created_at)
-  VALUES (p_user_id, p_type, p_message, p_type, p_link, false, now()) ON CONFLICT DO NOTHING;
-EXCEPTION WHEN OTHERS THEN NULL;
+  SELECT * INTO v_period FROM public.periods WHERE is_active = true ORDER BY created_at DESC LIMIT 1;
+  IF NOT FOUND THEN
+    SELECT * INTO v_period FROM public.periods WHERE status = 'open' ORDER BY created_at DESC LIMIT 1;
+  END IF;
+  IF NOT FOUND THEN RETURN jsonb_build_object('found', false); END IF;
+  RETURN jsonb_build_object(
+    'found', true, 'id', v_period.id, 'name', v_period.name,
+    'status', v_period.status, 'is_active', v_period.is_active,
+    'start_date', v_period.start_date, 'end_date', v_period.end_date,
+    'classroom_id', v_period.classroom_id
+  );
 END;
 $$;
-GRANT EXECUTE ON FUNCTION public.send_notification(uuid, text, text, jsonb, text) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.get_current_period() TO authenticated;
 
--- Preview del ciclo de pagos
-CREATE OR REPLACE FUNCTION public.preview_payment_cycle()
+-- Obtener período activo para un salón (alias para get_current_period para compatibilidad)
+DROP FUNCTION IF EXISTS public.get_active_period(bigint);
+CREATE OR REPLACE FUNCTION public.get_active_period(p_classroom_id bigint)
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE v_period periods%ROWTYPE;
+BEGIN
+  -- First try to find active period for the specific classroom
+  IF p_classroom_id IS NOT NULL THEN
+    SELECT * INTO v_period FROM public.periods 
+    WHERE is_active = true AND classroom_id = p_classroom_id 
+    ORDER BY created_at DESC LIMIT 1;
+  END IF;
+  
+  -- If not found, try global active period
+  IF NOT FOUND THEN
+    SELECT * INTO v_period FROM public.periods WHERE is_active = true ORDER BY created_at DESC LIMIT 1;
+  END IF;
+  
+  -- If still not found, try open period
+  IF NOT FOUND THEN
+    SELECT * INTO v_period FROM public.periods WHERE status = 'open' ORDER BY created_at DESC LIMIT 1;
+  END IF;
+  
+  IF NOT FOUND THEN RETURN jsonb_build_object('found', false); END IF;
+  
+  RETURN jsonb_build_object(
+    'found', true, 'id', v_period.id, 'name', v_period.name,
+    'status', v_period.status, 'is_active', v_period.is_active,
+    'start_date', v_period.start_date, 'end_date', v_period.end_date,
+    'classroom_id', v_period.classroom_id
+  );
+END;
+$$;
+GRANT EXECUTE ON FUNCTION public.get_active_period(bigint) TO authenticated;
+
+-- Versión sin parámetro para compatibilidad
+DROP FUNCTION IF EXISTS public.get_active_period();
+CREATE OR REPLACE FUNCTION public.get_active_period()
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+  RETURN public.get_active_period(NULL::bigint);
+END;
+$$;
+GRANT EXECUTE ON FUNCTION public.get_active_period() TO authenticated;
+
+-- Obtener tareas por período
+CREATE OR REPLACE FUNCTION public.get_tasks_for_period(p_classroom_id bigint, p_period_id bigint DEFAULT NULL)
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 DECLARE
-  v_gen_day int; v_cur_m int := extract(month from current_date)::int;
-  v_cur_y int := extract(year from current_date)::int;
-  v_tgt_m int; v_tgt_y int; v_month_key text;
-  v_count int; v_total numeric; v_grace int; v_existing int;
+  v_period_id bigint := p_period_id;
+  v_result    jsonb;
 BEGIN
-  SELECT COALESCE(generation_day,25) INTO v_gen_day FROM public.school_settings WHERE id=1;
-  v_tgt_m := v_cur_m + 1; v_tgt_y := v_cur_y;
-  IF v_tgt_m > 12 THEN v_tgt_m := 1; v_tgt_y := v_tgt_y + 1; END IF;
-  v_month_key := v_tgt_y||'-'||LPAD(v_tgt_m::text,2,'0');
-  SELECT count(*), COALESCE(sum(monthly_fee+COALESCE(prolongado_fee,0)),0) INTO v_count, v_total
-  FROM public.students s WHERE s.is_active=true AND (s.monthly_fee>0 OR COALESCE(s.prolongado_fee,0)>0)
-    AND (s.start_date IS NULL OR (
-      CASE WHEN extract(day from s.start_date)<v_gen_day
-        THEN make_date(extract(year from s.start_date)::int,extract(month from s.start_date)::int,1)+interval'1 month'
-        ELSE make_date(extract(year from s.start_date)::int,extract(month from s.start_date)::int,1)+interval'2 months'
-      END <= make_date(v_tgt_y,v_tgt_m,1)))
-    AND NOT EXISTS (SELECT 1 FROM public.payments p WHERE p.student_id=s.id AND p.month_paid=v_month_key AND p.deleted_at IS NULL);
-  SELECT count(DISTINCT student_id) INTO v_existing FROM public.payments WHERE month_paid=v_month_key AND deleted_at IS NULL;
-  RETURN jsonb_build_object('target_month',v_month_key,'count',v_count,'total_amount',v_total,'existing_count',v_existing);
+  IF v_period_id IS NULL THEN
+    SELECT id INTO v_period_id FROM public.periods
+    WHERE classroom_id = p_classroom_id AND is_active = true ORDER BY created_at DESC LIMIT 1;
+    IF v_period_id IS NULL THEN
+      SELECT id INTO v_period_id FROM public.periods
+      WHERE classroom_id = p_classroom_id AND status = 'open' ORDER BY created_at DESC LIMIT 1;
+    END IF;
+  END IF;
+
+  SELECT jsonb_agg(
+    jsonb_build_object(
+      'id', t.id, 'title', t.title, 'description', t.description,
+      'due_date', t.due_date, 'file_url', t.file_url,
+      'grading_system', t.grading_system, 'classroom_id', t.classroom_id,
+      'period_id', t.period_id, 'created_at', t.created_at
+    ) ORDER BY t.due_date ASC
+  ) INTO v_result
+  FROM public.tasks t
+  WHERE t.classroom_id = p_classroom_id
+    AND (
+      v_period_id IS NULL OR
+      t.period_id = v_period_id OR
+      (t.period_id IS NULL AND v_period_id IS NOT NULL AND EXISTS (
+        SELECT 1 FROM public.periods p
+        WHERE p.id = v_period_id
+          AND t.created_at BETWEEN p.start_date AND p.end_date + INTERVAL '1 day'
+      ))
+    );
+
+  RETURN jsonb_build_object('tasks', COALESCE(v_result, '[]'::jsonb), 'period_id', v_period_id);
 END;
 $$;
-GRANT EXECUTE ON FUNCTION public.preview_payment_cycle() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.get_tasks_for_period(bigint, bigint) TO authenticated;
 
--- Healthcheck del ciclo
-CREATE OR REPLACE FUNCTION public.check_payment_cycle_health()
+-- Obtener posts por período
+CREATE OR REPLACE FUNCTION public.get_posts_for_period(
+  p_classroom_id bigint DEFAULT NULL,
+  p_period_id    bigint DEFAULT NULL,
+  p_limit        int    DEFAULT 50
+)
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
-DECLARE v_gen_day int; v_today int := extract(day from current_date)::int; v_month_key text; v_ok boolean; BEGIN
-  SELECT generation_day INTO v_gen_day FROM public.school_settings WHERE id=1;
-  IF v_today < v_gen_day THEN RETURN jsonb_build_object('status','ok','message','Aún no llega el día de generación'); END IF;
-  v_month_key := to_char(current_date+interval'1 month','YYYY-MM');
-  SELECT EXISTS(SELECT 1 FROM public.payments WHERE month_paid=v_month_key AND concept='Mensualidad' AND deleted_at IS NULL) INTO v_ok;
-  IF v_ok THEN RETURN jsonb_build_object('status','ok','message','Ciclo ejecutado correctamente');
-  ELSE RETURN jsonb_build_object('status','error','message','El ciclo de pagos no se ha ejecutado todavía'); END IF;
+DECLARE
+  v_period_id bigint := p_period_id;
+  v_result    jsonb;
+BEGIN
+  IF v_period_id IS NULL AND p_classroom_id IS NOT NULL THEN
+    SELECT id INTO v_period_id FROM public.periods
+    WHERE classroom_id = p_classroom_id AND is_active = true ORDER BY created_at DESC LIMIT 1;
+    IF v_period_id IS NULL THEN
+      SELECT id INTO v_period_id FROM public.periods
+      WHERE classroom_id = p_classroom_id AND status = 'open' ORDER BY created_at DESC LIMIT 1;
+    END IF;
+  END IF;
+
+  SELECT jsonb_agg(
+    jsonb_build_object(
+      'id', p.id, 'content', p.content, 'media_url', p.media_url,
+      'media_type', p.media_type, 'image_url', p.image_url,
+      'created_at', p.created_at, 'classroom_id', p.classroom_id,
+      'period_id', p.period_id, 'teacher_id', p.teacher_id,
+      'teacher', jsonb_build_object(
+        'name', COALESCE(pr.name, p.teacher_name, 'Maestra'),
+        'avatar_url', COALESCE(pr.avatar_url, p.teacher_avatar),
+        'role', pr.role
+      ),
+      'likes', COALESCE((
+        SELECT jsonb_agg(jsonb_build_object('user_id', l.user_id, 'id', l.id))
+        FROM public.likes l WHERE l.post_id = p.id
+      ), '[]'::jsonb),
+      'comments', COALESCE((
+        SELECT jsonb_agg(jsonb_build_object(
+          'id', c.id, 'content', c.content,
+          'user_name', c.user_name, 'user_id', c.user_id,
+          'created_at', c.created_at
+        ) ORDER BY c.created_at ASC)
+        FROM public.comments c WHERE c.post_id = p.id
+      ), '[]'::jsonb)
+    ) ORDER BY p.created_at DESC
+  ) INTO v_result
+  FROM public.posts p
+  LEFT JOIN public.profiles pr ON pr.id = p.teacher_id
+  WHERE (p.classroom_id = p_classroom_id OR p.classroom_id IS NULL)
+    AND (
+      v_period_id IS NULL OR
+      p.period_id = v_period_id OR
+      (p.period_id IS NULL AND v_period_id IS NOT NULL AND EXISTS (
+        SELECT 1 FROM public.periods per
+        WHERE per.id = v_period_id
+          AND p.created_at BETWEEN per.start_date AND per.end_date + INTERVAL '1 day'
+      ))
+    )
+  LIMIT p_limit;
+
+  RETURN jsonb_build_object('posts', COALESCE(v_result, '[]'::jsonb), 'period_id', v_period_id);
 END;
 $$;
-GRANT EXECUTE ON FUNCTION public.check_payment_cycle_health() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.get_posts_for_period(bigint, bigint, int) TO authenticated;
 
--- Posts para padre (sin RLS)
+-- Obtener posts para padres (bypasa RLS)
 CREATE OR REPLACE FUNCTION public.get_posts_for_parent(p_classroom_id bigint DEFAULT NULL)
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
-DECLARE v_result jsonb; BEGIN
-  SELECT jsonb_agg(jsonb_build_object(
-    'id',p.id,'content',p.content,'media_url',p.media_url,'media_type',p.media_type,
-    'image_url',p.image_url,'created_at',p.created_at,'classroom_id',p.classroom_id,
-    'teacher_id',p.teacher_id,
-    'teacher',jsonb_build_object('name',COALESCE(pr.name,p.teacher_name,'Maestra'),'avatar_url',COALESCE(pr.avatar_url,p.teacher_avatar),'role',pr.role),
-    'likes',COALESCE((SELECT jsonb_agg(jsonb_build_object('user_id',l.user_id,'id',l.id)) FROM public.likes l WHERE l.post_id=p.id),'[]'),
-    'comments',COALESCE((SELECT jsonb_agg(jsonb_build_object('id',c.id,'content',c.content,'user_name',c.user_name,'user_id',c.user_id,'created_at',c.created_at) ORDER BY c.created_at) FROM public.comments c WHERE c.post_id=p.id),'[]')
-  ) ORDER BY p.created_at DESC) INTO v_result
-  FROM public.posts p LEFT JOIN public.profiles pr ON pr.id=p.teacher_id
-  WHERE p.classroom_id IS NULL OR (p_classroom_id IS NOT NULL AND p.classroom_id=p_classroom_id);
-  RETURN COALESCE(v_result,'[]');
+DECLARE v_result jsonb;
+BEGIN
+  SELECT jsonb_agg(
+    jsonb_build_object(
+      'id', p.id, 'content', p.content, 'media_url', p.media_url,
+      'media_type', p.media_type, 'image_url', p.image_url,
+      'created_at', p.created_at, 'classroom_id', p.classroom_id,
+      'teacher_id', p.teacher_id,
+      'teacher', jsonb_build_object(
+        'name', COALESCE(pr.name, p.teacher_name, 'Maestra'),
+        'avatar_url', COALESCE(pr.avatar_url, p.teacher_avatar),
+        'role', pr.role
+      ),
+      'likes', COALESCE((
+        SELECT jsonb_agg(jsonb_build_object('user_id', l.user_id, 'id', l.id))
+        FROM public.likes l WHERE l.post_id = p.id
+      ), '[]'::jsonb),
+      'comments', COALESCE((
+        SELECT jsonb_agg(jsonb_build_object(
+          'id', c.id, 'content', c.content,
+          'user_name', c.user_name, 'user_id', c.user_id,
+          'created_at', c.created_at
+        ) ORDER BY c.created_at ASC)
+        FROM public.comments c WHERE c.post_id = p.id
+      ), '[]'::jsonb)
+    ) ORDER BY p.created_at DESC
+  ) INTO v_result
+  FROM public.posts p
+  LEFT JOIN public.profiles pr ON pr.id = p.teacher_id
+  WHERE p.classroom_id IS NULL OR (p_classroom_id IS NOT NULL AND p.classroom_id = p_classroom_id);
+
+  RETURN COALESCE(v_result, '[]'::jsonb);
 END;
 $$;
 GRANT EXECUTE ON FUNCTION public.get_posts_for_parent(bigint) TO authenticated, anon;
 
--- Búsqueda full-text de estudiantes
-CREATE OR REPLACE FUNCTION public.search_students(query text)
-RETURNS SETOF public.students LANGUAGE sql STABLE AS $$
-  SELECT * FROM public.students
-  WHERE search_vector @@ plainto_tsquery('simple', query)
-     OR lower(name) LIKE lower('%'||query||'%')
-     OR lower(COALESCE(matricula,'')) LIKE lower('%'||query||'%')
-  ORDER BY ts_rank(search_vector, plainto_tsquery('simple', query)) DESC LIMIT 50;
-$$;
-
--- Verificar email bajo ataque
-CREATE OR REPLACE FUNCTION public.is_email_under_attack(p_email text)
-RETURNS boolean LANGUAGE sql SECURITY DEFINER SET search_path = public AS $$
-  SELECT COUNT(*) >= 10 FROM public.login_attempts
-  WHERE email=p_email AND success=false AND created_at > NOW()-INTERVAL'1 hour';
-$$;
-GRANT EXECUTE ON FUNCTION public.is_email_under_attack(text) TO authenticated;
-
--- Trigger staff_permits updated_at
-CREATE OR REPLACE FUNCTION public.update_staff_permits_timestamp()
-RETURNS TRIGGER LANGUAGE plpgsql AS $$
-BEGIN NEW.updated_at = now(); RETURN NEW; END;
-$$;
-
--- ── 7. TRIGGERS ──────────────────────────────────────────────
-
-CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+-- Activar período
+CREATE OR REPLACE FUNCTION public.activate_period(p_period_id bigint)
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  v_user_id uuid;
+  v_role text;
+  v_period periods%ROWTYPE;
+  v_old_id bigint;
 BEGIN
-  INSERT INTO public.profiles (id, email, name, role, accepted_terms)
-  VALUES (NEW.id, NEW.email,
-    COALESCE(NEW.raw_user_meta_data->>'name', split_part(NEW.email,'@',1)),
-    COALESCE(NEW.raw_user_meta_data->>'role','padre'), false)
-  ON CONFLICT (id) DO NOTHING;
-  RETURN NEW;
+  v_user_id := auth.uid();
+  SELECT role INTO v_role FROM public.profiles WHERE id = v_user_id;
+  IF v_role NOT IN ('directora','admin') THEN
+    RETURN jsonb_build_object('error', 'Solo la directora puede activar períodos');
+  END IF;
+
+  SELECT * INTO v_period FROM public.periods WHERE id = p_period_id;
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('error', 'Período no encontrado');
+  END IF;
+
+  SELECT id INTO v_old_id FROM public.periods WHERE is_active = true LIMIT 1;
+
+  UPDATE public.periods SET is_active = false
+  WHERE classroom_id = v_period.classroom_id OR classroom_id IS NULL;
+
+  UPDATE public.periods SET is_active = true, status = 'open' WHERE id = p_period_id;
+
+  INSERT INTO public.audit_logs (user_id, action, payload, created_at)
+  VALUES (v_user_id, 'period.activated', jsonb_build_object(
+    'new_period_id', p_period_id, 'new_period_name', v_period.name, 'old_period_id', v_old_id
+  ), now());
+
+  RETURN jsonb_build_object(
+    'success', true, 'period_id', p_period_id, 'period_name', v_period.name, 'old_period_id', v_old_id
+  );
 END;
 $$;
-DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
-CREATE TRIGGER on_auth_user_created AFTER INSERT ON auth.users FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+GRANT EXECUTE ON FUNCTION public.activate_period(bigint) TO authenticated;
 
+-- Obtener historial de estudiante
+CREATE OR REPLACE FUNCTION public.get_student_history(p_student_id bigint)
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE v_role text;
+BEGIN
+  SELECT role INTO v_role FROM public.profiles WHERE id = auth.uid();
+  IF v_role NOT IN ('directora','asistente','admin') THEN
+    RETURN jsonb_build_object('error', 'No autorizado');
+  END IF;
+
+  RETURN (
+    SELECT jsonb_agg(
+      jsonb_build_object(
+        'period_id', rc.period_id, 'period_name', p.name,
+        'period_status', p.status, 'classroom_id', rc.classroom_id,
+        'classroom_name', c.name, 'task_avg', rc.task_avg,
+        'formal_avg', rc.formal_avg, 'final_score', rc.final_score,
+        'level', rc.level, 'teacher_comment', rc.teacher_comment,
+        'created_at', rc.created_at
+      ) ORDER BY p.start_date DESC
+    )
+    FROM public.report_cards rc
+    JOIN public.periods p ON p.id = rc.period_id
+    LEFT JOIN public.classrooms c ON c.id = rc.classroom_id
+    WHERE rc.student_id = p_student_id
+  );
+END;
+$$;
+GRANT EXECUTE ON FUNCTION public.get_student_history(bigint) TO authenticated;
+
+-- Cerrar período y calcular promedios
+CREATE OR REPLACE FUNCTION public.close_period(p_period_id bigint)
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  v_period periods%ROWTYPE;
+  v_user_id uuid;
+  v_role text;
+  v_student record;
+  v_avg numeric(4,2);
+  v_task_avg numeric(4,2);
+  v_formal_avg numeric(4,2);
+  v_level text;
+  v_cards_created int := 0;
+  v_cards_updated int := 0;
+BEGIN
+  v_user_id := auth.uid();
+  SELECT role INTO v_role FROM public.profiles WHERE id = v_user_id;
+  IF v_role NOT IN ('directora','admin') THEN
+    RETURN jsonb_build_object('error', 'Solo la directora puede cerrar períodos');
+  END IF;
+
+  SELECT * INTO v_period FROM public.periods WHERE id = p_period_id;
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('error', 'Período no encontrado');
+  END IF;
+  IF v_period.status = 'closed' THEN
+    RETURN jsonb_build_object('error', 'El período ya está cerrado');
+  END IF;
+
+  FOR v_student IN
+    SELECT s.id AS student_id, s.name AS student_name
+    FROM public.students s
+    WHERE s.classroom_id = v_period.classroom_id AND s.is_active = true
+  LOOP
+    SELECT ROUND(AVG(
+      CASE
+        WHEN te.stars IS NOT NULL AND te.stars > 0 THEN te.stars::numeric
+        WHEN te.grade_letter = 'A' THEN 5
+        WHEN te.grade_letter = 'B' THEN 4
+        WHEN te.grade_letter = 'C' THEN 3
+        WHEN te.grade_letter = 'D' THEN 2
+        WHEN te.grade_letter = 'E' THEN 1
+        ELSE NULL
+      END
+    ), 2) INTO v_task_avg
+    FROM public.task_evidences te
+    JOIN public.tasks t ON t.id = te.task_id
+    WHERE te.student_id = v_student.student_id
+      AND t.classroom_id = v_period.classroom_id
+      AND te.status = 'graded'
+      AND t.created_at BETWEEN v_period.start_date AND v_period.end_date + INTERVAL '1 day';
+
+    SELECT ROUND(AVG(g.score), 2) INTO v_formal_avg
+    FROM public.grades g
+    WHERE g.student_id = v_student.student_id AND g.period_id = p_period_id;
+
+    IF v_task_avg IS NOT NULL AND v_formal_avg IS NOT NULL THEN
+      v_avg := ROUND((v_task_avg * 0.6) + (v_formal_avg * 0.4), 2);
+    ELSIF v_task_avg IS NOT NULL THEN
+      v_avg := v_task_avg;
+    ELSIF v_formal_avg IS NOT NULL THEN
+      v_avg := v_formal_avg;
+    ELSE
+      v_avg := NULL;
+    END IF;
+
+    v_level := CASE
+      WHEN v_avg IS NULL THEN 'Sin calificar'
+      WHEN v_avg >= 4.5 THEN 'Excelente'
+      WHEN v_avg >= 3.5 THEN 'Bueno'
+      WHEN v_avg >= 2.5 THEN 'En proceso'
+      ELSE 'Requiere apoyo'
+    END;
+
+    INSERT INTO public.report_cards (
+      student_id, classroom_id, period_id, task_avg, formal_avg, final_score, level, created_at
+    ) VALUES (
+      v_student.student_id, v_period.classroom_id, p_period_id,
+      v_task_avg, v_formal_avg, v_avg, v_level, now()
+    )
+    ON CONFLICT (student_id, period_id) DO UPDATE SET
+      task_avg = EXCLUDED.task_avg,
+      formal_avg = EXCLUDED.formal_avg,
+      final_score = EXCLUDED.final_score,
+      level = EXCLUDED.level;
+
+    GET DIAGNOSTICS v_cards_created = ROW_COUNT;
+    v_cards_updated := v_cards_updated + 1;
+  END LOOP;
+
+  UPDATE public.periods SET status = 'closed', is_active = false WHERE id = p_period_id;
+
+  INSERT INTO public.audit_logs (user_id, action, payload, created_at)
+  VALUES (v_user_id, 'period.closed', jsonb_build_object(
+    'period_id', p_period_id, 'period_name', v_period.name, 'cards_generated', v_cards_updated
+  ), now());
+
+  RETURN jsonb_build_object(
+    'success', true, 'period_id', p_period_id, 'period_name', v_period.name, 'cards_generated', v_cards_updated
+  );
+END;
+$$;
+GRANT EXECUTE ON FUNCTION public.close_period(bigint) TO authenticated;
+
+-- Obtener período activo de un salón
+CREATE OR REPLACE FUNCTION public.get_active_period(p_classroom_id bigint)
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE v_period periods%ROWTYPE;
+BEGIN
+  SELECT * INTO v_period FROM public.periods
+  WHERE classroom_id = p_classroom_id AND status = 'open' AND is_active = true
+  ORDER BY created_at DESC LIMIT 1;
+
+  IF NOT FOUND THEN
+    SELECT * INTO v_period FROM public.periods
+    WHERE classroom_id = p_classroom_id AND status = 'open'
+    ORDER BY created_at DESC LIMIT 1;
+  END IF;
+
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('found', false, 'status', 'no_period');
+  END IF;
+
+  RETURN jsonb_build_object(
+    'found', true, 'id', v_period.id, 'name', v_period.name,
+    'status', v_period.status, 'is_active', v_period.is_active,
+    'start_date', v_period.start_date, 'end_date', v_period.end_date
+  );
+END;
+$$;
+GRANT EXECUTE ON FUNCTION public.get_active_period(bigint) TO authenticated;
+
+-- ============================================================
+-- 13. FUNCIONES DE DASHBOARD
+-- ============================================================
+CREATE OR REPLACE FUNCTION public.get_dashboard_kpis()
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  v_total_students int;
+  v_active_students int;
+  v_total_classrooms int;
+  v_total_teachers int;
+  v_total_payments int;
+  v_paid_payments int;
+  v_pending_payments int;
+  v_overdue_payments int;
+BEGIN
+  SELECT COUNT(*) INTO v_total_students FROM public.students WHERE deleted_at IS NULL;
+  SELECT COUNT(*) INTO v_active_students FROM public.students WHERE is_active = true AND deleted_at IS NULL;
+  SELECT COUNT(*) INTO v_total_classrooms FROM public.classrooms;
+  SELECT COUNT(*) INTO v_total_teachers FROM public.profiles WHERE role = 'maestra' AND deleted_at IS NULL;
+  SELECT COUNT(*) INTO v_total_payments FROM public.payments WHERE deleted_at IS NULL;
+  SELECT COUNT(*) INTO v_paid_payments FROM public.payments WHERE status = 'paid' AND deleted_at IS NULL;
+  SELECT COUNT(*) INTO v_pending_payments FROM public.payments WHERE status = 'pending' AND deleted_at IS NULL;
+  SELECT COUNT(*) INTO v_overdue_payments FROM public.payments WHERE status = 'overdue' AND deleted_at IS NULL;
+
+  RETURN jsonb_build_object(
+    'total_students', v_total_students,
+    'active_students', v_active_students,
+    'total_classrooms', v_total_classrooms,
+    'total_teachers', v_total_teachers,
+    'total_payments', v_total_payments,
+    'paid_payments', v_paid_payments,
+    'pending_payments', v_pending_payments,
+    'overdue_payments', v_overdue_payments
+  );
+END;
+$$;
+GRANT EXECUTE ON FUNCTION public.get_dashboard_kpis() TO authenticated;
+
+-- ============================================================
+-- 14. FUNCIONES DE FACTURACIÓN
+-- ============================================================
+
+-- Generar factura desde un pago
+CREATE OR REPLACE FUNCTION public.generate_invoice(p_payment_id bigint, p_issued_by uuid DEFAULT NULL)
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  v_payment payments%ROWTYPE;
+  v_student students%ROWTYPE;
+  v_classroom classrooms%ROWTYPE;
+  v_parent profiles%ROWTYPE;
+  v_issued_by profiles%ROWTYPE;
+  v_settings school_settings%ROWTYPE;
+  v_invoice_number text;
+  v_invoice_id bigint;
+  v_tax_amount numeric(10,2);
+  v_total numeric(10,2);
+BEGIN
+  -- Obtener datos del pago
+  SELECT * INTO v_payment FROM public.payments WHERE id = p_payment_id;
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('error', 'Pago no encontrado');
+  END IF;
+  
+  -- Obtener datos del estudiante
+  SELECT * INTO v_student FROM public.students WHERE id = v_payment.student_id;
+  
+  -- Obtener datos del salón
+  IF v_student.classroom_id IS NOT NULL THEN
+    SELECT * INTO v_classroom FROM public.classrooms WHERE id = v_student.classroom_id;
+  END IF;
+  
+  -- Obtener datos del padre
+  IF v_student.parent_id IS NOT NULL THEN
+    SELECT * INTO v_parent FROM public.profiles WHERE id = v_student.parent_id;
+  END IF;
+  
+  -- Obtener datos del emisor
+  IF p_issued_by IS NOT NULL THEN
+    SELECT * INTO v_issued_by FROM public.profiles WHERE id = p_issued_by;
+  END IF;
+  
+  -- Obtener configuración del colegio
+  SELECT * INTO v_settings FROM public.school_settings WHERE id = 1;
+  
+  -- Generar número de factura único
+  v_invoice_number := public.generate_invoice_number();
+  
+  -- Calcular impuesto y total
+  v_tax_amount := (v_payment.amount * v_settings.tax_rate) / 100;
+  v_total := v_payment.amount + v_tax_amount;
+  
+  -- Insertar factura
+  INSERT INTO public.invoices (
+    invoice_number, payment_id, student_id, student_name, student_matricula,
+    classroom_name, parent_name, parent_phone, concept, amount, subtotal,
+    tax_amount, total, tax_rate, currency, status, payment_method,
+    payment_date, due_date, school_name, school_rnc, school_address,
+    school_phone, school_email, school_website, school_logo_url,
+    issued_by, issued_by_name, notes, footer_note, terms
+  ) VALUES (
+    v_invoice_number, p_payment_id, v_payment.student_id, v_student.name,
+    v_student.matricula, v_classroom.name, v_parent.name, v_parent.phone,
+    v_payment.concept, v_payment.amount, v_payment.amount, v_tax_amount,
+    v_total, v_settings.tax_rate, v_settings.currency, 
+    CASE WHEN v_payment.status = 'paid' THEN 'paid' ELSE 'issued' END,
+    v_payment.method, v_payment.paid_date, v_payment.due_date,
+    v_settings.school_name, v_settings.rnc,
+    COALESCE(v_settings.address, '') || ' ' || COALESCE(v_settings.city, ''),
+    v_settings.phone, v_settings.email, v_settings.website,
+    v_settings.logo_url, p_issued_by, v_issued_by.name,
+    v_payment.notes, v_settings.footer_note, v_settings.terms_conditions
+  ) RETURNING id INTO v_invoice_id;
+  
+  RETURN jsonb_build_object(
+    'success', true,
+    'invoice_id', v_invoice_id,
+    'invoice_number', v_invoice_number
+  );
+END;
+$$;
+GRANT EXECUTE ON FUNCTION public.generate_invoice(bigint, uuid) TO authenticated, service_role;
+
+-- Obtener factura por ID
+CREATE OR REPLACE FUNCTION public.get_invoice(p_invoice_id bigint)
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  v_invoice invoices%ROWTYPE;
+BEGIN
+  SELECT * INTO v_invoice FROM public.invoices WHERE id = p_invoice_id;
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('error', 'Factura no encontrada');
+  END IF;
+  
+  RETURN row_to_json(v_invoice)::jsonb;
+END;
+$$;
+GRANT EXECUTE ON FUNCTION public.get_invoice(bigint) TO authenticated, service_role;
+
+-- Obtener facturas por pago
+CREATE OR REPLACE FUNCTION public.get_invoices_by_payment(p_payment_id bigint)
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+  RETURN jsonb_agg(row_to_json(i)) FROM public.invoices i WHERE i.payment_id = p_payment_id;
+END;
+$$;
+GRANT EXECUTE ON FUNCTION public.get_invoices_by_payment(bigint) TO authenticated, service_role;
+
+-- Obtener facturas por estudiante
+CREATE OR REPLACE FUNCTION public.get_invoices_by_student(p_student_id bigint)
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+  RETURN jsonb_agg(row_to_json(i) ORDER BY i.created_at DESC) FROM public.invoices i WHERE i.student_id = p_student_id;
+END;
+$$;
+GRANT EXECUTE ON FUNCTION public.get_invoices_by_student(bigint) TO authenticated, service_role;
+
+-- Cancelar factura
+CREATE OR REPLACE FUNCTION public.cancel_invoice(p_invoice_id bigint, p_reason text DEFAULT NULL)
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  v_invoice invoices%ROWTYPE;
+BEGIN
+  SELECT * INTO v_invoice FROM public.invoices WHERE id = p_invoice_id;
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('error', 'Factura no encontrada');
+  END IF;
+  
+  IF v_invoice.status = 'paid' THEN
+    RETURN jsonb_build_object('error', 'No se puede cancelar una factura pagada');
+  END IF;
+  
+  UPDATE public.invoices
+  SET status = 'cancelled',
+      notes = COALESCE(notes, '') || CASE WHEN notes IS NOT NULL THEN ' | ' ELSE '' END || 'Cancelada: ' || COALESCE(p_reason, 'Sin motivo'),
+      updated_at = now()
+  WHERE id = p_invoice_id;
+  
+  RETURN jsonb_build_object('success', true, 'message', 'Factura cancelada');
+END;
+$$;
+GRANT EXECUTE ON FUNCTION public.cancel_invoice(bigint, text) TO authenticated, service_role;
+
+-- ============================================================
+-- 14. FUNCIONES DE NOTIFICACIONES
+-- ============================================================
+CREATE OR REPLACE FUNCTION public.send_notification(p_user_id uuid, p_type text, p_message text, p_data jsonb DEFAULT '{}', p_link text DEFAULT NULL)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+  INSERT INTO public.notifications (user_id, title, message, type, link, is_read, created_at)
+  VALUES (p_user_id, p_type, p_message, p_type, p_link, false, now())
+  ON CONFLICT DO NOTHING;
+EXCEPTION WHEN OTHERS THEN NULL;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.send_notification(p_user_id uuid, p_type text, p_message text, p_data json DEFAULT NULL, p_link text DEFAULT NULL)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+  INSERT INTO public.notifications (user_id, title, message, type, link, is_read, created_at)
+  VALUES (p_user_id, p_type, p_message, p_type, p_link, false, now())
+  ON CONFLICT DO NOTHING;
+EXCEPTION WHEN OTHERS THEN NULL;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.send_notification(p_user_id uuid, p_type text, p_message text)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+  INSERT INTO public.notifications (user_id, title, message, type, is_read, created_at)
+  VALUES (p_user_id, p_type, p_message, p_type, false, now())
+  ON CONFLICT DO NOTHING;
+EXCEPTION WHEN OTHERS THEN NULL;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.send_notification(p_user_id text, p_type text, p_message text)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+  INSERT INTO public.notifications (user_id, title, message, type, is_read, created_at)
+  VALUES (p_user_id::uuid, p_type, p_message, p_type, false, now())
+  ON CONFLICT DO NOTHING;
+EXCEPTION WHEN OTHERS THEN NULL;
+END;
+$$;
+
+GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO authenticated;
+GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO service_role;
+
+-- ============================================================
+-- 15. TRIGGERS
+-- ============================================================
+
+-- Trigger para poblar datos de maestra en posts
 CREATE OR REPLACE FUNCTION public.handle_new_post_teacher_info()
 RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 BEGIN
   IF NEW.teacher_id IS NOT NULL THEN
-    NEW.teacher_name   := (SELECT name FROM public.profiles WHERE id=NEW.teacher_id LIMIT 1);
-    NEW.teacher_avatar := (SELECT avatar_url FROM public.profiles WHERE id=NEW.teacher_id LIMIT 1);
+    NEW.teacher_name := (SELECT name FROM public.profiles WHERE id = NEW.teacher_id LIMIT 1);
+    NEW.teacher_avatar := (SELECT avatar_url FROM public.profiles WHERE id = NEW.teacher_id LIMIT 1);
   END IF;
   RETURN NEW;
 END;
 $$;
 DROP TRIGGER IF EXISTS on_new_post_populate_teacher ON public.posts;
-CREATE TRIGGER on_new_post_populate_teacher BEFORE INSERT ON public.posts FOR EACH ROW EXECUTE FUNCTION public.handle_new_post_teacher_info();
+CREATE TRIGGER on_new_post_populate_teacher BEFORE INSERT ON public.posts
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_post_teacher_info();
 
-CREATE OR REPLACE FUNCTION public.update_post_comments_count()
+-- Trigger de auditoría para pagos
+CREATE OR REPLACE FUNCTION public.payment_audit_trigger_fn()
 RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 BEGIN
-  IF TG_OP='INSERT' THEN UPDATE public.posts SET comments_count=comments_count+1 WHERE id=NEW.post_id; RETURN NEW;
-  ELSIF TG_OP='DELETE' THEN UPDATE public.posts SET comments_count=GREATEST(0,comments_count-1) WHERE id=OLD.post_id; RETURN OLD;
-  END IF; RETURN NULL;
-END;
-$$;
-DROP TRIGGER IF EXISTS on_comment_change_update_count ON public.comments;
-CREATE TRIGGER on_comment_change_update_count AFTER INSERT OR DELETE ON public.comments FOR EACH ROW EXECUTE FUNCTION public.update_post_comments_count();
-
-CREATE OR REPLACE FUNCTION public.update_post_likes_count()
-RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
-BEGIN
-  IF TG_OP='INSERT' THEN UPDATE public.posts SET likes_count=likes_count+1 WHERE id=NEW.post_id; RETURN NEW;
-  ELSIF TG_OP='DELETE' THEN UPDATE public.posts SET likes_count=GREATEST(0,likes_count-1) WHERE id=OLD.post_id; RETURN OLD;
-  END IF; RETURN NULL;
-END;
-$$;
-DROP TRIGGER IF EXISTS on_like_change_update_count ON public.likes;
-CREATE TRIGGER on_like_change_update_count AFTER INSERT OR DELETE ON public.likes FOR EACH ROW EXECUTE FUNCTION public.update_post_likes_count();
-
-CREATE OR REPLACE FUNCTION public.handle_student_chat_creation()
-RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
-DECLARE v_teacher_id uuid; v_cls_chat bigint; v_dm_chat bigint; BEGIN
-  IF NEW.classroom_id IS NULL OR NEW.parent_id IS NULL THEN RETURN NEW; END IF;
-  v_teacher_id := (SELECT teacher_id FROM public.classrooms WHERE id=NEW.classroom_id);
-  IF v_teacher_id IS NULL THEN RETURN NEW; END IF;
-  v_cls_chat := (SELECT id FROM public.conversations WHERE type='classroom' AND classroom_id=NEW.classroom_id LIMIT 1);
-  IF v_cls_chat IS NULL THEN
-    INSERT INTO public.conversations (type, classroom_id) VALUES ('classroom', NEW.classroom_id) RETURNING id INTO v_cls_chat;
+  IF TG_OP = 'UPDATE' AND OLD.status IS DISTINCT FROM NEW.status THEN
+    INSERT INTO public.payment_audit_log (payment_id, action, old_status, new_status, changed_by, details)
+    VALUES (NEW.id, 'status_change', OLD.status, NEW.status, auth.uid(),
+      jsonb_build_object('amount', NEW.amount, 'month_paid', NEW.month_paid, 'student_id', NEW.student_id));
+  ELSIF TG_OP = 'DELETE' THEN
+    INSERT INTO public.payment_audit_log (payment_id, action, old_status, changed_by, details)
+    VALUES (OLD.id, 'deleted', OLD.status, auth.uid(),
+      jsonb_build_object('amount', OLD.amount, 'month_paid', OLD.month_paid));
   END IF;
-  INSERT INTO public.conversation_participants (conversation_id, user_id)
-    VALUES (v_cls_chat, NEW.parent_id),(v_cls_chat, v_teacher_id) ON CONFLICT DO NOTHING;
-  v_dm_chat := (SELECT conv.id FROM public.conversations conv
-    WHERE conv.type='direct_message'
-      AND EXISTS (SELECT 1 FROM public.conversation_participants cp WHERE cp.conversation_id=conv.id AND cp.user_id=NEW.parent_id)
-      AND EXISTS (SELECT 1 FROM public.conversation_participants cp WHERE cp.conversation_id=conv.id AND cp.user_id=v_teacher_id)
-    LIMIT 1);
-  IF v_dm_chat IS NULL THEN
-    INSERT INTO public.conversations (type) VALUES ('direct_message') RETURNING id INTO v_dm_chat;
-    INSERT INTO public.conversation_participants (conversation_id, user_id) VALUES (v_dm_chat, NEW.parent_id),(v_dm_chat, v_teacher_id);
-  END IF;
-  RETURN NEW;
+  RETURN COALESCE(NEW, OLD);
 END;
 $$;
-DROP TRIGGER IF EXISTS on_student_upsert_chat ON public.students;
-CREATE TRIGGER on_student_upsert_chat AFTER INSERT OR UPDATE OF classroom_id, parent_id ON public.students FOR EACH ROW EXECUTE FUNCTION public.handle_student_chat_creation();
+DROP TRIGGER IF EXISTS payment_audit_trigger ON public.payments;
+CREATE TRIGGER payment_audit_trigger AFTER UPDATE OR DELETE ON public.payments
+  FOR EACH ROW EXECUTE FUNCTION public.payment_audit_trigger_fn();
 
-CREATE OR REPLACE FUNCTION public.notify_parent_on_new_charge()
-RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
-DECLARE v_parent_id uuid; v_student_name text; BEGIN
-  IF NEW.status='pending' AND NEW.amount>0 THEN
-    SELECT parent_id, name INTO v_parent_id, v_student_name FROM public.students WHERE id=NEW.student_id;
-    IF v_parent_id IS NOT NULL THEN
-      INSERT INTO public.notifications (user_id, title, message, type, link)
-      VALUES (v_parent_id, 'Nuevo Cargo Generado',
-        'Se generó un cargo de $'||NEW.amount::text||' para '||COALESCE(v_student_name,'Estudiante')||' ('||COALESCE(NEW.month_paid,'Mensualidad')||').',
-        'alert', 'panel_padres.html#payments');
-    END IF;
-  END IF;
-  RETURN NEW;
-END;
-$$;
-DROP TRIGGER IF EXISTS on_new_payment_charge ON public.payments;
-CREATE TRIGGER on_new_payment_charge AFTER INSERT ON public.payments FOR EACH ROW EXECUTE FUNCTION public.notify_parent_on_new_charge();
-
-CREATE OR REPLACE FUNCTION public.set_updated_at()
-RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER AS $$
-BEGIN NEW.updated_at = now(); RETURN NEW; END;
-$$;
-DROP TRIGGER IF EXISTS set_updated_at_posts         ON public.posts;
-DROP TRIGGER IF EXISTS set_updated_at_conversations ON public.conversations;
-DROP TRIGGER IF EXISTS set_updated_at_inquiries     ON public.inquiries;
-DROP TRIGGER IF EXISTS set_updated_at_payments      ON public.payments;
-CREATE TRIGGER set_updated_at_posts         BEFORE UPDATE ON public.posts         FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
-CREATE TRIGGER set_updated_at_conversations BEFORE UPDATE ON public.conversations  FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
-CREATE TRIGGER set_updated_at_inquiries     BEFORE UPDATE ON public.inquiries      FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
-CREATE TRIGGER set_updated_at_payments      BEFORE UPDATE ON public.payments       FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
-
-DROP TRIGGER IF EXISTS tr_update_staff_permits_timestamp ON public.staff_permits;
-CREATE TRIGGER tr_update_staff_permits_timestamp BEFORE UPDATE ON public.staff_permits FOR EACH ROW EXECUTE FUNCTION public.update_staff_permits_timestamp();
-
--- Auditoría inmutable de pagos
+-- Trigger de auditoría general para pagos
 CREATE OR REPLACE FUNCTION public.fn_audit_payment()
 RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
-DECLARE v_action text; v_payload jsonb; BEGIN
-  IF TG_OP='INSERT' THEN
-    v_action:='payment.created';
-    v_payload:=jsonb_build_object('payment_id',NEW.id,'student_id',NEW.student_id,'amount',NEW.amount,'month',NEW.month_paid,'status',NEW.status);
-  ELSIF TG_OP='UPDATE' THEN
-    IF OLD.status IS DISTINCT FROM NEW.status OR OLD.amount IS DISTINCT FROM NEW.amount THEN
-      v_action:=CASE WHEN NEW.status='paid' AND OLD.status!='paid' THEN 'payment.approved'
-                     WHEN NEW.status='overdue' THEN 'payment.overdue'
-                     WHEN NEW.status='rejected' THEN 'payment.rejected'
-                     ELSE 'payment.updated' END;
-      v_payload:=jsonb_build_object('payment_id',NEW.id,'old_status',OLD.status,'new_status',NEW.status,'amount',NEW.amount,'month',NEW.month_paid);
-    ELSE RETURN NEW; END IF;
-  ELSIF TG_OP='DELETE' THEN
-    v_action:='payment.deleted';
-    v_payload:=jsonb_build_object('payment_id',OLD.id,'student_id',OLD.student_id,'amount',OLD.amount,'month',OLD.month_paid);
+DECLARE
+  v_action text;
+  v_payload jsonb;
+  v_user_id uuid;
+BEGIN
+  BEGIN v_user_id := auth.uid(); EXCEPTION WHEN OTHERS THEN v_user_id := NULL; END;
+
+  IF TG_OP = 'INSERT' THEN
+    v_action := 'payment.created';
+    v_payload := jsonb_build_object(
+      'payment_id', NEW.id, 'student_id', NEW.student_id, 'amount', NEW.amount,
+      'month', NEW.month_paid, 'status', NEW.status, 'method', NEW.method,
+      'concept', NEW.concept, 'due_date', NEW.due_date
+    );
+  ELSIF TG_OP = 'UPDATE' THEN
+    IF OLD.status IS DISTINCT FROM NEW.status OR OLD.amount IS DISTINCT FROM NEW.amount OR OLD.due_date IS DISTINCT FROM NEW.due_date THEN
+      v_action := CASE
+        WHEN NEW.status = 'paid' AND OLD.status != 'paid' THEN 'payment.approved'
+        WHEN NEW.status = 'overdue' AND OLD.status != 'overdue' THEN 'payment.overdue'
+        WHEN NEW.status = 'rejected' THEN 'payment.rejected'
+        WHEN OLD.due_date IS DISTINCT FROM NEW.due_date THEN 'payment.mora_waived'
+        ELSE 'payment.updated'
+      END;
+      v_payload := jsonb_build_object(
+        'payment_id', NEW.id, 'student_id', NEW.student_id, 'amount', NEW.amount,
+        'month', NEW.month_paid, 'old_status', OLD.status, 'new_status', NEW.status,
+        'old_due_date', OLD.due_date, 'new_due_date', NEW.due_date,
+        'validated_by', NEW.validated_by, 'notes', NEW.notes
+      );
+    ELSE
+      RETURN NEW;
+    END IF;
+  ELSIF TG_OP = 'DELETE' THEN
+    v_action := 'payment.deleted';
+    v_payload := jsonb_build_object(
+      'payment_id', OLD.id, 'student_id', OLD.student_id, 'amount', OLD.amount,
+      'month', OLD.month_paid, 'status', OLD.status
+    );
   END IF;
-  INSERT INTO public.audit_logs (user_id, action, payload, created_at) VALUES (auth.uid(), v_action, v_payload, now());
+
+  INSERT INTO public.audit_logs (user_id, action, payload, created_at)
+  VALUES (v_user_id, v_action, v_payload, now());
+
   RETURN COALESCE(NEW, OLD);
 END;
 $$;
 DROP TRIGGER IF EXISTS trg_audit_payment ON public.payments;
-CREATE TRIGGER trg_audit_payment AFTER INSERT OR UPDATE OR DELETE ON public.payments FOR EACH ROW EXECUTE FUNCTION public.fn_audit_payment();
+CREATE TRIGGER trg_audit_payment AFTER INSERT OR UPDATE OR DELETE ON public.payments
+  FOR EACH ROW EXECUTE FUNCTION public.fn_audit_payment();
 
--- ── 8. POLÍTICAS RLS ─────────────────────────────────────────
+-- ============================================================
+-- 16. POLÍTICAS RLS
+-- ============================================================
 
--- Eliminar políticas existentes
-DO $$
-DECLARE pol record;
-BEGIN
-  FOR pol IN SELECT policyname, tablename FROM pg_policies WHERE schemaname='public' LOOP
-    EXECUTE format('DROP POLICY IF EXISTS %I ON public.%I', pol.policyname, pol.tablename);
-  END LOOP;
-END $$;
+-- Políticas para profiles
+DROP POLICY IF EXISTS "profiles_select" ON public.profiles;
+CREATE POLICY "profiles_select" ON public.profiles FOR SELECT
+  USING (auth.uid() = id OR get_my_role() IN ('directora','asistente','admin'));
 
--- PROFILES
-CREATE POLICY "profiles_select" ON public.profiles FOR SELECT USING (
-  deleted_at IS NULL AND (auth.uid()=id OR get_my_role() IN ('directora','asistente','maestra','admin') OR auth.uid() IS NOT NULL)
-);
-CREATE POLICY "profiles_insert" ON public.profiles FOR INSERT WITH CHECK (
-  auth.uid()=id OR get_my_role() IN ('directora','asistente','admin')
-);
-CREATE POLICY "profiles_update" ON public.profiles FOR UPDATE USING (
-  (auth.uid()=id OR get_my_role() IN ('directora','asistente','admin')) AND deleted_at IS NULL
-);
-CREATE POLICY "profiles_delete" ON public.profiles FOR DELETE USING (get_my_role() IN ('directora','asistente','admin'));
+DROP POLICY IF EXISTS "profiles_insert" ON public.profiles;
+CREATE POLICY "profiles_insert" ON public.profiles FOR INSERT
+  WITH CHECK (get_my_role() IN ('directora','admin'));
 
--- CLASSROOMS
-CREATE POLICY "classrooms_staff" ON public.classrooms FOR ALL
-  USING (get_my_role() IN ('directora','asistente','admin')) WITH CHECK (get_my_role() IN ('directora','asistente','admin'));
-CREATE POLICY "classrooms_teacher" ON public.classrooms FOR SELECT USING (teacher_id=auth.uid());
-CREATE POLICY "classrooms_parent"  ON public.classrooms FOR SELECT USING (id IN (SELECT ret_id FROM public.get_my_classroom_ids()));
+DROP POLICY IF EXISTS "profiles_update" ON public.profiles;
+CREATE POLICY "profiles_update" ON public.profiles FOR UPDATE
+  USING (auth.uid() = id OR get_my_role() IN ('directora','admin'))
+  WITH CHECK (auth.uid() = id OR get_my_role() IN ('directora','admin'));
 
--- STUDENTS
-CREATE POLICY "students_staff" ON public.students FOR ALL
-  USING (get_my_role() IN ('directora','asistente','admin') AND deleted_at IS NULL)
-  WITH CHECK (get_my_role() IN ('directora','asistente','admin'));
-CREATE POLICY "students_teacher"          ON public.students FOR SELECT USING (is_teacher_of_student(id) AND deleted_at IS NULL);
-CREATE POLICY "students_parent_own"       ON public.students FOR SELECT USING (parent_id=auth.uid() AND deleted_at IS NULL);
-CREATE POLICY "students_parent_update"    ON public.students FOR UPDATE USING (parent_id=auth.uid() AND deleted_at IS NULL) WITH CHECK (parent_id=auth.uid());
-CREATE POLICY "students_parent_classmates" ON public.students FOR SELECT USING (
-  classroom_id IN (SELECT ret_id FROM public.get_my_classroom_ids()) AND deleted_at IS NULL
-);
+-- Políticas para classrooms
+DROP POLICY IF EXISTS "classrooms_all" ON public.classrooms;
+CREATE POLICY "classrooms_all" ON public.classrooms FOR ALL
+  USING (get_my_role() IN ('directora','asistente','admin','maestra'));
 
--- ATTENDANCE
-CREATE POLICY "attendance_staff"   ON public.attendance FOR ALL USING (get_my_role() IN ('directora','asistente','admin')) WITH CHECK (get_my_role() IN ('directora','asistente','admin'));
-CREATE POLICY "attendance_teacher" ON public.attendance FOR ALL USING (is_teacher_of_classroom(classroom_id)) WITH CHECK (is_teacher_of_classroom(classroom_id));
-CREATE POLICY "attendance_parent"  ON public.attendance FOR SELECT USING (EXISTS (SELECT 1 FROM public.students WHERE id=attendance.student_id AND parent_id=auth.uid()));
+-- Políticas para students
+DROP POLICY IF EXISTS "students_staff_all" ON public.students;
+CREATE POLICY "students_staff_all" ON public.students FOR ALL
+  USING (get_my_role() IN ('directora','asistente','admin','maestra'));
 
--- ATTENDANCE REQUESTS
-CREATE POLICY "att_req_staff"          ON public.attendance_requests FOR ALL USING (get_my_role() IN ('directora','asistente','maestra','admin')) WITH CHECK (get_my_role() IN ('directora','asistente','maestra','admin'));
-CREATE POLICY "att_req_parent_insert"  ON public.attendance_requests FOR INSERT WITH CHECK (is_parent_of_student(student_id));
-CREATE POLICY "att_req_parent_select"  ON public.attendance_requests FOR SELECT USING (is_parent_of_student(student_id));
+DROP POLICY IF EXISTS "students_parent_select" ON public.students;
+CREATE POLICY "students_parent_select" ON public.students FOR SELECT
+  USING (parent_id = auth.uid());
 
--- TASKS
-CREATE POLICY "tasks_staff"   ON public.tasks FOR ALL USING (get_my_role() IN ('directora','asistente','admin')) WITH CHECK (get_my_role() IN ('directora','asistente','admin'));
-CREATE POLICY "tasks_teacher" ON public.tasks FOR ALL USING (is_teacher_of_classroom(classroom_id)) WITH CHECK (is_teacher_of_classroom(classroom_id));
-CREATE POLICY "tasks_parent"  ON public.tasks FOR SELECT USING (is_parent_of_classroom(classroom_id));
+-- Políticas para attendance
+DROP POLICY IF EXISTS "attendance_staff_all" ON public.attendance;
+CREATE POLICY "attendance_staff_all" ON public.attendance FOR ALL
+  USING (get_my_role() IN ('directora','asistente','admin','maestra'));
 
--- TASK EVIDENCES
-CREATE POLICY "evidences_staff"          ON public.task_evidences FOR ALL USING (get_my_role() IN ('directora','asistente','admin')) WITH CHECK (get_my_role() IN ('directora','asistente','admin'));
-CREATE POLICY "evidences_teacher"        ON public.task_evidences FOR ALL USING (EXISTS (SELECT 1 FROM public.tasks t WHERE t.id=task_evidences.task_id AND is_teacher_of_classroom(t.classroom_id))) WITH CHECK (EXISTS (SELECT 1 FROM public.tasks t WHERE t.id=task_evidences.task_id AND is_teacher_of_classroom(t.classroom_id)));
-CREATE POLICY "evidences_parent_insert"  ON public.task_evidences FOR INSERT WITH CHECK (auth.uid()=parent_id);
-CREATE POLICY "evidences_parent_select"  ON public.task_evidences FOR SELECT USING (auth.uid()=parent_id OR EXISTS (SELECT 1 FROM public.students WHERE id=task_evidences.student_id AND parent_id=auth.uid()));
+DROP POLICY IF EXISTS "attendance_parent_select" ON public.attendance;
+CREATE POLICY "attendance_parent_select" ON public.attendance FOR SELECT
+  USING (EXISTS (SELECT 1 FROM public.students s WHERE s.id = attendance.student_id AND s.parent_id = auth.uid()));
 
--- POSTS
-CREATE POLICY "posts_select" ON public.posts FOR SELECT USING (auth.uid() IS NOT NULL AND (get_my_role() IN ('directora','asistente','admin','maestra') OR classroom_id IS NULL OR is_teacher_of_classroom(classroom_id) OR is_parent_of_classroom(classroom_id)));
-CREATE POLICY "posts_insert" ON public.posts FOR INSERT WITH CHECK (get_my_role() IN ('directora','asistente','maestra','admin'));
-CREATE POLICY "posts_update" ON public.posts FOR UPDATE USING (get_my_role() IN ('directora','asistente','admin') OR auth.uid()=teacher_id);
-CREATE POLICY "posts_delete" ON public.posts FOR DELETE USING (get_my_role() IN ('directora','asistente','admin') OR auth.uid()=teacher_id);
+-- Políticas para attendance_requests
+DROP POLICY IF EXISTS "attendance_requests_all" ON public.attendance_requests;
+CREATE POLICY "attendance_requests_all" ON public.attendance_requests FOR ALL
+  USING (get_my_role() IN ('directora','asistente','admin','maestra') OR
+         EXISTS (SELECT 1 FROM public.students s WHERE s.id = attendance_requests.student_id AND s.parent_id = auth.uid()));
 
--- COMMENTS
-CREATE POLICY "comments_select" ON public.comments FOR SELECT USING (EXISTS (SELECT 1 FROM public.posts p WHERE p.id=comments.post_id AND (get_my_role() IN ('directora','asistente','admin','maestra') OR p.classroom_id IS NULL OR is_teacher_of_classroom(p.classroom_id) OR is_parent_of_classroom(p.classroom_id))));
-CREATE POLICY "comments_insert" ON public.comments FOR INSERT WITH CHECK (auth.uid()=user_id AND EXISTS (SELECT 1 FROM public.posts p WHERE p.id=comments.post_id AND (get_my_role() IN ('directora','asistente','maestra','admin') OR p.classroom_id IS NULL OR is_parent_of_classroom(p.classroom_id))));
-CREATE POLICY "comments_delete" ON public.comments FOR DELETE USING (auth.uid()=user_id OR get_my_role() IN ('directora','asistente','maestra','admin'));
+-- Políticas para periods
+DROP POLICY IF EXISTS "periods_all" ON public.periods;
+CREATE POLICY "periods_all" ON public.periods FOR ALL
+  USING (get_my_role() IN ('directora','asistente','admin'));
 
--- LIKES
-CREATE POLICY "likes_select" ON public.likes FOR SELECT USING (EXISTS (SELECT 1 FROM public.posts p WHERE p.id=likes.post_id AND (get_my_role() IN ('directora','asistente','admin','maestra') OR p.classroom_id IS NULL OR is_teacher_of_classroom(p.classroom_id) OR is_parent_of_classroom(p.classroom_id))));
-CREATE POLICY "likes_insert" ON public.likes FOR INSERT WITH CHECK (auth.uid()=user_id);
-CREATE POLICY "likes_delete" ON public.likes FOR DELETE USING (auth.uid()=user_id);
+-- Políticas para tasks
+DROP POLICY IF EXISTS "tasks_staff_all" ON public.tasks;
+CREATE POLICY "tasks_staff_all" ON public.tasks FOR ALL
+  USING (get_my_role() IN ('directora','asistente','admin','maestra'));
 
--- CONVERSATIONS
-CREATE POLICY "conv_select" ON public.conversations FOR SELECT USING (get_my_role() IN ('directora','asistente','admin') OR user_is_participant(id, auth.uid()));
-CREATE POLICY "conv_insert" ON public.conversations FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
-CREATE POLICY "conv_update" ON public.conversations FOR UPDATE USING (user_is_participant(id, auth.uid()));
+-- Políticas para task_evidences
+DROP POLICY IF EXISTS "task_evidences_all" ON public.task_evidences;
+CREATE POLICY "task_evidences_all" ON public.task_evidences FOR ALL
+  USING (get_my_role() IN ('directora','asistente','admin','maestra') OR parent_id = auth.uid());
 
--- CONVERSATION PARTICIPANTS
-CREATE POLICY "cp_select" ON public.conversation_participants FOR SELECT USING (get_my_role() IN ('directora','asistente','admin') OR user_id=auth.uid());
-CREATE POLICY "cp_insert" ON public.conversation_participants FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
-CREATE POLICY "cp_delete" ON public.conversation_participants FOR DELETE USING (user_id=auth.uid());
-
--- MESSAGES
-CREATE POLICY "msg_select" ON public.messages FOR SELECT USING (get_my_role() IN ('directora','asistente','admin') OR user_is_participant(conversation_id, auth.uid()));
-CREATE POLICY "msg_insert" ON public.messages FOR INSERT WITH CHECK (auth.uid()=sender_id AND user_is_participant(conversation_id, auth.uid()));
-CREATE POLICY "msg_update" ON public.messages FOR UPDATE USING (get_my_role() IN ('directora','maestra','asistente','admin') OR sender_id=auth.uid());
-
--- NOTIFICATIONS
-CREATE POLICY "notifications_all" ON public.notifications FOR ALL USING (auth.uid()=user_id OR get_my_role() IN ('directora','asistente','admin'));
-
--- PAYMENTS (sin condición deleted_at en USING para que el staff pueda ver todos)
-CREATE POLICY "payments_staff_all" ON public.payments FOR ALL
-  USING (COALESCE((SELECT role FROM public.profiles WHERE id=auth.uid() LIMIT 1),'') IN ('directora','asistente','admin'))
-  WITH CHECK (COALESCE((SELECT role FROM public.profiles WHERE id=auth.uid() LIMIT 1),'') IN ('directora','asistente','admin'));
-CREATE POLICY "payments_parent_select" ON public.payments FOR SELECT USING (
-  EXISTS (SELECT 1 FROM public.students WHERE id=payments.student_id AND parent_id=auth.uid() AND deleted_at IS NULL)
-  AND deleted_at IS NULL
-);
-CREATE POLICY "payments_parent_insert" ON public.payments FOR INSERT WITH CHECK (
-  EXISTS (SELECT 1 FROM public.students WHERE id=payments.student_id AND parent_id=auth.uid())
+-- Políticas para posts
+DROP POLICY IF EXISTS "posts_select" ON public.posts;
+CREATE POLICY "posts_select" ON public.posts FOR SELECT USING (
+  auth.uid() IS NOT NULL AND (
+    get_my_role() IN ('directora','asistente','admin','maestra') OR
+    classroom_id IS NULL OR
+    is_teacher_of_classroom(classroom_id) OR
+    is_parent_of_classroom(classroom_id)
+  )
 );
 
--- INCIDENTS
-CREATE POLICY "incidents_insert" ON public.incidents FOR INSERT WITH CHECK (auth.uid()=teacher_id);
-CREATE POLICY "incidents_select" ON public.incidents FOR SELECT USING (auth.uid()=teacher_id OR get_my_role() IN ('directora','asistente','admin') OR is_parent_of_student(student_id));
-CREATE POLICY "incidents_update" ON public.incidents FOR UPDATE USING (get_my_role() IN ('directora','asistente','maestra','admin'));
+DROP POLICY IF EXISTS "posts_insert" ON public.posts;
+CREATE POLICY "posts_insert" ON public.posts FOR INSERT
+  WITH CHECK (
+    auth.uid() = teacher_id
+    AND get_my_role() IN ('directora','asistente','maestra','admin')
+  );
 
--- DAILY LOGS
-CREATE POLICY "daily_logs_staff"   ON public.daily_logs FOR ALL USING (get_my_role() IN ('directora','asistente','admin')) WITH CHECK (get_my_role() IN ('directora','asistente','admin'));
-CREATE POLICY "daily_logs_teacher" ON public.daily_logs FOR ALL USING (is_teacher_of_classroom(classroom_id)) WITH CHECK (is_teacher_of_classroom(classroom_id));
-CREATE POLICY "daily_logs_parent"  ON public.daily_logs FOR SELECT USING (EXISTS (SELECT 1 FROM public.students WHERE id=daily_logs.student_id AND parent_id=auth.uid()));
+DROP POLICY IF EXISTS "posts_update" ON public.posts;
+CREATE POLICY "posts_update" ON public.posts FOR UPDATE
+  USING (auth.uid() = teacher_id AND get_my_role() IN ('directora','asistente','maestra','admin'));
 
--- GALLERY & CHAT AULA
-CREATE POLICY "gallery_teacher"      ON public.classroom_gallery FOR ALL USING (is_teacher_of_classroom(classroom_id)) WITH CHECK (is_teacher_of_classroom(classroom_id));
-CREATE POLICY "gallery_parent"       ON public.classroom_gallery FOR SELECT USING (is_parent_of_classroom(classroom_id));
-CREATE POLICY "classroom_chat_select" ON public.classroom_chat FOR SELECT USING (is_teacher_of_classroom(classroom_id) OR is_parent_of_classroom(classroom_id));
-CREATE POLICY "classroom_chat_insert" ON public.classroom_chat FOR INSERT WITH CHECK (auth.uid()=user_id AND (is_teacher_of_classroom(classroom_id) OR is_parent_of_classroom(classroom_id)));
+DROP POLICY IF EXISTS "posts_delete" ON public.posts;
+CREATE POLICY "posts_delete" ON public.posts FOR DELETE
+  USING (auth.uid() = teacher_id AND get_my_role() IN ('directora','asistente','maestra','admin'));
 
--- GRADES
-CREATE POLICY "grades_staff"  ON public.grades FOR ALL USING (get_my_role() IN ('directora','asistente','maestra','admin')) WITH CHECK (get_my_role() IN ('directora','admin') OR (get_my_role() IN ('maestra','asistente') AND (period_id IS NULL OR public.is_period_open(period_id))));
-CREATE POLICY "grades_parent" ON public.grades FOR SELECT USING (is_parent_of_student(student_id));
+-- Políticas para comments
+DROP POLICY IF EXISTS "comments_select" ON public.comments;
+CREATE POLICY "comments_select" ON public.comments FOR SELECT USING (
+  EXISTS (SELECT 1 FROM public.posts p WHERE p.id = comments.post_id AND (
+    auth.uid() IS NOT NULL AND (
+      get_my_role() IN ('directora','asistente','admin','maestra') OR
+      p.classroom_id IS NULL OR
+      is_teacher_of_classroom(p.classroom_id) OR
+      is_parent_of_classroom(p.classroom_id)
+    )
+  ))
+);
 
--- PERIODS
-CREATE POLICY "periods_staff"  ON public.periods FOR ALL USING (get_my_role() IN ('directora','asistente','maestra','admin')) WITH CHECK (get_my_role() IN ('directora','asistente','maestra','admin'));
-CREATE POLICY "periods_parent" ON public.periods FOR SELECT USING (classroom_id IN (SELECT ret_id FROM public.get_my_classroom_ids()));
+DROP POLICY IF EXISTS "comments_insert" ON public.comments;
+CREATE POLICY "comments_insert" ON public.comments FOR INSERT
+  WITH CHECK (auth.uid() = user_id AND EXISTS (
+    SELECT 1 FROM public.posts p WHERE p.id = comments.post_id AND (
+      get_my_role() IN ('directora','asistente','maestra','admin') OR
+      p.classroom_id IS NULL OR
+      is_parent_of_classroom(p.classroom_id)
+    )
+  ));
 
--- REPORT CARDS
-CREATE POLICY "report_cards_staff"  ON public.report_cards FOR ALL USING (get_my_role() IN ('directora','asistente','maestra','admin')) WITH CHECK (get_my_role() IN ('directora','asistente','maestra','admin'));
-CREATE POLICY "report_cards_parent" ON public.report_cards FOR SELECT USING (EXISTS (SELECT 1 FROM public.students WHERE id=report_cards.student_id AND parent_id=auth.uid()));
+-- Políticas para likes
+DROP POLICY IF EXISTS "likes_select" ON public.likes;
+CREATE POLICY "likes_select" ON public.likes FOR SELECT USING (
+  EXISTS (SELECT 1 FROM public.posts p WHERE p.id = likes.post_id AND (
+    auth.uid() IS NOT NULL AND (
+      get_my_role() IN ('directora','asistente','admin','maestra') OR
+      p.classroom_id IS NULL OR
+      is_teacher_of_classroom(p.classroom_id) OR
+      is_parent_of_classroom(p.classroom_id)
+    )
+  ))
+);
 
--- INQUIRIES
-CREATE POLICY "inquiries_staff"         ON public.inquiries FOR ALL USING (get_my_role() IN ('directora','asistente','admin')) WITH CHECK (get_my_role() IN ('directora','asistente','admin'));
-CREATE POLICY "inquiries_parent_select" ON public.inquiries FOR SELECT USING (auth.uid()=parent_id);
-CREATE POLICY "inquiries_parent_insert" ON public.inquiries FOR INSERT WITH CHECK (auth.uid()=parent_id);
+DROP POLICY IF EXISTS "likes_all" ON public.likes;
+CREATE POLICY "likes_all" ON public.likes FOR ALL
+  USING (auth.uid() = user_id);
 
--- SCHOOL SETTINGS
-CREATE POLICY "settings_staff" ON public.school_settings FOR ALL USING (get_my_role() IN ('directora','asistente','admin')) WITH CHECK (get_my_role() IN ('directora','asistente','admin'));
-CREATE POLICY "settings_read"  ON public.school_settings FOR SELECT USING (auth.uid() IS NOT NULL);
+-- Políticas para conversations
+DROP POLICY IF EXISTS "conversations_participant" ON public.conversations;
+CREATE POLICY "conversations_participant" ON public.conversations FOR ALL
+  USING (user_is_participant(id, auth.uid()));
 
--- SYSTEM EVENTS
-CREATE POLICY "system_events_staff" ON public.system_events FOR ALL USING (get_my_role() IN ('directora','asistente','admin')) WITH CHECK (get_my_role() IN ('directora','asistente','admin'));
+-- Políticas para conversation_participants
+DROP POLICY IF EXISTS "conversation_participants_all" ON public.conversation_participants;
+CREATE POLICY "conversation_participants_all" ON public.conversation_participants FOR ALL
+  USING (user_id = auth.uid() OR get_my_role() IN ('directora','admin'));
 
--- TERMS ACCEPTANCE
-CREATE POLICY "terms_own" ON public.terms_acceptance FOR ALL USING (auth.uid()=user_id);
+-- Políticas para messages
+DROP POLICY IF EXISTS "messages_participant" ON public.messages;
+CREATE POLICY "messages_participant" ON public.messages FOR ALL
+  USING (user_is_participant(conversation_id, auth.uid()));
 
--- AUDIT LOGS
-CREATE POLICY "audit_logs_staff" ON public.audit_logs FOR SELECT USING (get_my_role() IN ('directora','asistente','admin'));
-CREATE POLICY "audit_logs_insert" ON public.audit_logs FOR INSERT WITH CHECK (true);
+-- Políticas para notifications
+DROP POLICY IF EXISTS "notifications_own" ON public.notifications;
+CREATE POLICY "notifications_own" ON public.notifications FOR ALL
+  USING (user_id = auth.uid());
 
--- LOGIN ATTEMPTS
-CREATE POLICY "login_attempts_insert" ON public.login_attempts FOR INSERT WITH CHECK (true);
-CREATE POLICY "login_attempts_admin"  ON public.login_attempts FOR SELECT USING (get_my_role()='admin');
+-- Políticas para payments
+DROP POLICY IF EXISTS "payments_staff_can_see_all" ON public.payments;
+CREATE POLICY "payments_staff_can_see_all" ON public.payments FOR SELECT
+  USING (COALESCE(get_my_role(), '') IN ('directora','asistente','admin'));
 
--- DOOR PUNCHES
-CREATE POLICY "punches_staff_all"   ON public.door_punches FOR ALL USING (get_my_role() IN ('directora','asistente','maestra','admin'));
-CREATE POLICY "punches_parent_read" ON public.door_punches FOR SELECT USING (EXISTS (SELECT 1 FROM public.students s WHERE s.id=door_punches.student_id AND s.parent_id=auth.uid()));
+DROP POLICY IF EXISTS "payments_staff_can_insert" ON public.payments;
+CREATE POLICY "payments_staff_can_insert" ON public.payments FOR INSERT
+  WITH CHECK (COALESCE(get_my_role(), '') IN ('directora','asistente','admin'));
 
--- STAFF PERMITS
-CREATE POLICY "staff_view_own_permits"  ON public.staff_permits FOR SELECT USING (auth.uid()=staff_id);
-CREATE POLICY "staff_create_permits"    ON public.staff_permits FOR INSERT WITH CHECK (auth.uid()=staff_id);
-CREATE POLICY "admin_view_all_permits"  ON public.staff_permits FOR SELECT USING (get_my_role() IN ('directora','asistente','admin'));
-CREATE POLICY "admin_manage_permits"    ON public.staff_permits FOR UPDATE USING (get_my_role() IN ('directora','asistente','admin'));
+DROP POLICY IF EXISTS "payments_staff_can_update" ON public.payments;
+CREATE POLICY "payments_staff_can_update" ON public.payments FOR UPDATE
+  USING (COALESCE(get_my_role(), '') IN ('directora','asistente','admin'))
+  WITH CHECK (COALESCE(get_my_role(), '') IN ('directora','asistente','admin'));
 
--- ── 9. PERFIL ADMIN INICIAL ───────────────────────────────────
+DROP POLICY IF EXISTS "payments_staff_can_delete" ON public.payments;
+CREATE POLICY "payments_staff_can_delete" ON public.payments FOR DELETE
+  USING (COALESCE(get_my_role(), '') IN ('directora','asistente','admin'));
+
+DROP POLICY IF EXISTS "payments_parent_see_own" ON public.payments;
+CREATE POLICY "payments_parent_see_own" ON public.payments FOR SELECT
+  USING (EXISTS (SELECT 1 FROM public.students s WHERE s.id = payments.student_id AND s.parent_id = auth.uid() AND s.deleted_at IS NULL));
+
+DROP POLICY IF EXISTS "payments_parent_can_submit" ON public.payments;
+CREATE POLICY "payments_parent_can_submit" ON public.payments FOR INSERT
+  WITH CHECK (EXISTS (SELECT 1 FROM public.students s WHERE s.id = payments.student_id AND s.parent_id = auth.uid() AND s.deleted_at IS NULL));
+
+DROP POLICY IF EXISTS "payments_parent_can_update_own" ON public.payments;
+CREATE POLICY "payments_parent_can_update_own" ON public.payments FOR UPDATE
+  USING (EXISTS (SELECT 1 FROM public.students s WHERE s.id = payments.student_id AND s.parent_id = auth.uid() AND s.deleted_at IS NULL))
+  WITH CHECK (EXISTS (SELECT 1 FROM public.students s WHERE s.id = payments.student_id AND s.parent_id = auth.uid() AND s.deleted_at IS NULL));
+
+-- Políticas para payment_audit_log
+DROP POLICY IF EXISTS "audit_log_staff" ON public.payment_audit_log;
+CREATE POLICY "audit_log_staff" ON public.payment_audit_log FOR SELECT
+  USING (COALESCE(get_my_role(), '') IN ('directora','asistente','admin'));
+
+-- Políticas para incidents
+DROP POLICY IF EXISTS "incidents_staff_all" ON public.incidents;
+CREATE POLICY "incidents_staff_all" ON public.incidents FOR ALL
+  USING (get_my_role() IN ('directora','asistente','admin','maestra'));
+
+DROP POLICY IF EXISTS "incidents_parent_select" ON public.incidents;
+CREATE POLICY "incidents_parent_select" ON public.incidents FOR SELECT
+  USING (EXISTS (SELECT 1 FROM public.students s WHERE s.id = incidents.student_id AND s.parent_id = auth.uid()));
+
+-- Políticas para daily_logs
+DROP POLICY IF EXISTS "daily_logs_staff_all" ON public.daily_logs;
+CREATE POLICY "daily_logs_staff_all" ON public.daily_logs FOR ALL
+  USING (get_my_role() IN ('directora','asistente','admin','maestra'));
+
+DROP POLICY IF EXISTS "daily_logs_parent_select" ON public.daily_logs;
+CREATE POLICY "daily_logs_parent_select" ON public.daily_logs FOR SELECT
+  USING (EXISTS (SELECT 1 FROM public.students s WHERE s.id = daily_logs.student_id AND s.parent_id = auth.uid()));
+
+-- Políticas para classroom_gallery
+DROP POLICY IF EXISTS "classroom_gallery_all" ON public.classroom_gallery;
+CREATE POLICY "classroom_gallery_all" ON public.classroom_gallery FOR ALL
+  USING (get_my_role() IN ('directora','asistente','admin','maestra') OR is_parent_of_classroom(classroom_id));
+
+-- Políticas para classroom_chat
+DROP POLICY IF EXISTS "classroom_chat_all" ON public.classroom_chat;
+CREATE POLICY "classroom_chat_all" ON public.classroom_chat FOR ALL
+  USING (get_my_role() IN ('directora','asistente','admin','maestra') OR is_parent_of_classroom(classroom_id));
+
+-- Políticas para grades
+DROP POLICY IF EXISTS "grades_staff" ON public.grades;
+CREATE POLICY "grades_staff" ON public.grades FOR ALL
+  USING (get_my_role() IN ('directora','asistente','maestra','admin'))
+  WITH CHECK (
+    get_my_role() IN ('directora','asistente','maestra','admin') AND (
+      period_id IS NULL OR
+      is_period_open(period_id) OR
+      get_my_role() IN ('directora','admin')
+    )
+  );
+
+-- Políticas para report_cards
+DROP POLICY IF EXISTS "report_cards_staff" ON public.report_cards;
+CREATE POLICY "report_cards_staff" ON public.report_cards FOR ALL
+  USING (get_my_role() IN ('directora','asistente','admin'));
+
+DROP POLICY IF EXISTS "report_cards_parent" ON public.report_cards;
+CREATE POLICY "report_cards_parent" ON public.report_cards FOR SELECT
+  USING (EXISTS (SELECT 1 FROM public.students s WHERE s.id = report_cards.student_id AND s.parent_id = auth.uid()));
+
+-- Políticas para inquiries
+DROP POLICY IF EXISTS "inquiries_staff_all" ON public.inquiries;
+CREATE POLICY "inquiries_staff_all" ON public.inquiries FOR ALL
+  USING (get_my_role() IN ('directora','asistente','admin'));
+
+DROP POLICY IF EXISTS "inquiries_parent_own" ON public.inquiries;
+CREATE POLICY "inquiries_parent_own" ON public.inquiries FOR ALL
+  USING (parent_id = auth.uid());
+
+-- Políticas para school_settings
+DROP POLICY IF EXISTS "school_settings_all" ON public.school_settings;
+CREATE POLICY "school_settings_all" ON public.school_settings FOR ALL
+  USING (get_my_role() IN ('directora','admin'));
+
+-- Políticas para system_events
+DROP POLICY IF EXISTS "system_events_staff" ON public.system_events;
+CREATE POLICY "system_events_staff" ON public.system_events FOR ALL
+  USING (get_my_role() IN ('directora','admin'));
+
+-- Políticas para system_errors
+DROP POLICY IF EXISTS "system_errors_select_staff" ON public.system_errors;
+CREATE POLICY "system_errors_select_staff" ON public.system_errors FOR SELECT
+  USING (get_my_role() IN ('directora','asistente','admin'));
+
+DROP POLICY IF EXISTS "system_errors_insert_authenticated" ON public.system_errors;
+CREATE POLICY "system_errors_insert_authenticated" ON public.system_errors FOR INSERT
+  WITH CHECK (auth.uid() IS NOT NULL);
+
+-- Políticas para terms_acceptance
+DROP POLICY IF EXISTS "terms_acceptance_own" ON public.terms_acceptance;
+CREATE POLICY "terms_acceptance_own" ON public.terms_acceptance FOR ALL
+  USING (user_id = auth.uid());
+
+-- Políticas para meetings
+DROP POLICY IF EXISTS "meetings_all" ON public.meetings;
+CREATE POLICY "meetings_all" ON public.meetings FOR ALL
+  USING (auth.uid() IS NOT NULL);
+
+-- Políticas para audit_logs
+DROP POLICY IF EXISTS "audit_logs_staff" ON public.audit_logs;
+CREATE POLICY "audit_logs_staff" ON public.audit_logs FOR SELECT
+  USING (get_my_role() IN ('directora','admin'));
+
+-- Políticas para data_snapshots
+DROP POLICY IF EXISTS "data_snapshots_staff" ON public.data_snapshots;
+CREATE POLICY "data_snapshots_staff" ON public.data_snapshots FOR ALL
+  USING (get_my_role() IN ('directora','admin'));
+
+-- Políticas para login_attempts
+DROP POLICY IF EXISTS "login_attempts_staff" ON public.login_attempts;
+CREATE POLICY "login_attempts_staff" ON public.login_attempts FOR ALL
+  USING (get_my_role() IN ('directora','admin'));
+
+-- Políticas para door_punches
+DROP POLICY IF EXISTS "punches_staff_all" ON public.door_punches;
+CREATE POLICY "punches_staff_all" ON public.door_punches FOR ALL
+  USING (get_my_role() IN ('directora','asistente','maestra','admin'));
+
+DROP POLICY IF EXISTS "punches_parent_select" ON public.door_punches;
+CREATE POLICY "punches_parent_select" ON public.door_punches FOR SELECT
+  USING (EXISTS (SELECT 1 FROM public.students s WHERE s.id = door_punches.student_id AND s.parent_id = auth.uid()));
+
+-- Políticas para staff_permits
+DROP POLICY IF EXISTS "staff_permits_all" ON public.staff_permits;
+CREATE POLICY "staff_permits_all" ON public.staff_permits FOR ALL
+  USING (staff_id = auth.uid() OR get_my_role() IN ('directora','admin'));
+
+-- ============================================================
+-- 17. CONFIGURACIÓN DE STORAGE
+-- ============================================================
+
+-- Asegurar que los buckets existen y son públicos
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES ('avatars', 'avatars', true, 5242880, ARRAY['image/jpeg','image/jpg','image/png','image/webp','image/gif'])
+ON CONFLICT (id) DO UPDATE SET public = true, file_size_limit = 5242880, allowed_mime_types = ARRAY['image/jpeg','image/jpg','image/png','image/webp','image/gif'];
+
+INSERT INTO storage.buckets (id, name, public, file_size_limit)
+VALUES ('classroom_media', 'classroom_media', true, 10485760)
+ON CONFLICT (id) DO UPDATE SET public = true;
+
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES ('karpus-uploads', 'karpus-uploads', true, 5242880, ARRAY['image/jpeg','image/jpg','image/png','image/webp','image/gif','application/pdf'])
+ON CONFLICT (id) DO UPDATE SET public = true, file_size_limit = 5242880;
+
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES ('posts', 'posts', true, 10485760, ARRAY['image/jpeg','image/jpg','image/png','image/webp','image/gif','video/mp4','video/webm'])
+ON CONFLICT (id) DO UPDATE SET public = true, file_size_limit = 10485760;
+
+-- Políticas para bucket "avatars"
+DROP POLICY IF EXISTS "avatars_public_read" ON storage.objects;
+CREATE POLICY "avatars_public_read" ON storage.objects FOR SELECT USING (bucket_id = 'avatars');
+
+DROP POLICY IF EXISTS "avatars_auth_insert" ON storage.objects;
+CREATE POLICY "avatars_auth_insert" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'avatars' AND auth.role() = 'authenticated');
+
+DROP POLICY IF EXISTS "avatars_auth_update" ON storage.objects;
+CREATE POLICY "avatars_auth_update" ON storage.objects FOR UPDATE USING (bucket_id = 'avatars' AND auth.role() = 'authenticated');
+
+DROP POLICY IF EXISTS "avatars_auth_delete" ON storage.objects;
+CREATE POLICY "avatars_auth_delete" ON storage.objects FOR DELETE USING (bucket_id = 'avatars' AND auth.role() = 'authenticated');
+
+-- Políticas para bucket "classroom_media"
+DROP POLICY IF EXISTS "classroom_media_public_read" ON storage.objects;
+CREATE POLICY "classroom_media_public_read" ON storage.objects FOR SELECT USING (bucket_id = 'classroom_media');
+
+DROP POLICY IF EXISTS "classroom_media_auth_insert" ON storage.objects;
+CREATE POLICY "classroom_media_auth_insert" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'classroom_media' AND auth.role() = 'authenticated');
+
+DROP POLICY IF EXISTS "classroom_media_auth_update" ON storage.objects;
+CREATE POLICY "classroom_media_auth_update" ON storage.objects FOR UPDATE USING (bucket_id = 'classroom_media' AND auth.role() = 'authenticated');
+
+-- Políticas para bucket "karpus-uploads"
+DROP POLICY IF EXISTS "karpus_uploads_public_read" ON storage.objects;
+CREATE POLICY "karpus_uploads_public_read" ON storage.objects FOR SELECT USING (bucket_id = 'karpus-uploads');
+
+DROP POLICY IF EXISTS "karpus_uploads_auth_insert" ON storage.objects;
+CREATE POLICY "karpus_uploads_auth_insert" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'karpus-uploads' AND auth.role() = 'authenticated');
+
+DROP POLICY IF EXISTS "karpus_uploads_auth_update" ON storage.objects;
+CREATE POLICY "karpus_uploads_auth_update" ON storage.objects FOR UPDATE USING (bucket_id = 'karpus-uploads' AND auth.role() = 'authenticated');
+
+DROP POLICY IF EXISTS "karpus_uploads_auth_delete" ON storage.objects;
+CREATE POLICY "karpus_uploads_auth_delete" ON storage.objects FOR DELETE USING (bucket_id = 'karpus-uploads' AND auth.role() = 'authenticated');
+
+-- Políticas para bucket "posts"
+DROP POLICY IF EXISTS "posts_public_read" ON storage.objects;
+CREATE POLICY "posts_public_read" ON storage.objects FOR SELECT USING (bucket_id = 'posts');
+
+DROP POLICY IF EXISTS "posts_auth_insert" ON storage.objects;
+CREATE POLICY "posts_auth_insert" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'posts' AND auth.role() = 'authenticated');
+
+DROP POLICY IF EXISTS "posts_auth_update" ON storage.objects;
+CREATE POLICY "posts_auth_update" ON storage.objects FOR UPDATE USING (bucket_id = 'posts' AND auth.role() = 'authenticated');
+
+DROP POLICY IF EXISTS "posts_auth_delete" ON storage.objects;
+CREATE POLICY "posts_auth_delete" ON storage.objects FOR DELETE USING (bucket_id = 'posts' AND auth.role() = 'authenticated');
+
+-- ============================================================
+-- 18. CONFIGURACIÓN INICIAL
+-- ============================================================
+
+-- Insertar/actualizar perfil de administrador
 INSERT INTO public.profiles (id, email, name, role, accepted_terms, created_at)
-VALUES ('5b6e8359-1a65-4d26-aba4-ca48b6b66409','impulsodigital@gmail.com','Administrador','admin',true,now())
-ON CONFLICT (id) DO UPDATE SET role='admin', accepted_terms=true;
+VALUES ('5b6e8359-1a65-4d26-aba4-ca48b6b66409', 'impulsodigital@gmail.com', 'Administrador', 'admin', true, now())
+ON CONFLICT (id) DO UPDATE SET role = 'admin', email = 'impulsodigital@gmail.com', accepted_terms = true;
 
--- ── 9.1 PERFIL DIRECTORA INICIAL ──────────────────────────────
+-- Insertar/actualizar perfil de directora
 INSERT INTO public.profiles (id, email, name, role, accepted_terms, created_at)
-VALUES ('c8923116-e769-4a01-a322-358a750ed37c','directora@sonrisacreativas.com','Directora','directora',true,'2026-06-26 17:15:50.326681+00')
-ON CONFLICT (id) DO UPDATE SET role='directora', accepted_terms=true, email=EXCLUDED.email, name=EXCLUDED.name, created_at=EXCLUDED.created_at;
+VALUES ('3ce39f30-0447-4b3a-a639-20e9a34e5fb8', 'directora@sonrisacreativas.com', 'Directora', 'directora', true, now())
+ON CONFLICT (id) DO UPDATE SET role = 'directora', email = 'directora@sonrisacreativas.com', accepted_terms = true;
 
--- ── 10. STORAGE BUCKETS ───────────────────────────────────────
-INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-VALUES ('avatars','avatars',true,5242880,ARRAY['image/jpeg','image/jpg','image/png','image/webp','image/gif'])
-ON CONFLICT (id) DO UPDATE SET public=true, file_size_limit=5242880;
-
-INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-VALUES ('karpus-uploads','karpus-uploads',true,5242880,ARRAY['image/jpeg','image/jpg','image/png','image/webp','image/gif','application/pdf'])
-ON CONFLICT (id) DO UPDATE SET public=true, file_size_limit=5242880;
-
-INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-VALUES ('classroom_media','classroom_media',true,52428800,ARRAY['image/jpeg','image/png','image/webp','image/gif','video/mp4','video/webm','video/quicktime','application/pdf'])
-ON CONFLICT (id) DO UPDATE SET public=true;
-
-DROP POLICY IF EXISTS "avatars_select"           ON storage.objects;
-DROP POLICY IF EXISTS "avatars_insert"           ON storage.objects;
-DROP POLICY IF EXISTS "avatars_update"           ON storage.objects;
-DROP POLICY IF EXISTS "avatars_delete"           ON storage.objects;
-DROP POLICY IF EXISTS "karpus_uploads_select"    ON storage.objects;
-DROP POLICY IF EXISTS "karpus_uploads_insert"    ON storage.objects;
-DROP POLICY IF EXISTS "karpus_uploads_update"    ON storage.objects;
-DROP POLICY IF EXISTS "karpus_uploads_delete"    ON storage.objects;
-DROP POLICY IF EXISTS "classroom_media_select"   ON storage.objects;
-DROP POLICY IF EXISTS "classroom_media_insert"   ON storage.objects;
-DROP POLICY IF EXISTS "classroom_media_update"   ON storage.objects;
-
-CREATE POLICY "avatars_select"        ON storage.objects FOR SELECT USING (bucket_id='avatars');
-CREATE POLICY "avatars_insert"        ON storage.objects FOR INSERT WITH CHECK (bucket_id='avatars' AND auth.role()='authenticated');
-CREATE POLICY "avatars_update"        ON storage.objects FOR UPDATE USING (bucket_id='avatars' AND auth.role()='authenticated');
-CREATE POLICY "avatars_delete"        ON storage.objects FOR DELETE USING (bucket_id='avatars' AND auth.role()='authenticated');
-CREATE POLICY "karpus_uploads_select" ON storage.objects FOR SELECT USING (bucket_id='karpus-uploads');
-CREATE POLICY "karpus_uploads_insert" ON storage.objects FOR INSERT WITH CHECK (bucket_id='karpus-uploads' AND auth.role()='authenticated');
-CREATE POLICY "karpus_uploads_update" ON storage.objects FOR UPDATE USING (bucket_id='karpus-uploads' AND auth.role()='authenticated');
-CREATE POLICY "karpus_uploads_delete" ON storage.objects FOR DELETE USING (bucket_id='karpus-uploads' AND auth.role()='authenticated');
-CREATE POLICY "classroom_media_select" ON storage.objects FOR SELECT USING (bucket_id='classroom_media');
-CREATE POLICY "classroom_media_insert" ON storage.objects FOR INSERT WITH CHECK (bucket_id='classroom_media' AND auth.role()='authenticated');
-CREATE POLICY "classroom_media_update" ON storage.objects FOR UPDATE USING (bucket_id='classroom_media' AND auth.role()='authenticated');
-
--- ── 11. GRANTS FINALES ────────────────────────────────────────
-GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO authenticated;
-GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO authenticated;
-GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO authenticated;
-
--- ── VERIFICACIÓN ──────────────────────────────────────────────
-SELECT 'profiles'    AS tabla, count(*) FROM public.profiles
-UNION ALL SELECT 'students',   count(*) FROM public.students
-UNION ALL SELECT 'classrooms', count(*) FROM public.classrooms
-UNION ALL SELECT 'payments',   count(*) FROM public.payments
-UNION ALL SELECT 'door_punches', count(*) FROM public.door_punches;
+-- ============================================================
+-- FIN DEL SCHEMA CONSOLIDADO
+-- ============================================================

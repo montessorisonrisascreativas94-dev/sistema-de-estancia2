@@ -5,6 +5,7 @@ import { AppState } from './state.js';
 import { supabase, createClient, SUPABASE_URL, SUPABASE_ANON_KEY } from '../shared/supabase.js';
 import { auditLog } from '../shared/db-utils.js';
 import { QueryCache } from '../shared/query-cache.js';
+import { RealtimeManager } from '../shared/realtime-manager.js';
 
 // Vista activa: 'table' | 'grid'
 let _view = 'table';
@@ -16,8 +17,13 @@ function avg(arr) {
 }
 
 export const StudentsModule = {
+  _realtimeSubscribed: false,
 
   async init() {
+    // ✅ Suscribirse a cambios en tiempo real
+    if (!this._realtimeSubscribed) {
+      this._subscribeRealtime();
+    }
     try {
       if (!this._dirPage) this._dirPage = 1;
       const pageSize = 10;
@@ -156,6 +162,21 @@ export const StudentsModule = {
         if (window.lucide) lucide.createIcons();
       }
     }
+  },
+
+  _subscribeRealtime() {
+    this._realtimeSubscribed = true;
+    
+    RealtimeManager.subscribe('directora-students', (channel) => {
+      channel
+        .on('postgres_changes', 
+          { event: '*', schema: 'public', table: 'students' },
+          () => {
+            // Actualizar automáticamente cuando haya cambios en estudiantes
+            this.init();
+          }
+        );
+    });
   },
 
   render(students) {

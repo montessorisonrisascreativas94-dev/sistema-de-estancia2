@@ -8,6 +8,7 @@ import { UIHelpers, DirectorUI } from './ui.module.js';
 import { StudentsModule } from './students.module.js';
 import { TeachersModule } from './teachers.module.js';
 import { PaymentsModule } from './payments.module.js';
+import { InvoicingModule } from './invoicing.module.js';
 
 // ── Tenant config row — única fila de configuración del tenant ─────────────────
 const SCHOOL_SETTINGS_ID = 1;
@@ -38,6 +39,7 @@ window.App = {
   teachers: { ...TeachersModule, edit: (id) => TeachersModule.openModal(id) },
   rooms: RoomsModule,
   payments: PaymentsModule,
+  invoicing: InvoicingModule,
   attendance: AttendanceModule,
   grades: GradesModule,
   ui: { ...UIHelpers, ...DirectorUI },
@@ -225,31 +227,54 @@ async function loadProfile() {
     setVal('confPhone', profile.phone);
     setVal('confEmail', profile.email);
 
-    // Cargar horario desde school_settings (con fallback si columnas nuevas no existen)
+    // Cargar todos los school_settings
     try {
-      // Intentar con columnas nuevas primero
-      let settings = null;
-      const { data: s1, error: e1 } = await supabase
+      // Cargar todas las configuraciones del colegio
+      const { data: settings } = await supabase
         .from('school_settings')
-        .select('id, generation_day, due_day, phone, business_hours, open_time, close_time, work_days, rnc')
-        .eq('id', SCHOOL_SETTINGS_ID).maybeSingle();
-
-      if (e1 && e1.code === '42703') {
-        // Columnas nuevas no existen — usar solo las base
-        const { data: s2 } = await supabase
-          .from('school_settings')
-          .select('id, generation_day, due_day, phone, business_hours')
-          .eq('id', SCHOOL_SETTINGS_ID).maybeSingle();
-        settings = s2;
-      } else {
-        settings = s1;
-      }
+        .select('*')
+        .eq('id', SCHOOL_SETTINGS_ID)
+        .maybeSingle();
 
       if (settings) {
+        // Datos básicos
+        setVal('confSchoolName', settings.school_name);
+        setVal('confRNC', settings.rnc);
+        setVal('confPhone', settings.phone);
+        setVal('confEmail', settings.email);
+        setVal('confWebsite', settings.website);
+        setVal('confAddress', settings.address);
+        setVal('confCity', settings.city);
+        setVal('confState', settings.state);
+        setVal('confZipCode', settings.zip_code);
+        setVal('confCountry', settings.country);
+        
+        // Configuración de facturación
+        setVal('confCurrency', settings.currency);
+        setVal('confTaxRate', settings.tax_rate);
+        setVal('confInvoicePrefix', settings.invoice_prefix);
+        setVal('confInvoiceCounter', settings.invoice_counter);
+        setVal('confFooterNote', settings.footer_note);
+        setVal('confTermsConditions', settings.terms_conditions);
+        
+        // Logo
+        setVal('confLogoUrl', settings.logo_url);
+        if (settings.logo_url) {
+          const logoEl = document.getElementById('confSchoolLogo');
+          const placeholderEl = document.getElementById('confSchoolLogoPlaceholder');
+          if (logoEl) {
+            logoEl.src = settings.logo_url;
+            logoEl.classList.remove('hidden');
+          }
+          if (placeholderEl) {
+            placeholderEl.classList.add('hidden');
+          }
+        }
+        
+        // Horario
         if (settings.open_time)  { const el = document.getElementById('confOpenTime');  if (el) el.value = settings.open_time; }
         if (settings.close_time) { const el = document.getElementById('confCloseTime'); if (el) el.value = settings.close_time; }
-        if (settings.rnc) { const el = document.getElementById('confRNC'); if (el) el.value = settings.rnc; }
-
+        
         if (settings.work_days) {
           try {
             const days = typeof settings.work_days === 'string' ? JSON.parse(settings.work_days) : settings.work_days;
@@ -339,6 +364,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 5. Iniciar Dashboard por defecto
     goToSection('dashboard');
+    
+    // 5a. Iniciar Realtime para Dashboard
+    DashboardService.subscribeToChanges();
+    DashboardService.onUpdate(() => {
+      // Actualizar Dashboard cuando haya cambios
+      const currentSection = AppState.get('currentSection');
+      if (currentSection === 'dashboard') {
+        DashboardService.getFullData(true).then(data => {
+          if (data) DirectorUI.renderDashboard(data);
+        });
+      }
+    });
 
     // 5b. Buscadores en tiempo real (Debounced)
     const setupSearch = (id, module) => {
@@ -404,7 +441,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 7b. Configurar guardado de perfil
     document.getElementById('btnSaveMainConfig')?.addEventListener('click', async () => {
       // Solo actualizar columnas que existen en profiles (name, bio, phone)
-      // title y address no existen � causan 400
       const updates = {};
       const nameVal  = document.getElementById('confDirName')?.value?.trim();
       const bioVal   = document.getElementById('confDirBio')?.value?.trim();
@@ -418,25 +454,86 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (accessId) updates.access_code = accessId;
 
       const { error } = await supabase.from('profiles').update(updates).eq('id', auth.user.id);
-      if (error) Helpers.toast('Error al guardar perfil: ' + error.message, 'error');
-      else {
-        // Guardar horario y RNC en school_settings
+      if (error) {
+        Helpers.toast('Error al guardar perfil: ' + error.message, 'error');
+      } else {
+        // Guardar todas las configuraciones del colegio en school_settings
+        const schoolUpdates = {};
+        
+        // Datos básicos
+        const schoolNameVal = document.getElementById('confSchoolName')?.value?.trim();
+        const rncVal = document.getElementById('confRNC')?.value?.trim();
+        const schoolPhoneVal = document.getElementById('confPhone')?.value?.trim();
+        const emailVal = document.getElementById('confEmail')?.value?.trim();
+        const websiteVal = document.getElementById('confWebsite')?.value?.trim();
+        const addressVal = document.getElementById('confAddress')?.value?.trim();
+        const cityVal = document.getElementById('confCity')?.value?.trim();
+        const stateVal = document.getElementById('confState')?.value?.trim();
+        const zipCodeVal = document.getElementById('confZipCode')?.value?.trim();
+        const countryVal = document.getElementById('confCountry')?.value?.trim();
+        
+        if (schoolNameVal) schoolUpdates.school_name = schoolNameVal;
+        if (rncVal) schoolUpdates.rnc = rncVal;
+        if (schoolPhoneVal) schoolUpdates.phone = schoolPhoneVal;
+        if (emailVal) schoolUpdates.email = emailVal;
+        if (websiteVal) schoolUpdates.website = websiteVal;
+        if (addressVal) schoolUpdates.address = addressVal;
+        if (cityVal) schoolUpdates.city = cityVal;
+        if (stateVal) schoolUpdates.state = stateVal;
+        if (zipCodeVal) schoolUpdates.zip_code = zipCodeVal;
+        if (countryVal) schoolUpdates.country = countryVal;
+        
+        // Configuración de facturación
+        const currencyVal = document.getElementById('confCurrency')?.value;
+        const taxRateVal = parseFloat(document.getElementById('confTaxRate')?.value);
+        const invoicePrefixVal = document.getElementById('confInvoicePrefix')?.value?.trim();
+        const invoiceCounterVal = parseInt(document.getElementById('confInvoiceCounter')?.value);
+        const footerNoteVal = document.getElementById('confFooterNote')?.value?.trim();
+        const termsConditionsVal = document.getElementById('confTermsConditions')?.value?.trim();
+        
+        if (currencyVal) schoolUpdates.currency = currencyVal;
+        if (!isNaN(taxRateVal)) schoolUpdates.tax_rate = taxRateVal;
+        if (invoicePrefixVal) schoolUpdates.invoice_prefix = invoicePrefixVal;
+        if (!isNaN(invoiceCounterVal) && invoiceCounterVal > 0) schoolUpdates.invoice_counter = invoiceCounterVal;
+        if (footerNoteVal) schoolUpdates.footer_note = footerNoteVal;
+        if (termsConditionsVal) schoolUpdates.terms_conditions = termsConditionsVal;
+        
+        // Logo
+        const logoUrlVal = document.getElementById('confLogoUrl')?.value?.trim();
+        if (logoUrlVal) schoolUpdates.logo_url = logoUrlVal;
+        
+        // Horario
         const openTime  = document.getElementById('confOpenTime')?.value;
         const closeTime = document.getElementById('confCloseTime')?.value;
         const workDays  = [...document.querySelectorAll('.work-day-btn.bg-[#0B63C7]')].map(b => b.dataset.day);
-        const rncVal = document.getElementById('confRNC')?.value?.trim();
-        const scheduleUpdates = {};
-        if (openTime)  scheduleUpdates.open_time  = openTime;
-        if (closeTime) scheduleUpdates.close_time = closeTime;
-        // FIX weak types: work_days stored as JSON string (DB column is text; migrate to jsonb when possible)
-        if (workDays.length) scheduleUpdates.work_days = JSON.stringify(workDays);
-        if (rncVal) scheduleUpdates.rnc = rncVal;
-        if (Object.keys(scheduleUpdates).length) {
-          await supabase.from('school_settings').update(scheduleUpdates).eq('id', SCHOOL_SETTINGS_ID);
+        
+        if (openTime)  schoolUpdates.open_time  = openTime;
+        if (closeTime) schoolUpdates.close_time = closeTime;
+        if (workDays.length) schoolUpdates.work_days = JSON.stringify(workDays);
+        
+        if (Object.keys(schoolUpdates).length) {
+          await supabase.from('school_settings').update(schoolUpdates).eq('id', SCHOOL_SETTINGS_ID);
         }
-        Helpers.toast('Configuraci�n guardada correctamente', 'success');
+        
+        Helpers.toast('Configuración guardada correctamente', 'success');
         AppState.set('profile', { ...auth.profile, ...updates });
         loadProfile();
+      }
+    });
+    
+    // 7c. Configurar actualización del logo en tiempo real
+    document.getElementById('confLogoUrl')?.addEventListener('input', (e) => {
+      const logoUrl = e.target.value?.trim();
+      const logoEl = document.getElementById('confSchoolLogo');
+      const placeholderEl = document.getElementById('confSchoolLogoPlaceholder');
+      
+      if (logoUrl && logoEl) {
+        logoEl.src = logoUrl;
+        logoEl.classList.remove('hidden');
+        if (placeholderEl) placeholderEl.classList.add('hidden');
+      } else if (logoEl && placeholderEl) {
+        logoEl.classList.add('hidden');
+        placeholderEl.classList.remove('hidden');
       }
     });
 

@@ -1,13 +1,21 @@
-﻿import { DirectorApi } from './api.js';
+import { DirectorApi } from './api.js';
 import { Helpers } from '../shared/helpers.js';
 import { UI } from './ui.module.js';
+import { supabase } from '../shared/supabase.js';
+import { RealtimeManager } from '../shared/realtime-manager.js';
 
 export const InquiriesModule = {
   _allInquiries: [],
+  _realtimeSubscribed: false,
 
   async init() {
     const container = document.getElementById('reportsList');
     if (!container) return;
+    
+    // ✅ Suscribirse a cambios en tiempo real
+    if (!this._realtimeSubscribed) {
+      this._subscribeRealtime();
+    }
     
     container.innerHTML = '<div class="col-span-3 text-center p-8"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0B63C7] mx-auto"></div></div>';
     try {
@@ -22,6 +30,21 @@ export const InquiriesModule = {
       container.innerHTML = '<div class="col-span-3 text-center p-8">' + Helpers.errorState('Error al cargar reportes', 'App.inquiries.init()') + '</div>';
       if (window.lucide) lucide.createIcons();
     }
+  },
+
+  _subscribeRealtime() {
+    this._realtimeSubscribed = true;
+    
+    RealtimeManager.subscribe('directora-inquiries', (channel) => {
+      channel
+        .on('postgres_changes', 
+          { event: '*', schema: 'public', table: 'inquiries' },
+          () => {
+            // Actualizar automáticamente cuando haya cambios en consultas
+            this.init();
+          }
+        );
+    });
   },
 
   filter(status) {

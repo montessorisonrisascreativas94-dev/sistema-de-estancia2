@@ -3,6 +3,7 @@ import { Helpers } from '../shared/helpers.js';
 import { AppState } from './state.js';
 import { sendEmail } from '../shared/supabase.js';
 import { calcMora } from '../shared/payment-service.js';
+import { InvoiceModule } from '../shared/invoice.js';
 
 // ── Tenant config row — single source of truth ────────────────────────────────
 const SCHOOL_SETTINGS_ID = 1;
@@ -56,6 +57,8 @@ export const PaymentsModule = {
     document.getElementById('btnNewPayment')?.addEventListener('click',       () => this.openPaymentModal());
     document.getElementById('btnGeneratePayments')?.addEventListener('click', () => this.runCycle());
     document.getElementById('btnRefreshPayments')?.addEventListener('click',  () => this.loadPayments());
+    // Exportación de facturas
+    document.getElementById('btnExportInvoices')?.addEventListener('click', () => this._openExportModal());
     document.getElementById('statusPills')?.addEventListener('click', (e) => {
       const pill = e.target.closest('[data-status]');
       if (!pill) return;
@@ -215,10 +218,69 @@ export const PaymentsModule = {
       '<td class="px-5 py-3.5"><div class="text-[11px] font-bold text-slate-700">' + (p.paid_date ? new Date(p.paid_date).toLocaleDateString('es-ES') : ds) + '</div><div class="text-[9px] text-slate-400 uppercase">' + (p.paid_date ? 'Pagado' : 'Vence') + '</div></td>' +
       '<td class="px-5 py-3.5 text-center">' + (hasV ? '<a href="' + (p.evidence_url || p.proof_url) + '" target="_blank" class="inline-flex items-center gap-1 text-sky-600 text-xs font-bold"><i data-lucide="external-link" class="w-3 h-3"></i>Ver</a>' : '<span class="text-slate-300 text-xs">-</span>') + '</td>' +
       '<td class="px-5 py-3.5 text-center"><div class="flex justify-center gap-1.5">' +
+        '<button onclick="App.payments.downloadInvoice(\'' + p.id + '\')" class="p-1.5 bg-violet-50 text-violet-600 rounded-lg hover:bg-violet-100 transition-colors" title="Descargar Factura"><i data-lucide="file-down" class="w-4 h-4"></i></button>' +
         (isPending ? '<button onclick="App.payments.markPaid(\'' + p.id + '\')" class="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-100" title="Aprobar">' + (hasV ? '<span class="relative flex h-3 w-3 absolute -top-1 -right-1"><span class="animate-ping absolute h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span class="relative rounded-full h-3 w-3 bg-emerald-500"></span></span>' : '') + '<i data-lucide="check" class="w-4 h-4"></i></button>' : '') +
         (statusKey === 'review' ? '<button onclick="App.payments.rejectPayment(\'' + p.id + '\')" class="p-1.5 bg-rose-50 text-rose-500 rounded-lg hover:bg-rose-100" title="Rechazar"><i data-lucide="x" class="w-4 h-4"></i></button>' : '') +
         '<button onclick="App.payments.deletePayment(\'' + p.id + '\')" class="p-1.5 bg-slate-50 text-slate-400 rounded-lg hover:bg-rose-100 hover:text-rose-500" title="Eliminar"><i data-lucide="trash-2" class="w-4 h-4"></i></button>' +
       '</div></td></tr>';
+  },
+
+  downloadInvoice(id) {
+    const list = AppState.get('paymentsData') || [];
+    const p = list.find(x => String(x.id) === String(id));
+    if (p) InvoiceModule.downloadSingle(p);
+  },
+
+  _openExportModal() {
+    const list = AppState.get('paymentsData') || [];
+    const counts = { all:0, paid:0, pending:0, review:0, overdue:0, mora:0 };
+    list.forEach(p => {
+      counts.all++;
+      const s = InvoiceModule._resolveStatus(p);
+      if (counts[s] !== undefined) counts[s]++;
+      const mora = InvoiceModule._calcMoraClient(p.due_date);
+      if (mora > 0 && s !== 'paid') counts.mora++;
+    });
+
+    const btn = (status, label, color, count) =>
+      `<button onclick="App.payments._doExport('${status}')" class="flex items-center justify-between w-full px-4 py-3 rounded-xl border-2 border-slate-100 hover:border-teal-400 hover:bg-teal-50 transition-all text-left group">
+        <div class="flex items-center gap-3">
+          <span class="w-3 h-3 rounded-full flex-shrink-0" style="background:${color}"></span>
+          <span class="font-bold text-slate-700 text-sm">${label}</span>
+        </div>
+        <span class="text-xs font-black px-2.5 py-1 rounded-full" style="background:${color}20;color:${color}">${count} registros</span>
+      </button>`;
+
+    openGlobalModal(
+      '<div class="p-6 bg-gradient-to-r from-violet-600 to-purple-600 text-white rounded-t-3xl flex items-center gap-3">' +
+        '<div class="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center text-2xl">📊</div>' +
+        '<div><h3 class="text-xl font-black">Exportar Facturas</h3><p class="text-xs text-white/70 font-bold uppercase tracking-widest">Descarga electrónica CSV</p></div>' +
+      '</div>' +
+      '<div class="p-6 space-y-2">' +
+        '<p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Selecciona el filtro a exportar:</p>' +
+        btn('all',     'Todas las facturas',    '#6366f1', counts.all) +
+        btn('paid',    'Aprobadas / Pagadas',   '#16a34a', counts.paid) +
+        btn('pending', 'Pendientes de pago',    '#d97706', counts.pending) +
+        btn('review',  'En revisión',           '#2563eb', counts.review) +
+        btn('overdue', 'Vencidas',              '#dc2626', counts.overdue) +
+        btn('mora',    'Con mora aplicada',     '#b91c1c', counts.mora) +
+      '</div>' +
+      '<div class="px-6 pb-5 flex justify-end">' +
+        '<button onclick="App.payments.closeModal()" class="px-6 py-2.5 text-slate-500 font-black text-xs uppercase hover:bg-slate-50 rounded-2xl">Cerrar</button>' +
+      '</div>'
+    );
+  },
+
+  _doExport(statusFilter) {
+    let list = AppState.get('paymentsData') || [];
+    if (statusFilter === 'mora') {
+      list = list.filter(p => InvoiceModule._calcMoraClient(p.due_date) > 0 && InvoiceModule._resolveStatus(p) !== 'paid');
+    }
+    const count = InvoiceModule.exportBatch(list, { statusFilter: statusFilter === 'mora' ? 'all' : statusFilter });
+    if (count) {
+      this.closeModal();
+      Helpers.toast(`${count} facturas exportadas`, 'success');
+    }
   },
 
   _renderPaymentRows(list) {

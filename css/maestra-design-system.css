@@ -205,17 +205,42 @@ body.panel-maestra-body .sb-purple {
 }
 
 /* ── ALERT BANNERS ──────────────────────────────────────────────────
-   Calidos y educativos con colores suaves
+   Cards blancas con acento izquierdo de color, no gradiente sólido
 ─────────────────────────────────────────────────────────────────── */
 body.panel-maestra-body .alert-banner-punch {
-  background: linear-gradient(135deg, #FCD34D 0%, #FBBF24 100%) !important;
+  background: #FFFBF0 !important;
+  border: 1px solid rgba(255,138,0,.2) !important;
+  border-left: 4px solid var(--m-orange) !important;
   border-radius: 24px !important;
-  box-shadow: 0 8px 24px rgba(252,211,77,.35) !important;
+  box-shadow: 0 8px 24px rgba(255,138,0,.08) !important;
 }
+body.panel-maestra-body .alert-banner-punch h4 {
+  color: #92400E !important;
+}
+body.panel-maestra-body .alert-banner-punch p {
+  color: #78350F !important;
+}
+body.panel-maestra-body .alert-banner-punch .w-12 {
+  background: var(--m-orange-lt) !important;
+  color: var(--m-orange) !important;
+}
+
 body.panel-maestra-body .alert-banner-tasks {
-  background: linear-gradient(135deg, #34D399 0%, #10B981 100%) !important;
+  background: #F0FDF4 !important;
+  border: 1px solid rgba(40,181,77,.2) !important;
+  border-left: 4px solid var(--m-green) !important;
   border-radius: 24px !important;
-  box-shadow: 0 8px 24px rgba(52,211,153,.35) !important;
+  box-shadow: 0 8px 24px rgba(40,181,77,.08) !important;
+}
+body.panel-maestra-body .alert-banner-tasks h4 {
+  color: #14532D !important;
+}
+body.panel-maestra-body .alert-banner-tasks p {
+  color: #166534 !important;
+}
+body.panel-maestra-body .alert-banner-tasks .w-12 {
+  background: var(--m-green-lt) !important;
+  color: var(--m-green) !important;
 }
 
 /* ── INTERNAL TABS ──────────────────────────────────────────────────
@@ -605,9 +630,10 @@ body.panel-maestra-body input[readonly]:focus {
 ─────────────────────────────────────────────────────────────────── */
 body.panel-maestra-body #nextActivityWidget {
   background: #fff !important;
-  border: 2px solid var(--m-orange) !important;
+  border: 1px solid var(--m-border) !important;
+  border-left: 4px solid var(--m-orange) !important;
   border-radius: var(--m-radius-card) !important;
-  box-shadow: var(--m-shadow-card) !important;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.04) !important;
 }
 body.panel-maestra-body #punchAlertWidget {
   background: var(--m-orange-lt) !important;
@@ -672,6 +698,22 @@ body.panel-maestra-body ::-webkit-scrollbar-track { background: transparent; }
 body.panel-maestra-body ::-webkit-scrollbar-thumb {
   background: #DDE4E8;
   border-radius: 4px;
+}
+
+/* ── BADGE PULSE — punto naranja en tabs de aula ──────────────────── */
+@keyframes badge-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50%       { transform: scale(1.4); opacity: 0.7; }
+}
+
+/* ── NAV GLOW — resplandor en botón del sidebar ──────────────────── */
+@keyframes nav-glow-anim {
+  0%   { box-shadow: 0 0 0 0 rgba(255,138,0,0); }
+  40%  { box-shadow: 0 0 0 6px rgba(255,138,0,0.35); }
+  100% { box-shadow: 0 0 0 0 rgba(255,138,0,0); }
+}
+body.panel-maestra-body .nav-badge-glow {
+  animation: nav-glow-anim 1s ease-out 3 !important;
 }
 
 /* ── ANIMACIÓN fadeIn de secciones ──────────────────────────── */
@@ -807,46 +849,62 @@ body.panel-maestra-body #classesGrid .classroom-level {
   color: var(--m-green) !important;
 }
 
-/* ── TABS DE AULA — borde verde medio-grueso ─────────────────────── */
+/* ── TABS DE AULA — pildoras limpias, sin borde grueso ───────────── */
 body.panel-maestra-body .class-tab-btn {
-  border: 2px solid var(--m-green) !important;
+  border: none !important;
+  background: #F1F5F9 !important;
+  color: var(--m-text-mid) !important;
   margin-right: 4px;
+  border-radius: 12px !important;
+  font-weight: 700 !important;
+  font-size: 0.72rem !important;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  padding: 10px 16px !important;
+  cursor: pointer;
+  transition: background .15s, color .15s, transform .15s;
+}
+body.panel-maestra-body .class-tab-btn:hover {
+  background: var(--m-green-lt) !important;
+  color: var(--m-green) !important;
+  border: none !important;
+  transform: translateY(-1px);
 }
 body.panel-maestra-body .class-tab-btn.active {
   background: var(--m-green) !important;
   color: #fff !important;
-  border-color: var(--m-green) !important;
+  border: none !important;
+  box-shadow: 0 4px 12px rgba(40,181,77,.2) !important;
 }
 body.panel-maestra-body .class-tab-btn:not(.active):hover {
   background: var(--m-green-lt) !important;
   color: var(--m-green) !important;
-  border-color: var(--m-green) !important;
+  border: none !important;
 }
 
-/* ── MODALES MAESTRA — header verde, footer con botón naranja ─────── */
-/* Cualquier modal generado por Modal.open() o el modalBackdrop */
+/* ── MODALES MAESTRA — header blanco, ícono en círculo naranja ────── */
 body.panel-maestra-body [id$="-inner"] > div > div:first-child,
 body.panel-maestra-body .modal-header-pink {
-  background: var(--m-green) !important;
-  color: #fff !important;
-  border-bottom: none !important;
+  background: #fff !important;
+  color: var(--m-text) !important;
+  border-bottom: 1px solid var(--m-border) !important;
 }
 body.panel-maestra-body .modal-header-pink h3,
 body.panel-maestra-body [id$="-inner"] > div > div:first-child h3,
 body.panel-maestra-body [id$="-inner"] > div > div:first-child p {
-  color: #fff !important;
+  color: var(--m-text) !important;
 }
 body.panel-maestra-body .modal-header-pink .modal-icon-wrap {
-  background: rgba(255,255,255,0.2) !important;
-  color: #fff !important;
+  background: var(--m-orange-lt) !important;
+  color: var(--m-orange) !important;
 }
 body.panel-maestra-body .modal-header-pink .modal-close {
-  background: rgba(255,255,255,0.18) !important;
-  border-color: rgba(255,255,255,0.3) !important;
-  color: #fff !important;
+  background: var(--m-bg) !important;
+  border: 1px solid var(--m-border) !important;
+  color: var(--m-text-mid) !important;
 }
 body.panel-maestra-body .modal-header-pink .modal-close:hover {
-  background: rgba(255,255,255,0.3) !important;
+  background: var(--m-border) !important;
 }
 /* Botón guardar/primario en modales: naranja */
 body.panel-maestra-body .modal-footer-pink .btn-maestra,
@@ -888,8 +946,9 @@ body.panel-maestra-body #nextActivityWidget h4 {
   color: var(--m-green) !important;
 }
 
-/* ── TODOS LOS CONTENEDORES — borde naranja permanente ──────────────
-   Tarjetas blancas con borde naranja sin necesidad de hover
+/* ── CONTENEDORES — borde blanco/sutil, sin naranja permanente ───────
+   Regla 70-20-10: el naranja es solo para alertas y acciones urgentes.
+   Las tarjetas usan sombra suave + borde 1px gris muy claro.
 ──────────────────────────────────────────────────────────── */
 body.panel-maestra-body .bg-white.rounded-\[2\.5rem\],
 body.panel-maestra-body .bg-white.rounded-\[2rem\],
@@ -897,10 +956,11 @@ body.panel-maestra-body .bg-white.rounded-3xl,
 body.panel-maestra-body .bg-white.rounded-2xl,
 body.panel-maestra-body .patio-card,
 body.panel-maestra-body .toy-card {
-  border: 2px solid var(--m-orange) !important;
+  border: 1px solid var(--m-border) !important;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.04) !important;
 }
 
-/* Excepción: inputs, botones, badges, headers y elementos que no son tarjetas */
+/* Excepción: inputs, botones, badges, headers */
 body.panel-maestra-body input.bg-white,
 body.panel-maestra-body textarea.bg-white,
 body.panel-maestra-body select.bg-white,
@@ -909,25 +969,43 @@ body.panel-maestra-body .modal-header-pink.bg-white,
 body.panel-maestra-body nav.bg-white,
 body.panel-maestra-body header.bg-white {
   border: 1px solid #DDE4E8 !important;
+  box-shadow: none !important;
 }
 
-/* Publicaciones del muro — borde naranja */
+/* Publicaciones del muro — borde sutil, acento verde izquierdo */
 body.panel-maestra-body #muroPostsContainer > div,
 body.panel-maestra-body [id^="post-"] {
-  border: 2px solid var(--m-orange) !important;
+  border: 1px solid var(--m-border) !important;
+  border-left: 4px solid var(--m-green) !important;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.04) !important;
 }
 body.panel-maestra-body #muroPostsContainer > div:hover,
 body.panel-maestra-body [id^="post-"]:hover {
-  border-color: var(--m-green) !important;
   box-shadow: 0 8px 24px rgba(40,181,77,.1) !important;
+  transform: translateY(-2px);
 }
 
-/* Sección Alumnos — tarjetas con borde naranja fijo (sin hover requerido) */
+/* Sección Alumnos — tarjetas limpias con acento izquierdo verde */
 body.panel-maestra-body #classroomStudentsGrid > div {
-  border: 2px solid var(--m-orange) !important;
+  border: 1px solid var(--m-border) !important;
+  border-left: 4px solid var(--m-green) !important;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.04) !important;
+  transition: box-shadow .2s, transform .2s;
 }
 body.panel-maestra-body #classroomStudentsGrid > div:hover {
-  border-color: var(--m-green) !important;
+  box-shadow: 0 12px 28px rgba(40,181,77,.12) !important;
+  transform: translateY(-3px);
+}
+
+/* Tarjetas de aula — acento izquierdo verde, sin borde naranja */
+body.panel-maestra-body #classesGrid > div {
+  border: 1px solid var(--m-border) !important;
+  border-left: 4px solid var(--m-green) !important;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.04) !important;
+}
+body.panel-maestra-body #classesGrid > div:hover {
+  box-shadow: 0 16px 32px rgba(40,181,77,.1) !important;
+  transform: translateY(-4px);
 }
 
 /* Texto verde en contenidos principales de tarjetas */
@@ -935,12 +1013,13 @@ body.panel-maestra-body .section h3.font-black,
 body.panel-maestra-body .section h4.font-black {
   color: var(--m-green) !important;
 }
-/* Excepción: títulos dentro de botones y headers no se colorean */
+/* Excepción: títulos dentro de botones y headers */
 body.panel-maestra-body button h3,
 body.panel-maestra-body button h4,
 body.panel-maestra-body .modal-header-pink h3 { color: inherit !important; }
 
-/* Stat blocks — sin borde naranja (tienen gradiente propio) */
+/* Stat blocks — sin borde (tienen gradiente propio) */
 body.panel-maestra-body .stat-block {
   border: none !important;
+  box-shadow: 0 4px 16px rgba(0,0,0,.06) !important;
 }

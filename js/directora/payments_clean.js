@@ -5,6 +5,7 @@ import { UIHelpers } from './ui.module.js';
 import { supabase } from '../shared/supabase.js';
 import { auditLog } from '../shared/db-utils.js';
 import { UIPremium } from '../shared/ui-premium.js';
+import { InvoiceModule } from '../shared/invoice.js';
 
 const MES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
 const MES_LABEL = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
@@ -31,6 +32,7 @@ export const PaymentsModule = {
       on('btnGeneratePaymentsNow','click',  () => this.showCyclePreview());
       on('btnSendPaymentReminders','click', () => this.sendReminders());
       on('btnExportMorosidad',    'click',  () => this.exportMorosidad());
+      on('btnExportInvoices',     'click',  () => this._openExportModal());
       on('btnSavePaymentConfig',  'click',  () => this.savePaymentConfig());
     }
     this._loadFilters();
@@ -298,7 +300,9 @@ export const PaymentsModule = {
               '<td class="px-5 py-3.5 w-1/6"><div class="text-[10px] font-bold text-slate-600 uppercase truncate max-w-[110px]">' + (p.bank || '-') + '</div><div class="text-[9px] text-slate-400 font-bold">' + (p.reference || '') + '</div></td>' +
               '<td class="px-5 py-3.5 w-1/8"><div class="text-[11px] font-bold text-slate-700">' + (p.paid_date ? new Date(p.paid_date).toLocaleDateString('es-ES') : ds) + '</div><div class="text-[9px] text-slate-400 font-bold uppercase">' + (p.paid_date ? 'Pagado' : 'Vence') + '</div></td>' +
               '<td class="px-5 py-3.5 text-center w-1/12">' + voucherCell + '</td>' +
-              '<td class="px-5 py-3.5 text-center w-1/8"><div class="flex justify-center gap-1.5">' + approveBtn + waiveMoraBtn + deleteBtn + '</div></td>' +
+              '<td class="px-5 py-3.5 text-center w-1/8"><div class="flex justify-center gap-1.5">' +
+                '<button onclick="App.payments.downloadInvoice(\'' + p.id + '\')" class="p-1.5 bg-violet-50 text-violet-600 rounded-lg hover:bg-violet-100 transition-colors" title="Descargar Factura"><i data-lucide="file-down" class="w-4 h-4"></i></button>' +
+                approveBtn + waiveMoraBtn + deleteBtn + '</div></td>' +
             '</tr>' +
           '</table>' +
         '</div>' +
@@ -883,6 +887,74 @@ export const PaymentsModule = {
       this.settings.due_day = d;
       Helpers.toast('Configuracion guardada', 'success');
     } catch (e) { Helpers.toast('Error: ' + e.message, 'error'); }
+  },
+
+  // ── Factura individual ────────────────────────────────────────────
+  downloadInvoice(id) {
+    const list = AppState.get('paymentsData') || [];
+    const p = list.find(x => String(x.id) === String(id));
+    if (p) InvoiceModule.downloadSingle(p);
+    else Helpers.toast('No se encontró el registro', 'warning');
+  },
+
+  // ── Modal de exportación batch ────────────────────────────────────
+  _openExportModal() {
+    const list = AppState.get('paymentsData') || [];
+    const counts = { all: 0, paid: 0, pending: 0, review: 0, overdue: 0, mora: 0 };
+    list.forEach(p => {
+      counts.all++;
+      const s = InvoiceModule._resolveStatus(p);
+      if (counts[s] !== undefined) counts[s]++;
+      if (InvoiceModule._calcMoraClient(p.due_date) > 0 && s !== 'paid') counts.mora++;
+    });
+
+    const row = (status, label, color, count) =>
+      `<button onclick="App.payments._doExport('${status}')"
+        class="flex items-center justify-between w-full px-4 py-3.5 rounded-2xl border-2 border-slate-100 hover:border-[#0B63C7] hover:bg-blue-50 transition-all text-left">
+        <div class="flex items-center gap-3">
+          <span class="w-3 h-3 rounded-full flex-shrink-0" style="background:${color}"></span>
+          <span class="font-bold text-slate-700 text-sm">${label}</span>
+        </div>
+        <span class="text-xs font-black px-2.5 py-1 rounded-full" style="background:${color}20;color:${color}">${count} registros</span>
+      </button>`;
+
+    window.openGlobalModal(
+      '<div class="bg-gradient-to-r from-violet-600 to-purple-600 text-white p-6 rounded-t-3xl flex items-center gap-3">' +
+        '<div class="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center text-2xl">📊</div>' +
+        '<div><h3 class="text-xl font-black">Exportar Facturas</h3><p class="text-xs text-white/70 font-bold uppercase tracking-widest">Descarga electrónica CSV</p></div>' +
+      '</div>' +
+      '<div class="p-6 space-y-2">' +
+        '<p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Selecciona el filtro a exportar:</p>' +
+        row('all',     'Todas las facturas',    '#6366f1', counts.all) +
+        row('paid',    'Aprobadas / Pagadas',   '#16a34a', counts.paid) +
+        row('pending', 'Pendientes de pago',    '#d97706', counts.pending) +
+        row('review',  'En revisión',           '#2563eb', counts.review) +
+        row('overdue', 'Vencidas',              '#dc2626', counts.overdue) +
+        row('mora',    'Con mora aplicada',     '#b91c1c', counts.mora) +
+      '</div>' +
+      '<div class="px-6 pb-5 flex justify-end">' +
+        '<button onclick="App.ui.closeModal()" class="px-6 py-2.5 text-slate-500 font-black text-xs uppercase hover:bg-slate-50 rounded-2xl">Cerrar</button>' +
+      '</div>'
+    );
+    if (window.lucide) lucide.createIcons();
+  },
+
+  _doExport(statusFilter) {
+    let list = AppState.get('paymentsData') || [];
+    if (statusFilter === 'mora') {
+      list = list.filter(p => InvoiceModule._calcMoraClient(p.due_date) > 0 && InvoiceModule._resolveStatus(p) !== 'paid');
+    }
+    const mv  = document.getElementById('filterPaymentMonth')?.value || '';
+    const yv  = document.getElementById('filterPaymentYear')?.value  || String(new Date().getFullYear());
+    const filename = `facturas_${statusFilter}_${yv}${mv ? '-' + mv : ''}_${new Date().toISOString().split('T')[0]}.csv`;
+    const count = InvoiceModule.exportBatch(list, {
+      statusFilter: statusFilter === 'mora' ? 'all' : statusFilter,
+      filename
+    });
+    if (count) {
+      UIHelpers.closeModal();
+      Helpers.toast(`${count} facturas exportadas`, 'success');
+    }
   }
 };
 

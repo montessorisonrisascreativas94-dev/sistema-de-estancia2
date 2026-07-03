@@ -211,7 +211,7 @@ export const WallModule = {
         .select(`
           id, content, media_url, media_type, created_at,
           classroom:classrooms(name),
-          teacher:profiles!posts_teacher_id_fkey(name, avatar_url),
+          teacher:profiles(name, avatar_url),
           likes(user_id),
           comments:comments(count)
         `)
@@ -793,6 +793,37 @@ export const WallModule = {
         if (el) {
           el.classList.add('opacity-0', 'scale-95');
           setTimeout(() => el.remove(), 300);
+        }
+      })
+      // Realtime para likes
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'likes' }, async (payload) => {
+        // Refrescar el contador de likes en tiempo real
+        const postId = payload.new?.post_id || payload.old?.post_id;
+        if (postId) {
+          const { data: likes } = await supabase.from('likes').select('user_id').eq('post_id', postId);
+          const count = likes?.length || 0;
+          const countSpan = document.getElementById(`like-count-${postId}`);
+          if (countSpan) {
+            countSpan.textContent = count;
+          }
+        }
+      })
+      // Realtime para comentarios
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'comments' }, async (payload) => {
+        // Refrescar el contador de comentarios en tiempo real
+        const postId = payload.new?.post_id || payload.old?.post_id;
+        if (postId) {
+          const { count } = await supabase.from('comments').select('id', { count: 'exact', head: true }).eq('post_id', postId);
+          const btn = document.querySelector(`#post-${postId} button[onclick*="toggleCommentSection"] span`);
+          if (btn) {
+            btn.textContent = `${count || 0} Comentarios`;
+          }
+          // Si la sección de comentarios está abierta, actualizarla
+          const section = document.getElementById(`comments-section-${postId}`);
+          if (section && !section.classList.contains('hidden')) {
+            const comments = await this._fetchComments(postId);
+            this.renderComments(postId, comments);
+          }
         }
       })
       .subscribe((status) => {

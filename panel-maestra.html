@@ -309,6 +309,18 @@
       z-index: 100; transition: all 0.3s ease;
     }
 
+    /* Tab badge dot — punto naranja en esquina del tab */
+    @keyframes badge-pulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50%       { transform: scale(1.5); opacity: 0.6; }
+    }
+    .tab-badge-dot {
+      position: absolute; top: 4px; right: 4px;
+      width: 9px; height: 9px; border-radius: 50%;
+      background: #FF8A00; border: 2px solid white;
+      animation: badge-pulse 1.5s infinite;
+    }
+
 
 
     /* Nav buttons base — sobreescritos por maestra-design-system.css */
@@ -638,7 +650,7 @@
         <!-- 🚀 WIDGETS DE AUTOMATIZACIÓN -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           <!-- Widget: Actividad Próxima -->
-          <div id="nextActivityWidget" class="lg:col-span-2 bg-white rounded-[2.5rem] p-6 border-2 border-[#FF8A00] shadow-sm flex flex-col md:flex-row items-center gap-6">
+          <div id="nextActivityWidget" class="lg:col-span-2 bg-white rounded-[2.5rem] p-6 shadow-sm flex flex-col md:flex-row items-center gap-6">
             <div class="w-20 h-20 bg-[var(--sc-green-light)] text-[var(--sc-green)] rounded-[2rem] flex items-center justify-center shrink-0 animate-bounce-subtle">
               <i data-lucide="clock" class="w-10 h-10"></i>
             </div>
@@ -651,30 +663,30 @@
           </div>
 
           <!-- Widget: Alerta de Ponche -->
-          <div id="punchAlertWidget" class="alert-banner-punch p-6 flex flex-col justify-center hidden">
+          <div id="punchAlertWidget" class="alert-banner-punch bg-white rounded-[2.5rem] p-6 flex flex-col justify-center hidden">
             <div class="flex items-center gap-4 mb-3">
-              <div class="w-12 h-12 bg-white/90 text-orange-600 rounded-2xl flex items-center justify-center shadow-lg">
+              <div class="w-12 h-12 rounded-2xl flex items-center justify-center shadow-sm">
                 <i data-lucide="user-check" class="w-7 h-7"></i>
               </div>
-              <h4 class="font-bold text-white text-lg tracking-tight">Faltan por Ponchar</h4>
+              <h4 class="font-bold text-lg tracking-tight">Faltan por Ponchar</h4>
             </div>
-            <p id="punchAlertText" class="text-sm font-semibold text-white/90 mb-4">2 niños aún no han marcado entrada hoy.</p>
-            <button onclick="App.sendAbsenceAlerts()" class="w-full py-3 bg-white text-orange-600 rounded-xl font-bold text-sm uppercase tracking-wider shadow-lg hover:bg-white/90 transition-all active:scale-95 flex items-center justify-center gap-2">
+            <p id="punchAlertText" class="text-sm font-semibold mb-4">2 niños aún no han marcado entrada hoy.</p>
+            <button onclick="App.sendAbsenceAlerts()" class="w-full py-3 btn-alert-maestra rounded-xl font-bold text-sm uppercase tracking-wider flex items-center justify-center gap-2">
               <i data-lucide="send" class="w-4 h-4"></i>
               Enviar Avisos
             </button>
           </div>
 
           <!-- Widget: Tareas por Calificar -->
-          <div id="tasksToGradeWidget" class="alert-banner-tasks p-6 flex flex-col justify-center hidden">
+          <div id="tasksToGradeWidget" class="alert-banner-tasks bg-white rounded-[2.5rem] p-6 flex flex-col justify-center hidden">
             <div class="flex items-center gap-4 mb-3">
-              <div class="w-12 h-12 bg-white/90 text-emerald-600 rounded-2xl flex items-center justify-center shadow-lg">
+              <div class="w-12 h-12 rounded-2xl flex items-center justify-center shadow-sm">
                 <i data-lucide="book-open-check" class="w-7 h-7"></i>
               </div>
-              <h4 class="font-bold text-white text-lg tracking-tight">Tareas por Calificar</h4>
+              <h4 class="font-bold text-lg tracking-tight">Tareas por Calificar</h4>
             </div>
-            <p id="tasksToGradeText" class="text-sm font-semibold text-white/90 mb-4">Tienes 1 entrega pendiente de revisar (más de 24h).</p>
-            <button onclick="App.navigateTo('t-home', 'tasks')" class="w-full py-3 bg-white text-emerald-600 rounded-xl font-bold text-sm uppercase tracking-wider shadow-lg hover:bg-white/90 transition-all active:scale-95 flex items-center justify-center gap-2">
+            <p id="tasksToGradeText" class="text-sm font-semibold mb-4">Tienes 1 entrega pendiente de revisar (más de 24h).</p>
+            <button onclick="App.navigateTo('t-home', 'tasks')" class="w-full py-3 btn-maestra rounded-xl font-bold text-sm uppercase tracking-wider flex items-center justify-center gap-2">
               <i data-lucide="arrow-right" class="w-4 h-4"></i>
               Ir a Tareas
             </button>
@@ -813,7 +825,7 @@
                 <i data-lucide="arrow-left" class="w-4 h-4"></i>
               </button>
               <div id="chatActiveAvatar"
-                   class="w-10 h-10 rounded-full bg-[#E8F2FF] text-[#0B63C7] flex items-center justify-center font-bold overflow-hidden border border-[#FF7A00] shrink-0"></div>
+                   class="w-10 h-10 rounded-full bg-[#E8F2FF] text-[#0B63C7] flex items-center justify-center font-bold overflow-hidden border border-slate-200 shrink-0"></div>
               <div class="min-w-0">
                 <div id="chatActiveName" class="font-bold text-slate-800 truncate"></div>
                 <div id="chatActiveMeta" class="text-[10px] font-bold uppercase tracking-wider text-slate-400"></div>
@@ -829,7 +841,7 @@
             </div>
 
             <!-- Typing Indicator -->
-            <div id="chatTypingIndicator" class="hidden absolute bottom-[80px] left-6 right-6 px-4 py-2 bg-white/90 backdrop-blur-sm border border-[#FF7A00] rounded-xl text-[10px] font-black text-[#FF7A00] shadow-lg animate-bounce-subtle z-20">
+            <div id="chatTypingIndicator" class="hidden absolute bottom-[80px] left-6 right-6 px-4 py-2 bg-white/90 backdrop-blur-sm border border-slate-200 rounded-xl text-[10px] font-black text-[var(--m-green)] shadow-lg animate-bounce-subtle z-20">
               Alguien está escribiendo...
             </div>
 

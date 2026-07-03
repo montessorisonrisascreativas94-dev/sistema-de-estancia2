@@ -104,7 +104,7 @@ export const WallApi = {
         .insert([{
           teacher_id: user.id,
           content: Helpers.escapeHTML(title ? `${title}\n\n${content}` : content),
-          images: images,
+          images: images.length ? images : null,
           created_at: new Date().toISOString()
         }])
         .select()

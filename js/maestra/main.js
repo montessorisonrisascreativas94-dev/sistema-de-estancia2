@@ -48,6 +48,11 @@ window.App = {
   safeEscapeHTML: UI.safeEscapeHTML,
   Modal: UI.Modal,
 
+  // Wall
+  WallModule: WallModule,
+  openNewPostModal: () => window.App._openNewPostModal(),
+  submitNewPost: () => window.App._submitNewPost(),
+
   // Attendance
   registerAttendance: Attendance.registerAttendance,
   markAllPresent: Attendance.markAllPresent,
@@ -396,34 +401,132 @@ function initRealtimeUpdates(classroomId) {
   const channelName = `maestra_room_${classroomId}`;
   
   RealtimeManager.subscribe(channelName, (channel) => {
-    channel
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'task_evidences' }, (payload) => {
-        const student = (AppState.get('students') || []).find(s => s.id === payload.new.student_id);
-        if (student) safeToast(`📝 ${student.name} entregó una tarea`, 'info');
-      })
-      // Escuchar cambios en posts para actualizar el muro sin recargar
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, (payload) => {
-        const { eventType, new: newPost, old: oldPost } = payload;
-        const post = newPost || oldPost;
-        
-        // Solo si es de este aula o general
-        if (post && post.classroom_id && post.classroom_id !== classroomId) return;
+    // ── Nuevas entregas de tareas ────────────────────────────────────
+    channel.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'task_evidences' }, (payload) => {
+      const student = (AppState.get('students') || []).find(s => s.id === payload.new.student_id);
+      if (student) safeToast(`📝 ${student.name} entregó una tarea`, 'info');
+      // Badge en sidebar "Mis Clases"
+      _incrementBadge('t-home');
+      _applyTabBadge('tasks');
+    });
 
-        if (eventType === 'INSERT') {
-          safeToast('Nueva publicación en el muro', 'info');
-          WallModule.loadPosts('muroPostsContainer');
-        } else if (eventType === 'UPDATE') {
-          const postId = newPost.id;
-          const likeSpan = document.getElementById(`like-count-${postId}`);
-          const commBtn = document.querySelector(`#post-${postId} button[onclick*="toggleCommentSection"] span`);
-          
-          if (likeSpan && typeof newPost.likes_count === 'number') likeSpan.textContent = newPost.likes_count;
-          if (commBtn && typeof newPost.comments_count === 'number') commBtn.textContent = `${newPost.comments_count} Comentarios`;
-        } else if (eventType === 'DELETE') {
-          document.getElementById(`post-${oldPost.id}`)?.remove();
+    // ── Cambios en posts del muro ────────────────────────────────────
+    channel.on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, (payload) => {
+      const { eventType, new: newPost, old: oldPost } = payload;
+      const post = newPost || oldPost;
+      
+      if (post && post.classroom_id && post.classroom_id !== classroomId) return;
+
+      if (eventType === 'INSERT') {
+        const currentUser = AppState.get('user');
+        // No mostrar badge si lo publicó la maestra misma
+        if (newPost?.teacher_id !== currentUser?.id) {
+          safeToast('📢 Nueva publicación en el muro', 'info');
+          // Badge en tab "Muro" si no está activo
+          const activeTab = localStorage.getItem('maestra_last_tab');
+          if (activeTab !== 'feed') _applyTabBadge('feed');
         }
-      });
+        WallModule.loadPosts('muroPostsContainer');
+      } else if (eventType === 'UPDATE') {
+        const postId = newPost.id;
+        const likeSpan = document.getElementById(`like-count-${postId}`);
+        const commBtn  = document.querySelector(`#post-${postId} button[onclick*="toggleCommentSection"] span`);
+        if (likeSpan && typeof newPost.likes_count === 'number') likeSpan.textContent = newPost.likes_count;
+        if (commBtn && typeof newPost.comments_count === 'number') commBtn.textContent = `${newPost.comments_count} Comentarios`;
+      } else if (eventType === 'DELETE') {
+        document.getElementById(`post-${oldPost.id}`)?.remove();
+      }
+    });
+
+    // ── Nuevos mensajes de chat ──────────────────────────────────────
+    channel.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
+      const currentUser = AppState.get('user');
+      if (payload.new?.sender_id === currentUser?.id) return;
+      // No notificar si el chat de esa conversación ya está abierto
+      const activeConvId = AppState.get('activeConversationId');
+      if (activeConvId && payload.new?.conversation_id === activeConvId) return;
+
+      _incrementBadge('t-chat');
+      // Badge en el contacto específico dentro del chat
+      _applyContactBadge(payload.new?.sender_id);
+      safeToast('💬 Nuevo mensaje', 'info');
+    });
+
+    // ── Nuevas notificaciones generales ─────────────────────────────
+    channel.on('postgres_changes', {
+      event: 'INSERT', schema: 'public', table: 'notifications',
+      filter: `user_id=eq.${AppState.get('user')?.id}`
+    }, (payload) => {
+      const type = payload.new?.type;
+      if (type === 'payment' || type === 'receipt') _incrementBadge('t-permits');
+      if (type === 'post' || type === 'muro') {
+        const activeTab = localStorage.getItem('maestra_last_tab');
+        if (activeTab !== 'feed') _applyTabBadge('feed');
+      }
+    });
   });
+}
+
+/** Incrementa el badge del sidebar (badge-{section}) */
+function _incrementBadge(section) {
+  const badge = document.getElementById('badge-' + section);
+  if (!badge) return;
+  const current = parseInt(badge.textContent) || 0;
+  const next = current + 1;
+  badge.textContent = next > 99 ? '99+' : String(next);
+  badge.classList.remove('hidden');
+  badge.classList.add('flex');
+  // Glow en el botón del sidebar
+  const btn = document.querySelector(`[data-section="${section}"]`);
+  if (btn) {
+    btn.classList.add('nav-badge-glow');
+    setTimeout(() => btn.classList.remove('nav-badge-glow'), 3000);
+  }
+}
+
+/** Muestra un badge puntito en el tab de aula (feed, tasks, attendance…) */
+function _applyTabBadge(tab) {
+  const tabBtn = document.querySelector(`.class-tab-btn[data-tab="${tab}"]`);
+  if (!tabBtn) return;
+  let dot = tabBtn.querySelector('.tab-badge-dot');
+  if (!dot) {
+    dot = document.createElement('span');
+    dot.className = 'tab-badge-dot';
+    tabBtn.style.position = 'relative';
+    tabBtn.appendChild(dot);
+  }
+  dot.style.cssText = [
+    'position:absolute', 'top:4px', 'right:4px',
+    'width:8px', 'height:8px', 'border-radius:50%',
+    'background:#FF8A00', 'border:2px solid white',
+    'animation:badge-pulse 1.5s infinite'
+  ].join(';');
+}
+
+/** Limpia el badge puntito de un tab */
+function _clearTabBadge(tab) {
+  const dot = document.querySelector(`.class-tab-btn[data-tab="${tab}"] .tab-badge-dot`);
+  dot?.remove();
+}
+
+/** Badge en el contacto de chat */
+function _applyContactBadge(senderId) {
+  if (!senderId) return;
+  const contactEl = document.querySelector(`[data-contact-id="${senderId}"]`);
+  if (!contactEl) return;
+  let dot = contactEl.querySelector('.contact-badge-dot');
+  if (!dot) {
+    dot = document.createElement('span');
+    dot.className = 'contact-badge-dot inline-flex items-center justify-center';
+    dot.style.cssText = [
+      'min-width:18px', 'height:18px', 'border-radius:50px',
+      'background:#FF8A00', 'color:white', 'font-size:10px',
+      'font-weight:900', 'padding:0 5px'
+    ].join(';');
+    dot.textContent = '●';
+    contactEl.style.position = 'relative';
+    contactEl.appendChild(dot);
+  }
 }
 
 async function notify({ message, pushTo = null }) {
@@ -876,27 +979,20 @@ function initClassTabs(defaultTab = null) {
   const activateTab = (targetTab) => {
     // 1. Resetear TODOS los botones
     tabBtns.forEach(b => {
-      b.classList.remove('active', 'bg-[#FF7A00]', 'bg-[#FF7A00]', 'text-white', 'ring-4', 'ring-blue-100');
+      b.classList.remove('active', 'bg-[#FF7A00]', 'text-white', 'ring-4', 'ring-blue-100');
       b.classList.add('bg-slate-100', 'text-slate-600');
     });
 
-    // 2. Activar botones que coincidan (con énfasis especial en Rutina)
+    // 2. Activar botón correcto
     tabBtns.forEach(b => {
       if (b.dataset.tab === targetTab) {
-        const isRoutine = targetTab === 'daily-routine';
-        
-        // Estilo Naranja Vibrante solicitado por el usuario
-        b.classList.add('active', isRoutine ? 'bg-[#FF7A00]' : 'bg-[#FF7A00]', 'text-white', 'ring-4', 'ring-blue-100');
+        b.classList.add('active', 'bg-[#FF7A00]', 'text-white', 'ring-4', 'ring-blue-100');
         b.classList.remove('bg-slate-100', 'text-slate-600', 'text-slate-500');
-        
-        // Efecto visual extra para Rutina
-        if (isRoutine) {
-           b.classList.add('animate-pulse-subtle');
-        }
+        if (targetTab === 'daily-routine') b.classList.add('animate-pulse-subtle');
+        // Limpiar badge del tab al abrirlo
+        _clearTabBadge(targetTab);
       }
     });
-
-    // 3. Mostrar contenido correcto
     tabContents.forEach(c => c.classList.add('hidden'));
     document.getElementById(`tab-${targetTab}`)?.classList.remove('hidden');
 
@@ -1097,9 +1193,8 @@ async function submitNewPost() {
       content,
       media_url: mediaUrl,
       media_type: mediaType,
-      author_id: user.id,
-      classroom_id: classroom.id,
-      type: 'classroom'
+      teacher_id: user.id,
+      classroom_id: classroom.id
     });
 
     if (error) throw error;
