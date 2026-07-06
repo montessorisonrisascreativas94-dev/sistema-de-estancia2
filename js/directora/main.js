@@ -5,10 +5,13 @@ import { UIPremium } from '../shared/ui-premium.js';
 import { WallModule } from './wall.module.js';
 import { DashboardService } from './dashboard.service.js';
 import { UIHelpers, DirectorUI } from './ui.module.js';
+import { renderDashboardV2 } from './dashboard-v2.js';
 import { StudentsModule } from './students.module.js';
 import { TeachersModule } from './teachers.module.js';
 import { PaymentsModule } from './payments.module.js';
+import { NewPaymentsModule } from './payments-new.module.js';
 import { InvoicingModule } from './invoicing.module.js';
+import { AccountingModule } from './accounting.module.js';
 
 // ── Tenant config row — única fila de configuración del tenant ─────────────────
 const SCHOOL_SETTINGS_ID = 1;
@@ -17,10 +20,10 @@ import { PermitsModule } from './permits.module.js';
 import { InquiriesModule } from './inquiries.module.js';
 import { ChatModule } from './chat.module.js';
 import { RoomsModule } from './rooms.module.js';
-import { AutomationModule } from './automation.js';
+import { AcademicCycleModule } from './academic-cycle.module.js';
+import { CajaModule } from './caja.module.js';
 import { AccessModule } from './access.module.js';
 import { AttendanceModule } from './attendance.module.js';
-import { BadgeSystem } from '../shared/badges.js';
 import { RealtimeManager } from '../shared/realtime-manager.js';
 import { QueryCache } from '../shared/query-cache.js';
 import { ImageLoader } from '../shared/image-loader.js';
@@ -40,13 +43,17 @@ window.App = {
   rooms: RoomsModule,
   payments: PaymentsModule,
   invoicing: InvoicingModule,
+  accounting: AccountingModule,
   attendance: AttendanceModule,
   grades: GradesModule,
   ui: { ...UIHelpers, ...DirectorUI },
   inquiries: InquiriesModule,
   permits: PermitsModule,
   chat: ChatModule,
-  automation: AutomationModule,
+  automation: { renderSmartWidgets: () => {} }, // stub — módulo no disponible
+  academic:   AcademicCycleModule,
+  caja:       CajaModule,
+  cuentasCobrar: { init: () => import('./cuentas-cobrar.module.js').then(m => m.CuentasCobrarModule.init()), remindStudent: (id) => import('./cuentas-cobrar.module.js').then(m=>m.CuentasCobrarModule.remindStudent(id)), applyFilter: (v) => import('./cuentas-cobrar.module.js').then(m=>m.CuentasCobrarModule.applyFilter(v)) },
   wall: {
     toggleCommentSection: (pid) => WallModule.toggleCommentSection(pid),
     sendComment: (pid) => WallModule.sendComment(pid),
@@ -127,7 +134,12 @@ export function goToSection(sectionId) {
     // Carga bajo demanda por módulo (Lazy Loading via import())
     switch (sectionId) {
       case 'dashboard':
-        DashboardService.getFullData(true).then(data => DirectorUI.renderDashboard(data));
+        renderDashboardV2();
+        break;
+
+      // ── GESTIÓN ACADÉMICA (hub) ──────────────────────────────────────
+      case 'gestion-academica':
+        _renderGestionAcademica();
         break;
       case 'maestros':
         import('./teachers.module.js').then(m => m.TeachersModule.init());
@@ -144,39 +156,58 @@ export function goToSection(sectionId) {
       case 'calificaciones':
         import('./grades.module.js').then(m => m.GradesModule.init());
         break;
-      case 'pagos':
-        import('./payments.module.js').then(m => m.PaymentsModule.init());
-        break;
-      case 'comunicacion':
-        import('./chat.module.js').then(m => m.ChatModule.init());
-        break;
       case 'videoconferencia': {
         const profile = AppState.get('profile');
         import('../shared/videocall-ui.js').then(({ VideoCallUI }) => {
           VideoCallUI.renderSection('videocall-directora-section', {
-            role: 'directora',
-            userName: profile?.name || 'Directora',
-            classroomId: null
+            role: 'directora', userName: profile?.name || 'Directora', classroomId: null
           });
         }).catch(() => {});
         break;
       }
+
+      // ── CICLO ESCOLAR (hub) ──────────────────────────────────────────
+      case 'ciclo-escolar':
+        _renderCicloEscolar();
+        break;
+      case 'ciclo-academico':
+        import('./academic-cycle.module.js').then(m => m.AcademicCycleModule.init());
+        break;
+      case 'staff-permits':
+        import('./permits.module.js').then(m => m.PermitsModule.init());
+        break;
+
+      // ── FINANZAS (hub) ───────────────────────────────────────────────
+      case 'finanzas':
+        _renderFinanzas();
+        break;
+      case 'caja':        CajaModule.init();     break;
+      case 'pagos':
+        NewPaymentsModule.init();
+        break;
+      case 'contabilidad':
+        import('./accounting.module.js').then(m => m.AccountingModule.init()).catch(() => {});
+        break;
+      case 'cuentas-cobrar':
+        import('./cuentas-cobrar.module.js').then(m => m.CuentasCobrarModule.init()).catch(() => {});
+        break;
+
+      // ── COMUNICACIÓN ─────────────────────────────────────────────────
+      case 'comunicacion':
+        import('./chat.module.js').then(m => m.ChatModule.init());
+        break;
       case 'muro':
         import('./wall.module.js').then(m => {
-          m.WallModule.init('muroPostsContainer', { 
-            accentColor: 'blue', 
-            likeColor: 'blue' 
-          }, AppState);
+          m.WallModule.init('muroPostsContainer', { accentColor: 'blue', likeColor: 'blue' }, AppState);
         });
-        break;
-      case 'accesos':
-        import('./access.module.js').then(m => m.AccessModule.init());
         break;
       case 'reportes':
         import('./reports.module.js').then(m => m.ReportsModule.init());
         break;
-      case 'staff-permits':
-        import('./permits.module.js').then(m => m.PermitsModule.init());
+
+      // ── SISTEMA ──────────────────────────────────────────────────────
+      case 'accesos':
+        import('./access.module.js').then(m => m.AccessModule.init());
         break;
       case 'configuracion':
         loadProfile();
@@ -188,13 +219,24 @@ export function goToSection(sectionId) {
     BadgeSystem.mark(sectionId);
   }
 
+  // Mapear sub-secciones a su botón padre en el sidebar
+  const _parentSection = {
+    maestros:'gestion-academica', estudiantes:'gestion-academica',
+    aulas:'gestion-academica',    asistencia:'gestion-academica',
+    calificaciones:'gestion-academica', videoconferencia:'gestion-academica',
+    'ciclo-academico':'ciclo-escolar', 'staff-permits':'ciclo-escolar',
+    accesos:'ciclo-escolar',
+    caja:'finanzas', pagos:'finanzas', contabilidad:'finanzas',
+    'cuentas-cobrar':'finanzas',
+    muro:'comunicacion', reportes:'comunicacion',
+  };
+  const activeSidebarId = _parentSection[sectionId] || sectionId;
+
   // Actualizar Botones Nav (Sidebar)
   document.querySelectorAll('[data-section]').forEach(btn => {
-    if (btn.dataset.section === sectionId) {
-      btn.classList.add('bg-white/20');
-    } else {
-      btn.classList.remove('bg-white/20');
-    }
+    const match = btn.dataset.section === activeSidebarId || btn.dataset.section === sectionId;
+    btn.classList.toggle('bg-white/20', match);
+    btn.classList.toggle('active', match);
   });
 
   // Actualizar Bottom Nav si existe
@@ -370,6 +412,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 5. Iniciar Dashboard por defecto
     goToSection('dashboard');
+
+    // Cargar ciclos escolares en los selectores del sidebar y header
+    _loadCycleSelectors();
     
     // 5a. Iniciar Realtime para Dashboard
     DashboardService.subscribeToChanges();
@@ -408,6 +453,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Badge de posts nuevos en muro
     loadNewPostsBadge();
+
+        BadgeSystem.init(auth.user.id);
+
+    // Cargar badge de pre-inscripciones pendientes
+    supabase.from('student_preregistrations').select('id',{count:'exact',head:true}).eq('status','pending').then(({count})=>{
+      const b=document.getElementById('badge-ciclo');
+      if(b&&count>0){b.textContent=count>99?'99+':String(count);b.classList.remove('hidden');}
+    }).catch(()=>{});
 
     // ?? Sistema de badges por secci�n
     BadgeSystem.init(auth.user.id);
@@ -635,6 +688,110 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Para otros errores: mostrar el panel vacío en vez de redirigir
   }
 });
+
+/**
+ * Hub: Gestión Académica — sub-navegación interna
+ */
+function _renderGestionAcademica() {
+  const secs = [
+    { id:'maestros',        icon:'user-cog',       label:'Maestros',          desc:'Docentes y personal académico',     color:'#28B54D' },
+    { id:'estudiantes',     icon:'users',           label:'Estudiantes',       desc:'Expedientes y gestión de alumnos',  color:'#0B63C7' },
+    { id:'aulas',           icon:'school',          label:'Aulas',             desc:'Salones, capacidad y horarios',     color:'#0D9488' },
+    { id:'asistencia',      icon:'calendar-check-2',label:'Asistencia',        desc:'Control diario de asistencia',      color:'#EC4899' },
+    { id:'calificaciones',  icon:'star',            label:'Calificaciones',    desc:'Boletines, promedios y evaluaciones',color:'#F59E0B'},
+    { id:'videoconferencia',icon:'video',           label:'Videoconferencia',  desc:'Clases virtuales y reuniones',      color:'#8B5CF6' },
+  ];
+  _renderHub('gestion-academica', '🎓 Gestión Académica', 'Administración del equipo docente, alumnos y procesos educativos', secs);
+}
+
+/**
+ * Hub: Ciclo Escolar — sub-navegación interna
+ */
+function _renderCicloEscolar() {
+  const secs = [
+    { id:'ciclo-academico', icon:'clipboard-pen',  label:'Inscripciones',     desc:'Pre-inscripciones, admisión y ciclos', color:'#0D9488' },
+    { id:'staff-permits',   icon:'calendar-off',   label:'Permisos Staff',    desc:'Ausencias y permisos del personal',    color:'#EC4899' },
+    { id:'accesos',         icon:'qr-code',         label:'Accesos QR',        desc:'Control de entradas y salidas',        color:'#64748B' },
+  ];
+  _renderHub('ciclo-escolar', '📅 Ciclo Escolar', 'Gestión del año escolar, inscripciones, reinscripciones y calendarios', secs);
+}
+
+/**
+ * Hub: Finanzas — sub-navegación interna
+ */
+function _renderFinanzas() {
+  const secs = [
+    { id:'caja',           icon:'landmark',        label:'Caja',              desc:'Cobros del día y emisión de facturas', color:'#28B54D' },
+    { id:'pagos',          icon:'banknote',         label:'Pagos',             desc:'Control de mensualidades y estados',   color:'#F59E0B' },
+    { id:'contabilidad',   icon:'bar-chart-big',    label:'Contabilidad',      desc:'Reportes financieros y flujo de caja', color:'#0B63C7' },
+    { id:'cuentas-cobrar', icon:'receipt',          label:'Cuentas por Cobrar',desc:'Deudores, mora y recordatorios',       color:'#EF4444' },
+  ];
+  _renderHub('finanzas', '💰 Finanzas', 'Motor financiero escolar: caja, pagos, contabilidad y cuentas por cobrar', secs);
+}
+
+/**
+ * Renderiza un hub de sección con tarjetas de acceso rápido
+ */
+function _renderHub(containerId, title, subtitle, sections) {
+  const section = document.getElementById(containerId);
+  if (!section) return;
+  // El hub renderiza directo en la sección o en su primer div
+  const el = section.querySelector('div') || section;
+  el.innerHTML = `
+    <div class="space-y-6">
+      <div>
+        <h2 class="text-2xl font-black text-slate-800">${title}</h2>
+        <p class="text-slate-400 font-medium mt-1">${subtitle}</p>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        ${sections.map(s => `
+          <button onclick="App.navigation.goTo('${s.id}')"
+            class="text-left bg-white rounded-2xl border border-slate-100 shadow-sm p-5 hover:shadow-lg hover:border-slate-200 transition-all active:scale-[.98] group">
+            <div class="w-12 h-12 rounded-2xl flex items-center justify-center mb-4" style="background:${s.color}18">
+              <i data-lucide="${s.icon}" class="w-6 h-6" style="color:${s.color}"></i>
+            </div>
+            <h3 class="font-black text-slate-800 text-base mb-1">${s.label}</h3>
+            <p class="text-sm text-slate-500 font-medium leading-snug">${s.desc}</p>
+            <div class="flex items-center gap-1 mt-4 text-xs font-black uppercase tracking-wider" style="color:${s.color}">
+              Abrir <i data-lucide="arrow-right" class="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform"></i>
+            </div>
+          </button>`).join('')}
+      </div>
+    </div>`;
+  if (window.lucide) lucide.createIcons();
+}
+
+/**
+ * Cargar ciclos escolares en todos los selectores del panel
+ */
+async function _loadCycleSelectors() {
+  try {
+    const { data: years } = await supabase
+      .from('school_years')
+      .select('id,name,is_current,status')
+      .order('start_date',{ascending:false})
+      .limit(10);
+
+    if (!years?.length) return;
+
+    const opts = years.map(y =>
+      `<option value="${y.id}"${y.is_current?' selected':''}>${y.name}${y.is_current?' ✓':''}</option>`
+    ).join('');
+
+    // Header selector
+    const hdr = document.getElementById('headerCycleSelector');
+    if (hdr) hdr.innerHTML = opts;
+
+    // Sidebar selector
+    const sb = document.getElementById('sidebarCycleSelector');
+    if (sb) sb.innerHTML = opts;
+
+    // Guardar el ciclo activo en AppState
+    const current = years.find(y => y.is_current) || years[0];
+    if (current && window.AppState) AppState.set('activeCycleId', current.id);
+
+  } catch (_) {}
+}
 
 /**
  * ?? Notificaciones de Mensajes No Le�dos

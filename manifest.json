@@ -1,14 +1,13 @@
 {
-  "name": "Sonrisas Creativas — Montessori",
-  "short_name": "Sonrisas",
-  "description": "Portal educativo del Colegio Montessori Sonrisas Creativas — Padres, Maestras y Dirección",
-  "start_url": "/login.html",
+  "name": "Colegio Montessori Sonrisas Creativas",
+  "short_name": "Sonrisas Creativas",
+  "description": "Portal educativo del Colegio Montessori Sonrisas Creativas para padres, maestros y dirección",
+  "start_url": "/index.html",
   "scope": "/",
   "display": "standalone",
-  "orientation": "portrait",
+  "orientation": "portrait-primary",
   "background_color": "#FFFFFF",
-  "theme_color": "#0B63C7",
-  "gcm_sender_id": "482941778795",
+  "theme_color": "#28B54D",
   "icons": [
     {
       "src": "logo/android-chrome-192x192.png",
@@ -30,6 +29,6 @@
     }
   ],
   "categories": ["education", "family"],
-  "lang": "es",
+  "lang": "es-DO",
   "prefer_related_applications": false
 }

@@ -1,766 +1,830 @@
+/**
+ * Rutina Express v2 — Sonrisas Creativas
+ * Filosofia: Un evento = 1-3 segundos. Hora del servidor. Todos por defecto.
+ */
 import { supabase } from '../../shared/supabase.js';
 import { AppState } from '../state.js';
-import { MaestraApi } from '../api.js';
 import { UI } from './ui.js';
-import { Helpers } from '../../shared/helpers.js';
 
 const { safeToast, safeEscapeHTML, Modal } = UI;
 
-const _saving = {};
+let _undoTimer   = null;
+let _pendingUndo = null;
+let _logsMap     = {};
+let _sleepMap    = {};
 
-/**
- * Lógica de 12 horas: El reporte del día solo es válido si fue guardado hace menos de 12 horas.
- */
-function _isWithin12h(dateStr) {
-  if (!dateStr) return false;
-  const saved = new Date(dateStr);
-  return (Date.now() - saved.getTime()) < 12 * 60 * 60 * 1000;
+function _isWithin12h(d) {
+  if (!d) return false;
+  return (Date.now() - new Date(d).getTime()) < 43200000;
 }
+async function _serverNow() {
+  try {
+    const { data } = await supabase.rpc('get_server_timestamp');
+    if (data) return new Date(data);
+  } catch (_) {}
+  return new Date();
+}
+function _fmtTime(d) {
+  return d.toLocaleTimeString('es-DO', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+}
+function _today() { return new Date().toISOString().split('T')[0]; }
 
-/**
- * Vista de rutina mejorada — Tarjetas de estudiantes con progreso visual (burbujas).
- * Optimizada para móvil y con sistema de alertas.
- */
+const EVENTS = [
+  { id:'breakfast', icon:'🍞', label:'Desayuno',    field:'food',   value:'todo', color:'#FF8A00' },
+  { id:'snack',     icon:'🍎', label:'Merienda',    field:'food',   value:'poco', color:'#28B54D' },
+  { id:'lunch',     icon:'🥗', label:'Almuerzo',    field:'food',   value:'todo', color:'#28B54D' },
+  { id:'milk',      icon:'🍼', label:'Biberón',     field:'_milk',  value:null,   color:'#0B63C7' },
+  { id:'sleep',     icon:'😴', label:'Durmió',      field:'_sleep', value:'start',color:'#8B5CF6' },
+  { id:'wakeup',    icon:'😊', label:'Despertó',    field:'_sleep', value:'end',  color:'#FFD43B' },
+  { id:'diaper_w',  icon:'💧', label:'Pañal mojado',field:'_diaper',value:'wet',  color:'#0B63C7' },
+  { id:'diaper_s',  icon:'💩', label:'Pañal sucio', field:'_diaper',value:'soiled',color:'#FF8A00'},
+  { id:'bathroom',  icon:'🚽', label:'Baño',        field:'_bath',  value:'done', color:'#28B54D' },
+  { id:'temp',      icon:'🌡', label:'Temperatura', field:'_temp',  value:null,   color:'#EF4444' },
+  { id:'med',       icon:'💊', label:'Medicamento', field:'_med',   value:null,   color:'#EC4899' },
+  { id:'mood_g',    icon:'😊', label:'Contento',    field:'mood',   value:'feliz',color:'#FFD43B' },
+  { id:'mood_b',    icon:'😢', label:'Triste',      field:'mood',   value:'triste',color:'#94A3B8'},
+  { id:'note',      icon:'📝', label:'Nota',        field:'_note',  value:null,   color:'#64748B' },
+];
+
+const SCHEDULE = [
+  { time:'08:00', icon:'🍞', label:'Desayuno',  eventId:'breakfast' },
+  { time:'10:00', icon:'🍎', label:'Merienda',  eventId:'snack'     },
+  { time:'10:30', icon:'😴', label:'Siesta',    eventId:'sleep'     },
+  { time:'12:00', icon:'🥗', label:'Almuerzo',  eventId:'lunch'     },
+  { time:'14:00', icon:'🍼', label:'Biberón',   eventId:'milk'      },
+];
+
 export async function initRoutine() {
   const classroom = AppState.get('classroom');
   const container = document.getElementById('tab-daily-routine');
   if (!container) return;
 
-  // Mostrar esqueleto de carga para feedback instantáneo
+  container.innerHTML = `<div class="animate-pulse space-y-4">
+    <div class="h-14 bg-slate-100 rounded-2xl"></div>
+    <div class="grid grid-cols-4 sm:grid-cols-7 gap-3">${Array(14).fill('<div class="h-20 bg-slate-50 rounded-2xl"></div>').join('')}</div>
+  </div>`;
+
+  const students = AppState.get('students') || [];
+  const today    = _today();
+
+  const { data: logs } = await supabase
+    .from('daily_logs')
+    .select('id, student_id, date, mood, food, nap, notes, created_at, infant_data')
+    .eq('classroom_id', classroom.id)
+    .eq('date', today);
+
+  _logsMap = {};
+  (logs || []).forEach(l => { _logsMap[l.student_id] = l; });
+
+  _sleepMap = {};
+  (logs || []).forEach(l => {
+    const ev = (l.infant_data || []).filter(e => e.type === 'sleep').pop();
+    if (ev && !ev.end_time) _sleepMap[l.student_id] = ev;
+  });
+
+  const now   = new Date();
+  const hour  = now.getHours();
+  const activeBlock = SCHEDULE.find(b => {
+    const bh = parseInt(b.time);
+    return hour >= bh && hour < bh + 2;
+  });
+
+  const openSleeps = Object.keys(_sleepMap);
+  const completados = students.filter(s => _logsMap[s.id] && _isWithin12h(_logsMap[s.id].created_at)).length;
+  const todayLabel = now.toLocaleDateString('es-ES', { weekday:'long', day:'numeric', month:'long' });
+
   container.innerHTML = `
-    <div class="animate-pulse space-y-6">
-      <div class="h-12 bg-slate-100 rounded-2xl w-1/3"></div>
-      <div class="h-24 bg-slate-50 rounded-[2rem]"></div>
-      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
-        ${Array(5).fill('<div class="h-40 bg-slate-50 rounded-[2rem]"></div>').join('')}
+  <div class="space-y-5 pb-24" id="routineView">
+  <style>
+    .ev-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:14px 8px;border-radius:18px;border:2px solid #f1f5f9;background:white;cursor:pointer;transition:all .15s;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+    .ev-btn:active{transform:scale(.88)}
+    .ev-btn.done{border-color:var(--c);background:color-mix(in srgb,var(--c) 12%,white)}
+    .ev-btn .ev-icon{font-size:1.9rem;line-height:1}
+    .ev-btn .ev-lbl{font-size:.58rem;font-weight:900;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8;text-align:center}
+    .ev-btn.done .ev-lbl{color:var(--c)}
+    .schip{display:flex;align-items:center;gap:6px;padding:5px 12px;border-radius:50px;border:2px solid #f1f5f9;background:white;font-size:.75rem;font-weight:800;cursor:pointer;transition:all .15s;-webkit-tap-highlight-color:transparent}
+    .schip.on{border-color:#28B54D;background:#E6F7EB;color:#1A8035}
+    .schip.off{border-color:#EF4444;background:#FEF2F2;color:#EF4444;text-decoration:line-through}
+    .undo-bar{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);z-index:600;background:#1a2340;color:#fff;border-radius:16px;padding:12px 20px;display:flex;align-items:center;gap:14px;box-shadow:0 8px 32px rgba(0,0,0,.3);animation:slideUp .25s ease;font-size:.85rem;font-weight:700;white-space:nowrap}
+    @keyframes slideUp{from{opacity:0;transform:translateX(-50%) translateY(16px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+    .undo-prog{width:80px;height:4px;background:rgba(255,255,255,.2);border-radius:4px;overflow:hidden}
+    .undo-fill{height:100%;background:#28B54D;border-radius:4px;animation:drain 10s linear forwards}
+    @keyframes drain{from{width:100%}to{width:0}}
+  </style>
+
+  <!-- HEADER -->
+  <div class="flex items-center justify-between flex-wrap gap-3">
+    <div>
+      <h3 class="text-xl font-black text-slate-800">Rutina Express</h3>
+      <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mt-0.5">${todayLabel} · ${completados}/${students.length} reportes</p>
+    </div>
+    <div class="flex gap-2 flex-wrap">
+      <button onclick="App.initRoutine()" class="px-3 py-2 text-[10px] font-black uppercase tracking-widest bg-slate-100 text-slate-500 rounded-xl hover:bg-slate-200 transition-all flex items-center gap-1">
+        <i data-lucide="refresh-cw" class="w-3 h-3"></i> Actualizar
+      </button>
+    </div>
+  </div>
+
+  ${openSleeps.length > 0 ? `
+  <button onclick="App.routineWakeAll()" class="w-full flex items-center justify-between gap-3 bg-purple-50 border-2 border-purple-200 rounded-2xl px-4 py-3 text-left hover:bg-purple-100 transition-all active:scale-[.98]">
+    <div class="flex items-center gap-3">
+      <span class="text-2xl">😴</span>
+      <div>
+        <div class="text-sm font-black text-purple-700">${openSleeps.length} siesta(s) abierta(s)</div>
+        <div class="text-xs text-purple-500">Toca para registrar que despertaron todos</div>
       </div>
     </div>
-  `;
+    <span class="text-xs font-black text-white bg-purple-500 px-3 py-1.5 rounded-full shrink-0">Despertar todos</span>
+  </button>` : ''}
 
-  try {
-    // 1. Obtener estudiantes del AppState (ya cargados en showClassroomDetail)
-    const students = AppState.get('students') || [];
-    const today    = new Date().toISOString().split('T')[0];
+  ${activeBlock ? `
+  <div class="bg-orange-50 border-2 border-orange-200 rounded-2xl p-4 flex items-center gap-4">
+    <span class="text-3xl">${activeBlock.icon}</span>
+    <div class="flex-1">
+      <div class="text-sm font-black text-orange-700">Es hora de: ${activeBlock.label}</div>
+      <div class="text-xs text-orange-500">Registra el evento para toda el aula</div>
+    </div>
+    <button onclick="App.routineQuickEvent('${activeBlock.eventId}')" class="shrink-0 px-4 py-2 bg-orange-500 text-white text-xs font-black uppercase rounded-xl active:scale-95 transition-all">Registrar</button>
+  </div>` : ''}
 
-    // 2. Cargar logs de hoy usando MaestraApi (Capa de abstracción)
-    const { data: todayLogs, error } = await supabase
-      .from('daily_logs')
-      .select('id, student_id, date, mood, food, nap, eating, sleeping, activities, notes, created_at, infant_data')
-      .eq('classroom_id', classroom.id)
-      .eq('date', today);
+  <!-- PANEL DE EVENTOS -->
+  <div>
+    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Registrar evento para toda el aula</p>
+    <div class="grid grid-cols-4 sm:grid-cols-7 gap-3" id="eventsGrid">
+      ${EVENTS.map(ev => {
+        const done = students.some(s => _eventIsDone(_logsMap[s.id], ev));
+        return `<button class="ev-btn${done?' done':''}" style="--c:${ev.color}"
+          onclick="App.routineQuickEvent('${ev.id}')"
+          title="${ev.label}">
+          <span class="ev-icon">${ev.icon}</span>
+          <span class="ev-lbl">${ev.label}</span>
+        </button>`;
+      }).join('')}
+    </div>
+  </div>
 
-    if (error) throw error;
-
-    const logsMap = {};
-    (todayLogs || []).forEach(l => { logsMap[l.student_id] = l; });
-
-    if (!students.length) {
-      container.innerHTML = '<div class="text-center p-12 text-slate-400"><p class="font-bold">No hay estudiantes en esta aula.</p></div>';
-      return;
-    }
-
-    const todayLabel = new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
-    
-    // Calcular periodo actual para alarmas
-    const now = new Date();
-    const hour = now.getHours();
-    let currentPeriod = 'morning'; 
-    if (hour >= 12 && hour < 16) currentPeriod = 'afternoon';
-    if (hour >= 16) currentPeriod = 'late';
-
-    const periodNames = { morning: 'Mañana', afternoon: 'Tarde', late: 'Tardecita' };
-    
-    // Estudiantes pendientes en el periodo actual
-    const pendingStudents = students.filter(s => {
-      const log = logsMap[s.id];
-      if (!log || !_isWithin12h(log.created_at)) return true;
-      
-      // Validar si falta algún campo crítico según el periodo
-      if (currentPeriod === 'morning' && !log.mood) return true;
-      if (currentPeriod === 'afternoon' && (!log.food || !log.mood)) return true;
-      if (currentPeriod === 'late' && (!log.nap || !log.food || !log.mood)) return true;
-      
-      return false;
-    });
-
-    container.innerHTML = `
-      <div class="space-y-6 pb-20">
-        <!-- Header y Alarmas -->
-        <div class="space-y-4">
-          <div class="flex items-center justify-between">
-            <div>
-              <h3 class="text-xl font-black text-slate-800">📝 Rutina Diaria</h3>
-              <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mt-0.5">${todayLabel}</p>
-            </div>
-            <div class="flex flex-col items-end gap-2">
-               <span class="text-[10px] font-black text-orange-600 bg-orange-50 border border-orange-100 px-3 py-1 rounded-full uppercase tracking-wider">
-                Periodo: ${periodNames[currentPeriod]}
-              </span>
-              <div class="flex gap-4">
-                <button onclick="App.openBulkRoutineModal()" class="text-[10px] font-black text-blue-600 hover:text-blue-700 underline uppercase tracking-widest">
-                  Rutina General (Bulk)
-                </button>
-                <button onclick="Routine.publishAll()" id="btnPublishAll" class="text-[10px] font-black text-emerald-600 hover:text-emerald-700 underline uppercase tracking-widest hidden">
-                  Publicar Todos
-                </button>
-              </div>
-            </div>
+  <!-- LÍNEA DE TIEMPO DEL DÍA -->
+  <div>
+    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Jornada de hoy</p>
+    <div class="flex gap-3 overflow-x-auto pb-2" style="scrollbar-width:none">
+      ${SCHEDULE.map(b => {
+        const bh = parseInt(b.time);
+        const isActive = hour >= bh && hour < bh + 2;
+        return `<button onclick="App.routineQuickEvent('${b.eventId}')"
+          class="block-btn shrink-0${isActive?' active-block':''}"
+          style="min-width:130px;border:2px solid ${isActive?'#FF8A00':'#f1f5f9'};background:${isActive?'#FFF3E0':'white'};border-radius:16px;padding:12px 16px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:all .15s">
+          <span style="font-size:1.5rem">${b.icon}</span>
+          <div style="text-align:left">
+            <div style="font-size:.7rem;font-weight:900;color:#64748b;text-transform:uppercase">${b.time}</div>
+            <div style="font-size:.85rem;font-weight:800;color:#1a2340">${b.label}</div>
           </div>
+        </button>`;
+      }).join('')}
+    </div>
+  </div>
 
-          <!-- Alarma Visual si hay pendientes -->
-          ${pendingStudents.length > 0 ? `
-            <div class="bg-orange-50 border-2 border-orange-100 rounded-[2rem] p-5 flex items-center gap-4 animate-pulse-subtle">
-              <div class="w-12 h-12 bg-orange-500 text-white rounded-2xl flex items-center justify-center text-2xl shrink-0 shadow-lg shadow-orange-200">⚠️</div>
-              <div class="flex-1">
-                <p class="text-sm font-black text-orange-800">Reportes Pendientes</p>
-                <p class="text-xs font-bold text-orange-600/80">Faltan ${pendingStudents.length} estudiantes por reportar en este periodo.</p>
-              </div>
-              <div class="flex -space-x-3 overflow-hidden">
-                ${pendingStudents.slice(0, 3).map(s => `
-                  <div class="w-8 h-8 rounded-full border-2 border-white bg-slate-200 overflow-hidden shadow-sm">
-                    ${s.avatar_url ? `<img src="${s.avatar_url}" class="w-full h-full object-cover">` : `<div class="w-full h-full flex items-center justify-center text-[10px] font-black text-slate-500">${s.name.charAt(0)}</div>`}
-                  </div>
-                `).join('')}
-                ${pendingStudents.length > 3 ? `<div class="w-8 h-8 rounded-full border-2 border-white bg-orange-100 flex items-center justify-center text-[10px] font-black text-orange-600 shadow-sm">+${pendingStudents.length - 3}</div>` : ''}
-              </div>
-            </div>
-          ` : `
-            <div class="bg-emerald-50 border-2 border-emerald-100 rounded-[2rem] p-5 flex items-center gap-4">
-              <div class="w-12 h-12 bg-emerald-500 text-white rounded-2xl flex items-center justify-center text-2xl shrink-0 shadow-lg shadow-emerald-200">✅</div>
-              <div>
-                <p class="text-sm font-black text-emerald-800">¡Todo al día!</p>
-                <p class="text-xs font-bold text-emerald-600/80">Has completado los reportes de este periodo.</p>
-              </div>
-            </div>
-          `}
-        </div>
+  <!-- TARJETAS DE ESTUDIANTES -->
+  <div>
+    <div class="flex items-center justify-between mb-3">
+      <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Reportes individuales</p>
+      <button onclick="App.openBulkRoutineModal()" class="text-[10px] font-black text-blue-600 hover:underline uppercase tracking-widest">Reporte masivo</button>
+    </div>
+    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4" id="studentsGrid">
+      ${students.map(s => _studentCard(s, _logsMap[s.id])).join('')}
+    </div>
+  </div>
+  </div>`;
 
-        <!-- Grid de Estudiantes (Cards) -->
-        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4" id="routineStudentsGrid">
-          ${students.map(s => _renderStudentRoutineCard(s, logsMap[s.id] || {})).join('')}
-        </div>
-
-        <div class="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm text-center border-l-4 border-l-orange-500">
-          <p class="text-xs text-slate-400 font-medium">
-            💡 Toca a un estudiante para abrir su reporte de rutina individual.<br>
-            Los emojis flotantes indican el progreso actual. Los reportes en <strong>Borrador</strong> no son visibles para los padres.
-          </p>
-        </div>
-      </div>
-    `;
-
-    // Mostrar botón de publicar todo si hay borradores
-    const hasDrafts = (todayLogs || []).some(l => l.status === 'draft');
-    if (hasDrafts) document.getElementById('btnPublishAll')?.classList.remove('hidden');
-
-    if (window.lucide) window.lucide.createIcons();
-  } catch (e) {
-    console.error('Error en initRoutine:', e);
-    container.innerHTML = Helpers.errorState('Error al cargar la rutina', 'App.initRoutine()');
-  }
+  if (window.lucide) lucide.createIcons();
 }
 
-/**
- * Publicar todos los borradores del aula hoy
- */
-export async function publishAll() {
-  const students = AppState.get('students') || [];
-  const today = new Date().toISOString().split('T')[0];
-  const classroom = AppState.get('classroom');
-
-  try {
-    const { data: drafts } = await supabase
-      .from('daily_logs')
-      .select('id')
-      .eq('classroom_id', classroom.id)
-      .eq('date', today)
-      .eq('status', 'draft');
-
-    if (!drafts?.length) return;
-
-    if (!confirm(`¿Publicar ${drafts.length} reportes? Los padres recibirán las notificaciones ahora.`)) return;
-
-    Helpers.showLoader('Publicando reportes...');
-    await MaestraApi.publishDailyLogs(drafts.map(d => d.id));
-    
-    Helpers.hideLoader();
-    UI.safeToast('Reportes publicados con éxito', 'success');
-    await initRoutine();
-
-  } catch (e) {
-    Helpers.hideLoader();
-    UI.safeToast('Error al publicar reportes', 'error');
-  }
+function _eventIsDone(log, ev) {
+  if (!log || !_isWithin12h(log.created_at)) return false;
+  if (ev.field === 'mood')   return !!log.mood;
+  if (ev.field === 'food')   return !!log.food;
+  if (ev.field === 'nap')    return !!log.nap;
+  if (ev.field === '_sleep') return (log.infant_data||[]).some(e => e.type==='sleep');
+  if (ev.field === '_milk')  return (log.infant_data||[]).some(e => e.type==='milk');
+  if (ev.field === '_diaper')return (log.infant_data||[]).some(e => e.type==='diaper');
+  if (ev.field === '_bath')  return (log.infant_data||[]).some(e => e.type==='bath');
+  if (ev.field === '_temp')  return (log.infant_data||[]).some(e => e.type==='temp');
+  if (ev.field === '_note')  return !!log.notes;
+  return false;
 }
 
-/**
- * Renderiza la tarjeta individual del estudiante para la sección de rutina.
- */
-function _renderStudentRoutineCard(s, log) {
-  const isValid = _isWithin12h(log.created_at);
-  const mood  = isValid && log.mood ? log.mood : null;
-  const food  = isValid && log.food ? log.food : null;
-  const sleep = isValid && log.nap  ? log.nap  : null;
-  const note  = isValid && log.notes ? true : false;
-  const isDraft = isValid && log.status === 'draft';
-  const isInfant = s.age_type === 'meses' || s.age_type === 'mes';
-  const infantEvents = isValid && log.infant_data ? log.infant_data : [];
+function _studentCard(s, log) {
+  const valid = log && _isWithin12h(log.created_at);
+  const mood  = valid && log.mood;
+  const food  = valid && log.food;
+  const nap   = valid && log.nap;
+  const note  = valid && log.notes;
+  const events = valid ? (log.infant_data||[]) : [];
+  const lastEvt = events[events.length - 1];
+  const lastTime = lastEvt ? new Date(lastEvt.created_at).toLocaleTimeString('es-DO',{hour:'2-digit',minute:'2-digit',hour12:true}) : null;
 
-    const moodEmojis = { feliz: '😊', normal: '😐', triste: '😢', enojado: '😡' };
-    const foodEmojis = { todo: '🍽️', poco: '🍲', nada: '🙅' };
-    const sleepEmojis = { si: '💤', no: '☀️' };
+  const moodEmoji = {feliz:'😊',normal:'😐',triste:'😢',enojado:'😡'}[mood] || '';
+  const foodEmoji = {todo:'🍽️',poco:'🍲',nada:'🙅'}[food] || '';
+  const napEmoji  = {si:'💤',no:'☀️'}[nap] || '';
+  const bubbles   = [moodEmoji,foodEmoji,napEmoji,note?'📝':'',events.length?'🍼':''].filter(Boolean);
 
   return `
-    <div onclick="App.openStudentRoutine('${s.id}')" 
-      class="group relative bg-white rounded-[2rem] p-4 border-2 ${isDraft ? 'border-dashed border-orange-200 bg-orange-50/20' : 'border-slate-100'} hover:border-orange-400 hover:shadow-xl hover:shadow-orange-100 transition-all cursor-pointer active:scale-95 flex flex-col items-center text-center overflow-hidden">
-      
-      <!-- Badge de Borrador -->
-      ${isDraft ? `
-        <div class="absolute top-2 left-2 z-10">
-          <span class="px-2 py-0.5 bg-orange-500 text-white text-[8px] font-black uppercase rounded-lg shadow-sm">Borrador</span>
-        </div>
-      ` : ''}
-
-      <!-- Burbujas de Emojis Flotantes (Status) -->
-      <div class="absolute top-2 right-2 flex flex-col gap-1 z-10">
-        ${mood ? `<div class="w-7 h-7 bg-orange-50 rounded-full flex items-center justify-center text-sm shadow-sm border border-orange-100 animate-bounce-subtle">${moodEmojis[mood]}</div>` : ''}
-        ${isInfant && infantEvents.length > 0 ? `<div class="w-7 h-7 bg-blue-50 rounded-full flex items-center justify-center text-sm shadow-sm border border-blue-100 animate-bounce-subtle">🍼</div>` : ''}
-        ${!isInfant && food ? `<div class="w-7 h-7 bg-emerald-50 rounded-full flex items-center justify-center text-sm shadow-sm border border-emerald-100 animate-bounce-subtle" style="animation-delay: 0.2s">${foodEmojis[food]}</div>` : ''}
-        ${sleep ? `<div class="w-7 h-7 bg-indigo-50 rounded-full flex items-center justify-center text-sm shadow-sm border border-indigo-100 animate-bounce-subtle" style="animation-delay: 0.4s">${sleepEmojis[sleep]}</div>` : ''}
-        ${note ? `<div class="w-7 h-7 bg-slate-50 rounded-full flex items-center justify-center text-xs shadow-sm border border-slate-100 animate-bounce-subtle" style="animation-delay: 0.6s">📝</div>` : ''}
-      </div>
-
-      <!-- Avatar -->
-      <div class="w-20 h-20 rounded-[1.5rem] bg-orange-50 border-4 border-white shadow-inner overflow-hidden mb-3 group-hover:scale-110 transition-transform duration-500 flex items-center justify-center font-black text-2xl text-orange-300">
-        ${s.avatar_url ? `<img src="${s.avatar_url}" class="w-full h-full object-cover">` : s.name.charAt(0)}
-      </div>
-
-      <!-- Info -->
-      <h4 class="text-sm font-black text-slate-800 leading-tight mb-1 line-clamp-2">${safeEscapeHTML(s.name)}</h4>
-      <p class="text-[10px] font-black text-slate-400 uppercase tracking-tighter">${s.age} ${s.age_type || 'años'}</p>
-      
-      <!-- Progress Indicator (Dot) -->
-      <div class="flex gap-1 mt-auto pt-2">
-        <div class="w-1.5 h-1.5 rounded-full ${mood ? 'bg-orange-400' : 'bg-slate-200'}"></div>
-        <div class="w-1.5 h-1.5 rounded-full ${isInfant ? (infantEvents.length ? 'bg-blue-400' : 'bg-slate-200') : (food ? 'bg-emerald-400' : 'bg-slate-200')}"></div>
-        <div class="w-1.5 h-1.5 rounded-full ${sleep ? 'bg-indigo-400' : 'bg-slate-200'}"></div>
-      </div>
+  <div onclick="App.openStudentRoutine('${s.id}')"
+    class="group relative bg-white rounded-[2rem] p-4 border-2 ${valid?'border-green-100':'border-slate-100'} hover:border-orange-300 hover:shadow-lg transition-all cursor-pointer active:scale-95 flex flex-col items-center text-center overflow-hidden">
+    ${valid ? '<div class="absolute top-2 left-2 w-2 h-2 rounded-full bg-green-400"></div>' : ''}
+    <div class="absolute top-2 right-2 flex flex-col gap-1">
+      ${bubbles.slice(0,3).map(b => `<div class="w-6 h-6 bg-slate-50 rounded-full flex items-center justify-center text-xs border border-slate-100">${b}</div>`).join('')}
     </div>
-  `;
+    <div class="w-16 h-16 rounded-[1.25rem] bg-orange-50 border-4 border-white shadow-inner overflow-hidden mb-2 flex items-center justify-center font-black text-xl text-orange-300 group-hover:scale-110 transition-transform">
+      ${s.avatar_url ? `<img src="${s.avatar_url}" class="w-full h-full object-cover">` : safeEscapeHTML(s.name.charAt(0))}
+    </div>
+    <h4 class="text-xs font-black text-slate-800 leading-tight line-clamp-2 mb-0.5">${safeEscapeHTML(s.name)}</h4>
+    <p class="text-[9px] font-bold text-slate-400 uppercase">${s.age||''} ${s.age_type||'años'}</p>
+    ${lastTime ? `<p class="text-[8px] font-black text-green-600 mt-1">Último: ${lastTime}</p>` : ''}
+    <div class="flex gap-1 mt-auto pt-2">
+      <div class="w-1.5 h-1.5 rounded-full ${mood?'bg-orange-400':'bg-slate-200'}"></div>
+      <div class="w-1.5 h-1.5 rounded-full ${food?'bg-emerald-400':'bg-slate-200'}"></div>
+      <div class="w-1.5 h-1.5 rounded-full ${nap?'bg-indigo-400':'bg-slate-200'}"></div>
+    </div>
+  </div>`;
 }
 
+// ── Evento Express: registra para TODA el aula en 1-3 segundos ───────────────
+export async function routineQuickEvent(eventId) {
+  const ev = EVENTS.find(e => e.id === eventId);
+  if (!ev) return;
+
+  const students = AppState.get('students') || [];
+  const classroom = AppState.get('classroom');
+  const today     = _today();
+
+  // Eventos especiales con UI rápida
+  if (ev.field === '_milk')   { return _openMilkPicker(students, today, classroom.id); }
+  if (ev.field === '_temp')   { return _openTempPicker(students, today, classroom.id); }
+  if (ev.field === '_note')   { return _openNotePicker(students, today, classroom.id); }
+  if (ev.field === '_med')    { return _openMedPicker(students, today, classroom.id); }
+
+  // Pañal — selector de ícono
+  if (ev.field === '_diaper') {
+    const isDiaper = ev.id === 'diaper_w' ? 'wet' : 'soiled';
+    return _confirmAllAndSaveEvent(students, today, classroom.id, { type:'diaper', subtype: isDiaper });
+  }
+
+  // Siesta
+  if (ev.field === '_sleep' && ev.value === 'start') {
+    return _confirmAllAndSaveEvent(students, today, classroom.id, { type:'sleep', start_time: '__now__' });
+  }
+  if (ev.field === '_sleep' && ev.value === 'end') {
+    return routineWakeAll();
+  }
+
+  // Baño
+  if (ev.field === '_bath') {
+    return _confirmAllAndSaveEvent(students, today, classroom.id, { type:'bath' });
+  }
+
+  // Eventos simples (mood, food, nap)
+  return _confirmAllAndSave(students, today, classroom.id, ev);
+}
+
+// ── Confirmación "todos por defecto" ─────────────────────────────────────────
+async function _confirmAllAndSave(students, today, classroomId, ev) {
+  const profileName = AppState.get('profile')?.name || 'Maestra';
+  const now = await _serverNow();
+  const timeStr = _fmtTime(now);
+
+  const excludedIds = new Set();
+
+  const modalId = 'quickEvModal';
+  const html = `
+    <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-sm p-6 flex flex-col gap-5">
+      <div class="flex items-center gap-3">
+        <span style="font-size:2.5rem">${ev.icon}</span>
+        <div>
+          <h3 class="text-lg font-black text-slate-800">${ev.label}</h3>
+          <p class="text-xs text-slate-400 font-bold">${timeStr} · ${profileName}</p>
+        </div>
+      </div>
+      <div>
+        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Desmarca si alguien es diferente:</p>
+        <div class="flex flex-wrap gap-2" id="studentChips">
+          ${students.map(s => `
+            <button class="schip on" data-sid="${s.id}" onclick="this.classList.toggle('on');this.classList.toggle('off')">
+              <span>${s.name.split(' ')[0]}</span>
+            </button>`).join('')}
+        </div>
+      </div>
+      <div class="flex gap-3">
+        <button onclick="Modal.close('${modalId}')" class="flex-1 py-3 text-slate-500 font-black text-xs uppercase border-2 border-slate-100 rounded-2xl hover:bg-slate-50">Cancelar</button>
+        <button id="btnConfirmQuick" onclick="App.routineConfirmSave('${ev.field}','${ev.value}','${modalId}')"
+          class="flex-2 flex-grow py-3 text-white font-black text-xs uppercase rounded-2xl active:scale-95 transition-all"
+          style="background:${ev.color};flex:2">
+          Confirmar
+        </button>
+      </div>
+    </div>`;
+  Modal.open(modalId, html);
+}
+
+export async function routineConfirmSave(field, value, modalId) {
+  const students = AppState.get('students') || [];
+  const classroom = AppState.get('classroom');
+  const today = _today();
+  const now = await _serverNow();
+  const timeStr = _fmtTime(now);
+
+  const chips = document.querySelectorAll('#studentChips .schip.on');
+  const included = [...chips].map(c => c.dataset.sid);
+  if (!included.length) { safeToast('Selecciona al menos un alumno', 'warning'); return; }
+
+  Modal.close(modalId);
+  const profile = AppState.get('profile');
+
+  const updates = included.map(sid => {
+    const existing = _logsMap[sid] || {};
+    const update = {
+      student_id:   parseInt(sid),
+      classroom_id: classroom.id,
+      date:         today,
+      status:       'published',
+    };
+    if (field === 'mood')  update.mood = value;
+    if (field === 'food')  update.food = value;
+    if (field === 'nap')   update.nap  = value;
+    return update;
+  });
+
+  // Guarda todos en paralelo con upsert
+  const { error } = await supabase.from('daily_logs')
+    .upsert(updates, { onConflict: 'student_id,date' });
+
+  if (error) { safeToast('Error al guardar', 'error'); return; }
+
+  // Actualiza mapa local
+  included.forEach(sid => {
+    if (!_logsMap[sid]) _logsMap[sid] = { student_id: parseInt(sid), date: today, infant_data:[] };
+    if (field === 'mood') _logsMap[sid].mood = value;
+    if (field === 'food') _logsMap[sid].food = value;
+    if (field === 'nap')  _logsMap[sid].nap  = value;
+    _logsMap[sid].created_at = now.toISOString();
+  });
+
+  _refreshStudentCards();
+  _showUndoBar(`${EVENTS.find(e=>e.field===field&&e.value===value)?.icon||'✅'} Registrado para ${included.length} alumnos`, {
+    field, value, studentIds: included.map(Number), today, classroomId: classroom.id
+  });
+  safeToast(`Registrado para ${included.length} alumno(s) — ${timeStr}`, 'success');
+}
+
+// ── Siesta para todos ─────────────────────────────────────────────────────────
+async function _confirmAllAndSaveEvent(students, today, classroomId, eventData) {
+  const now = await _serverNow();
+  const timeStr = _fmtTime(now);
+
+  const updates = await Promise.allSettled(students.map(async s => {
+    const existing = _logsMap[s.id] || { infant_data: [] };
+    const events   = [...(existing.infant_data || [])];
+
+    if (eventData.type === 'sleep' && eventData.start_time === '__now__') {
+      events.push({ id: crypto.randomUUID?.() || Math.random().toString(36).slice(2), type:'sleep', start_time: now.toISOString(), created_at: now.toISOString() });
+    } else {
+      events.push({ id: crypto.randomUUID?.() || Math.random().toString(36).slice(2), ...eventData, created_at: now.toISOString() });
+    }
+
+    return supabase.from('daily_logs').upsert({
+      student_id: s.id, classroom_id: classroomId, date: today,
+      infant_data: events, status: 'published'
+    }, { onConflict: 'student_id,date' });
+  }));
+
+  const ok = updates.filter(r => r.status === 'fulfilled').length;
+  safeToast(`${eventData.type === 'sleep' ? '😴' : '✅'} Registrado — ${timeStr}`, 'success');
+  await initRoutine();
+}
+
+// ── Despertar todos ───────────────────────────────────────────────────────────
+export async function routineWakeAll() {
+  const students = AppState.get('students') || [];
+  const classroom = AppState.get('classroom');
+  const today = _today();
+  const now = await _serverNow();
+  const timeStr = _fmtTime(now);
+
+  const toWake = students.filter(s => _sleepMap[s.id]);
+  if (!toWake.length) { safeToast('No hay siestas abiertas', 'info'); return; }
+
+  await Promise.allSettled(toWake.map(async s => {
+    const log = _logsMap[s.id] || { infant_data: [] };
+    const events = [...(log.infant_data || [])].map(e => {
+      if (e.type === 'sleep' && !e.end_time) {
+        const start = new Date(e.start_time);
+        const diffMs = now - start;
+        const h = Math.floor(diffMs / 3600000);
+        const m = Math.floor((diffMs % 3600000) / 60000);
+        return { ...e, end_time: now.toISOString(), duration: `${h}h ${m}m` };
+      }
+      return e;
+    });
+    return supabase.from('daily_logs').upsert(
+      { student_id: s.id, classroom_id: classroom.id, date: today, infant_data: events, status:'published' },
+      { onConflict: 'student_id,date' }
+    );
+  }));
+
+  safeToast(`😊 ${toWake.length} alumno(s) despertaron — ${timeStr}`, 'success');
+  await initRoutine();
+}
+
+// ── Selectores rápidos ────────────────────────────────────────────────────────
+async function _openMilkPicker(students, today, classroomId) {
+  const modalId = 'milkModal';
+  Modal.open(modalId, `
+    <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-xs p-6 text-center">
+      <div class="text-3xl mb-2">🍼</div>
+      <h3 class="text-lg font-black text-slate-800 mb-4">¿Cuántos oz?</h3>
+      <div class="grid grid-cols-4 gap-3 mb-5">
+        ${[2,4,6,8].map(oz => `
+          <button onclick="App.routineSaveMilk(${oz},'${modalId}')"
+            class="py-4 text-2xl font-black rounded-2xl border-2 border-slate-100 hover:border-blue-400 hover:bg-blue-50 active:scale-90 transition-all">
+            ${oz}<span class="block text-xs font-bold text-slate-400">oz</span>
+          </button>`).join('')}
+      </div>
+      <button onclick="Modal.close('${modalId}')" class="text-sm text-slate-400 hover:underline">Cancelar</button>
+    </div>`);
+}
+
+export async function routineSaveMilk(oz, modalId) {
+  const students  = AppState.get('students') || [];
+  const classroom = AppState.get('classroom');
+  const today     = _today();
+  const now       = await _serverNow();
+
+  Modal.close(modalId);
+  await Promise.allSettled(students.map(s => {
+    const events = [...(_logsMap[s.id]?.infant_data || [])];
+    events.push({ id: crypto.randomUUID?.() || Math.random().toString(36).slice(2), type:'milk', oz, created_at: now.toISOString() });
+    return supabase.from('daily_logs').upsert(
+      { student_id: s.id, classroom_id: classroom.id, date: today, infant_data: events, status:'published' },
+      { onConflict: 'student_id,date' }
+    );
+  }));
+  safeToast(`🍼 ${oz} oz registrado — ${_fmtTime(now)}`, 'success');
+  await initRoutine();
+}
+
+async function _openTempPicker(students, today, classroomId) {
+  const modalId = 'tempModal';
+  Modal.open(modalId, `
+    <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-xs p-6 text-center">
+      <div class="text-3xl mb-2">🌡</div>
+      <h3 class="text-lg font-black text-slate-800 mb-4">Temperatura</h3>
+      <div class="grid grid-cols-4 gap-2 mb-4">
+        ${[36.4,36.5,36.6,36.7,36.8,37.0,37.5,38.0].map(t => `
+          <button onclick="App.routineSaveTemp(${t},'${modalId}')"
+            class="py-3 text-sm font-black rounded-2xl border-2 ${t>=37.5?'border-red-200 text-red-600':'border-slate-100'} hover:border-orange-400 hover:bg-orange-50 active:scale-90 transition-all">
+            ${t}°
+          </button>`).join('')}
+      </div>
+      <button onclick="Modal.close('${modalId}')" class="text-sm text-slate-400 hover:underline">Cancelar</button>
+    </div>`);
+}
+
+export async function routineSaveTemp(temp, modalId) {
+  const students  = AppState.get('students') || [];
+  const classroom = AppState.get('classroom');
+  const today     = _today();
+  const now       = await _serverNow();
+  Modal.close(modalId);
+  await Promise.allSettled(students.map(s => {
+    const events = [...(_logsMap[s.id]?.infant_data || [])];
+    events.push({ id: crypto.randomUUID?.() || Math.random().toString(36).slice(2), type:'temp', value: temp, created_at: now.toISOString() });
+    return supabase.from('daily_logs').upsert(
+      { student_id: s.id, classroom_id: classroom.id, date: today, infant_data: events, status:'published' },
+      { onConflict: 'student_id,date' }
+    );
+  }));
+  safeToast(`🌡 ${temp}° registrado`, 'success');
+  await initRoutine();
+}
+
+async function _openNotePicker(students, today, classroomId) {
+  const modalId = 'noteModal';
+  Modal.open(modalId, `
+    <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-sm p-6">
+      <div class="text-3xl text-center mb-2">📝</div>
+      <h3 class="text-lg font-black text-slate-800 text-center mb-4">Nota para el aula</h3>
+      <textarea id="quickNote" rows="3" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl text-sm font-medium outline-none focus:border-orange-400 resize-none" placeholder="Escribe una observación..."></textarea>
+      <div class="flex gap-3 mt-4">
+        <button onclick="Modal.close('${modalId}')" class="flex-1 py-3 text-slate-500 font-black text-xs uppercase border-2 border-slate-100 rounded-2xl">Cancelar</button>
+        <button onclick="App.routineSaveNote('${modalId}')" class="flex-2 flex-grow py-3 bg-slate-700 text-white font-black text-xs uppercase rounded-2xl active:scale-95">Guardar</button>
+      </div>
+    </div>`);
+}
+
+export async function routineSaveNote(modalId) {
+  const note = document.getElementById('quickNote')?.value?.trim();
+  if (!note) return safeToast('Escribe una nota', 'warning');
+  const students  = AppState.get('students') || [];
+  const classroom = AppState.get('classroom');
+  const today     = _today();
+  const now       = await _serverNow();
+  Modal.close(modalId);
+  await Promise.allSettled(students.map(s =>
+    supabase.from('daily_logs').upsert(
+      { student_id: s.id, classroom_id: classroom.id, date: today, notes: note, status:'published' },
+      { onConflict: 'student_id,date' }
+    )
+  ));
+  safeToast('📝 Nota guardada', 'success');
+  await initRoutine();
+}
+
+async function _openMedPicker(students, today, classroomId) {
+  const modalId = 'medModal';
+  Modal.open(modalId, `
+    <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-sm p-6">
+      <div class="text-3xl text-center mb-2">💊</div>
+      <h3 class="text-lg font-black text-slate-800 text-center mb-4">Medicamento</h3>
+      <input id="medName" type="text" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl text-sm font-medium outline-none focus:border-pink-400 mb-3" placeholder="Nombre del medicamento">
+      <input id="medDose" type="text" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl text-sm font-medium outline-none focus:border-pink-400" placeholder="Dosis (ej. 5ml)">
+      <div class="flex gap-3 mt-4">
+        <button onclick="Modal.close('${modalId}')" class="flex-1 py-3 text-slate-500 font-black text-xs uppercase border-2 border-slate-100 rounded-2xl">Cancelar</button>
+        <button onclick="App.routineSaveMed('${modalId}')" class="flex-2 flex-grow py-3 bg-pink-500 text-white font-black text-xs uppercase rounded-2xl active:scale-95">Guardar</button>
+      </div>
+    </div>`);
+}
+
+export async function routineSaveMed(modalId) {
+  const name = document.getElementById('medName')?.value?.trim();
+  const dose = document.getElementById('medDose')?.value?.trim();
+  if (!name) return safeToast('Escribe el medicamento', 'warning');
+  const students  = AppState.get('students') || [];
+  const classroom = AppState.get('classroom');
+  const today     = _today();
+  const now       = await _serverNow();
+  Modal.close(modalId);
+  await Promise.allSettled(students.map(s => {
+    const events = [...(_logsMap[s.id]?.infant_data || [])];
+    events.push({ id: crypto.randomUUID?.() || Math.random().toString(36).slice(2), type:'med', name, dose: dose||'', created_at: now.toISOString() });
+    return supabase.from('daily_logs').upsert(
+      { student_id: s.id, classroom_id: classroom.id, date: today, infant_data: events, status:'published' },
+      { onConflict: 'student_id,date' }
+    );
+  }));
+  safeToast(`💊 ${name} registrado`, 'success');
+  await initRoutine();
+}
+
+// ── Barra de deshacer ─────────────────────────────────────────────────────────
+function _showUndoBar(msg, undoData) {
+  document.getElementById('routine-undo-bar')?.remove();
+  const bar = document.createElement('div');
+  bar.id    = 'routine-undo-bar';
+  bar.className = 'undo-bar';
+  bar.innerHTML = `
+    <span>${msg}</span>
+    <div class="undo-prog"><div class="undo-fill"></div></div>
+    <button onclick="App.routineUndo()" style="background:rgba(255,255,255,.15);border:none;color:white;font-weight:900;font-size:.75rem;padding:6px 12px;border-radius:10px;cursor:pointer;-webkit-tap-highlight-color:transparent">DESHACER</button>`;
+  document.body.appendChild(bar);
+
+  _pendingUndo = undoData;
+  clearTimeout(_undoTimer);
+  _undoTimer = setTimeout(() => {
+    bar.remove();
+    _pendingUndo = null;
+  }, 10000);
+}
+
+export async function routineUndo() {
+  document.getElementById('routine-undo-bar')?.remove();
+  clearTimeout(_undoTimer);
+  if (!_pendingUndo) return;
+
+  const { field, value, studentIds, today, classroomId } = _pendingUndo;
+  _pendingUndo = null;
+
+  await Promise.allSettled(studentIds.map(sid => {
+    const update = { student_id: sid, classroom_id: classroomId, date: today };
+    if (field === 'mood') update.mood = null;
+    if (field === 'food') update.food = null;
+    if (field === 'nap')  update.nap  = null;
+    return supabase.from('daily_logs')
+      .update(update)
+      .eq('student_id', sid)
+      .eq('date', today);
+  }));
+
+  safeToast('Deshecho correctamente', 'info');
+  await initRoutine();
+}
+
+// ── Actualizar tarjetas sin recargar todo ─────────────────────────────────────
+function _refreshStudentCards() {
+  const students = AppState.get('students') || [];
+  const grid = document.getElementById('studentsGrid');
+  if (!grid) return;
+  grid.innerHTML = students.map(s => _studentCard(s, _logsMap[s.id])).join('');
+}
+
+// ── Modal de estudiante individual ───────────────────────────────────────────
 export async function openStudentRoutine(studentId) {
-  const student = AppState.get('students').find(s => s.id == studentId);
+  const student = (AppState.get('students') || []).find(s => s.id == studentId);
   if (!student) return;
 
-  const today = new Date().toISOString().split('T')[0];
-  // FIX select('*'): fetch only the columns needed by the routine modal
+  const today = _today();
   const { data: log } = await supabase
     .from('daily_logs')
-    .select('id, student_id, date, mood, food, nap, eating, sleeping, activities, notes, infant_data, status')
+    .select('id, student_id, date, mood, food, nap, notes, infant_data, status, created_at')
     .eq('student_id', studentId)
     .eq('date', today)
     .maybeSingle();
-  
-  const isInfant = student.age_type === 'meses' || student.age_type === 'mes';
-  const modalId = 'routineStudentModal';
 
-  const content = isInfant 
-    ? _renderInfantRoutineUI(student, log, modalId)
-    : _renderStandardRoutineUI(student, log, modalId);
+  const valid = log && _isWithin12h(log.created_at);
+  const events = valid ? (log.infant_data || []) : [];
+  const modalId = `sr_${studentId}`;
 
-  Modal.open(modalId, content);
-  if (window.lucide) window.lucide.createIcons();
-}
+  // Timeline de eventos del día
+  const evTimeline = events.map(e => {
+    const t = e.created_at ? new Date(e.created_at).toLocaleTimeString('es-DO',{hour:'2-digit',minute:'2-digit',hour12:true}) : '';
+    const icons = { milk:'🍼', sleep:'😴', diaper:'💧', bath:'🚽', temp:'🌡', med:'💊', note:'📝' };
+    const icon  = icons[e.type] || '📌';
+    let detail  = '';
+    if (e.type==='milk')  detail = `${e.oz} oz`;
+    if (e.type==='sleep' && e.duration) detail = `${e.duration}`;
+    if (e.type==='temp')  detail = `${e.value}°`;
+    if (e.type==='med')   detail = e.name;
+    if (e.type==='diaper') detail = e.subtype==='wet'?'mojado':'sucio';
+    return `<div class="flex items-center gap-3 py-2 border-b border-slate-50 last:border-0">
+      <span class="text-xl w-8 text-center">${icon}</span>
+      <div class="flex-1"><span class="text-sm font-bold text-slate-700 capitalize">${e.type}</span>${detail?` <span class="text-xs text-slate-400">(${detail})</span>`:''}</div>
+      <span class="text-[10px] font-bold text-slate-400">${t}</span>
+    </div>`;
+  }).join('') || '<p class="text-sm text-slate-400 text-center py-4">Sin eventos hoy</p>';
 
-function _renderInfantRoutineUI(student, log, modalId) {
-  const infantData = log?.infant_data || [];
-  const lastEntry = [...infantData].reverse()[0];
-  
-  const now = new Date();
-  const currentHourStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
-
-  const timeOptions = [];
-  for(let h=7; h<=18; h++) {
-    for(let m=0; m<60; m+=30) {
-      const hh = h > 12 ? h-12 : h;
-      const ampm = h >= 12 ? 'PM' : 'AM';
-      const time = `${hh}:${m.toString().padStart(2, '0')} ${ampm}`;
-      timeOptions.push(time);
-    }
-  }
-
-  const activities = ["Sensorial", "Motricidad", "Música", "Lectura", "Juego libre", "Estimulación temprana", "Arte"];
-
-  return `
-    <div class="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden animate-fadeIn flex flex-col max-h-[95vh]">
-      <div class="bg-gradient-to-r from-[#28B54D] to-[#239943] p-6 text-white relative">
-        <button onclick="Modal.close('${modalId}')" class="absolute top-4 right-4 p-2 bg-white/20 rounded-full hover:bg-white/30 transition-colors">
-          <i data-lucide="x" class="w-5 h-5"></i>
-        </button>
-        <div class="flex items-center gap-4">
-          <div class="w-16 h-16 rounded-2xl bg-white/20 border-2 border-white/30 overflow-hidden shadow-inner shrink-0 flex items-center justify-center font-black text-2xl text-white">
-            ${student.avatar_url ? `<img src="${student.avatar_url}" class="w-full h-full object-cover">` : student.name.charAt(0)}
+  Modal.open(modalId, `
+    <div class="bg-white w-full max-w-sm rounded-[2rem] shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
+      <div class="bg-gradient-to-r from-[#28B54D] to-[#239943] p-5 text-white relative">
+        <button onclick="Modal.close('${modalId}')" class="absolute top-4 right-4 p-2 bg-white/20 rounded-full"><i data-lucide="x" class="w-4 h-4"></i></button>
+        <div class="flex items-center gap-3">
+          <div class="w-14 h-14 rounded-2xl bg-white/20 overflow-hidden flex items-center justify-center font-black text-xl text-white">
+            ${student.avatar_url ? `<img src="${student.avatar_url}" class="w-full h-full object-cover">` : safeEscapeHTML(student.name.charAt(0))}
           </div>
           <div>
-            <h3 class="text-xl font-black">${safeEscapeHTML(student.name)}</h3>
-            <p class="text-xs font-bold text-green-100 uppercase tracking-widest">Registro del Bebé 🍼</p>
+            <h3 class="text-lg font-black">${safeEscapeHTML(student.name)}</h3>
+            <p class="text-xs text-green-100 font-bold">${student.age||''} ${student.age_type||'años'} · Reporte del día</p>
           </div>
         </div>
       </div>
-
-      <div class="p-6 space-y-6 overflow-y-auto custom-scrollbar bg-slate-50/50">
-        
-        <!-- Bloque 1: Hora -->
-        <div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm">
-          <label class="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-3 ml-1">Hora del Registro</label>
-          <select id="infantTime" class="w-full p-3.5 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold text-sm outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-400 transition-all">
-            ${timeOptions.map(t => `<option value="${t}" ${t === currentHourStr ? 'selected' : ''}>${t}</option>`).join('')}
-          </select>
-        </div>
-
-        <!-- Bloque 2: Leche -->
-        <div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm">
-          <label class="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-3 ml-1">Leche (Onzas)</label>
-          <div class="flex items-center gap-4">
-            <input type="number" id="infantMilk" min="0" max="12" step="0.5" placeholder="0" class="flex-1 p-3.5 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold text-lg outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-400 transition-all">
-            <span class="font-black text-slate-400 uppercase text-[10px] tracking-widest">oz</span>
-          </div>
-        </div>
-
-        <!-- Bloque 3: Comida -->
-        <div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm">
-          <label class="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-3 ml-1">Alimentación</label>
-          <div class="grid grid-cols-2 gap-2">
-            ${[
-              {id: 'none', label: 'No comió', emoji: '🙅'},
-              {id: 'little', label: 'Poco', emoji: '🍲'},
-              {id: 'half', label: 'La mitad', emoji: '🥣'},
-              {id: 'all', label: 'Todo', emoji: '🍽️'}
-            ].map(f => `
-              <label class="relative flex items-center gap-3 p-3 bg-slate-50 border-2 border-slate-100 rounded-2xl cursor-pointer hover:bg-blue-50 transition-all group">
-                <input type="radio" name="infantFood" value="${f.id}" class="hidden peer">
-                <div class="w-5 h-5 rounded-full border-2 border-slate-300 peer-checked:border-blue-500 peer-checked:bg-blue-500 flex items-center justify-center transition-all">
-                  <div class="w-2 h-2 bg-white rounded-full"></div>
-                </div>
-                <span class="text-xl">${f.emoji}</span>
-                <span class="text-xs font-bold text-slate-600">${f.label}</span>
-              </label>
-            `).join('')}
-          </div>
-        </div>
-
-        <!-- Bloque 4: Actividades -->
-        <div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm">
-          <label class="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-3 ml-1">Actividades</label>
-          <div class="flex flex-wrap gap-2">
-            ${activities.map(a => `
-              <label class="relative cursor-pointer group">
-                <input type="checkbox" name="infantActivity" value="${a}" class="hidden peer">
-                <span class="block px-4 py-2 bg-slate-50 border-2 border-slate-100 rounded-xl text-xs font-bold text-slate-500 peer-checked:bg-indigo-50 peer-checked:border-indigo-400 peer-checked:text-indigo-700 transition-all">
-                  ${a}
-                </span>
-              </label>
-            `).join('')}
-          </div>
-        </div>
-
-        <!-- Bloque 5: Comentario -->
-        <div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm">
-          <label class="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-3 ml-1">Observación adicional 📝</label>
-          <textarea id="infantNotes" rows="2" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl text-sm font-medium outline-none focus:border-blue-400 transition-all resize-none" placeholder="Escribe algo importante..."></textarea>
-        </div>
-
-        <!-- Historial Rápido -->
-        <div class="pt-2">
-          <label class="block text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-3">Último Registro</label>
-          ${lastEntry ? `
-            <div class="p-4 bg-white rounded-3xl border border-slate-100 flex items-center gap-3">
-              <div class="w-10 h-10 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center font-black">🍼</div>
-              <div class="flex-1 min-w-0">
-                <p class="text-[10px] font-black text-slate-400 uppercase">${new Date(lastEntry.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</p>
-                <p class="text-xs font-bold text-slate-700 truncate">${lastEntry.comment || 'Registro de rutina'}</p>
+      <div class="p-5 overflow-y-auto flex-1 space-y-5">
+        <!-- Estado rápido -->
+        <div class="grid grid-cols-3 gap-3">
+          ${[
+            {label:'Ánimo', opts:{feliz:'😊',normal:'😐',triste:'😢',enojado:'😡'}, field:'mood', current: valid?log.mood:''},
+            {label:'Comida', opts:{todo:'🍽️',poco:'🍲',nada:'🙅'}, field:'food', current: valid?log.food:''},
+            {label:'Siesta', opts:{si:'💤',no:'☀️'}, field:'nap', current: valid?log.nap:''},
+          ].map(g => `
+            <div>
+              <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">${g.label}</p>
+              <div class="flex flex-wrap gap-1">
+                ${Object.entries(g.opts).map(([v,e]) => `
+                  <button onclick="App.routineSingleField(${studentId},'${g.field}','${v}','${modalId}')"
+                    class="text-xl p-1.5 rounded-xl border-2 transition-all active:scale-90 ${g.current===v?'border-orange-400 bg-orange-50':'border-slate-100'}">
+                    ${e}
+                  </button>`).join('')}
               </div>
-            </div>
-          ` : '<p class="text-xs text-slate-400 italic ml-1">No hay registros hoy.</p>'}
+            </div>`).join('')}
+        </div>
+        <!-- Notas -->
+        <div>
+          <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Observaciones</p>
+          <textarea id="singleNote_${studentId}" rows="2"
+            class="w-full p-3 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm outline-none focus:border-orange-400 resize-none"
+            placeholder="Notas adicionales...">${valid&&log.notes ? safeEscapeHTML(log.notes):''}</textarea>
+        </div>
+        <!-- Timeline -->
+        <div>
+          <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Eventos del día</p>
+          <div class="bg-slate-50 rounded-2xl p-3">${evTimeline}</div>
         </div>
       </div>
-
-      <div class="p-6 bg-white border-t border-slate-100">
-        <button onclick="App.saveInfantEntry('${student.id}')" id="btnSaveInfant"
-          class="w-full py-4 bg-[#FF8A00] text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-[#E07900] transition-all shadow-lg shadow-orange-100 flex items-center justify-center gap-2 active:scale-95">
-          <i data-lucide="save" class="w-4 h-4"></i> Guardar Registro
+      <div class="p-5 pt-0">
+        <button onclick="App.routineSaveSingle(${studentId},'${modalId}')" id="btnSaveModalRoutine"
+          class="w-full py-4 text-white font-black text-xs uppercase rounded-2xl active:scale-95 transition-all flex items-center justify-center gap-2"
+          style="background:#FF8A00">
+          <i data-lucide="check-circle" class="w-4 h-4"></i> Guardar
         </button>
       </div>
-    </div>
-  `;
+    </div>`);
+
+  if (window.lucide) lucide.createIcons();
 }
 
-function _renderStandardRoutineUI(student, log, modalId) {
-  const isValid = log && _isWithin12h(log.created_at);
-  const currentMood  = isValid ? (log?.mood || '') : '';
-  const currentFood  = isValid ? (log?.food || '') : '';
-  const currentSleep = isValid ? (log?.nap || '') : '';
-  const currentNotes = isValid ? (log?.notes || '') : '';
-
-    const moodEmojis = { feliz: '😊', normal: '😐', triste: '😢', enojado: '😡' };
-    const foodEmojis = { todo: '🍽️', poco: '🍲', nada: '🙅' };
-    const sleepEmojis = { si: '💤', no: '☀️' };
-
-  return `
-    <div class="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden animate-fadeIn flex flex-col max-h-[90vh]">
-      <!-- Header Verde -->
-      <div class="bg-gradient-to-r from-[#28B54D] to-[#239943] p-6 text-white relative">
-        <button onclick="Modal.close('${modalId}')" class="absolute top-4 right-4 p-2 bg-white/20 rounded-full hover:bg-white/30 transition-colors">
-          <i data-lucide="x" class="w-5 h-5"></i>
-        </button>
-        <div class="flex items-center gap-4">
-          <div class="w-16 h-16 rounded-2xl bg-white/20 border-2 border-white/30 overflow-hidden shadow-inner shrink-0 flex items-center justify-center font-black text-2xl text-white">
-            ${student.avatar_url ? `<img src="${student.avatar_url}" class="w-full h-full object-cover">` : student.name.charAt(0)}
-          </div>
-          <div>
-            <h3 class="text-xl font-black">${safeEscapeHTML(student.name)}</h3>
-            <p class="text-xs font-bold text-green-100 uppercase tracking-widest">Reporte de Rutina</p>
-          </div>
-        </div>
-      </div>
-
-      <div class="p-6 space-y-6 overflow-y-auto custom-scrollbar">
-        <!-- 1. Estado de Ánimo -->
-        <div class="space-y-3">
-          <label class="block text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">¿Cómo está de ánimo? ☀️</label>
-          <div class="grid grid-cols-4 gap-2">
-            ${Object.entries(moodEmojis).map(([v, e]) => `
-              <button onclick="App.updateRoutineFieldInModal('${student.id}','mood','${v}')"
-                class="routine-modal-mood-${student.id} flex flex-col items-center justify-center p-3 rounded-2xl border-2 transition-all active:scale-90
-                ${currentMood === v ? 'border-orange-400 bg-orange-50 shadow-md' : 'border-slate-100 bg-slate-50'}"
-                data-val="${v}">
-                <span class="text-2xl mb-1">${e}</span>
-                <span class="text-[9px] font-black uppercase text-slate-500">${v}</span>
-              </button>
-            `).join('')}
-          </div>
-        </div>
-
-        <!-- 2. Alimentación -->
-        <div class="space-y-3">
-          <label class="block text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">¿Cómo comió hoy? 🍽️</label>
-          <div class="grid grid-cols-3 gap-2">
-            ${Object.entries(foodEmojis).map(([v, e]) => `
-              <button onclick="App.updateRoutineFieldInModal('${student.id}','food','${v}')"
-                class="routine-modal-food-${student.id} flex flex-col items-center justify-center p-3 rounded-2xl border-2 transition-all active:scale-90
-                ${currentFood === v ? 'border-emerald-400 bg-emerald-50 shadow-md' : 'border-slate-100 bg-slate-50'}"
-                data-val="${v}">
-                <span class="text-2xl mb-1">${e}</span>
-                <span class="text-[9px] font-black uppercase text-slate-500">${v}</span>
-              </button>
-            `).join('')}
-          </div>
-        </div>
-
-        <!-- 3. Siesta -->
-        <div class="space-y-3">
-          <label class="block text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">¿Hizo su siesta? 💤</label>
-          <div class="grid grid-cols-2 gap-3">
-            ${Object.entries(sleepEmojis).map(([v, e]) => `
-              <button onclick="App.updateRoutineFieldInModal('${student.id}','sleep','${v}')"
-                class="routine-modal-sleep-${student.id} flex items-center justify-center gap-3 p-4 rounded-2xl border-2 transition-all active:scale-90
-                ${currentSleep === v ? 'border-indigo-400 bg-indigo-50 shadow-md' : 'border-slate-100 bg-slate-50'}"
-                data-val="${v}">
-                <span class="text-2xl">${e}</span>
-                <span class="text-xs font-black uppercase text-slate-600">${v === 'si' ? 'Durmió' : 'No durmió'}</span>
-              </button>
-            `).join('')}
-          </div>
-        </div>
-
-        <!-- 4. Notas -->
-        <div class="space-y-3">
-          <label class="block text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Observaciones adicionales 📝</label>
-          <textarea id="modal-note-${student.id}" 
-            class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl text-sm font-medium outline-none focus:border-orange-400 transition-all resize-none"
-            rows="3" placeholder="Ej: Estuvo muy participativo hoy...">${safeEscapeHTML(currentNotes)}</textarea>
-        </div>
-      </div>
-
-      <div class="p-6 pt-0 mt-auto">
-        <button onclick="App.saveRoutineInModal('${student.id}')" id="btnSaveModalRoutine"
-          class="w-full py-4 bg-[#FF8A00] text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-[#E07900] transition-all shadow-lg shadow-orange-100 flex items-center justify-center gap-2 active:scale-95">
-          <i data-lucide="check-circle" class="w-4 h-4"></i> Guardar y Cerrar
-        </button>
-      </div>
-    </div>
-  `;
-}
-
-/**
- * Registra un evento de bebé (leche, siesta, vomito, pañal) - Deprecado por saveInfantEntry pero mantenido por compatibilidad
- */
-export async function registerInfantEvent(sid, type, val) {
-  try {
-    const today = new Date().toISOString().split('T')[0];
-    const classroom = AppState.get('classroom');
-    
-    const updatedLog = await MaestraApi.upsertDailyLog({
-      student_id: sid,
-      classroom_id: classroom.id,
-      date: today,
-      infant_event: { type, value: val }
-    });
-    
-    safeToast(`Registro de ${type} guardado`);
-    
-    const modalContent = _renderInfantRoutineUI(
-      AppState.get('students').find(s => s.id == sid),
-      updatedLog,
-      'routineStudentModal'
-    );
-    document.getElementById('routineStudentModal-inner').innerHTML = modalContent;
-    if (window.lucide) window.lucide.createIcons();
-
-  } catch (e) {
-    safeToast('Error al registrar evento', 'error');
-  }
-}
-
-/**
- * Nueva lógica para guardar entrada estructurada de bebé
- */
-export async function saveInfantEntry(sid) {
-  const btn = document.getElementById('btnSaveInfant');
-  if (btn) { btn.disabled = true; btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin w-4 h-4"></i> Guardando...'; }
-  if (window.lucide) window.lucide.createIcons();
-
-  try {
-    const time = document.getElementById('infantTime').value;
-    const milk = parseFloat(document.getElementById('infantMilk').value) || 0;
-    const food = document.querySelector('input[name="infantFood"]:checked')?.value;
-    const activities = Array.from(document.querySelectorAll('input[name="infantActivity"]:checked')).map(cb => cb.value);
-    const notes = document.getElementById('infantNotes').value.trim();
-
-    // Generar comentario inteligente
-    let commentParts = [];
-    if (milk > 0) commentParts.push(`Tomó ${milk} oz de leche.`);
-    else if (milk === 0 && document.getElementById('infantMilk').value !== '') commentParts.push(`No quiso tomar leche.`);
-
-    if (food) {
-      const foodMap = { none: 'No quiso comer.', little: 'Comió una pequeña cantidad.', half: 'Comió la mitad de su comida.', all: 'Comió toda su comida.' };
-      commentParts.push(foodMap[food]);
-    }
-
-    if (activities.length > 0) {
-      commentParts.push(`Participó en actividades de ${activities.join(', ').toLowerCase()}.`);
-    }
-
-    if (notes) commentParts.push(notes);
-
-    const finalComment = commentParts.join(' ');
-
-    const today = new Date().toISOString().split('T')[0];
-    const classroom = AppState.get('classroom');
-
-    await MaestraApi.upsertDailyLog({
-      student_id: sid,
-      classroom_id: classroom.id,
-      date: today,
-      infant_event: {
-        type: 'structured_entry',
-        time, milk, food, activities, notes,
-        comment: finalComment
-      }
-    });
-
-    safeToast('Registro guardado correctamente');
-    Modal.close('routineStudentModal');
-    initRoutine();
-
-  } catch (e) {
-    console.error(e);
-    safeToast('Error al guardar el registro', 'error');
-    if (btn) { btn.disabled = false; btn.innerHTML = '<i data-lucide="save" class="w-4 h-4"></i> Guardar Registro'; }
-    if (window.lucide) window.lucide.createIcons();
-  }
-}
-
-/**
- * Helper para actualizar en modal y luego guardar
- */
-export function updateRoutineFieldInModal(sid, field, val) {
-  const btns = document.querySelectorAll(`.routine-modal-${field}-${sid}`);
-  const colorMap = {
-    mood: 'border-orange-400 bg-orange-50 shadow-md',
-    food: 'border-emerald-400 bg-emerald-50 shadow-md',
-    sleep: 'border-indigo-400 bg-indigo-50 shadow-md'
-  };
-  const activeCls = colorMap[field].split(' ');
-  
-  btns.forEach(b => {
-    b.classList.remove(...activeCls);
-    b.classList.add('border-slate-100', 'bg-slate-50');
-    b.classList.remove('shadow-md');
-    if (b.dataset.val === val) {
-      b.classList.add(...activeCls);
-      b.classList.remove('border-slate-100', 'bg-slate-50');
-    }
-  });
-  // Auto-save
-  updateRoutineField(sid, field, val);
-}
-
-export async function saveRoutineInModal(sid) {
-  const note = document.getElementById(`modal-note-${sid}`)?.value;
-  const mood = document.querySelector(`.routine-modal-mood-${sid}.border-orange-400`)?.dataset.val;
-  const food = document.querySelector(`.routine-modal-food-${sid}.border-emerald-400`)?.dataset.val;
-  const sleep = document.querySelector(`.routine-modal-sleep-${sid}.border-indigo-400`)?.dataset.val;
-
-  const updates = { notes: note };
-  if (mood) updates.mood = mood;
-  if (food) updates.food = food;
-  if (sleep) updates.nap = sleep;
-
-  try {
-    const today = new Date().toISOString().split('T')[0];
-    const classroom = AppState.get('classroom');
-
-    await MaestraApi.upsertDailyLog({
-      student_id: sid,
-      classroom_id: classroom.id,
-      date: today,
-      ...updates
-    });
-
-    safeToast('Reporte guardado');
-    Modal.close('routineStudentModal');
-    initRoutine(); 
-  } catch (e) {
-    safeToast('Error al guardar', 'error');
-  }
-}
-
-/**
- * Modal para reporte masivo ( Bulk Report ).
- */
-export async function openBulkRoutineModal() {
-  const modalId = 'bulkRoutineModal';
-  const content = `
-    <div class="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden animate-fadeIn">
-      <div class="bg-gradient-to-r from-[#28B54D] to-[#239943] px-8 py-5 flex justify-between items-center">
-        <h3 class="text-lg font-black text-white flex items-center gap-2"><span>📋</span> Rutina General</h3>
-        <button onclick="Modal.close('${modalId}')" class="p-2 bg-white/20 rounded-full hover:bg-white/30 transition-colors">
-          <i data-lucide="x" class="w-5 h-5 text-white"></i>
-        </button>
-      </div>
-      <div class="p-8">
-        <p class="text-sm text-slate-500 mb-6">Aplica el mismo reporte para todos los estudiantes presentes hoy.</p>
-        <div class="space-y-6">
-          <div class="grid grid-cols-2 gap-4">
-            <div class="space-y-2">
-              <label class="text-[10px] font-black uppercase text-slate-400 ml-1">Ánimo 😊</label>
-              <select id="bulkMood" class="w-full p-3 bg-slate-50 border-2 border-slate-100 rounded-xl font-bold text-sm outline-none focus:border-[#28B54D]">
-                <option value="feliz">Feliz 😊</option>
-                <option value="normal">Normal 😐</option>
-              </select>
-            </div>
-            <div class="space-y-2">
-              <label class="text-[10px] font-black uppercase text-slate-400 ml-1">Comida 🍽️</label>
-              <select id="bulkFood" class="w-full p-3 bg-slate-50 border-2 border-slate-100 rounded-xl font-bold text-sm outline-none focus:border-[#28B54D]">
-                <option value="todo">Todo 😋</option>
-                <option value="poco">Poco 🍲</option>
-              </select>
-            </div>
-          </div>
-          <div class="space-y-2">
-            <label class="text-[10px] font-black uppercase text-slate-400 ml-1">Siesta 💤</label>
-            <select id="bulkSleep" class="w-full p-3 bg-slate-50 border-2 border-slate-100 rounded-xl font-bold text-sm outline-none focus:border-[#28B54D]">
-              <option value="si">Durmió 💤</option>
-              <option value="no">No durmió ☀️</option>
-            </select>
-          </div>
-          <div class="flex gap-3 pt-4">
-            <button onclick="Modal.close('${modalId}')" class="flex-1 py-4 text-slate-400 font-black text-xs uppercase tracking-widest hover:bg-slate-50 rounded-2xl">Cancelar</button>
-            <button onclick="App.applyBulkRoutine()" id="btnBulkSave" class="flex-[2] py-4 bg-[#FF8A00] text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-orange-100 hover:bg-[#E07900] active:scale-95 transition-all">Aplicar a Todos</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  `;
-  Modal.open(modalId, content);
-}
-
-export async function applyBulkRoutine() {
-  const btn = document.getElementById('btnBulkSave');
-  if (!btn) return;
-  
-  btn.disabled = true;
-  btn.innerHTML = 'Aplicando...';
-  
-  const mood = document.getElementById('bulkMood').value;
-  const food = document.getElementById('bulkFood').value;
-  const sleep = document.getElementById('bulkSleep').value;
-  
-  const students = AppState.get('students') || [];
+export async function routineSingleField(studentId, field, value, modalId) {
+  // Resalta visualmente el botón seleccionado
+  const allBtns = document.querySelectorAll(`[onclick*="routineSingleField"][onclick*="${field}"]`);
+  allBtns.forEach(b => { b.className = b.className.replace('border-orange-400 bg-orange-50','border-slate-100'); });
+  const clicked = [...allBtns].find(b => b.getAttribute('onclick').includes(`'${value}'`));
+  if (clicked) clicked.className = clicked.className.replace('border-slate-100','border-orange-400 bg-orange-50');
+  // Guarda inmediatamente
+  const today    = _today();
   const classroom = AppState.get('classroom');
-  const today = new Date().toISOString().split('T')[0];
+  const update    = { student_id: parseInt(studentId), classroom_id: classroom.id, date: today, status:'published' };
+  update[field]   = value;
+  await supabase.from('daily_logs').upsert(update, { onConflict: 'student_id,date' });
+  if (!_logsMap[studentId]) _logsMap[studentId] = { student_id: parseInt(studentId), date: today, infant_data:[] };
+  _logsMap[studentId][field] = value;
+  _logsMap[studentId].created_at = new Date().toISOString();
+  _refreshStudentCards();
+}
 
-  try {
-    const promises = students.map(s => MaestraApi.upsertDailyLog({
-      student_id: s.id,
-      classroom_id: classroom.id,
-      date: today,
-      mood, food, nap: sleep
-    }));
-    
-    await Promise.all(promises);
-    safeToast(`Rutina aplicada a ${students.length} estudiantes`);
-    
-    Modal.close('bulkRoutineModal');
-    initRoutine();
-    
-    if (window.WallModule) {
-      window.WallModule.loadPosts(); 
-    }
-  } catch (_) {
-    safeToast('Error al aplicar rutina masiva', 'error');
-    btn.disabled = false;
-    btn.innerHTML = 'Aplicar a Todos';
+export async function routineSaveSingle(studentId, modalId) {
+  const note      = document.getElementById(`singleNote_${studentId}`)?.value?.trim();
+  const today     = _today();
+  const classroom = AppState.get('classroom');
+  if (note !== undefined) {
+    await supabase.from('daily_logs').upsert(
+      { student_id: parseInt(studentId), classroom_id: classroom.id, date: today, notes: note, status:'published' },
+      { onConflict: 'student_id,date' }
+    );
+    if (_logsMap[studentId]) _logsMap[studentId].notes = note;
   }
+  Modal.close(modalId);
+  _refreshStudentCards();
+  safeToast('Guardado', 'success');
 }
 
-/**
- * Actualiza un campo visualmente y guarda en DB.
- */
-export async function updateRoutineField(studentId, field, value) {
-  await saveRoutineLog(studentId, field, value);
+// ── Reporte masivo (legacy) ───────────────────────────────────────────────────
+export async function openBulkRoutineModal() {
+  const students  = AppState.get('students') || [];
+  const classroom = AppState.get('classroom');
+  const today     = _today();
+  const modalId   = 'bulkRoutine';
+
+  Modal.open(modalId, `
+    <div class="bg-white w-full max-w-sm rounded-[2rem] shadow-2xl p-6 flex flex-col gap-5">
+      <h3 class="text-lg font-black text-slate-800 text-center">Reporte Masivo</h3>
+      <p class="text-xs text-slate-400 text-center -mt-3">Se aplica a todos los alumnos del aula</p>
+      <div class="space-y-4">
+        ${[
+          {label:'Ánimo',  opts:{feliz:'😊 Feliz',normal:'😐 Normal',triste:'😢 Triste'}, id:'bulk_mood'},
+          {label:'Comida', opts:{todo:'🍽️ Todo',poco:'🍲 Poco',nada:'🙅 Nada'},          id:'bulk_food'},
+          {label:'Siesta', opts:{si:'💤 Durmió',no:'☀️ No durmió'},                       id:'bulk_nap'},
+        ].map(g => `
+          <div>
+            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">${g.label}</label>
+            <select id="${g.id}" class="w-full p-3 border-2 border-slate-100 rounded-xl text-sm font-bold outline-none focus:border-orange-400 bg-slate-50">
+              <option value="">Sin cambio</option>
+              ${Object.entries(g.opts).map(([v,l]) => `<option value="${v}">${l}</option>`).join('')}
+            </select>
+          </div>`).join('')}
+      </div>
+      <div class="flex gap-3">
+        <button onclick="Modal.close('${modalId}')" class="flex-1 py-3 text-slate-500 font-black text-xs uppercase border-2 border-slate-100 rounded-2xl">Cancelar</button>
+        <button onclick="App.applyBulkRoutine('${modalId}')" class="flex-2 flex-grow py-3 bg-[#28B54D] text-white font-black text-xs uppercase rounded-2xl active:scale-95">Aplicar</button>
+      </div>
+    </div>`);
 }
 
-/**
- * Guarda un campo en la DB con upsert.
- */
-export async function saveRoutineLog(studentId, field = 'notes', value = null) {
-  if (_saving[studentId + field]) return;
-  _saving[studentId + field] = true;
+export async function applyBulkRoutine(modalId) {
+  const mood = document.getElementById('bulk_mood')?.value;
+  const food = document.getElementById('bulk_food')?.value;
+  const nap  = document.getElementById('bulk_nap')?.value;
+  if (!mood && !food && !nap) { safeToast('Selecciona al menos un campo', 'warning'); return; }
 
-  try {
-    const classroom = AppState.get('classroom');
-    const today = new Date().toISOString().split('T')[0];
-    const fieldMap = { mood: 'mood', food: 'food', sleep: 'nap', notes: 'notes' };
-    const dbField  = fieldMap[field] || field;
-    const fieldValue = value ?? '';
+  const students  = AppState.get('students') || [];
+  const classroom = AppState.get('classroom');
+  const today     = _today();
+  const now       = new Date();
 
-    await MaestraApi.upsertDailyLog({
-      student_id:   studentId,
-      classroom_id: classroom.id,
-      date:         today,
-      [dbField]:    fieldValue
-    });
+  Modal.close(modalId);
+  const updates = students.map(s => {
+    const u = { student_id: s.id, classroom_id: classroom.id, date: today, status:'published' };
+    if (mood) u.mood = mood;
+    if (food) u.food = food;
+    if (nap)  u.nap  = nap;
+    return u;
+  });
 
-  } catch (_) {
-    safeToast('Error al guardar. Intenta de nuevo.', 'error');
-  } finally {
-    _saving[studentId + field] = false;
-  }
+  const { error } = await supabase.from('daily_logs').upsert(updates, { onConflict:'student_id,date' });
+  if (error) return safeToast('Error al guardar', 'error');
+
+  students.forEach(s => {
+    if (!_logsMap[s.id]) _logsMap[s.id] = { student_id:s.id, date:today, infant_data:[] };
+    if (mood) _logsMap[s.id].mood = mood;
+    if (food) _logsMap[s.id].food = food;
+    if (nap)  _logsMap[s.id].nap  = nap;
+    _logsMap[s.id].created_at = now.toISOString();
+  });
+
+  _refreshStudentCards();
+  safeToast(`Reporte aplicado a ${students.length} alumnos`, 'success');
 }
 
-export function openNewRoutineModal() {
-  safeToast('Toca a un estudiante para reportar su rutina diaria.', 'info');
-}
+// Alias compatibilidad con llamadas antiguas
+export { openBulkRoutineModal as openNewRoutineModal };
+export const saveRoutineLog          = async () => {};
+export const updateRoutineField      = async () => {};
+export const registerInfantEvent     = async () => {};
+export const saveInfantEntry         = async () => {};
+export const updateRoutineFieldInModal = routineSingleField;
+export const saveRoutineInModal      = routineSaveSingle;
+export const openStudentRoutine_old  = openStudentRoutine;

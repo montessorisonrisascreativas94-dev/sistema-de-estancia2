@@ -489,6 +489,13 @@
           <span class="flex-1 text-left">Comunicación</span>
         </button>
         
+        <!-- Rutina Diaria -->
+        <button type="button" data-target="rutina-diaria" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 font-bold text-sm" aria-label="Rutina Diaria">
+          <i data-lucide="clipboard-list" class="w-5 h-5 shrink-0"></i>
+          <span class="flex-1 text-left">Rutina Diaria</span>
+          <span id="badge-class" class="hidden min-w-[18px] h-[18px] rounded-full bg-[#FF7A00] text-white text-[9px] font-black flex items-center justify-center px-1">0</span>
+        </button>
+
         <!-- Mis Reportes -->
         <button type="button" data-target="reports" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 font-bold text-sm" aria-label="Mis Reportes">
           <i data-lucide="file-alert" class="w-5 h-5 shrink-0"></i>
@@ -1155,6 +1162,32 @@
                     <p class="font-bold">No tienes reportes aún</p>
                     <p class="text-sm mt-1">Crea tu primer reporte haciendo clic en "Nuevo Reporte"</p>
                   </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- RUTINA DIARIA -->
+          <section id="rutina-diaria" class="section hidden">
+            <div class="flex flex-col gap-6">
+              <div class="flex items-center justify-between">
+                <h3 class="text-2xl font-black text-[#1A2340] flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-xl bg-[#28B54D] text-white flex items-center justify-center shadow-lg shadow-green-200">
+                    <i data-lucide="clipboard-list" class="w-5 h-5"></i>
+                  </div>
+                  Rutina de Hoy
+                </h3>
+                <div class="flex items-center gap-2">
+                  <input type="date" id="rutinaDatePicker" class="border-2 border-slate-100 rounded-xl px-3 py-2 text-sm font-bold text-slate-600 outline-none focus:border-[#28B54D] bg-white" onchange="DailyReportModule.loadDate(this.value)">
+                  <button onclick="DailyReportModule.load()" class="p-2 rounded-xl bg-slate-100 text-slate-500 hover:bg-slate-200 transition-all" title="Actualizar">
+                    <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                  </button>
+                </div>
+              </div>
+              <div id="dailyReportContainer">
+                <div class="animate-pulse space-y-4">
+                  <div class="h-32 bg-slate-100 rounded-2xl"></div>
+                  <div class="h-40 bg-slate-100 rounded-2xl"></div>
                 </div>
               </div>
             </div>

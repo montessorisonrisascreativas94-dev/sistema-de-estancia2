@@ -1,11 +1,13 @@
 {
-  "name": "Asistencia — Sonrisas Creativas",
-  "short_name": "Asistencia SC",
+  "name": "Ponche Digital - Sonrisas Creativas",
+  "short_name": "Ponche SC",
   "description": "Terminal de asistencia del Colegio Montessori Sonrisas Creativas",
   "start_url": "/attendance-live.html",
+  "scope": "/",
   "display": "standalone",
+  "orientation": "portrait-primary",
   "background_color": "#FFFFFF",
-  "theme_color": "#0B63C7",
+  "theme_color": "#28B54D",
   "icons": [
     {
       "src": "logo/android-chrome-192x192.png",
@@ -18,8 +20,15 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
+    },
+    {
+      "src": "logo/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
     }
   ],
   "categories": ["education"],
-  "lang": "es"
+  "lang": "es-DO",
+  "prefer_related_applications": false
 }

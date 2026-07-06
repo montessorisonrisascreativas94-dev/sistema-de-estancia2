@@ -11,6 +11,7 @@ import { FeedModule }      from './feed.js';
 import { ProfileModule }   from './profile.js';
 import { GradesModule }    from './grades.js';
 import { ReportsModule }   from './reports.js';
+import { DailyReportModule } from './daily-report.js';
 import { initLiveClassListener } from './attendance_live.js';
 import { NotifyPermission } from '../shared/notify-permission.js';
 import { BadgeSystem } from '../shared/badges.js';
@@ -658,6 +659,12 @@ export async function navigateTo(targetId) {
       case 'profile':         ProfileModule.init(); _initPadreQR(student); NotifyPermission.requestIfNeeded(); break;
       case 'grades':          GradesModule.init(student?.id); break;
       case 'reports':         ReportsModule.init(); break;
+      case 'rutina-diaria': {
+        const sid = AppState.get('currentStudent')?.id;
+        DailyReportModule.setStudent(sid);
+        DailyReportModule.load();
+        break;
+      }
       case 'qr-access':       _initPadreQR(student); break;
       case 'videocall': {
         const student = AppState.get('currentStudent');
@@ -1009,6 +1016,9 @@ async function switchStudent(studentId) {
     // 3. Actualizar Estado Global
     AppState.set('currentStudent', selected);
     localStorage.setItem('karpus_last_student_id', studentId);
+
+    // Actualizar módulo de rutina diaria con el nuevo estudiante
+    DailyReportModule.setStudent(selected.id);
     
     // 4. Reiniciar Realtime para el nuevo hijo
     _initDailyLogRealtime(selected.id);

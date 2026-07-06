@@ -87,8 +87,61 @@ export const InvoicingModule = {
   },
   
   /**
-   * Obtener facturas de un pago
+   * Asignar NCF a una factura
    */
+  async assignNCF(invoiceId, ncf, userId) {
+    try {
+      const { data: result, error } = await supabase
+        .from('invoices')
+        .update({ 
+          ncf: ncf,
+          ncf_assigned_by: userId,
+          ncf_assigned_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', invoiceId)
+        .select();
+      
+      if (error) throw error;
+      
+      Helpers.toast('NCF asignado exitosamente!', 'success');
+      return result;
+    } catch (error) {
+      console.error('Error assigning NCF:', error);
+      Helpers.toast(error.message || 'Error al asignar NCF', 'error');
+      return null;
+    }
+  },
+
+  /**
+   * Obtener todas las facturas (para el panel directora)
+   */
+  async getAllInvoices(filters = {}) {
+    try {
+      let query = supabase
+        .from('invoices')
+        .select('*, student:student_id(name, matricula), parent:student_id(parent_id(name, fiscal_rnc, fiscal_company_name, fiscal_address))')
+        .order('created_at', { ascending: false });
+      
+      if (filters.status) {
+        query = query.eq('status', filters.status);
+      }
+      
+      if (filters.has_ncf === true) {
+        query = query.not('ncf', 'is', null);
+      } else if (filters.has_ncf === false) {
+        query = query.is('ncf', null);
+      }
+      
+      const { data: invoices, error } = await query;
+      
+      if (error) throw error;
+      return invoices || [];
+    } catch (error) {
+      console.error('Error getting invoices:', error);
+      return [];
+    }
+  },
   async getPaymentInvoices(paymentId) {
     try {
       const { data: invoices, error } = await supabase
@@ -220,8 +273,25 @@ export const InvoicingModule = {
             </div>
             ${invoice.parent_name ? `<p style="margin: 10px 0 5px 0; font-size: 16px; color: #14213d; font-weight: 700;">${invoice.parent_name}</p>` : ''}
             ${invoice.parent_phone ? `<p style="margin: 5px 0; font-size: 14px; color: #64748b; font-weight: 600;"><span style="color: #28B54D; font-weight: 700;">Teléfono:</span> ${invoice.parent_phone}</p>` : ''}
+            ${invoice.fiscal_parent_rnc || invoice.fiscal_parent_company_name ? `
+              <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e3ebf5;">
+                <p style="margin: 0 0 8px 0; font-size: 12px; color: #0B63C7; font-weight: 900; text-transform: uppercase; letter-spacing: 1px;">Información Fiscal</p>
+                ${invoice.fiscal_parent_company_name ? `<p style="margin: 5px 0; font-size: 14px; color: #14213d; font-weight: 600;"><span style="color: #64748b; font-weight: 700;">Empresa:</span> ${invoice.fiscal_parent_company_name}</p>` : ''}
+                ${invoice.fiscal_parent_rnc ? `<p style="margin: 5px 0; font-size: 14px; color: #14213d; font-weight: 600;"><span style="color: #64748b; font-weight: 700;">RNC:</span> ${invoice.fiscal_parent_rnc}</p>` : ''}
+                ${invoice.fiscal_parent_address ? `<p style="margin: 5px 0; font-size: 14px; color: #14213d; font-weight: 600;"><span style="color: #64748b; font-weight: 700;">Dirección:</span> ${invoice.fiscal_parent_address}</p>` : ''}
+              </div>
+            ` : ''}
           </div>
         </div>
+        
+        <!-- NCF si está asignado -->
+        ${invoice.ncf ? `
+          <div style="background: linear-gradient(135deg, #FFD43B 0%, #FFC107 100%); padding: 20px; border-radius: 16px; margin-bottom: 40px; text-align: center; box-shadow: 0 4px 15px rgba(255, 212, 59, 0.25);">
+            <p style="margin: 0 0 5px 0; font-size: 12px; color: #1e293b; font-weight: 900; text-transform: uppercase; letter-spacing: 1.5px;">Número de Comprobante Fiscal</p>
+            <p style="margin: 0; font-size: 24px; color: #0B63C7; font-weight: 900; letter-spacing: 2px;">${invoice.ncf}</p>
+            ${invoice.ncf_assigned_at ? `<p style="margin: 8px 0 0 0; font-size: 11px; color: #64748b; font-weight: 600;">Asignado el: ${formatDate(invoice.ncf_assigned_at)}</p>` : ''}
+          </div>
+        ` : ''}
         
         <!-- Detalles de la factura corporativa -->
         <div style="background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(11, 99, 199, 0.08); margin-bottom: 40px;">
@@ -567,6 +637,82 @@ export const InvoicingModule = {
     }
   },
   
+  /**
+   * Abrir modal para asignar NCF
+   */
+  async openAssignNCFModal(invoiceId) {
+    const invoice = await this.getInvoice(invoiceId);
+    if (!invoice) return;
+    
+    const modalHTML = `
+      <div class="modal-header bg-gradient-to-r from-[#FF7A00] to-[#D96500] text-white p-6 rounded-t-3xl flex items-center">
+        <div class="flex items-center gap-3">
+          <div class="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center shadow-inner">
+            📄
+          </div>
+          <div>
+            <h3 class="text-xl font-black">Asignar NCF</h3>
+            <p class="text-xs text-white/70 font-bold uppercase tracking-widest">Factura: ${invoice.invoice_number}</p>
+          </div>
+        </div>
+      </div>
+      
+      <div class="modal-body p-8 bg-slate-50/30">
+        <div class="mb-6">
+          <label class="block text-[11px] font-black text-slate-400 uppercase tracking-wider mb-1.5 ml-1">Número de Comprobante Fiscal (NCF)</label>
+          <input type="text" id="ncfInput" value="${invoice.ncf || ''}" placeholder="Ej: B0100000001" class="w-full px-4 py-2.5 border-2 border-slate-100 rounded-2xl outline-none focus:ring-4 focus:ring-orange-100 focus:border-[#FF7A00] bg-white text-sm font-medium" />
+        </div>
+        
+        ${invoice.fiscal_parent_rnc || invoice.fiscal_parent_company_name ? `
+          <div class="bg-orange-50 p-4 rounded-2xl border border-orange-100 mb-6">
+            <p class="text-[11px] font-black text-orange-800 uppercase tracking-wider mb-2">Información Fiscal</p>
+            ${invoice.fiscal_parent_company_name ? `<p class="text-sm text-slate-700"><strong>Empresa:</strong> ${invoice.fiscal_parent_company_name}</p>` : ''}
+            ${invoice.fiscal_parent_rnc ? `<p class="text-sm text-slate-700"><strong>RNC:</strong> ${invoice.fiscal_parent_rnc}</p>` : ''}
+            ${invoice.fiscal_parent_address ? `<p class="text-sm text-slate-700"><strong>Dirección:</strong> ${invoice.fiscal_parent_address}</p>` : ''}
+          </div>
+        ` : ''}
+      </div>
+      
+      <div class="modal-footer bg-white p-6 rounded-b-3xl border-t border-slate-100 flex justify-end gap-3">
+        <button onclick="App.ui.closeModal()" class="px-6 py-2 border border-slate-300 text-slate-700 rounded-xl font-bold hover:bg-slate-50 transition-all">
+          Cancelar
+        </button>
+        <button onclick="window.InvoicingModule.saveNCF(${invoiceId})" class="px-8 py-2 bg-gradient-to-r from-[#FF7A00] to-[#D96500] text-white rounded-xl font-bold shadow-lg hover:shadow-xl transition-all active:scale-95">
+          Asignar NCF
+        </button>
+      </div>
+    `;
+    
+    window.openGlobalModal(modalHTML);
+  },
+
+  /**
+   * Guardar NCF
+   */
+  async saveNCF(invoiceId) {
+    const ncf = document.getElementById('ncfInput')?.value?.trim();
+    if (!ncf) {
+      Helpers.toast('Por favor ingrese el NCF', 'warning');
+      return;
+    }
+    
+    // Obtener usuario actual
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      Helpers.toast('Usuario no autenticado', 'error');
+      return;
+    }
+    
+    const result = await this.assignNCF(invoiceId, ncf, user.id);
+    if (result) {
+      App.ui.closeModal();
+      // Actualizar la lista de facturas si es necesario
+      if (window.App?.invoices?.refresh) {
+        window.App.invoices.refresh();
+      }
+    }
+  },
+
   /**
    * Abrir modal para ver/descargar factura
    */

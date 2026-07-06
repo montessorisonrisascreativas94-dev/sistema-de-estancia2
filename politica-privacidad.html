@@ -4,244 +4,334 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Política de Privacidad — Colegio Montessori Sonrisas Creativas</title>
-  <link rel="stylesheet" href="css/karpus-tailwind.css">
-  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Baloo+2:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
   <style>
-    body{
-      font-family:'Nunito',sans-serif;
-      background: linear-gradient(135deg, #F7F9FB 0%, #E6F7EB 100%);
+    :root {
+      --blue: #0B63C7;
+      --blue-dark: #0850A0;
+      --blue-light: #E8F2FF;
+      --orange: #FF7A00;
+      --orange-light: #FFF0E0;
+      --green: #28B54D;
+      --green-light: #E6F7EB;
+      --yellow: #FFD43B;
+      --yellow-light: #FFFBE6;
+      --white: #FFFFFF;
+      --gray-bg: #F8FAFC;
+      --text-dark: #1A2340;
+      --text-mid: #4A5568;
+      --text-light: #718096;
+      --radius-xl: 24px;
+      --radius-2xl: 36px;
     }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Nunito', sans-serif;
+      background: linear-gradient(135deg, var(--gray-bg) 0%, var(--green-light) 100%);
+      color: var(--text-dark);
+      line-height: 1.7;
+    }
+    .container { max-width: 1000px; margin: 0 auto; padding: 40px 20px; }
+    
+    .back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--green);
+      font-weight: 800;
+      text-decoration: none;
+      font-size: 1rem;
+      margin-bottom: 30px;
+      transition: all 0.3s;
+    }
+    .back-btn:hover {
+      color: var(--green);
+      transform: translateX(-5px);
+    }
+    
+    .content-card {
+      background: var(--white);
+      border-radius: var(--radius-2xl);
+      padding: 50px;
+      box-shadow: 0 8px 40px rgba(11,99,199,0.12);
+      border: 2px solid var(--green-light);
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .content-card::before {
+      content: '';
+      position: absolute;
+      top: -50px; right: -50px;
+      width: 200px; height: 200px;
+      background: var(--green-light);
+      border-radius: 50%;
+      opacity: 0.5;
+      pointer-events: none;
+    }
+    .content-card::after {
+      content: '';
+      position: absolute;
+      bottom: -80px; left: -80px;
+      width: 250px; height: 250px;
+      background: var(--orange-light);
+      border-radius: 50%;
+      opacity: 0.4;
+      pointer-events: none;
+    }
+    
+    .header-section {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      margin-bottom: 40px;
+      position: relative;
+      z-index: 1;
+    }
+    .header-icon {
+      width: 70px;
+      height: 70px;
+      background: linear-gradient(135deg, var(--green), #1A8035);
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      color: white;
+      box-shadow: 0 8px 24px rgba(40,181,77,0.25);
+    }
+    .header-title h1 {
+      font-family: 'Baloo 2', cursive;
+      font-size: 2.2rem;
+      color: var(--text-dark);
+      margin-bottom: 4px;
+    }
+    .header-title p {
+      font-size: 0.95rem;
+      color: var(--text-light);
+      font-weight: 700;
+    }
+
+    .section {
+      margin-bottom: 35px;
+      position: relative;
+      z-index: 1;
+    }
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-family: 'Baloo 2', cursive;
+      font-size: 1.25rem;
+      color: var(--text-dark);
+      margin-bottom: 16px;
+    }
+    .section-number {
+      width: 36px;
+      height: 36px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      font-size: 0.95rem;
+    }
+    .section-number.green { background: var(--green-light); color: var(--green); }
+    .section-number.orange { background: var(--orange-light); color: var(--orange); }
+    .section p {
+      color: var(--text-mid);
+      font-size: 1rem;
+      margin-bottom: 12px;
+    }
+    .section ul {
+      list-style: none;
+      margin-top: 10px;
+    }
+    .section li {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 8px 0;
+      color: var(--text-mid);
+    }
+    .section li .check {
+      color: var(--green);
+      font-size: 1.1rem;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .highlight-box {
+      background: linear-gradient(135deg, var(--orange-light), #FFFEF0);
+      border: 2px solid var(--orange);
+      border-radius: 20px;
+      padding: 24px;
+      margin: 20px 0;
+      position: relative;
+      z-index: 1;
+    }
+    .highlight-title {
+      font-weight: 900;
+      color: var(--orange);
+      font-size: 1.05rem;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .footer-link {
+      text-align: center;
+      margin-top: 30px;
+      position: relative;
+      z-index: 1;
+    }
+    .footer-link a {
+      color: var(--green);
+      font-weight: 800;
+      text-decoration: none;
+      font-size: 1rem;
+      transition: all 0.3s;
+    }
+    .footer-link a:hover {
+      color: var(--green);
+      text-decoration: underline;
+    }
+    
     @keyframes float {
       0%, 100% { transform: translateY(0); }
       50% { transform: translateY(-10px); }
     }
-    .float-anim { animation: float 4s ease-in-out infinite; }
-    .float-delayed { animation: float 4s ease-in-out infinite 1s; }
+    .mascot {
+      position: absolute;
+      animation: float 4s ease-in-out infinite;
+      opacity: 0.8;
+      pointer-events: none;
+    }
+    .mascot-1 {
+      top: 30px; right: 30px;
+      font-size: 48px;
+    }
+    .mascot-2 {
+      bottom: 30px; right: 60px;
+      font-size: 42px;
+      animation-delay: 1s;
+    }
+
+    @media (max-width: 640px) {
+      .content-card { padding: 30px 20px; }
+      .header-title h1 { font-size: 1.7rem; }
+      .header-icon { width: 56px; height: 56px; font-size: 26px; }
+    }
   </style>
 </head>
-<body class="text-slate-700">
-  <div class="max-w-4xl mx-auto px-4 sm:px-6 py-12">
-    <div class="mb-8 flex items-center gap-4">
-      <a href="panel_padres.html" class="text-[#28B54D] hover:text-[#239943] font-bold text-sm flex items-center gap-1 transition-colors">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="19" y1="12" x2="5" y2="12"></line>
-          <polyline points="12 19 5 12 12 5"></polyline>
-        </svg>
-        Volver
-      </a>
-    </div>
-    <div class="bg-white rounded-[2.5rem] shadow-lg border-2 border-slate-100 p-6 sm:p-8 md:p-12 relative overflow-hidden">
-      <!-- Decorative Mascots -->
-      <div class="absolute top-4 right-4 hidden sm:flex gap-2 pointer-events-none">
-        <!-- Triangle -->
-        <svg width="40" height="48" viewBox="0 0 180 200" class="float-anim">
-          <polygon points="90,20 165,180 15,180" fill="#FF7A00" stroke="#E06900" stroke-width="4"/>
-          <circle cx="68" cy="105" r="12" fill="white"/>
-          <circle cx="112" cy="105" r="12" fill="white"/>
-          <circle cx="68" cy="105" r="6" fill="#333"/>
-          <circle cx="112" cy="105" r="6" fill="#333"/>
-          <path d="M 58 140 Q 90 160 122 140" stroke="#333" stroke-width="5" fill="none" stroke-linecap="round"/>
-        </svg>
-        <!-- Pentagon -->
-        <svg width="40" height="48" viewBox="0 0 180 180" class="float-delayed">
-          <polygon points="90,10 155,45 155,115 90,150 25,115 25,45" fill="#28B54D" stroke="#239943" stroke-width="4"/>
-          <ellipse cx="90" cy="28" rx="42" ry="16" fill="#0B63C7"/>
-          <circle cx="68" cy="80" r="12" fill="white"/>
-          <circle cx="112" cy="80" r="12" fill="white"/>
-          <circle cx="68" cy="80" r="6" fill="#333"/>
-          <circle cx="112" cy="80" r="6" fill="#333"/>
-          <path d="M 58 105 Q 90 125 122 105" stroke="#333" stroke-width="5" fill="none" stroke-linecap="round"/>
-        </svg>
-      </div>
-      
-      <div class="flex items-center gap-4 mb-8">
-        <div class="w-14 h-14 bg-gradient-to-br from-[#28B54D] to-[#239943] rounded-2xl flex items-center justify-center text-2xl shadow-lg shadow-green-200">🔒</div>
-        <div>
-          <h1 class="text-2xl sm:text-3xl font-black text-slate-800">Política de Privacidad</h1>
-          <p class="text-sm text-slate-400 font-bold">Colegio Montessori Sonrisas Creativas — Última actualización: Junio 2026</p>
+<body>
+  <div class="container">
+    <a href="index.html" class="back-btn">
+      <i class="bi bi-arrow-left"></i>
+      Volver al inicio
+    </a>
+
+    <div class="content-card">
+      <span class="mascot mascot-1">🔒</span>
+      <span class="mascot mascot-2">🛡️</span>
+
+      <div class="header-section">
+        <div class="header-icon">🔒</div>
+        <div class="header-title">
+          <h1>Política de Privacidad</h1>
+          <p>Colegio Montessori Sonrisas Creativas — Última actualización: Julio 2025</p>
         </div>
       </div>
 
-      <div class="space-y-8 text-sm leading-relaxed">
+      <div class="section">
+        <div class="section-title">
+          <div class="section-number green">1</div>
+          Responsable del Tratamiento
+        </div>
+        <p>Colegio Montessori Sonrisas Creativas es el responsable del tratamiento de los datos personales recopilados a través de esta plataforma educativa. Nos comprometemos a proteger la privacidad de los menores de edad y sus familias conforme a la legislación aplicable.</p>
+      </div>
 
-        <section>
-          <h2 class="text-base font-black text-slate-800 mb-3 flex items-center gap-2">
-            <span class="w-7 h-7 bg-green-100 text-[#28B54D] rounded-xl flex items-center justify-center text-xs font-black">1</span>
-            Responsable del Tratamiento
-          </h2>
-          <p class="text-slate-600">Colegio Montessori Sonrisas Creativas es el responsable del tratamiento de los datos personales recopilados a través de esta plataforma educativa. Nos comprometemos a proteger la privacidad de los menores de edad y sus familias conforme a la legislación aplicable.</p>
-        </section>
+      <div class="section">
+        <div class="section-title">
+          <div class="section-number green">2</div>
+          Datos que Recopilamos
+        </div>
+        <ul>
+          <li><span class="check">✓</span><span><strong>Datos del estudiante:</strong> nombre, edad, aula asignada, foto de perfil, tipo de sangre, alergias, personas autorizadas para recoger.</span></li>
+          <li><span class="check">✓</span><span><strong>Datos del padre/madre/tutor:</strong> nombre, correo electrónico, teléfono, dirección.</span></li>
+          <li><span class="check">✓</span><span><strong>Datos académicos:</strong> asistencia, calificaciones, tareas entregadas, reportes de rutina diaria.</span></li>
+          <li><span class="check">✓</span><span><strong>Datos de pago y facturación:</strong> montos adeudados, historial de pagos, métodos utilizados y comprobantes digitales de transferencia.</span></li>
+          <li><span class="check">✓</span><span><strong>Datos de uso:</strong> registros de acceso, sección visitada, dispositivo utilizado.</span></li>
+        </ul>
+      </div>
 
-        <section>
-          <h2 class="text-base font-black text-slate-800 mb-3 flex items-center gap-2">
-            <span class="w-7 h-7 bg-green-100 text-[#28B54D] rounded-xl flex items-center justify-center text-xs font-black">2</span>
-            Datos que Recopilamos
-          </h2>
-          <ul class="space-y-3 list-none">
-            <li class="flex items-start gap-2">
-              <span class="text-[#28B54D] mt-0.5 font-black text-lg">✓</span>
-              <span class="text-slate-600"><strong class="text-slate-800">Datos del estudiante:</strong> nombre, edad, aula asignada, foto de perfil, tipo de sangre, alergias, personas autorizadas para recoger.</span>
-            </li>
-            <li class="flex items-start gap-2">
-              <span class="text-[#28B54D] mt-0.5 font-black text-lg">✓</span>
-              <span class="text-slate-600"><strong class="text-slate-800">Datos del padre/tutor:</strong> nombre, correo electrónico, teléfono, dirección.</span>
-            </li>
-            <li class="flex items-start gap-2">
-              <span class="text-[#28B54D] mt-0.5 font-black text-lg">✓</span>
-              <span class="text-slate-600"><strong class="text-slate-800">Datos académicos:</strong> asistencia, calificaciones, tareas entregadas, reportes de rutina diaria.</span>
-            </li>
-            <li class="flex items-start gap-2">
-              <span class="text-[#28B54D] mt-0.5 font-black text-lg">✓</span>
-              <span class="text-slate-600"><strong class="text-slate-800">Datos de pago y facturación:</strong> montos adeudados, historial de pagos, métodos utilizados y comprobantes digitales de transferencia.</span>
-            </li>
-            <li class="flex items-start gap-2">
-              <span class="text-[#28B54D] mt-0.5 font-black text-lg">✓</span>
-              <span class="text-slate-600"><strong class="text-slate-800">Datos de uso:</strong> registros de acceso, sección visitada, dispositivo utilizado.</span>
-            </li>
-          </ul>
-        </section>
+      <div class="section">
+        <div class="section-title">
+          <div class="section-number orange">3</div>
+          Finalidad del Tratamiento
+        </div>
+        <ul>
+          <li><span class="check">→</span><span>Gestión académica y administrativa de la estancia infantil.</span></li>
+          <li><span class="check">→</span><span>Comunicación entre padres, maestros y dirección.</span></li>
+          <li><span class="check">→</span><span>Control de asistencia y seguimiento del progreso del estudiante.</span></li>
+          <li><span class="check">→</span><span>Gestión de pagos de mensualidades.</span></li>
+          <li><span class="check">→</span><span>Envío de notificaciones relacionadas con la actividad escolar.</span></li>
+        </ul>
+      </div>
 
-        <section>
-          <h2 class="text-base font-black text-slate-800 mb-3 flex items-center gap-2">
-            <span class="w-7 h-7 bg-orange-100 text-[#FF7A00] rounded-xl flex items-center justify-center text-xs font-black">3</span>
-            Finalidad del Tratamiento
-          </h2>
-          <ul class="space-y-3 list-none">
-            <li class="flex items-start gap-2">
-              <span class="text-[#FF7A00] mt-0.5 font-black text-lg">→</span>
-              <span class="text-slate-600">Gestión académica y administrativa de la estancia infantil.</span>
-            </li>
-            <li class="flex items-start gap-2">
-              <span class="text-[#FF7A00] mt-0.5 font-black text-lg">→</span>
-              <span class="text-slate-600">Comunicación entre padres, maestros y dirección.</span>
-            </li>
-            <li class="flex items-start gap-2">
-              <span class="text-[#FF7A00] mt-0.5 font-black text-lg">→</span>
-              <span class="text-slate-600">Control de asistencia y seguimiento del progreso del estudiante.</span>
-            </li>
-            <li class="flex items-start gap-2">
-              <span class="text-[#FF7A00] mt-0.5 font-black text-lg">→</span>
-              <span class="text-slate-600">Gestión de pagos de mensualidades.</span>
-            </li>
-            <li class="flex items-start gap-2">
-              <span class="text-[#FF7A00] mt-0.5 font-black text-lg">→</span>
-              <span class="text-slate-600">Envío de notificaciones relacionadas con la actividad escolar.</span>
-            </li>
-          </ul>
-        </section>
-
-        <section>
-          <h2 class="text-base font-black text-slate-800 mb-3 flex items-center gap-2">
-            <span class="w-7 h-7 bg-orange-100 text-[#FF7A00] rounded-xl flex items-center justify-center text-xs font-black">4</span>
-            Protección de Datos de Menores
-          </h2>
-          <div class="bg-gradient-to-br from-orange-50 to-amber-50 border-2 border-orange-200 rounded-2xl p-5">
-            <p class="font-black text-[#FF7A00] mb-2 flex items-center gap-2">
-              <span>⚠️</span> Datos de menores de edad
-            </p>
-            <p class="text-slate-700">Los datos de los estudiantes son tratados con especial cuidado conforme a la normativa de protección de datos de menores. Solo el personal autorizado (directora, maestras, asistentes) y los padres/tutores registrados tienen acceso a esta información. No compartimos datos de menores con terceros sin consentimiento expreso.</p>
+      <div class="section">
+        <div class="section-title">
+          <div class="section-number orange">4</div>
+          Protección de Datos de Menores
+        </div>
+        <div class="highlight-box">
+          <div class="highlight-title">
+            <span>⚠️</span> Datos de menores de edad
           </div>
-        </section>
-
-        <section>
-          <h2 class="text-base font-black text-slate-800 mb-3 flex items-center gap-2">
-            <span class="w-7 h-7 bg-green-100 text-[#28B54D] rounded-xl flex items-center justify-center text-xs font-black">5</span>
-            Almacenamiento y Seguridad
-          </h2>
-          <p class="text-slate-600">Los datos se almacenan en servidores seguros de Supabase con cifrado en tránsito (HTTPS/TLS) y en reposo. Implementamos políticas de acceso por roles (RLS) para garantizar que cada usuario solo acceda a la información que le corresponde.</p>
-        </section>
-
-        <section>
-          <h2 class="text-base font-black text-slate-800 mb-3 flex items-center gap-2">
-            <span class="w-7 h-7 bg-green-100 text-[#28B54D] rounded-xl flex items-center justify-center text-xs font-black">6</span>
-            Derechos del Usuario
-          </h2>
-          <p class="text-slate-600">Tienes derecho a: <strong class="text-slate-800">acceder</strong> a tus datos, <strong class="text-slate-800">rectificarlos</strong>, <strong class="text-slate-800">eliminarlos</strong>, <strong class="text-slate-800">oponerte</strong> a su tratamiento y <strong class="text-slate-800">portabilidad</strong>. Para ejercer estos derechos, contacta a la dirección de la estancia.</p>
-        </section>
-
-        <section>
-          <h2 class="text-base font-black text-slate-800 mb-3 flex items-center gap-2">
-            <span class="w-7 h-7 bg-green-100 text-[#28B54D] rounded-xl flex items-center justify-center text-xs font-black">7</span>
-            Retención de Datos
-          </h2>
-          <p class="text-slate-600">Los datos se conservan mientras el estudiante esté inscrito en la estancia y por un período adicional de 2 años para cumplir obligaciones legales. Después de este período, los datos son eliminados de forma segura.</p>
-        </section>
-
-        <section>
-          <h2 class="text-base font-black text-slate-800 mb-3 flex items-center gap-2">
-            <span class="w-7 h-7 bg-orange-100 text-[#FF7A00] rounded-xl flex items-center justify-center text-xs font-black">8</span>
-            Contacto
-          </h2>
-          <p class="text-slate-600">Para cualquier consulta sobre privacidad: <strong class="text-[#28B54D]">admin@karpuskids.com</strong></p>
-        </section>
-
+          <p>Los datos de los estudiantes son tratados con especial cuidado conforme a la normativa de protección de datos de menores. Solo el personal autorizado (directora, maestras, asistentes) y los padres/tutores registrados tienen acceso a esta información. No compartimos datos de menores con terceros sin consentimiento expreso.</p>
+        </div>
       </div>
 
-      <div class="mt-10 pt-6 border-t border-slate-100">
-        <!-- Accept Terms Button — shown when user is logged in but hasn't accepted -->
-        <div id="acceptSection" class="hidden mb-6 p-5 bg-green-50 border-2 border-green-200 rounded-2xl">
-          <p class="text-sm font-bold text-[#28B54D] mb-4 text-center">
-            ✅ He leído y entendido la Política de Privacidad y los Términos de Uso de Colegio Montessori Sonrisas Creativas.
-          </p>
-          <button id="btnAcceptTerms"
-            class="w-full py-3 bg-gradient-to-r from-[#28B54D] to-[#239943] hover:from-[#239943] hover:to-[#1A8035] text-white font-black rounded-2xl shadow-lg shadow-green-200 transition-all active:scale-95 flex items-center justify-center gap-2">
-            <span>✓</span> Aceptar y Continuar al Panel
-          </button>
-          <p id="acceptMsg" class="text-xs text-[#28B54D] font-bold text-center mt-2 hidden">Guardando...</p>
+      <div class="section">
+        <div class="section-title">
+          <div class="section-number green">5</div>
+          Almacenamiento y Seguridad
         </div>
-        <div class="text-center">
-          <a href="terminos-uso.html" class="text-[#28B54D] hover:text-[#239943] font-bold text-sm transition-colors">Ver Términos de Uso →</a>
+        <p>Los datos se almacenan en servidores seguros con cifrado en tránsito (HTTPS/TLS) y en reposo. Implementamos políticas de acceso por roles para garantizar que cada usuario solo acceda a la información que le corresponde.</p>
+      </div>
+
+      <div class="section">
+        <div class="section-title">
+          <div class="section-number green">6</div>
+          Derechos del Usuario
         </div>
+        <p>Tienes derecho a: <strong>acceder</strong> a tus datos, <strong>rectificarlos</strong>, <strong>eliminarlos</strong>, <strong>oponerte</strong> a su tratamiento y <strong>portabilidad</strong>. Para ejercer estos derechos, contacta a la dirección de la estancia.</p>
+      </div>
+
+      <div class="section">
+        <div class="section-title">
+          <div class="section-number green">7</div>
+          Retención de Datos
+        </div>
+        <p>Los datos se conservan mientras el estudiante esté inscrito en la estancia y por un período adicional de 2 años para cumplir obligaciones legales. Después de este período, los datos son eliminados de forma segura.</p>
+      </div>
+
+      <div class="section">
+        <div class="section-title">
+          <div class="section-number orange">8</div>
+          Contacto
+        </div>
+        <p>Para cualquier consulta sobre privacidad: <strong style="color: var(--green);">admin@karpuskids.com</strong></p>
+      </div>
+
+      <div class="footer-link">
+        <a href="terminos-uso.html">Ver Términos de Uso →</a>
       </div>
     </div>
   </div>
-
-  <script type="module">
-    import { supabase, TERMS_VERSION } from './js/shared/supabase.js';
-
-    (async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) return; // Not logged in — just reading
-
-      // Check if already accepted
-      const { data: existing } = await supabase
-        .from('terms_acceptance')
-        .select('user_id')
-        .eq('user_id', session.user.id)
-        .eq('terms_version', TERMS_VERSION)
-        .maybeSingle();
-
-      if (existing) return; // Already accepted — no button needed
-
-      // Show accept button
-      document.getElementById('acceptSection')?.classList.remove('hidden');
-
-      document.getElementById('btnAcceptTerms')?.addEventListener('click', async () => {
-        const btn = document.getElementById('btnAcceptTerms');
-        const msg = document.getElementById('acceptMsg');
-        btn.disabled = true;
-        if (msg) msg.classList.remove('hidden');
-
-        try {
-          await supabase.from('terms_acceptance').upsert({
-            user_id:       session.user.id,
-            terms_version: TERMS_VERSION,
-            accepted_at:   new Date().toISOString()
-          }, { onConflict: 'user_id,terms_version' });
-
-          localStorage.setItem('karpus_terms_accepted_' + TERMS_VERSION, 'true');
-
-          // Redirect to correct panel
-          const { data: profile } = await supabase
-            .from('profiles').select('role').eq('id', session.user.id).maybeSingle();
-          const routes = { directora:'panel_directora.html', maestra:'panel-maestra.html', padre:'panel_padres.html', asistente:'panel_asistente.html' };
-          window.location.href = routes[profile?.role] || 'panel_padres.html';
-        } catch (e) {
-          console.error(e);
-          if (msg) { msg.textContent = 'Error al guardar. Intenta de nuevo.'; msg.classList.remove('hidden'); }
-          btn.disabled = false;
-        }
-      });
-    })();
-  </script>
-</body></html>
+</body>
+</html>

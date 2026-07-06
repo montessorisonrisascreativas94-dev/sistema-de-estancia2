@@ -173,6 +173,13 @@
   <button class="nav-item" onclick="goTo('maestras')"><i class="bi bi-person-workspace"></i> Maestras</button>
   <button class="nav-item" onclick="goTo('directoras')"><i class="bi bi-person-badge-fill"></i> Directoras</button>
 
+  <div class="nav-section">Ciclo Escolar</div>
+  <button class="nav-item" onclick="goTo('preinscripciones')"><i class="bi bi-person-add"></i> Preinscripciones <span class="nav-badge" id="badge-preins" style="background:#3b82f6;">0</span></button>
+  <button class="nav-item" onclick="goTo('inscripciones')"><i class="bi bi-clipboard-check-fill"></i> Inscripciones</button>
+  <button class="nav-item" onclick="goTo('cargos')"><i class="bi bi-cash-coin"></i> Cargos</button>
+  <button class="nav-item" onclick="goTo('planes')"><i class="bi bi-receipt-cutoff"></i> Planes de Pago</button>
+  <button class="nav-item" onclick="goTo('school-years')"><i class="bi bi-calendar-range-fill"></i> Años Escolares</button>
+
   <div class="nav-section">Operaciones</div>
   <button class="nav-item" onclick="goTo('pagos')"><i class="bi bi-credit-card-fill"></i> Pagos</button>
   <button class="nav-item" onclick="goTo('asistencia')"><i class="bi bi-calendar-check-fill"></i> Asistencia</button>
@@ -538,10 +545,97 @@
       </div>
     </div>
 
+    <!-- ══════════════════════════════════════════════════════
+         PREINSCRIPCIONES
+    ══════════════════════════════════════════════════════ -->
+    <div class="section" id="sec-preinscripciones">
+      <div class="panel">
+        <div class="panel-hdr">
+          <h3><i class="bi bi-person-add" style="color:#3b82f6;margin-right:6px;"></i>Solicitudes de Preinscripción</h3>
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="tbl">
+            <thead><tr><th>Estudiante</th><th>Edad</th><th>Padre</th><th>Teléfono</th><th>Estado</th><th>Fecha</th><th>Acciones</th></tr></thead>
+            <tbody id="preinscripcionesBody"><tr><td colspan="7" style="text-align:center;padding:24px;color:var(--muted);">Cargando...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════
+         INSCRIPCIONES
+    ══════════════════════════════════════════════════════ -->
+    <div class="section" id="sec-inscripciones">
+      <div class="panel">
+        <div class="panel-hdr">
+          <h3><i class="bi bi-clipboard-check-fill" style="color:#22c55e;margin-right:6px;"></i>Inscripciones del Año Escolar</h3>
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="tbl">
+            <thead><tr><th>Estudiante</th><th>Aula</th><th>Plan de Pago</th><th>Estado</th><th>Fecha Inscripción</th><th>Acciones</th></tr></thead>
+            <tbody id="inscripcionesBody"><tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted);">Cargando...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════
+         CARGOS
+    ══════════════════════════════════════════════════════ -->
+    <div class="section" id="sec-cargos">
+      <div class="kpi-grid" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr));margin-bottom:16px;">
+        <div class="kpi k-green"><div class="kpi-val" id="kpi-cargos-pagados">—</div><div class="kpi-lbl">Pagados</div></div>
+        <div class="kpi k-yellow"><div class="kpi-val" id="kpi-cargos-pendientes">—</div><div class="kpi-lbl">Pendientes</div></div>
+        <div class="kpi k-red"><div class="kpi-val" id="kpi-cargos-vencidos">—</div><div class="kpi-lbl">Vencidos</div></div>
+        <div class="kpi k-blue"><div class="kpi-val" id="kpi-cargos-total">—</div><div class="kpi-lbl">Total RD$</div></div>
+      </div>
+      <div class="panel">
+        <div class="panel-hdr">
+          <h3><i class="bi bi-cash-coin" style="color:#f97316;margin-right:6px;"></i>Historial de Cargos</h3>
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="tbl">
+            <thead><tr><th>Estudiante</th><th>Concepto</th><th>Monto</th><th>Vencimiento</th><th>Estado</th><th>Acciones</th></tr></thead>
+            <tbody id="cargosBody"><tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted);">Cargando...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════
+         PLANES DE PAGO
+    ══════════════════════════════════════════════════════ -->
+    <div class="section" id="sec-planes">
+      <div class="panel">
+        <div class="panel-hdr">
+          <h3><i class="bi bi-receipt-cutoff" style="color:#6366f1;margin-right:6px;"></i>Planes de Pago Activos</h3>
+        </div>
+        <div id="planesGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;padding:20px;"></div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════
+         AÑOS ESCOLARES
+    ══════════════════════════════════════════════════════ -->
+    <div class="section" id="sec-school-years">
+      <div class="panel">
+        <div class="panel-hdr">
+          <h3><i class="bi bi-calendar-range-fill" style="color:#8b5cf6;margin-right:6px;"></i>Años Escolares</h3>
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="tbl">
+            <thead><tr><th>Año</th><th>Inicio</th><th>Fin</th><th>Estado</th><th>Acciones</th></tr></thead>
+            <tbody id="schoolYearsBody"><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted);">Cargando...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
   </div><!-- /content -->
 </div><!-- /main -->
 
 <script src="js/shared/supabase-js.min.js"></script>
+<script src="js/enrollment-cycle.js"></script>
 <script type="module" src="js/control/main.js"></script>
 </body>
 </html>

@@ -8,6 +8,7 @@ import { Helpers } from '../shared/helpers.js';
 import { WallModule } from '../shared/wall.js';
 import { ChatModule } from '../shared/chat.js';
 import { StudentsModule } from './modules/students.js';
+import { renderCajaCobro, CajaCobro } from './caja-cobro.js';
 import { auditLog } from '../shared/db-utils.js';
 import { RoomsModule } from './modules/rooms.js';
 import { DashboardModule } from './modules/dashboard.js';
@@ -17,6 +18,7 @@ import { QueryCache } from '../shared/query-cache.js';
 import { RealtimeManager } from '../shared/realtime-manager.js';
 import { Security } from '../shared/security.js';
 import { UIPremium } from '../shared/ui-premium.js';
+import { AssistantAccountingModule } from './accounting.module.js';
 
 // ?? Definir objeto App globalmente para evitar ReferenceError en onclicks del HTML
 // Global close modal fallback � always available even before openNewPostModal is called
@@ -69,6 +71,7 @@ window.App = {
     waiveMora:     (id)  => PaymentsModule.waiveMora(id),
     _confirmApproval: (id) => PaymentsModule._confirmApproval(id)
   },
+  accounting: AssistantAccountingModule,
   registerAccess: (sid, type) => window.App._registerAccess(sid, type),
   confirmPayment: (id) => PaymentsModule.markPaid(id),
   rejectPayment:  (id) => PaymentsModule.rejectPayment(id),
@@ -375,10 +378,15 @@ function initNavigation() {
       try {
         switch (target) {
           case 'pagos':
-            await PaymentsModule.init();
+            renderCajaCobro();
+            // Inicializar el historial en background
+            PaymentsModule.init().catch(()=>{});
             import('../shared/payment-queue.js').then(m =>
               m.PaymentQueue.init('payment-queue-container')
             ).catch(() => {});
+            break;
+          case 'contabilidad':
+            await AssistantAccountingModule.init();
             break;
           case 'accesos':
             await AccessModule.init();

@@ -90,6 +90,7 @@ const DirectorUI = {
     });
 
     // Lanzar widgets inteligentes en background (no bloquea el render)
+    // Smart widgets — carga lazy si el módulo existe
     import('./automation.js').then(({ AutomationModule }) => {
       AutomationModule.renderSmartWidgets('smartAlertsContainer');
     }).catch(() => {});

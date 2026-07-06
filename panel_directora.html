@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="utf-8" />
@@ -10,13 +10,13 @@
   <style>html{display:none;}</style>
   <!-- X-Frame-Options debe ser configurado por el servidor, no por meta tag -->
   <script>if(self===top){document.documentElement.style.display='block';}else{top.location=self.location;}</script>
-  <!-- Service Worker — registrar lo antes posible para OneSignal -->
+  <!-- Service Worker � registrar lo antes posible para OneSignal -->
   <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/OneSignalSDKWorker.js', { scope: '/' }).catch(() => {});
     }
   </script>
-  <title>Colegio Montessori Sonrisas Creativas — Panel Directora</title>
+  <title>Colegio Montessori Sonrisas Creativas � Panel Directora</title>
   <link rel="icon" href="logo/favicon.ico" type="image/x-icon">
   <link rel="manifest" href="manifest.json">
   
@@ -126,7 +126,7 @@
       box-shadow: 0 14px 35px rgba(15, 23, 42, 0.06);
     }
 
-    /* ── METRIC CARDS ─────────────────────────────── */
+    /* -- METRIC CARDS ------------------------------- */
     .metric-card {
       padding: 1.1rem 1.1rem 1.2rem;
       transition: transform 0.25s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.2s ease;
@@ -149,7 +149,7 @@
       box-shadow: 0 20px 45px rgba(15, 23, 42, 0.1);
     }
 
-    /* Color variants — border + icon tint */
+    /* Color variants � border + icon tint */
     .metric-card--blue   { border-left-color: var(--blue-primary);   }
     .metric-card--orange { border-left-color: var(--orange-primary);  }
     .metric-card--green  { border-left-color: var(--green-primary);   }
@@ -195,7 +195,7 @@
       line-height: 1.1;
     }
 
-    /* ── QUICK ACTION CARDS ───────────────────────── */
+    /* -- QUICK ACTION CARDS ------------------------- */
     .quick-action-card {
       padding: 1.3rem;
       transition: transform 0.25s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.2s ease, border-color 0.2s ease;
@@ -277,10 +277,10 @@
       border: 1px solid #e6edf4;
     }
     
-    /* ═══════════════════════════════════════════════
-       SIDEBAR — gestionado por css/karpus-modern.css
+    /* -----------------------------------------------
+       SIDEBAR � gestionado por css/karpus-modern.css
        (sistema unificado body.sidebar-collapsed)
-    ═══════════════════════════════════════════════ */
+    ----------------------------------------------- */
     aside#sidebar {
       width: 288px; /* directora usa 288px en lugar de 280px */
       background: linear-gradient(160deg, #0B63C7 0%, #0850A0 60%, #042C60 100%);
@@ -298,7 +298,7 @@
     }
     aside#sidebar::-webkit-scrollbar { display: none; }
 
-    /* Directora sidebar is 288px — karpus-modern.css handles flex layout */
+    /* Directora sidebar is 288px � karpus-modern.css handles flex layout */
     @media (min-width: 769px) {
       body.panel-directora-body aside#sidebar { width: 288px; }
       body.sidebar-collapsed.panel-directora-body aside#sidebar { width: 80px !important; }
@@ -306,18 +306,18 @@
 
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-    /* ═══════════════════════════════════════════════
+    /* -----------------------------------------------
        MODALES ANIMADOS
-    ═══════════════════════════════════════════════ */
+    ----------------------------------------------- */
     @keyframes scaleIn {
       from { opacity: 0; transform: scale(0.95) translateY(10px); }
       to { opacity: 1; transform: scale(1) translateY(0); }
     }
     .animate-scaleIn { animation: scaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
 
-    /* ═══════════════════════════════════════════════
+    /* -----------------------------------------------
        MAIN / LAYOUT SHELL
-    ═══════════════════════════════════════════════ */
+    ----------------------------------------------- */
     #layoutShell {
       transition: margin-left .25s ease;
     }
@@ -381,9 +381,9 @@
       }
     }
 
-    /* ═══════════════════════════════════════════════
+    /* -----------------------------------------------
        NAV BUTTONS
-    ═══════════════════════════════════════════════ */
+    ----------------------------------------------- */
     .nav-btn, .kk-nav-item {
       display: flex; align-items: center; gap: 12px;
       padding: 12px 16px; width: 100%; color: #94a3b8;
@@ -397,9 +397,9 @@
     .nav-btn:hover, .nav-btn.active, .kk-nav-item:hover, .kk-nav-item.active { background: rgba(255,255,255,0.15); color: white; }
     .nav-btn .badge, .kk-nav-item .kk-badge { display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 5px;border-radius:50px;background:#FF7A00;color:white;font-size:9px;font-weight:900;line-height:1; }
 
-    /* ═══════════════════════════════════════════════
-       SECCIONES — ocultas por defecto, visibles con .active
-    ═══════════════════════════════════════════════ */
+    /* -----------------------------------------------
+       SECCIONES � ocultas por defecto, visibles con .active
+    ----------------------------------------------- */
     .section {
       display: none;
       overflow: visible;
@@ -411,9 +411,9 @@
     }
     @keyframes fadeInDir { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
-    /* ═══════════════════════════════════════════════
-       TABLAS — scroll horizontal contenido, nunca body
-    ═══════════════════════════════════════════════ */
+    /* -----------------------------------------------
+       TABLAS � scroll horizontal contenido, nunca body
+    ----------------------------------------------- */
     .data-table {
       width: 100%; border-collapse: collapse; background: white;
       border-radius: 8px; border: 1px solid #e2e8f0;
@@ -430,9 +430,9 @@
     }
     .table-scroll-wrap .data-table { min-width: 600px; }
 
-    /* ═══════════════════════════════════════════════
+    /* -----------------------------------------------
        CHAT TIPO MESSENGER
-    ═══════════════════════════════════════════════ */
+    ----------------------------------------------- */
     .chat-app {
       display: flex;
       height: calc(100dvh - 120px);
@@ -476,9 +476,9 @@
       .chat-app.show-chat .chat-conversation { display: flex; }
     }
 
-    /* ═══════════════════════════════════════════════
-       MODALES — Paleta Sonrisas Creativas
-    ═══════════════════════════════════════════════ */
+    /* -----------------------------------------------
+       MODALES � Paleta Sonrisas Creativas
+    ----------------------------------------------- */
     .modal-content {
       background: white;
       border-radius: 24px;
@@ -491,7 +491,7 @@
       border: 1px solid rgba(11,99,199,0.08);
     }
 
-    /* Header base — azul institucional */
+    /* Header base � azul institucional */
     .modal-header {
       padding: 1.25rem 1.5rem;
       border-bottom: none;
@@ -588,18 +588,18 @@
     }
     .modal-container.hidden { display: none !important; }
 
-    /* ═══════════════════════════════════════════════
-       KPI GRID — auto-fit responsivo
-    ═══════════════════════════════════════════════ */
+    /* -----------------------------------------------
+       KPI GRID � auto-fit responsivo
+    ----------------------------------------------- */
     .kpi-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
       gap: 1rem;
     }
 
-    /* ═══════════════════════════════════════════════
+    /* -----------------------------------------------
        TARJETAS CHILD
-    ═══════════════════════════════════════════════ */
+    ----------------------------------------------- */
     .child-card {
       background-color: white; border-radius: 16px; padding: 1rem;
       position: relative; z-index: 1;
@@ -613,28 +613,28 @@
     .child-card.notebook { border-top-color: #0B63C7; background-image: linear-gradient(#f0f9ff 1px, transparent 1px); background-size: 100% 24px; }
     .child-card.toy { border-top-color: #28B54D; border-radius: 24px; border-style: dashed; }
 
-    /* ═══════════════════════════════════════════════
+    /* -----------------------------------------------
        ATTENDANCE TABS
-    ═══════════════════════════════════════════════ */
+    ----------------------------------------------- */
     [data-att-mode] { transition: all .2s ease; }
     [data-att-mode].active-att-tab { background:white; color:#0B63C7; font-weight:900; box-shadow:0 2px 8px rgba(11,99,199,0.15); }
 
-    /* ═══════════════════════════════════════════════
+    /* -----------------------------------------------
        REPORT DETAILS ANIMATION
-    ═══════════════════════════════════════════════ */
+    ----------------------------------------------- */
     .report-details { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 0.3s ease-out; }
     .report-details.open { grid-template-rows: 1fr; }
     .report-details > div { overflow: hidden; }
 
-    /* ═══════════════════════════════════════════════
+    /* -----------------------------------------------
        SIDEBAR SCROLL
-    ═══════════════════════════════════════════════ */
+    ----------------------------------------------- */
     .sidebar-scroll { overflow-y: visible; max-height: none; scrollbar-width: none; }
     .sidebar-scroll::-webkit-scrollbar { display: none; }
 
-    /* ═══════════════════════════════════════════════
+    /* -----------------------------------------------
        MOBILE SIDEBAR
-    ═══════════════════════════════════════════════ */
+    ----------------------------------------------- */
     @media (max-width: 767px) {
       aside#sidebar {
         transform: translateX(-100%);
@@ -647,18 +647,18 @@
       }
     }
 
-    /* ═══════════════════════════════════════════════
+    /* -----------------------------------------------
        CHIPS
-    ═══════════════════════════════════════════════ */
+    ----------------------------------------------- */
     .chip { padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 700; }
     .chip-blue   { background: #E8F2FF; color: #0B63C7; }
     .chip-green  { background: #E6F7EB; color: #1A8035; }
     .chip-orange { background: #FFF0E0; color: #D96500; }
     .chip-yellow { background: #FFFBE6; color: #B8860B; }
 
-    /* ═══════════════════════════════════════════════
-       BOTONES DE ACCIÓN EN TABLAS
-    ═══════════════════════════════════════════════ */
+    /* -----------------------------------------------
+       BOTONES DE ACCI�N EN TABLAS
+    ----------------------------------------------- */
     .btn-action { padding: 6px 10px; border-radius: 10px; font-size: 12px; font-weight: 700; cursor: pointer; touch-action: manipulation; transition: all 0.2s; }
     .btn-edit   { color: #0B63C7; background: #E8F2FF; border: 1px solid #DBEAFE; }
     .btn-edit:hover   { background: #0B63C7; color: white; }
@@ -667,9 +667,9 @@
     .btn-approve { color: #1A8035; background: #E6F7EB; border: 1px solid #D1FAE5; }
     .btn-approve:hover { background: #28B54D; color: white; }
 
-    /* ═══════════════════════════════════════════════
+    /* -----------------------------------------------
        LOADER INICIAL
-    ═══════════════════════════════════════════════ */
+    ----------------------------------------------- */
     #initial-loading {
       position: fixed; inset: 0; background: white; z-index: 9999;
       display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -682,9 +682,9 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* ═══════════════════════════════════════════════
-       SONRISAS CREATIVAS — Colored letters (sidebar brand)
-    ═══════════════════════════════════════════════ */
+    /* -----------------------------------------------
+       SONRISAS CREATIVAS � Colored letters (sidebar brand)
+    ----------------------------------------------- */
     .karpus-kids-inline .k-1  { color: #FF7A00; }
     .karpus-kids-inline .k-2  { color: #0B63C7; }
     .karpus-kids-inline .k-3  { color: #28B54D; }
@@ -696,9 +696,9 @@
     .karpus-kids-inline .k-9  { color: #0B63C7; }
     .karpus-kids-inline .k-10 { color: #FFD43B; }
 
-    /* ═══════════════════════════════════════════════
-       PALETA SONRISAS — Utility classes for JS-generated content
-    ═══════════════════════════════════════════════ */
+    /* -----------------------------------------------
+       PALETA SONRISAS � Utility classes for JS-generated content
+    ----------------------------------------------- */
 
     /* Status badges (used by JS renderers) */
     .badge-paid,   .status-paid   { background:#E6F7EB; color:#1A8035; border:1px solid #B7EFC5; }
@@ -734,7 +734,7 @@
       background:linear-gradient(90deg,#0B63C7,#FF7A00,#28B54D,#FFD43B);
     }
 
-    /* Section page headers — unified */
+    /* Section page headers � unified */
     .page-header {
       display:flex; flex-direction:column; gap:4px; margin-bottom:1.5rem;
     }
@@ -846,24 +846,24 @@
       body { background:white; }
     }
 
-    /* ═══════════════════════════════════════════════
+    /* -----------------------------------------------
        MOBILE OVERRIDES GENERALES
-    ═══════════════════════════════════════════════ */
+    ----------------------------------------------- */
     @media (max-width: 640px) {
       .hide-mobile { display: none !important; }
       /* Tablas: scroll horizontal, nunca romper layout */
       .overflow-x-auto { -webkit-overflow-scrolling: touch; }
-      /* Gráficos: no desbordar */
+      /* Gr�ficos: no desbordar */
       canvas { max-width: 100% !important; }
-      /* Modales full-width en móvil */
+      /* Modales full-width en m�vil */
       .modal-content { width: 95%; max-height: 85dvh; }
-      /* Botones full-width en móvil */
+      /* Botones full-width en m�vil */
       .btn-mobile-full { width: 100% !important; justify-content: center; }
     }
 
-    /* ═══════════════════════════════════════════════
+    /* -----------------------------------------------
        TEACHER GRID BUTTON FIX
-    ═══════════════════════════════════════════════ */
+    ----------------------------------------------- */
     #teachersGrid button.bg-slate-900,
     #teachersGrid button.bg-black,
     #teachersGrid button.bg-gray-800 {
@@ -872,7 +872,7 @@
     }
     #teachersGrid button:hover { background-color: #0850A0 !important; }
 
-    /* Sin bottom-nav en este panel — cancelar el padding reservado */
+    /* Sin bottom-nav en este panel � cancelar el padding reservado */
     body { padding-bottom: 0 !important; }
   </style>
 </head>
@@ -882,7 +882,7 @@
   <div id="initial-loading">
     <div class="loader-spin mb-4"></div>
     <h2 class="text-xl font-bold text-slate-700 animate-pulse">Sonrisas Creativas</h2>
-    <p class="text-sm text-slate-400">Cargando panel de dirección...</p>
+    <p class="text-sm text-slate-400">Cargando panel de direcci�n...</p>
   </div>
 
   <div class="app">
@@ -924,61 +924,55 @@
         </div>
       </div>
 
-      <!-- Nav -->
-      <nav class="flex-1 overflow-y-auto kk-scroll px-2 py-1 space-y-0.5 relative z-10">
-        <div class="kk-nav-section label">Principal</div>
+      <!-- Nav por categor�as -->
+      <nav class="flex-1 overflow-y-auto kk-scroll px-2 py-2 space-y-1 relative z-10">
+
         <button data-section="dashboard" class="kk-nav-item" data-tooltip="Dashboard">
           <i data-lucide="layout-dashboard" class="text-blue-300"></i>
           <span class="label">Dashboard</span>
         </button>
 
-        <div class="kk-nav-section label">Gestión</div>
-        <button data-section="maestros" class="kk-nav-item relative" data-tooltip="Maestros">
-          <i data-lucide="user-cog" class="text-green-300"></i>
-          <span class="label">Maestros</span>
-          <span id="badge-maestros" class="hidden kk-badge">0</span>
-        </button>
-        <button data-section="estudiantes" class="kk-nav-item relative" data-tooltip="Estudiantes">
-          <i data-lucide="graduation-cap" class="text-orange-300"></i>
-          <span class="label">Estudiantes</span>
-          <span id="badge-estudiantes" class="hidden kk-badge">0</span>
-        </button>
-        <button data-section="aulas" class="kk-nav-item" data-tooltip="Aulas">
-          <i data-lucide="school" class="text-blue-300"></i>
-          <span class="label">Aulas</span>
+        <button data-section="gestion-academica" class="kk-nav-item relative" data-tooltip="Gesti�n Acad�mica">
+          <i data-lucide="graduation-cap" class="text-green-300"></i>
+          <span class="label">Gesti�n Acad�mica</span>
+          <span id="badge-gestion" class="hidden kk-badge">0</span>
         </button>
 
-        <div class="kk-nav-section label">Académico</div>
-        <button data-section="asistencia" class="kk-nav-item relative" data-tooltip="Asistencia">
-          <i data-lucide="calendar-check-2" class="text-pink-300"></i>
-          <span class="label">Asistencia</span>
-          <span id="badge-asistencia" class="hidden kk-badge">0</span>
-        </button>
-        <button data-section="calificaciones" class="kk-nav-item relative" data-tooltip="Calificaciones">
-          <i data-lucide="star" class="text-[#28B54D]"></i>
-          <span class="label">Calificaciones</span>
-          <span id="badge-calificaciones" class="hidden kk-badge">0</span>
+        <button data-section="ciclo-escolar" class="kk-nav-item relative" data-tooltip="Ciclo Escolar">
+          <i data-lucide="calendar-range" class="text-teal-300"></i>
+          <span class="label">Ciclo Escolar</span>
+          <span id="badge-ciclo" class="hidden kk-badge">0</span>
         </button>
 
-        <div class="kk-nav-section label">Finanzas</div>
-        <button data-section="pagos" class="kk-nav-item relative" data-tooltip="Pagos">
+        <button data-section="finanzas" class="kk-nav-item relative" data-tooltip="Finanzas">
           <i data-lucide="banknote" class="text-yellow-300"></i>
-          <span class="label">Pagos</span>
+          <span class="label">Finanzas</span>
           <span id="badge-pagos" class="hidden kk-badge">0</span>
         </button>
 
-        <div class="kk-nav-section label">Sistema</div>
-        <button data-section="configuracion" class="kk-nav-item" data-tooltip="Configuración">
-          <i data-lucide="sliders-horizontal" class="text-slate-300"></i>
-          <span class="label">Configuración</span>
+        <button data-section="contabilidad" class="kk-nav-item relative" data-tooltip="Contabilidad">
+          <i data-lucide="bar-chart-3" class="text-orange-300"></i>
+          <span class="label">Contabilidad</span>
         </button>
+
+        <button data-section="comunicacion" class="kk-nav-item relative" data-tooltip="Comunicaci�n">
+          <i data-lucide="messages-square" class="text-sky-300"></i>
+          <span class="label">Comunicaci�n</span>
+          <span id="badge-comunicacion" class="hidden kk-badge">0</span>
+        </button>
+
+        <button data-section="configuracion" class="kk-nav-item" data-tooltip="Configuraci�n">
+          <i data-lucide="sliders-horizontal" class="text-slate-300"></i>
+          <span class="label">Configuraci�n</span>
+        </button>
+
       </nav>
 
       <!-- Logout -->
       <div class="p-3 relative z-10 border-t border-white/10">
         <button id="btnLogout" class="kk-logout-btn">
           <i data-lucide="log-out" class="w-4 h-4"></i>
-          <span class="label">Cerrar Sesión</span>
+          <span class="label">Cerrar Sesi�n</span>
         </button>
       </div>
     </aside>
@@ -989,120 +983,41 @@
         <button id="menuBtn" class="md:hidden p-2.5 rounded-xl bg-white shadow-sm border border-slate-100 text-slate-600 hover:bg-[#E8F2FF] hover:text-[#0B63C7] transition-colors active:scale-95"
           style="position:relative;z-index:200;"
           data-managed="true"
-          aria-label="Abrir menú">
+          aria-label="Abrir men�">
           <i data-lucide="menu" class="w-5 h-5"></i>
         </button>
-        <h2 class="text-lg font-bold text-slate-800 hidden md:block">Colegio Montessori Sonrisas Creativas — Panel Director</h2>
+        <h2 class="text-lg font-bold text-slate-800 hidden md:block">Colegio Montessori Sonrisas Creativas � Panel Director</h2>
         <span class="text-xs font-semibold text-slate-400 uppercase tracking-widest md:hidden">Panel Directora</span>
+        <!-- Selector de Ciclo Escolar Global -->
+        <div class="hidden md:flex items-center gap-2 ml-auto">
+          <span class="text-xs font-black text-slate-400 uppercase tracking-wider">Ciclo:</span>
+          <select id="headerCycleSelector" onchange="App.academic?.switchYear?.(this.value)"
+            class="border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-black text-slate-700 outline-none focus:border-blue-400 bg-white">
+            <option value="">Cargando...</option>
+          </select>
+        </div>
       </header>
 
       <!-- MAIN SCROLLABLE -->
       <main class="main" id="layoutShell">
         <!-- SECTIONS -->
         <section id="dashboard" class="section active">
+<div id="dashboardContainer" class="space-y-6"></div>
+</section>
+
+<!-- GESTI�N ACAD�MICA HUB -->
+<section id="gestion-academica" class="section"><div class="p-2 md:p-4"></div></section>
+
+<!-- CICLO ESCOLAR HUB -->
+<section id="ciclo-escolar" class="section"><div class="p-2 md:p-4"></div></section>
+
+<!-- FINANZAS HUB -->
+<section id="finanzas" class="section"><div class="p-2 md:p-4"></div></section>
+
+<section id="maestros" class="section">
         <div class="section-shell">
           <div class="section-header">
-            <h1 class="section-title">Panel general</h1>
-            <p class="section-subtitle">Resumen ejecutivo y accesos rápidos para la gestión diaria.</p>
-          </div>
-
-          <div id="dashboardAlerts" class="mb-6 hidden"></div>
-
-          <div class="kpi-grid mb-8">
-            <div class="metric-card metric-card--blue">
-              <div class="metric-icon"><i data-lucide="users" class="w-5 h-5"></i></div>
-              <div class="metric-label">Estudiantes</div>
-              <div class="metric-value" id="kpiStudents">0</div>
-              <div class="text-sm text-slate-500">Activos en la institución</div>
-            </div>
-            <div class="metric-card metric-card--orange">
-              <div class="metric-icon"><i data-lucide="graduation-cap" class="w-5 h-5"></i></div>
-              <div class="metric-label">Docentes</div>
-              <div class="metric-value" id="kpiTeachers">0</div>
-              <div class="text-sm text-slate-500">Personal académico</div>
-            </div>
-            <div class="metric-card metric-card--green">
-              <div class="metric-icon"><i data-lucide="home" class="w-5 h-5"></i></div>
-              <div class="metric-label">Aulas</div>
-              <div class="metric-value" id="kpiClassrooms">0</div>
-              <div class="text-sm text-slate-500">Operativas hoy</div>
-            </div>
-            <div class="metric-card metric-card--amber">
-              <div class="metric-icon"><i data-lucide="user-check" class="w-5 h-5"></i></div>
-              <div class="metric-label">Asistencia</div>
-              <div class="metric-value" id="kpiAttendance">0</div>
-              <div class="text-sm text-slate-500" id="kpiAttendanceRate"></div>
-            </div>
-            <div class="metric-card metric-card--slate">
-              <div class="metric-icon"><i data-lucide="alert-circle" class="w-5 h-5"></i></div>
-              <div class="metric-label">Por cobrar</div>
-              <div class="metric-value" id="kpiPendingMoney">RD$0.00</div>
-              <div class="text-sm text-slate-500">Cobros pendientes</div>
-            </div>
-
-          </div>
-
-          <div id="smartAlertsContainer" class="mb-6">
-            <div class="flex items-center gap-2 py-4">
-              <div class="w-4 h-4 border-2 border-blue-200 border-t-transparent rounded-full animate-spin"></div>
-              <span class="text-xs text-slate-400 font-bold">Analizando datos...</span>
-            </div>
-          </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 mb-2">
-            <div id="cardReportes" data-action="go-section" data-section="reportes" class="quick-action-card quick-action-card--blue">
-              <div class="flex items-center gap-3 mb-3">
-                <div class="metric-icon"><i data-lucide="file-text" class="w-5 h-5"></i></div>
-                <h3 class="font-black text-slate-800 text-lg">Reportes</h3>
-              </div>
-              <p class="text-slate-500 text-sm">Gestión de incidencias y seguimiento de quejas.</p>
-            </div>
-            <div id="cardVideoconferencia" data-action="go-section" data-section="videoconferencia" class="quick-action-card quick-action-card--rose">
-              <div class="flex items-center gap-3 mb-3">
-                <div class="metric-icon"><i data-lucide="video" class="w-5 h-5"></i></div>
-                <h3 class="font-black text-slate-800 text-lg">Videoconferencia</h3>
-              </div>
-              <p class="text-slate-500 text-sm">Activación rápida de sesiones en vivo para aulas.</p>
-            </div>
-            <div id="cardComunicaciones" data-action="go-section" data-section="comunicacion" class="quick-action-card quick-action-card--blue relative">
-              <span id="badge-card-comunicacion" class="hidden absolute -top-2 -right-2 min-w-[22px] h-5 bg-rose-500 text-white text-[10px] font-black rounded-full flex items-center justify-center px-1.5 shadow-md animate-pulse z-10">0</span>
-              <div class="flex items-center gap-3 mb-3">
-                <div class="metric-icon"><i data-lucide="message-square" class="w-5 h-5"></i></div>
-                <h3 class="font-black text-slate-800 text-lg">Comunicaciones</h3>
-              </div>
-              <p class="text-slate-500 text-sm">Centro de mensajería con familias y docentes.</p>
-            </div>
-            <div id="cardMuro" data-action="go-section" data-section="muro" class="quick-action-card quick-action-card--slate relative">
-              <span id="badge-card-muro" class="hidden absolute -top-2 -right-2 min-w-[22px] h-5 bg-rose-500 text-white text-[10px] font-black rounded-full flex items-center justify-center px-1.5 shadow-md animate-pulse z-10">0</span>
-              <div class="flex items-center gap-3 mb-3">
-                <div class="metric-icon"><i data-lucide="layout" class="w-5 h-5"></i></div>
-                <h3 class="font-black text-slate-800 text-lg">Muro Escolar</h3>
-              </div>
-              <p class="text-slate-500 text-sm">Publicaciones institucionales y novedades.</p>
-            </div>
-            <div data-action="go-section" data-section="accesos" id="cardAcceso" class="quick-action-card quick-action-card--orange">
-              <div class="flex items-center gap-3 mb-3">
-                <div class="metric-icon"><i data-lucide="qr-code" class="w-5 h-5"></i></div>
-                <h3 class="font-black text-slate-800 text-lg">Control de Accesos</h3>
-              </div>
-              <p class="text-slate-500 text-sm">Monitoreo en tiempo real de entradas y salidas.</p>
-            </div>
-            <div data-action="go-section" data-section="staff-permits" class="quick-action-card quick-action-card--green">
-              <div class="flex items-center gap-3 mb-3">
-                <div class="metric-icon"><i data-lucide="calendar-check" class="w-5 h-5"></i></div>
-                <h3 class="font-black text-slate-800 text-lg">Permisos y Faltas</h3>
-              </div>
-              <p class="text-slate-500 text-sm">Control de ausencias y autorizaciones del personal.</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- MAESTROS -->
-      <section id="maestros" class="section">
-        <div class="section-shell">
-          <div class="section-header">
-            <h1 class="section-title">Gestión de personal</h1>
+            <h1 class="section-title">Gesti�n de personal</h1>
             <p class="section-subtitle">Control del equipo docente y apoyo operativo.</p>
           </div>
 
@@ -1179,9 +1094,9 @@
           <div>
             <h1 class="text-2xl font-black text-slate-800 tracking-tight flex items-center gap-3">
               <span class="p-2 bg-emerald-100 text-emerald-600 rounded-2xl"><i data-lucide="calendar-check" class="w-5 h-5"></i></span>
-              Gestión de Permisos y Faltas
+              Gesti�n de Permisos y Faltas
             </h1>
-            <p class="text-slate-500 text-sm font-medium mt-0.5">Historial y aprobación de ausencias del personal</p>
+            <p class="text-slate-500 text-sm font-medium mt-0.5">Historial y aprobaci�n de ausencias del personal</p>
           </div>
 
         </div>
@@ -1244,8 +1159,8 @@
       <section id="estudiantes" class="section">
         <div class="section-shell">
           <div class="section-header">
-            <h1 class="section-title">Gestión de estudiantes</h1>
-            <p class="section-subtitle">Vista consolidada de matrícula, rendimiento y seguimiento.</p>
+            <h1 class="section-title">Gesti�n de estudiantes</h1>
+            <p class="section-subtitle">Vista consolidada de matr�cula, rendimiento y seguimiento.</p>
           </div>
 
           <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 mb-6">
@@ -1294,8 +1209,8 @@
         <!-- Encabezado y acciones -->
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
           <div>
-            <h2 class="text-2xl font-bold text-[#1A2340]">Centro Académico</h2>
-            <p class="text-slate-500 text-sm">Vista moderna de aulas con métricas en tiempo real</p>
+            <h2 class="text-2xl font-bold text-[#1A2340]">Centro Acad�mico</h2>
+            <p class="text-slate-500 text-sm">Vista moderna de aulas con m�tricas en tiempo real</p>
           </div>
           <div class="flex gap-3">
             <button id="btnAddRoom" onclick="App.rooms.openModal()" class="px-4 py-2.5 text-white rounded-xl flex items-center gap-2 shadow-md transition-all hover:opacity-90" style="background:#0B63C7;">
@@ -1305,14 +1220,14 @@
           </div>
         </div>
 
-        <!-- BLOQUE 1 – Tabla de Aulas (sin cambios) -->
+        <!-- BLOQUE 1 � Tabla de Aulas (sin cambios) -->
         <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden mb-8">
           <table class="w-full text-sm">
             <thead class="bg-[#E8F2FF] text-left text-xs font-black uppercase tracking-wider text-[#0850A0]">
               <tr>
                 <th class="py-4 px-6">Nombre del Aula</th>
                 <th class="py-4 px-6">Maestra Asignada</th>
-                <th class="py-4 px-6">Ocupación / Capacidad</th>
+                <th class="py-4 px-6">Ocupaci�n / Capacidad</th>
                 <th class="py-4 px-6 text-center">Acciones</th>
               </tr>
             </thead>
@@ -1322,7 +1237,7 @@
           </table> 
         </div>
 
-        <!-- BLOQUE 2 – Panel Interno del Aula (Opcional, mantenido para detalle) -->
+        <!-- BLOQUE 2 � Panel Interno del Aula (Opcional, mantenido para detalle) -->
         <div id="classroomPanel" class="hidden mt-8">
           <div class="bg-white rounded-3xl shadow-md border border-slate-100 overflow-hidden">
             <div class="p-6 bg-gradient-to-r from-[#0B63C7] to-[#0850A0] text-white flex items-center justify-between">
@@ -1330,7 +1245,7 @@
                 <img id="cpTeacherPhoto" src="img/1.jpg" class="w-14 h-14 rounded-2xl object-cover border-2 border-white/30" alt="Maestro" loading="lazy" />
                 <div>
                   <div class="text-xl font-bold" id="cpClassName">Aula</div>
-                  <div class="text-sm text-white/80">Maestro: <span id="cpTeacherName">—</span> • Alumnos: <span id="cpTotal">0</span></div>
+                  <div class="text-sm text-white/80">Maestro: <span id="cpTeacherName">�</span> � Alumnos: <span id="cpTotal">0</span></div>
                 </div>
               </div>
               <div class="text-right">
@@ -1341,9 +1256,9 @@
             </div>
 
             <div class="p-6 grid grid-cols-1 lg:grid-cols-4 gap-6">
-              <!-- Acciones rápidas -->
+              <!-- Acciones r�pidas -->
               <div class="lg:col-span-4 bg-slate-50 rounded-2xl p-4 border border-slate-200">
-                <div class="text-xs font-bold text-slate-600 uppercase mb-2">Acciones rápidas</div>
+                <div class="text-xs font-bold text-slate-600 uppercase mb-2">Acciones r�pidas</div>
                 <div class="flex flex-wrap gap-2">
                   <button id="cpQuickAttendance" class="px-4 py-2 text-white rounded-xl text-sm font-bold transition-all hover:opacity-90" style="background:#0B63C7;">Registrar asistencia</button>
                   <button id="cpQuickCalendar" class="px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold hover:bg-slate-50">Ver calendario</button>
@@ -1381,7 +1296,7 @@
         <!-- Mode Tabs -->
         <div class="flex gap-1 bg-slate-100 p-1 rounded-xl w-fit mb-6">
           <button data-att-mode="day" class="active-att-tab px-5 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all">
-            <i data-lucide="calendar" class="w-3.5 h-3.5 inline mr-1"></i>Por Día
+            <i data-lucide="calendar" class="w-3.5 h-3.5 inline mr-1"></i>Por D�a
           </button>
           <button data-att-mode="range" class="px-5 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all text-slate-500 hover:text-slate-700">
             <i data-lucide="calendar-range" class="w-3.5 h-3.5 inline mr-1"></i>Por Periodo
@@ -1410,23 +1325,23 @@
         <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
           <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
             <p class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">Total</p>
-            <p class="text-2xl font-black text-slate-800" id="attKpiTotal">—</p>
+            <p class="text-2xl font-black text-slate-800" id="attKpiTotal">�</p>
           </div>
           <div class="bg-emerald-50 rounded-2xl p-4 border border-emerald-100 shadow-sm">
             <p class="text-[10px] font-black text-emerald-500 uppercase tracking-wider mb-1">Presentes</p>
-            <p class="text-2xl font-black text-emerald-700" id="attKpiPresent">—</p>
+            <p class="text-2xl font-black text-emerald-700" id="attKpiPresent">�</p>
           </div>
           <div class="bg-rose-50 rounded-2xl p-4 border border-rose-100 shadow-sm">
             <p class="text-[10px] font-black text-rose-500 uppercase tracking-wider mb-1">Ausentes</p>
-            <p class="text-2xl font-black text-rose-700" id="attKpiAbsent">—</p>
+            <p class="text-2xl font-black text-rose-700" id="attKpiAbsent">�</p>
           </div>
           <div class="bg-amber-50 rounded-2xl p-4 border border-amber-100 shadow-sm">
             <p class="text-[10px] font-black text-amber-500 uppercase tracking-wider mb-1">Tardanzas</p>
-            <p class="text-2xl font-black text-amber-700" id="attKpiLate">—</p>
+            <p class="text-2xl font-black text-amber-700" id="attKpiLate">�</p>
           </div>
           <div class="bg-[#E8F2FF] rounded-2xl p-4 border border-blue-200 shadow-sm col-span-2 md:col-span-1">
             <p class="text-[10px] font-black text-[#0B63C7] uppercase tracking-wider mb-1">Tasa Asistencia</p>
-            <p class="text-2xl font-black text-[#0850A0]" id="attKpiRate">—</p>
+            <p class="text-2xl font-black text-[#0850A0]" id="attKpiRate">�</p>
             <div class="mt-2 h-1.5 bg-blue-100 rounded-full overflow-hidden">
               <div id="attRateBar" class="h-full bg-[#0B63C7] rounded-full transition-all duration-500" style="width:0%"></div>
             </div>
@@ -1437,7 +1352,7 @@
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-5">
           <!-- Donut -->
           <div class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
-            <h3 class="text-xs font-black text-slate-500 uppercase tracking-wider mb-4">Distribución</h3>
+            <h3 class="text-xs font-black text-slate-500 uppercase tracking-wider mb-4">Distribuci�n</h3>
             <div class="h-52"><canvas id="attDonutChart"></canvas></div>
           </div>
           <!-- Bar por aula (solo rango) -->
@@ -1491,7 +1406,7 @@
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div>
             <h1 class="text-2xl font-black text-[#1A2340] tracking-tight">Centro de Calificaciones</h1>
-            <p class="text-slate-500 font-medium">Seguimiento del progreso académico por periodo.</p>
+            <p class="text-slate-500 font-medium">Seguimiento del progreso acad�mico por periodo.</p>
           </div>
           <div class="flex gap-2 flex-wrap">
             <button id="btnNewPeriod" class="px-5 py-2.5 text-white rounded-xl font-black text-xs uppercase tracking-wider shadow-lg transition-all flex items-center gap-2 active:scale-95 hover:opacity-90" style="background:#0B63C7;box-shadow:0 4px 14px rgba(11,99,199,0.3);">
@@ -1545,7 +1460,7 @@
                   <th class="px-6 py-4 border-b border-slate-200">Estudiante</th>
                   <th class="px-6 py-4 text-center border-b border-slate-200">Promedio</th>
                   <th class="px-6 py-4 text-center border-b border-slate-200">Nivel</th>
-                  <th class="px-6 py-4 border-b border-slate-200">Última Tarea Calificada</th>
+                  <th class="px-6 py-4 border-b border-slate-200">�ltima Tarea Calificada</th>
                 </tr>
               </thead>
               <tbody id="gradesTableBody" class="divide-y divide-slate-100 bg-white">
@@ -1553,7 +1468,7 @@
               </tbody>
             </table>
           </div>
-          <p class="text-[10px] text-slate-400 mt-4 italic">💡 Tip: Haz doble clic en un estudiante para ver el detalle de todas sus tareas del trimestre.</p>
+          <p class="text-[10px] text-slate-400 mt-4 italic">?? Tip: Haz doble clic en un estudiante para ver el detalle de todas sus tareas del trimestre.</p>
         </div>
       </section>
 
@@ -1571,7 +1486,7 @@
             <select id="statusFilter" class="px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
               <option value="">Todos los estados</option>
               <option value="pending">Pendientes</option>
-              <option value="in_review">En Revisión</option>
+              <option value="in_review">En Revisi�n</option>
               <option value="resolved">Resueltos</option>
               <option value="closed">Cerrados</option>
             </select>
@@ -1600,7 +1515,7 @@
         </div>
       </section>
 
-      <!-- SECCIÓN DE ACCESOS — QRs de Estudiantes -->
+      <!-- SECCI�N DE ACCESOS � QRs de Estudiantes -->
       <section id="accesos" class="section">
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
           <div>
@@ -1639,7 +1554,7 @@
           </div>
         </div>
 
-        <!-- Visualización Gráfica -->
+        <!-- Visualizaci�n Gr�fica -->
         <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">
           <div class="lg:col-span-3 bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm">
             <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-6">Tendencia de Entradas en el Periodo</h3>
@@ -1680,213 +1595,368 @@
         </div>
       </section>
 
-      <!-- PAGOS -->
+      <!-- PAGOS - NUEVO FLUJO -->
       <section id="pagos" class="section">
         <!-- Header Pagos -->
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
           <div>
             <div class="flex items-center gap-3 mb-1">
               <div class="w-1 h-8 bg-[#0B63C7] rounded-full"></div>
-              <h1 class="text-2xl font-black text-slate-800 tracking-tight">Gestión Financiera</h1>
+              <h1 class="text-2xl font-black text-slate-800 tracking-tight">Gestión de Pagos</h1>
             </div>
-            <p class="text-slate-500 font-medium ml-4">Control de ingresos, mensualidades y transferencias</p>
-          </div>
-          <button id="btnNewPayment" class="px-5 py-3 text-white rounded-2xl font-black text-sm uppercase tracking-wide shadow-lg transition-all flex items-center gap-2 active:scale-95" style="background:#FF8A00;box-shadow:0 4px 14px rgba(255,138,0,0.3);">
-            <i data-lucide="plus-circle" class="w-5 h-5"></i> Registrar Pago
-          </button>
-          <button id="btnExportInvoices" class="px-5 py-3 text-white rounded-2xl font-black text-sm uppercase tracking-wide shadow-lg transition-all flex items-center gap-2 active:scale-95" style="background:#7c3aed;box-shadow:0 4px 14px rgba(124,58,237,0.3);">
-            <i data-lucide="file-down" class="w-5 h-5"></i> Exportar Facturas
-          </button>
-        </div>
-
-        <!-- KPIs Financieros -->
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <!-- Ingresos -->
-          <div class="bg-[#E8F2FF] p-5 rounded-2xl border border-blue-100 shadow-sm hover:shadow-md transition-all">
-            <div class="flex items-center gap-3 mb-3">
-              <div class="w-10 h-10 bg-[#0B63C7] rounded-xl flex items-center justify-center">
-                <i data-lucide="trending-up" class="w-5 h-5 text-white"></i>
-              </div>
-              <span class="text-xs font-black text-[#0B63C7] uppercase tracking-wider">Ingresos Mes</span>
-            </div>
-            <p class="text-2xl font-black text-slate-800" id="kpiIncomeMonth">$0</p>
-          </div>
-          <!-- Pendientes -->
-          <div onclick="App.payments.filterBy('pending')" class="bg-[#FFFBE6] p-5 rounded-2xl border border-yellow-100 shadow-sm cursor-pointer hover:shadow-md transition-all group">
-            <div class="flex items-center gap-3 mb-3">
-              <div class="w-10 h-10 bg-[#FFD43B] rounded-xl flex items-center justify-center">
-                <i data-lucide="clock" class="w-5 h-5 text-slate-700"></i>
-              </div>
-              <span class="text-xs font-black text-yellow-700 uppercase tracking-wider">Pendientes</span>
-            </div>
-            <p class="text-2xl font-black text-slate-800" id="kpiPendingCount">0</p>
-          </div>
-          <!-- En Revisión -->
-          <div onclick="App.payments.filterBy('review')" class="bg-[#FFF0E0] p-5 rounded-2xl border border-orange-100 shadow-sm cursor-pointer hover:shadow-md transition-all group">
-            <div class="flex items-center gap-3 mb-3">
-              <div class="w-10 h-10 bg-[#FF7A00] rounded-xl flex items-center justify-center">
-                <i data-lucide="file-search" class="w-5 h-5 text-white"></i>
-              </div>
-              <span class="text-xs font-black text-[#D96500] uppercase tracking-wider">En Revisión</span>
-            </div>
-            <p class="text-2xl font-black text-slate-800" id="kpiReviewCount">0</p>
-          </div>
-          <!-- Vencidos -->
-          <div onclick="App.payments.filterBy('overdue')" class="bg-rose-50 p-5 rounded-2xl border border-rose-100 shadow-sm cursor-pointer hover:shadow-md transition-all group">
-            <div class="flex items-center gap-3 mb-3">
-              <div class="w-10 h-10 bg-rose-500 rounded-xl flex items-center justify-center">
-                <i data-lucide="alert-triangle" class="w-5 h-5 text-white"></i>
-              </div>
-              <span class="text-xs font-black text-rose-600 uppercase tracking-wider">Vencidos</span>
-            </div>
-            <p class="text-2xl font-black text-slate-800" id="kpiOverdueCount">0</p>
+            <p class="text-slate-500 font-medium ml-4">Busca un estudiante y gestiona sus pagos en un solo flujo</p>
           </div>
         </div>
 
-        <!-- BLOQUE 2: Gráfico y Configuración (Separado de la tabla) -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-          <!-- Gráfico Financiero -->
-          <div class="lg:col-span-2 bg-white rounded-3xl shadow-sm border border-slate-100 p-6">
-            <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
-              <h3 class="font-bold text-slate-800">Análisis Financiero</h3>
-              <div class="flex gap-2">
-                <select id="chartYear" class="px-3 py-1.5 bg-slate-50 border-none rounded-lg text-xs font-bold text-slate-600 outline-none">
-                  <option value="2025">2025</option>
-                  <option value="2026" selected>2026</option>
-                </select>
-                <select id="chartMonth" class="px-3 py-1.5 bg-slate-50 border-none rounded-lg text-xs font-bold text-slate-600 outline-none">
-                  <option value="all">Todo el año</option>
-                  <option value="1">Enero</option>
-                  <!-- JS llenará esto -->
-                </select>
-              </div>
-            </div>
-            <div class="h-64 w-full">
-              <canvas id="financialChart"></canvas>
-            </div>
-          </div>
-
-          <!-- Configuración de Ciclo de Pagos -->
-          <div class="bg-slate-50 rounded-3xl border border-slate-200 p-6 flex flex-col justify-center">
-            <h3 class="font-bold text-slate-800 mb-4 flex items-center gap-2">
-              <i data-lucide="settings-2" class="w-5 h-5 text-[#0B63C7]"></i> Configuración de Cobro
-            </h3>
-            <div class="space-y-4">
-              <div>
-                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Día Generación Automática</label>
-                <div class="flex items-center gap-2">
-                  <input type="number" id="confGenDay" min="1" max="28" value="25" class="w-full px-3 py-2 border rounded-xl text-sm font-bold bg-white outline-none focus:ring-2 focus:ring-[#0B63C7]">
-                  <span class="text-xs text-slate-400 font-medium">del mes anterior</span>
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <!-- Columna Izquierda: Buscador y Lista de Estudiantes -->
+          <div class="lg:col-span-4">
+            <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
+              <div class="p-5 border-b border-slate-100 bg-gradient-to-br from-slate-50 to-white">
+                <h3 class="font-bold text-slate-800 flex items-center gap-2 mb-4">
+                  <i data-lucide="users" class="w-5 h-5 text-[#0B63C7]"></i>
+                  Buscar Estudiante
+                </h3>
+                <div class="relative">
+                  <i data-lucide="search" class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"></i>
+                  <input 
+                    id="newPaymentSearch" 
+                    placeholder="Buscar por nombre, matrícula, teléfono o código QR..." 
+                    class="w-full pl-11 pr-5 py-3.5 border border-slate-200 rounded-2xl text-sm font-medium bg-white outline-none focus:ring-2 focus:ring-[#0B63C7] focus:border-transparent transition-all">
                 </div>
               </div>
-              <div>
-                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Día Límite de Pago</label>
-                <div class="flex items-center gap-2">
-                  <input type="number" id="confDueDay" min="1" max="28" value="5" class="w-full px-3 py-2 border rounded-xl text-sm font-bold bg-white outline-none focus:ring-2 focus:ring-[#0B63C7]">
-                  <span class="text-xs text-slate-400 font-medium">del mes actual</span>
+              <div id="studentSearchResults" class="max-h-[450px] overflow-y-auto">
+                <div class="p-10 text-center text-slate-400">
+                  <i data-lucide="user-search" class="w-12 h-12 mx-auto mb-3 opacity-50"></i>
+                  <p class="text-sm font-medium">Busca un estudiante para comenzar</p>
                 </div>
               </div>
-              <button id="btnSavePaymentConfig" class="w-full py-2.5 text-white rounded-xl font-bold text-xs uppercase tracking-wide transition-all shadow-md mt-2 flex items-center justify-center gap-2 hover:opacity-90" style="background:#0B63C7;">
-                <i data-lucide="save" class="w-4 h-4"></i> Guardar Configuración
-              </button>
-              <button id="btnGeneratePaymentsNow" class="w-full py-2.5 text-white rounded-xl font-bold text-xs uppercase tracking-wide transition-all shadow-md mt-1 flex items-center justify-center gap-2 hover:opacity-90" style="background:#28B54D;">
-                <i data-lucide="play-circle" class="w-4 h-4"></i> Generar pagos ahora
-              </button>
-              <button id="btnGenerateSpecificMonth" class="w-full py-2.5 text-white rounded-xl font-bold text-xs uppercase tracking-wide transition-all shadow-md mt-1 flex items-center justify-center gap-2 hover:opacity-90" style="background:#0B63C7;">
-                <i data-lucide="calendar-plus" class="w-4 h-4"></i> Generar mes específico
-              </button>
-              <button id="btnSendPaymentReminders" class="w-full py-2.5 text-white rounded-xl font-bold text-xs uppercase tracking-wide transition-all shadow-md mt-1 flex items-center justify-center gap-2 hover:opacity-90" style="background:#FF8A00;">
-                <i data-lucide="bell" class="w-4 h-4"></i> Enviar recordatorios ahora
-              </button>
-              <button id="btnExportMorosidad" class="w-full py-2.5 bg-slate-700 text-white rounded-xl font-bold text-xs uppercase tracking-wide hover:bg-slate-800 transition-all shadow-md mt-1 flex items-center justify-center gap-2">
-                <i data-lucide="download" class="w-4 h-4"></i> Exportar reporte morosidad
-              </button>
-              <button id="btnExportInvoices" class="w-full py-2.5 text-white rounded-xl font-bold text-xs uppercase tracking-wide transition-all shadow-md mt-1 flex items-center justify-center gap-2" style="background:#7c3aed;">
-                <i data-lucide="file-down" class="w-4 h-4"></i> Exportar facturas electrónicas
-              </button>
-            </div>
-            <p class="text-[10px] text-slate-400 mt-4 text-center leading-tight">
-              El sistema generará los cobros y aplicará estados de vencimiento automáticamente según estos días.
-            </p>
-          </div>
-        </div>
-
-        <!-- BLOQUE 3: Tabla Principal -->
-        <div class="bg-white rounded-2xl shadow-md border border-slate-100 p-6">
-          <div class="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
-            <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2 w-full md:w-auto">
-              <span class="w-2 h-6 bg-[#FF7A00] rounded-full"></span>
-              Control de Pagos
-            </h3>
-            <div class="flex flex-wrap gap-3 w-full md:w-auto">
-               <div class="relative flex-1 md:w-64">
-                  <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"></i>
-                  <input id="searchPaymentStudent" placeholder="Buscar por nombre..." class="pl-10 pr-4 py-2 border rounded-xl text-sm w-full bg-slate-50 focus:bg-white transition-all">
-               </div>
-               <div class="flex gap-2">
-                 <select id="filterPaymentMonth" class="px-3 py-2 border rounded-xl text-sm bg-slate-50 font-bold text-slate-700">
-                    <option value="all">Todos los meses</option>
-                    <option value="01">Enero</option>
-                    <option value="02">Febrero</option>
-                    <option value="03">Marzo</option>
-                    <option value="04">Abril</option>
-                    <option value="05">Mayo</option>
-                    <option value="06">Junio</option>
-                    <option value="07">Julio</option>
-                    <option value="08">Agosto</option>
-                    <option value="09">Septiembre</option>
-                    <option value="10">Octubre</option>
-                    <option value="11">Noviembre</option>
-                    <option value="12">Diciembre</option>
-                 </select>
-                 <select id="filterPaymentYear" class="px-3 py-2 border rounded-xl text-sm bg-slate-50 font-bold text-slate-700">
-                    <option value="2023">2023</option>
-                    <option value="2024">2024</option>
-                    <option value="2025">2025</option>
-                    <option value="2026" selected>2026</option>
-                    <option value="2027">2027</option>
-                 </select>
-               </div>
-               <select id="filterPaymentStatus" class="px-3 py-2 border rounded-xl text-sm bg-slate-50">
-                  <option value="all">Todos los estados</option>
-                  <option value="paid">Aprobados</option>
-                  <option value="pending">Pendiente</option>
-                  <option value="review">En Revisión</option>
-                  <option value="overdue">Vencido</option>
-               </select>
             </div>
           </div>
 
-          <!-- TABLA DE PAGOS ESTRUCTURADA (Solicitado) -->
-          <div class="table-scroll-wrap rounded-2xl border border-slate-200">
-            <table class="w-full text-sm text-left" style="min-width:700px;">
-              <thead class="bg-[#E8F2FF] text-[#0850A0] font-black uppercase text-[10px] tracking-wider">
-                <tr>
-                  <th class="px-6 py-4">Estudiante</th>
-                  <th class="px-6 py-4 text-center">Estado</th>
-                  <th class="px-6 py-4 text-right">Monto</th>
-                  <th class="px-6 py-4">Método</th>
-                  <th class="px-6 py-4">Banco / Ref</th>
-                  <th class="px-6 py-4">Fecha</th>
-                  <th class="px-6 py-4 text-center">Vauche</th>
-                  <th class="px-6 py-4 text-center">Acciones</th>
-                </tr>
-              </thead>
-              <tbody id="paymentsTableBody" class="divide-y divide-slate-100 bg-white">
-                <!-- Rows injected by JS -->
-              </tbody>
-            </table>
+          <!-- Columna Derecha: Expediente Financiero -->
+          <div class="lg:col-span-8">
+            <div id="financialFileContainer" class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
+              <!-- Estado: Sin Estudiante Seleccionado -->
+              <div id="noStudentSelected" class="p-12 text-center text-slate-400">
+                <div class="w-20 h-20 bg-slate-100 rounded-3xl flex items-center justify-center mx-auto mb-4">
+                  <i data-lucide="file-user" class="w-10 h-10 text-slate-300"></i>
+                </div>
+                <p class="text-lg font-bold text-slate-600 mb-2">Selecciona un estudiante</p>
+                <p class="text-sm text-slate-500">Busca y selecciona un estudiante para ver su expediente financiero</p>
+              </div>
+
+              <!-- Estado: Estudiante Seleccionado -->
+              <div id="studentFinancialFile" class="hidden">
+                <!-- Encabezado del Estudiante -->
+                <div class="p-6 border-b border-slate-100 bg-gradient-to-br from-blue-50 to-white">
+                  <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+                    <div class="flex items-center gap-3">
+                      <div id="studentAvatar" class="w-16 h-16 bg-gradient-to-br from-[#0B63C7] to-blue-600 rounded-2xl flex items-center justify-center text-2xl font-black text-white shadow-lg">
+                        ?
+                      </div>
+                      <div>
+                        <h3 id="studentName" class="text-xl font-black text-slate-800 mb-1">—</h3>
+                        <div class="flex flex-wrap items-center gap-2 text-xs">
+                          <span id="studentClassroom" class="bg-[#E8F2FF] text-[#0B63C7] px-3 py-1 rounded-full font-bold uppercase tracking-wide">—</span>
+                          <span id="studentSchoolYear" class="bg-slate-100 text-slate-600 px-3 py-1 rounded-full font-bold uppercase tracking-wide">—</span>
+                          <span id="studentPlan" class="bg-orange-50 text-orange-600 px-3 py-1 rounded-full font-bold uppercase tracking-wide">—</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="flex flex-col items-end gap-1">
+                      <span class="text-xs font-bold text-slate-400 uppercase tracking-wide">Balance General</span>
+                      <span id="studentBalance" class="text-3xl font-black text-slate-800">.00</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Tabs: Pendientes vs Historial -->
+                <div class="flex border-b border-slate-100 bg-slate-50">
+                  <button id="tabPending" class="flex-1 py-4 px-6 font-bold text-sm uppercase tracking-wide border-b-2 border-[#0B63C7] text-[#0B63C7] bg-white">
+                    Pendientes
+                  </button>
+                  <button id="tabHistory" class="flex-1 py-4 px-6 font-bold text-sm uppercase tracking-wide text-slate-500 hover:text-slate-700 transition-colors">
+                    Historial
+                  </button>
+                </div>
+
+                <!-- Contenido de los Tabs -->
+                <div class="p-6">
+                  <!-- Tab: Pendientes -->
+                  <div id="pendingItemsContainer" class="space-y-3">
+                    <!-- Items de pago pendiente -->
+                  </div>
+
+                  <!-- Tab: Historial -->
+                  <div id="historyContainer" class="hidden space-y-3">
+                    <!-- Historial de pagos -->
+                  </div>
+                </div>
+
+                <!-- Carrito de Pagos -->
+                <div id="cartContainer" class="hidden border-t border-slate-100 bg-gradient-to-br from-orange-50 to-white">
+                  <div class="p-6">
+                    <div class="flex items-center justify-between mb-4">
+                      <h4 class="text-lg font-black text-slate-800 flex items-center gap-2">
+                        <i data-lucide="shopping-cart" class="w-5 h-5 text-orange-500"></i>
+                        Carrito de Pagos
+                      </h4>
+                      <button id="clearCartBtn" class="text-sm font-bold text-slate-400 hover:text-rose-500 transition-colors">
+                        Limpiar
+                      </button>
+                    </div>
+                    <div id="cartItems" class="space-y-2 mb-4 max-h-60 overflow-y-auto">
+                      <!-- Items del carrito -->
+                    </div>
+                    <div class="border-t border-slate-200 pt-4 mb-4">
+                      <div class="flex flex-col gap-3 mb-4">
+                        <!-- Subtotal -->
+                        <div class="flex justify-between items-center text-sm">
+                          <span class="text-slate-600 font-medium">Subtotal</span>
+                          <span id="cartSubtotal" class="font-bold text-slate-800">.00</span>
+                        </div>
+                        <!-- Descuento -->
+                        <div id="cartDiscountRow" class="hidden flex justify-between items-center text-sm">
+                          <span class="text-emerald-600 font-medium">Descuento</span>
+                          <span id="cartDiscount" class="font-bold text-emerald-600">-.00</span>
+                        </div>
+                        <!-- Mora -->
+                        <div id="cartMoraRow" class="hidden flex justify-between items-center text-sm">
+                          <span class="text-rose-600 font-medium">Mora</span>
+                          <span id="cartMora" class="font-bold text-rose-600">.00</span>
+                        </div>
+                        <!-- Total -->
+                        <div class="flex justify-between items-center pt-3 border-t border-slate-200">
+                          <span class="text-base font-black text-slate-800 uppercase tracking-wide">Total</span>
+                          <span id="cartTotal" class="text-3xl font-black text-[#0B63C7]">.00</span>
+                        </div>
+                      </div>
+                      <button id="continueToPaymentBtn" class="w-full py-4 bg-gradient-to-r from-[#0B63C7] to-blue-600 text-white font-black text-sm uppercase tracking-wide rounded-2xl shadow-lg hover:shadow-xl transition-all active:scale-[0.98]">
+                        Continuar al Pago
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      <!-- COMUNICACION tipo Teams -->
+      <!-- MODAL: Método de Pago -->
+      <div id="paymentMethodModal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+          <div class="p-6 border-b border-slate-100 bg-gradient-to-br from-[#0B63C7] to-blue-600">
+            <div class="flex items-center justify-between">
+              <div>
+                <h3 class="text-xl font-black text-white">Confirmar Pago</h3>
+                <p class="text-blue-100 text-sm font-medium mt-1">Selecciona el método de pago</p>
+              </div>
+              <button id="closePaymentModalBtn" class="p-2 rounded-xl bg-white/20 hover:bg-white/30 text-white transition-colors">
+                <i data-lucide="x" class="w-5 h-5"></i>
+              </button>
+            </div>
+          </div>
+          
+          <div class="p-6">
+            <!-- Resumen -->
+            <div class="mb-6 p-5 bg-slate-50 rounded-2xl border border-slate-100">
+              <h4 class="font-bold text-slate-800 mb-3 flex items-center gap-2">
+                <i data-lucide="receipt" class="w-4 h-4 text-[#0B63C7]"></i>
+                Resumen del Pago
+              </h4>
+              <div id="paymentSummaryItems" class="space-y-2 mb-3">
+                <!-- Items del resumen -->
+              </div>
+              <div class="flex justify-between items-center pt-3 border-t border-slate-200">
+                <span class="font-bold text-slate-800">Total a Pagar</span>
+                <span id="paymentSummaryTotal" class="text-3xl font-black text-[#0B63C7]">.00</span>
+              </div>
+            </div>
+
+            <!-- Métodos de Pago -->
+            <div class="mb-6">
+              <h4 class="font-bold text-slate-800 mb-3">Método de Pago</h4>
+              <div class="grid grid-cols-2 gap-3">
+                <label class="relative cursor-pointer">
+                  <input type="radio" name="paymentMethod" value="efectivo" class="peer sr-only" checked>
+                  <div class="p-4 border-2 border-slate-200 rounded-2xl flex items-center gap-3 bg-white hover:border-[#0B63C7] transition-colors peer-checked:border-[#0B63C7] peer-checked:bg-blue-50">
+                    <div class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center">
+                      <i data-lucide="banknote" class="w-6 h-6"></i>
+                    </div>
+                    <span class="font-bold text-slate-800">Efectivo</span>
+                  </div>
+                </label>
+
+                <label class="relative cursor-pointer">
+                  <input type="radio" name="paymentMethod" value="tarjeta" class="peer sr-only">
+                  <div class="p-4 border-2 border-slate-200 rounded-2xl flex items-center gap-3 bg-white hover:border-[#0B63C7] transition-colors peer-checked:border-[#0B63C7] peer-checked:bg-blue-50">
+                    <div class="w-12 h-12 bg-violet-50 text-violet-600 rounded-xl flex items-center justify-center">
+                      <i data-lucide="credit-card" class="w-6 h-6"></i>
+                    </div>
+                    <span class="font-bold text-slate-800">Tarjeta</span>
+                  </div>
+                </label>
+
+                <label class="relative cursor-pointer">
+                  <input type="radio" name="paymentMethod" value="transferencia" class="peer sr-only">
+                  <div class="p-4 border-2 border-slate-200 rounded-2xl flex items-center gap-3 bg-white hover:border-[#0B63C7] transition-colors peer-checked:border-[#0B63C7] peer-checked:bg-blue-50">
+                    <div class="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center">
+                      <i data-lucide="landmark" class="w-6 h-6"></i>
+                    </div>
+                    <span class="font-bold text-slate-800">Transferencia</span>
+                  </div>
+                </label>
+
+                <label class="relative cursor-pointer">
+                  <input type="radio" name="paymentMethod" value="mixto" class="peer sr-only">
+                  <div class="p-4 border-2 border-orange-200 rounded-2xl flex items-center gap-3 bg-white hover:border-[#FF8A00] transition-colors peer-checked:border-[#FF8A00] peer-checked:bg-orange-50">
+                    <div class="w-12 h-12 bg-orange-50 text-orange-600 rounded-xl flex items-center justify-center">
+                      <i data-lucide="plus-circle" class="w-6 h-6"></i>
+                    </div>
+                    <span class="font-bold text-slate-800">Pago Mixto ⭐</span>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <!-- Detalles del Método -->
+            <div id="methodDetailsContainer" class="mb-6">
+              <!-- Efectivo -->
+              <div id="efectivoDetails" class="p-4 bg-emerald-50 border border-emerald-100 rounded-2xl">
+                <p class="text-sm text-emerald-700 font-medium flex items-center gap-2">
+                  <i data-lucide="check-circle" class="w-4 h-4"></i>
+                  Pago en efectivo listo para registrar
+                </p>
+              </div>
+
+              <!-- Tarjeta -->
+              <div id="tarjetaDetails" class="hidden space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Banco</label>
+                    <select id="cardBank" class="w-full px-4 py-3 border border-slate-200 rounded-2xl text-sm font-medium bg-white outline-none focus:ring-2 focus:ring-[#0B63C7]">
+                      <option value="">Seleccionar</option>
+                      <option value="Banreservas">Banreservas</option>
+                      <option value="Banco Popular">Banco Popular</option>
+                      <option value="Scotiabank">Scotiabank</option>
+                      <option value="BHD León">BHD León</option>
+                      <option value="Otro">Otro</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Últimos 4 dígitos</label>
+                    <input id="cardLast4" type="text" maxlength="4" class="w-full px-4 py-3 border border-slate-200 rounded-2xl text-sm font-medium bg-white outline-none focus:ring-2 focus:ring-[#0B63C7]">
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Autorización</label>
+                  <input id="cardAuth" type="text" class="w-full px-4 py-3 border border-slate-200 rounded-2xl text-sm font-medium bg-white outline-none focus:ring-2 focus:ring-[#0B63C7]">
+                </div>
+              </div>
+
+              <!-- Transferencia -->
+              <div id="transferenciaDetails" class="hidden space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Banco</label>
+                    <select id="transferBank" class="w-full px-4 py-3 border border-slate-200 rounded-2xl text-sm font-medium bg-white outline-none focus:ring-2 focus:ring-[#0B63C7]">
+                      <option value="">Seleccionar</option>
+                      <option value="Banreservas">Banreservas</option>
+                      <option value="Banco Popular">Banco Popular</option>
+                      <option value="Scotiabank">Scotiabank</option>
+                      <option value="BHD León">BHD León</option>
+                      <option value="Otro">Otro</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Número de Referencia</label>
+                    <input id="transferRef" type="text" class="w-full px-4 py-3 border border-slate-200 rounded-2xl text-sm font-medium bg-white outline-none focus:ring-2 focus:ring-[#0B63C7]">
+                  </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Fecha</label>
+                    <input id="transferDate" type="date" class="w-full px-4 py-3 border border-slate-200 rounded-2xl text-sm font-medium bg-white outline-none focus:ring-2 focus:ring-[#0B63C7]">
+                  </div>
+                  <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Comprobante (opcional)</label>
+                    <input id="transferProof" type="file" accept="image/*,.pdf" class="w-full px-4 py-3 border border-slate-200 rounded-2xl text-sm font-medium bg-white">
+                  </div>
+                </div>
+              </div>
+
+              <!-- Pago Mixto -->
+              <div id="mixtoDetails" class="hidden space-y-4">
+                <p class="text-sm text-slate-600 font-medium">Combina múltiples métodos de pago</p>
+                <div class="space-y-3" id="mixedPaymentItems">
+                  <!-- Items de pago mixto -->
+                </div>
+                <button id="addMixedMethodBtn" class="w-full py-3 border-2 border-dashed border-slate-300 rounded-xl text-slate-500 font-bold text-sm hover:border-[#0B63C7] hover:text-[#0B63C7] transition-colors">
+                  + Agregar Método
+                </button>
+              </div>
+            </div>
+
+            <!-- Opción de e-CF -->
+            <div class="mb-6 p-4 bg-violet-50 border border-violet-100 rounded-2xl">
+              <div class="flex items-start gap-3">
+                <input type="checkbox" id="needsEcf" class="mt-1 w-5 h-5 text-violet-600 rounded border-violet-300 focus:ring-violet-500">
+                <div class="flex-1">
+                  <label for="needsEcf" class="font-bold text-violet-800 cursor-pointer">
+                    Solicitar e-CF (Comprobante Fiscal)
+                  </label>
+                  <p class="text-xs text-violet-600 mt-1">Genera y envía el comprobante fiscal a la DGII</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Botones -->
+            <div class="flex flex-col gap-3">
+              <button id="confirmPaymentBtn" class="w-full py-4 bg-gradient-to-r from-[#28B54D] to-emerald-600 text-white font-black text-sm uppercase tracking-wide rounded-2xl shadow-lg hover:shadow-xl transition-all active:scale-[0.98]">
+                <i data-lucide="check-circle" class="w-5 h-5 inline mr-2"></i>
+                Confirmar Pago
+              </button>
+              <button id="cancelPaymentModalBtn" class="w-full py-3 bg-slate-100 text-slate-700 font-bold text-sm uppercase tracking-wide rounded-xl hover:bg-slate-200 transition-colors">
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODAL: Pago Exitoso -->
+      <div id="paymentSuccessModal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md text-center p-8">
+          <div class="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
+            <i data-lucide="check-circle" class="w-10 h-10"></i>
+          </div>
+          <h3 class="text-2xl font-black text-slate-800 mb-2">¡Pago Registrado!</h3>
+          <p class="text-slate-600 mb-6">El pago se ha registrado exitosamente</p>
+          <div class="flex flex-col gap-3">
+            <button id="downloadInvoiceBtn" class="w-full py-3 bg-[#0B63C7] text-white font-bold text-sm uppercase tracking-wide rounded-xl hover:bg-blue-700 transition-colors">
+              <i data-lucide="download" class="w-4 h-4 inline mr-2"></i>
+              Descargar Factura
+            </button>
+            <button id="sendInvoiceEmailBtn" class="w-full py-3 bg-slate-100 text-slate-700 font-bold text-sm uppercase tracking-wide rounded-xl hover:bg-slate-200 transition-colors">
+              <i data-lucide="mail" class="w-4 h-4 inline mr-2"></i>
+              Enviar por Email
+            </button>
+            <button id="closeSuccessModalBtn" class="w-full py-3 text-slate-500 font-bold text-sm uppercase tracking-wide hover:text-slate-700 transition-colors">
+              Cerrar
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- COMUNICACION tipo Teams -->      <!-- COMUNICACION tipo Teams -->
       <section id="comunicacion" class="section">
         <div class="flex items-center justify-between mb-6">
           <div>
             <h2 class="text-2xl font-bold text-[#1A2340] flex items-center gap-2">
               <i data-lucide="messages-square" class="w-6 h-6 text-blue-600"></i>
-              Centro de Comunicación
+              Centro de Comunicaci�n
             </h2>
             <p class="text-slate-500 text-sm">Chat privado, seguro, con archivos e historial</p>
           </div>
@@ -1905,7 +1975,7 @@
             <div id="chatContactsList" class="flex-1 overflow-y-auto p-2"></div>
           </div>
 
-          <!-- Vista 2: Conversación -->
+          <!-- Vista 2: Conversaci�n -->
           <div class="chat-conversation">
             <!-- Header -->
             <div id="chatActiveHeader" class="p-3 border-b border-slate-100 flex items-center gap-3 bg-white hidden">
@@ -1921,13 +1991,13 @@
             <div id="chatMessagesContainer" class="relative">
               <div class="h-full flex flex-col items-center justify-center text-slate-400 opacity-40">
                 <i data-lucide="message-circle" class="w-16 h-16 mb-4"></i>
-                <p class="font-medium">Selecciona una conversación</p>
+                <p class="font-medium">Selecciona una conversaci�n</p>
               </div>
             </div>
 
             <!-- Typing Indicator -->
             <div id="chatTypingIndicator" class="hidden absolute bottom-[90px] left-6 right-6 px-4 py-2 bg-white/90 backdrop-blur-sm border border-blue-100 rounded-xl text-[10px] font-black text-blue-600 shadow-lg animate-bounce-subtle z-20">
-              Alguien está escribiendo...
+              Alguien est� escribiendo...
             </div>
 
             <!-- Input Area -->
@@ -1946,16 +2016,16 @@
       <section id="muro" class="section">
         <header class="mb-6 flex items-center justify-between">
           <div>
-            <h1 class="text-3xl font-black text-slate-800">🎭 Muro Escolar</h1>
-            <p class="text-slate-500 font-medium">Comunicación y actualizaciones de la comunidad educativa</p>
+            <h1 class="text-3xl font-black text-slate-800">?? Muro Escolar</h1>
+            <p class="text-slate-500 font-medium">Comunicaci�n y actualizaciones de la comunidad educativa</p>
           </div>
           <button id="btnNewPost" onclick="App.wall.openNewPostModal()" class="px-4 py-2 text-white rounded-lg transition-colors flex items-center gap-2 font-medium shadow-sm hover:opacity-90" style="background:#0B63C7;">
-            <i data-lucide="plus" class="w-5 h-5"></i> Nueva Publicación
+            <i data-lucide="plus" class="w-5 h-5"></i> Nueva Publicaci�n
           </button>
         </header>
 
         <div class="max-w-5xl mx-auto">
-          <!-- Búsqueda -->
+          <!-- B�squeda -->
           <div class="mb-6 flex items-center gap-2">
             <input type="text" id="wallSearch" placeholder="Buscar posts..." class="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-orange-600">
             <select id="wallClassroomFilter" class="px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-orange-600">
@@ -1980,12 +2050,12 @@
         </div>
       </section>
 
-      <!-- CONFIGURACIÓN -->
+      <!-- CONFIGURACI�N -->
       <section id="configuracion" class="section">
         <div id="notifPermissionSlot"></div>
         <div class="flex items-center gap-3 mb-6">
           <i data-lucide="settings" class="w-7 h-7 text-slate-600"></i>
-          <h2 class="text-2xl font-bold">Configuración y Perfil</h2>
+          <h2 class="text-2xl font-bold">Configuraci�n y Perfil</h2>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -2007,8 +2077,8 @@
                 </div>
                 <div>
                   <p class="font-bold text-slate-800 text-sm">Foto de Perfil</p>
-                  <p class="text-xs text-slate-500 mt-0.5">JPG, PNG o WEBP · Máx 5MB</p>
-                  <p class="text-xs text-[#0B63C7] font-bold mt-1">Haz clic en la cámara para cambiarla</p>
+                  <p class="text-xs text-slate-500 mt-0.5">JPG, PNG o WEBP � M�x 5MB</p>
+                  <p class="text-xs text-[#0B63C7] font-bold mt-1">Haz clic en la c�mara para cambiarla</p>
                 </div>
               </div>
 
@@ -2018,22 +2088,22 @@
                   <input id="confDirName" type="text" class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-[#0B63C7] outline-none" placeholder="Cargando...">
                 </div>
                 <div>
-                  <label class="block text-sm font-medium text-slate-700 mb-1">Título / Cargo</label>
+                  <label class="block text-sm font-medium text-slate-700 mb-1">T�tulo / Cargo</label>
                   <input id="confDirTitle" type="text" class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-[#0B63C7] outline-none" placeholder="Cargando...">
                 </div>
                 <div class="md:col-span-2">
-                  <label class="block text-sm font-medium text-slate-700 mb-1">Presentación / Biografía</label>
-                  <textarea id="confDirBio" rows="4" class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-[#0B63C7] outline-none" placeholder="Escribe una breve presentación..."></textarea>
-                  <p class="text-xs text-slate-500 mt-1">Esta información será visible en el perfil público para padres y maestros.</p>
+                  <label class="block text-sm font-medium text-slate-700 mb-1">Presentaci�n / Biograf�a</label>
+                  <textarea id="confDirBio" rows="4" class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-[#0B63C7] outline-none" placeholder="Escribe una breve presentaci�n..."></textarea>
+                  <p class="text-xs text-slate-500 mt-1">Esta informaci�n ser� visible en el perfil p�blico para padres y maestros.</p>
                 </div>
               </div>
             </div>
 
             <div class="bg-white rounded shadow p-6">
-              <h3 class="text-lg font-semibold mb-4 border-b pb-2 flex items-center gap-2"><i data-lucide="building" class="w-5 h-5"></i> Información Institucional</h3>
+              <h3 class="text-lg font-semibold mb-4 border-b pb-2 flex items-center gap-2"><i data-lucide="building" class="w-5 h-5"></i> Informaci�n Institucional</h3>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="md:col-span-2">
-                  <label class="block text-sm font-medium text-slate-700 mb-1">Nombre de la Institución</label>
+                  <label class="block text-sm font-medium text-slate-700 mb-1">Nombre de la Instituci�n</label>
                   <input id="confSchoolName" type="text" class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-[#0B63C7] outline-none" placeholder="Colegio Montessori Sonrisas Creativas">
                 </div>
                 <div>
@@ -2041,7 +2111,7 @@
                   <input id="confRNC" type="text" class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-[#0B63C7] outline-none" placeholder="1-23-45678-9">
                 </div>
                 <div>
-                  <label class="block text-sm font-medium text-slate-700 mb-1">Teléfono Institucional</label>
+                  <label class="block text-sm font-medium text-slate-700 mb-1">Tel�fono Institucional</label>
                   <input id="confPhone" type="tel" class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-[#0B63C7] outline-none" placeholder="+1 (000) 000-0000">
                 </div>
                 <div>
@@ -2053,8 +2123,8 @@
                   <input id="confWebsite" type="url" class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-[#0B63C7] outline-none" placeholder="https://ejemplo.com">
                 </div>
                 <div class="md:col-span-2">
-                  <label class="block text-sm font-medium text-slate-700 mb-1">Dirección Física</label>
-                  <input id="confAddress" type="text" class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-[#0B63C7] outline-none" placeholder="Dirección de la estancia">
+                  <label class="block text-sm font-medium text-slate-700 mb-1">Direcci�n F�sica</label>
+                  <input id="confAddress" type="text" class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-[#0B63C7] outline-none" placeholder="Direcci�n de la estancia">
                 </div>
                 <div>
                   <label class="block text-sm font-medium text-slate-700 mb-1">Ciudad</label>
@@ -2065,25 +2135,25 @@
                   <input id="confState" type="text" class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-[#0B63C7] outline-none" placeholder="Estado">
                 </div>
                 <div>
-                  <label class="block text-sm font-medium text-slate-700 mb-1">Código Postal</label>
+                  <label class="block text-sm font-medium text-slate-700 mb-1">C�digo Postal</label>
                   <input id="confZipCode" type="text" class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-[#0B63C7] outline-none" placeholder="10000">
                 </div>
                 <div>
-                  <label class="block text-sm font-medium text-slate-700 mb-1">País</label>
-                  <input id="confCountry" type="text" class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-[#0B63C7] outline-none" placeholder="República Dominicana">
+                  <label class="block text-sm font-medium text-slate-700 mb-1">Pa�s</label>
+                  <input id="confCountry" type="text" class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-[#0B63C7] outline-none" placeholder="Rep�blica Dominicana">
                 </div>
               </div>
             </div>
 
             <div class="bg-white rounded shadow p-6">
-              <h3 class="text-lg font-semibold mb-4 border-b pb-2 flex items-center gap-2"><i data-lucide="file-text" class="w-5 h-5"></i> Configuración de Facturación</h3>
+              <h3 class="text-lg font-semibold mb-4 border-b pb-2 flex items-center gap-2"><i data-lucide="file-text" class="w-5 h-5"></i> Configuraci�n de Facturaci�n</h3>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label class="block text-sm font-medium text-slate-700 mb-1">Moneda</label>
                   <select id="confCurrency" class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-[#0B63C7] outline-none">
                     <option value="RD$">RD$ - Peso Dominicano</option>
-                    <option value="$">$ - Dólar Estadounidense</option>
-                    <option value="€">€ - Euro</option>
+                    <option value="$">$ - D�lar Estadounidense</option>
+                    <option value="�">� - Euro</option>
                   </select>
                 </div>
                 <div>
@@ -2091,18 +2161,18 @@
                   <input id="confTaxRate" type="number" step="0.01" min="0" max="100" class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-[#0B63C7] outline-none" placeholder="18.00">
                 </div>
                 <div class="md:col-span-2">
-                  <label class="block text-sm font-medium text-slate-700 mb-1">Términos y Condiciones</label>
-                  <textarea id="confTermsConditions" rows="3" class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-[#0B63C7] outline-none" placeholder="Términos y condiciones de pago..."></textarea>
+                  <label class="block text-sm font-medium text-slate-700 mb-1">T�rminos y Condiciones</label>
+                  <textarea id="confTermsConditions" rows="3" class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-[#0B63C7] outline-none" placeholder="T�rminos y condiciones de pago..."></textarea>
                 </div>
               </div>
             </div>
 
             <div class="bg-white rounded shadow p-6">
-              <h3 class="text-lg font-semibold mb-4 border-b pb-2 flex items-center gap-2"><i data-lucide="image" class="w-5 h-5"></i> Logo de la Institución</h3>
+              <h3 class="text-lg font-semibold mb-4 border-b pb-2 flex items-center gap-2"><i data-lucide="image" class="w-5 h-5"></i> Logo de la Instituci�n</h3>
               <div class="flex flex-col md:flex-row items-start gap-6">
                 <div class="flex-shrink-0">
                   <div class="w-32 h-32 rounded-2xl bg-slate-100 border-2 border-dashed border-slate-300 flex items-center justify-center overflow-hidden">
-                    <img id="confSchoolLogo" src="" alt="Logo de la institución" class="w-full h-full object-cover hidden">
+                    <img id="confSchoolLogo" src="" alt="Logo de la instituci�n" class="w-full h-full object-cover hidden">
                     <div id="confSchoolLogoPlaceholder" class="text-center p-4">
                       <i data-lucide="upload" class="w-10 h-10 text-slate-400 mx-auto mb-2"></i>
                       <p class="text-xs text-slate-500">Logo</p>
@@ -2112,7 +2182,7 @@
                 <div class="flex-1">
                   <label class="block text-sm font-medium text-slate-700 mb-1">URL del Logo</label>
                   <input id="confLogoUrl" type="url" class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-[#0B63C7] outline-none mb-3" placeholder="https://ejemplo.com/logo.png">
-                  <p class="text-xs text-slate-500">Ingrese la URL del logo. El logo aparecerá en las facturas.</p>
+                  <p class="text-xs text-slate-500">Ingrese la URL del logo. El logo aparecer� en las facturas.</p>
                 </div>
               </div>
             </div>
@@ -2123,15 +2193,15 @@
                 Horario de la Estancia
               </h3>
 
-              <!-- Días laborables -->
-              <p class="text-[10px] font-black text-slate-500 uppercase tracking-wider mb-2">Días laborables</p>
+              <!-- D�as laborables -->
+              <p class="text-[10px] font-black text-slate-500 uppercase tracking-wider mb-2">D�as laborables</p>
               <div class="flex flex-wrap gap-2 mb-5" id="workDaysContainer">
                 <button type="button" data-day="Lun" onclick="window.toggleWorkDay(this)" class="work-day-btn px-3 py-1.5 rounded-xl text-xs font-black border-2 border-slate-200 bg-white text-slate-500 transition-all">Lun</button>
                 <button type="button" data-day="Mar" onclick="window.toggleWorkDay(this)" class="work-day-btn px-3 py-1.5 rounded-xl text-xs font-black border-2 border-slate-200 bg-white text-slate-500 transition-all">Mar</button>
-                <button type="button" data-day="Mié" onclick="window.toggleWorkDay(this)" class="work-day-btn px-3 py-1.5 rounded-xl text-xs font-black border-2 border-slate-200 bg-white text-slate-500 transition-all">Mié</button>
+                <button type="button" data-day="Mi�" onclick="window.toggleWorkDay(this)" class="work-day-btn px-3 py-1.5 rounded-xl text-xs font-black border-2 border-slate-200 bg-white text-slate-500 transition-all">Mi�</button>
                 <button type="button" data-day="Jue" onclick="window.toggleWorkDay(this)" class="work-day-btn px-3 py-1.5 rounded-xl text-xs font-black border-2 border-slate-200 bg-white text-slate-500 transition-all">Jue</button>
                 <button type="button" data-day="Vie" onclick="window.toggleWorkDay(this)" class="work-day-btn px-3 py-1.5 rounded-xl text-xs font-black border-2 border-slate-200 bg-white text-slate-500 transition-all">Vie</button>
-                <button type="button" data-day="Sáb" onclick="window.toggleWorkDay(this)" class="work-day-btn px-3 py-1.5 rounded-xl text-xs font-black border-2 border-slate-200 bg-white text-slate-500 transition-all">Sáb</button>
+                <button type="button" data-day="S�b" onclick="window.toggleWorkDay(this)" class="work-day-btn px-3 py-1.5 rounded-xl text-xs font-black border-2 border-slate-200 bg-white text-slate-500 transition-all">S�b</button>
                 <button type="button" data-day="Dom" onclick="window.toggleWorkDay(this)" class="work-day-btn px-3 py-1.5 rounded-xl text-xs font-black border-2 border-slate-200 bg-white text-slate-500 transition-all">Dom</button>
               </div>
 
@@ -2153,7 +2223,7 @@
                 </div>
               </div>
 
-              <!-- Preview dinámico -->
+              <!-- Preview din�mico -->
               <div id="schedulePreview" class="p-3 bg-[#E8F2FF] rounded-xl border border-blue-200 text-xs font-bold text-[#0850A0] text-center hidden">
                 <!-- Generado por JS -->
               </div>
@@ -2171,7 +2241,7 @@
                 </button>
               </div>
               <input type="file" id="configAvatarInput" accept="image/*" class="hidden">
-              <p class="text-xs text-slate-500 mb-4">JPG, PNG o WEBP. Máx 2MB.</p>
+              <p class="text-xs text-slate-500 mb-4">JPG, PNG o WEBP. M�x 2MB.</p>
             </div>
 
             <div class="bg-white rounded shadow p-6">
@@ -2192,10 +2262,353 @@
               <div id="dir-qr-container" class="bg-white p-2 rounded-xl border border-slate-100 min-h-[100px] flex items-center justify-center mb-2">
                 <p class="text-[9px] text-slate-400 font-bold text-center">Genera un ID para ver el QR</p>
               </div>
-              <button type="button" onclick="window._printDirectorQR()" class="w-full py-2 bg-slate-800 text-white rounded-xl font-black text-[9px] uppercase tracking-widest hover:bg-slate-900 transition-all">🖨️ Imprimir Carnet</button>
+              <button type="button" onclick="window._printDirectorQR()" class="w-full py-2 bg-slate-800 text-white rounded-xl font-black text-[9px] uppercase tracking-widest hover:bg-slate-900 transition-all">??? Imprimir Carnet</button>
             </div>
               <button class="w-full py-2 border border-slate-300 text-slate-700 rounded hover:bg-slate-50 transition-colors">Cancelar</button>
             </div>
+          </div>
+        </div>
+      </section>
+
+
+      <!-- CAJA -->
+      <section id="caja" class="section">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+          <div>
+            <div class="flex items-center gap-3 mb-1">
+              <div class="w-1 h-8 rounded-full" style="background:#28B54D"></div>
+              <h1 class="text-2xl font-black text-slate-800 tracking-tight">Caja</h1>
+            </div>
+            <p class="text-slate-500 font-medium ml-4">Cobro de mensualidades, inscripciones y emisi�n de facturas con RNC</p>
+          </div>
+          <div class="flex gap-2 flex-wrap">
+            <button id="btnCajaNewCobro" class="px-5 py-2.5 text-white rounded-2xl font-black text-sm flex items-center gap-2 active:scale-95 transition-all" style="background:#28B54D;box-shadow:0 4px 14px rgba(40,181,77,0.3)">
+              <i data-lucide="plus-circle" class="w-5 h-5"></i> Registrar Cobro
+            </button>
+            <button id="btnCajaReport" class="px-5 py-2.5 text-white rounded-2xl font-black text-sm flex items-center gap-2 active:scale-95 transition-all" style="background:#0B63C7">
+              <i data-lucide="printer" class="w-5 h-5"></i> Reporte del D�a
+            </button>
+          </div>
+        </div>
+
+        <!-- KPIs del d�a -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+          <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
+            <div class="flex items-center gap-2 mb-2">
+              <div class="p-1.5 rounded-lg" style="background:#E6F7EB"><i data-lucide="trending-up" class="w-4 h-4" style="color:#28B54D"></i></div>
+              <span class="text-[10px] font-black uppercase tracking-wider" style="color:#28B54D">Cobrado Hoy</span>
+            </div>
+            <p class="text-xl font-black text-slate-800" id="cajaTodayIncome">RD$0.00</p>
+          </div>
+          <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
+            <div class="flex items-center gap-2 mb-2">
+              <div class="p-1.5 rounded-lg bg-amber-50"><i data-lucide="file-text" class="w-4 h-4 text-amber-600"></i></div>
+              <span class="text-[10px] font-black uppercase tracking-wider text-amber-600">Facturas Hoy</span>
+            </div>
+            <p class="text-xl font-black text-slate-800" id="cajaTodayInvoices">0</p>
+          </div>
+          <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
+            <div class="flex items-center gap-2 mb-2">
+              <div class="p-1.5 rounded-lg" style="background:#E8F2FF"><i data-lucide="credit-card" class="w-4 h-4" style="color:#0B63C7"></i></div>
+              <span class="text-[10px] font-black uppercase tracking-wider" style="color:#0B63C7">Transferencias</span>
+            </div>
+            <p class="text-xl font-black text-slate-800" id="cajaTodayTransfer">RD$0.00</p>
+          </div>
+          <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
+            <div class="flex items-center gap-2 mb-2">
+              <div class="p-1.5 rounded-lg bg-green-50"><i data-lucide="wallet" class="w-4 h-4 text-green-600"></i></div>
+              <span class="text-[10px] font-black uppercase tracking-wider text-green-600">Efectivo</span>
+            </div>
+            <p class="text-xl font-black text-slate-800" id="cajaTodayCash">RD$0.00</p>
+          </div>
+        </div>
+
+        <!-- Tabla de cobros del d�a -->
+        <div class="bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-sm">
+          <div class="p-4 border-b border-slate-100 flex items-center justify-between">
+            <span class="font-black text-slate-700 text-sm">Cobros de hoy</span>
+            <input type="date" id="cajaDateFilter" class="border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-bold outline-none focus:border-green-400" onchange="App.caja?.loadByDate(this.value)">
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm" style="min-width:700px">
+              <thead class="bg-slate-50 border-b border-slate-100">
+                <tr>
+                  <th class="px-4 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider">Estudiante</th>
+                  <th class="px-4 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider">Concepto</th>
+                  <th class="px-4 py-3 text-right text-[10px] font-black text-slate-400 uppercase tracking-wider">Monto</th>
+                  <th class="px-4 py-3 text-center text-[10px] font-black text-slate-400 uppercase tracking-wider">M�todo</th>
+                  <th class="px-4 py-3 text-center text-[10px] font-black text-slate-400 uppercase tracking-wider">Factura</th>
+                  <th class="px-4 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider">Hora</th>
+                  <th class="px-4 py-3 text-center text-[10px] font-black text-slate-400 uppercase tracking-wider">Acci�n</th>
+                </tr>
+              </thead>
+              <tbody id="cajaTableBody" class="divide-y divide-slate-50">
+                <tr><td colspan="7" class="text-center py-8 text-slate-400 text-sm">Cargando...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- CICLO ACADEMICO -->
+      <section id="ciclo-academico" class="section">
+        <div id="academicCycleContainer" class="p-2 md:p-4"></div>
+      </section>
+
+      <!-- CONTABILIDAD -->
+      <section id="contabilidad" class="section">
+        <div class="flex items-center justify-between mb-6 flex-wrap gap-3">
+          <div>
+            <div class="flex items-center gap-3 mb-1">
+              <div class="w-1 h-8 rounded-full" style="background:#28B54D"></div>
+              <h1 class="text-2xl font-black text-slate-800">Contabilidad y Reportes</h1>
+            </div>
+            <p class="text-slate-500 font-medium ml-4">An�lisis financiero, flujo de caja y reportes ejecutivos</p>
+          </div>
+          <div class="flex gap-2 flex-wrap">
+            <select id="contCycleFilter" class="border border-slate-200 rounded-xl px-3 py-2 text-xs font-black outline-none focus:border-green-400 bg-white">
+              <option value="">Ciclo actual</option>
+            </select>
+            <select id="contPeriodFilter" class="border border-slate-200 rounded-xl px-3 py-2 text-xs font-black outline-none focus:border-green-400 bg-white">
+              <option value="month">Este mes</option>
+              <option value="quarter">Este trimestre</option>
+              <option value="year">Este a�o</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="flex gap-2 flex-wrap border-b border-slate-200 pb-3 mb-6 overflow-x-auto" id="contTabs">
+          <button data-cont-tab="daily"     class="cont-tab px-4 py-2 rounded-xl text-xs font-black uppercase border-2 border-blue-500 bg-blue-50 text-blue-700">Diario</button>
+          <button data-cont-tab="monthly"   class="cont-tab px-4 py-2 rounded-xl text-xs font-black uppercase border-2 border-transparent text-slate-500 hover:bg-slate-50">Mensual</button>
+          <button data-cont-tab="cashflow"  class="cont-tab px-4 py-2 rounded-xl text-xs font-black uppercase border-2 border-transparent text-slate-500 hover:bg-slate-50">Flujo de Caja</button>
+          <button data-cont-tab="students"  class="cont-tab px-4 py-2 rounded-xl text-xs font-black uppercase border-2 border-transparent text-slate-500 hover:bg-slate-50">Por Alumno</button>
+          <button data-cont-tab="classrooms"class="cont-tab px-4 py-2 rounded-xl text-xs font-black uppercase border-2 border-transparent text-slate-500 hover:bg-slate-50">Por Aula</button>
+          <button data-cont-tab="director"  class="cont-tab px-4 py-2 rounded-xl text-xs font-black uppercase border-2 border-transparent text-slate-500 hover:bg-slate-50">Direcci�n</button>
+        </div>
+
+        <!-- Tab: Diario -->
+        <div id="cont-daily" class="cont-panel space-y-5">
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm text-center">
+              <p class="text-xl font-black text-green-600" id="dailyCobrado">RD$0</p>
+              <p class="text-[10px] font-black text-slate-400 uppercase mt-1">Cobrado Hoy</p>
+            </div>
+            <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm text-center">
+              <p class="text-xl font-black text-amber-600" id="dailyPendiente">0</p>
+              <p class="text-[10px] font-black text-slate-400 uppercase mt-1">Pendiente</p>
+            </div>
+            <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm text-center">
+              <p class="text-xl font-black text-blue-600" id="dailyFacturas">0</p>
+              <p class="text-[10px] font-black text-slate-400 uppercase mt-1">Facturas Emitidas</p>
+            </div>
+            <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm text-center">
+              <p class="text-xl font-black text-slate-600" id="dailyMetodo">�</p>
+              <p class="text-[10px] font-black text-slate-400 uppercase mt-1">M�todo Principal</p>
+            </div>
+          </div>
+          <div class="bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-sm">
+            <div class="p-4 border-b border-slate-100 flex items-center gap-3">
+              <span class="font-black text-slate-700 text-sm">Detalle del d�a</span>
+              <input type="date" id="dailyDate" class="border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-bold outline-none focus:border-blue-400 ml-auto" onchange="App.accounting?.loadDaily?.(this.value)">
+            </div>
+            <div id="dailyTableContainer">
+              <div class="text-center py-8 text-slate-400 text-sm">Selecciona una fecha o carga el d�a de hoy</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab: Mensual -->
+        <div id="cont-monthly" class="cont-panel hidden space-y-5">
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+            <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm text-center">
+              <p class="text-xl font-black text-green-600" id="monthlyIngresos">RD$0</p>
+              <p class="text-[10px] font-black text-slate-400 uppercase mt-1">Ingresos del Mes</p>
+            </div>
+            <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm text-center">
+              <p class="text-xl font-black text-red-600" id="monthlyMoras">RD$0</p>
+              <p class="text-[10px] font-black text-slate-400 uppercase mt-1">Moras Generadas</p>
+            </div>
+            <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm text-center">
+              <p class="text-xl font-black text-purple-600" id="monthlyDescuentos">RD$0</p>
+              <p class="text-[10px] font-black text-slate-400 uppercase mt-1">Descuentos Otorgados</p>
+            </div>
+          </div>
+          <div class="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
+            <h3 class="font-black text-slate-700 mb-4 text-sm">Ingresos por Nivel Educativo</h3>
+            <div id="monthlyByLevel" class="space-y-3">
+              <div class="animate-pulse h-8 bg-slate-100 rounded-xl"></div>
+              <div class="animate-pulse h-8 bg-slate-100 rounded-xl"></div>
+            </div>
+          </div>
+          <div class="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
+            <h3 class="font-black text-slate-700 mb-4 text-sm">Ingresos por Plan de Pago</h3>
+            <div id="monthlyByPlan" class="space-y-3">
+              <div class="animate-pulse h-8 bg-slate-100 rounded-xl"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab: Flujo de Caja -->
+        <div id="cont-cashflow" class="cont-panel hidden space-y-5">
+          <div class="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="font-black text-slate-700 text-sm">Flujo de Caja Mensual</h3>
+              <select id="cashflowYear" class="border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-black outline-none" onchange="App.accounting?.loadCashflow?.(this.value)">
+                <option value="2026">2026</option><option value="2027">2027</option>
+              </select>
+            </div>
+            <div class="h-64"><canvas id="cashflowChart"></canvas></div>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div class="bg-white rounded-2xl p-4 border border-green-100 shadow-sm text-center">
+              <p class="text-xl font-black text-green-600" id="cfEntradas">RD$0</p>
+              <p class="text-[10px] font-black text-slate-400 uppercase mt-1">Entradas del A�o</p>
+            </div>
+            <div class="bg-white rounded-2xl p-4 border border-amber-100 shadow-sm text-center">
+              <p class="text-xl font-black text-amber-600" id="cfProyeccion">RD$0</p>
+              <p class="text-[10px] font-black text-slate-400 uppercase mt-1">Proyecci�n Pendiente</p>
+            </div>
+            <div class="bg-white rounded-2xl p-4 border border-blue-100 shadow-sm text-center">
+              <p class="text-xl font-black text-blue-600" id="cfCobranza">0%</p>
+              <p class="text-[10px] font-black text-slate-400 uppercase mt-1">% Cobranza</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab: Por Alumno -->
+        <div id="cont-students" class="cont-panel hidden space-y-4">
+          <div class="flex gap-3 flex-wrap">
+            <input id="contStudentSearch" type="text" placeholder="Buscar alumno..." class="border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold outline-none focus:border-blue-400 flex-1 min-w-48" oninput="App.accounting?.searchStudent?.(this.value)">
+          </div>
+          <div id="contStudentResults" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div class="col-span-full text-center py-8 text-slate-400 text-sm">Busca un alumno para ver su expediente financiero</div>
+          </div>
+        </div>
+
+        <!-- Tab: Por Aula -->
+        <div id="cont-classrooms" class="cont-panel hidden">
+          <div id="contByClassroom" class="space-y-4">
+            <div class="animate-pulse h-16 bg-slate-100 rounded-2xl"></div>
+            <div class="animate-pulse h-16 bg-slate-100 rounded-2xl"></div>
+          </div>
+        </div>
+
+        <!-- Tab: Direcci�n -->
+        <div id="cont-director" class="cont-panel hidden space-y-5">
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm text-center">
+              <p class="text-xl font-black text-green-600" id="dirIngresos">RD$0</p>
+              <p class="text-[10px] font-black text-slate-400 uppercase mt-1">Ingresos A�o</p>
+            </div>
+            <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm text-center">
+              <p class="text-xl font-black text-red-600" id="dirPendiente">RD$0</p>
+              <p class="text-[10px] font-black text-slate-400 uppercase mt-1">Por Cobrar</p>
+            </div>
+            <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm text-center">
+              <p class="text-xl font-black text-amber-600" id="dirMorosidad">0%</p>
+              <p class="text-[10px] font-black text-slate-400 uppercase mt-1">% Morosidad</p>
+            </div>
+            <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm text-center">
+              <p class="text-xl font-black text-blue-600" id="dirCobranza">0%</p>
+              <p class="text-[10px] font-black text-slate-400 uppercase mt-1">% Cobranza</p>
+            </div>
+          </div>
+          <div class="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
+            <h3 class="font-black text-slate-700 mb-4 text-sm">Ranking de Morosidad por Aula</h3>
+            <div id="dirMorosidadRanking" class="space-y-3">
+              <div class="animate-pulse h-8 bg-slate-100 rounded-xl"></div>
+            </div>
+          </div>
+        </div>
+
+        <style>
+          .cont-tab.active-cont { border-color:#28B54D!important; background:#E6F7EB!important; color:#1A8035!important; }
+        </style>
+        <script>
+          document.getElementById('contTabs')?.addEventListener('click', function(e) {
+            const btn = e.target.closest('[data-cont-tab]');
+            if (!btn) return;
+            const tab = btn.dataset.contTab;
+            document.querySelectorAll('.cont-tab').forEach(b => b.classList.remove('active-cont','border-blue-500','bg-blue-50','text-blue-700'));
+            btn.classList.add('active-cont');
+            document.querySelectorAll('.cont-panel').forEach(p => p.classList.add('hidden'));
+            const panel = document.getElementById('cont-'+tab);
+            if (panel) panel.classList.remove('hidden');
+            import('./js/directora/accounting.module.js').then(m => m.AccountingModule?.loadTab?.(tab)).catch(() => {});
+          });
+          // Init date picker
+          document.getElementById('dailyDate') && (document.getElementById('dailyDate').value = new Date().toISOString().split('T')[0]);
+        </script>
+      </section>
+
+      <!-- CUENTAS POR COBRAR -->
+      <section id="cuentas-cobrar" class="section">
+        <div class="flex items-center justify-between mb-6 flex-wrap gap-3">
+          <div>
+            <div class="flex items-center gap-3 mb-1">
+              <div class="w-1 h-8 rounded-full bg-amber-500"></div>
+              <h1 class="text-2xl font-black text-slate-800">Cuentas por Cobrar</h1>
+            </div>
+            <p class="text-slate-500 font-medium ml-4">Listado de deudores, antig�edad de saldos y recordatorios</p>
+          </div>
+          <div class="flex gap-2">
+            <button onclick="App.cuentasCobrar?.exportDeudores?.()" class="px-4 py-2.5 text-white text-xs font-black uppercase rounded-xl" style="background:#FF8A00">
+              <i data-lucide="download" class="w-4 h-4 inline mr-1"></i> Exportar
+            </button>
+            <button onclick="App.cuentasCobrar?.sendReminders?.()" class="px-4 py-2.5 text-white text-xs font-black uppercase rounded-xl" style="background:#0B63C7">
+              <i data-lucide="bell" class="w-4 h-4 inline mr-1"></i> Enviar recordatorios
+            </button>
+          </div>
+        </div>
+
+        <!-- KPIs -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+          <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm text-center">
+            <p class="text-2xl font-black text-red-600" id="ccTotalDeuda">RD$0</p>
+            <p class="text-[10px] font-black text-slate-400 uppercase mt-1">Total Adeudado</p>
+          </div>
+          <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm text-center">
+            <p class="text-2xl font-black text-amber-600" id="ccDeudores">0</p>
+            <p class="text-[10px] font-black text-slate-400 uppercase mt-1">Deudores</p>
+          </div>
+          <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm text-center">
+            <p class="text-2xl font-black text-orange-600" id="ccVencido30">RD$0</p>
+            <p class="text-[10px] font-black text-slate-400 uppercase mt-1">Vencido +30 d�as</p>
+          </div>
+          <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm text-center">
+            <p class="text-2xl font-black text-slate-600" id="ccMoraTotal">RD$0</p>
+            <p class="text-[10px] font-black text-slate-400 uppercase mt-1">Mora acumulada</p>
+          </div>
+        </div>
+
+        <!-- Tabla de deudores -->
+        <div class="bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-sm">
+          <div class="p-4 border-b border-slate-100 flex flex-wrap gap-3 items-center">
+            <span class="font-black text-slate-700 text-sm">Alumnos con saldo pendiente</span>
+            <select id="ccFilter" onchange="App.cuentasCobrar?.applyFilter?.(this.value)" class="border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-bold outline-none bg-white ml-auto">
+              <option value="all">Todos</option>
+              <option value="overdue">Vencidos</option>
+              <option value="current">Al corriente</option>
+              <option value="mora">Con mora</option>
+            </select>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm" style="min-width:700px">
+              <thead class="bg-slate-50 border-b border-slate-100">
+                <tr>
+                  <th class="px-4 py-3 text-left text-[10px] font-black text-slate-400 uppercase">Alumno</th>
+                  <th class="px-4 py-3 text-left text-[10px] font-black text-slate-400 uppercase">Plan</th>
+                  <th class="px-4 py-3 text-right text-[10px] font-black text-slate-400 uppercase">Saldo</th>
+                  <th class="px-4 py-3 text-right text-[10px] font-black text-slate-400 uppercase">Mora</th>
+                  <th class="px-4 py-3 text-center text-[10px] font-black text-slate-400 uppercase">D�as vencido</th>
+                  <th class="px-4 py-3 text-center text-[10px] font-black text-slate-400 uppercase">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="ccTableBody" class="divide-y divide-slate-50">
+                <tr><td colspan="6" class="text-center py-8 text-slate-400">Cargando...</td></tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </section>
@@ -2204,16 +2617,16 @@
     </div> <!-- Cierre de .app-content-wrapper -->
   </div> <!-- Cierre de .app -->
 
-  <!-- Contenedor Único de Modales -->
+  <!-- Contenedor �nico de Modales -->
   <div id="globalModalContainer"
     class="fixed inset-0 z-[9999] overflow-y-auto flex items-start justify-center pt-16 pb-8 px-4"
     style="display:none; background:rgba(8,80,160,0.45); backdrop-filter:blur(6px);">
   </div>
 
-  <!-- TOAST CONTAINER — fuera de secciones para no duplicarse -->
+  <!-- TOAST CONTAINER � fuera de secciones para no duplicarse -->
   <div id="toast-container" class="fixed top-5 right-5 z-[9998] flex flex-col gap-2 pointer-events-none"></div>
 
-  <!-- Los modales de maestros y estudiantes se generan dinámicamente via globalModalContainer -->
+  <!-- Los modales de maestros y estudiantes se generan din�micamente via globalModalContainer -->
 
   <!-- Scripts optimizados -->
   <script>
@@ -2225,13 +2638,13 @@
         setTimeout(() => loader.remove(), 500);
       }
     });
-    // Timeout de seguridad: quitar loader después de 12s pase lo que pase
+    // Timeout de seguridad: quitar loader despu�s de 12s pase lo que pase
     setTimeout(() => {
       const loader = document.getElementById('initial-loading');
       if (loader) { loader.style.opacity = '0'; setTimeout(() => loader.remove(), 300); }
     }, 12000);
   </script>
-  <!-- Lucide Icons — cargado al final del body para garantizar DOM completo -->
+  <!-- Lucide Icons � cargado al final del body para garantizar DOM completo -->
   <script>
     // Silenciar errores internos de lucide UMD (promesas no manejadas)
     window.addEventListener('unhandledrejection', function(e) {
@@ -2243,7 +2656,7 @@
   </script>
   <script src="js/shared/lucide.min.js"></script>
   <script>
-    // Inicializar iconos — pasar atributos de clase al SVG reemplazante
+    // Inicializar iconos � pasar atributos de clase al SVG reemplazante
     function _initLucide() {
       if (!window.lucide) return;
       lucide.createIcons({
@@ -2258,12 +2671,12 @@
         }
       });
     }
-    // Exponer globalmente para que los módulos JS puedan usarla
+    // Exponer globalmente para que los m�dulos JS puedan usarla
     window._initLucide = _initLucide;
     _initLucide();
 
     // MutationObserver: re-ejecutar createIcons cada vez que se inserte
-    // contenido dinámico con atributos data-lucide
+    // contenido din�mico con atributos data-lucide
     (function() {
       let _timer = null;
       const _run = () => _initLucide();
@@ -2290,6 +2703,6 @@
   <script type="module" src="js/directora/event-handlers.js"></script>
   <script defer src="js/common_ui.js"></script>
   <script src="js/pwa-install.js" defer></script>
-  <!-- SW ya registrado en el <head> — no duplicar aquí -->
+  <!-- SW ya registrado en el <head> � no duplicar aqu� -->
 </body>
 </html>

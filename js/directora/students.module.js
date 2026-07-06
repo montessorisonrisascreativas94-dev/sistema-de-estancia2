@@ -507,6 +507,7 @@ export const StudentsModule = {
       monthly_fee:           n('monthlyFee', 0),
       prolongado_fee:        n('prolongadoFee', 0),
       due_day:               i('dueDay', 5),
+      payment_plan:          v('paymentPlan') || 'monthly',
       // Si hay hermano seleccionado, el parent_id se fuerza en save()
       _inheritedParentId:    inheritedParentId
     };
@@ -682,6 +683,15 @@ export const StudentsModule = {
               </h4>
               <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
+                  <label class="${labelClass}">Plan de Pago</label>
+                  <select id="paymentPlan" class="${inputClass}">
+                    <option value="monthly">Mensual</option>
+                    <option value="two_installments">Dos Cuotas</option>
+                    <option value="semestral">Semestral</option>
+                    <option value="anual">Anual</option>
+                  </select>
+                </div>
+                <div>
                   <label class="${labelClass}">Mensualidad</label>
                   <div class="relative">
                     <span class="absolute left-4 top-1/2 -translate-y-1/2 text-amber-600 font-black text-sm">$</span>
@@ -695,7 +705,7 @@ export const StudentsModule = {
                     <input id="prolongadoFee" placeholder="0.00" type="number" step="0.01" class="${inputClass} pl-8 bg-white">
                   </div>
                 </div>
-                <div><label class="${labelClass}">D\u00eda Vencimiento</label><input id="dueDay" placeholder="5" type="number" min="1" max="31" class="${inputClass} bg-white"></div>
+                <div class="md:col-span-2"><label class="${labelClass}">D\u00eda Vencimiento</label><input id="dueDay" placeholder="5" type="number" min="1" max="31" class="${inputClass} bg-white"></div>
               </div>
           </div>
 
@@ -942,6 +952,7 @@ export const StudentsModule = {
           setVal('monthlyFee',   student.monthly_fee);
           setVal('prolongadoFee', student.prolongado_fee);
           setVal('dueDay',       student.due_day);
+          setVal('paymentPlan',  student.payment_plan || 'monthly');
 
           const checkActive = document.getElementById('active');
           if (checkActive) checkActive.checked = student.is_active !== false;
