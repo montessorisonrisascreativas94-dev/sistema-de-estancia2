@@ -22,15 +22,15 @@ export async function renderDashboardV2(data) {
   const [
     studentsRes, teachersRes, attendanceRes,
     paymentsRes, pendingRes, messagesRes,
-    birthRes, cycleRes
+    allStudentsForBirthday, cycleRes
   ] = await Promise.allSettled([
-    supabase.from('students').select('id,is_active').is('deleted_at',null).limit(2000),
+    supabase.from('students').select('id,is_active').limit(2000),
     supabase.from('profiles').select('id,role').in('role',['maestra','asistente','admin']).limit(200),
     supabase.from('attendance').select('status').eq('date',todayStr).limit(1000),
     supabase.from('payments').select('amount,method').eq('status','paid').gte('paid_date',todayStr+'T00:00:00').lte('paid_date',todayStr+'T23:59:59').limit(500),
     supabase.from('payments').select('amount').in('status',['pending','overdue']).limit(2000),
     supabase.from('messages').select('id',{count:'exact',head:true}).eq('is_read',false),
-    supabase.from('students').select('name,p1_name').ilike('birth_date','%-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0')).is('deleted_at',null).limit(20),
+    supabase.from('students').select('name,p1_name,birth_date').limit(200),
     supabase.from('school_years').select('name,is_current').order('start_date',{ascending:false}).limit(5),
   ]);
 
@@ -41,7 +41,18 @@ export async function renderDashboardV2(data) {
   const todayPay   = safe(paymentsRes).data||[];
   const pending    = safe(pendingRes).data||[];
   const unread     = safe(messagesRes).count||0;
-  const birthdays  = safe(birthRes).data||[];
+  
+  // Filtrar cumpleaños del día en el cliente
+  const allStudents = safe(allStudentsForBirthday).data||[];
+  const currentMonth = String(now.getMonth()+1).padStart(2,'0');
+  const currentDay = String(now.getDate()).padStart(2,'0');
+  const birthdays = allStudents.filter(s => {
+    if (!s.birth_date) return false;
+    const birthDateStr = String(s.birth_date);
+    return birthDateStr.endsWith(`-${currentMonth}-${currentDay}`) || 
+           birthDateStr.includes(`-${currentMonth}-${currentDay}`);
+  });
+  
   const cycles     = safe(cycleRes).data||[];
 
   const totalStu   = students.length;
@@ -186,27 +197,6 @@ export async function renderDashboardV2(data) {
     </div>
   </div>
 
-  <!-- ACCESOS RÁPIDOS -->
-  <div>
-    <div class="dash-section-title"><i data-lucide="zap" class="w-3.5 h-3.5"></i> Accesos Rápidos</div>
-    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
-      ${[
-        {s:'gestion-academica',icon:'graduation-cap',label:'Gestión Académica',color:'#0B63C7',bg:'#E8F2FF'},
-        {s:'ciclo-escolar',    icon:'calendar-range', label:'Ciclo Escolar',   color:'#0D9488',bg:'#CCFBF1'},
-        {s:'finanzas',         icon:'banknote',       label:'Finanzas',        color:'#28B54D',bg:'#E6F7EB'},
-        {s:'comunicacion',     icon:'messages-square',label:'Comunicación',   color:'#8B5CF6',bg:'#F3E8FF'},
-        {s:'configuracion',    icon:'settings',       label:'Configuración',  color:'#64748B',bg:'#F1F5F9'},
-        {s:'ciclo-escolar',    icon:'user-plus',      label:'Nueva Inscripción',color:'#FF8A00',bg:'#FFF3E0'},
-      ].map(a=>`
-        <button onclick="App.navigation?.goTo?.('${a.s}')"
-          class="flex flex-col items-center gap-2 p-4 bg-white rounded-2xl border border-slate-100 hover:shadow-md transition-all active:scale-95 group">
-          <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background:${a.bg}">
-            <i data-lucide="${a.icon}" class="w-5 h-5" style="color:${a.color}"></i>
-          </div>
-          <span class="text-[10px] font-black text-slate-600 uppercase tracking-wide text-center leading-tight">${a.label}</span>
-        </button>`).join('')}
-    </div>
-  </div>
   `;
 
   if (window.lucide) lucide.createIcons();

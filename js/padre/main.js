@@ -301,6 +301,10 @@ async function refreshDashboard() {
   renderDailySummary(logs);
   renderLatestPosts(latestPosts); // Nueva función para renderizar posts en home
   renderGradesChart(academic?.evidences || []); // Renderizar gráfico de calificaciones
+  
+  // Load weekly summary for the dashboard
+  DailyReportModule.setStudent(student.id);
+  DailyReportModule.loadWeeklySummary();
 
   // 🚨 Banner de deuda vencida
   _updateDebtBanner(finance);

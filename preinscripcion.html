@@ -320,18 +320,80 @@
     </footer>
 
     <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
     <script>
+        // Initialize Supabase
+        const supabaseUrl = 'https://yswizaskeftxpcphixiy.supabase.co';
+        const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlzd2l6YXNrZWZ0eHBjcGhpeGl5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIzNDA3MjAsImV4cCI6MjA5NzkxNjcyMH0.9B1w2V1u9v5KjWv2kT1pF9oZ8c0O8rQ5eT0w5Q4eYw';
+        const sbClient = window.supabase ? window.supabase.createClient(supabaseUrl, supabaseAnonKey) : null;
+
         AOS.init({ duration:700, easing:'ease-out-cubic', once:true });
         
-        document.getElementById('preinscripcionForm').addEventListener('submit', function(e) {
+        document.getElementById('preinscripcionForm').addEventListener('submit', async function(e) {
             e.preventDefault();
-            // Simulate form submission
-            document.getElementById('successMessage').style.display = 'block';
-            this.reset();
-            setTimeout(() => {
-                document.getElementById('successMessage').style.display = 'none';
-            }, 5000);
+            
+            const formData = new FormData(this);
+            
+            // Map form fields to database fields
+            const data = {
+                student_name: formData.get('nombre_estudiante'),
+                birth_date: formData.get('fecha_nacimiento'),
+                section: formData.get('nivel'),
+                schedule: formData.get('horario'),
+                gender: formData.get('genero'),
+                allergies: formData.get('alergias') || null,
+                p1_name: formData.get('nombre_tutor'),
+                p1_relationship: formData.get('parentesco'),
+                p1_phone: formData.get('telefono'),
+                p1_email: formData.get('email'),
+                p1_address: formData.get('direccion'),
+                p2_name: formData.get('autorizado1') || null,
+                p2_phone: formData.get('telefono_autorizado1') || null,
+                p2_relationship: formData.get('parentesco_autorizado1') || null,
+                emergency_name: formData.get('autorizado2') || formData.get('autorizado1') || formData.get('nombre_tutor'),
+                emergency_phone: formData.get('telefono_autorizado2') || formData.get('telefono_autorizado1') || formData.get('telefono'),
+                reference: formData.get('referencia') || null,
+                comments: formData.get('comentarios') || null,
+                status: 'pending'
+            };
+
+            try {
+                const submitBtn = this.querySelector('button[type="submit"]');
+                const originalText = submitBtn.innerHTML;
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Enviando...';
+
+                if (sbClient) {
+                    const { error } = await sbClient
+                        .from('student_preregistrations')
+                        .insert([data]);
+
+                    if (error) throw error;
+                } else {
+                    console.warn('Supabase no está disponible, modo de demostración');
+                    // Simular delay
+                    await new Promise(resolve => setTimeout(resolve, 1500));
+                }
+
+                document.getElementById('successMessage').style.display = 'block';
+                this.reset();
+                
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+
+                setTimeout(() => {
+                    document.getElementById('successMessage').style.display = 'none';
+                }, 8000);
+
+            } catch (error) {
+                console.error('Error al enviar preinscripción:', error);
+                alert('Ocurrió un error al enviar la preinscripción. Por favor, intenta nuevamente.');
+                
+                const submitBtn = this.querySelector('button[type="submit"]');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="bi bi-send"></i> Enviar Preinscripción';
+            }
         });
     </script>
 </body>

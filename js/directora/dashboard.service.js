@@ -1,4 +1,4 @@
-﻿/**
+/**
  * 🎯 DASHBOARD SERVICE — Sincronización centralizada de datos
  * 
  * Responsabilidad: Orquestar carga de TODOS los datos del dashboard
@@ -26,7 +26,7 @@ export const DashboardService = {
 
       // Queries directas en paralelo — no dependen de RPC
       const [studentsRes, teachersRes, classroomsRes, attendanceRes, pendingPaymentsData] = await Promise.allSettled([
-        supabase.from('students').select('id').is('deleted_at', null).limit(2000),
+        supabase.from('students').select('id').limit(2000),
         supabase.from('profiles').select('id').in('role', ['maestra', 'asistente', 'admin']).limit(200),
         supabase.from('classrooms').select('id').limit(200),
         supabase.from('attendance').select('status').eq('date', today).limit(1000),

@@ -111,17 +111,20 @@ export const AcademicCycleModule = {
 
   _preinscRow(r){
     const sc={pending:'bg-amber-100 text-amber-700',admitted:'bg-blue-100 text-blue-700',rejected:'bg-red-100 text-red-600',converted:'bg-green-100 text-green-700'};
-    const sl={pending:'Pendiente',admitted:'Admitido',rejected:'Rechazado',converted:'Convertido'};
+    const sl={pending:'⏳ Pendiente',admitted:'✅ Admitido',rejected:'❌ Rechazado',converted:'🎉 Inscrito'};
     return `<tr class="hover:bg-slate-50 transition-colors preinsc-row" data-name="${(r.student_name||'').toLowerCase()}" data-status="${r.status}">
-      <td class="px-4 py-3"><div class="font-bold text-slate-800">${Helpers.escapeHTML(r.student_name||'—')}</div><div class="text-[10px] text-slate-400">${r.section||''}</div></td>
-      <td class="px-4 py-3"><div class="font-bold text-slate-700 text-xs">${Helpers.escapeHTML(r.p1_name||'—')}</div><div class="text-[10px] text-slate-400">${r.p1_phone||''}</div></td>
+      <td class="px-4 py-3"><div class="font-bold text-slate-800">${Helpers.escapeHTML(r.student_name||'—')}</div><div class="text-[10px] text-slate-400">${r.birth_date ? 'Nacimiento: ' + fmtDate(r.birth_date) : ''}</div></td>
+      <td class="px-4 py-3"><div class="font-bold text-slate-700 text-xs">${Helpers.escapeHTML(r.p1_name||'—')}</div><div class="text-[10px] text-slate-400">${r.p1_phone||''} ${r.p1_email ? '• ' + r.p1_email : ''}</div></td>
       <td class="px-4 py-3 text-xs font-bold text-slate-600">${r.section||'—'}<br><span class="text-slate-400 font-normal">${r.schedule||''}</span></td>
       <td class="px-4 py-3 text-center"><span class="px-2.5 py-1 rounded-full text-[10px] font-black ${sc[r.status]||'bg-slate-100 text-slate-500'}">${sl[r.status]||r.status}</span></td>
       <td class="px-4 py-3 text-xs text-slate-500">${fmtDate(r.created_at?.split('T')[0])}</td>
       <td class="px-4 py-3"><div class="flex justify-center gap-1.5">
-        <button onclick="App.academic.viewPreinsc(${r.id})" class="p-1.5 bg-slate-50 text-slate-500 rounded-lg hover:bg-blue-50 hover:text-blue-600" title="Ver"><i data-lucide="eye" class="w-4 h-4"></i></button>
-        ${r.status==='pending'?`<button onclick="App.academic.admitPreinsc(${r.id})" class="p-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100" title="Admitir"><i data-lucide="check" class="w-4 h-4"></i></button>`:''}
-        ${r.status!=='converted'&&r.status!=='rejected'?`<button onclick="App.academic.convertPreinsc(${r.id})" class="p-1.5 bg-green-50 text-green-600 rounded-lg hover:bg-green-100" title="Inscribir"><i data-lucide="user-plus" class="w-4 h-4"></i></button>`:''}
+        <button onclick="App.academic.viewPreinsc(${r.id})" class="p-1.5 bg-slate-50 text-slate-500 rounded-lg hover:bg-blue-50 hover:text-blue-600" title="Ver detalles"><i data-lucide="eye" class="w-4 h-4"></i></button>
+        ${r.status==='pending'?`
+          <button onclick="App.academic.admitPreinsc(${r.id})" class="p-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100" title="Marcar como admitido"><i data-lucide="check-circle" class="w-4 h-4"></i></button>
+          <button onclick="App.academic.rejectPreinsc(${r.id})" class="p-1.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-100" title="Rechazar"><i data-lucide="x-circle" class="w-4 h-4"></i></button>
+        `:''}
+        ${(r.status==='pending'||r.status==='admitted')?`<button onclick="App.academic.convertPreinsc(${r.id})" class="p-1.5 bg-green-50 text-green-600 rounded-lg hover:bg-green-100" title="Completar inscripción"><i data-lucide="user-plus" class="w-4 h-4"></i></button>`:''}
       </div></td>
     </tr>`;
   },
@@ -137,62 +140,411 @@ export const AcademicCycleModule = {
   },
 
   async admitPreinsc(id){
-    await supabase.from('student_preregistrations').update({status:'admitted',reviewed_at:new Date().toISOString()}).eq('id',id);
-    Helpers.toast('Admitido','success'); this.loadPreregistrations();
+    try {
+      const { error } = await supabase
+        .from('student_preregistrations')
+        .update({status:'admitted', reviewed_at:new Date().toISOString()})
+        .eq('id', id);
+      
+      if (error) throw error;
+      
+      Helpers.toast('✅ Preinscripción marcada como admitida', 'success');
+      this.loadPreregistrations();
+    } catch (error) {
+      console.error('Error al admitir:', error);
+      Helpers.toast('Error al actualizar estado', 'error');
+    }
+  },
+
+  async rejectPreinsc(id){
+    try {
+      const confirm = window.confirm('¿Estás seguro de que deseas rechazar esta preinscripción?');
+      if (!confirm) return;
+      
+      const { error } = await supabase
+        .from('student_preregistrations')
+        .update({status:'rejected', reviewed_at:new Date().toISOString()})
+        .eq('id', id);
+      
+      if (error) throw error;
+      
+      Helpers.toast('❌ Preinscripción rechazada', 'error');
+      this.loadPreregistrations();
+    } catch (error) {
+      console.error('Error al rechazar:', error);
+      Helpers.toast('Error al actualizar estado', 'error');
+    }
   },
 
   async viewPreinsc(id){
     const {data:r}=await supabase.from('student_preregistrations').select('*').eq('id',id).single();
     if(!r)return;
+    
+    const sc={pending:'bg-amber-100 text-amber-700',admitted:'bg-blue-100 text-blue-700',rejected:'bg-red-100 text-red-600',converted:'bg-green-100 text-green-700'};
+    const sl={pending:'⏳ Pendiente',admitted:'✅ Admitido',rejected:'❌ Rechazado',converted:'🎉 Inscrito'};
+    
     window.openGlobalModal(`<div class="p-6 max-h-[80vh] overflow-y-auto">
-      <h3 class="text-lg font-black text-slate-800 mb-4">Pre-inscripción: ${Helpers.escapeHTML(r.student_name)}</h3>
-      <div class="grid grid-cols-2 gap-3 text-sm">
-        ${[['Nivel',r.section],['Horario',r.schedule],['Fecha nac.',fmtDate(r.birth_date)],['Sangre',r.blood_type],['Alergias',r.allergies],
-           ['Tutor 1',r.p1_name],['Tel.',r.p1_phone],['Email',r.p1_email],['Tutor 2',r.p2_name],['Tel. 2',r.p2_phone],
-           ['Emergencia',r.emergency_name],['Tel. emerg.',r.emergency_phone]]
-          .map(([l,v])=>v?`<div><span class="text-[9px] font-black text-slate-400 uppercase">${l}</span><p class="font-bold text-slate-700 text-xs">${Helpers.escapeHTML(String(v))}</p></div>`:'').join('')}
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-black text-slate-800">Pre-inscripción</h3>
+        <span class="px-3 py-1 rounded-full text-[11px] font-black ${sc[r.status]||'bg-slate-100 text-slate-500'}">${sl[r.status]||r.status}</span>
       </div>
-      <div class="mt-5 flex justify-end gap-2">
-        <button onclick="App.ui.closeModal()" class="px-4 py-2 text-slate-500 font-bold text-xs uppercase border border-slate-200 rounded-xl">Cerrar</button>
-        ${r.status!=='converted'?`<button onclick="App.ui.closeModal();App.academic.convertPreinsc(${r.id})" class="px-4 py-2 text-white font-black text-xs uppercase rounded-xl" style="background:#28B54D">Inscribir</button>`:''}
+      
+      <div class="bg-blue-50 rounded-xl p-4 mb-4">
+        <h4 class="font-bold text-blue-800 mb-2 flex items-center gap-2">
+          <i data-lucide="user" class="w-4 h-4"></i> Datos del Estudiante
+        </h4>
+        <div class="grid grid-cols-2 gap-3 text-sm">
+          ${[
+            ['Nombre', r.student_name],
+            ['Fecha de Nacimiento', r.birth_date ? fmtDate(r.birth_date) : '—'],
+            ['Género', r.gender || '—'],
+            ['Tipo de Sangre', r.blood_type || '—'],
+            ['Alergias', r.allergies || 'Ninguna reportada'],
+            ['Nivel', r.section || '—'],
+            ['Horario', r.schedule || '—']
+          ].map(([l,v])=>`
+            <div>
+              <span class="text-[10px] font-black text-slate-400 uppercase block">${l}</span>
+              <p class="font-bold text-slate-700 text-sm">${Helpers.escapeHTML(String(v||'—'))}</p>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+      
+      <div class="bg-green-50 rounded-xl p-4 mb-4">
+        <h4 class="font-bold text-green-800 mb-2 flex items-center gap-2">
+          <i data-lucide="home" class="w-4 h-4"></i> Datos del Tutor
+        </h4>
+        <div class="grid grid-cols-2 gap-3 text-sm">
+          ${[
+            ['Nombre', r.p1_name],
+            ['Parentesco', r.p1_relationship || '—'],
+            ['Teléfono', r.p1_phone || '—'],
+            ['Email', r.p1_email || '—'],
+            ['Dirección', r.p1_address || '—']
+          ].map(([l,v])=>`
+            <div>
+              <span class="text-[10px] font-black text-slate-400 uppercase block">${l}</span>
+              <p class="font-bold text-slate-700 text-sm">${Helpers.escapeHTML(String(v||'—'))}</p>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+      
+      ${r.p2_name ? `
+      <div class="bg-purple-50 rounded-xl p-4 mb-4">
+        <h4 class="font-bold text-purple-800 mb-2 flex items-center gap-2">
+          <i data-lucide="users" class="w-4 h-4"></i> Tutor Secundario
+        </h4>
+        <div class="grid grid-cols-2 gap-3 text-sm">
+          ${[
+            ['Nombre', r.p2_name],
+            ['Parentesco', r.p2_relationship || '—'],
+            ['Teléfono', r.p2_phone || '—']
+          ].map(([l,v])=>`
+            <div>
+              <span class="text-[10px] font-black text-slate-400 uppercase block">${l}</span>
+              <p class="font-bold text-slate-700 text-sm">${Helpers.escapeHTML(String(v||'—'))}</p>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+      ` : ''}
+      
+      ${r.emergency_name ? `
+      <div class="bg-red-50 rounded-xl p-4 mb-4">
+        <h4 class="font-bold text-red-800 mb-2 flex items-center gap-2">
+          <i data-lucide="alert-triangle" class="w-4 h-4"></i> Contacto de Emergencia
+        </h4>
+        <div class="grid grid-cols-2 gap-3 text-sm">
+          ${[
+            ['Nombre', r.emergency_name],
+            ['Teléfono', r.emergency_phone || '—'],
+            ['Parentesco', r.emergency_relationship || '—']
+          ].map(([l,v])=>`
+            <div>
+              <span class="text-[10px] font-black text-slate-400 uppercase block">${l}</span>
+              <p class="font-bold text-slate-700 text-sm">${Helpers.escapeHTML(String(v||'—'))}</p>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+      ` : ''}
+      
+      ${r.comments || r.reference ? `
+      <div class="bg-slate-50 rounded-xl p-4 mb-4">
+        <h4 class="font-bold text-slate-800 mb-2 flex items-center gap-2">
+          <i data-lucide="info" class="w-4 h-4"></i> Información Adicional
+        </h4>
+        ${r.reference ? `
+          <div class="mb-2">
+            <span class="text-[10px] font-black text-slate-400 uppercase block">¿Cómo se enteró?</span>
+            <p class="font-bold text-slate-700 text-sm">${Helpers.escapeHTML(r.reference)}</p>
+          </div>
+        ` : ''}
+        ${r.comments ? `
+          <div>
+            <span class="text-[10px] font-black text-slate-400 uppercase block">Comentarios</span>
+            <p class="font-medium text-slate-700 text-sm">${Helpers.escapeHTML(r.comments)}</p>
+          </div>
+        ` : ''}
+      </div>
+      ` : ''}
+      
+      <div class="text-xs text-slate-400 mb-4">
+        Solicitud recibida: ${fmtDate(r.created_at?.split('T')[0])}
+        ${r.reviewed_at ? ` • Revisado: ${fmtDate(r.reviewed_at?.split('T')[0])}` : ''}
+      </div>
+      
+      <div class="flex flex-wrap justify-end gap-2">
+        <button onclick="App.ui.closeModal()" class="px-4 py-2 text-slate-500 font-bold text-xs uppercase border border-slate-200 rounded-xl hover:bg-slate-50">
+          Cerrar
+        </button>
+        ${r.status==='pending'?`
+          <button onclick="App.ui.closeModal();App.academic.admitPreinsc(${r.id})" class="px-4 py-2 text-white font-black text-xs uppercase rounded-xl" style="background:#0B63C7">
+            ✅ Admitir
+          </button>
+          <button onclick="App.ui.closeModal();App.academic.rejectPreinsc(${r.id})" class="px-4 py-2 text-white font-black text-xs uppercase rounded-xl" style="background:#EF4444">
+            ❌ Rechazar
+          </button>
+        `:''}
+        ${(r.status==='pending'||r.status==='admitted')?`
+          <button onclick="App.ui.closeModal();App.academic.convertPreinsc(${r.id})" class="px-4 py-2 text-white font-black text-xs uppercase rounded-xl" style="background:#28B54D">
+            🎉 Completar Inscripción
+          </button>
+        `:''}
       </div>
     </div>`);
+    
+    // Re-render icons
+    if (window.lucide) lucide.createIcons();
   },
 
   async convertPreinsc(preinscId){
     await this._loadYears();
-    const {data:plans}=await supabase.from('payment_plans').select('id,name,level,schedule').eq('school_year_id',this._currentYear?.id||0).eq('is_active',true).order('name');
-    const {data:rooms}=await supabase.from('classrooms').select('id,name').order('name');
+    const {data:pre}=await supabase.from('student_preregistrations').select('*').eq('id',preinscId).single();
+    const {data:plans}=await supabase.from('payment_plans').select('id,name,level,schedule,registration_fee').eq('school_year_id',this._currentYear?.id||0).eq('is_active',true).order('name');
+    const {data:rooms}=await supabase.from('classrooms').select('id,name,capacity').order('name');
+    const {data:lastStudent}=await supabase.from('students').select('id,matricula').order('id',{ascending:false}).limit(1).maybeSingle();
+    
+    // Generar matrícula automática
+    const year = new Date().getFullYear();
+    let nextNum = 1;
+    if (lastStudent?.matricula) {
+      const match = lastStudent.matricula.match(/-(\d+)$/);
+      if (match) nextNum = parseInt(match[1]) + 1;
+    }
+    const autoMatricula = `SC-${year}-${String(nextNum).padStart(3, '0')}`;
+    
     const po=(plans||[]).map(p=>`<option value="${p.id}">${p.name} — ${p.level} ${p.schedule}</option>`).join('');
     const ro=(rooms||[]).map(r=>`<option value="${r.id}">${r.name}</option>`).join('');
-    window.openGlobalModal(`<div class="p-6">
-      <h3 class="text-lg font-black text-slate-800 mb-5">Inscribir Alumno</h3>
-      <div class="space-y-4">
-        <div><label class="text-[10px] font-black text-slate-400 uppercase block mb-1">Aula</label>
-          <select id="convClassroom" class="w-full border-2 border-slate-100 rounded-xl px-3 py-2.5 text-sm font-bold outline-none focus:border-blue-400">
-            <option value="">Sin asignar</option>${ro}</select></div>
-        <div><label class="text-[10px] font-black text-slate-400 uppercase block mb-1">Plan de pago</label>
-          <select id="convPlan" class="w-full border-2 border-slate-100 rounded-xl px-3 py-2.5 text-sm font-bold outline-none focus:border-blue-400">
-            <option value="">Sin plan</option>${po}</select></div>
-        <div><label class="text-[10px] font-black text-slate-400 uppercase block mb-1">Matrícula</label>
-          <input id="convMatricula" type="text" placeholder="Ej: SC-2026-001" class="w-full border-2 border-slate-100 rounded-xl px-3 py-2.5 text-sm font-bold outline-none focus:border-blue-400"></div>
+    
+    window.openGlobalModal(`<div class="p-6 max-w-2xl">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-black text-slate-800">🎉 Completar Inscripción</h3>
+        <span class="text-xs font-bold text-green-600 bg-green-50 px-3 py-1 rounded-full">
+          ${pre?.student_name || 'Estudiante'}
+        </span>
       </div>
-      <div class="mt-5 flex justify-end gap-2">
-        <button onclick="App.ui.closeModal()" class="px-4 py-2 text-slate-500 font-bold text-xs uppercase border border-slate-200 rounded-xl">Cancelar</button>
-        <button id="btnDoConvert" onclick="App.academic._doConvert(${preinscId})" class="px-5 py-2 text-white font-black text-xs uppercase rounded-xl" style="background:#0B63C7">Inscribir</button>
+      
+      <div class="bg-blue-50 rounded-xl p-4 mb-4">
+        <div class="grid grid-cols-2 gap-3 text-sm">
+          <div>
+            <span class="text-[10px] font-black text-blue-400 uppercase block">Estudiante</span>
+            <p class="font-bold text-blue-800 text-sm">${Helpers.escapeHTML(pre?.student_name || '—')}</p>
+          </div>
+          <div>
+            <span class="text-[10px] font-black text-blue-400 uppercase block">Nivel</span>
+            <p class="font-bold text-blue-800 text-sm">${pre?.section || '—'}</p>
+          </div>
+          <div>
+            <span class="text-[10px] font-black text-blue-400 uppercase block">Tutor</span>
+            <p class="font-bold text-blue-800 text-sm">${Helpers.escapeHTML(pre?.p1_name || '—')}</p>
+          </div>
+          <div>
+            <span class="text-[10px] font-black text-blue-400 uppercase block">Año Escolar</span>
+            <p class="font-bold text-blue-800 text-sm">${this._currentYear?.name || '—'}</p>
+          </div>
+        </div>
+      </div>
+      
+      <div class="space-y-4">
+        <div>
+          <label class="text-[10px] font-black text-slate-400 uppercase block mb-1">
+            📋 Matrícula <span class="text-green-600">(generada automáticamente)</span>
+          </label>
+          <input id="convMatricula" type="text" value="${autoMatricula}" 
+                 class="w-full border-2 border-slate-100 rounded-xl px-3 py-2.5 text-sm font-bold outline-none focus:border-blue-400 bg-slate-50">
+        </div>
+        <div>
+          <label class="text-[10px] font-black text-slate-400 uppercase block mb-1">
+            🏫 Aula Asignada
+          </label>
+          <select id="convClassroom" class="w-full border-2 border-slate-100 rounded-xl px-3 py-2.5 text-sm font-bold outline-none focus:border-blue-400">
+            <option value="">Sin asignar</option>${ro}
+          </select>
+        </div>
+        <div>
+          <label class="text-[10px] font-black text-slate-400 uppercase block mb-1">
+            💳 Plan de Pago
+          </label>
+          <select id="convPlan" class="w-full border-2 border-slate-100 rounded-xl px-3 py-2.5 text-sm font-bold outline-none focus:border-blue-400">
+            <option value="">Sin plan</option>${po}
+          </select>
+          ${plans?.length ? `
+            <div id="planInfo" class="mt-2 text-xs text-slate-500 bg-slate-50 p-2 rounded-lg hidden">
+              <span class="font-bold">Inscripción:</span> <span id="planFee">$0.00</span>
+            </div>
+          ` : ''}
+        </div>
+      </div>
+      
+      <div class="mt-5 flex flex-wrap justify-end gap-2">
+        <button onclick="App.ui.closeModal()" class="px-4 py-2 text-slate-500 font-bold text-xs uppercase border border-slate-200 rounded-xl hover:bg-slate-50">
+          Cancelar
+        </button>
+        <button id="btnDoConvert" onclick="App.academic._doConvert(${preinscId})" 
+                class="px-5 py-2 text-white font-black text-xs uppercase rounded-xl flex items-center gap-2" 
+                style="background:#28B54D">
+          <i data-lucide="check-circle" class="w-4 h-4"></i>
+          Finalizar Inscripción
+        </button>
       </div>
     </div>`);
+    
+    // Re-render icons
+    if (window.lucide) lucide.createIcons();
+    
+    // Add plan info logic
+    setTimeout(() => {
+      const planSelect = document.getElementById('convPlan');
+      const planInfo = document.getElementById('planInfo');
+      const planFee = document.getElementById('planFee');
+      if (planSelect && plans?.length) {
+        planSelect.addEventListener('change', () => {
+          const selectedPlan = plans.find(p => p.id === parseInt(planSelect.value));
+          if (selectedPlan && planInfo && planFee) {
+            planInfo.classList.remove('hidden');
+            planFee.textContent = fmtCurrency(selectedPlan.registration_fee);
+          } else if (planInfo) {
+            planInfo.classList.add('hidden');
+          }
+        });
+      }
+    }, 100);
   },
 
   async _doConvert(preinscId){
-    const classId=$el('convClassroom')?.value||null; const planId=$el('convPlan')?.value||null; const mat=$el('convMatricula')?.value?.trim()||null;
-    const btn=$el('btnDoConvert'); if(btn){btn.disabled=true;btn.textContent='Procesando...';}
-    const {data,error}=await supabase.rpc('convert_preregistration',{
-      p_preinsc_id:preinscId, p_school_year_id:this._currentYear?.id,
-      p_classroom_id:classId?parseInt(classId):null, p_payment_plan_id:planId?parseInt(planId):null, p_matricula:mat
-    });
-    if(error){Helpers.toast('Error: '+error.message,'error');if(btn){btn.disabled=false;btn.textContent='Inscribir';}return;}
-    Helpers.toast('Alumno inscrito y cargos generados','success'); App.ui.closeModal(); this.loadPreregistrations();
+    const classId=$el('convClassroom')?.value||null; 
+    const planId=$el('convPlan')?.value||null; 
+    const mat=$el('convMatricula')?.value?.trim()||null;
+    const btn=$el('btnDoConvert'); 
+    
+    if(btn){
+      btn.disabled=true;
+      btn.innerHTML='<div class="flex items-center gap-2"><div class="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>Procesando...</div>';
+    }
+    
+    try {
+      // Primero intentamos usar la función RPC, si falla hacemos la inserción manual
+      let result;
+      try {
+        const {data, error}=await supabase.rpc('convert_preregistration',{
+          p_preinsc_id:preinscId, 
+          p_school_year_id:this._currentYear?.id,
+          p_classroom_id:classId?parseInt(classId):null, 
+          p_payment_plan_id:planId?parseInt(planId):null, 
+          p_matricula:mat
+        });
+        
+        if (!error) {
+          result = data;
+        } else {
+          throw error;
+        }
+      } catch (rpcError) {
+        console.log('RPC no disponible, usando método manual:', rpcError);
+        // Método manual si la RPC no existe
+        result = await this._doConvertManual(preinscId, classId, planId, mat);
+      }
+      
+      Helpers.toast('🎉 ¡Alumno inscrito exitosamente!', 'success'); 
+      App.ui.closeModal(); 
+      this.loadPreregistrations();
+      
+      // Navegar automáticamente a estudiantes para ver el nuevo alumno
+      setTimeout(() => {
+        if (window.App?.navigation?.goTo) {
+          window.App.navigation.goTo('estudiantes');
+        }
+      }, 1000);
+      
+    } catch(error){
+      console.error('Error en conversión:', error);
+      Helpers.toast('Error: ' + (error.message || 'Error al inscribir'), 'error');
+      if(btn){
+        btn.disabled=false;
+        btn.innerHTML='<i data-lucide="check-circle" class="w-4 h-4"></i> Finalizar Inscripción';
+        if (window.lucide) lucide.createIcons();
+      }
+    }
+  },
+  
+  async _doConvertManual(preinscId, classId, planId, mat) {
+    // Obtener datos de preinscripción
+    const {data:pre} = await supabase.from('student_preregistrations').select('*').eq('id',preinscId).single();
+    if (!pre) throw new Error('Preinscripción no encontrada');
+    
+    // 1. Crear estudiante
+    const {data:student, error:studentError} = await supabase
+      .from('students')
+      .insert({
+        name: pre.student_name,
+        birth_date: pre.birth_date,
+        classroom_id: classId ? parseInt(classId) : null,
+        allergies: pre.allergies,
+        matricula: mat,
+        p1_name: pre.p1_name,
+        p1_phone: pre.p1_phone,
+        p1_email: pre.p1_email,
+        p1_address: pre.p1_address,
+        p2_name: pre.p2_name,
+        p2_phone: pre.p2_phone,
+        is_active: true,
+        start_date: new Date().toISOString().split('T')[0]
+      })
+      .select()
+      .single();
+    
+    if (studentError) throw studentError;
+    
+    // 2. Crear student_enrollment
+    if (this._currentYear?.id) {
+      const {error:enrollError} = await supabase
+        .from('student_enrollments')
+        .insert({
+          student_id: student.id,
+          school_year_id: this._currentYear.id,
+          classroom_id: classId ? parseInt(classId) : null,
+          payment_plan_id: planId ? parseInt(planId) : null,
+          status: 'inscrito',
+          preinscription_date: pre.created_at,
+          admission_date: new Date().toISOString()
+        });
+      
+      if (enrollError) console.warn('Error al crear enrollment:', enrollError);
+    }
+    
+    // 3. Actualizar estado de preinscripción
+    await supabase
+      .from('student_preregistrations')
+      .update({
+        status: 'converted', 
+        reviewed_at: new Date().toISOString()
+      })
+      .eq('id', preinscId);
+    
+    return {success: true, student_id: student.id};
   },
 
   // ── INSCRIPCIONES ────────────────────────────────────────────────────────

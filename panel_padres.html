@@ -496,11 +496,7 @@
           <span id="badge-class" class="hidden min-w-[18px] h-[18px] rounded-full bg-[#FF7A00] text-white text-[9px] font-black flex items-center justify-center px-1">0</span>
         </button>
 
-        <!-- Mis Reportes -->
-        <button type="button" data-target="reports" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 font-bold text-sm" aria-label="Mis Reportes">
-          <i data-lucide="file-alert" class="w-5 h-5 shrink-0"></i>
-          <span class="flex-1 text-left">Mis Reportes</span>
-        </button>
+
         
         <!-- Mi Cuenta -->
         <button type="button" data-target="profile" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 font-bold text-sm" aria-label="Mi Cuenta">
@@ -676,10 +672,30 @@
                 
               </div>
               
-              <button onclick="App.navigateTo('live-attendance')" class="w-full py-3.5 bg-[#0B63C7] text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-[#0850A0] active:scale-95 transition-all shadow-lg shadow-[#0B63C7]/20 flex items-center justify-center gap-2">
-                <i data-lucide="eye" class="w-4 h-4"></i> Ver Detalles Completos
+              <button onclick="App.navigateTo('rutina-diaria')" class="w-full py-3.5 bg-[#28B54D] text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-[#1A8035] active:scale-95 transition-all shadow-lg shadow-[#28B54D]/20 flex items-center justify-center gap-2">
+                <i data-lucide="clipboard-list" class="w-4 h-4"></i> Ver Rutina Diaria
               </button>
               
+            </div>
+          </div>
+
+          <!-- Resumen Semanal Inteligente -->
+          <div class="mb-8">
+            <div class="cloud-card">
+              <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 rounded-xl bg-[#8B5CF6] text-white flex items-center justify-center shadow-lg shadow-purple-200">
+                  <i data-lucide="trending-up" class="w-5 h-5"></i>
+                </div>
+                <div>
+                  <h3 class="font-black text-xl text-[#1A2340]">Resumen Semanal</h3>
+                  <p class="text-xs font-black text-[#64748B] uppercase tracking-[0.15em]">Estadísticas de los últimos 7 días</p>
+                </div>
+              </div>
+              <div id="weeklySummaryContainer">
+                <div class="animate-pulse space-y-4">
+                  <div class="h-24 bg-slate-100 rounded-2xl"></div>
+                </div>
+              </div>
             </div>
           </div>
           
@@ -1138,34 +1154,7 @@
             </div>
           </section>
 
-          <!-- MIS REPORTES -->
-          <section id="reports" class="section hidden">
-            <div class="flex flex-col gap-6">
-              <!-- Header -->
-              <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <h3 class="text-2xl md:text-3xl font-black text-[#1A2340] tracking-tight flex items-center gap-3">
-                  <div class="w-10 h-10 rounded-xl bg-[#FF7A00] text-white flex items-center justify-center shadow-lg shadow-[#FF7A00]/20">
-                    <i data-lucide="file-alert" class="w-5 h-5"></i>
-                  </div>
-                  Mis Reportes
-                </h3>
-                <button id="btnNewReport" class="px-6 py-3 bg-[#0B63C7] text-white rounded-xl font-black text-sm hover:bg-[#0850A0] active:scale-95 transition-all flex items-center gap-2 shadow-lg shadow-[#0B63C7]/20">
-                  <i data-lucide="plus" class="w-4 h-4"></i> Nuevo Reporte
-                </button>
-              </div>
 
-              <!-- Reports List -->
-              <div class="cloud-card">
-                <div id="reportsList" class="space-y-4">
-                  <div class="p-8 text-center text-[#64748B]">
-                    <i data-lucide="inbox" class="w-16 h-16 mx-auto mb-4 text-[#E2E8F0]"></i>
-                    <p class="font-bold">No tienes reportes aún</p>
-                    <p class="text-sm mt-1">Crea tu primer reporte haciendo clic en "Nuevo Reporte"</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
 
           <!-- RUTINA DIARIA -->
           <section id="rutina-diaria" class="section hidden">

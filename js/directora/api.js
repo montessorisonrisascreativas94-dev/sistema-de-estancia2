@@ -348,7 +348,6 @@ export const DirectorApi = {
       const { data: activeStudents } = await supabase
         .from(TABLES.STUDENTS)
         .select('parent_id')
-        .is('deleted_at', null)
         .eq('is_active', true);
 
       const activeParentIds = [...new Set((activeStudents || []).map(s => s.parent_id).filter(Boolean))];
@@ -383,7 +382,6 @@ export const DirectorApi = {
         .from(TABLES.STUDENTS)
         .select('parent_id, name, classroom_id')
         .in('parent_id', ids)
-        .is('deleted_at', null)
         .eq('is_active', true);
       if (error) throw error;
 

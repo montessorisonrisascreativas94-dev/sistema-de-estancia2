@@ -860,7 +860,6 @@ export const StudentsModule = {
         .from('students')
         .select('id, name, p1_name, parent_id, classrooms:classroom_id(name)')
         .eq('is_active', true)
-        .is('deleted_at', null)
         .order('name')
         .limit(200);
 
@@ -976,7 +975,6 @@ export const StudentsModule = {
               .select('id, name, avatar_url, classrooms:classroom_id(name)')
               .eq('parent_id', student.parent_id)
               .eq('is_active', true)
-              .is('deleted_at', null)
               .neq('id', numericId)
               .order('name')
               .then(({ data: siblings }) => {

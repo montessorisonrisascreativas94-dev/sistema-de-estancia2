@@ -12,6 +12,7 @@ import { PaymentsModule } from './payments.module.js';
 import { NewPaymentsModule } from './payments-new.module.js';
 import { InvoicingModule } from './invoicing.module.js';
 import { AccountingModule } from './accounting.module.js';
+import { BadgeSystem } from '../shared/badges.js';
 
 // ── Tenant config row — única fila de configuración del tenant ─────────────────
 const SCHOOL_SETTINGS_ID = 1;
@@ -171,6 +172,7 @@ export function goToSection(sectionId) {
         _renderCicloEscolar();
         break;
       case 'ciclo-academico':
+      case 'inscripciones':
         import('./academic-cycle.module.js').then(m => m.AcademicCycleModule.init());
         break;
       case 'staff-permits':
@@ -225,6 +227,7 @@ export function goToSection(sectionId) {
     aulas:'gestion-academica',    asistencia:'gestion-academica',
     calificaciones:'gestion-academica', videoconferencia:'gestion-academica',
     'ciclo-academico':'ciclo-escolar', 'staff-permits':'ciclo-escolar',
+    'inscripciones':'ciclo-escolar',
     accesos:'ciclo-escolar',
     caja:'finanzas', pagos:'finanzas', contabilidad:'finanzas',
     'cuentas-cobrar':'finanzas',
@@ -457,10 +460,32 @@ document.addEventListener('DOMContentLoaded', async () => {
         BadgeSystem.init(auth.user.id);
 
     // Cargar badge de pre-inscripciones pendientes
-    supabase.from('student_preregistrations').select('id',{count:'exact',head:true}).eq('status','pending').then(({count})=>{
-      const b=document.getElementById('badge-ciclo');
-      if(b&&count>0){b.textContent=count>99?'99+':String(count);b.classList.remove('hidden');}
-    }).catch(()=>{});
+    const loadPreBadge = async () => {
+      try {
+        const {count} = await supabase.from('student_preregistrations').select('id',{count:'exact',head:true}).eq('status','pending');
+        const b=document.getElementById('badge-ciclo');
+        if(b) {
+          if(count>0){
+            b.textContent=count>99?'99+':String(count);
+            b.classList.remove('hidden');
+          } else {
+            b.classList.add('hidden');
+          }
+        }
+      } catch(e){}
+    };
+    loadPreBadge();
+    
+    // Suscribirse a cambios en preinscripciones para actualizar badge en tiempo real
+    try {
+      supabase.channel('preinscripciones-realtime')
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'student_preregistrations'
+        }, () => loadPreBadge())
+        .subscribe();
+    } catch(e){}
 
     // ?? Sistema de badges por secci�n
     BadgeSystem.init(auth.user.id);
@@ -480,7 +505,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 7. Sidebar — delegado al módulo unificado sidebar-manager.js
     import('../shared/sidebar-manager.js')
-      .then(({ initSidebar }) => initSidebar())
+      .then(({ initSidebar }) => {
+        initSidebar();
+        // Inicializar toggles de dropdowns del sidebar
+        initSidebarDropdowns();
+      })
       .catch((err) => {
         console.warn('[Sidebar] sidebar-manager.js no cargó, usando fallback:', err?.message);
         document.getElementById('menuBtn')?.addEventListener('click', () => {
@@ -495,6 +524,8 @@ document.addEventListener('DOMContentLoaded', async () => {
           const ov = document.getElementById('sidebarOverlay');
           if (ov) ov.style.display = 'none';
         });
+        // Inicializar toggles de dropdowns también en fallback
+        initSidebarDropdowns();
       });
 
     // 7b. Configurar guardado de perfil
@@ -1055,6 +1086,34 @@ async function _initDirectorAccessId(profile) {
   input.addEventListener('input', (e) => {
     clearTimeout(window._dirQrDebounce);
     window._dirQrDebounce = setTimeout(() => _renderQR(e.target.value.trim()), 600);
+  });
+}
+
+/**
+ * Inicializar toggles de dropdowns del sidebar
+ */
+function initSidebarDropdowns() {
+  document.querySelectorAll('.kk-nav-group-toggle').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      // Prevenir que el click navegue a una sección si es un toggle
+      e.stopPropagation();
+      
+      const group = btn.closest('.kk-nav-group');
+      const submenu = group?.querySelector('.kk-nav-sub');
+      
+      if (group && submenu) {
+        // Toggle la clase 'open' en el botón y el grupo
+        btn.classList.toggle('open');
+        group.classList.toggle('open');
+        
+        // Mostrar/ocultar el submenú
+        if (submenu.style.display === 'none' || submenu.style.display === '') {
+          submenu.style.display = 'block';
+        } else {
+          submenu.style.display = 'none';
+        }
+      }
+    });
   });
 }
 
