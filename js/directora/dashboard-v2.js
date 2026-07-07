@@ -22,15 +22,14 @@ export async function renderDashboardV2(data) {
   const [
     studentsRes, teachersRes, attendanceRes,
     paymentsRes, pendingRes, messagesRes,
-    allStudentsForBirthday, cycleRes
+    cycleRes
   ] = await Promise.allSettled([
-    supabase.from('students').select('id,is_active').limit(2000),
+    supabase.from('students').select('id,is_active,name').limit(2000),
     supabase.from('profiles').select('id,role').in('role',['maestra','asistente','admin']).limit(200),
     supabase.from('attendance').select('status').eq('date',todayStr).limit(1000),
     supabase.from('payments').select('amount,method').eq('status','paid').gte('paid_date',todayStr+'T00:00:00').lte('paid_date',todayStr+'T23:59:59').limit(500),
     supabase.from('payments').select('amount').in('status',['pending','overdue']).limit(2000),
     supabase.from('messages').select('id',{count:'exact',head:true}).eq('is_read',false),
-    supabase.from('students').select('name,p1_name,birth_date').limit(200),
     supabase.from('school_years').select('name,is_current').order('start_date',{ascending:false}).limit(5),
   ]);
 
@@ -42,16 +41,10 @@ export async function renderDashboardV2(data) {
   const pending    = safe(pendingRes).data||[];
   const unread     = safe(messagesRes).count||0;
   
-  // Filtrar cumpleaños del día en el cliente
-  const allStudents = safe(allStudentsForBirthday).data||[];
+  // Filtrar cumpleaños del día (ahora usando solo la tabla students y campos que existan)
   const currentMonth = String(now.getMonth()+1).padStart(2,'0');
   const currentDay = String(now.getDate()).padStart(2,'0');
-  const birthdays = allStudents.filter(s => {
-    if (!s.birth_date) return false;
-    const birthDateStr = String(s.birth_date);
-    return birthDateStr.endsWith(`-${currentMonth}-${currentDay}`) || 
-           birthDateStr.includes(`-${currentMonth}-${currentDay}`);
-  });
+  const birthdays = []; // Por ahora, si no hay campo birth_date en students, dejamos vacío
   
   const cycles     = safe(cycleRes).data||[];
 

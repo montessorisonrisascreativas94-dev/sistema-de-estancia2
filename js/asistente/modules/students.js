@@ -465,19 +465,12 @@ export const StudentsModule = {
     // Prefill if editing
     if (studentId) {
       try {
-        const { data: st, error } = await supabase.from('students').select('id, name, is_active, parent_id, classroom_id, matricula, p1_name, p1_phone, p1_email, p2_name, p2_phone, monthly_fee, due_day, blood_type, allergies, authorized_pickup, start_date, avatar_url').eq('id', studentId).single();
+        const { data: st, error } = await supabase.from('students').select('id, name, is_active, parent_id, classroom_id, matricula, monthly_fee, due_day, start_date, avatar_url').eq('id', studentId).single();
         if (error) throw error;
         if (st) {
           const sv = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ''; };
           sv('stId', st.id); sv('stMatricula', st.matricula); sv('stName', st.name);
           sv('stClassroom', st.classroom_id); sv('stJoinedDate', st.start_date?.split('T')[0]);
-          sv('stEmailNotif', st.p1_email); sv('stBlood', st.blood_type);
-          sv('stAllergies', st.allergies); sv('stPickup', st.authorized_pickup);
-          sv('p1Name', st.p1_name); sv('p1Phone', st.p1_phone);
-          sv('p1Profession', st.p1_job); sv('p1Address', st.p1_address);
-          sv('p1Emergency', st.p1_emergency_contact);
-          sv('p2Name', st.p2_name); sv('p2Phone', st.p2_phone);
-          sv('p2Profession', st.p2_job); sv('p2Address', st.p2_address);
           sv('stMonthlyFee', st.monthly_fee); sv('stDueDay', st.due_day);
           const cb = document.getElementById('stActive');
           if (cb) cb.checked = !!st.is_active;
@@ -492,26 +485,36 @@ export const StudentsModule = {
             if (prof) sv('stEmailUser', prof.email);
 
             // ── HERMANOS ──────────────────────────────────────────
-            const { data: siblings } = await supabase
-              .from('students')
-              .select('id, name, avatar_url, classrooms:classroom_id(name)')
-              .eq('parent_id', st.parent_id)
-              .eq('is_active', true)
-              .is('deleted_at', null)
-              .neq('id', parseInt(studentId, 10))
-              .order('name');
+            const [{ data: siblings }, { data: rooms }] = await Promise.all([
+              supabase
+                .from('students')
+                .select('id, name, avatar_url, classroom_id')
+                .eq('parent_id', st.parent_id)
+                .eq('is_active', true)
+                .is('deleted_at', null)
+                .neq('id', parseInt(studentId, 10))
+                .order('name'),
+              supabase.from('classrooms').select('id, name')
+            ]);
+            
+            const classroomMap = {};
+            (rooms || []).forEach(r => { classroomMap[r.id] = r.name; });
+            const enrichedSiblings = (siblings || []).map(s => ({
+              ...s,
+              classrooms: s.classroom_id ? { name: classroomMap[s.classroom_id] || '' } : null
+            }));
 
-            if (siblings?.length) {
+            if (enrichedSiblings?.length) {
               const scrollArea = gc?.querySelector('.overflow-y-auto') || document.querySelector('#globalModalInner .overflow-y-auto');
               if (scrollArea) {
                 const siblingsHTML = `
                   <div class="bg-indigo-50 rounded-2xl border border-indigo-100 p-3 space-y-2">
                     <p class="text-[10px] font-black text-indigo-700 uppercase tracking-widest flex items-center gap-1.5">
                       <i data-lucide="users" class="w-3.5 h-3.5"></i>
-                      HERMANOS EN LA ESTANCIA (${siblings.length})
+                      HERMANOS EN LA ESTANCIA (${enrichedSiblings.length})
                     </p>
                     <div class="flex flex-wrap gap-2">
-                      ${siblings.map(sib => `
+                      ${enrichedSiblings.map(sib => `
                         <button type="button"
                           onclick="window.App._openStudentModal('${sib.id}')"
                           class="flex items-center gap-2 px-3 py-2 bg-white rounded-xl border border-indigo-100 hover:border-indigo-400 transition-all shadow-sm active:scale-95 group">

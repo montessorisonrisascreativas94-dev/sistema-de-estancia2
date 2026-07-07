@@ -1,4 +1,4 @@
-﻿import { supabase } from '../shared/supabase.js';
+import { supabase } from '../shared/supabase.js';
 import { Helpers } from '../shared/helpers.js';
 import { AppState } from './state.js';
 import { sendEmail } from '../shared/supabase.js';
@@ -378,11 +378,22 @@ export const PaymentsModule = {
       '</div>'
     );
     try {
-      const { data: students } = await supabase.from('students').select('id, name, monthly_fee, classroom_id, classrooms:classroom_id(name)').eq('is_active', true).is('deleted_at', null).order('name').limit(200);
+      const [{ data: students }, { data: rooms }] = await Promise.all([
+        supabase.from('students').select('id, name, monthly_fee, classroom_id').eq('is_active', true).is('deleted_at', null).order('name').limit(200),
+        supabase.from('classrooms').select('id, name')
+      ]);
+      
+      const classroomMap = {};
+      (rooms || []).forEach(r => { classroomMap[r.id] = r.name; });
+      const enrichedStudents = (students || []).map(s => ({
+        ...s,
+        classrooms: s.classroom_id ? { name: classroomMap[s.classroom_id] || '' } : null
+      }));
+      
       const sel = document.getElementById('payStudentSelect');
-      if (sel && students?.length) {
+      if (sel && enrichedStudents?.length) {
         sel.innerHTML = '<option value="">-- Seleccionar Estudiante --</option>' +
-          students.map(s => '<option value="'+s.id+'" data-fee="'+(s.monthly_fee||0)+'"'+(prefillStudentId&&String(s.id)===String(prefillStudentId)?' selected':'')+'>'+Helpers.escapeHTML(s.name)+' ('+(s.classrooms?.name||'Sin aula')+')</option>').join('');
+          enrichedStudents.map(s => '<option value="'+s.id+'" data-fee="'+(s.monthly_fee||0)+'"'+(prefillStudentId&&String(s.id)===String(prefillStudentId)?' selected':'')+'>'+Helpers.escapeHTML(s.name)+' ('+(s.classrooms?.name||'Sin aula')+')</option>').join('');
         sel.addEventListener('change', e => {
           const opt = e.target.selectedOptions[0];
           const fi = document.getElementById('payAmount');

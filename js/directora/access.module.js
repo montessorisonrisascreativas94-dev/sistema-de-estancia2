@@ -1,4 +1,4 @@
-﻿import { supabase } from '../shared/supabase.js';
+import { supabase } from '../shared/supabase.js';
 import { Helpers } from '../shared/helpers.js';
 
 export const AccessModule = {
@@ -30,11 +30,23 @@ export const AccessModule = {
     const to   = document.getElementById('accessDateTo')?.value;
 
     try {
-      const [staff, students, doorPunches] = await Promise.all([
+      const [staff, studentsRes, roomsRes, doorPunches] = await Promise.all([
         supabase.from('profiles').select('id, name, role, matricula').in('role', ['maestra', 'asistente', 'directora']),
-        supabase.from('students').select('id, name, matricula, classrooms(id, name)'),
+        supabase.from('students').select('id, name, matricula, classroom_id'),
+        supabase.from('classrooms').select('id, name'),
         supabase.from('door_punches').select('student_id, staff_id, punch_type, punched_at').gte('date', from).lte('date', to)
       ]);
+      
+      // Enrich students with classroom names
+      const classroomMap = {};
+      (roomsRes.data || []).forEach(r => { classroomMap[r.id] = r.name; });
+      const students = {
+        ...studentsRes,
+        data: (studentsRes.data || []).map(s => ({
+          ...s,
+          classrooms: s.classroom_id ? { id: s.classroom_id, name: classroomMap[s.classroom_id] || '' } : null
+        }))
+      };
       
       // ✅ CORRECCIÓN DE CONEXIÓN: Obtener también asistencia manual para evitar falsos "No Reportados"
       const { data: manualAtt } = await supabase.from('attendance').select('student_id, status').eq('date', from);
@@ -199,12 +211,21 @@ export const AccessModule = {
 
   async exportIntelligenceReport() {
     const today = new Date().toISOString().split('T')[0];
-    const { data: active } = await supabase.from('students').select('id, name, classrooms(name)').eq('is_active', true);
+    const { data: active } = await supabase.from('students').select('id, name, classroom_id').eq('is_active', true);
+    const { data: rooms } = await supabase.from('classrooms').select('id, name');
     const { data: att } = await supabase.from('attendance').select('student_id').eq('date', today);
+    
+    // Enrich active with classroom names
+    const classroomMap = {};
+    (rooms || []).forEach(r => { classroomMap[r.id] = r.name; });
+    const enrichedActive = (active || []).map(s => ({
+      ...s,
+      classrooms: s.classroom_id ? { name: classroomMap[s.classroom_id] || '' } : null
+    }));
 
-    if (!active) return Helpers.toast('No hay estudiantes activos', 'warning');
+    if (!enrichedActive) return Helpers.toast('No hay estudiantes activos', 'warning');
     const attIds = new Set((att || []).map(a => a.student_id));
-    const missing = active.filter(s => !attIds.has(s.id));
+    const missing = enrichedActive.filter(s => !attIds.has(s.id));
 
     if (!missing.length) return Helpers.toast('Asistencia completa hoy', 'success');
 

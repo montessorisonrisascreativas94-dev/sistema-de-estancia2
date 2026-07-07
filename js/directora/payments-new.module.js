@@ -105,21 +105,49 @@ export const NewPaymentsModule = {
     container.innerHTML = '<div class="p-6 text-center"><div class="animate-spin w-6 h-6 border-2 border-[#0B63C7] border-t-transparent rounded-full mx-auto"></div></div>';
 
     try {
-      let q = supabase.from('students').select('*, classrooms(name), profiles!parent_id(*)');
+      let q = supabase.from('students').select('*');
 
       if (query && query.trim()) {
         const searchTerm = query.trim().toLowerCase();
         q = q.or(
-          `name.ilike.%${searchTerm}%,matricula.ilike.%${searchTerm}%,profiles.email.ilike.%${searchTerm}%,profiles.phone.ilike.%${searchTerm}%`
+          `name.ilike.%${searchTerm}%,matricula.ilike.%${searchTerm}%`
         );
       }
 
       q = q.order('name').limit(20);
       const { data: students, error } = await q;
-
+      
       if (error) throw error;
+      
+      // Enrich with classroom names
+      const classroomIds = [...new Set((students || []).map(s => s.classroom_id).filter(Boolean))];
+      let classroomMap = {};
+      if (classroomIds.length > 0) {
+        const { data: rooms } = await supabase
+          .from('classrooms')
+          .select('id, name')
+          .in('id', classroomIds);
+        (rooms || []).forEach(r => { classroomMap[r.id] = r.name; });
+      }
+      
+      // Enrich with parent profiles
+      const parentIds = [...new Set((students || []).map(s => s.parent_id).filter(Boolean))];
+      let parentMap = {};
+      if (parentIds.length > 0) {
+        const { data: parents } = await supabase
+          .from('profiles')
+          .select('id, email, phone, name')
+          .in('id', parentIds);
+        (parents || []).forEach(p => { parentMap[p.id] = p; });
+      }
+      
+      const enrichedStudents = (students || []).map(s => ({
+        ...s,
+        classrooms: s.classroom_id ? { name: classroomMap[s.classroom_id] || '' } : null,
+        profiles: s.parent_id ? parentMap[s.parent_id] : null
+      }));
 
-      if (!students || students.length === 0) {
+      if (!enrichedStudents || enrichedStudents.length === 0) {
         container.innerHTML = `
           <div class="p-8 text-center text-slate-400">
             <i data-lucide="search" class="w-12 h-12 mx-auto mb-3 opacity-50"></i>
@@ -130,7 +158,7 @@ export const NewPaymentsModule = {
         return;
       }
 
-      container.innerHTML = students.map(student => `
+      container.innerHTML = enrichedStudents.map(student => `
         <div class="p-4 hover:bg-slate-50 cursor-pointer transition-colors border-b border-slate-100 last:border-b-0" data-student-id="${student.id}">
           <div class="flex items-center gap-3">
             <div class="w-12 h-12 bg-gradient-to-br from-[#0B63C7] to-blue-600 rounded-xl flex items-center justify-center text-lg font-black text-white shadow-md">
@@ -153,7 +181,7 @@ export const NewPaymentsModule = {
       studentItems.forEach(item => {
         item.addEventListener('click', () => {
           const studentId = item.dataset.studentId;
-          const student = students.find(s => String(s.id) === String(studentId));
+          const student = enrichedStudents.find(s => String(s.id) === String(studentId));
           if (student) {
             this._selectStudent(student);
           }
@@ -428,26 +456,85 @@ export const NewPaymentsModule = {
     }
   },
 
+  // Calculadora automática completa
   _calculateTotals() {
     let subtotal = 0;
     let mora = 0;
+    let descuentoHermanos = 0;
+    let descuentoPagoAnticipado = 0;
+    let beca = 0;
+    let creditoFavor = 0;
+
     this.state.cart.forEach(item => {
       subtotal += item.amount;
-      if (item.status === 'overdue') {
-        mora += 500;
+      
+      // Calcular mora
+      if (item.status === 'overdue' && item.dueDate) {
+        const dueDate = new Date(item.dueDate + 'T00:00:00');
+        const today = new Date().setHours(0, 0, 0, 0);
+        const diffDays = Math.max(0, Math.ceil((today - dueDate.getTime()) / (1000 * 60 * 60 * 24)));
+        
+        // Mora: 2% del monto por día de atraso (ejemplo configurable)
+        mora += (item.amount * 0.02 * diffDays);
       }
     });
-    const discount = 0;
-    const total = subtotal - discount + mora;
-    return { subtotal, mora, discount, total };
+
+    // Descuento por hermanos (10% si hay 2+ hermanos activos)
+    if (this.state.selectedStudent) {
+      // Simulamos la lógica, en la realidad consultaríamos la base de datos
+      const tieneHermanos = false; // Cambiar a true para probar
+      if (tieneHermanos) {
+        descuentoHermanos = subtotal * 0.10; // 10%
+      }
+
+      // Descuento por pago anticipado (5% si paga antes de la fecha de vencimiento)
+      const pagoAnticipado = this.state.cart.some(item => {
+        if (!item.dueDate) return false;
+        const dueDate = new Date(item.dueDate + 'T00:00:00');
+        const today = new Date().setHours(0, 0, 0, 0);
+        return today < dueDate.getTime();
+      });
+      if (pagoAnticipado) {
+        descuentoPagoAnticipado = subtotal * 0.05; // 5%
+      }
+
+      // Beca (ejemplo: 5% de beca académica)
+      const tieneBeca = false; // Simulación
+      if (tieneBeca) {
+        beca = subtotal * 0.05;
+      }
+
+      // Crédito a favor
+      creditoFavor = 0; // Simulación
+    }
+
+    const descuentosTotales = descuentoHermanos + descuentoPagoAnticipado + beca + creditoFavor;
+    const total = subtotal - descuentosTotales + mora;
+
+    return { 
+      subtotal, 
+      mora, 
+      descuentoHermanos, 
+      descuentoPagoAnticipado, 
+      beca, 
+      creditoFavor,
+      descuentosTotales, 
+      total 
+    };
   },
 
   _updateCartUI() {
     const cartContainer = document.getElementById('cartContainer');
     const cartItemsEl = document.getElementById('cartItems');
     const subtotalEl = document.getElementById('cartSubtotal');
-    const discountEl = document.getElementById('cartDiscount');
-    const discountRowEl = document.getElementById('cartDiscountRow');
+    const descuentoHermanosEl = document.getElementById('cartDescuentoHermanos');
+    const descuentoHermanosRowEl = document.getElementById('cartDescuentoHermanosRow');
+    const descuentoPagoAnticipadoEl = document.getElementById('cartDescuentoPagoAnticipado');
+    const descuentoPagoAnticipadoRowEl = document.getElementById('cartDescuentoPagoAnticipadoRow');
+    const becaEl = document.getElementById('cartBeca');
+    const becaRowEl = document.getElementById('cartBecaRow');
+    const creditoFavorEl = document.getElementById('cartCreditoFavor');
+    const creditoFavorRowEl = document.getElementById('cartCreditoFavorRow');
     const moraEl = document.getElementById('cartMora');
     const moraRowEl = document.getElementById('cartMoraRow');
     const totalEl = document.getElementById('cartTotal');
@@ -466,7 +553,7 @@ export const NewPaymentsModule = {
         <div class="flex items-center justify-between p-3 bg-white rounded-xl border border-slate-100 mb-2">
           <div class="flex-1 min-w-0 mr-3">
             <p class="font-bold text-slate-800 truncate text-sm">${Helpers.escapeHTML(item.concept)}</p>
-            ${item.status === 'overdue' ? '<p class="text-xs text-rose-600">+ mora</p>' : ''}
+            ${item.status === 'overdue' ? `<p class="text-xs text-rose-600">+ mora (${this._getOverdueDays(item.dueDate)} días)</p>` : ''}
           </div>
           <div class="flex items-center gap-3">
             <span class="font-black text-slate-800 text-sm">${CURRENCY} ${item.amount.toLocaleString('es-DO', { minimumFractionDigits: 2 })}</span>
@@ -486,14 +573,33 @@ export const NewPaymentsModule = {
       if (window.lucide) lucide.createIcons();
     }
 
-    const { subtotal, mora, discount, total } = this._calculateTotals();
+    const { subtotal, mora, descuentoHermanos, descuentoPagoAnticipado, beca, creditoFavor, total } = this._calculateTotals();
 
     if (subtotalEl) subtotalEl.textContent = `${CURRENCY} ${subtotal.toLocaleString('es-DO', { minimumFractionDigits: 2 })}`;
-    if (discountEl) discountEl.textContent = `- ${CURRENCY} ${discount.toLocaleString('es-DO', { minimumFractionDigits: 2 })}`;
-    if (discountRowEl) discountRowEl.classList.toggle('hidden', discount === 0);
-    if (moraEl) moraEl.textContent = `${CURRENCY} ${mora.toLocaleString('es-DO', { minimumFractionDigits: 2 })}`;
+    
+    if (descuentoHermanosEl) descuentoHermanosEl.textContent = `- ${CURRENCY} ${descuentoHermanos.toLocaleString('es-DO', { minimumFractionDigits: 2 })}`;
+    if (descuentoHermanosRowEl) descuentoHermanosRowEl.classList.toggle('hidden', descuentoHermanos === 0);
+    
+    if (descuentoPagoAnticipadoEl) descuentoPagoAnticipadoEl.textContent = `- ${CURRENCY} ${descuentoPagoAnticipado.toLocaleString('es-DO', { minimumFractionDigits: 2 })}`;
+    if (descuentoPagoAnticipadoRowEl) descuentoPagoAnticipadoRowEl.classList.toggle('hidden', descuentoPagoAnticipado === 0);
+    
+    if (becaEl) becaEl.textContent = `- ${CURRENCY} ${beca.toLocaleString('es-DO', { minimumFractionDigits: 2 })}`;
+    if (becaRowEl) becaRowEl.classList.toggle('hidden', beca === 0);
+    
+    if (creditoFavorEl) creditoFavorEl.textContent = `- ${CURRENCY} ${creditoFavor.toLocaleString('es-DO', { minimumFractionDigits: 2 })}`;
+    if (creditoFavorRowEl) creditoFavorRowEl.classList.toggle('hidden', creditoFavor === 0);
+    
+    if (moraEl) moraEl.textContent = `+ ${CURRENCY} ${mora.toLocaleString('es-DO', { minimumFractionDigits: 2 })}`;
     if (moraRowEl) moraRowEl.classList.toggle('hidden', mora === 0);
+    
     if (totalEl) totalEl.textContent = `${CURRENCY} ${total.toLocaleString('es-DO', { minimumFractionDigits: 2 })}`;
+  },
+
+  _getOverdueDays(dueDateStr) {
+    if (!dueDateStr) return 0;
+    const dueDate = new Date(dueDateStr + 'T00:00:00');
+    const today = new Date().setHours(0, 0, 0, 0);
+    return Math.max(0, Math.ceil((today - dueDate.getTime()) / (1000 * 60 * 60 * 24)));
   },
 
   // Tabs

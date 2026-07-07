@@ -419,7 +419,7 @@ export const DirectorApi = {
   async getStudents(filters = {}, range = null) {
     let q = supabase
       .from(TABLES.STUDENTS)
-      .select('id, name, avatar_url, matricula, age, age_type, classrooms(id, name), is_active', { count: 'exact' })
+      .select('id, name, avatar_url, matricula, age, age_type, classroom_id, is_active', { count: 'exact' })
       .order('name');
 
     if (filters.search) q = q.ilike('name', `%${filters.search}%`);
@@ -433,7 +433,27 @@ export const DirectorApi = {
       q = q.limit(100); // Default safety limit
     }
 
-    return q;
+    const { data, error, count } = await q;
+    
+    if (error) return { data, error, count };
+    
+    // Enrich with classroom names
+    const classroomIds = [...new Set((data || []).map(s => s.classroom_id).filter(Boolean))];
+    let classroomMap = {};
+    if (classroomIds.length > 0) {
+      const { data: rooms } = await supabase
+        .from('classrooms')
+        .select('id, name')
+        .in('id', classroomIds);
+      (rooms || []).forEach(r => { classroomMap[r.id] = r.name; });
+    }
+    
+    const enriched = (data || []).map(s => ({
+      ...s,
+      classrooms: s.classroom_id ? { id: s.classroom_id, name: classroomMap[s.classroom_id] || '' } : null
+    }));
+    
+    return { data: enriched, error, count };
   },
 
   async getQuickCounts() {
