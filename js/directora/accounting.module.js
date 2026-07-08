@@ -16,6 +16,8 @@ let charts = {};
 export const AccountingModule = {
   async init() {
     await this.loadTab('resumen');
+    // Conectar botones de configuración de cobro
+    import('./payments.module.js').then(m => m.PaymentsModule.init()).catch(()=>{});
   },
 
   async loadTab(tab) {

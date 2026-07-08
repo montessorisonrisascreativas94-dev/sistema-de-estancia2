@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="utf-8" />
@@ -10,7 +10,7 @@
   <style>html{display:none;}</style>
   <!-- X-Frame-Options debe ser configurado por el servidor, no por meta tag -->
   <script>if(self===top){document.documentElement.style.display='block';}else{top.location=self.location;}</script>
-  <!-- Service Worker � registrar lo antes posible para OneSignal -->
+  <!-- Service Worker  registrar lo antes posible para OneSignal -->
   <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/OneSignalSDKWorker.js', { scope: '/' }).catch(() => {});
@@ -149,7 +149,7 @@
       box-shadow: 0 20px 45px rgba(15, 23, 42, 0.1);
     }
 
-    /* Color variants � border + icon tint */
+    /* Color variants  border + icon tint */
     .metric-card--blue   { border-left-color: var(--blue-primary);   }
     .metric-card--orange { border-left-color: var(--orange-primary);  }
     .metric-card--green  { border-left-color: var(--green-primary);   }
@@ -278,7 +278,7 @@
     }
     
     /* -----------------------------------------------
-       SIDEBAR � gestionado por css/karpus-modern.css
+       SIDEBAR  gestionado por css/karpus-modern.css
        (sistema unificado body.sidebar-collapsed)
     ----------------------------------------------- */
     aside#sidebar {
@@ -298,7 +298,7 @@
     }
     aside#sidebar::-webkit-scrollbar { display: none; }
 
-    /* Directora sidebar is 288px � karpus-modern.css handles flex layout */
+    /* Directora sidebar is 288px  karpus-modern.css handles flex layout */
     @media (min-width: 769px) {
       body.panel-directora-body aside#sidebar { width: 288px; }
       body.sidebar-collapsed.panel-directora-body aside#sidebar { width: 80px !important; }
@@ -398,7 +398,7 @@
     .nav-btn .badge, .kk-nav-item .kk-badge { display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 5px;border-radius:50px;background:#FF7A00;color:white;font-size:9px;font-weight:900;line-height:1; }
 
     /* -----------------------------------------------
-       SECCIONES � ocultas por defecto, visibles con .active
+       SECCIONES  ocultas por defecto, visibles con .active
     ----------------------------------------------- */
     .section {
       display: none;
@@ -412,7 +412,7 @@
     @keyframes fadeInDir { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
     /* -----------------------------------------------
-       TABLAS � scroll horizontal contenido, nunca body
+       TABLAS  scroll horizontal contenido, nunca body
     ----------------------------------------------- */
     .data-table {
       width: 100%; border-collapse: collapse; background: white;
@@ -477,7 +477,7 @@
     }
 
     /* -----------------------------------------------
-       MODALES � Paleta Sonrisas Creativas
+       MODALES  Paleta Sonrisas Creativas
     ----------------------------------------------- */
     .modal-content {
       background: white;
@@ -491,7 +491,7 @@
       border: 1px solid rgba(11,99,199,0.08);
     }
 
-    /* Header base � azul institucional */
+    /* Header base  azul institucional */
     .modal-header {
       padding: 1.25rem 1.5rem;
       border-bottom: none;
@@ -589,7 +589,7 @@
     .modal-container.hidden { display: none !important; }
 
     /* -----------------------------------------------
-       KPI GRID � auto-fit responsivo
+       KPI GRID  auto-fit responsivo
     ----------------------------------------------- */
     .kpi-grid {
       display: grid;
@@ -657,7 +657,7 @@
     .chip-yellow { background: #FFFBE6; color: #B8860B; }
 
     /* -----------------------------------------------
-       BOTONES DE ACCI�N EN TABLAS
+       BOTONES DE ACCIN EN TABLAS
     ----------------------------------------------- */
     .btn-action { padding: 6px 10px; border-radius: 10px; font-size: 12px; font-weight: 700; cursor: pointer; touch-action: manipulation; transition: all 0.2s; }
     .btn-edit   { color: #0B63C7; background: #E8F2FF; border: 1px solid #DBEAFE; }
@@ -683,7 +683,7 @@
     @keyframes spin { to { transform: rotate(360deg); } }
 
     /* -----------------------------------------------
-       SONRISAS CREATIVAS � Colored letters (sidebar brand)
+       SONRISAS CREATIVAS  Colored letters (sidebar brand)
     ----------------------------------------------- */
     .karpus-kids-inline .k-1  { color: #FF7A00; }
     .karpus-kids-inline .k-2  { color: #0B63C7; }
@@ -697,7 +697,7 @@
     .karpus-kids-inline .k-10 { color: #FFD43B; }
 
     /* -----------------------------------------------
-       PALETA SONRISAS � Utility classes for JS-generated content
+       PALETA SONRISAS  Utility classes for JS-generated content
     ----------------------------------------------- */
 
     /* Status badges (used by JS renderers) */
@@ -734,7 +734,7 @@
       background:linear-gradient(90deg,#0B63C7,#FF7A00,#28B54D,#FFD43B);
     }
 
-    /* Section page headers � unified */
+    /* Section page headers  unified */
     .page-header {
       display:flex; flex-direction:column; gap:4px; margin-bottom:1.5rem;
     }
@@ -907,11 +907,11 @@
       .hide-mobile { display: none !important; }
       /* Tablas: scroll horizontal, nunca romper layout */
       .overflow-x-auto { -webkit-overflow-scrolling: touch; }
-      /* Gr�ficos: no desbordar */
+      /* Grficos: no desbordar */
       canvas { max-width: 100% !important; }
-      /* Modales full-width en m�vil */
+      /* Modales full-width en mvil */
       .modal-content { width: 95%; max-height: 85dvh; }
-      /* Botones full-width en m�vil */
+      /* Botones full-width en mvil */
       .btn-mobile-full { width: 100% !important; justify-content: center; }
     }
 
@@ -926,7 +926,7 @@
     }
     #teachersGrid button:hover { background-color: #0850A0 !important; }
 
-    /* Sin bottom-nav en este panel � cancelar el padding reservado */
+    /* Sin bottom-nav en este panel  cancelar el padding reservado */
     body { padding-bottom: 0 !important; }
   </style>
 </head>
@@ -978,7 +978,7 @@
         </div>
       </div>
 
-      <!-- Nav por categor�as -->
+      <!-- Nav por categoras -->
       <nav class="flex-1 overflow-y-auto kk-scroll px-2 py-2 space-y-1 relative z-10">
 
         <!-- Dashboard -->
@@ -1114,10 +1114,10 @@
         <button id="menuBtn" class="md:hidden p-2.5 rounded-xl bg-white shadow-sm border border-slate-100 text-slate-600 hover:bg-[#E8F2FF] hover:text-[#0B63C7] transition-colors active:scale-95"
           style="position:relative;z-index:200;"
           data-managed="true"
-          aria-label="Abrir men�">
+          aria-label="Abrir men">
           <i data-lucide="menu" class="w-5 h-5"></i>
         </button>
-        <h2 class="text-lg font-bold text-slate-800 hidden md:block">Colegio Montessori Sonrisas Creativas � Panel Director</h2>
+        <h2 class="text-lg font-bold text-slate-800 hidden md:block">Colegio Montessori Sonrisas Creativas  Panel Director</h2>
         <span class="text-xs font-semibold text-slate-400 uppercase tracking-widest md:hidden">Panel Directora</span>
         <!-- Selector de Ciclo Escolar Global -->
         <div class="hidden md:flex items-center gap-2 ml-auto">
@@ -1136,7 +1136,7 @@
 <div id="dashboardContainer" class="space-y-6"></div>
 </section>
 
-<!-- GESTI�N ACAD�MICA HUB -->
+<!-- GESTIN ACADMICA HUB -->
 <section id="gestion-academica" class="section"><div class="p-2 md:p-4"></div></section>
 
 <!-- CICLO ESCOLAR HUB -->
@@ -1351,7 +1351,7 @@
           </div>
         </div>
 
-        <!-- BLOQUE 1 � Tabla de Aulas (sin cambios) -->
+        <!-- BLOQUE 1  Tabla de Aulas (sin cambios) -->
         <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden mb-8">
           <table class="w-full text-sm">
             <thead class="bg-[#E8F2FF] text-left text-xs font-black uppercase tracking-wider text-[#0850A0]">
@@ -1368,7 +1368,7 @@
           </table> 
         </div>
 
-        <!-- BLOQUE 2 � Panel Interno del Aula (Opcional, mantenido para detalle) -->
+        <!-- BLOQUE 2  Panel Interno del Aula (Opcional, mantenido para detalle) -->
         <div id="classroomPanel" class="hidden mt-8">
           <div class="bg-white rounded-3xl shadow-md border border-slate-100 overflow-hidden">
             <div class="p-6 bg-gradient-to-r from-[#0B63C7] to-[#0850A0] text-white flex items-center justify-between">
@@ -1376,7 +1376,7 @@
                 <img id="cpTeacherPhoto" src="img/1.jpg" class="w-14 h-14 rounded-2xl object-cover border-2 border-white/30" alt="Maestro" loading="lazy" />
                 <div>
                   <div class="text-xl font-bold" id="cpClassName">Aula</div>
-                  <div class="text-sm text-white/80">Maestro: <span id="cpTeacherName">�</span> � Alumnos: <span id="cpTotal">0</span></div>
+                  <div class="text-sm text-white/80">Maestro: <span id="cpTeacherName"></span>  Alumnos: <span id="cpTotal">0</span></div>
                 </div>
               </div>
               <div class="text-right">
@@ -1387,7 +1387,7 @@
             </div>
 
             <div class="p-6 grid grid-cols-1 lg:grid-cols-4 gap-6">
-              <!-- Acciones r�pidas -->
+              <!-- Acciones rpidas -->
               <div class="lg:col-span-4 bg-slate-50 rounded-2xl p-4 border border-slate-200">
                 <div class="text-xs font-bold text-slate-600 uppercase mb-2">Acciones rapidas</div>
                 <div class="flex flex-wrap gap-2">
@@ -1456,23 +1456,23 @@
         <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
           <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
             <p class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">Total</p>
-            <p class="text-2xl font-black text-slate-800" id="attKpiTotal">�</p>
+            <p class="text-2xl font-black text-slate-800" id="attKpiTotal"></p>
           </div>
           <div class="bg-emerald-50 rounded-2xl p-4 border border-emerald-100 shadow-sm">
             <p class="text-[10px] font-black text-emerald-500 uppercase tracking-wider mb-1">Presentes</p>
-            <p class="text-2xl font-black text-emerald-700" id="attKpiPresent">�</p>
+            <p class="text-2xl font-black text-emerald-700" id="attKpiPresent"></p>
           </div>
           <div class="bg-rose-50 rounded-2xl p-4 border border-rose-100 shadow-sm">
             <p class="text-[10px] font-black text-rose-500 uppercase tracking-wider mb-1">Ausentes</p>
-            <p class="text-2xl font-black text-rose-700" id="attKpiAbsent">�</p>
+            <p class="text-2xl font-black text-rose-700" id="attKpiAbsent"></p>
           </div>
           <div class="bg-amber-50 rounded-2xl p-4 border border-amber-100 shadow-sm">
             <p class="text-[10px] font-black text-amber-500 uppercase tracking-wider mb-1">Tardanzas</p>
-            <p class="text-2xl font-black text-amber-700" id="attKpiLate">�</p>
+            <p class="text-2xl font-black text-amber-700" id="attKpiLate"></p>
           </div>
           <div class="bg-[#E8F2FF] rounded-2xl p-4 border border-blue-200 shadow-sm col-span-2 md:col-span-1">
             <p class="text-[10px] font-black text-[#0B63C7] uppercase tracking-wider mb-1">Tasa Asistencia</p>
-            <p class="text-2xl font-black text-[#0850A0]" id="attKpiRate">�</p>
+            <p class="text-2xl font-black text-[#0850A0]" id="attKpiRate"></p>
             <div class="mt-2 h-1.5 bg-blue-100 rounded-full overflow-hidden">
               <div id="attRateBar" class="h-full bg-[#0B63C7] rounded-full transition-all duration-500" style="width:0%"></div>
             </div>
@@ -1483,7 +1483,7 @@
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-5">
           <!-- Donut -->
           <div class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
-            <h3 class="text-xs font-black text-slate-500 uppercase tracking-wider mb-4">Distribuci�n</h3>
+            <h3 class="text-xs font-black text-slate-500 uppercase tracking-wider mb-4">Distribucin</h3>
             <div class="h-52"><canvas id="attDonutChart"></canvas></div>
           </div>
           <!-- Bar por aula (solo rango) -->
@@ -1537,7 +1537,7 @@
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div>
             <h1 class="text-2xl font-black text-[#1A2340] tracking-tight">Centro de Calificaciones</h1>
-            <p class="text-slate-500 font-medium">Seguimiento del progreso acad�mico por periodo.</p>
+            <p class="text-slate-500 font-medium">Seguimiento del progreso acadmico por periodo.</p>
           </div>
           <div class="flex gap-2 flex-wrap">
             <button id="btnNewPeriod" class="px-5 py-2.5 text-white rounded-xl font-black text-xs uppercase tracking-wider shadow-lg transition-all flex items-center gap-2 active:scale-95 hover:opacity-90" style="background:#0B63C7;box-shadow:0 4px 14px rgba(11,99,199,0.3);">
@@ -1591,7 +1591,7 @@
                   <th class="px-6 py-4 border-b border-slate-200">Estudiante</th>
                   <th class="px-6 py-4 text-center border-b border-slate-200">Promedio</th>
                   <th class="px-6 py-4 text-center border-b border-slate-200">Nivel</th>
-                  <th class="px-6 py-4 border-b border-slate-200">�ltima Tarea Calificada</th>
+                  <th class="px-6 py-4 border-b border-slate-200">ltima Tarea Calificada</th>
                 </tr>
               </thead>
               <tbody id="gradesTableBody" class="divide-y divide-slate-100 bg-white">
@@ -1617,7 +1617,7 @@
             <select id="statusFilter" class="px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
               <option value="">Todos los estados</option>
               <option value="pending">Pendientes</option>
-              <option value="in_review">En Revisi�n</option>
+              <option value="in_review">En Revisin</option>
               <option value="resolved">Resueltos</option>
               <option value="closed">Cerrados</option>
             </select>
@@ -1646,7 +1646,7 @@
         </div>
       </section>
 
-      <!-- SECCI�N DE ACCESOS � QRs de Estudiantes -->
+      <!-- SECCIN DE ACCESOS  QRs de Estudiantes -->
       <section id="accesos" class="section">
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
           <div>
@@ -1685,7 +1685,7 @@
           </div>
         </div>
 
-        <!-- Visualizaci�n Gr�fica -->
+        <!-- Visualizacin Grfica -->
         <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">
           <div class="lg:col-span-3 bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm">
             <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-6">Tendencia de Entradas en el Periodo</h3>
@@ -2102,7 +2102,7 @@
           <div>
             <h2 class="text-2xl font-bold text-[#1A2340] flex items-center gap-2">
               <i data-lucide="messages-square" class="w-6 h-6 text-blue-600"></i>
-              Centro de Comunicaci�n
+              Centro de Comunicacin
             </h2>
             <p class="text-slate-500 text-sm">Chat privado, seguro, con archivos e historial</p>
           </div>
@@ -2121,7 +2121,7 @@
             <div id="chatContactsList" class="flex-1 overflow-y-auto p-2"></div>
           </div>
 
-          <!-- Vista 2: Conversaci�n -->
+          <!-- Vista 2: Conversacin -->
           <div class="chat-conversation">
             <!-- Header -->
             <div id="chatActiveHeader" class="p-3 border-b border-slate-100 flex items-center gap-3 bg-white hidden">
@@ -2137,13 +2137,13 @@
             <div id="chatMessagesContainer" class="relative">
               <div class="h-full flex flex-col items-center justify-center text-slate-400 opacity-40">
                 <i data-lucide="message-circle" class="w-16 h-16 mb-4"></i>
-                <p class="font-medium">Selecciona una conversaci�n</p>
+                <p class="font-medium">Selecciona una conversacin</p>
               </div>
             </div>
 
             <!-- Typing Indicator -->
             <div id="chatTypingIndicator" class="hidden absolute bottom-[90px] left-6 right-6 px-4 py-2 bg-white/90 backdrop-blur-sm border border-blue-100 rounded-xl text-[10px] font-black text-blue-600 shadow-lg animate-bounce-subtle z-20">
-              Alguien est� escribiendo...
+              Alguien est escribiendo...
             </div>
 
             <!-- Input Area -->
@@ -2163,15 +2163,15 @@
         <header class="mb-6 flex items-center justify-between">
           <div>
             <h1 class="text-3xl font-black text-slate-800">?? Muro Escolar</h1>
-            <p class="text-slate-500 font-medium">Comunicaci�n y actualizaciones de la comunidad educativa</p>
+            <p class="text-slate-500 font-medium">Comunicacin y actualizaciones de la comunidad educativa</p>
           </div>
           <button id="btnNewPost" onclick="App.wall.openNewPostModal()" class="px-4 py-2 text-white rounded-lg transition-colors flex items-center gap-2 font-medium shadow-sm hover:opacity-90" style="background:#0B63C7;">
-            <i data-lucide="plus" class="w-5 h-5"></i> Nueva Publicaci�n
+            <i data-lucide="plus" class="w-5 h-5"></i> Nueva Publicacin
           </button>
         </header>
 
         <div class="max-w-5xl mx-auto">
-          <!-- B�squeda -->
+          <!-- Bsqueda -->
           <div class="mb-6 flex items-center gap-2">
             <input type="text" id="wallSearch" placeholder="Buscar posts..." class="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-orange-600">
             <select id="wallClassroomFilter" class="px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-orange-600">
@@ -2196,12 +2196,12 @@
         </div>
       </section>
 
-      <!-- CONFIGURACI�N -->
+      <!-- CONFIGURACIN -->
       <section id="configuracion" class="section">
         <div id="notifPermissionSlot"></div>
         <div class="flex items-center gap-3 mb-6">
           <i data-lucide="settings" class="w-7 h-7 text-slate-600"></i>
-          <h2 class="text-2xl font-bold">Configuraci�n y Perfil</h2>
+          <h2 class="text-2xl font-bold">Configuracin y Perfil</h2>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -2223,8 +2223,8 @@
                 </div>
                 <div>
                   <p class="font-bold text-slate-800 text-sm">Foto de Perfil</p>
-                  <p class="text-xs text-slate-500 mt-0.5">JPG, PNG o WEBP � M�x 5MB</p>
-                  <p class="text-xs text-[#0B63C7] font-bold mt-1">Haz clic en la c�mara para cambiarla</p>
+                  <p class="text-xs text-slate-500 mt-0.5">JPG, PNG o WEBP  Mx 5MB</p>
+                  <p class="text-xs text-[#0B63C7] font-bold mt-1">Haz clic en la cmara para cambiarla</p>
                 </div>
               </div>
 
@@ -2234,22 +2234,22 @@
                   <input id="confDirName" type="text" class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-[#0B63C7] outline-none" placeholder="Cargando...">
                 </div>
                 <div>
-                  <label class="block text-sm font-medium text-slate-700 mb-1">T�tulo / Cargo</label>
+                  <label class="block text-sm font-medium text-slate-700 mb-1">Ttulo / Cargo</label>
                   <input id="confDirTitle" type="text" class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-[#0B63C7] outline-none" placeholder="Cargando...">
                 </div>
                 <div class="md:col-span-2">
-                  <label class="block text-sm font-medium text-slate-700 mb-1">Presentaci�n / Biograf�a</label>
-                  <textarea id="confDirBio" rows="4" class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-[#0B63C7] outline-none" placeholder="Escribe una breve presentaci�n..."></textarea>
-                  <p class="text-xs text-slate-500 mt-1">Esta informaci�n ser� visible en el perfil p�blico para padres y maestros.</p>
+                  <label class="block text-sm font-medium text-slate-700 mb-1">Presentacin / Biografa</label>
+                  <textarea id="confDirBio" rows="4" class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-[#0B63C7] outline-none" placeholder="Escribe una breve presentacin..."></textarea>
+                  <p class="text-xs text-slate-500 mt-1">Esta informacin ser visible en el perfil pblico para padres y maestros.</p>
                 </div>
               </div>
             </div>
 
             <div class="bg-white rounded shadow p-6">
-              <h3 class="text-lg font-semibold mb-4 border-b pb-2 flex items-center gap-2"><i data-lucide="building" class="w-5 h-5"></i> Informaci�n Institucional</h3>
+              <h3 class="text-lg font-semibold mb-4 border-b pb-2 flex items-center gap-2"><i data-lucide="building" class="w-5 h-5"></i> Informacin Institucional</h3>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="md:col-span-2">
-                  <label class="block text-sm font-medium text-slate-700 mb-1">Nombre de la Instituci�n</label>
+                  <label class="block text-sm font-medium text-slate-700 mb-1">Nombre de la Institucin</label>
                   <input id="confSchoolName" type="text" class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-[#0B63C7] outline-none" placeholder="Colegio Montessori Sonrisas Creativas">
                 </div>
                 <div>
@@ -2257,7 +2257,7 @@
                   <input id="confRNC" type="text" class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-[#0B63C7] outline-none" placeholder="1-23-45678-9">
                 </div>
                 <div>
-                  <label class="block text-sm font-medium text-slate-700 mb-1">Tel�fono Institucional</label>
+                  <label class="block text-sm font-medium text-slate-700 mb-1">Telfono Institucional</label>
                   <input id="confPhone" type="tel" class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-[#0B63C7] outline-none" placeholder="+1 (000) 000-0000">
                 </div>
                 <div>
@@ -2269,8 +2269,8 @@
                   <input id="confWebsite" type="url" class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-[#0B63C7] outline-none" placeholder="https://ejemplo.com">
                 </div>
                 <div class="md:col-span-2">
-                  <label class="block text-sm font-medium text-slate-700 mb-1">Direcci�n F�sica</label>
-                  <input id="confAddress" type="text" class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-[#0B63C7] outline-none" placeholder="Direcci�n de la estancia">
+                  <label class="block text-sm font-medium text-slate-700 mb-1">Direccin Fsica</label>
+                  <input id="confAddress" type="text" class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-[#0B63C7] outline-none" placeholder="Direccin de la estancia">
                 </div>
                 <div>
                   <label class="block text-sm font-medium text-slate-700 mb-1">Ciudad</label>
@@ -2281,25 +2281,25 @@
                   <input id="confState" type="text" class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-[#0B63C7] outline-none" placeholder="Estado">
                 </div>
                 <div>
-                  <label class="block text-sm font-medium text-slate-700 mb-1">C�digo Postal</label>
+                  <label class="block text-sm font-medium text-slate-700 mb-1">Cdigo Postal</label>
                   <input id="confZipCode" type="text" class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-[#0B63C7] outline-none" placeholder="10000">
                 </div>
                 <div>
-                  <label class="block text-sm font-medium text-slate-700 mb-1">Pa�s</label>
-                  <input id="confCountry" type="text" class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-[#0B63C7] outline-none" placeholder="Rep�blica Dominicana">
+                  <label class="block text-sm font-medium text-slate-700 mb-1">Pas</label>
+                  <input id="confCountry" type="text" class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-[#0B63C7] outline-none" placeholder="Repblica Dominicana">
                 </div>
               </div>
             </div>
 
             <div class="bg-white rounded shadow p-6">
-              <h3 class="text-lg font-semibold mb-4 border-b pb-2 flex items-center gap-2"><i data-lucide="file-text" class="w-5 h-5"></i> Configuraci�n de Facturaci�n</h3>
+              <h3 class="text-lg font-semibold mb-4 border-b pb-2 flex items-center gap-2"><i data-lucide="file-text" class="w-5 h-5"></i> Configuracin de Facturacin</h3>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label class="block text-sm font-medium text-slate-700 mb-1">Moneda</label>
                   <select id="confCurrency" class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-[#0B63C7] outline-none">
                     <option value="RD$">RD$ - Peso Dominicano</option>
-                    <option value="$">$ - D�lar Estadounidense</option>
-                    <option value="�">� - Euro</option>
+                    <option value="$">$ - Dlar Estadounidense</option>
+                    <option value=""> - Euro</option>
                   </select>
                 </div>
                 <div>
@@ -2307,18 +2307,18 @@
                   <input id="confTaxRate" type="number" step="0.01" min="0" max="100" class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-[#0B63C7] outline-none" placeholder="18.00">
                 </div>
                 <div class="md:col-span-2">
-                  <label class="block text-sm font-medium text-slate-700 mb-1">T�rminos y Condiciones</label>
-                  <textarea id="confTermsConditions" rows="3" class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-[#0B63C7] outline-none" placeholder="T�rminos y condiciones de pago..."></textarea>
+                  <label class="block text-sm font-medium text-slate-700 mb-1">Trminos y Condiciones</label>
+                  <textarea id="confTermsConditions" rows="3" class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-[#0B63C7] outline-none" placeholder="Trminos y condiciones de pago..."></textarea>
                 </div>
               </div>
             </div>
 
             <div class="bg-white rounded shadow p-6">
-              <h3 class="text-lg font-semibold mb-4 border-b pb-2 flex items-center gap-2"><i data-lucide="image" class="w-5 h-5"></i> Logo de la Instituci�n</h3>
+              <h3 class="text-lg font-semibold mb-4 border-b pb-2 flex items-center gap-2"><i data-lucide="image" class="w-5 h-5"></i> Logo de la Institucin</h3>
               <div class="flex flex-col md:flex-row items-start gap-6">
                 <div class="flex-shrink-0">
                   <div class="w-32 h-32 rounded-2xl bg-slate-100 border-2 border-dashed border-slate-300 flex items-center justify-center overflow-hidden">
-                    <img id="confSchoolLogo" src="" alt="Logo de la instituci�n" class="w-full h-full object-cover hidden">
+                    <img id="confSchoolLogo" src="" alt="Logo de la institucin" class="w-full h-full object-cover hidden">
                     <div id="confSchoolLogoPlaceholder" class="text-center p-4">
                       <i data-lucide="upload" class="w-10 h-10 text-slate-400 mx-auto mb-2"></i>
                       <p class="text-xs text-slate-500">Logo</p>
@@ -2328,7 +2328,7 @@
                 <div class="flex-1">
                   <label class="block text-sm font-medium text-slate-700 mb-1">URL del Logo</label>
                   <input id="confLogoUrl" type="url" class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-[#0B63C7] outline-none mb-3" placeholder="https://ejemplo.com/logo.png">
-                  <p class="text-xs text-slate-500">Ingrese la URL del logo. El logo aparecer� en las facturas.</p>
+                  <p class="text-xs text-slate-500">Ingrese la URL del logo. El logo aparecer en las facturas.</p>
                 </div>
               </div>
             </div>
@@ -2339,15 +2339,15 @@
                 Horario de la Estancia
               </h3>
 
-              <!-- D�as laborables -->
-              <p class="text-[10px] font-black text-slate-500 uppercase tracking-wider mb-2">D�as laborables</p>
+              <!-- Das laborables -->
+              <p class="text-[10px] font-black text-slate-500 uppercase tracking-wider mb-2">Das laborables</p>
               <div class="flex flex-wrap gap-2 mb-5" id="workDaysContainer">
                 <button type="button" data-day="Lun" onclick="window.toggleWorkDay(this)" class="work-day-btn px-3 py-1.5 rounded-xl text-xs font-black border-2 border-slate-200 bg-white text-slate-500 transition-all">Lun</button>
                 <button type="button" data-day="Mar" onclick="window.toggleWorkDay(this)" class="work-day-btn px-3 py-1.5 rounded-xl text-xs font-black border-2 border-slate-200 bg-white text-slate-500 transition-all">Mar</button>
-                <button type="button" data-day="Mi�" onclick="window.toggleWorkDay(this)" class="work-day-btn px-3 py-1.5 rounded-xl text-xs font-black border-2 border-slate-200 bg-white text-slate-500 transition-all">Mi�</button>
+                <button type="button" data-day="Mi" onclick="window.toggleWorkDay(this)" class="work-day-btn px-3 py-1.5 rounded-xl text-xs font-black border-2 border-slate-200 bg-white text-slate-500 transition-all">Mi</button>
                 <button type="button" data-day="Jue" onclick="window.toggleWorkDay(this)" class="work-day-btn px-3 py-1.5 rounded-xl text-xs font-black border-2 border-slate-200 bg-white text-slate-500 transition-all">Jue</button>
                 <button type="button" data-day="Vie" onclick="window.toggleWorkDay(this)" class="work-day-btn px-3 py-1.5 rounded-xl text-xs font-black border-2 border-slate-200 bg-white text-slate-500 transition-all">Vie</button>
-                <button type="button" data-day="S�b" onclick="window.toggleWorkDay(this)" class="work-day-btn px-3 py-1.5 rounded-xl text-xs font-black border-2 border-slate-200 bg-white text-slate-500 transition-all">S�b</button>
+                <button type="button" data-day="Sb" onclick="window.toggleWorkDay(this)" class="work-day-btn px-3 py-1.5 rounded-xl text-xs font-black border-2 border-slate-200 bg-white text-slate-500 transition-all">Sb</button>
                 <button type="button" data-day="Dom" onclick="window.toggleWorkDay(this)" class="work-day-btn px-3 py-1.5 rounded-xl text-xs font-black border-2 border-slate-200 bg-white text-slate-500 transition-all">Dom</button>
               </div>
 
@@ -2369,7 +2369,7 @@
                 </div>
               </div>
 
-              <!-- Preview din�mico -->
+              <!-- Preview dinmico -->
               <div id="schedulePreview" class="p-3 bg-[#E8F2FF] rounded-xl border border-blue-200 text-xs font-bold text-[#0850A0] text-center hidden">
                 <!-- Generado por JS -->
               </div>
@@ -2387,7 +2387,7 @@
                 </button>
               </div>
               <input type="file" id="configAvatarInput" accept="image/*" class="hidden">
-              <p class="text-xs text-slate-500 mb-4">JPG, PNG o WEBP. M�x 2MB.</p>
+              <p class="text-xs text-slate-500 mb-4">JPG, PNG o WEBP. Mx 2MB.</p>
             </div>
 
             <div class="bg-white rounded shadow p-6">
@@ -2425,19 +2425,19 @@
               <div class="w-1 h-8 rounded-full" style="background:#28B54D"></div>
               <h1 class="text-2xl font-black text-slate-800 tracking-tight">Caja</h1>
             </div>
-            <p class="text-slate-500 font-medium ml-4">Cobro de mensualidades, inscripciones y emisi�n de facturas con RNC</p>
+            <p class="text-slate-500 font-medium ml-4">Cobro de mensualidades, inscripciones y emisin de facturas con RNC</p>
           </div>
           <div class="flex gap-2 flex-wrap">
             <button id="btnCajaNewCobro" class="px-5 py-2.5 text-white rounded-2xl font-black text-sm flex items-center gap-2 active:scale-95 transition-all" style="background:#28B54D;box-shadow:0 4px 14px rgba(40,181,77,0.3)">
               <i data-lucide="plus-circle" class="w-5 h-5"></i> Registrar Cobro
             </button>
             <button id="btnCajaReport" class="px-5 py-2.5 text-white rounded-2xl font-black text-sm flex items-center gap-2 active:scale-95 transition-all" style="background:#0B63C7">
-              <i data-lucide="printer" class="w-5 h-5"></i> Reporte del D�a
+              <i data-lucide="printer" class="w-5 h-5"></i> Reporte del Da
             </button>
           </div>
         </div>
 
-        <!-- KPIs del d�a -->
+        <!-- KPIs del da -->
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
           <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
             <div class="flex items-center gap-2 mb-2">
@@ -2469,7 +2469,7 @@
           </div>
         </div>
 
-        <!-- Tabla de cobros del d�a -->
+        <!-- Tabla de cobros del da -->
         <div class="bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-sm">
           <div class="p-4 border-b border-slate-100 flex items-center justify-between">
             <span class="font-black text-slate-700 text-sm">Cobros de hoy</span>
@@ -2482,10 +2482,10 @@
                   <th class="px-4 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider">Estudiante</th>
                   <th class="px-4 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider">Concepto</th>
                   <th class="px-4 py-3 text-right text-[10px] font-black text-slate-400 uppercase tracking-wider">Monto</th>
-                  <th class="px-4 py-3 text-center text-[10px] font-black text-slate-400 uppercase tracking-wider">M�todo</th>
+                  <th class="px-4 py-3 text-center text-[10px] font-black text-slate-400 uppercase tracking-wider">Mtodo</th>
                   <th class="px-4 py-3 text-center text-[10px] font-black text-slate-400 uppercase tracking-wider">Factura</th>
                   <th class="px-4 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider">Hora</th>
-                  <th class="px-4 py-3 text-center text-[10px] font-black text-slate-400 uppercase tracking-wider">Acci�n</th>
+                  <th class="px-4 py-3 text-center text-[10px] font-black text-slate-400 uppercase tracking-wider">Accin</th>
                 </tr>
               </thead>
               <tbody id="cajaTableBody" class="divide-y divide-slate-50">
@@ -2509,7 +2509,7 @@
               <div class="w-1 h-8 rounded-full" style="background:#28B54D"></div>
               <h1 class="text-2xl font-black text-slate-800">Contabilidad y Reportes</h1>
             </div>
-            <p class="text-slate-500 font-medium ml-4">An�lisis financiero, flujo de caja y reportes ejecutivos</p>
+            <p class="text-slate-500 font-medium ml-4">Anlisis financiero, flujo de caja y reportes ejecutivos</p>
           </div>
           <div class="flex gap-2 flex-wrap">
             <select id="contCycleFilter" class="border border-slate-200 rounded-xl px-3 py-2 text-xs font-black outline-none focus:border-green-400 bg-white">
@@ -2518,7 +2518,7 @@
             <select id="contPeriodFilter" class="border border-slate-200 rounded-xl px-3 py-2 text-xs font-black outline-none focus:border-green-400 bg-white">
               <option value="month">Este mes</option>
               <option value="quarter">Este trimestre</option>
-              <option value="year">Este a�o</option>
+              <option value="year">Este ao</option>
             </select>
           </div>
         </div>
@@ -2530,7 +2530,7 @@
           <button data-cont-tab="cashflow"  class="cont-tab px-4 py-2 rounded-xl text-xs font-black uppercase border-2 border-transparent text-slate-500 hover:bg-slate-50">Flujo de Caja</button>
           <button data-cont-tab="students"  class="cont-tab px-4 py-2 rounded-xl text-xs font-black uppercase border-2 border-transparent text-slate-500 hover:bg-slate-50">Por Alumno</button>
           <button data-cont-tab="classrooms"class="cont-tab px-4 py-2 rounded-xl text-xs font-black uppercase border-2 border-transparent text-slate-500 hover:bg-slate-50">Por Aula</button>
-          <button data-cont-tab="director"  class="cont-tab px-4 py-2 rounded-xl text-xs font-black uppercase border-2 border-transparent text-slate-500 hover:bg-slate-50">Direcci�n</button>
+          <button data-cont-tab="director"  class="cont-tab px-4 py-2 rounded-xl text-xs font-black uppercase border-2 border-transparent text-slate-500 hover:bg-slate-50">Direccin</button>
         </div>
 
         <!-- Tab: Diario -->
@@ -2549,17 +2549,17 @@
               <p class="text-[10px] font-black text-slate-400 uppercase mt-1">Facturas Emitidas</p>
             </div>
             <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm text-center">
-              <p class="text-xl font-black text-slate-600" id="dailyMetodo">�</p>
-              <p class="text-[10px] font-black text-slate-400 uppercase mt-1">M�todo Principal</p>
+              <p class="text-xl font-black text-slate-600" id="dailyMetodo"></p>
+              <p class="text-[10px] font-black text-slate-400 uppercase mt-1">Mtodo Principal</p>
             </div>
           </div>
           <div class="bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-sm">
             <div class="p-4 border-b border-slate-100 flex items-center gap-3">
-              <span class="font-black text-slate-700 text-sm">Detalle del d�a</span>
+              <span class="font-black text-slate-700 text-sm">Detalle del da</span>
               <input type="date" id="dailyDate" class="border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-bold outline-none focus:border-blue-400 ml-auto" onchange="App.accounting?.loadDaily?.(this.value)">
             </div>
             <div id="dailyTableContainer">
-              <div class="text-center py-8 text-slate-400 text-sm">Selecciona una fecha o carga el d�a de hoy</div>
+              <div class="text-center py-8 text-slate-400 text-sm">Selecciona una fecha o carga el da de hoy</div>
             </div>
           </div>
         </div>
@@ -2609,11 +2609,11 @@
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div class="bg-white rounded-2xl p-4 border border-green-100 shadow-sm text-center">
               <p class="text-xl font-black text-green-600" id="cfEntradas">RD$0</p>
-              <p class="text-[10px] font-black text-slate-400 uppercase mt-1">Entradas del A�o</p>
+              <p class="text-[10px] font-black text-slate-400 uppercase mt-1">Entradas del Ao</p>
             </div>
             <div class="bg-white rounded-2xl p-4 border border-amber-100 shadow-sm text-center">
               <p class="text-xl font-black text-amber-600" id="cfProyeccion">RD$0</p>
-              <p class="text-[10px] font-black text-slate-400 uppercase mt-1">Proyecci�n Pendiente</p>
+              <p class="text-[10px] font-black text-slate-400 uppercase mt-1">Proyeccin Pendiente</p>
             </div>
             <div class="bg-white rounded-2xl p-4 border border-blue-100 shadow-sm text-center">
               <p class="text-xl font-black text-blue-600" id="cfCobranza">0%</p>
@@ -2640,12 +2640,12 @@
           </div>
         </div>
 
-        <!-- Tab: Direcci�n -->
+        <!-- Tab: Direccin -->
         <div id="cont-director" class="cont-panel hidden space-y-5">
           <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm text-center">
               <p class="text-xl font-black text-green-600" id="dirIngresos">RD$0</p>
-              <p class="text-[10px] font-black text-slate-400 uppercase mt-1">Ingresos A�o</p>
+              <p class="text-[10px] font-black text-slate-400 uppercase mt-1">Ingresos Ao</p>
             </div>
             <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm text-center">
               <p class="text-xl font-black text-red-600" id="dirPendiente">RD$0</p>
@@ -2686,6 +2686,45 @@
           // Init date picker
           document.getElementById('dailyDate') && (document.getElementById('dailyDate').value = new Date().toISOString().split('T')[0]);
         </script>
+
+        <!-- CONFIGURACIÓN DE COBRO -->
+        <div class="bg-slate-50 rounded-3xl border border-slate-200 p-6 mt-6">
+          <h3 class="font-black text-slate-800 mb-5 flex items-center gap-2">
+            <i data-lucide="settings-2" class="w-5 h-5" style="color:#0B63C7"></i> Configuración de Cobro
+          </h3>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div>
+              <label class="block text-xs font-black text-slate-500 uppercase tracking-wider mb-1.5">Día Generación Automática</label>
+              <div class="flex items-center gap-2">
+                <input type="number" id="confGenDay" min="1" max="28" value="25"
+                  class="w-full px-3 py-2.5 border-2 border-slate-100 rounded-xl text-sm font-bold bg-white outline-none focus:border-blue-400">
+                <span class="text-xs text-slate-400 font-medium whitespace-nowrap">del mes anterior</span>
+              </div>
+            </div>
+            <div>
+              <label class="block text-xs font-black text-slate-500 uppercase tracking-wider mb-1.5">Día Límite de Pago</label>
+              <div class="flex items-center gap-2">
+                <input type="number" id="confDueDay" min="1" max="28" value="5"
+                  class="w-full px-3 py-2.5 border-2 border-slate-100 rounded-xl text-sm font-bold bg-white outline-none focus:border-blue-400">
+                <span class="text-xs text-slate-400 font-medium whitespace-nowrap">del mes actual</span>
+              </div>
+            </div>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-5">
+            <button id="btnSavePaymentConfig" class="py-2.5 text-white text-xs font-black uppercase rounded-xl flex items-center justify-center gap-2 hover:opacity-90 transition-all" style="background:#0B63C7">
+              <i data-lucide="save" class="w-4 h-4"></i> Guardar Configuración
+            </button>
+            <button id="btnGeneratePaymentsNow" class="py-2.5 text-white text-xs font-black uppercase rounded-xl flex items-center justify-center gap-2 hover:opacity-90 transition-all" style="background:#28B54D">
+              <i data-lucide="play-circle" class="w-4 h-4"></i> Generar pagos ahora
+            </button>
+            <button id="btnSendPaymentReminders" class="py-2.5 text-white text-xs font-black uppercase rounded-xl flex items-center justify-center gap-2 hover:opacity-90 transition-all" style="background:#FF8A00">
+              <i data-lucide="bell" class="w-4 h-4"></i> Enviar recordatorios
+            </button>
+            <button id="btnExportMorosidad" class="py-2.5 text-white text-xs font-black uppercase rounded-xl flex items-center justify-center gap-2 hover:opacity-90 transition-all" style="background:#475569">
+              <i data-lucide="download" class="w-4 h-4"></i> Exportar morosidad
+            </button>
+          </div>
+        </div>
       </section>
 
       <!-- CUENTAS POR COBRAR -->
@@ -2696,7 +2735,7 @@
               <div class="w-1 h-8 rounded-full bg-amber-500"></div>
               <h1 class="text-2xl font-black text-slate-800">Cuentas por Cobrar</h1>
             </div>
-            <p class="text-slate-500 font-medium ml-4">Listado de deudores, antig�edad de saldos y recordatorios</p>
+            <p class="text-slate-500 font-medium ml-4">Listado de deudores, antigedad de saldos y recordatorios</p>
           </div>
           <div class="flex gap-2">
             <button onclick="App.cuentasCobrar?.exportDeudores?.()" class="px-4 py-2.5 text-white text-xs font-black uppercase rounded-xl" style="background:#FF8A00">
@@ -2720,7 +2759,7 @@
           </div>
           <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm text-center">
             <p class="text-2xl font-black text-orange-600" id="ccVencido30">RD$0</p>
-            <p class="text-[10px] font-black text-slate-400 uppercase mt-1">Vencido +30 d�as</p>
+            <p class="text-[10px] font-black text-slate-400 uppercase mt-1">Vencido +30 das</p>
           </div>
           <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm text-center">
             <p class="text-2xl font-black text-slate-600" id="ccMoraTotal">RD$0</p>
@@ -2747,7 +2786,7 @@
                   <th class="px-4 py-3 text-left text-[10px] font-black text-slate-400 uppercase">Plan</th>
                   <th class="px-4 py-3 text-right text-[10px] font-black text-slate-400 uppercase">Saldo</th>
                   <th class="px-4 py-3 text-right text-[10px] font-black text-slate-400 uppercase">Mora</th>
-                  <th class="px-4 py-3 text-center text-[10px] font-black text-slate-400 uppercase">D�as vencido</th>
+                  <th class="px-4 py-3 text-center text-[10px] font-black text-slate-400 uppercase">Das vencido</th>
                   <th class="px-4 py-3 text-center text-[10px] font-black text-slate-400 uppercase">Acciones</th>
                 </tr>
               </thead>
@@ -2763,16 +2802,16 @@
     </div> <!-- Cierre de .app-content-wrapper -->
   </div> <!-- Cierre de .app -->
 
-  <!-- Contenedor �nico de Modales -->
+  <!-- Contenedor nico de Modales -->
   <div id="globalModalContainer"
     class="fixed inset-0 z-[9999] overflow-y-auto flex items-start justify-center pt-16 pb-8 px-4"
     style="display:none; background:rgba(8,80,160,0.45); backdrop-filter:blur(6px);">
   </div>
 
-  <!-- TOAST CONTAINER � fuera de secciones para no duplicarse -->
+  <!-- TOAST CONTAINER  fuera de secciones para no duplicarse -->
   <div id="toast-container" class="fixed top-5 right-5 z-[9998] flex flex-col gap-2 pointer-events-none"></div>
 
-  <!-- Los modales de maestros y estudiantes se generan din�micamente via globalModalContainer -->
+  <!-- Los modales de maestros y estudiantes se generan dinmicamente via globalModalContainer -->
 
   <!-- Scripts optimizados -->
   <script>
@@ -2784,13 +2823,13 @@
         setTimeout(() => loader.remove(), 500);
       }
     });
-    // Timeout de seguridad: quitar loader despu�s de 12s pase lo que pase
+    // Timeout de seguridad: quitar loader despus de 12s pase lo que pase
     setTimeout(() => {
       const loader = document.getElementById('initial-loading');
       if (loader) { loader.style.opacity = '0'; setTimeout(() => loader.remove(), 300); }
     }, 12000);
   </script>
-  <!-- Lucide Icons � cargado al final del body para garantizar DOM completo -->
+  <!-- Lucide Icons  cargado al final del body para garantizar DOM completo -->
   <script>
     // Silenciar errores internos de lucide UMD (promesas no manejadas)
     window.addEventListener('unhandledrejection', function(e) {
@@ -2802,7 +2841,7 @@
   </script>
   <script src="js/shared/lucide.min.js"></script>
   <script>
-    // Inicializar iconos � pasar atributos de clase al SVG reemplazante
+    // Inicializar iconos  pasar atributos de clase al SVG reemplazante
     function _initLucide() {
       if (!window.lucide) return;
       lucide.createIcons({
@@ -2817,12 +2856,12 @@
         }
       });
     }
-    // Exponer globalmente para que los m�dulos JS puedan usarla
+    // Exponer globalmente para que los mdulos JS puedan usarla
     window._initLucide = _initLucide;
     _initLucide();
 
     // MutationObserver: re-ejecutar createIcons cada vez que se inserte
-    // contenido din�mico con atributos data-lucide
+    // contenido dinmico con atributos data-lucide
     (function() {
       let _timer = null;
       const _run = () => _initLucide();
@@ -2911,6 +2950,6 @@
       setTimeout(fixMissingLucideIcons, 1000);
     });
   </script>
-  <!-- SW ya registrado en el <head> � no duplicar aqu� -->
+  <!-- SW ya registrado en el <head>  no duplicar aqu -->
 </body>
 </html>

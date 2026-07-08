@@ -57,6 +57,9 @@ export const PaymentsModule = {
     document.getElementById('btnNewPayment')?.addEventListener('click',       () => this.openPaymentModal());
     document.getElementById('btnGeneratePayments')?.addEventListener('click', () => this.runCycle());
     document.getElementById('btnRefreshPayments')?.addEventListener('click',  () => this.loadPayments());
+    document.getElementById('btnSavePaymentConfig')?.addEventListener('click',() => this.savePaymentConfig?.());
+    document.getElementById('btnSendPaymentReminders')?.addEventListener('click',() => this.sendReminders?.());
+    document.getElementById('btnExportMorosidad')?.addEventListener('click',  () => this.exportMorosidad?.());
     // Exportación de facturas
     document.getElementById('btnExportInvoices')?.addEventListener('click', () => this._openExportModal());
     document.getElementById('statusPills')?.addEventListener('click', (e) => {

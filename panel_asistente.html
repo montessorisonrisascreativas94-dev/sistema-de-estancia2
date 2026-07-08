@@ -775,6 +775,45 @@
         <div id="accounting-students" class="accounting-section hidden">
           <!-- Students Content -->
         </div>
+
+        <!-- CONFIGURACIÓN DE COBRO -->
+        <div class="bg-slate-50 rounded-2xl border border-slate-200 p-5 mt-6">
+          <h3 class="font-bold text-slate-700 text-sm mb-4 flex items-center gap-2">
+            <i data-lucide="settings-2" class="w-4 h-4 text-teal-600"></i> Configuración de Cobro
+          </h3>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Día Generación Automática</label>
+              <div class="flex items-center gap-2">
+                <input type="number" id="confGenDay" min="1" max="28" value="25"
+                  class="w-full px-3 py-2.5 border-2 border-slate-100 rounded-xl text-sm font-bold bg-white outline-none focus:border-teal-400">
+                <span class="text-xs text-slate-400 font-medium whitespace-nowrap">del mes anterior</span>
+              </div>
+            </div>
+            <div>
+              <label class="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Día Límite de Pago</label>
+              <div class="flex items-center gap-2">
+                <input type="number" id="confDueDay" min="1" max="28" value="5"
+                  class="w-full px-3 py-2.5 border-2 border-slate-100 rounded-xl text-sm font-bold bg-white outline-none focus:border-teal-400">
+                <span class="text-xs text-slate-400 font-medium whitespace-nowrap">del mes actual</span>
+              </div>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-4">
+            <button id="btnSavePaymentConfig" class="py-2.5 text-white text-xs font-black uppercase rounded-xl flex items-center justify-center gap-1.5 hover:opacity-90" style="background:#0D9488">
+              <i data-lucide="save" class="w-3.5 h-3.5"></i> Guardar
+            </button>
+            <button id="btnGeneratePayments" class="py-2.5 text-white text-xs font-black uppercase rounded-xl flex items-center justify-center gap-1.5 hover:opacity-90" style="background:#28B54D">
+              <i data-lucide="play-circle" class="w-3.5 h-3.5"></i> Generar pagos
+            </button>
+            <button id="btnSendPaymentReminders" class="py-2.5 text-white text-xs font-black uppercase rounded-xl flex items-center justify-center gap-1.5 hover:opacity-90" style="background:#FF8A00">
+              <i data-lucide="bell" class="w-3.5 h-3.5"></i> Recordatorios
+            </button>
+            <button id="btnExportMorosidad" class="py-2.5 text-white text-xs font-black uppercase rounded-xl flex items-center justify-center gap-1.5 hover:opacity-90" style="background:#475569">
+              <i data-lucide="download" class="w-3.5 h-3.5"></i> Morosidad
+            </button>
+          </div>
+        </div>
       </section>
 
       <!-- CHAT -->

@@ -35,6 +35,7 @@ export const PaymentsModule = {
       on('btnSavePaymentConfig',   'click',  () => this.savePaymentConfig());
       on('btnSendPaymentReminders','click',  () => this.sendReminders());
       on('btnExportInvoices',      'click',  () => this._openExportModal());
+      on('btnExportMorosidad',     'click',  () => this.exportMorosidad());
     }
     
     // ✅ Suscribirse a cambios en tiempo real
