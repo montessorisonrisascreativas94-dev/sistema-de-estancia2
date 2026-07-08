@@ -596,47 +596,52 @@ async function initDashboard() {
     _updatePunchAlertWidget(students, attendance);
     _updateTasksToGradeWidget(classroom.id);
 
-    // Grid de Aulas (Home) — Diseño cálido y educativo
+    // Grid de Aulas (Home) — Paleta Sonrisas Creativas
     const grid = document.getElementById('classesGrid');
     if (grid) {
+      const attendanceToday = (attendance || []).filter(a => {
+        const today = new Date().toISOString().slice(0,10);
+        return a.date === today && a.status === 'present';
+      }).length;
+      const totalSt = (students || []).length;
+
       grid.innerHTML = `
         <div onclick="App.showClassroomDetail('${classroom.id}')"
-             class="p-6 rounded-[2.5rem] border-0 shadow-lg hover:shadow-2xl transition-all cursor-pointer group relative overflow-hidden"
-             style="background: linear-gradient(135deg, #A78BFA 0%, #C4B5FD 60%, #F3E8FF 100%);">
-          <!-- Decoración de fondo amigable -->
-          <div class="absolute top-0 right-0 w-40 h-40 rounded-full opacity-20 pointer-events-none"
-               style="background: radial-gradient(circle, white 0%, transparent 70%); transform: translate(30%, -20%);"></div>
-          <div class="absolute bottom-0 left-0 w-32 h-32 rounded-full opacity-15 pointer-events-none"
-               style="background: radial-gradient(circle, white 0%, transparent 70%); transform: translate(-20%, 30%);"></div>
-          
-          <div class="relative z-10">
-            <!-- Cabecera con icono grande -->
-            <div class="flex items-center gap-6 mb-8">
-              <div class="w-20 h-20 bg-white rounded-3xl flex items-center justify-center shadow-xl group-hover:scale-110 transition-transform duration-300">
-                <i data-lucide="door-open" class="w-10 h-10 text-purple-600"></i>
+             class="cursor-pointer group relative overflow-hidden"
+             style="background:#fff; border-radius:2rem; border:2px solid #E6F7EB; box-shadow:0 8px 24px rgba(40,181,77,.1); transition:all .25s ease;">
+          <!-- Banda superior verde -->
+          <div style="background:linear-gradient(135deg,#28B54D,#239943); padding:24px 24px 20px; position:relative; overflow:hidden;">
+            <div style="position:absolute;top:-20px;right:-20px;width:100px;height:100px;background:rgba(255,255,255,.12);border-radius:50%;pointer-events:none;"></div>
+            <div style="position:absolute;bottom:-30px;left:-10px;width:80px;height:80px;background:rgba(255,255,255,.08);border-radius:50%;pointer-events:none;"></div>
+            <div style="display:flex;align-items:center;gap:16px;position:relative;z-index:1;">
+              <div style="width:60px;height:60px;background:rgba(255,255,255,.2);border-radius:18px;display:flex;align-items:center;justify-content:center;transition:transform .3s;flex-shrink:0;" class="group-hover:scale-110">
+                <i data-lucide="door-open" style="width:30px;height:30px;color:white;"></i>
               </div>
               <div>
-                <h3 class="font-extrabold text-white text-2xl drop-shadow-md">${safeEscapeHTML(classroom.name)}</h3>
-                <p class="text-purple-100 font-semibold text-sm mt-1">Kinder • Aula Principal</p>
+                <h3 style="font-weight:900;color:white;font-size:1.25rem;line-height:1.2;" class="classroom-name">${safeEscapeHTML(classroom.name)}</h3>
+                <p style="color:rgba(255,255,255,.8);font-size:.8rem;font-weight:600;margin-top:2px;">${safeEscapeHTML(classroom.level || 'Educación Inicial')}</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Cuerpo blanco -->
+          <div style="padding:20px 24px;">
+            <!-- KPIs compactos -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
+              <div style="background:#E6F7EB;border-radius:12px;padding:10px 14px;text-align:center;">
+                <p style="font-size:1.5rem;font-weight:900;color:#28B54D;line-height:1;">${totalSt}</p>
+                <p style="font-size:.65rem;font-weight:800;color:#239943;text-transform:uppercase;letter-spacing:.06em;margin-top:2px;">Alumnos</p>
+              </div>
+              <div style="background:#FFF3E0;border-radius:12px;padding:10px 14px;text-align:center;">
+                <p style="font-size:1.5rem;font-weight:900;color:#FF8A00;line-height:1;">${attendanceToday}</p>
+                <p style="font-size:.65rem;font-weight:800;color:#E07900;text-transform:uppercase;letter-spacing:.06em;margin-top:2px;">Presentes hoy</p>
               </div>
             </div>
 
-            <!-- Badges -->
-            <div class="flex items-center justify-between gap-4 mb-6">
-              <span class="bg-white/90 text-purple-700 px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 shadow-md">
-                <i data-lucide="users" class="w-4 h-4"></i>
-                ${(students || []).length} estudiantes
-              </span>
-              <span class="bg-emerald-400/90 text-white px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 shadow-md">
-                <i data-lucide="check-circle" class="w-4 h-4"></i>
-                Activo
-              </span>
-            </div>
-
-            <!-- Botón principal -->
-            <button class="w-full py-4 bg-white text-purple-600 rounded-2xl font-extrabold text-lg flex items-center justify-center gap-2 shadow-2xl group-hover:scale-[1.02] transition-all duration-300">
-              🚪 Entrar a Mi Aula
-              <i data-lucide="arrow-right" class="w-5 h-5"></i>
+            <!-- Botón CTA -->
+            <button style="width:100%;padding:14px;background:linear-gradient(135deg,#FF8A00,#E07900);color:white;border:none;border-radius:14px;font-weight:900;font-size:.9rem;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;box-shadow:0 4px 14px rgba(255,138,0,.3);transition:transform .2s;" class="group-hover:scale-[1.02]">
+              🚪 Entrar al Aula
+              <i data-lucide="arrow-right" style="width:18px;height:18px;"></i>
             </button>
           </div>
         </div>
@@ -988,17 +993,15 @@ function initClassTabs(defaultTab = null) {
   const tabContents = document.querySelectorAll('.class-tab-content');
 
   const activateTab = (targetTab) => {
-    // 1. Resetear TODOS los botones
+    // 1. Resetear TODOS los botones — solo clase CSS, sin Tailwind inline
     tabBtns.forEach(b => {
-      b.classList.remove('active', 'bg-[#FF7A00]', 'text-white', 'ring-4', 'ring-blue-100');
-      b.classList.add('bg-slate-100', 'text-slate-600');
+      b.classList.remove('active');
     });
 
     // 2. Activar botón correcto
     tabBtns.forEach(b => {
       if (b.dataset.tab === targetTab) {
-        b.classList.add('active', 'bg-[#FF7A00]', 'text-white', 'ring-4', 'ring-blue-100');
-        b.classList.remove('bg-slate-100', 'text-slate-600', 'text-slate-500');
+        b.classList.add('active');
         if (targetTab === 'daily-routine') b.classList.add('animate-pulse-subtle');
         // Limpiar badge del tab al abrirlo
         _clearTabBadge(targetTab);

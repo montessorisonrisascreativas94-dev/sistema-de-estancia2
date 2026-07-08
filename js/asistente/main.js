@@ -19,6 +19,11 @@ import { RealtimeManager } from '../shared/realtime-manager.js';
 import { Security } from '../shared/security.js';
 import { UIPremium } from '../shared/ui-premium.js';
 import { AssistantAccountingModule } from './accounting.module.js';
+import { InscripcionesModule } from '../directora/inscripciones.module.js';
+
+// Exponer globalmente para onclick en HTML
+window.InscripcionesModule = InscripcionesModule;
+window.CajaCobro = CajaCobro;
 
 // ?? Definir objeto App globalmente para evitar ReferenceError en onclicks del HTML
 // Global close modal fallback � always available even before openNewPostModal is called
@@ -103,8 +108,26 @@ document.addEventListener('DOMContentLoaded', async () => {
   AppState.set('user', auth.user);
   AppState.set('profile', auth.profile);
 
-  // ?? Sistema de badges por secci�n
+  // ?? Sistema de badges por sección
   BadgeSystem.init(auth.user.id);
+
+  // Badge inscripciones pendientes
+  const loadPreBadge = async () => {
+    try {
+      const { count } = await supabase.from('student_preregistrations').select('id', { count: 'exact', head: true }).eq('status', 'pending');
+      const b = document.getElementById('badge-inscripciones');
+      if (b) {
+        if (count > 0) { b.textContent = count > 99 ? '99+' : String(count); b.classList.remove('hidden'); }
+        else b.classList.add('hidden');
+      }
+    } catch (_) {}
+  };
+  loadPreBadge();
+  try {
+    supabase.channel('asistente-preinsc-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'student_preregistrations' }, () => loadPreBadge())
+      .subscribe();
+  } catch (_) {}
 
   // Sidebar profile
   const profile = auth.profile;
@@ -377,6 +400,9 @@ function initNavigation() {
     if (!loadedSections.has(target)) {
       try {
         switch (target) {
+          case 'inscripciones':
+            InscripcionesModule.load();
+            break;
           case 'pagos':
             renderCajaCobro();
             // Inicializar el historial en background

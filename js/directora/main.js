@@ -22,8 +22,11 @@ import { InquiriesModule } from './inquiries.module.js';
 import { ChatModule } from './chat.module.js';
 import { RoomsModule } from './rooms.module.js';
 import { AcademicCycleModule } from './academic-cycle.module.js';
+import { InscripcionesModule } from './inscripciones.module.js';
 import { CajaModule } from './caja.module.js';
 import { AccessModule } from './access.module.js';
+
+window.CajaModule = CajaModule;
 import { AttendanceModule } from './attendance.module.js';
 import { RealtimeManager } from '../shared/realtime-manager.js';
 import { QueryCache } from '../shared/query-cache.js';
@@ -36,6 +39,8 @@ const debounce = (fn, delay) => {
     timeout = setTimeout(() => fn(...args), delay);
   };
 };
+
+window.InscripcionesModule = InscripcionesModule;
 
 window.App = {
   navigation: { goTo: goToSection },
@@ -172,8 +177,10 @@ export function goToSection(sectionId) {
         _renderCicloEscolar();
         break;
       case 'ciclo-academico':
-      case 'inscripciones':
         import('./academic-cycle.module.js').then(m => m.AcademicCycleModule.init());
+        break;
+      case 'inscripciones':
+        InscripcionesModule.load();
         break;
       case 'staff-permits':
         import('./permits.module.js').then(m => m.PermitsModule.init());

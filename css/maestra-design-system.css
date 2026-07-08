@@ -200,8 +200,8 @@ body.panel-maestra-body .sb-orange {
   box-shadow: 0 4px 16px rgba(255,138,0,.15) !important;
 }
 body.panel-maestra-body .sb-purple {
-  background: linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%) !important;
-  box-shadow: 0 4px 16px rgba(139,92,246,.15) !important;
+  background: linear-gradient(135deg, #0B63C7 0%, #0850A0 100%) !important;
+  box-shadow: 0 4px 16px rgba(11,99,199,.15) !important;
 }
 
 /* ── ALERT BANNERS ──────────────────────────────────────────────────
@@ -269,10 +269,10 @@ body.panel-maestra-body .class-tab-btn:hover {
   transform: translateY(-2px);
 }
 body.panel-maestra-body .class-tab-btn.active {
-  background: linear-gradient(135deg, #A78BFA 0%, #C4B5FD 100%) !important;
+  background: var(--m-green) !important;
   color: white !important;
   border: none !important;
-  box-shadow: 0 6px 20px rgba(167,139,250,.35) !important;
+  box-shadow: 0 6px 20px rgba(40,181,77,.3) !important;
   transform: translateY(-2px);
 }
 body.panel-maestra-body .class-tab-btn svg {

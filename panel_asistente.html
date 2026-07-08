@@ -147,6 +147,11 @@
         </button>
 
         <div class="kk-nav-section label">Gestión</div>
+        <button data-section="inscripciones" class="nav-btn kk-nav-item relative" data-tooltip="Inscripciones">
+          <i data-lucide="clipboard-list" class="text-yellow-300"></i>
+          <span class="label">Inscripciones</span>
+          <span id="badge-inscripciones" class="hidden kk-badge">0</span>
+        </button>
         <button data-section="estudiantes" class="nav-btn kk-nav-item relative" data-tooltip="Estudiantes">
           <i data-lucide="users" class="text-orange-300"></i>
           <span class="label">Estudiantes</span>
@@ -1034,6 +1039,26 @@
           <div class="flex flex-wrap justify-center gap-4">
             <a href="qr-manager.html" class="px-10 py-4 bg-[#0B63C7] text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-blue-200 hover:shadow-blue-200 transition-all">Comenzar Ahora</a>
           </div>
+        </div>
+      </section>
+
+      <!-- INSCRIPCIONES -->
+      <section id="inscripciones" class="section hidden">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+          <div>
+            <h2 class="text-2xl font-black text-slate-800 flex items-center gap-3">
+              <span class="w-10 h-10 bg-[#E8F2FF] rounded-2xl flex items-center justify-center text-xl">📋</span>
+              Inscripciones
+            </h2>
+            <p class="text-sm text-slate-500 mt-1 font-medium">Preinscripciones pendientes y admisión de estudiantes</p>
+          </div>
+          <button onclick="InscripcionesModule && InscripcionesModule.load()"
+            class="flex items-center gap-2 px-4 py-2.5 bg-[#0B63C7] hover:bg-[#0850A0] text-white rounded-xl font-black text-xs uppercase tracking-wider shadow-sm transition-all active:scale-95">
+            <i data-lucide="refresh-cw" class="w-4 h-4"></i> Actualizar
+          </button>
+        </div>
+        <div id="inscripcionesContainer">
+          <div class="text-center py-8 text-slate-400">Cargando preinscripciones...</div>
         </div>
       </section>
 
