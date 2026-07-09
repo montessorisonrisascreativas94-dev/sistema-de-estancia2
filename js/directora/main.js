@@ -23,6 +23,7 @@ import { ChatModule } from './chat.module.js';
 import { RoomsModule } from './rooms.module.js';
 import { AcademicCycleModule } from './academic-cycle.module.js';
 import { InscripcionesModule } from './inscripciones.module.js';
+import { CatalogoModule } from '../shared/catalogo-conceptos.module.js';
 import { CajaModule } from './caja.module.js';
 import { initCajaCobro, CajaCobroV2 } from '../shared/caja-cobro-v2.js';
 import { AccessModule } from './access.module.js';
@@ -43,6 +44,7 @@ const debounce = (fn, delay) => {
 };
 
 window.InscripcionesModule = InscripcionesModule;
+window.CatalogoModule = CatalogoModule;
 
 window.App = {
   navigation: { goTo: goToSection },
@@ -187,6 +189,9 @@ export function goToSection(sectionId) {
       case 'inscripciones':
         InscripcionesModule.load();
         break;
+      case 'catalogo':
+        CatalogoModule.init();
+        break;
       case 'staff-permits':
         import('./permits.module.js').then(m => m.PermitsModule.init());
         break;
@@ -242,7 +247,7 @@ export function goToSection(sectionId) {
     'inscripciones':'ciclo-escolar',
     accesos:'ciclo-escolar',
     caja:'finanzas', pagos:'finanzas', contabilidad:'finanzas',
-    'cuentas-cobrar':'finanzas',
+    'cuentas-cobrar':'finanzas', catalogo:'finanzas',
     muro:'comunicacion', reportes:'comunicacion',
   };
   const activeSidebarId = _parentSection[sectionId] || sectionId;

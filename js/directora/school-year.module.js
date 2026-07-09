@@ -37,7 +37,7 @@ export const SchoolYearModule = {
   },
 
   render() {
-    const section = $el('ciclo-escolar');
+    const section = $el('ciclo-escolar-config');
     if (!section) return;
 
     section.innerHTML = `

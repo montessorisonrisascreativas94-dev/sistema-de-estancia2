@@ -292,6 +292,16 @@ export const PaymentsModule = {
       else if (days <= 3)  urgencyBadge = `<span class="text-[9px] font-black text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-full">vence en ${days}d</span>`;
     }
 
+    // Map concept to readable label
+    const conceptLabels = {
+      mensualidad: 'Mensualidad',
+      uniforme: 'Uniforme',
+      libros: 'Libros',
+      materiales: 'Materiales',
+      otro: 'Otro'
+    };
+    const conceptLabel = conceptLabels[p.concept] || p.concept || 'Mensualidad';
+
     return `
       <div class="bg-white rounded-3xl border border-slate-100 overflow-hidden ${sc.border} mb-3 ${isPaid ? 'cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition-all active:scale-[0.99]' : ''}"
         ${isPaid ? `onclick="PaymentsModule.openReceipt('${p.id}')"` : ''}>
@@ -302,7 +312,7 @@ export const PaymentsModule = {
                 ${mora > 0 ? '⚠️' : (isPaid ? '✅' : (p.method === 'transferencia' ? '🏦' : '💵'))}
               </div>
               <div class="min-w-0">
-                <p class="font-black text-slate-800 text-sm truncate">${escapeHtml(p.month_paid || 'Colegiatura')}</p>
+                <p class="font-black text-slate-800 text-sm truncate">${escapeHtml(p.month_paid || 'Colegiatura')} · ${escapeHtml(conceptLabel)}</p>
                 <div class="flex items-center gap-1.5 mt-0.5 flex-wrap">
                   <span class="text-[9px] font-bold text-slate-400 uppercase">${Helpers.formatDate(p.created_at)}</span>
                   ${p.bank ? `<span class="text-[9px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded-full">🏦 ${escapeHtml(p.bank)}</span>` : ''}
@@ -319,6 +329,12 @@ export const PaymentsModule = {
               ${isPaid ? `<p class="text-[9px] text-emerald-600 font-bold mt-1 flex items-center justify-end gap-0.5"><i data-lucide="download" class="w-3 h-3"></i> Ver recibo</p>` : ''}
             </div>
           </div>
+          
+          ${p.fiscal_receipt_url ? `
+          <div class="mt-3 pt-3 border-t border-slate-50 flex items-center justify-between">
+            <p class="text-[9px] font-bold text-slate-400 italic">Comprobante fiscal adjunto</p>
+            <a href="${p.fiscal_receipt_url}" target="_blank" class="text-[9px] font-black text-indigo-600 hover:underline flex items-center gap-1">Ver <i data-lucide="external-link" class="w-3 h-3"></i></a>
+          </div>` : ''}
 
           ${moraInfo ? `
           <div class="mt-3 p-3 bg-rose-50 rounded-2xl border border-rose-100">
@@ -691,25 +707,25 @@ export const PaymentsModule = {
 
     const fileInput = document.getElementById('paymentFileInput');
     const file   = fileInput?.files[0];
+    const fiscalInput = document.getElementById('paymentFiscalInput');
+    const fiscalFile = fiscalInput?.files[0];
     const amount = parseFloat(document.getElementById('paymentAmount')?.value || '0');
-    const monthRaw = document.getElementById('paymentMonth')?.value?.trim();
+    const selectedMonths = Array.from(document.getElementById('paymentMonth')?.selectedOptions || []).map(opt => opt.value);
+    const concept = document.getElementById('paymentConcept')?.value || 'mensualidad';
     const method = document.getElementById('paymentMethod')?.value || 'transferencia';
     const bank   = document.getElementById('paymentBank')?.value?.trim() || null;
 
-    if (!file)   { Helpers.toast('Adjunta el comprobante', 'warning'); return; }
+    if (!file)   { Helpers.toast('Adjunta el comprobante de transferencia', 'warning'); return; }
     if (!amount || amount <= 0 || amount > 99999) { Helpers.toast('Ingresa un monto válido (mayor a 0)', 'warning'); return; }
-    if (!monthRaw) { Helpers.toast('Selecciona el mes', 'warning'); return; }
+    if (!selectedMonths.length) { Helpers.toast('Selecciona al menos un mes', 'warning'); return; }
     if (!bank)   { Helpers.toast('Selecciona el banco de origen', 'warning'); return; }
     
-    // Normalizar mes para búsqueda (Abril 2026 -> 2026-04)
-    const month = monthRaw.includes(' ') ? (monthRaw.split(' ')[1] + '-' + {
-      'Enero':'01','Febrero':'02','Marzo':'03','Abril':'04','Mayo':'05','Junio':'06',
-      'Julio':'07','Agosto':'08','Septiembre':'09','Octubre':'10','Noviembre':'11','Diciembre':'12'
-    }[monthRaw.split(' ')[0]] || monthRaw) : monthRaw;
-
     if (file.size > 5 * 1024 * 1024) { Helpers.toast('Archivo muy grande (max 5MB)', 'error'); return; }
     if (!['image/jpeg','image/png','image/webp','application/pdf'].includes(file.type)) {
-      Helpers.toast('Formato no permitido (JPG, PNG, PDF)', 'error'); return;
+      Helpers.toast('Formato no permitido para comprobante (JPG, PNG, PDF)', 'error'); return;
+    }
+    if (fiscalFile && fiscalFile.size > 5 * 1024 * 1024) {
+      Helpers.toast('Comprobante fiscal muy grande (max 5MB)', 'error'); return;
     }
 
     const btn = document.getElementById('btnSubmitPayment');
@@ -724,7 +740,7 @@ export const PaymentsModule = {
     const setP = (p) => { const f = document.getElementById('payment-progress-fill'); if(f) f.style.width = p + '%'; };
 
     try {
-      Helpers.toast('Subiendo comprobante...', 'info');
+      Helpers.toast('Subiendo comprobantes...', 'info');
       const ext  = file.name.split('.').pop().toLowerCase();
       const path = `payments/${student.id}_${Date.now()}.${ext}`;
       let uploadFile = file;
@@ -748,49 +764,54 @@ export const PaymentsModule = {
       });
       if (upErr) throw upErr;
       
-      setP(95);
+      setP(60);
       const { data: { publicUrl } } = supabase.storage.from('classroom_media').getPublicUrl(path);
+      
+      // Upload fiscal receipt if provided
+      let fiscalUrl = null;
+      if (fiscalFile) {
+        const fiscalExt  = fiscalFile.name.split('.').pop().toLowerCase();
+        const fiscalPath = `payments/fiscal_${student.id}_${Date.now()}.${fiscalExt}`;
+        
+        let uploadFiscal = fiscalFile;
+        if (fiscalFile.type.startsWith('image/')) {
+          try {
+            const { ImageLoader } = await import('../shared/image-loader.js');
+            uploadFiscal = await ImageLoader.compress(fiscalFile, { maxWidth: 1000, maxHeight: 1000, quality: 0.8, maxSizeKB: 400 });
+          } catch (err) {
+            console.warn('Fallo compresión fiscal, subiendo original:', err);
+          }
+        }
+        
+        const { error: fiscalUpErr } = await supabase.storage.from('classroom_media').upload(fiscalPath, uploadFiscal);
+        if (fiscalUpErr) {
+          console.warn('Error subiendo comprobante fiscal:', fiscalUpErr);
+        } else {
+          const { data: { publicUrl: puFiscal } } = supabase.storage.from('classroom_media').getPublicUrl(fiscalPath);
+          fiscalUrl = puFiscal;
+        }
+      }
 
-      // 🔍 Buscar registro existente (Vencido o Pendiente) para este mes
-      // Intentamos con el formato normalizado YYYY-MM y con el original
-      const { data: existingPayments, error: fetchErr } = await supabase
-        .from(TABLES.PAYMENTS)
-        .select('id, status, month_paid')
-        .eq('student_id', student.id)
-        .or(`month_paid.eq."${month}",month_paid.eq."${monthRaw}"`)
-        .neq('status', 'paid')
-        .limit(1);
+      setP(85);
 
-      if (fetchErr) throw fetchErr;
-      const existing = existingPayments?.[0] || null;
-
-      if (existing) {
-        // UPDATE: Cambiar a revisión y adjuntar comprobante
-        const { error: updateErr } = await supabase.from(TABLES.PAYMENTS)
-          .update({ 
-            evidence_url: publicUrl, 
-            status: 'review', 
-            method, 
-            bank
-          })
-          .eq('id', existing.id);
-        if (updateErr) throw updateErr;
-      } else {
-        // INSERT: Crear nuevo registro en revisión si no existe
+      // Insert a payment record for each selected month
+      for (const month of selectedMonths) {
         const { error: insertErr } = await supabase.from(TABLES.PAYMENTS).insert({
           student_id: student.id, 
           amount, 
           month_paid: month,
+          concept,
           method, 
           bank, 
           evidence_url: publicUrl, 
+          fiscal_receipt_url: fiscalUrl,
           status: 'review',
           created_at: new Date().toISOString()
         });
         if (insertErr) throw insertErr;
       }
       
-      this._showSuccessConfirmation(amount, monthRaw, bank);
+      this._showSuccessConfirmation(amount, selectedMonths.join(', '), bank);
       setP(100);
 
       // ✅ ÉXITO: Confetti
@@ -818,7 +839,8 @@ export const PaymentsModule = {
         student_id:   student.id,
         student_name: student.name,
         amount:       amount.toFixed(2),
-        month:        monthRaw
+        months:       selectedMonths,
+        concept
       }).catch(() => {});
 
     } catch (err) {
@@ -826,7 +848,7 @@ export const PaymentsModule = {
       document.getElementById('payment-upload-progress')?.remove();
       Helpers.toast('Error al enviar: ' + (err.message || 'Error desconocido'), 'error');
     } finally {
-      if (btn) { btn.disabled = false; btn.textContent = 'Enviar Reporte'; }
+      if (btn) { btn.disabled = false; btn.textContent = 'Enviar Comprobante'; }
     }
   },
 

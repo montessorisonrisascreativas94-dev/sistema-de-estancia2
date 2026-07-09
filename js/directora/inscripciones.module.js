@@ -445,7 +445,8 @@ export async function openAdmitModal(preregId) {
       <button onclick="if(window.App?.ui?.closeModal){App.ui.closeModal();}else{const gc=document.getElementById('globalModalContainer');if(gc){gc.style.display='none';gc.innerHTML='';}document.getElementById('admitStudentOverlay')?.remove();}"
         class="px-8 py-3 text-slate-500 font-black text-xs uppercase hover:bg-slate-100 rounded-2xl transition-all">Cancelar</button>
       <button id="btnConfirmAdmit" onclick="InscripcionesModule.admitStudent(${preregId})"
-        class="px-10 py-3 bg-gradient-to-r from-[#FF7A00] to-[#E06500] text-white rounded-2xl font-black text-xs uppercase shadow-lg shadow-orange-200 hover:shadow-orange-300 hover:-translate-y-0.5 transition-all active:scale-95">
+        style="background:linear-gradient(135deg,#FF7A00,#E06500);color:white;border:none;cursor:pointer;"
+        class="px-10 py-3 rounded-2xl font-black text-xs uppercase shadow-lg hover:-translate-y-0.5 transition-all active:scale-95">
         ✅ Confirmar Admisión
       </button>
     </div>`;
@@ -524,19 +525,30 @@ export async function openAdmitModal(preregId) {
   if (window.lucide) lucide.createIcons();
 }
 
+// ── Flag to prevent double execution ───────────────────────
+let _admittingStudent = false;
 // ── Admit Student — full flow ─────────────────────────────────
 export async function admitStudent(preregId) {
+  if (_admittingStudent) return; // Prevent double execution
+  
+  _admittingStudent = true;
   const btn = document.getElementById('btnConfirmAdmit');
-  if (btn) { btn.disabled = true; btn.textContent = '⏳ Procesando...'; }
+  if (btn) {
+    btn.style.opacity = '0.75';
+    btn.style.cursor = 'not-allowed';
+    btn.style.pointerEvents = 'none';
+    btn.textContent = '⏳ Procesando...';
+  }
 
   try {
-    // 1. Load pre-registration
+    // 1. Load pre-registration and check status
     const { data: reg, error: regErr } = await supabase
       .from('student_preregistrations')
       .select('*')
       .eq('id', preregId)
       .single();
     if (regErr || !reg) throw new Error('Registro no encontrado');
+    if (reg.status === 'admitted') throw new Error('El estudiante ya fue admitido');
 
     // 2. Read all form fields (using getElementById — forms use id= not name=)
     const v = (id) => document.getElementById(id)?.value?.trim() || null;
@@ -578,46 +590,79 @@ export async function admitStudent(preregId) {
       payment_plan:          v('paymentPlan') || 'monthly',
     };
 
-    // 3. Handle parent user (sibling shares parent, otherwise create new)
+    // 3. Handle parent user (sibling shares parent, otherwise create via signUp)
     let parentUserId = null;
 
     if (siblingId) {
-      // Inherit parent from sibling
-      const sibSel   = document.getElementById('stSiblingId');
-      const sibOpt   = sibSel?.options[sibSel.selectedIndex];
-      parentUserId   = sibOpt?.dataset?.parentId || null;
+      // Inherit parent from sibling — no new auth user needed
+      const sibSel = document.getElementById('stSiblingId');
+      const sibOpt = sibSel?.options[sibSel?.selectedIndex];
+      parentUserId  = sibOpt?.dataset?.parentId || null;
     }
 
     if (!parentUserId) {
-      // Try admin API first, fallback to signUp
-      const { data: authData } = await supabase.auth.admin?.createUser?.({
-        email: emailUser, password, email_confirm: true,
-        user_metadata: { role: 'padre', full_name: studentPayload.p1_name }
-      }) ?? { data: null };
+      // Note: supabase.auth.admin is NOT available client-side (requires service_role key).
+      // Use signUp instead — it works for new accounts. If email already exists,
+      // we look up the existing profile by email.
+      const { data: signupData, error: signupErr } = await supabase.auth.signUp({
+        email: emailUser,
+        password,
+        options: { data: { role: 'padre', full_name: studentPayload.p1_name } }
+      });
 
-      parentUserId = authData?.user?.id;
-
-      if (!parentUserId) {
-        const { data: signupData } = await supabase.auth.signUp({
-          email: emailUser, password,
-          options: { data: { role: 'padre', full_name: studentPayload.p1_name } }
-        });
-        parentUserId = signupData?.user?.id;
+      if (signupData?.user?.id) {
+        parentUserId = signupData.user.id;
+      } else if (signupErr?.message?.toLowerCase().includes('already registered') ||
+                 signupErr?.status === 422 ||
+                 signupErr?.message?.toLowerCase().includes('user already')) {
+        // Email already exists — look up existing profile
+        const { data: existingProfile } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('email', emailUser)
+          .maybeSingle();
+        if (existingProfile?.id) parentUserId = existingProfile.id;
+      }
+      // If signup returns identities=[] it means email exists but is unconfirmed — still has an id
+      if (!parentUserId && signupData?.user?.identities?.length === 0 && signupData?.user?.id) {
+        parentUserId = signupData.user.id;
       }
     }
 
-    // Upsert parent profile
+    // Upsert parent profile (only if we have a userId)
     if (parentUserId) {
-      await supabase.from('profiles').upsert({
+      const profileData = {
         id:    parentUserId,
         name:  studentPayload.p1_name || '',
         email: emailUser,
         phone: studentPayload.p1_phone || '',
         role:  'padre',
-        updated_at: new Date().toISOString()
-      }, { onConflict: 'id' });
+      };
+      // Try upsert; if it fails, try plain update; ignore all profile errors (non-fatal)
+      const { error: profileErr } = await supabase
+        .from('profiles')
+        .upsert(profileData, { onConflict: 'id', ignoreDuplicates: false });
+
+      if (profileErr) {
+        // Fallback: try update only (profile may already exist)
+        await supabase.from('profiles').update({
+          name:  profileData.name,
+          email: profileData.email,
+          phone: profileData.phone,
+          role:  'padre',
+        }).eq('id', parentUserId).catch(() => {});
+        console.warn('[Inscripciones] profile upsert fell back to update:', profileErr.message);
+      }
       studentPayload.parent_id = parentUserId;
     }
+
+    // Check if student with same matricula already exists
+    const { data: existingStudent } = await supabase
+      .from('students')
+      .select('id')
+      .eq('matricula', matricula)
+      .maybeSingle();
+    if (existingStudent) throw new Error(`Ya existe un estudiante con la matrícula: ${matricula}`);
 
     // 4. Create student record
     const { data: student, error: stuErr } = await supabase
@@ -630,12 +675,18 @@ export async function admitStudent(preregId) {
     const studentId = student.id;
 
     // 5. Create payment plan
-    const { data: plan } = await supabase
-      .from('payment_plans')
-      .insert({ student_id: studentId, monthly_fee: monthlyFee, due_day: dueDay, status: 'active', start_date: `${startMonth}-01` })
-      .select('id')
-      .single()
-      .catch(() => ({ data: null }));
+    let plan = null;
+    try {
+      const { data } = await supabase
+        .from('payment_plans')
+        .insert({ student_id: studentId, monthly_fee: monthlyFee, due_day: dueDay, status: 'active', start_date: `${startMonth}-01` })
+        .select('id')
+        .single();
+      plan = data;
+    } catch (e) {
+      console.warn('[Inscripciones] payment plan insert:', e.message);
+      plan = null;
+    }
 
     // 6. Create 12 monthly payments
     if (plan?.id) {
@@ -677,7 +728,14 @@ export async function admitStudent(preregId) {
   } catch (err) {
     console.error('[Inscripciones] admitStudent error:', err);
     Helpers.toast('Error: ' + err.message, 'error');
-    if (btn) { btn.disabled = false; btn.textContent = '✅ Confirmar Admisión'; }
+    if (btn) {
+      btn.style.opacity = '1';
+      btn.style.cursor = 'pointer';
+      btn.style.pointerEvents = 'auto';
+      btn.innerHTML = '✅ Confirmar Admisión';
+    }
+  } finally {
+    _admittingStudent = false; // Reset flag
   }
 }
 

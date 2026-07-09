@@ -21,9 +21,11 @@ import { Security } from '../shared/security.js';
 import { UIPremium } from '../shared/ui-premium.js';
 import { AssistantAccountingModule } from './accounting.module.js';
 import { InscripcionesModule } from '../directora/inscripciones.module.js';
+import { CatalogoModule } from '../shared/catalogo-conceptos.module.js';
 
 // Exponer globalmente para onclick en HTML
 window.InscripcionesModule = InscripcionesModule;
+window.CatalogoModule = CatalogoModule;
 window.CajaCobro = CajaCobro;
 
 // ?? Definir objeto App globalmente para evitar ReferenceError en onclicks del HTML
@@ -404,6 +406,9 @@ function initNavigation() {
           case 'inscripciones':
             InscripcionesModule.load();
             break;
+          case 'catalogo':
+            CatalogoModule.init();
+            break;
           case 'pagos':
             initCajaCobro('pagosContainer');
             PaymentsModule.init().catch(()=>{});
@@ -503,6 +508,37 @@ function initNavigation() {
         if (ov) ov.style.display = 'none';
       });
     });
+
+  // -- Inicializar toggles de dropdowns del sidebar ---------------------------
+  initSidebarDropdowns();
+}
+
+/**
+ * Inicializar toggles de dropdowns del sidebar
+ */
+function initSidebarDropdowns() {
+  document.querySelectorAll('.kk-nav-group-toggle').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      // Prevenir que el click navegue a una sección si es un toggle
+      e.stopPropagation();
+      
+      const group = btn.closest('.kk-nav-group');
+      const submenu = group?.querySelector('.kk-nav-sub');
+      
+      if (group && submenu) {
+        // Toggle la clase 'open' en el botón y el grupo
+        btn.classList.toggle('open');
+        group.classList.toggle('open');
+        
+        // Mostrar/ocultar el submenú
+        if (submenu.style.display === 'none' || submenu.style.display === '') {
+          submenu.style.display = 'block';
+        } else {
+          submenu.style.display = 'none';
+        }
+      }
+    });
+  });
 }
 
 

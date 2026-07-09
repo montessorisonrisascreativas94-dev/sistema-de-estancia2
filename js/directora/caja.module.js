@@ -232,6 +232,8 @@ export const CajaModule = {
         <tr><td colspan="6" class="text-center py-8 text-slate-400 text-sm">Sin estudiantes pendientes</td></tr>
       `;
 
+      await this._loadPendingTransfers(); // Load pending parent payments
+      
       if (window.lucide) lucide.createIcons();
     } catch (e) {
       console.error('Error loading pending payments:', e);
@@ -293,7 +295,106 @@ export const CajaModule = {
       `;
     }).join('') : `
         <tr><td colspan="6" class="text-center py-8 text-slate-400 text-sm">Sin resultados</td></tr>
-    `;
+      `;
+  },
+
+  async approvePayment(paymentId) {
+    if (!confirm('¿Estás seguro de aprobar este pago?')) return;
+
+    try {
+      const { error } = await supabase
+        .from('payments')
+        .update({
+          status: 'paid',
+          paid_date: new Date().toISOString()
+        })
+        .eq('id', paymentId);
+
+      if (error) throw error;
+
+      Helpers.toast('Pago aprobado!', 'success');
+      await this._loadPendingTransfers(); // Refresh the list
+      await this._loadPendingPayments(); // Refresh the student list
+    } catch (e) {
+      console.error('Error approving payment', e);
+      Helpers.toast('Error al aprobar pago', 'error');
+    }
+  },
+
+  async rejectPayment(paymentId) {
+    const reason = prompt('¿Por qué estás rechazando este pago?');
+    if (!reason) return;
+
+    try {
+      const { error } = await supabase
+        .from('payments')
+        .update({
+          status: 'rejected',
+          notes: reason
+        })
+        .eq('id', paymentId);
+
+      if (error) throw error;
+
+      Helpers.toast('Pago rechazado', 'info');
+      await this._loadPendingTransfers(); // Refresh
+    } catch (e) {
+      console.error('Error rejecting payment', e);
+      Helpers.toast('Error al rechazar pago', 'error');
+    }
+  },
+
+  async _loadPendingTransfers() {
+    const container = $el('transferenciasPendientes');
+    if (!container) return;
+
+    try {
+      const { data: payments } = await supabase
+        .from('payments')
+        .select(`
+          id, student_id, amount, concept, method, bank, evidence_url, fiscal_receipt_url, month_paid, notes, created_at,
+          students (name, classrooms (name))
+        `)
+        .eq('status', 'review')
+        .order('created_at', { ascending: false });
+
+      if (!payments || payments.length === 0) {
+        container.innerHTML = '<div class="text-center py-4 text-slate-400 text-sm">Sin transferencias pendientes</div>';
+        return;
+      }
+
+      container.innerHTML = payments.map(p => `
+        <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
+          <div class="flex justify-between items-start">
+            <div>
+              <p class="font-black text-slate-800">${Helpers.escapeHTML(p.students?.name || 'Estudiante desconocido')}</p>
+              <p class="text-xs text-slate-500">${p.students?.classrooms?.name || ''} · ${Helpers.formatDate(p.created_at)}</p>
+            </div>
+            <p class="font-black text-lg text-slate-800">${fmtCurrency(p.amount)}</p>
+          </div>
+          <div class="grid grid-cols-2 gap-2 text-xs">
+            <div><span class="font-bold text-slate-500">Concepto:</span> ${Helpers.escapeHTML(p.concept || 'Mensualidad')}</div>
+            <div><span class="font-bold text-slate-500">Mes:</span> ${Helpers.escapeHTML(p.month_paid || '')}</div>
+            ${p.bank ? `<div><span class="font-bold text-slate-500">Banco:</span> ${Helpers.escapeHTML(p.bank)}</div>` : ''}
+          </div>
+          ${p.evidence_url ? `<div class="text-xs"><span class="font-bold text-slate-500">Comprobante:</span> <a href="${p.evidence_url}" target="_blank" class="text-blue-600 hover:underline">Ver</a></div>` : ''}
+          ${p.fiscal_receipt_url ? `<div class="text-xs"><span class="font-bold text-slate-500">Comprobante Fiscal:</span> <a href="${p.fiscal_receipt_url}" target="_blank" class="text-indigo-600 hover:underline">Ver</a></div>` : ''}
+          <div class="flex gap-2 mt-2">
+            <button onclick="CajaModule.approvePayment(${p.id})" class="flex-1 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-black text-xs rounded-xl hover:from-green-600 transition-all">
+              <i data-lucide="check" class="w-3 h-3 inline mr-1"></i> Aprobar
+            </button>
+            <button onclick="CajaModule.rejectPayment(${p.id})" class="flex-1 py-2 bg-gradient-to-r from-red-500 to-rose-600 text-white font-black text-xs rounded-xl hover:from-red-600 transition-all">
+              <i data-lucide="x" class="w-3 h-3 inline mr-1"></i> Rechazar
+            </button>
+          </div>
+        </div>
+      `).join('');
+
+      if (window.lucide) lucide.createIcons();
+    } catch (e) {
+      console.error('Error loading pending transfers', e);
+      container.innerHTML = '<div class="text-center py-4 text-red-400 text-sm">Error al cargar transferencias</div>';
+    }
   },
 
   async openCobroModal(studentId) {

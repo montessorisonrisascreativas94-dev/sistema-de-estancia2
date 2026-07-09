@@ -998,7 +998,11 @@
           <div class="kk-nav-sub" id="group-finanzas" style="display:none">
             <button data-section="caja" class="kk-nav-sub-item">
               <i data-lucide="credit-card" class="w-3.5 h-3.5 text-yellow-200 shrink-0"></i>
-              <span>Pago</span>
+              <span>Cobros</span>
+            </button>
+            <button data-section="catalogo" class="kk-nav-sub-item">
+              <i data-lucide="tag" class="w-3.5 h-3.5 text-orange-200 shrink-0"></i>
+              <span>Catálogo</span>
             </button>
             <button data-section="contabilidad" class="kk-nav-sub-item">
               <i data-lucide="bar-chart-3" class="w-3.5 h-3.5 text-orange-200 shrink-0"></i>
@@ -1895,7 +1899,7 @@
       </section>
 
       <!-- MODAL: Método de Pago -->
-      <div id="paymentMethodModal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-4">
+      <div id="paymentMethodModal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-md z-[9999] flex items-center justify-center p-4">
         <div class="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
           <div class="p-6 border-b border-slate-100 bg-gradient-to-br from-[#0B63C7] to-blue-600">
             <div class="flex items-center justify-between">
@@ -2077,7 +2081,7 @@
       </div>
 
       <!-- MODAL: Pago Exitoso -->
-      <div id="paymentSuccessModal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-4">
+      <div id="paymentSuccessModal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-md z-[9999] flex items-center justify-center p-4">
         <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md text-center p-8">
           <div class="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
             <i data-lucide="check-circle" class="w-10 h-10"></i>
@@ -2505,6 +2509,11 @@
         <div id="academicCycleContainer" class="p-2 md:p-4"></div>
       </section>
 
+      <!-- CICLO ESCOLAR CONFIG -->
+      <section id="ciclo-escolar-config" class="section">
+        <div class="p-2 md:p-4"></div>
+      </section>
+
       <!-- CONTABILIDAD -->
       <section id="contabilidad" class="section">
         <div class="flex items-center justify-between mb-6 flex-wrap gap-3">
@@ -2822,6 +2831,26 @@
           <div class="text-center py-8 text-slate-400">Haz clic en Inscripciones para cargar...</div>
         </div>
       </section>
+
+      <!-- SECTION: CATÁLOGO DE CONCEPTOS -->
+      <section id="catalogo" class="section">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+          <div>
+            <div class="flex items-center gap-3 mb-1">
+              <div class="w-1 h-8 bg-[#FF7A00] rounded-full"></div>
+              <h1 class="text-2xl font-black text-slate-800 tracking-tight">Catálogo de Conceptos</h1>
+            </div>
+            <p class="text-slate-500 font-medium ml-4">Gestiona los conceptos de cobro: colegiatura, inscripción, uniforme, libros y más</p>
+          </div>
+        </div>
+        <div id="catalogoContainer">
+          <div class="flex items-center gap-3 py-10 justify-center text-slate-400">
+            <div class="w-5 h-5 border-2 border-[#0B63C7] border-t-transparent rounded-full animate-spin"></div>
+            Cargando catálogo...
+          </div>
+        </div>
+      </section>
+
 </main> <!-- Cierre de .main -->
     </div> <!-- Cierre de .app-content-wrapper -->
   </div> <!-- Cierre de .app -->

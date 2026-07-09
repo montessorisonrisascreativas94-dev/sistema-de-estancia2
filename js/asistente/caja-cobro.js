@@ -106,47 +106,101 @@ export function renderCajaCobro() {
 }
 
 async function _loadStudents() {
-  const tbody = $el('cajaTableBody');
-  if (!tbody) return;
+    const tbody = $el('cajaTableBody');
+    if (!tbody) return;
+
+    try {
+      const { data: students } = await supabase.from('students')
+        .select(`
+          id, name, matricula, p1_name,
+          classrooms (name, level),
+          student_enrollments!left (
+            id,
+            student_charges!left (id, concept, amount, status, due_date)
+          )
+        `)
+        .eq('is_active', true)
+        .is('deleted_at', null)
+        .limit(200);
+
+      const processedStudents = (students || []).map(s => {
+        const enroll = s.student_enrollments?.[0];
+        const charges = (enroll?.student_charges || []).filter(c => ['pending','overdue'].includes(c.status));
+        const totalOwed = charges.reduce((sum, c) => sum + (c.amount || 0), 0;
+        const hasMora = charges.some(c => c.due_date && new Date(c.due_date) < new Date());
+        const status = charges.some(c => c.status === 'overdue') ? 'overdue' 
+                     : charges.length > 0 ? 'pending' 
+                     : 'paid';
+
+        return {
+          ...s,
+          charges,
+          totalOwed,
+          hasMora,
+          status,
+          earliestDueDate: charges.length ? charges.sort((a,b)=>new Date(a.due_date)-new Date(b.due_date))[0].due_date : null
+        };
+      });
+
+      _state.students = processedStudents;
+      $el('totalPendientes').textContent = `${processedStudents.filter(s => s.status !== 'paid').length} estudiantes`;
+      _renderTable(processedStudents);
+      await _loadPendingTransfers(); // Load pending parent payments
+    } catch (e) {
+      console.error('Error loading students', e);
+    }
+  }
+
+async function _loadPendingTransfers() {
+  const container = $el('transferenciasPendientes');
+  if (!container) return;
 
   try {
-    const { data: students } = await supabase.from('students')
+    const { data: payments } = await supabase
+      .from('payments')
       .select(`
-        id, name, matricula, p1_name,
-        classrooms (name, level),
-        student_enrollments!left (
-          id,
-          student_charges!left (id, concept, amount, status, due_date)
-        )
+        id, student_id, amount, concept, method, bank, evidence_url, fiscal_receipt_url, month_paid, notes, created_at,
+        students (name, classrooms (name))
       `)
-      .eq('is_active', true)
-      .is('deleted_at', null)
-      .limit(200);
+      .eq('status', 'review')
+      .order('created_at', { ascending: false });
 
-    const processedStudents = (students || []).map(s => {
-      const enroll = s.student_enrollments?.[0];
-      const charges = (enroll?.student_charges || []).filter(c => ['pending','overdue'].includes(c.status));
-      const totalOwed = charges.reduce((sum, c) => sum + (c.amount || 0), 0);
-      const hasMora = charges.some(c => c.due_date && new Date(c.due_date) < new Date());
-      const status = charges.some(c => c.status === 'overdue') ? 'overdue' 
-                   : charges.length > 0 ? 'pending' 
-                   : 'paid';
+    if (!payments || payments.length === 0) {
+      container.innerHTML = '<div class="text-center py-4 text-slate-400 text-sm">Sin transferencias pendientes</div>';
+      return;
+    }
 
-      return {
-        ...s,
-        charges,
-        totalOwed,
-        hasMora,
-        status,
-        earliestDueDate: charges.length ? charges.sort((a,b)=>new Date(a.due_date)-new Date(b.due_date))[0].due_date : null
-      };
-    });
+    container.innerHTML = payments.map(p => `
+      <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
+        <div class="flex justify-between items-start">
+          <div>
+            <p class="font-black text-slate-800">${Helpers.escapeHTML(p.students?.name || 'Estudiante desconocido')}</p>
+            <p class="text-xs text-slate-500">${p.students?.classrooms?.name || ''} · ${Helpers.formatDate(p.created_at)}</p>
+          </div>
+          <p class="font-black text-lg text-slate-800">${fmt(p.amount)}</p>
+        </div>
+        <div class="grid grid-cols-2 gap-2 text-xs">
+          <div><span class="font-bold text-slate-500">Concepto:</span> ${Helpers.escapeHTML(p.concept || 'Mensualidad')}</div>
+          <div><span class="font-bold text-slate-500">Mes:</span> ${Helpers.escapeHTML(p.month_paid || '')}</div>
+          ${p.bank ? `<div><span class="font-bold text-slate-500">Banco:</span> ${Helpers.escapeHTML(p.bank)}</div>` : ''}
+        </div>
+        ${p.evidence_url ? `<div class="text-xs"><span class="font-bold text-slate-500">Comprobante:</span> <a href="${p.evidence_url}" target="_blank" class="text-blue-600 hover:underline">Ver</a></div>` : ''}
+        ${p.fiscal_receipt_url ? `<div class="text-xs"><span class="font-bold text-slate-500">Comprobante Fiscal:</span> <a href="${p.fiscal_receipt_url}" target="_blank" class="text-indigo-600 hover:underline">Ver</a></div>` : ''}
+        <div class="flex gap-2 mt-2">
+          <button onclick="CajaCobro.approvePayment(${p.id})" class="flex-1 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-black text-xs rounded-xl hover:from-green-600 transition-all">
+            <i data-lucide="check" class="w-3 h-3 inline mr-1"></i> Aprobar
+          </button>
+          <button onclick="CajaCobro.rejectPayment(${p.id})" class="flex-1 py-2 bg-gradient-to-r from-red-500 to-rose-600 text-white font-black text-xs rounded-xl hover:from-red-600 transition-all">
+            <i data-lucide="x" class="w-3 h-3 inline mr-1"></i> Rechazar
+          </button>
+        </div>
+      </div>
+    `).join('');
 
-    _state.students = processedStudents;
-    $el('totalPendientes').textContent = `${processedStudents.filter(s => s.status !== 'paid').length} estudiantes`;
-    _renderTable(processedStudents);
+    if (window.lucide) lucide.createIcons();
   } catch (e) {
-    console.error('Error loading students', e);
+    console.error('Error loading pending transfers', e);
+    container.innerHTML = '<div class="text-center py-4 text-red-400 text-sm">Error al cargar transferencias</div>';
   }
 }
 
@@ -183,16 +237,62 @@ function _renderTable(students) {
 }
 
 export const CajaCobro = {
-  _applyFilters() {
-    const q = $el('cajaSearch')?.value?.toLowerCase() || '';
-    const filtered = _state.students.filter(s => {
-      const name = s.name?.toLowerCase();
-      const mat = s.matricula?.toLowerCase();
-      return (name && name.includes(q)) || (mat && mat.includes(q));
-    });
-    $el('totalPendientes').textContent = `${filtered.filter(s => s.status !== 'paid').length} estudiantes`;
-    _renderTable(filtered);
-  },
+    _applyFilters() {
+      const q = $el('cajaSearch')?.value?.toLowerCase() || '';
+      const filtered = _state.students.filter(s => {
+        const name = s.name?.toLowerCase();
+        const mat = s.matricula?.toLowerCase();
+        return (name && name.includes(q)) || (mat && mat.includes(q));
+      });
+      $el('totalPendientes').textContent = `${filtered.filter(s => s.status !== 'paid').length} estudiantes`;
+      _renderTable(filtered);
+    },
+
+    async approvePayment(paymentId) {
+      if (!confirm('¿Estás seguro de aprobar este pago?')) return;
+
+      try {
+        const { error } = await supabase
+          .from('payments')
+          .update({
+            status: 'paid',
+            paid_date: new Date().toISOString()
+          })
+          .eq('id', paymentId);
+
+        if (error) throw error;
+
+        Helpers.toast('Pago aprobado!', 'success');
+        await _loadPendingTransfers(); // Refresh the list
+        await _loadStudents(); // Refresh the student list
+      } catch (e) {
+        console.error('Error approving payment', e);
+        Helpers.toast('Error al aprobar pago', 'error');
+      }
+    },
+
+    async rejectPayment(paymentId) {
+      const reason = prompt('¿Por qué estás rechazando este pago?');
+      if (!reason) return;
+
+      try {
+        const { error } = await supabase
+          .from('payments')
+          .update({
+            status: 'rejected',
+            notes: reason
+          })
+          .eq('id', paymentId);
+
+        if (error) throw error;
+
+        Helpers.toast('Pago rechazado', 'info');
+        await _loadPendingTransfers(); // Refresh
+      } catch (e) {
+        console.error('Error rejecting payment', e);
+        Helpers.toast('Error al rechazar pago', 'error');
+      }
+    },
 
   async selectStudent(studentId) {
     const { data: student } = await supabase.from('students')
@@ -405,145 +505,127 @@ function openCobroModal() {
   const total = totalCart + _state.totalMora - _state.totalDiscount;
 
   const modalHTML = `
-  <div class="fixed inset-0 bg-black/60 backdrop-blur-sm z-9999 flex items-center justify-center p-4" id="cajaModalOverlay">
-    <div class="bg-white rounded-3xl overflow-hidden w-full max-w-6xl max-h-[95vh] shadow-2xl">
-      <div class="p-6 border-b border-slate-100" style="background: linear-gradient(135deg, #0d9488, #0f766e)">
-        <div class="flex items-center justify-between flex-wrap gap-4">
-          <div class="flex items-center gap-4">
-            <div class="w-16 h-16 rounded-2xl bg-white/20 flex items-center justify-center text-white text-3xl font-black">
+  <div class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-start justify-center p-4 overflow-y-auto" id="cajaModalOverlay">
+    <div class="bg-white rounded-3xl overflow-hidden w-full max-w-3xl my-4 shadow-2xl">
+      <div class="p-5 border-b border-slate-100" style="background: linear-gradient(135deg, #0B63C7, #0850A0)">
+        <div class="flex items-center justify-between gap-3">
+          <div class="flex items-center gap-3">
+            <div class="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center text-white text-2xl font-black flex-shrink-0">
               ${s.name.charAt(0).toUpperCase()}
             </div>
-            <div class="text-white">
-              <h3 class="text-xl font-black">${Helpers.escapeHTML(s.name)}</h3>
-              <p class="text-sm font-bold opacity-90">${s.classrooms?.name || '—'} · Matrícula: ${s.matricula || '—'}</p>
-              <p class="text-xs font-bold opacity-80 mt-1">Padre/Tutor: ${Helpers.escapeHTML(s.p1_name || '—')}</p>
+            <div class="text-white min-w-0">
+              <h3 class="text-lg font-black truncate">${Helpers.escapeHTML(s.name)}</h3>
+              <p class="text-xs font-bold opacity-80 truncate">${s.classrooms?.name || '—'} · ${s.matricula || '—'}</p>
             </div>
           </div>
-          <div class="text-right text-white">
-            <div class="text-xs font-bold opacity-80 uppercase">Balance General</div>
-            <div class="text-2xl font-black">RD$0</div>
-            <div class="text-xs opacity-80 mt-1">Último pago: —</div>
-          </div>
+          <button onclick="closeCobroModal()" class="w-9 h-9 flex items-center justify-center bg-white/20 hover:bg-white/30 rounded-xl text-white transition-all flex-shrink-0">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
         </div>
       </div>
 
-      <div class="p-6 grid grid-cols-1 lg:grid-cols-5 gap-6 bg-slate-50/50 overflow-y-auto">
-        <div class="lg:col-span-2 space-y-4">
-          <div class="bg-white rounded-2xl border border-slate-100 p-4">
-            <h4 class="text-sm font-black text-slate-800 mb-3">Estado financiero</h4>
-            <p class="text-xs text-slate-400 mb-2">${new Date().getFullYear()}-${(new Date().getFullYear()+1).toString().slice(-2)}</p>
-            <div class="grid grid-cols-6 gap-1">
-              ${months.map((m, i) => {
-                const isPaid = false, isOverdue = i < new Date().getMonth(), isFuture = i > new Date().getMonth();
-                const clr = isPaid ? 'bg-green-100 text-green-800' : isOverdue ? 'bg-red-100 text-red-800' : isFuture ? 'bg-slate-100 text-slate-500' : 'bg-teal-50 text-teal-800';
-                return `<div class="p-2 rounded-xl text-center ${clr}"><div class="text-xs font-black">${m.slice(0,3)}</div><div class="text-lg">${isPaid ? '✓' : isOverdue ? '🔴' : '⚪'}</div></div>`
-              }).join('')}
-            </div>
-          </div>
-          <div class="bg-white rounded-2xl border border-slate-100 p-4">
-            <h4 class="text-sm font-black text-slate-800 mb-3">Cuotas pendientes</h4>
-            <div class="space-y-2" id="cuotasList">
-              ${(_state.charges || []).map(c => `
-                <label class="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100 cursor-pointer hover:border-teal-300 transition-all">
-                  <input type="checkbox" class="cuota-check w-4 h-4 accent-teal-600"
-                    data-id="${c.id}" data-concept="${Helpers.escapeHTML(c.concept || c.type)}"
-                    data-amount="${c.amount}" onchange="CajaCobro._toggleCuota(this)">
-                  <div class="flex-1 min-w-0">
-                    <div class="text-xs font-bold text-slate-700">${Helpers.escapeHTML(c.concept || c.type)}</div>
-                    <div class="text-[10px] text-slate-400">${c.due_date || ''}</div>
-                  </div>
-                  <div class="text-sm font-black text-slate-800">${fmt(c.amount)}</div>
-                </label>`
-              ).join('')}
-            </div>
+      <div class="p-5 space-y-4 overflow-y-auto max-h-[70vh]">
+        <!-- Estado financiero — meses compactos -->
+        <div class="bg-slate-50 rounded-2xl p-4">
+          <h4 class="text-xs font-black text-slate-600 uppercase tracking-wider mb-3">Estado Mensual ${new Date().getFullYear()}</h4>
+          <div class="grid grid-cols-6 gap-1.5">
+            ${months.map((m, i) => {
+              const isPaid = false;
+              const isOverdue = i < new Date().getMonth();
+              const isCurrent = i === new Date().getMonth();
+              const bg = isPaid ? 'bg-[#E6F7EB] text-[#28B54D]' : isOverdue ? 'bg-red-50 text-red-600' : isCurrent ? 'bg-[#E8F2FF] text-[#0B63C7]' : 'bg-white text-slate-400';
+              const icon = isPaid ? '✓' : isOverdue ? '·' : isCurrent ? '→' : '○';
+              return `<div class="rounded-xl p-1.5 text-center border border-slate-100 ${bg}">
+                <div class="text-[9px] font-black uppercase">${m.slice(0,3)}</div>
+                <div class="text-sm font-black leading-none mt-0.5">${icon}</div>
+              </div>`;
+            }).join('')}
           </div>
         </div>
 
-        <div class="lg:col-span-3 space-y-4">
-          <div class="bg-white rounded-2xl border border-slate-100 p-4">
-            <div class="flex items-center justify-between mb-3">
-              <h4 class="text-sm font-black text-slate-800">Otros conceptos</h4>
-              <button onclick="CajaCobro._openConceptModal()" class="p-2 text-white rounded-lg text-xs font-bold" style="background:#0d9488">+ Agregar</button>
-            </div>
-            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
-              ${_state.concepts.map(conc => `
-                <div class="p-3 text-center border-2 border-slate-100 rounded-xl hover:border-teal-300 hover:bg-teal-50 transition-all relative group">
-                  <button onclick='CajaCobro._addCatalogConcept(${JSON.stringify({id: conc.id, label: conc.name, amount: conc.amount}).replace(/'/g, "&apos;")})' class="w-full">
-                    <div class="text-xs font-bold text-slate-700">${Helpers.escapeHTML(conc.name)}</div>
-                    ${conc.amount>0 ? `<div class="text-sm font-black text-slate-800 mt-1">${fmt(conc.amount)}</div>` : ''}
-                  </button>
-                  <div class="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                    <button onclick='event.stopPropagation(); CajaCobro._openConceptModal(${JSON.stringify(conc).replace(/'/g, "&apos;")})' class="p-1 bg-yellow-100 text-yellow-700 rounded">
-                      <i data-lucide="edit" class="w-3 h-3"></i>
-                    </button>
-                    <button onclick="event.stopPropagation(); CajaCobro._deleteConcept(${conc.id})" class="p-1 bg-red-100 text-red-700 rounded">
-                      <i data-lucide="trash" class="w-3 h-3"></i>
-                    </button>
-                  </div>
+        <!-- Cuotas pendientes -->
+        <div class="bg-white rounded-2xl border border-slate-100 p-4">
+          <h4 class="text-sm font-black text-slate-800 mb-3 flex items-center gap-2">
+            <i data-lucide="clock" class="w-4 h-4 text-[#0B63C7]"></i> Cuotas Pendientes
+          </h4>
+          <div class="space-y-2 max-h-48 overflow-y-auto" id="cuotasList">
+            ${(_state.charges || []).length ? (_state.charges || []).map(c => `
+              <label class="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border-2 border-transparent hover:border-[#0B63C7] cursor-pointer transition-all">
+                <input type="checkbox" class="w-4 h-4 accent-[#0B63C7]"
+                  data-id="${c.id}" data-concept="${Helpers.escapeHTML(c.concept || c.type)}"
+                  data-amount="${c.amount}" onchange="CajaCobro._toggleCuota(this)">
+                <div class="flex-1 min-w-0">
+                  <div class="text-xs font-black text-slate-700 truncate">${Helpers.escapeHTML(c.concept || c.type)}</div>
+                  <div class="text-[10px] text-slate-400">${c.due_date || ''}</div>
                 </div>
-              `).join('')}
-            </div>
+                <div class="text-sm font-black text-slate-800 flex-shrink-0">RD$${fmtN(c.amount)}</div>
+              </label>`).join('')
+            : '<p class="text-xs text-slate-400 text-center py-3">Sin cuotas pendientes</p>'}
           </div>
+        </div>
 
-          <div class="bg-white rounded-2xl border border-slate-100 p-4">
-            <h4 class="text-sm font-black text-slate-800 mb-3 flex items-center gap-2">
-              <i data-lucide="shopping-cart" class="w-4 h-4 text-teal-600"></i>
-              Carrito
-              <span id="ccCartCount" class="ml-auto text-xs font-black text-teal-600 bg-teal-50 px-2 py-0.5 rounded-full">0 items</span>
+        <!-- Otros conceptos (catálogo) -->
+        <div class="bg-white rounded-2xl border border-slate-100 p-4">
+          <div class="flex items-center justify-between mb-3">
+            <h4 class="text-sm font-black text-slate-800 flex items-center gap-2">
+              <i data-lucide="tag" class="w-4 h-4 text-[#FF7A00]"></i> Conceptos Extra
             </h4>
-            <div id="cartList" class="space-y-2 min-h-16">
-              ${_state.cart.length ? _state.cart.map((i, idx) => `
-                <div class="flex items-center justify-between p-3 bg-teal-50 rounded-xl border border-teal-100">
-                  <div class="flex-1 min-w-0">
-                    <div class="text-sm font-bold text-slate-700">${Helpers.escapeHTML(i.label)}</div>
-                    ${i.mora ? `<div class="text-[10px] text-red-500">+mora ${fmt(i.mora)}</div>` : ''}
-                  </div>
-                  <div class="font-black text-teal-700 mx-3">${fmt(i.amount + (i.mora||0))}</div>
-                  <button onclick="CajaCobro.removeFromCart(${idx})" class="w-6 h-6 rounded-lg bg-red-50 text-red-400 hover:bg-red-100 flex items-center justify-center">
-                    <i data-lucide="x" class="w-3 h-3"></i>
-                  </button>
-                </div>
-              `).join('') : `
-                <div class="text-center py-4 text-slate-300 text-sm font-bold">
-                  <i data-lucide="shopping-cart" class="w-8 h-8 mx-auto mb-2 opacity-40"></i>
-                  Selecciona conceptos
-                </div>
-              `}
-            </div>
-            <div class="mt-4 pt-4 border-t border-slate-100">
-              <div class="flex justify-between text-sm py-1"><span class="text-slate-600">Subtotal</span><span class="font-bold text-slate-800">${fmt(totalCart)}</span></div>
-              ${_state.totalDiscount>0 ? `<div class="flex justify-between text-sm py-1 text-green-600"><span>Descuento</span><span class="font-bold">-${fmt(_state.totalDiscount)}</span></div>` : ''}
-              ${_state.totalMora>0 ? `<div class="flex justify-between text-sm py-1 text-red-600"><span>Mora</span><span class="font-bold">+${fmt(_state.totalMora)}</span></div>` : ''}
-              <div class="flex justify-between text-lg font-black py-2 border-t border-slate-200 mt-1">
-                <span class="text-slate-800">TOTAL</span>
-                <span id="ccTotal" class="text-teal-700">${fmt(total)}</span>
-              </div>
-            </div>
           </div>
-
-          <div class="bg-white rounded-2xl border border-slate-100 p-4">
-            <h4 class="text-sm font-black text-slate-800 mb-3">Método de pago</h4>
-            <div class="grid grid-cols-2 sm:grid-cols-5 gap-2">
-              ${[
-                {id:'efectivo', label:'💵 Efectivo'},
-                {id:'tarjeta', label:'💳 Tarjeta'},
-                {id:'transferencia', label:'🏦 Transferencia'},
-                {id:'cheque', label:'📝 Cheque'},
-                {id:'mixto', label:'🔀 Mixto'},
-              ].map(m => `
-                <button onclick="CajaCobro._selectPaymentMethod('${m.id}')" data-method="${m.id}"
-                  class="p-3 text-center border-2 border-slate-100 rounded-xl hover:border-teal-300 transition-all">
-                  <div class="text-xs font-bold text-slate-700">${m.label}</div>
-                </button>
-              `).join('')}
-            </div>
-            <div id="paymentMethodDetails" class="mt-4"></div>
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            ${_state.concepts.map(conc => `
+              <button onclick='CajaCobro._addCatalogConcept(${JSON.stringify({id: conc.id, label: conc.name, amount: conc.amount}).replace(/'/g, "&apos;")})'
+                class="p-3 text-left border-2 border-slate-100 rounded-xl hover:border-[#0B63C7] hover:bg-[#E8F2FF] transition-all">
+                <div class="text-xs font-black text-slate-700 truncate">${Helpers.escapeHTML(conc.name)}</div>
+                ${conc.amount > 0 ? `<div class="text-sm font-black text-[#0B63C7] mt-0.5">RD$${fmtN(conc.amount)}</div>` : '<div class="text-[10px] text-slate-400 mt-0.5">Monto libre</div>'}
+              </button>`).join('')}
           </div>
         </div>
+
+        <!-- Carrito -->
+        <div class="bg-white rounded-2xl border border-slate-100 p-4">
+          <h4 class="text-sm font-black text-slate-800 mb-3 flex items-center gap-2">
+            <i data-lucide="shopping-cart" class="w-4 h-4 text-[#0B63C7]"></i>
+            Carrito
+            <span id="ccCartCount" class="ml-auto text-xs font-black text-[#0B63C7] bg-[#E8F2FF] px-2 py-0.5 rounded-full">0 items</span>
+          </h4>
+          <div id="cartList" class="space-y-2 min-h-[48px]">
+            <div class="text-center py-3 text-slate-300 text-xs font-bold">Selecciona conceptos arriba</div>
+          </div>
+          <div class="mt-3 pt-3 border-t border-slate-100 space-y-1">
+            ${_state.totalDiscount > 0 ? `<div class="flex justify-between text-xs text-green-600"><span class="font-bold">Descuento</span><span class="font-black">-RD$${fmtN(_state.totalDiscount)}</span></div>` : ''}
+            ${_state.totalMora > 0 ? `<div class="flex justify-between text-xs text-red-600"><span class="font-bold">Mora</span><span class="font-black">+RD$${fmtN(_state.totalMora)}</span></div>` : ''}
+            <div class="flex justify-between items-center pt-2">
+              <span class="text-sm font-black text-slate-800 uppercase">TOTAL</span>
+              <span id="ccTotal" class="text-xl font-black text-[#0B63C7]">${fmt(total)}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Método de pago -->
+        <div class="bg-white rounded-2xl border border-slate-100 p-4">
+          <h4 class="text-sm font-black text-slate-800 mb-3">Método de Pago</h4>
+          <div class="grid grid-cols-3 gap-2">
+            ${[
+              {id:'efectivo', label:'💵 Efectivo'},
+              {id:'tarjeta', label:'💳 Tarjeta'},
+              {id:'transferencia', label:'🏦 Transferencia'},
+            ].map(m => `
+              <button onclick="CajaCobro._selectPaymentMethod('${m.id}')" data-method="${m.id}"
+                class="py-3 px-2 text-center border-2 border-slate-100 rounded-xl hover:border-[#0B63C7] transition-all text-xs font-black text-slate-700">
+                ${m.label}
+              </button>`).join('')}
+          </div>
+          <div id="paymentMethodDetails" class="mt-3"></div>
+        </div>
       </div>
-      <div class="p-6 bg-white border-t border-slate-100 flex items-center justify-between gap-4">
-        <button onclick="closeCobroModal()" class="px-5 py-3 text-slate-500 font-black text-xs uppercase border-2 border-slate-200 rounded-2xl hover:bg-slate-50 transition-all">Cancelar</button>
-        <button onclick="CajaCobro.confirmPayment()" id="btnConfirmarPago" disabled class="px-8 py-3 text-white font-black text-sm uppercase rounded-2xl transition-all" style="background:linear-gradient(135deg,#0d9488,#0f766e); box-shadow:0 4px 12px rgba(13,148,136,.3)">COBRAR Y EMITIR FACTURA</button>
+
+      <div class="p-4 bg-white border-t border-slate-100 flex items-center justify-between gap-3">
+        <button onclick="closeCobroModal()" class="px-5 py-2.5 text-slate-500 font-black text-xs uppercase border-2 border-slate-200 rounded-xl hover:bg-slate-50 transition-all">Cancelar</button>
+        <button onclick="CajaCobro.confirmPayment()" id="btnConfirmarPago" disabled
+          class="px-8 py-2.5 text-white font-black text-sm uppercase rounded-xl transition-all disabled:opacity-50"
+          style="background:linear-gradient(135deg,#0B63C7,#0850A0); box-shadow:0 4px 12px rgba(11,99,199,.3)">
+          COBRAR Y EMITIR FACTURA
+        </button>
       </div>
     </div>
   </div>`;

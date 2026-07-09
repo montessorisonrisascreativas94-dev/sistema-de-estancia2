@@ -1009,9 +1009,19 @@
                     </div>
                     
                     <div>
-                      <label class="block text-xs font-black text-[#64748B] uppercase tracking-[0.2em] mb-1.5">Mes Correspondiente</label>
-                      <select id="paymentMonth" class="w-full p-3 border-2 border-[#E2E8F0] rounded-xl bg-[#F8FAFC] focus:bg-white focus:ring-2 focus:ring-[#28B54D] focus:border-[#28B54D] outline-none transition-all font-medium text-[#1A2340]" required>
-                        <option value="">Seleccionar mes...</option>
+                      <label class="block text-xs font-black text-[#64748B] uppercase tracking-[0.2em] mb-1.5">Concepto <span class="text-[#EF4444]">*</span></label>
+                      <select id="paymentConcept" class="w-full p-3 border-2 border-[#E2E8F0] rounded-xl bg-[#F8FAFC] focus:bg-white focus:ring-2 focus:ring-[#28B54D] focus:border-[#28B54D] outline-none transition-all font-medium text-[#1A2340]" required>
+                        <option value="mensualidad">Mensualidad</option>
+                        <option value="uniforme">Uniforme</option>
+                        <option value="libros">Libros</option>
+                        <option value="materiales">Materiales</option>
+                        <option value="otro">Otro</option>
+                      </select>
+                    </div>
+                    
+                    <div>
+                      <label class="block text-xs font-black text-[#64748B] uppercase tracking-[0.2em] mb-1.5">Mes(es) Correspondiente(s) (mantén presionado Ctrl para seleccionar múltiples)</label>
+                      <select id="paymentMonth" class="w-full p-3 border-2 border-[#E2E8F0] rounded-xl bg-[#F8FAFC] focus:bg-white focus:ring-2 focus:ring-[#28B54D] focus:border-[#28B54D] outline-none transition-all font-medium text-[#1A2340]" multiple required size="6">
                       </select>
                       <script>
                         (function() {
@@ -1063,9 +1073,15 @@
                     </div>
 
                     <div>
-                      <label class="block text-xs font-black text-[#64748B] uppercase tracking-[0.2em] mb-1.5">Comprobante</label>
-                      <input type="file" id="paymentFileInput" accept="image/png,image/jpeg,image/webp" class="w-full text-sm text-[#64748B] file:mr-4 file:py-3 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-black file:bg-[#28B54D] file:text-white hover:file:bg-[#1A8035] transition-all cursor-pointer shadow-md" required>
+                      <label class="block text-xs font-black text-[#64748B] uppercase tracking-[0.2em] mb-1.5">Comprobante de Transferencia</label>
+                      <input type="file" id="paymentFileInput" accept="image/png,image/jpeg,image/webp,application/pdf" class="w-full text-sm text-[#64748B] file:mr-4 file:py-3 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-black file:bg-[#28B54D] file:text-white hover:file:bg-[#1A8035] transition-all cursor-pointer shadow-md" required>
                       <p class="text-[10px] text-[#64748B] mt-1 italic ml-1">Puedes tomar una foto o seleccionar una de tu galería.</p>
+                    </div>
+                    
+                    <div>
+                      <label class="block text-xs font-black text-[#64748B] uppercase tracking-[0.2em] mb-1.5">Comprobante Fiscal (opcional)</label>
+                      <input type="file" id="paymentFiscalInput" accept="image/png,image/jpeg,image/webp,application/pdf" class="w-full text-sm text-[#64748B] file:mr-4 file:py-3 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-black file:bg-[#0B63C7] file:text-white hover:file:bg-[#0850A0] transition-all cursor-pointer shadow-md">
+                      <p class="text-[10px] text-[#64748B] mt-1 italic ml-1">Agrega tu comprobante fiscal si lo tienes.</p>
                     </div>
 
                     <button id="btnSubmitPayment" type="submit" class="w-full py-3.5 rounded-xl font-bold bg-[#28B54D] text-white hover:bg-[#1A8035] active:scale-95 transition-all flex items-center justify-center gap-2 shadow-lg shadow-[#28B54D]/20">
