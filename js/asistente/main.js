@@ -9,6 +9,7 @@ import { WallModule } from '../shared/wall.js';
 import { ChatModule } from '../shared/chat.js';
 import { StudentsModule } from './modules/students.js';
 import { renderCajaCobro, CajaCobro } from './caja-cobro.js';
+import { initCajaCobro, CajaCobroV2 } from '../shared/caja-cobro-v2.js';
 import { auditLog } from '../shared/db-utils.js';
 import { RoomsModule } from './modules/rooms.js';
 import { DashboardModule } from './modules/dashboard.js';
@@ -404,8 +405,7 @@ function initNavigation() {
             InscripcionesModule.load();
             break;
           case 'pagos':
-            renderCajaCobro();
-            // Inicializar el historial en background
+            initCajaCobro('pagosContainer');
             PaymentsModule.init().catch(()=>{});
             import('../shared/payment-queue.js').then(m =>
               m.PaymentQueue.init('payment-queue-container')

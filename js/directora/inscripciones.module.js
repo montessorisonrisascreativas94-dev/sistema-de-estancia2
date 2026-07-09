@@ -76,7 +76,7 @@ export async function loadInscripciones() {
   try {
     const { data, error } = await supabase
       .from('student_preregistrations')
-      .select('id, student_name, birth_date, gender, section, schedule, p1_name, p1_phone, p1_email, status, created_at')
+      .select('id, student_name, section, schedule, p1_name, p1_phone, p1_email, status, created_at')
       .order('created_at', { ascending: false });
 
     if (error) throw error;
@@ -150,10 +150,6 @@ export async function loadInscripciones() {
 }
 
 function _renderRow(r) {
-  const age = r.birth_date
-    ? Math.floor((Date.now() - new Date(r.birth_date)) / (365.25 * 24 * 3600 * 1000))
-    : '?';
-
   const admitBtn = r.status === 'pending'
     ? `<button onclick="InscripcionesModule.openAdmitModal(${r.id})"
          class="px-3 py-1.5 bg-[#0B63C7] text-white rounded-xl text-[10px] font-black uppercase hover:bg-[#0850A0] transition-all shadow-sm">
@@ -165,7 +161,6 @@ function _renderRow(r) {
     <tr data-status="${esc(r.status)}" class="hover:bg-slate-50 transition-colors">
       <td class="px-4 py-3">
         <div class="font-bold text-slate-800">${esc(r.student_name)}</div>
-        <div class="text-[10px] text-slate-400 font-bold">${age} años · ${esc(r.gender || '')}</div>
       </td>
       <td class="px-4 py-3 hidden md:table-cell">
         <span class="px-2 py-0.5 bg-[#E8F2FF] text-[#0B63C7] text-[10px] font-black rounded-full">${esc(r.section || '—')}</span>
@@ -556,7 +551,6 @@ export async function admitStudent(preregId) {
     const emailUser     = v('stEmailUser') || reg.p1_email;
     const siblingId     = v('stSiblingId');
 
-    if (!classroomId) throw new Error('Selecciona un aula');
     if (!password || password.length < 6) throw new Error('La contraseña debe tener al menos 6 caracteres');
     if (!emailUser)    throw new Error('El registro no tiene email del tutor');
 
@@ -564,13 +558,10 @@ export async function admitStudent(preregId) {
     const studentPayload = {
       name:                  v('stName') || reg.student_name,
       matricula,
-      classroom_id:          parseInt(classroomId),
+      classroom_id:          classroomId ? parseInt(classroomId) : null,
       schedule:              v('stHorario') || reg.schedule,
       start_date:            document.getElementById('stJoinedDate')?.value || new Date().toISOString().split('T')[0],
       is_active:             document.getElementById('active')?.checked ?? true,
-      birth_date:            reg.birth_date,
-      gender:                reg.gender,
-      blood_type:            v('bloodType') || reg.blood_type,
       allergies:             v('allergies') || reg.allergies,
       authorized_pickup:     v('authorized'),
       authorized_pickup_phone: v('authorizedPhone'),

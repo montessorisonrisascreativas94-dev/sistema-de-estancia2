@@ -29,7 +29,8 @@ let _state = {
   totalMora: 0,
   totalDiscount: 0,
   selectedPaymentMethod: null,
-  students: []
+  students: [],
+  concepts: [],
 };
 
 const $el = id => document.getElementById(id);
@@ -101,6 +102,7 @@ export function renderCajaCobro() {
   `;
   if (window.lucide) lucide.createIcons();
   _loadStudents();
+  _loadConcepts();
 }
 
 async function _loadStudents() {
@@ -169,7 +171,7 @@ function _renderTable(students) {
               Cobrar
             </button>
           ` : `
-            <button class="px-3 py-1 text-xs font-black uppercase text-slate-600 bg-slate-100 rounded-xl">
+            <button onclick="CajaCobro.selectStudent(${s.id})" class="px-3 py-1 text-xs font-black uppercase text-slate-600 bg-slate-100 rounded-xl hover:bg-slate-200 transition-colors">
               Ver
             </button>
           `}
@@ -404,7 +406,7 @@ function openCobroModal() {
 
   const modalHTML = `
   <div class="fixed inset-0 bg-black/60 backdrop-blur-sm z-9999 flex items-center justify-center p-4" id="cajaModalOverlay">
-    <div class="bg-white rounded-3xl overflow-hidden w-full max-w-7xl max-h-[95vh] shadow-2xl">
+    <div class="bg-white rounded-3xl overflow-hidden w-full max-w-6xl max-h-[95vh] shadow-2xl">
       <div class="p-6 border-b border-slate-100" style="background: linear-gradient(135deg, #0d9488, #0f766e)">
         <div class="flex items-center justify-between flex-wrap gap-4">
           <div class="flex items-center gap-4">
@@ -425,8 +427,8 @@ function openCobroModal() {
         </div>
       </div>
 
-      <div class="p-6 grid grid-cols-1 lg:grid-cols-3 gap-6 bg-slate-50/50 overflow-y-auto">
-        <div class="lg:col-span-1 space-y-4">
+      <div class="p-6 grid grid-cols-1 lg:grid-cols-5 gap-6 bg-slate-50/50 overflow-y-auto">
+        <div class="lg:col-span-2 space-y-4">
           <div class="bg-white rounded-2xl border border-slate-100 p-4">
             <h4 class="text-sm font-black text-slate-800 mb-3">Estado financiero</h4>
             <p class="text-xs text-slate-400 mb-2">${new Date().getFullYear()}-${(new Date().getFullYear()+1).toString().slice(-2)}</p>
@@ -457,16 +459,28 @@ function openCobroModal() {
           </div>
         </div>
 
-        <div class="lg:col-span-2 space-y-4">
+        <div class="lg:col-span-3 space-y-4">
           <div class="bg-white rounded-2xl border border-slate-100 p-4">
-            <h4 class="text-sm font-black text-slate-800 mb-3">Otros conceptos</h4>
-            <div class="grid grid-cols-2 sm:grid-cols-5 gap-2">
-              ${CONCEPTOS_CATALOGO.map(conc => `
-                <button onclick='CajaCobro._addCatalogConcept(${JSON.stringify(conc).replace(/'/g, "&apos;")})'
-                  class="p-3 text-center border-2 border-slate-100 rounded-xl hover:border-teal-300 hover:bg-teal-50 transition-all">
-                  <div class="text-xs font-bold text-slate-700">${conc.label}</div>
-                  ${conc.amount>0 ? `<div class="text-sm font-black text-slate-800 mt-1">${fmt(conc.amount)}</div>` : ''}
-                </button>
+            <div class="flex items-center justify-between mb-3">
+              <h4 class="text-sm font-black text-slate-800">Otros conceptos</h4>
+              <button onclick="CajaCobro._openConceptModal()" class="p-2 text-white rounded-lg text-xs font-bold" style="background:#0d9488">+ Agregar</button>
+            </div>
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+              ${_state.concepts.map(conc => `
+                <div class="p-3 text-center border-2 border-slate-100 rounded-xl hover:border-teal-300 hover:bg-teal-50 transition-all relative group">
+                  <button onclick='CajaCobro._addCatalogConcept(${JSON.stringify({id: conc.id, label: conc.name, amount: conc.amount}).replace(/'/g, "&apos;")})' class="w-full">
+                    <div class="text-xs font-bold text-slate-700">${Helpers.escapeHTML(conc.name)}</div>
+                    ${conc.amount>0 ? `<div class="text-sm font-black text-slate-800 mt-1">${fmt(conc.amount)}</div>` : ''}
+                  </button>
+                  <div class="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                    <button onclick='event.stopPropagation(); CajaCobro._openConceptModal(${JSON.stringify(conc).replace(/'/g, "&apos;")})' class="p-1 bg-yellow-100 text-yellow-700 rounded">
+                      <i data-lucide="edit" class="w-3 h-3"></i>
+                    </button>
+                    <button onclick="event.stopPropagation(); CajaCobro._deleteConcept(${conc.id})" class="p-1 bg-red-100 text-red-700 rounded">
+                      <i data-lucide="trash" class="w-3 h-3"></i>
+                    </button>
+                  </div>
+                </div>
               `).join('')}
             </div>
           </div>
@@ -539,10 +553,127 @@ function openCobroModal() {
   if (window.lucide) lucide.createIcons();
 }
 
+async function _loadConcepts() {
+  try {
+    const { data, error } = await supabase
+      .from('payment_concepts')
+      .select('*')
+      .order('name');
+    if (error) throw error;
+    _state.concepts = data || [];
+  } catch (e) {
+    console.error('Error loading concepts:', e);
+    // Fall back to static array if table doesn't exist
+    _state.concepts = CONCEPTOS_CATALOGO.map(c => ({ id: c.id, name: c.label, amount: c.amount }));
+  }
+}
+
+function _openConceptModal(concept = null) {
+  const isEdit = !!concept;
+  const modalHTML = `
+  <div class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[10000] flex items-center justify-center p-4" id="conceptModalOverlay">
+    <div class="bg-white rounded-2xl overflow-hidden w-full max-w-md shadow-2xl">
+      <div class="p-5 border-b border-slate-100" style="background: linear-gradient(135deg, #0d9488, #0f766e)">
+        <h3 class="text-lg font-black text-white">${isEdit ? 'Editar Concepto' : 'Nuevo Concepto'}</h3>
+      </div>
+      <div class="p-5">
+        <div class="space-y-4">
+          <div>
+            <label class="block text-xs font-black text-slate-400 uppercase mb-1">Nombre</label>
+            <input id="conceptName" type="text" value="${concept?.name || ''}" class="w-full border-2 border-slate-100 rounded-xl px-3 py-2 text-sm font-bold outline-none focus:border-teal-500">
+          </div>
+          <div>
+            <label class="block text-xs font-black text-slate-400 uppercase mb-1">Monto (RD$)</label>
+            <input id="conceptAmount" type="number" value="${concept?.amount || 0}" class="w-full border-2 border-slate-100 rounded-xl px-3 py-2 text-sm font-bold outline-none focus:border-teal-500">
+          </div>
+        </div>
+      </div>
+      <div class="p-5 border-t border-slate-100 flex justify-end gap-3">
+        <button onclick="CajaCobro._closeConceptModal()" class="px-4 py-2 text-slate-500 font-black text-xs uppercase border-2 border-slate-200 rounded-xl hover:bg-slate-50">Cancelar</button>
+        <button onclick="CajaCobro._saveConcept(${concept?.id || 'null'})" class="px-4 py-2 text-white font-black text-xs uppercase rounded-xl" style="background:#0d9488">${isEdit ? 'Guardar' : 'Crear'}</button>
+      </div>
+    </div>
+  </div>`;
+  const container = document.createElement('div');
+  container.innerHTML = modalHTML;
+  document.body.appendChild(container);
+  if (window.lucide) lucide.createIcons();
+}
+
+function _closeConceptModal() {
+  document.getElementById('conceptModalOverlay')?.remove();
+}
+
+async function _saveConcept(id) {
+  const name = document.getElementById('conceptName').value.trim();
+  const amount = parseFloat(document.getElementById('conceptAmount').value);
+
+  if (!name) {
+    Helpers.toast('Ingresa un nombre', 'warning');
+    return;
+  }
+
+  try {
+    if (id) {
+      // Edit existing
+      const { error } = await supabase
+        .from('payment_concepts')
+        .update({ name, amount })
+        .eq('id', id);
+      if (error) throw error;
+      Helpers.toast('Concepto actualizado', 'success');
+    } else {
+      // Create new
+      const { error } = await supabase
+        .from('payment_concepts')
+        .insert({ name, amount });
+      if (error) throw error;
+      Helpers.toast('Concepto creado', 'success');
+    }
+    _closeConceptModal();
+    await _loadConcepts();
+    // Re-render cobro modal if open
+    if (_state.selectedStudent) {
+      openCobroModal();
+    }
+  } catch (e) {
+    console.error('Error saving concept:', e);
+    Helpers.toast('Error al guardar concepto', 'error');
+  }
+}
+
+async function _deleteConcept(id) {
+  if (!confirm('¿Estás seguro de eliminar este concepto?')) return;
+
+  try {
+    const { error } = await supabase
+      .from('payment_concepts')
+      .delete()
+      .eq('id', id);
+    if (error) throw error;
+    Helpers.toast('Concepto eliminado', 'success');
+    await _loadConcepts();
+    // Re-render cobro modal if open
+    if (_state.selectedStudent) {
+      openCobroModal();
+    }
+  } catch (e) {
+    console.error('Error deleting concept:', e);
+    Helpers.toast('Error al eliminar concepto', 'error');
+  }
+}
+
 function closeCobroModal() {
   const el = document.getElementById('cajaModalOverlay');
   if (el) el.remove();
 }
+
+// Add to CajaCobro object
+CajaCobro._loadConcepts = _loadConcepts;
+CajaCobro._openConceptModal = _openConceptModal;
+CajaCobro._closeConceptModal = _closeConceptModal;
+CajaCobro._saveConcept = _saveConcept;
+CajaCobro._deleteConcept = _deleteConcept;
 
 window.CajaCobro = CajaCobro;
 window.calculateChange = calculateChange;

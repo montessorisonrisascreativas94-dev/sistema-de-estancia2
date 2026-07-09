@@ -454,6 +454,13 @@ export const AcademicCycleModule = {
             </div>
           ` : ''}
         </div>
+        <div>
+          <label class="text-[10px] font-black text-slate-400 uppercase block mb-1">
+            💰 Mensualidad (RD$)
+          </label>
+          <input id="convMonthlyFee" type="number" placeholder="0.00" 
+                 class="w-full border-2 border-slate-100 rounded-xl px-3 py-2.5 text-sm font-bold outline-none focus:border-blue-400">
+        </div>
       </div>
       
       <div class="mt-5 flex flex-wrap justify-end gap-2">
@@ -495,6 +502,7 @@ export const AcademicCycleModule = {
     const classId=$el('convClassroom')?.value||null; 
     const planId=$el('convPlan')?.value||null; 
     const mat=$el('convMatricula')?.value?.trim()||null;
+    const monthlyFee=$el('convMonthlyFee')?.value||null;
     const btn=$el('btnDoConvert'); 
     
     if(btn){
@@ -522,7 +530,7 @@ export const AcademicCycleModule = {
       } catch (rpcError) {
         console.log('RPC no disponible, usando método manual:', rpcError);
         // Método manual si la RPC no existe
-        result = await this._doConvertManual(preinscId, classId, planId, mat);
+        result = await this._doConvertManual(preinscId, classId, planId, mat, monthlyFee);
       }
       
       Helpers.toast('🎉 ¡Alumno inscrito exitosamente!', 'success'); 
@@ -548,7 +556,7 @@ export const AcademicCycleModule = {
     }
   },
   
-  async _doConvertManual(preinscId, classId, planId, mat) {
+  async _doConvertManual(preinscId, classId, planId, mat, monthlyFee) {
     // Obtener datos de preinscripción
     const {data:pre} = await supabase.from('student_preregistrations').select('*').eq('id',preinscId).single();
     if (!pre) throw new Error('Preinscripción no encontrada');
@@ -558,10 +566,10 @@ export const AcademicCycleModule = {
       .from('students')
       .insert({
         name: pre.student_name,
-        birth_date: pre.birth_date,
         classroom_id: classId ? parseInt(classId) : null,
         allergies: pre.allergies,
         matricula: mat,
+        monthly_fee: monthlyFee ? parseFloat(monthlyFee) : null,
         p1_name: pre.p1_name,
         p1_phone: pre.p1_phone,
         p1_email: pre.p1_email,

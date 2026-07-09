@@ -18,7 +18,6 @@ class EnrollmentCycle {
         .from('students')
         .insert([{
           name: data.studentName,
-          birth_date: data.birthDate,
           gender: data.gender,
           allergies: data.allergies,
           parent_id: this.currentUser?.id,

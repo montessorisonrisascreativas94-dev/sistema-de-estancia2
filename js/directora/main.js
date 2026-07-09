@@ -24,7 +24,9 @@ import { RoomsModule } from './rooms.module.js';
 import { AcademicCycleModule } from './academic-cycle.module.js';
 import { InscripcionesModule } from './inscripciones.module.js';
 import { CajaModule } from './caja.module.js';
+import { initCajaCobro, CajaCobroV2 } from '../shared/caja-cobro-v2.js';
 import { AccessModule } from './access.module.js';
+import { SchoolYearModule } from './school-year.module.js';
 
 window.CajaModule = CajaModule;
 import { AttendanceModule } from './attendance.module.js';
@@ -176,6 +178,9 @@ export function goToSection(sectionId) {
       case 'ciclo-escolar':
         _renderCicloEscolar();
         break;
+      case 'ciclo-escolar-config':
+        SchoolYearModule.init();
+        break;
       case 'ciclo-academico':
         import('./academic-cycle.module.js').then(m => m.AcademicCycleModule.init());
         break;
@@ -190,7 +195,7 @@ export function goToSection(sectionId) {
       case 'finanzas':
         _renderFinanzas();
         break;
-      case 'caja':        CajaModule.init();     break;
+      case 'caja':        initCajaCobro('cajaContainer'); break;
       case 'pagos':
         NewPaymentsModule.init();
         break;
@@ -747,9 +752,10 @@ function _renderGestionAcademica() {
  */
 function _renderCicloEscolar() {
   const secs = [
-    { id:'ciclo-academico', icon:'clipboard-pen',  label:'Inscripciones',     desc:'Pre-inscripciones, admisión y ciclos', color:'#0D9488' },
-    { id:'staff-permits',   icon:'calendar-off',   label:'Permisos Staff',    desc:'Ausencias y permisos del personal',    color:'#EC4899' },
-    { id:'accesos',         icon:'qr-code',         label:'Accesos QR',        desc:'Control de entradas y salidas',        color:'#64748B' },
+    { id:'ciclo-escolar-config', icon:'calendar-range', label:'Ciclo Escolar', desc:'Años escolares, calendarios y reinscripción', color:'#0B63C7' },
+    { id:'inscripciones',       icon:'clipboard-pen',   label:'Inscripciones', desc:'Pre-inscripciones y admisión', color:'#0D9488' },
+    { id:'staff-permits',       icon:'calendar-off',    label:'Permisos Staff', desc:'Ausencias y permisos del personal', color:'#EC4899' },
+    { id:'accesos',             icon:'qr-code',          label:'Accesos QR', desc:'Control de entradas y salidas', color:'#64748B' },
   ];
   _renderHub('ciclo-escolar', '📅 Ciclo Escolar', 'Gestión del año escolar, inscripciones, reinscripciones y calendarios', secs);
 }
