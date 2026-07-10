@@ -200,7 +200,7 @@ export function goToSection(sectionId) {
       case 'finanzas':
         _renderFinanzas();
         break;
-      case 'caja':        initCajaCobro('cajaContainer'); break;
+      case 'caja':        CajaModule.init(); break;
       case 'pagos':
         NewPaymentsModule.init();
         break;

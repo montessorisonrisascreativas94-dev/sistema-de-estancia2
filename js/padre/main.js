@@ -430,96 +430,77 @@ function renderHomeCards(student, data) {
 
 // ── Reporte Diario ────────────────────────────────────────────────────────────
 function renderDailySummary(log) {
-  const container = document.getElementById('dailySummaryCard');
-  if (!container) return;
+  // Update time stamp
+  const lastUpEl = document.getElementById('lastUpdateTime');
+  if (lastUpEl) lastUpEl.textContent = new Date().toLocaleTimeString('es-DO', { hour: '2-digit', minute: '2-digit' });
+
+  const timeline = document.getElementById('dailyEmojiTimeline');
+  if (!timeline) return;
+
+  const fmtTime = (iso) => iso ? new Date(iso).toLocaleTimeString('es-DO', { hour: '2-digit', minute: '2-digit', hour12: true }) : '';
 
   if (!log) {
-    container.innerHTML =
-      '<div class="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm text-center opacity-70">' +
-        '<p class="text-3xl mb-2">✨</p>' +
-        '<p class="text-sm font-bold text-slate-400 uppercase tracking-widest">Aún no hay reporte del día</p>' +
-      '</div>';
+    timeline.innerHTML = `
+      <div class="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl">
+        <span class="text-3xl">✨</span>
+        <div>
+          <p class="font-black text-sm text-slate-600">Sin reporte aún</p>
+          <p class="text-xs text-slate-400 font-medium">La maestra actualizará la rutina de hoy</p>
+        </div>
+      </div>`;
     return;
   }
 
-  const student = AppState.get('currentStudent');
-  const isInfant = student?.age_type === 'meses';
+  const rawEvents = log.infant_data || [];
 
-  if (isInfant) {
-    // 🍼 LÍNEA DE TIEMPO PARA BEBÉS
-    const infantData = log.infant_data || [];
-    const hasVomit = infantData.some(e => e.type === 'health' && e.value === 'vomito');
-    
-    container.innerHTML = `
-      <div class="bg-white rounded-2xl p-6 border ${hasVomit ? 'border-rose-200 bg-rose-50/30' : 'border-blue-100'} shadow-sm">
-        <h3 class="font-black text-slate-800 text-base mb-4 flex items-center gap-2">
-          <span class="bg-blue-100 text-blue-700 p-1.5 rounded-lg"><i data-lucide="baby" class="w-4 h-4"></i></span>
-          Cuidado del Bebé - Hoy
-        </h3>
-
-        ${hasVomit ? `
-          <div class="mb-4 p-4 bg-rose-100 border-2 border-rose-200 rounded-2xl flex items-center gap-3 animate-pulse">
-            <span class="text-2xl">⚠️</span>
-            <div>
-              <p class="text-xs font-black text-rose-800 uppercase">Alerta de Salud</p>
-              <p class="text-sm font-bold text-rose-700">Se ha registrado un evento de vómito. Favor estar atentos.</p>
-            </div>
-          </div>
-        ` : ''}
-
-        <div class="relative space-y-4 before:content-[''] before:absolute before:left-[15px] before:top-2 before:bottom-2 before:w-0.5 before:bg-blue-100">
-          ${infantData.length ? infantData.map(e => `
-            <div class="relative pl-10">
-              <div class="absolute left-0 top-1 w-8 h-8 rounded-full bg-white border-2 ${e.type === 'health' ? 'border-rose-400' : 'border-blue-400'} flex items-center justify-center text-sm shadow-sm z-10">
-                ${e.type === 'milk' ? '🍼' : e.type === 'health' ? '🤢' : e.type === 'sleep' ? '💤' : '💩'}
-              </div>
-              <p class="text-[10px] font-black text-slate-400 uppercase">${new Date(e.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</p>
-              <p class="text-sm font-bold text-slate-700">
-                ${e.type === 'milk' ? `Tomó ${e.value} de leche` : 
-                  e.type === 'health' ? `Reportó ${e.value}` :
-                  e.type === 'sleep' ? `Inició siesta` :
-                  `Cambio de pañal: ${e.value}`}
-              </p>
-            </div>
-          `).join('') : '<p class="text-xs text-slate-400 italic pl-10">Iniciando el seguimiento del día...</p>'}
-        </div>
-      </div>
-    `;
+  // Fallback from top-level fields if no infant_data
+  const items = [];
+  if (rawEvents.length) {
+    const typeMap = {
+      milk:   (e) => ({ icon:'🍼', label:'Biberón',       detail: e.oz ? e.oz + ' oz' : '' }),
+      sleep:  (e) => ({ icon:'😴', label:'Durmió',        detail: e.end_time ? ('hasta ' + fmtTime(e.end_time)) : 'En siesta...' }),
+      diaper: (e) => ({ icon: e.subtype==='wet'?'💧':'💩', label: e.subtype==='wet'?'Pañal mojado':'Pañal sucio', detail: '' }),
+      food:   (e) => ({ icon:'🍽️', label: e.meal||'Comida', detail: e.amount||'' }),
+      temp:   (e) => ({ icon:'🌡️', label:'Temperatura',   detail: e.value ? e.value + '°C' : '' }),
+      med:    (e) => ({ icon:'💊', label:'Medicamento',   detail: e.name||'' }),
+      note:   (e) => ({ icon:'📝', label:'Nota',          detail: e.text||'' }),
+      bath:   (_) => ({ icon:'🛁', label:'Baño',          detail: '' }),
+    };
+    rawEvents.forEach(e => {
+      const fn = typeMap[e.type];
+      const base = fn ? fn(e) : { icon:'📌', label: e.type, detail: '' };
+      items.push({ ...base, timeStr: fmtTime(e.created_at || e.start_time) });
+    });
   } else {
-    // 🧒 RESUMEN ESTÁNDAR
-    const moodMap = { feliz: '😊', bien: '😊', normal: '😐', triste: '😢', inquieto: '😫', enojado: '😡' };
-    const moodIcon = moodMap[(log.mood || '').toLowerCase()] || '✨';
-
-    container.innerHTML = `
-      <div class="bg-white rounded-2xl p-6 border border-green-100 shadow-sm">
-        <h3 class="font-black text-slate-800 text-base mb-4 flex items-center gap-2">
-          <span class="bg-green-100 text-green-700 p-1.5 rounded-lg"><i data-lucide="clipboard-list" class="w-4 h-4"></i></span>
-          Resumen del Día
-        </h3>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <div class="bg-slate-50 p-4 rounded-xl flex items-center gap-3">
-            <div class="w-10 h-10 rounded-full bg-white flex items-center justify-center text-xl shadow-sm">${moodIcon}</div>
-            <div><p class="text-[10px] font-black text-slate-400 uppercase">Ánimo</p><p class="font-bold text-slate-700 capitalize">${log.mood || 'Bien'}</p></div>
-          </div>
-          <div class="bg-slate-50 p-4 rounded-xl flex items-center gap-3">
-            <div class="w-10 h-10 rounded-full bg-white flex items-center justify-center text-xl shadow-sm">🍽️</div>
-            <div><p class="text-[10px] font-black text-slate-400 uppercase">Comida</p><p class="font-bold text-slate-700">${log.food || 'Sin registro'}</p></div>
-          </div>
-          <div class="bg-slate-50 p-4 rounded-xl flex items-center gap-3">
-            <div class="w-10 h-10 rounded-full bg-white flex items-center justify-center text-xl shadow-sm">💤</div>
-            <div><p class="text-[10px] font-black text-slate-400 uppercase">Siesta</p><p class="font-bold text-slate-700">${log.nap || log.sleeping || 'No registrada'}</p></div>
-          </div>
-        </div>
-        ${(log.notes || log.observations) ? `
-          <div class="mt-3 p-3 bg-amber-50 rounded-xl border border-amber-100">
-            <p class="text-[10px] font-black text-amber-500 uppercase mb-1">Observaciones</p>
-            <p class="text-sm text-slate-600 italic">&ldquo;${log.notes || log.observations}&rdquo;</p>
-          </div>` : ''}
-      </div>`;
+    const moodMap = { feliz:'😊', bien:'😊', normal:'😐', triste:'😢', inquieto:'😫', enojado:'😡' };
+    if (log.mood) items.push({ icon: moodMap[log.mood.toLowerCase()]||'😊', label:'Ánimo', detail: log.mood, timeStr: fmtTime(log.created_at) });
+    const fl = { todo:'Comio todo ✅', poco:'Comio poco ⚠️', nada:'No comio ❌' };
+    if (log.food?.breakfast) items.push({ icon:'🍳', label:'Desayuno', detail: fl[log.food.breakfast]||log.food.breakfast, timeStr:'' });
+    if (log.food?.lunch)     items.push({ icon:'🍽️', label:'Almuerzo', detail: fl[log.food.lunch]||log.food.lunch,         timeStr:'' });
+    if (log.food?.snack)     items.push({ icon:'🥪', label:'Merienda', detail: fl[log.food.snack]||log.food.snack,         timeStr:'' });
+    if (log.nap === 'si')    items.push({ icon:'💤', label:'Siesta', detail:'Durmi\u00f3 su siesta', timeStr:'' });
+    else if (log.nap === 'no') items.push({ icon:'☀️', label:'Sin siesta', detail:'No durmi\u00f3 siesta', timeStr:'' });
+    if (log.notes) items.push({ icon:'📝', label:'Observaci\u00f3n', detail: log.notes, timeStr: fmtTime(log.created_at) });
   }
+
+  if (!items.length) {
+    timeline.innerHTML = `<div class="text-center py-4 text-slate-400 text-sm font-bold">Sin eventos registrados hoy</div>`;
+    return;
+  }
+
+  timeline.innerHTML = items.map(item => `
+    <div class="flex items-center gap-3 px-3 py-2.5 rounded-2xl bg-slate-50 border border-slate-100 hover:bg-[#E8F2FF] hover:border-[#0B63C7]/20 transition-all">
+      <span class="text-2xl leading-none w-9 text-center shrink-0">${item.icon}</span>
+      <div class="flex-1 min-w-0">
+        <p class="font-black text-sm text-[#1A2340] leading-tight">${item.label}</p>
+        ${item.detail ? `<p class="text-xs text-slate-500 font-medium truncate">${item.detail}</p>` : ''}
+      </div>
+      ${item.timeStr ? `<span class="text-[10px] font-black text-[#0B63C7] bg-[#E8F2FF] px-2 py-1 rounded-lg shrink-0">${item.timeStr}</span>` : ''}
+    </div>`).join('');
 
   if (window.lucide) lucide.createIcons();
 }
+
 
 // ── Últimas publicaciones en home ─────────────────────────────────────────────
 function renderLatestPosts(posts) {

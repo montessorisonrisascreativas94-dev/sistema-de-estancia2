@@ -84,11 +84,11 @@ export async function renderDashboardV2(data) {
   <div class="flex items-center justify-between flex-wrap gap-3">
     <div>
       <h2 class="text-2xl font-black text-slate-800">Centro de Control</h2>
-      <p class="text-sm text-slate-400 font-bold">Ciclo activo: <span class="text-blue-600">${currentCycle}</span> · ${now.toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'})}</p>
+      <p class="text-sm text-slate-400 font-bold">Ciclo activo: <span class="text-emerald-600">${currentCycle}</span> · ${now.toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'})}</p>
     </div>
     <div class="flex gap-2 flex-wrap">
-      <button onclick="App.navigation?.goTo?.('caja')" class="px-4 py-2 text-white text-xs font-black uppercase rounded-xl" style="background:#28B54D">+ Registrar Cobro</button>
-      <button onclick="App.navigation?.goTo?.('ciclo-escolar')" class="px-4 py-2 text-white text-xs font-black uppercase rounded-xl" style="background:#0B63C7">Ciclo Escolar</button>
+      <button onclick="App.navigation?.goTo?.('caja')" class="px-4 py-2 text-white text-xs font-black uppercase rounded-xl" style="background:#047857">+ Registrar Cobro</button>
+      <button onclick="App.navigation?.goTo?.('ciclo-escolar')" class="px-4 py-2 text-white text-xs font-black uppercase rounded-xl" style="background:#065f46">Ciclo Escolar</button>
     </div>
   </div>
 
@@ -104,32 +104,32 @@ export async function renderDashboardV2(data) {
     <div class="dash-section-title"><i data-lucide="users" class="w-3.5 h-3.5"></i> Estudiantes y Personal</div>
     <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
       <div class="kpi2">
-        <div class="kpi-icon" style="background:#E8F2FF"><i data-lucide="users" class="w-4 h-4" style="color:#0B63C7"></i></div>
+        <div class="kpi-icon" style="background:#ecfdf5"><i data-lucide="users" class="w-4 h-4" style="color:#047857"></i></div>
         <div class="kpi-val">${totalStu}</div>
         <div class="kpi-lbl">Total Alumnos</div>
-        <div class="kpi-bar"><div class="kpi-bar-fill" style="width:100%;background:#0B63C7"></div></div>
+        <div class="kpi-bar"><div class="kpi-bar-fill" style="width:100%;background:#047857"></div></div>
       </div>
       <div class="kpi2">
-        <div class="kpi-icon" style="background:#E6F7EB"><i data-lucide="user-check" class="w-4 h-4" style="color:#28B54D"></i></div>
+        <div class="kpi-icon" style="background:#ecfdf5"><i data-lucide="user-check" class="w-4 h-4" style="color:#047857"></i></div>
         <div class="kpi-val">${activeStu}</div>
         <div class="kpi-lbl">Activos</div>
         <div class="kpi-sub">${totalStu>0?Math.round(activeStu/totalStu*100):0}% del total</div>
       </div>
       <div class="kpi2">
-        <div class="kpi-icon" style="background:#E6F7EB"><i data-lucide="graduation-cap" class="w-4 h-4" style="color:#28B54D"></i></div>
+        <div class="kpi-icon" style="background:#ecfdf5"><i data-lucide="graduation-cap" class="w-4 h-4" style="color:#047857"></i></div>
         <div class="kpi-val">${teachers.filter(t=>t.role==='maestra').length}</div>
         <div class="kpi-lbl">Docentes</div>
       </div>
       <div class="kpi2">
-        <div class="kpi-icon" style="background:#FFF3E0"><i data-lucide="clipboard-list" class="w-4 h-4" style="color:#FF8A00"></i></div>
+        <div class="kpi-icon" style="background:#FFF3E0"><i data-lucide="clipboard-list" class="w-4 h-4" style="color:#d97706"></i></div>
         <div class="kpi-val">${teachers.filter(t=>t.role==='asistente').length}</div>
         <div class="kpi-lbl">Asistentes</div>
       </div>
       <div class="kpi2">
-        <div class="kpi-icon" style="background:#E6F7EB"><i data-lucide="calendar-check" class="w-4 h-4" style="color:#28B54D"></i></div>
+        <div class="kpi-icon" style="background:#ecfdf5"><i data-lucide="calendar-check" class="w-4 h-4" style="color:#047857"></i></div>
         <div class="kpi-val">${present}</div>
         <div class="kpi-lbl">Presentes Hoy</div>
-        <div class="kpi-bar"><div class="kpi-bar-fill" style="width:${activeStu>0?Math.round(present/activeStu*100):0}%;background:#28B54D"></div></div>
+        <div class="kpi-bar"><div class="kpi-bar-fill" style="width:${activeStu>0?Math.round(present/activeStu*100):0}%;background:#047857"></div></div>
       </div>
       <div class="kpi2">
         <div class="kpi-icon" style="background:#FEE2E2"><i data-lucide="user-x" class="w-4 h-4" style="color:#EF4444"></i></div>
@@ -143,20 +143,20 @@ export async function renderDashboardV2(data) {
   <div>
     <div class="dash-section-title"><i data-lucide="banknote" class="w-3.5 h-3.5"></i> Finanzas del Día</div>
     <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-      <div class="kpi2" style="border-left:3px solid #28B54D">
-        <div class="kpi-icon" style="background:#E6F7EB"><i data-lucide="trending-up" class="w-4 h-4" style="color:#28B54D"></i></div>
-        <div class="kpi-val" style="color:#28B54D">${fmt(todayIncome)}</div>
+      <div class="kpi2" style="border-left:3px solid #047857">
+        <div class="kpi-icon" style="background:#ecfdf5"><i data-lucide="trending-up" class="w-4 h-4" style="color:#047857"></i></div>
+        <div class="kpi-val" style="color:#047857">${fmt(todayIncome)}</div>
         <div class="kpi-lbl">Cobrado Hoy</div>
         <div class="kpi-sub">${todayPay.length} transacciones</div>
       </div>
-      <div class="kpi2" style="border-left:3px solid #FF8A00">
-        <div class="kpi-icon" style="background:#FFF3E0"><i data-lucide="clock" class="w-4 h-4" style="color:#FF8A00"></i></div>
-        <div class="kpi-val" style="color:#FF8A00">${fmt(pendingAmt)}</div>
+      <div class="kpi2" style="border-left:3px solid #d97706">
+        <div class="kpi-icon" style="background:#FFF3E0"><i data-lucide="clock" class="w-4 h-4" style="color:#d97706"></i></div>
+        <div class="kpi-val" style="color:#d97706">${fmt(pendingAmt)}</div>
         <div class="kpi-lbl">Por Cobrar</div>
         <div class="kpi-sub">${pending.length} cuotas</div>
       </div>
       <div class="kpi2">
-        <div class="kpi-icon" style="background:#E8F2FF"><i data-lucide="wallet" class="w-4 h-4" style="color:#0B63C7"></i></div>
+        <div class="kpi-icon" style="background:#ecfdf5"><i data-lucide="wallet" class="w-4 h-4" style="color:#047857"></i></div>
         <div class="kpi-val">${fmt(monthly[now.getMonth()])}</div>
         <div class="kpi-lbl">Ingresos del Mes</div>
       </div>
@@ -166,7 +166,7 @@ export async function renderDashboardV2(data) {
         <div class="kpi-lbl">Mensajes Sin Leer</div>
       </div>
       <div class="kpi2">
-        <div class="kpi-icon" style="background:#E6F7EB"><i data-lucide="receipt" class="w-4 h-4" style="color:#28B54D"></i></div>
+        <div class="kpi-icon" style="background:#ecfdf5"><i data-lucide="receipt" class="w-4 h-4" style="color:#047857"></i></div>
         <div class="kpi-val">${todayPay.length}</div>
         <div class="kpi-lbl">Facturas Hoy</div>
       </div>

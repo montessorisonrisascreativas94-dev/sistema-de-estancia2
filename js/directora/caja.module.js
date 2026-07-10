@@ -312,6 +312,15 @@ export const CajaModule = {
 
       if (error) throw error;
 
+      // Llamar a la función para generar y enviar el recibo
+      try {
+        await supabase.functions.invoke('generate-invoice', {
+          body: { payment_id: paymentId, send_email: true }
+        });
+      } catch (invoiceErr) {
+        console.error('Error generando factura', invoiceErr);
+      }
+
       Helpers.toast('Pago aprobado!', 'success');
       await this._loadPendingTransfers(); // Refresh the list
       await this._loadPendingPayments(); // Refresh the student list

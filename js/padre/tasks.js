@@ -258,21 +258,21 @@ export const TasksModule = {
         return;
       }
 
-      // FIX 404: Wrap RPC call — PGRST202 code for missing function,
-      // but some Supabase versions return a 404 HTTP status with a different code.
-      // Catch ALL errors from the RPC and silently fall through to the direct query.
+      // Declare tasks here so both branches can populate it
+      let tasks = [];
+
+      // Try RPC first — silently fall through to direct query on any error
       try {
         const { data: rpcData, error: rpcErr } = await supabase.rpc('get_tasks_for_period', {
           p_classroom_id: student.classroom_id,
           p_period_id:    null
         });
-        if (!rpcErr && rpcData?.tasks) {
+        if (!rpcErr && rpcData?.tasks?.length) {
           tasks = rpcData.tasks;
         }
-        // Any error (404, PGRST202, network) → fall through to direct query silently
       } catch (_) { /* RPC not deployed — use fallback below */ }
 
-      // Fallback: query directa sin filtro de período
+      // Fallback: direct query if RPC returned nothing
       if (!tasks.length) {
         const { data, error } = await supabase
           .from(TABLES.TASKS)

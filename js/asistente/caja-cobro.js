@@ -1,7 +1,7 @@
 /**
  * Caja Cobro — Panel Asistente (Rediseño)
  */
-import { supabase } from '../shared/supabase.js';
+import { supabase, SUPABASE_URL, SUPABASE_ANON_KEY } from '../shared/supabase.js';
 import { Helpers } from '../shared/helpers.js';
 import { AppState } from './state.js';
 import { InvoiceModule } from '../shared/invoice.js';
@@ -39,70 +39,119 @@ export function renderCajaCobro() {
   const section = $el('pagos');
   if (!section) return;
 
+  const monthLabel = months[new Date().getMonth()] + ' ' + new Date().getFullYear();
+
   section.innerHTML = `
   <div class="space-y-5">
-    <!-- Header -->
+    <!-- HEADER POS -->
     <div class="flex items-center justify-between flex-wrap gap-3">
-      <div>
-        <h2 class="text-xl font-black text-slate-800">Caja</h2>
-        <p class="text-xs text-slate-400 font-bold uppercase tracking-wider">Gestión de pagos y cobros</p>
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 bg-gradient-to-br from-[#0d9488] to-[#0B63C7] rounded-2xl flex items-center justify-center shadow-lg">
+          <i data-lucide="credit-card" class="w-5 h-5 text-white"></i>
+        </div>
+        <div>
+          <h2 class="text-xl font-black text-slate-800">Caja — ${monthLabel}</h2>
+          <p class="text-xs text-slate-400 font-bold uppercase tracking-wide">Sistema de Cobro Profesional</p>
+        </div>
+      </div>
+      <div class="flex gap-2">
+        <button onclick="CajaCobro._openCierreCaja()" class="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-black text-xs uppercase transition-all">
+          <i data-lucide="clipboard-check" class="w-3.5 h-3.5"></i> Cierre
+        </button>
+        <button onclick="CajaCobro._exportCaja()" class="flex items-center gap-1.5 px-3 py-2 bg-[#E8F2FF] hover:bg-[#0B63C7] text-[#0B63C7] hover:text-white rounded-xl font-black text-xs uppercase transition-all">
+          <i data-lucide="download" class="w-3.5 h-3.5"></i> Exportar
+        </button>
       </div>
     </div>
 
-    <!-- Cobros Pendientes -->
-    <div class="bg-white rounded-2xl border border-slate-100 p-5">
-      <div class="flex items-center justify-between flex-wrap gap-3 mb-4 pb-4 border-b border-slate-100">
-        <div>
-          <h3 class="text-lg font-black text-slate-800">📅 ${months[new Date().getMonth()]} ${new Date().getFullYear()}</h3>
-          <p class="text-sm text-slate-400 font-bold">Estudiantes con pagos pendientes</p>
-        </div>
-        <div class="flex items-center gap-2">
-          <div class="relative flex-1">
+    <!-- KPIs del día -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div class="bg-gradient-to-br from-[#0d9488] to-[#077a70] rounded-2xl p-4 text-white">
+        <p class="text-[10px] font-black text-teal-200 uppercase tracking-widest mb-1">Cobrado Hoy</p>
+        <p class="text-xl font-black" id="cajaTodayTotal">RD$0.00</p>
+      </div>
+      <div class="bg-gradient-to-br from-[#FF7A00] to-[#D96500] rounded-2xl p-4 text-white">
+        <p class="text-[10px] font-black text-orange-200 uppercase tracking-widest mb-1">Pendientes</p>
+        <p class="text-xl font-black" id="cajaPendingCount">0</p>
+      </div>
+      <div class="bg-gradient-to-br from-[#0B63C7] to-[#0850A0] rounded-2xl p-4 text-white">
+        <p class="text-[10px] font-black text-blue-200 uppercase tracking-widest mb-1">Transferencias</p>
+        <p class="text-xl font-black" id="cajaReviewCount">0</p>
+      </div>
+      <div class="bg-gradient-to-br from-[#28B54D] to-[#1A8035] rounded-2xl p-4 text-white">
+        <p class="text-[10px] font-black text-green-200 uppercase tracking-widest mb-1">Al Día</p>
+        <p class="text-xl font-black" id="cajaPaidCount">0</p>
+      </div>
+    </div>
+
+    <!-- TABLA PRINCIPAL + BÚSQUEDA -->
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+      <div class="flex items-center justify-between flex-wrap gap-3 p-4 border-b border-slate-100">
+        <div class="flex items-center gap-3">
+          <div class="relative">
             <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"></i>
             <input id="cajaSearch" type="text" placeholder="Buscar estudiante..." oninput="CajaCobro._applyFilters()"
-              class="w-full pl-9 pr-4 py-2 border-2 border-slate-100 rounded-xl text-sm font-bold outline-none focus:border-teal-500">
+              class="pl-9 pr-4 py-2.5 border-2 border-slate-100 rounded-xl text-sm font-bold outline-none focus:border-[#0d9488] w-64 transition-all">
           </div>
+          <!-- Filtros de estado -->
+          <div class="flex gap-1.5">
+            <button onclick="CajaCobro._filterByStatus('all')" data-sf="all" class="status-filter-btn active px-3 py-1.5 rounded-xl text-xs font-black transition-all bg-[#0d9488] text-white">Todos</button>
+            <button onclick="CajaCobro._filterByStatus('pending')" data-sf="pending" class="status-filter-btn px-3 py-1.5 rounded-xl text-xs font-black transition-all bg-slate-100 text-slate-600 hover:bg-orange-100 hover:text-orange-700">Pendientes</button>
+            <button onclick="CajaCobro._filterByStatus('overdue')" data-sf="overdue" class="status-filter-btn px-3 py-1.5 rounded-xl text-xs font-black transition-all bg-slate-100 text-slate-600 hover:bg-rose-100 hover:text-rose-700">Vencidos</button>
+            <button onclick="CajaCobro._filterByStatus('review')" data-sf="review" class="status-filter-btn px-3 py-1.5 rounded-xl text-xs font-black transition-all bg-slate-100 text-slate-600 hover:bg-blue-100 hover:text-blue-700">Revisión</button>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-black text-slate-400" id="totalPendientes">0 estudiantes</span>
+          <button onclick="CajaCobro._refreshStudents()" class="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 transition-all" title="Actualizar">
+            <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+          </button>
         </div>
       </div>
 
-      <!-- Total pendientes -->
-      <div class="mb-4 p-3 rounded-xl" style="background: linear-gradient(135deg, #ccfbf1, #5eead4)">
-        <div class="text-xs font-black text-teal-800 uppercase">Total pendientes</div>
-        <div class="text-2xl font-black text-teal-900" id="totalPendientes">0 estudiantes</div>
-      </div>
-
-      <!-- Table -->
       <div class="overflow-x-auto">
-        <table class="w-full text-sm" style="min-width: 800px">
-          <thead class="bg-slate-50 border-b border-slate-100">
+        <table class="w-full text-sm">
+          <thead class="bg-[#E8F2FF] border-b border-[#0B63C7]/10">
             <tr>
-              <th class="px-4 py-3 text-left text-[10px] font-black text-slate-400 uppercase">Estado</th>
-              <th class="px-4 py-3 text-left text-[10px] font-black text-slate-400 uppercase">Estudiante</th>
-              <th class="px-4 py-3 text-left text-[10px] font-black text-slate-400 uppercase">Curso</th>
-              <th class="px-4 py-3 text-right text-[10px] font-black text-slate-400 uppercase">Debe</th>
-              <th class="px-4 py-3 text-left text-[10px] font-black text-slate-400 uppercase">Vence</th>
-              <th class="px-4 py-3 text-center text-[10px] font-black text-slate-400 uppercase">Acciones</th>
+              <th class="px-4 py-3 text-left text-[10px] font-black text-[#0850A0] uppercase tracking-wider">Estudiante</th>
+              <th class="px-4 py-3 text-left text-[10px] font-black text-[#0850A0] uppercase tracking-wider hidden md:table-cell">Aula</th>
+              <th class="px-4 py-3 text-right text-[10px] font-black text-[#0850A0] uppercase tracking-wider">Saldo</th>
+              <th class="px-4 py-3 text-center text-[10px] font-black text-[#0850A0] uppercase tracking-wider hidden sm:table-cell">Estado</th>
+              <th class="px-4 py-3 text-center text-[10px] font-black text-[#0850A0] uppercase tracking-wider">Acción</th>
             </tr>
           </thead>
           <tbody id="cajaTableBody" class="divide-y divide-slate-50">
-            <tr><td colspan="6" class="text-center py-8 text-slate-400 text-sm">Cargando...</td></tr>
+            <tr><td colspan="5" class="text-center py-10 text-slate-400 text-sm">
+              <div class="flex flex-col items-center gap-2">
+                <div class="w-10 h-10 border-2 border-[#0d9488] border-t-transparent rounded-full animate-spin"></div>
+                Cargando cobros...
+              </div>
+            </td></tr>
           </tbody>
         </table>
       </div>
     </div>
 
-    <!-- Transferencias pendientes -->
-    <div class="bg-white rounded-2xl border border-slate-100 p-5">
-      <h3 class="text-lg font-black text-slate-800 mb-4">🏦 Transferencias Pendientes</h3>
-      <div id="transferenciasPendientes" class="space-y-3">
-        <div class="text-center py-4 text-slate-400 text-sm">Sin transferencias pendientes</div>
+    <!-- COMPROBANTES POR VALIDAR -->
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+      <div class="flex items-center justify-between p-4 border-b border-slate-100">
+        <h3 class="text-sm font-black text-slate-800 flex items-center gap-2">
+          <i data-lucide="upload" class="w-4 h-4 text-[#FF7A00]"></i>
+          Comprobantes por Validar
+        </h3>
+        <span id="reviewBadge" class="hidden px-2 py-0.5 bg-[#FF7A00] text-white text-[9px] font-black rounded-full">0</span>
+      </div>
+      <div id="transferenciasPendientes" class="divide-y divide-slate-50">
+        <div class="text-center py-6 text-slate-400 text-sm">Sin comprobantes pendientes</div>
       </div>
     </div>
   </div>
   `;
+
   if (window.lucide) lucide.createIcons();
   _loadStudents();
   _loadConcepts();
+  _loadDayStats();
 }
 
 async function _loadStudents() {
@@ -158,94 +207,291 @@ async function _loadPendingTransfers() {
   try {
     const { data: payments } = await supabase
       .from('payments')
-      .select(`
-        id, student_id, amount, concept, method, bank, evidence_url, fiscal_receipt_url, month_paid, notes, created_at,
-        students (name, classrooms (name))
-      `)
+      .select('id, student_id, amount, concept, method, bank, evidence_url, fiscal_receipt_url, month_paid, notes, created_at, students(name, classrooms(name))')
       .eq('status', 'review')
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .limit(20);
 
     if (!payments || payments.length === 0) {
-      container.innerHTML = '<div class="text-center py-4 text-slate-400 text-sm">Sin transferencias pendientes</div>';
+      container.innerHTML = `
+        <div class="flex flex-col items-center gap-2 py-8 text-slate-400">
+          <i data-lucide="check-circle" class="w-10 h-10 text-emerald-400"></i>
+          <p class="text-sm font-bold">✅ Sin comprobantes pendientes</p>
+        </div>`;
+      if (window.lucide) lucide.createIcons();
       return;
     }
 
     container.innerHTML = payments.map(p => `
-      <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
-        <div class="flex justify-between items-start">
-          <div>
-            <p class="font-black text-slate-800">${Helpers.escapeHTML(p.students?.name || 'Estudiante desconocido')}</p>
-            <p class="text-xs text-slate-500">${p.students?.classrooms?.name || ''} · ${Helpers.formatDate(p.created_at)}</p>
+      <div class="flex items-start gap-4 p-4 hover:bg-slate-50 transition-colors">
+        <!-- Avatar -->
+        <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#FF7A00] to-[#D96500] text-white flex items-center justify-center font-black text-sm shrink-0 shadow-sm">
+          ${(p.students?.name || '?').charAt(0).toUpperCase()}
+        </div>
+        <!-- Info -->
+        <div class="flex-1 min-w-0">
+          <div class="flex items-start justify-between gap-2">
+            <div>
+              <p class="font-black text-sm text-slate-800">${Helpers.escapeHTML(p.students?.name || '—')}</p>
+              <p class="text-[10px] text-slate-400 font-bold uppercase">
+                ${Helpers.escapeHTML(p.concept || 'Mensualidad')} · ${p.month_paid || '—'}
+                ${p.bank ? ' · ' + Helpers.escapeHTML(p.bank) : ''}
+              </p>
+            </div>
+            <span class="font-black text-sm text-[#0B63C7] shrink-0">${fmt(p.amount)}</span>
           </div>
-          <p class="font-black text-lg text-slate-800">${fmt(p.amount)}</p>
+          <div class="flex items-center gap-2 mt-2 flex-wrap">
+            ${p.evidence_url ? `
+              <a href="${p.evidence_url}" target="_blank" rel="noopener"
+                class="inline-flex items-center gap-1 text-[10px] font-black text-[#0B63C7] bg-[#E8F2FF] px-2 py-1 rounded-lg hover:bg-[#0B63C7] hover:text-white transition-all">
+                <i data-lucide="eye" class="w-3 h-3"></i> Ver comprobante
+              </a>` : ''}
+            <button onclick="CajaCobro.approvePayment(${p.id})"
+              class="inline-flex items-center gap-1 text-[10px] font-black text-white bg-[#28B54D] px-3 py-1 rounded-lg hover:bg-[#1A8035] transition-all active:scale-95">
+              ✅ Aprobar
+            </button>
+            <button onclick="CajaCobro.rejectPayment(${p.id})"
+              class="inline-flex items-center gap-1 text-[10px] font-black text-rose-600 bg-rose-50 px-3 py-1 rounded-lg hover:bg-rose-600 hover:text-white transition-all active:scale-95">
+              ❌ Rechazar
+            </button>
+          </div>
         </div>
-        <div class="grid grid-cols-2 gap-2 text-xs">
-          <div><span class="font-bold text-slate-500">Concepto:</span> ${Helpers.escapeHTML(p.concept || 'Mensualidad')}</div>
-          <div><span class="font-bold text-slate-500">Mes:</span> ${Helpers.escapeHTML(p.month_paid || '')}</div>
-          ${p.bank ? `<div><span class="font-bold text-slate-500">Banco:</span> ${Helpers.escapeHTML(p.bank)}</div>` : ''}
-        </div>
-        ${p.evidence_url ? `<div class="text-xs"><span class="font-bold text-slate-500">Comprobante:</span> <a href="${p.evidence_url}" target="_blank" class="text-blue-600 hover:underline">Ver</a></div>` : ''}
-        ${p.fiscal_receipt_url ? `<div class="text-xs"><span class="font-bold text-slate-500">Comprobante Fiscal:</span> <a href="${p.fiscal_receipt_url}" target="_blank" class="text-indigo-600 hover:underline">Ver</a></div>` : ''}
-        <div class="flex gap-2 mt-2">
-          <button onclick="CajaCobro.approvePayment(${p.id})" class="flex-1 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-black text-xs rounded-xl hover:from-green-600 transition-all">
-            <i data-lucide="check" class="w-3 h-3 inline mr-1"></i> Aprobar
-          </button>
-          <button onclick="CajaCobro.rejectPayment(${p.id})" class="flex-1 py-2 bg-gradient-to-r from-red-500 to-rose-600 text-white font-black text-xs rounded-xl hover:from-red-600 transition-all">
-            <i data-lucide="x" class="w-3 h-3 inline mr-1"></i> Rechazar
-          </button>
-        </div>
-      </div>
-    `).join('');
+      </div>`).join('');
 
     if (window.lucide) lucide.createIcons();
   } catch (e) {
-    console.error('Error loading pending transfers', e);
-    container.innerHTML = '<div class="text-center py-4 text-red-400 text-sm">Error al cargar transferencias</div>';
+    console.error('[CajaCobro] _loadPendingTransfers error:', e);
+    container.innerHTML = '<div class="text-center py-4 text-rose-400 text-sm">Error al cargar</div>';
   }
+}
+
+// ── Day stats loader ──────────────────────────────────────────────────────────
+async function _loadDayStats() {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    const [todayRes, pendingRes, reviewRes, paidRes] = await Promise.allSettled([
+      supabase.from('payments').select('amount').eq('status','paid').gte('paid_date', today + 'T00:00:00'),
+      supabase.from('payments').select('id',{count:'exact',head:true}).in('status',['pending','overdue']),
+      supabase.from('payments').select('id',{count:'exact',head:true}).eq('status','review'),
+      supabase.from('payments').select('id',{count:'exact',head:true}).eq('status','paid'),
+    ]);
+    const get = r => r.status === 'fulfilled' ? r.value : {};
+    const todayTotal = (get(todayRes).data || []).reduce((s,p) => s + Number(p.amount||0), 0);
+    const set = (id, v) => { const el = $el(id); if (el) el.textContent = v; };
+    set('cajaTodayTotal', fmt(todayTotal));
+    set('cajaPendingCount', get(pendingRes).count || 0);
+    set('cajaReviewCount', get(reviewRes).count || 0);
+    set('cajaPaidCount', get(paidRes).count || 0);
+    // Update review badge
+    const rb = $el('reviewBadge');
+    const rc = get(reviewRes).count || 0;
+    if (rb) { rb.textContent = rc; rb.classList.toggle('hidden', rc === 0); }
+  } catch (_) {}
 }
 
 function _renderTable(students) {
   const tbody = $el('cajaTableBody');
   if (!tbody) return;
-  tbody.innerHTML = students.length ? students.map(s => {
-    const statusColor = s.status === 'overdue' ? 'red' : s.status === 'pending' ? 'yellow' : 'green';
-    const statusLabel = s.status === 'overdue' ? '🔴 Vencido' : s.status === 'pending' ? '🟡 Pendiente' : '🟢 Al día';
+
+  if (!students.length) {
+    tbody.innerHTML = '<tr><td colspan="5" class="text-center py-10 text-slate-400 text-sm font-bold">✅ Sin pagos pendientes</td></tr>';
+    return;
+  }
+
+  const statusCfg = {
+    overdue: { label:'Vencido',   cls:'bg-rose-100 text-rose-700 border border-rose-200',   dot:'bg-rose-500' },
+    pending: { label:'Pendiente', cls:'bg-amber-100 text-amber-700 border border-amber-200', dot:'bg-amber-500' },
+    review:  { label:'Revisión',  cls:'bg-blue-100 text-blue-700 border border-blue-200',    dot:'bg-blue-500' },
+    paid:    { label:'Al día',    cls:'bg-emerald-100 text-emerald-700 border border-emerald-200', dot:'bg-emerald-500' },
+  };
+
+  tbody.innerHTML = students.map(s => {
+    const sc = statusCfg[s.status] || statusCfg.pending;
+    const initial = (s.name || '?').charAt(0).toUpperCase();
+    const hasDebt = s.status !== 'paid';
     return `
-      <tr class="hover:bg-slate-50 transition-colors">
+      <tr class="hover:bg-slate-50/70 transition-colors group">
         <td class="px-4 py-3">
-          <span class="text-xs font-black text-${statusColor}-600 bg-${statusColor}-50 px-2 py-1 rounded-full">${statusLabel}</span>
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-[#0d9488] to-[#0B63C7] text-white flex items-center justify-center font-black text-sm shrink-0 shadow-sm">
+              ${initial}
+            </div>
+            <div class="min-w-0">
+              <p class="font-black text-sm text-slate-800 truncate">${Helpers.escapeHTML(s.name || '—')}</p>
+              <p class="text-[10px] text-slate-400 font-bold truncate">${Helpers.escapeHTML(s.matricula || s.p1_name || '—')}</p>
+            </div>
+          </div>
         </td>
-        <td class="px-4 py-3 font-bold text-slate-800">${Helpers.escapeHTML(s.name || '—')}</td>
-        <td class="px-4 py-3 text-sm text-slate-600">${Helpers.escapeHTML(s.classrooms?.name || '—')}</td>
-        <td class="px-4 py-3 text-right font-black text-slate-800">${fmt(s.totalOwed)}</td>
-        <td class="px-4 py-3 text-sm text-slate-600">${s.earliestDueDate || '—'}</td>
+        <td class="px-4 py-3 hidden md:table-cell">
+          <span class="px-2 py-1 bg-[#E8F2FF] text-[#0B63C7] text-[10px] font-black rounded-lg">${Helpers.escapeHTML(s.classrooms?.name || '—')}</span>
+        </td>
+        <td class="px-4 py-3 text-right">
+          <span class="font-black text-sm ${hasDebt ? 'text-rose-600' : 'text-emerald-600'}">${fmt(s.totalOwed)}</span>
+        </td>
+        <td class="px-4 py-3 text-center hidden sm:table-cell">
+          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[10px] font-black ${sc.cls}">
+            <span class="w-1.5 h-1.5 rounded-full ${sc.dot}"></span>
+            ${sc.label}
+          </span>
+        </td>
         <td class="px-4 py-3 text-center">
-          ${s.status !== 'paid' ? `
-            <button onclick="CajaCobro.selectStudent(${s.id})" class="px-3 py-1 text-xs font-black uppercase text-white rounded-xl" style="background:#0d9488">
-              Cobrar
+          ${hasDebt ? `
+            <button onclick="CajaCobro.selectStudent(${s.id})"
+              class="px-4 py-1.5 text-[11px] font-black uppercase text-white rounded-xl transition-all active:scale-95 shadow-sm"
+              style="background:linear-gradient(135deg,#0d9488,#0B63C7)">
+              💳 Cobrar
             </button>
           ` : `
-            <button onclick="CajaCobro.selectStudent(${s.id})" class="px-3 py-1 text-xs font-black uppercase text-slate-600 bg-slate-100 rounded-xl hover:bg-slate-200 transition-colors">
+            <button onclick="CajaCobro.selectStudent(${s.id})"
+              class="px-4 py-1.5 text-[11px] font-black uppercase text-slate-500 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all">
               Ver
             </button>
           `}
         </td>
-      </tr>
-    `;
-  }).join('') : '<tr><td colspan="6" class="text-center py-8 text-slate-400 text-sm">Sin estudiantes</td></tr>';
+      </tr>`;
+  }).join('');
+
   if (window.lucide) lucide.createIcons();
 }
 
 export const CajaCobro = {
     _applyFilters() {
       const q = $el('cajaSearch')?.value?.toLowerCase() || '';
+      const sf = document.querySelector('.status-filter-btn.active')?.dataset?.sf || 'all';
       const filtered = _state.students.filter(s => {
-        const name = s.name?.toLowerCase();
-        const mat = s.matricula?.toLowerCase();
-        return (name && name.includes(q)) || (mat && mat.includes(q));
+        const matchQ = !q || (s.name?.toLowerCase().includes(q)) || (s.matricula?.toLowerCase().includes(q));
+        const matchSf = sf === 'all' || s.status === sf;
+        return matchQ && matchSf;
       });
-      $el('totalPendientes').textContent = `${filtered.filter(s => s.status !== 'paid').length} estudiantes`;
+      $el('totalPendientes').textContent = `${filtered.filter(s => s.status !== 'paid').length} pendientes`;
       _renderTable(filtered);
+    },
+
+    _filterByStatus(sf) {
+      document.querySelectorAll('.status-filter-btn').forEach(b => {
+        const isActive = b.dataset.sf === sf;
+        b.className = 'status-filter-btn px-3 py-1.5 rounded-xl text-xs font-black transition-all ' +
+          (isActive ? 'bg-[#0d9488] text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200');
+      });
+      this._applyFilters();
+    },
+
+    _refreshStudents() {
+      _loadStudents();
+      _loadDayStats();
+    },
+
+    // ── Cierre de Caja ────────────────────────────────────────────────────────
+    async _openCierreCaja() {
+      const today = new Date().toISOString().split('T')[0];
+      const { data: payments } = await supabase
+        .from('payments')
+        .select('amount, method, status, concept, students:student_id(name)')
+        .eq('status', 'paid')
+        .gte('paid_date', today + 'T00:00:00')
+        .lte('paid_date', today + 'T23:59:59');
+
+      const byMethod = {};
+      let total = 0;
+      (payments || []).forEach(p => {
+        const m = p.method || 'efectivo';
+        byMethod[m] = (byMethod[m] || 0) + Number(p.amount || 0);
+        total += Number(p.amount || 0);
+      });
+
+      const methodRows = Object.entries(byMethod).map(([m, amt]) =>
+        `<div class="flex justify-between py-2 border-b border-slate-100">
+          <span class="font-bold text-slate-600 capitalize">${m}</span>
+          <span class="font-black text-slate-800">${fmt(amt)}</span>
+        </div>`
+      ).join('');
+
+      const html = `
+        <div style="background:linear-gradient(135deg,#0d9488,#0B63C7);padding:20px 24px;border-radius:24px 24px 0 0">
+          <h3 style="color:white;font-weight:900;font-size:1.1rem;margin:0">🏦 Cierre de Caja</h3>
+          <p style="color:rgba(255,255,255,.7);font-size:.75rem;margin:4px 0 0;font-weight:700">${new Date().toLocaleDateString('es-DO',{weekday:'long',day:'numeric',month:'long'})}</p>
+        </div>
+        <div style="padding:20px 24px;background:#f8fafc">
+          <p style="font-size:.7rem;font-weight:900;text-transform:uppercase;letter-spacing:1px;color:#94a3b8;margin-bottom:12px">Por Método de Pago</p>
+          ${methodRows || '<p style="color:#94a3b8;text-align:center;padding:12px">Sin cobros hoy</p>'}
+          <div class="flex justify-between pt-3 mt-2 border-t-2 border-slate-200">
+            <span style="font-weight:900;color:#1e293b;font-size:1rem">TOTAL DEL DÍA</span>
+            <span style="font-weight:900;color:#0d9488;font-size:1.25rem">${fmt(total)}</span>
+          </div>
+          <p style="font-size:.7rem;color:#94a3b8;text-align:center;margin-top:12px">${(payments||[]).length} transacciones</p>
+        </div>
+        <div style="padding:12px 24px 20px;display:flex;justify-content:flex-end;gap:10px;background:white;border-radius:0 0 24px 24px">
+          <button onclick="window._closeAsistenteModal()" style="padding:10px 20px;border-radius:12px;border:2px solid #e2e8f0;background:white;color:#4a5568;font-weight:800;cursor:pointer">Cerrar</button>
+          <button onclick="CajaCobro._printCierre(${total},${JSON.stringify(byMethod).replace(/"/g,'&quot;')})" style="padding:10px 20px;border-radius:12px;background:linear-gradient(135deg,#0d9488,#0B63C7);color:white;border:none;font-weight:900;cursor:pointer">🖨️ Imprimir</button>
+        </div>`;
+      window.openGlobalModal?.(html);
+    },
+
+    _printCierre(total, byMethod) {
+      const date = new Date().toLocaleDateString('es-DO', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+      const rows = Object.entries(byMethod).map(([m,a]) =>
+        `<tr><td style="padding:6px 12px;color:#4a5568;text-transform:capitalize">${m}</td><td style="padding:6px 12px;text-align:right;font-weight:800">${fmt(a)}</td></tr>`
+      ).join('');
+      const win = window.open('','_blank');
+      win.document.write(`<!DOCTYPE html><html><head><title>Cierre de Caja</title>
+        <style>body{font-family:Arial,sans-serif;padding:32px;max-width:400px;margin:0 auto}
+        h1{text-align:center;color:#0d9488;font-size:1.4rem}
+        table{width:100%;border-collapse:collapse}td{border-bottom:1px solid #e2e8f0}
+        .total{font-size:1.2rem;font-weight:900;color:#0d9488}
+        .footer{text-align:center;color:#94a3b8;font-size:.8rem;margin-top:24px}
+        </style></head><body>
+        <h1>🏦 Cierre de Caja</h1>
+        <p style="text-align:center;color:#64748b;text-transform:capitalize">${date}</p>
+        <hr style="margin:16px 0">
+        <table>${rows}</table>
+        <hr style="margin:16px 0">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="font-weight:900">TOTAL</span>
+          <span class="total">${fmt(total)}</span>
+        </div>
+        <div class="footer">Colegio Montessori Sonrisas Creativas</div>
+        <script>window.onload=()=>window.print()<\/script></body></html>`);
+      win.document.close();
+    },
+
+    // ── Exportar CSV ──────────────────────────────────────────────────────────
+    async _exportCaja() {
+      try {
+        Helpers.toast('Generando reporte...', 'info');
+        const today = new Date().toISOString().split('T')[0];
+        const { data } = await supabase
+          .from('payments')
+          .select('id, amount, concept, method, status, month_paid, paid_date, created_at, students:student_id(name, matricula)')
+          .order('created_at', { ascending: false })
+          .limit(500);
+
+        if (!data?.length) { Helpers.toast('Sin datos para exportar', 'warning'); return; }
+
+        const rows = [['ID','Estudiante','Matrícula','Concepto','Monto','Método','Estado','Mes','Fecha']];
+        data.forEach(p => {
+          rows.push([
+            p.id,
+            p.students?.name || '',
+            p.students?.matricula || '',
+            p.concept || '',
+            p.amount || 0,
+            p.method || '',
+            p.status || '',
+            p.month_paid || '',
+            (p.paid_date || p.created_at || '').split('T')[0]
+          ]);
+        });
+
+        const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+        const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = `cobros-${today}.csv`;
+        a.click(); URL.revokeObjectURL(url);
+        Helpers.toast('Reporte exportado correctamente', 'success');
+      } catch (err) {
+        Helpers.toast('Error al exportar: ' + err.message, 'error');
+      }
     },
 
     async approvePayment(paymentId) {
@@ -261,6 +507,15 @@ export const CajaCobro = {
           .eq('id', paymentId);
 
         if (error) throw error;
+
+        // Llamar a la función para generar y enviar el recibo
+        try {
+          await supabase.functions.invoke('generate-invoice', {
+            body: { payment_id: paymentId, send_email: true }
+          });
+        } catch (invoiceErr) {
+          console.error('Error generando factura', invoiceErr);
+        }
 
         Helpers.toast('Pago aprobado!', 'success');
         await _loadPendingTransfers(); // Refresh the list

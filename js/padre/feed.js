@@ -13,63 +13,80 @@ export const FeedModule = {
 
   /**
    * Inicializa el muro
-   * classroomId puede ser null — en ese caso solo muestra posts generales
+   * Carga posts del aula directamente (sin depender de WallModule/muroPostsContainer)
    */
   async init() {
     const student = AppState.get('currentStudent');
-    const parent = AppState.get('user');
+    const parent  = AppState.get('user');
     if (!student || !parent) return;
 
-    WallModule.init('muroPostsContainer', {
-      accentColor: 'indigo',
-      likeColor: 'indigo',
-      classroomId: student.classroom_id,
-      parentId: parent.id // Pasar parentId explícitamente para RLS
-    }, AppState);
+    this._classroomId = student.classroom_id;
+    await this.loadPosts();
+    this.initRealtime();
   },
 
   /**
-   * Carga publicaciones — solo del período activo del aula
+   * Carga publicaciones del aula directamente
    */
   async loadPosts() {
     const container = document.getElementById('classFeed');
     if (!container) return;
-    
+
     container.innerHTML = Helpers.skeleton(2, 'h-48');
 
     try {
-      // Intentar RPC de período activo primero (más eficiente y filtra por período)
-      const { data: rpcData, error: rpcErr } = await supabase.rpc('get_posts_for_period', {
-        p_classroom_id: this._classroomId || null,
-        p_period_id:    null, // null = usar período activo automáticamente
-        p_limit:        50
-      });
+      const student = AppState.get('currentStudent');
+      // Query directa — sin RPC ni Edge Function que pueden fallar
+      const { data: posts, error } = await supabase
+        .from('posts')
+        .select(`
+          id, content, media_url, media_type, created_at, classroom_id,
+          teacher:teacher_id ( id, name, avatar_url )
+        `)
+        .or(`classroom_id.is.null,classroom_id.eq.${student?.classroom_id || 0}`)
+        .order('created_at', { ascending: false })
+        .limit(50);
 
-      if (!rpcErr && rpcData?.posts !== undefined) {
-        AppState.set('feedPosts', rpcData.posts || []);
-        return;
+      if (error) throw error;
+
+      // Enrich with likes/comments counts
+      const postIds = (posts || []).map(p => p.id);
+      let likesMap = {}, commentsMap = {};
+
+      if (postIds.length > 0) {
+        const [likesRes, commentsRes] = await Promise.allSettled([
+          supabase.from('likes').select('post_id, user_id').in('post_id', postIds),
+          supabase.from('comments').select('post_id, id, content, user_name, user_id, created_at').in('post_id', postIds)
+        ]);
+        if (likesRes.status === 'fulfilled' && likesRes.value.data) {
+          for (const l of likesRes.value.data) {
+            if (!likesMap[l.post_id]) likesMap[l.post_id] = [];
+            likesMap[l.post_id].push(l);
+          }
+        }
+        if (commentsRes.status === 'fulfilled' && commentsRes.value.data) {
+          for (const c of commentsRes.value.data) {
+            if (!commentsMap[c.post_id]) commentsMap[c.post_id] = [];
+            commentsMap[c.post_id].push(c);
+          }
+        }
       }
 
-      // Fallback: Edge Function get-posts (sin filtro de período)
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
+      const enriched = (posts || []).map(p => ({
+        ...p,
+        likes:    likesMap[p.id]    || [],
+        comments: commentsMap[p.id] || []
+      }));
 
-      const { data: efData, error: efErr } = await supabase.functions.invoke('get-posts', {
-        body: { classroom_id: this._classroomId || null },
-        headers: token ? { Authorization: `Bearer ${token}` } : {}
-      });
-
-      if (efErr) throw new Error('Edge Function error: ' + (efErr.message || JSON.stringify(efErr)));
-      if (!efData?.posts) throw new Error('Respuesta inesperada de get-posts');
-
-      AppState.set('feedPosts', efData.posts || []);
+      AppState.set('feedPosts', enriched);
+      this.renderFeed(enriched);
 
     } catch (err) {
       container.innerHTML = `
         <div class="p-6 text-center">
-          <p class="text-rose-500 font-bold text-sm mb-2">Error al cargar publicaciones</p>
-          <p class="text-slate-400 text-xs font-mono">${escapeHtml(err.message || String(err))}</p>
-          <button onclick="App.feed.loadPosts()" class="mt-4 px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold">Reintentar</button>
+          <p class="text-rose-500 font-bold text-sm mb-2">❌ Error al cargar publicaciones</p>
+          <p class="text-slate-400 text-xs">${escapeHtml(err.message || String(err))}</p>
+          <button onclick="App.feed.init()" class="mt-4 px-4 py-2 bg-[#0B63C7] text-white rounded-xl text-xs font-bold">Reintentar</button>
         </div>`;
       if (window.lucide) lucide.createIcons();
     }

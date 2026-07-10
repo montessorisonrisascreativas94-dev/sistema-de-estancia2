@@ -42,21 +42,22 @@
   
   <style>
     /* =========================================
-       PALETA DE COLORES SONRISAS CREATIVAS
+       PALETA DE COLORES VERDE CORPORATIVO
        ========================================= */
     :root {
-      --blue-primary: #0B63C7;
-      --orange-primary: #FF7A00;
-      --green-primary: #28B54D;
+      --primary: #047857; /* Verde corporativo principal */
+      --primary-dark: #065f46; /* Verde oscuro */
+      --primary-light: #10b981; /* Verde claro */
+      --secondary: #059669; /* Verde secundario */
+      --accent: #34d399; /* Verde acento */
       --yellow-accent: #FFD43B;
-      --beige-bg: #F8FAFC;
-      --surface: #f4f7fb;
+      --surface: #f6fef9;
       --panel: #ffffff;
-      --panel-soft: #f8fbff;
-      --text: #14213d;
+      --panel-soft: #f0fdf4;
+      --text: #064e3b;
       --muted: #64748b;
-      --border: #e3ebf5;
-      --shadow: 0 20px 45px rgba(15, 23, 42, 0.08);
+      --border: #bbf7d0;
+      --shadow: 0 20px 45px rgba(6, 78, 59, 0.08);
     }
 
     body {
@@ -130,7 +131,7 @@
     .metric-card {
       padding: 1.1rem 1.1rem 1.2rem;
       transition: transform 0.25s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.2s ease;
-      border-left: 4px solid var(--blue-primary);
+      border-left: 4px solid var(--primary);
       position: relative;
       overflow: hidden;
     }
@@ -150,20 +151,20 @@
     }
 
     /* Color variants  border + icon tint */
-    .metric-card--blue   { border-left-color: var(--blue-primary);   }
-    .metric-card--orange { border-left-color: var(--orange-primary);  }
-    .metric-card--green  { border-left-color: var(--green-primary);   }
-    .metric-card--amber  { border-left-color: var(--yellow-accent);   }
-    .metric-card--slate  { border-left-color: #64748b;               }
-    .metric-card--rose   { border-left-color: #ef4444;               }
+    .metric-card--primary   { border-left-color: var(--primary);   }
+    .metric-card--secondary { border-left-color: var(--secondary); }
+    .metric-card--success   { border-left-color: var(--primary-light); }
+    .metric-card--amber     { border-left-color: var(--yellow-accent); }
+    .metric-card--slate     { border-left-color: #64748b;         }
+    .metric-card--rose      { border-left-color: #ef4444;         }
 
     /* Icon box gets matching tint */
-    .metric-card--blue   .metric-icon { background: #E8F2FF; color: var(--blue-primary);   }
-    .metric-card--orange .metric-icon { background: #FFF0E0; color: var(--orange-primary);  }
-    .metric-card--green  .metric-icon { background: #E6F7EB; color: var(--green-primary);   }
-    .metric-card--amber  .metric-icon { background: #FFFBE6; color: #B8860B;               }
-    .metric-card--slate  .metric-icon { background: #F1F5F9; color: #64748b;               }
-    .metric-card--rose   .metric-icon { background: #FFF1F2; color: #e11d48;               }
+    .metric-card--primary   .metric-icon { background: #ecfdf5; color: var(--primary);     }
+    .metric-card--secondary .metric-icon { background: #ecfdf5; color: var(--secondary);   }
+    .metric-card--success   .metric-icon { background: #ecfdf5; color: var(--primary-light); }
+    .metric-card--amber     .metric-icon { background: #FFFBE6; color: #B8860B;           }
+    .metric-card--slate     .metric-icon { background: #F1F5F9; color: #64748b;           }
+    .metric-card--rose      .metric-icon { background: #FFF1F2; color: #e11d48;           }
 
     .metric-icon {
       width: 2.6rem;
@@ -172,8 +173,8 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      background: #E8F2FF;
-      color: var(--blue-primary);
+      background: #ecfdf5;
+      color: var(--primary);
       margin-bottom: 0.8rem;
       transition: transform 0.2s ease;
     }
@@ -199,7 +200,7 @@
     .quick-action-card {
       padding: 1.3rem;
       transition: transform 0.25s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.2s ease, border-color 0.2s ease;
-      border-left: 4px solid var(--blue-primary);
+      border-left: 4px solid var(--primary);
       cursor: pointer;
       position: relative;
       overflow: hidden;
@@ -217,24 +218,24 @@
     }
 
     /* Color variants */
-    .quick-action-card--blue  { border-left-color: var(--blue-primary); }
-    .quick-action-card--blue:hover  { border-color: var(--blue-primary); box-shadow: 0 18px 40px rgba(11,99,199,0.12); }
-    .quick-action-card--orange{ border-left-color: var(--orange-primary); }
-    .quick-action-card--orange:hover{ border-color: var(--orange-primary); box-shadow: 0 18px 40px rgba(255,122,0,0.12); }
-    .quick-action-card--green { border-left-color: var(--green-primary); }
-    .quick-action-card--green:hover { border-color: var(--green-primary); box-shadow: 0 18px 40px rgba(40,181,77,0.12); }
+    .quick-action-card--primary  { border-left-color: var(--primary); }
+    .quick-action-card--primary:hover  { border-color: var(--primary); box-shadow: 0 18px 40px rgba(6, 78, 59, 0.12); }
+    .quick-action-card--secondary{ border-left-color: var(--secondary); }
+    .quick-action-card--secondary:hover{ border-color: var(--secondary); box-shadow: 0 18px 40px rgba(5, 150, 105, 0.12); }
+    .quick-action-card--success { border-left-color: var(--primary-light); }
+    .quick-action-card--success:hover { border-color: var(--primary-light); box-shadow: 0 18px 40px rgba(16, 185, 129, 0.12); }
     .quick-action-card--amber { border-left-color: var(--yellow-accent); }
     .quick-action-card--slate { border-left-color: #64748b; }
     .quick-action-card--rose  { border-left-color: #ef4444; }
     .quick-action-card--rose:hover  { border-color: #ef4444; box-shadow: 0 18px 40px rgba(239,68,68,0.12); }
 
     /* Quick action card: icon tints by variant */
-    .quick-action-card--blue   .metric-icon { background: #E8F2FF; color: var(--blue-primary);   }
-    .quick-action-card--orange .metric-icon { background: #FFF0E0; color: var(--orange-primary);  }
-    .quick-action-card--green  .metric-icon { background: #E6F7EB; color: var(--green-primary);   }
-    .quick-action-card--amber  .metric-icon { background: #FFFBE6; color: #B8860B;               }
-    .quick-action-card--slate  .metric-icon { background: #F1F5F9; color: #64748b;               }
-    .quick-action-card--rose   .metric-icon { background: #FFF1F2; color: #e11d48;               }
+    .quick-action-card--primary   .metric-icon { background: #ecfdf5; color: var(--primary);     }
+    .quick-action-card--secondary .metric-icon { background: #ecfdf5; color: var(--secondary);   }
+    .quick-action-card--success   .metric-icon { background: #ecfdf5; color: var(--primary-light); }
+    .quick-action-card--amber     .metric-icon { background: #FFFBE6; color: #B8860B;           }
+    .quick-action-card--slate     .metric-icon { background: #F1F5F9; color: #64748b;           }
+    .quick-action-card--rose      .metric-icon { background: #FFF1F2; color: #e11d48;           }
 
     .table-panel {
       background: var(--panel);
@@ -246,8 +247,8 @@
     }
 
     .table-panel .data-table thead th {
-      background: #f4f7fb;
-      color: #0f3f78;
+      background: #ecfdf5;
+      color: #064e3b;
       font-size: 0.72rem;
       font-weight: 800;
       letter-spacing: 0.12em;
@@ -283,7 +284,7 @@
     ----------------------------------------------- */
     aside#sidebar {
       width: 288px; /* directora usa 288px en lugar de 280px */
-      background: linear-gradient(160deg, #0B63C7 0%, #0850A0 60%, #042C60 100%);
+      background: linear-gradient(160deg, #047857 0%, #065f46 60%, #064e3b 100%);
       color: white;
       position: fixed;
       height: 100dvh;
@@ -294,7 +295,7 @@
       scrollbar-width: none;
       transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
                   transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      box-shadow: 4px 0 24px rgba(0,0,0,0.1);
+      box-shadow: 4px 0 24px rgba(6, 78, 59, 0.15);
     }
     aside#sidebar::-webkit-scrollbar { display: none; }
 
@@ -491,12 +492,12 @@
       border: 1px solid rgba(11,99,199,0.08);
     }
 
-    /* Header base  azul institucional */
+    /* Header base verde corporativo */
     .modal-header {
       padding: 1.25rem 1.5rem;
       border-bottom: none;
       display: flex; align-items: center; justify-content: space-between;
-      background: linear-gradient(135deg, #0B63C7 0%, #0850A0 100%);
+      background: linear-gradient(135deg, #047857 0%, #065f46 100%);
       border-radius: 22px 22px 0 0;
       color: white;
       position: relative;
@@ -515,9 +516,9 @@
 
     /* Variantes de color de header modal por tipo */
     .modal-header--orange { background: linear-gradient(135deg, #FF7A00 0%, #D96500 100%); }
-    .modal-header--green  { background: linear-gradient(135deg, #28B54D 0%, #1A8035 100%); }
+    .modal-header--primary  { background: linear-gradient(135deg, #047857 0%, #065f46 100%); }
+    .modal-header--success { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
     .modal-header--rose   { background: linear-gradient(135deg, #e11d48 0%, #be123c 100%); }
-    .modal-header--blue   { background: linear-gradient(135deg, #0B63C7 0%, #0850A0 100%); }
 
     .modal-header h2,
     .modal-header h3 { color: white !important; font-weight: 900; position: relative; z-index: 1; }
@@ -552,9 +553,9 @@
     .modal-body input:focus,
     .modal-body select:focus,
     .modal-body textarea:focus {
-      border-color: #0B63C7;
+      border-color: var(--primary);
       background: white;
-      box-shadow: 0 0 0 4px rgba(11,99,199,0.1);
+      box-shadow: 0 0 0 4px rgba(6, 120, 87, 0.1);
     }
     .modal-footer {
       padding: 1rem 1.5rem;
@@ -575,16 +576,16 @@
     .modal-footer button[data-action="save"],
     .modal-footer button[type="submit"] {
       padding: 10px 24px; border-radius: 14px;
-      background: #0B63C7; color: white;
+      background: var(--primary); color: white;
       border: none; font-weight: 900; cursor: pointer;
-      box-shadow: 0 4px 14px rgba(11,99,199,0.3);
+      box-shadow: 0 4px 14px rgba(6, 120, 87, 0.3);
       transition: all 0.25s cubic-bezier(0.34,1.56,0.64,1);
     }
     .modal-footer .btn-save:hover,
     .modal-footer button[type="submit"]:hover {
-      background: #0850A0;
+      background: var(--primary-dark);
       transform: translateY(-2px);
-      box-shadow: 0 8px 20px rgba(11,99,199,0.35);
+      box-shadow: 0 8px 20px rgba(6, 120, 87, 0.35);
     }
     .modal-container.hidden { display: none !important; }
 
@@ -660,12 +661,12 @@
        BOTONES DE ACCIN EN TABLAS
     ----------------------------------------------- */
     .btn-action { padding: 6px 10px; border-radius: 10px; font-size: 12px; font-weight: 700; cursor: pointer; touch-action: manipulation; transition: all 0.2s; }
-    .btn-edit   { color: #0B63C7; background: #E8F2FF; border: 1px solid #DBEAFE; }
-    .btn-edit:hover   { background: #0B63C7; color: white; }
+    .btn-edit   { color: var(--primary); background: #ecfdf5; border: 1px solid #bbf7d0; }
+    .btn-edit:hover   { background: var(--primary); color: white; }
     .btn-delete { color: #e11d48; background: #fff1f2; border: 1px solid #FFE4E8; }
     .btn-delete:hover { background: #e11d48; color: white; }
-    .btn-approve { color: #1A8035; background: #E6F7EB; border: 1px solid #D1FAE5; }
-    .btn-approve:hover { background: #28B54D; color: white; }
+    .btn-approve { color: var(--primary-dark); background: #ecfdf5; border: 1px solid #bbf7d0; }
+    .btn-approve:hover { background: var(--primary); color: white; }
 
     /* -----------------------------------------------
        LOADER INICIAL
@@ -676,8 +677,8 @@
       transition: opacity 0.5s ease;
     }
     .loader-spin {
-      width: 48px; height: 48px; border: 4px solid #e2e8f0;
-      border-top-color: #0B63C7; border-radius: 50%;
+      width: 48px; height: 48px; border: 4px solid #bbf7d0;
+      border-top-color: var(--primary); border-radius: 50%;
       animation: spin 0.8s linear infinite;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
@@ -944,9 +945,9 @@
     <div id="sidebarOverlay" class="fixed inset-0 bg-black/50 z-40 backdrop-blur-sm transition-opacity" style="display:none;"></div>
     
     <!-- SIDEBAR -->
-    <aside id="sidebar" class="kk-sidebar bg-gradient-to-b from-[#0B63C7] via-[#0B63C7] to-[#042C60] shadow-2xl flex flex-col flex-shrink-0" style="border-right:none;">
+    <aside id="sidebar" class="kk-sidebar bg-gradient-to-b from-[#047857] via-[#065f46] to-[#064e3b] shadow-2xl flex flex-col flex-shrink-0" style="border-right:none;">
       <!-- Toggle collapse -->
-      <button id="toggleSidebar" class="absolute -right-3 top-8 bg-white rounded-full p-1.5 shadow-lg border border-slate-100 text-slate-500 hover:text-[#0B63C7] hidden md:flex items-center justify-center z-10 transition-all hover:scale-110">
+      <button id="toggleSidebar" class="absolute -right-3 top-8 bg-white rounded-full p-1.5 shadow-lg border border-slate-100 text-slate-500 hover:text-[#047857] hidden md:flex items-center justify-center z-10 transition-all hover:scale-110">
         <i data-lucide="chevron-left" id="toggleSidebarIcon" class="w-3.5 h-3.5"></i>
       </button>
 
@@ -1119,7 +1120,7 @@
     <div class="app-content-wrapper">
       <!-- HEADER TIPO APP (FIJO Y LIMPIO) -->
       <header class="header">
-        <button id="menuBtn" class="md:hidden p-2.5 rounded-xl bg-white shadow-sm border border-slate-100 text-slate-600 hover:bg-[#E8F2FF] hover:text-[#0B63C7] transition-colors active:scale-95"
+        <button id="menuBtn" class="md:hidden p-2.5 rounded-xl bg-white shadow-sm border border-slate-100 text-slate-600 hover:bg-[#ecfdf5] hover:text-[#047857] transition-colors active:scale-95"
           style="position:relative;z-index:200;"
           data-managed="true"
           aria-label="Abrir men">
@@ -1187,14 +1188,14 @@
             <div class="flex items-center gap-3 w-full md:w-auto">
               <div class="relative w-full md:w-64">
                 <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"></i>
-                <input id="searchTeacher" placeholder="Buscar por nombre..." class="pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm w-full focus:ring-2 focus:ring-[#0B63C7] outline-none bg-slate-50 focus:bg-white transition-all">
+                <input id="searchTeacher" placeholder="Buscar por nombre..." class="pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm w-full focus:ring-2 focus:ring-[#047857] outline-none bg-slate-50 focus:bg-white transition-all">
               </div>
             </div>
             <div class="flex gap-3 w-full md:w-auto justify-end">
-              <button id="btnAddAssistant" class="px-4 py-2.5 bg-blue-100 text-[#0850A0] hover:bg-blue-100 rounded-xl text-sm font-bold transition-colors flex items-center gap-2">
+              <button id="btnAddAssistant" class="px-4 py-2.5 bg-emerald-100 text-[#047857] hover:bg-emerald-100 rounded-xl text-sm font-bold transition-colors flex items-center gap-2">
                 <i data-lucide="user-plus" class="w-4 h-4"></i> Asistente
               </button>
-              <button onclick="App.teachers.openModal()" class="px-4 py-2.5 text-white hover:opacity-90 rounded-xl text-sm font-bold shadow-md transition-all flex items-center gap-2" style="background:#0B63C7;">
+              <button onclick="App.teachers.openModal()" class="px-4 py-2.5 text-white hover:opacity-90 rounded-xl text-sm font-bold shadow-md transition-all flex items-center gap-2" style="background:#047857;">
                 <i data-lucide="plus" class="w-4 h-4"></i> Nuevo Maestro
               </button>
             </div>
@@ -2427,81 +2428,7 @@
 
       <!-- CAJA -->
       <section id="caja" class="section">
-        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-          <div>
-            <div class="flex items-center gap-3 mb-1">
-              <div class="w-1 h-8 rounded-full" style="background:#28B54D"></div>
-              <h1 class="text-2xl font-black text-slate-800 tracking-tight">Caja</h1>
-            </div>
-            <p class="text-slate-500 font-medium ml-4">Cobro de mensualidades, inscripciones y emisin de facturas con RNC</p>
-          </div>
-          <div class="flex gap-2 flex-wrap">
-            <button id="btnCajaNewCobro" class="px-5 py-2.5 text-white rounded-2xl font-black text-sm flex items-center gap-2 active:scale-95 transition-all" style="background:#28B54D;box-shadow:0 4px 14px rgba(40,181,77,0.3)">
-              <i data-lucide="plus-circle" class="w-5 h-5"></i> Registrar Cobro
-            </button>
-            <button id="btnCajaReport" class="px-5 py-2.5 text-white rounded-2xl font-black text-sm flex items-center gap-2 active:scale-95 transition-all" style="background:#0B63C7">
-              <i data-lucide="printer" class="w-5 h-5"></i> Reporte del Da
-            </button>
-          </div>
-        </div>
-
-        <!-- KPIs del da -->
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-          <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
-            <div class="flex items-center gap-2 mb-2">
-              <div class="p-1.5 rounded-lg" style="background:#E6F7EB"><i data-lucide="trending-up" class="w-4 h-4" style="color:#28B54D"></i></div>
-              <span class="text-[10px] font-black uppercase tracking-wider" style="color:#28B54D">Cobrado Hoy</span>
-            </div>
-            <p class="text-xl font-black text-slate-800" id="cajaTodayIncome">RD$0.00</p>
-          </div>
-          <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
-            <div class="flex items-center gap-2 mb-2">
-              <div class="p-1.5 rounded-lg bg-amber-50"><i data-lucide="file-text" class="w-4 h-4 text-amber-600"></i></div>
-              <span class="text-[10px] font-black uppercase tracking-wider text-amber-600">Facturas Hoy</span>
-            </div>
-            <p class="text-xl font-black text-slate-800" id="cajaTodayInvoices">0</p>
-          </div>
-          <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
-            <div class="flex items-center gap-2 mb-2">
-              <div class="p-1.5 rounded-lg" style="background:#E8F2FF"><i data-lucide="credit-card" class="w-4 h-4" style="color:#0B63C7"></i></div>
-              <span class="text-[10px] font-black uppercase tracking-wider" style="color:#0B63C7">Transferencias</span>
-            </div>
-            <p class="text-xl font-black text-slate-800" id="cajaTodayTransfer">RD$0.00</p>
-          </div>
-          <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
-            <div class="flex items-center gap-2 mb-2">
-              <div class="p-1.5 rounded-lg bg-green-50"><i data-lucide="wallet" class="w-4 h-4 text-green-600"></i></div>
-              <span class="text-[10px] font-black uppercase tracking-wider text-green-600">Efectivo</span>
-            </div>
-            <p class="text-xl font-black text-slate-800" id="cajaTodayCash">RD$0.00</p>
-          </div>
-        </div>
-
-        <!-- Tabla de cobros del da -->
-        <div class="bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-sm">
-          <div class="p-4 border-b border-slate-100 flex items-center justify-between">
-            <span class="font-black text-slate-700 text-sm">Cobros de hoy</span>
-            <input type="date" id="cajaDateFilter" class="border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-bold outline-none focus:border-green-400" onchange="App.caja?.loadByDate(this.value)">
-          </div>
-          <div class="overflow-x-auto">
-            <table class="w-full text-sm" style="min-width:700px">
-              <thead class="bg-slate-50 border-b border-slate-100">
-                <tr>
-                  <th class="px-4 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider">Estudiante</th>
-                  <th class="px-4 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider">Concepto</th>
-                  <th class="px-4 py-3 text-right text-[10px] font-black text-slate-400 uppercase tracking-wider">Monto</th>
-                  <th class="px-4 py-3 text-center text-[10px] font-black text-slate-400 uppercase tracking-wider">Mtodo</th>
-                  <th class="px-4 py-3 text-center text-[10px] font-black text-slate-400 uppercase tracking-wider">Factura</th>
-                  <th class="px-4 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider">Hora</th>
-                  <th class="px-4 py-3 text-center text-[10px] font-black text-slate-400 uppercase tracking-wider">Accin</th>
-                </tr>
-              </thead>
-              <tbody id="cajaTableBody" class="divide-y divide-slate-50">
-                <tr><td colspan="7" class="text-center py-8 text-slate-400 text-sm">Cargando...</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <!-- CajaModule will render here -->
       </section>
 
       <!-- CICLO ACADEMICO -->
@@ -2522,88 +2449,176 @@
               <div class="w-1 h-8 rounded-full" style="background:#28B54D"></div>
               <h1 class="text-2xl font-black text-slate-800">Contabilidad y Reportes</h1>
             </div>
-            <p class="text-slate-500 font-medium ml-4">Anlisis financiero, flujo de caja y reportes ejecutivos</p>
-          </div>
-          <div class="flex gap-2 flex-wrap">
-            <select id="contCycleFilter" class="border border-slate-200 rounded-xl px-3 py-2 text-xs font-black outline-none focus:border-green-400 bg-white">
-              <option value="">Ciclo actual</option>
-            </select>
-            <select id="contPeriodFilter" class="border border-slate-200 rounded-xl px-3 py-2 text-xs font-black outline-none focus:border-green-400 bg-white">
-              <option value="month">Este mes</option>
-              <option value="quarter">Este trimestre</option>
-              <option value="year">Este ao</option>
-            </select>
+            <p class="text-slate-500 font-medium ml-4">Análisis financiero, gastos, nómina y reportes ejecutivos</p>
           </div>
         </div>
 
         <!-- Tabs -->
         <div class="flex gap-2 flex-wrap border-b border-slate-200 pb-3 mb-6 overflow-x-auto" id="contTabs">
-          <button data-cont-tab="daily"     class="cont-tab px-4 py-2 rounded-xl text-xs font-black uppercase border-2 border-blue-500 bg-blue-50 text-blue-700">Diario</button>
-          <button data-cont-tab="monthly"   class="cont-tab px-4 py-2 rounded-xl text-xs font-black uppercase border-2 border-transparent text-slate-500 hover:bg-slate-50">Mensual</button>
-          <button data-cont-tab="cashflow"  class="cont-tab px-4 py-2 rounded-xl text-xs font-black uppercase border-2 border-transparent text-slate-500 hover:bg-slate-50">Flujo de Caja</button>
-          <button data-cont-tab="students"  class="cont-tab px-4 py-2 rounded-xl text-xs font-black uppercase border-2 border-transparent text-slate-500 hover:bg-slate-50">Por Alumno</button>
-          <button data-cont-tab="classrooms"class="cont-tab px-4 py-2 rounded-xl text-xs font-black uppercase border-2 border-transparent text-slate-500 hover:bg-slate-50">Por Aula</button>
-          <button data-cont-tab="director"  class="cont-tab px-4 py-2 rounded-xl text-xs font-black uppercase border-2 border-transparent text-slate-500 hover:bg-slate-50">Direccin</button>
+          <button data-cont-tab="resumen"     class="cont-tab px-4 py-2 rounded-xl text-xs font-black uppercase border-2 border-green-500 bg-green-50 text-green-700">Resumen</button>
+          <button data-cont-tab="ingresos"    class="cont-tab px-4 py-2 rounded-xl text-xs font-black uppercase border-2 border-transparent text-slate-500 hover:bg-slate-50">Ingresos</button>
+          <button data-cont-tab="gastos"      class="cont-tab px-4 py-2 rounded-xl text-xs font-black uppercase border-2 border-transparent text-slate-500 hover:bg-slate-50">Gastos</button>
+          <button data-cont-tab="nomina"      class="cont-tab px-4 py-2 rounded-xl text-xs font-black uppercase border-2 border-transparent text-slate-500 hover:bg-slate-50">Nómina</button>
+          <button data-cont-tab="cashflow"    class="cont-tab px-4 py-2 rounded-xl text-xs font-black uppercase border-2 border-transparent text-slate-500 hover:bg-slate-50">Flujo de Caja</button>
+          <button data-cont-tab="facturacion" class="cont-tab px-4 py-2 rounded-xl text-xs font-black uppercase border-2 border-transparent text-slate-500 hover:bg-slate-50">Facturación</button>
+          <button data-cont-tab="cxc"         class="cont-tab px-4 py-2 rounded-xl text-xs font-black uppercase border-2 border-transparent text-slate-500 hover:bg-slate-50">Cuentas por Cobrar</button>
+          <button data-cont-tab="reportes"    class="cont-tab px-4 py-2 rounded-xl text-xs font-black uppercase border-2 border-transparent text-slate-500 hover:bg-slate-50">Reportes</button>
+          <button data-cont-tab="configuracion"  class="cont-tab px-4 py-2 rounded-xl text-xs font-black uppercase border-2 border-transparent text-slate-500 hover:bg-slate-50">Configuración</button>
         </div>
 
-        <!-- Tab: Diario -->
-        <div id="cont-daily" class="cont-panel space-y-5">
+        <!-- Tab: Resumen -->
+        <div id="cont-resumen" class="cont-panel space-y-5">
+          <!-- KPIs -->
           <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm text-center">
-              <p class="text-xl font-black text-green-600" id="dailyCobrado">RD$0</p>
-              <p class="text-[10px] font-black text-slate-400 uppercase mt-1">Cobrado Hoy</p>
+            <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
+              <div class="flex items-center gap-2 mb-2">
+                <div class="p-2 rounded-lg bg-green-50"><i data-lucide="coins" class="w-4 h-4 text-green-600"></i></div>
+                <span class="text-[10px] font-black uppercase tracking-wider text-slate-400">Ingresos Hoy</span>
+              </div>
+              <p class="text-xl font-black text-slate-800" id="resIngresosHoy">RD$0</p>
             </div>
-            <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm text-center">
-              <p class="text-xl font-black text-amber-600" id="dailyPendiente">0</p>
-              <p class="text-[10px] font-black text-slate-400 uppercase mt-1">Pendiente</p>
+            <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
+              <div class="flex items-center gap-2 mb-2">
+                <div class="p-2 rounded-lg bg-emerald-50"><i data-lucide="wallet" class="w-4 h-4 text-emerald-600"></i></div>
+                <span class="text-[10px] font-black uppercase tracking-wider text-slate-400">Ingresos Mes</span>
+              </div>
+              <p class="text-xl font-black text-slate-800" id="resIngresosMes">RD$0</p>
             </div>
-            <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm text-center">
-              <p class="text-xl font-black text-blue-600" id="dailyFacturas">0</p>
-              <p class="text-[10px] font-black text-slate-400 uppercase mt-1">Facturas Emitidas</p>
+            <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
+              <div class="flex items-center gap-2 mb-2">
+                <div class="p-2 rounded-lg bg-amber-50"><i data-lucide="alert-triangle" class="w-4 h-4 text-amber-600"></i></div>
+                <span class="text-[10px] font-black uppercase tracking-wider text-slate-400">Por Cobrar</span>
+              </div>
+              <p class="text-xl font-black text-slate-800" id="resPendiente">RD$0</p>
             </div>
-            <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm text-center">
-              <p class="text-xl font-black text-slate-600" id="dailyMetodo"></p>
-              <p class="text-[10px] font-black text-slate-400 uppercase mt-1">Mtodo Principal</p>
+            <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
+              <div class="flex items-center gap-2 mb-2">
+                <div class="p-2 rounded-lg bg-red-50"><i data-lucide="clock-alert" class="w-4 h-4 text-red-600"></i></div>
+                <span class="text-[10px] font-black uppercase tracking-wider text-slate-400">Mora Acumulada</span>
+              </div>
+              <p class="text-xl font-black text-slate-800" id="resMora">RD$0</p>
             </div>
           </div>
-          <div class="bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-sm">
-            <div class="p-4 border-b border-slate-100 flex items-center gap-3">
-              <span class="font-black text-slate-700 text-sm">Detalle del da</span>
-              <input type="date" id="dailyDate" class="border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-bold outline-none focus:border-blue-400 ml-auto" onchange="App.accounting?.loadDaily?.(this.value)">
+
+          <!-- Gráficos -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div class="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
+              <h3 class="font-black text-slate-700 mb-4 text-sm">Ingresos Mensuales</h3>
+              <div class="h-64"><canvas id="chartIngresosMensuales"></canvas></div>
             </div>
-            <div id="dailyTableContainer">
-              <div class="text-center py-8 text-slate-400 text-sm">Selecciona una fecha o carga el da de hoy</div>
+            <div class="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
+              <h3 class="font-black text-slate-700 mb-4 text-sm">Ingresos vs Gastos</h3>
+              <div class="h-64"><canvas id="chartIngresosGastos"></canvas></div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div class="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
+              <h3 class="font-black text-slate-700 mb-4 text-sm">Cobros por Concepto</h3>
+              <div class="h-64"><canvas id="chartCobrosConcepto"></canvas></div>
+            </div>
+            <div class="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
+              <h3 class="font-black text-slate-700 mb-4 text-sm">Métodos de Pago</h3>
+              <div class="h-64"><canvas id="chartMetodosPago"></canvas></div>
+            </div>
+            <div class="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
+              <h3 class="font-black text-slate-700 mb-4 text-sm">Estado de Cobros</h3>
+              <div class="h-64"><canvas id="chartMorosidad"></canvas></div>
             </div>
           </div>
         </div>
 
-        <!-- Tab: Mensual -->
-        <div id="cont-monthly" class="cont-panel hidden space-y-5">
-          <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
-            <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm text-center">
-              <p class="text-xl font-black text-green-600" id="monthlyIngresos">RD$0</p>
-              <p class="text-[10px] font-black text-slate-400 uppercase mt-1">Ingresos del Mes</p>
+        <!-- Tab: Ingresos -->
+        <div id="cont-ingresos" class="cont-panel hidden space-y-5">
+          <div class="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="font-black text-slate-700 text-sm">Listado de Ingresos</h3>
+              <button onclick="AccountingModule.exportIngresosPDF()" class="px-4 py-2 bg-green-600 text-white rounded-xl text-xs font-black uppercase flex items-center gap-2">
+                <i data-lucide="download" class="w-4 h-4"></i> Exportar PDF
+              </button>
             </div>
-            <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm text-center">
-              <p class="text-xl font-black text-red-600" id="monthlyMoras">RD$0</p>
-              <p class="text-[10px] font-black text-slate-400 uppercase mt-1">Moras Generadas</p>
-            </div>
-            <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm text-center">
-              <p class="text-xl font-black text-purple-600" id="monthlyDescuentos">RD$0</p>
-              <p class="text-[10px] font-black text-slate-400 uppercase mt-1">Descuentos Otorgados</p>
+            <div class="overflow-x-auto">
+              <table class="w-full text-sm">
+                <thead class="bg-slate-50 border-b border-slate-100">
+                  <tr>
+                    <th class="px-4 py-3 text-left text-[10px] font-black text-slate-400 uppercase">Fecha</th>
+                    <th class="px-4 py-3 text-left text-[10px] font-black text-slate-400 uppercase">Concepto</th>
+                    <th class="px-4 py-3 text-left text-[10px] font-black text-slate-400 uppercase">Alumno</th>
+                    <th class="px-4 py-3 text-left text-[10px] font-black text-slate-400 uppercase">Método</th>
+                    <th class="px-4 py-3 text-right text-[10px] font-black text-slate-400 uppercase">Monto</th>
+                  </tr>
+                </thead>
+                <tbody id="ingresosTableBody">
+                  <tr><td colspan="5" class="text-center py-8 text-slate-400 text-sm">Cargando...</td></tr>
+                </tbody>
+              </table>
             </div>
           </div>
+        </div>
+
+        <!-- Tab: Gastos -->
+        <div id="cont-gastos" class="cont-panel hidden space-y-5">
           <div class="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
-            <h3 class="font-black text-slate-700 mb-4 text-sm">Ingresos por Nivel Educativo</h3>
-            <div id="monthlyByLevel" class="space-y-3">
-              <div class="animate-pulse h-8 bg-slate-100 rounded-xl"></div>
-              <div class="animate-pulse h-8 bg-slate-100 rounded-xl"></div>
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="font-black text-slate-700 text-sm">Gastos Registrados</h3>
+              <div class="flex gap-2">
+                <button onclick="AccountingModule.openGastoModal()" class="px-4 py-2 bg-green-600 text-white rounded-xl text-xs font-black uppercase flex items-center gap-2">
+                  <i data-lucide="plus" class="w-4 h-4"></i> Nuevo Gasto
+                </button>
+                <button onclick="AccountingModule.exportGastosPDF()" class="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-black uppercase flex items-center gap-2">
+                  <i data-lucide="download" class="w-4 h-4"></i> Exportar PDF
+                </button>
+              </div>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-sm">
+                <thead class="bg-slate-50 border-b border-slate-100">
+                  <tr>
+                    <th class="px-4 py-3 text-left text-[10px] font-black text-slate-400 uppercase">Fecha</th>
+                    <th class="px-4 py-3 text-left text-[10px] font-black text-slate-400 uppercase">Concepto</th>
+                    <th class="px-4 py-3 text-left text-[10px] font-black text-slate-400 uppercase">Categoría</th>
+                    <th class="px-4 py-3 text-right text-[10px] font-black text-slate-400 uppercase">Monto</th>
+                    <th class="px-4 py-3 text-center text-[10px] font-black text-slate-400 uppercase">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="gastosTableBody">
+                  <tr><td colspan="5" class="text-center py-8 text-slate-400 text-sm">No hay gastos registrados</td></tr>
+                </tbody>
+              </table>
             </div>
           </div>
+        </div>
+
+        <!-- Tab: Nómina -->
+        <div id="cont-nomina" class="cont-panel hidden space-y-5">
           <div class="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
-            <h3 class="font-black text-slate-700 mb-4 text-sm">Ingresos por Plan de Pago</h3>
-            <div id="monthlyByPlan" class="space-y-3">
-              <div class="animate-pulse h-8 bg-slate-100 rounded-xl"></div>
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="font-black text-slate-700 text-sm">Gestión de Nómina</h3>
+              <div class="flex gap-2">
+                <button onclick="AccountingModule.openNominaModal()" class="px-4 py-2 bg-green-600 text-white rounded-xl text-xs font-black uppercase flex items-center gap-2">
+                  <i data-lucide="plus" class="w-4 h-4"></i> Nuevo Pago
+                </button>
+                <button onclick="AccountingModule.exportNominaPDF()" class="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-black uppercase flex items-center gap-2">
+                  <i data-lucide="download" class="w-4 h-4"></i> Exportar PDF
+                </button>
+              </div>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-sm">
+                <thead class="bg-slate-50 border-b border-slate-100">
+                <tr>
+                  <th class="px-4 py-3 text-left text-[10px] font-black text-slate-400 uppercase">Empleado</th>
+                  <th class="px-4 py-3 text-left text-[10px] font-black text-slate-400 uppercase">Puesto</th>
+                  <th class="px-4 py-3 text-left text-[10px] font-black text-slate-400 uppercase">Periodo</th>
+                  <th class="px-4 py-3 text-right text-[10px] font-black text-slate-400 uppercase">Monto</th>
+                  <th class="px-4 py-3 text-center text-[10px] font-black text-slate-400 uppercase">Estado</th>
+                  <th class="px-4 py-3 text-center text-[10px] font-black text-slate-400 uppercase">Acciones</th>
+                </tr>
+              </thead>
+                <tbody id="nominaTableBody">
+                  <tr><td colspan="6" class="text-center py-8 text-slate-400 text-sm">No hay registros de nómina</td></tr>
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
@@ -2612,71 +2627,155 @@
         <div id="cont-cashflow" class="cont-panel hidden space-y-5">
           <div class="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
             <div class="flex items-center justify-between mb-4">
-              <h3 class="font-black text-slate-700 text-sm">Flujo de Caja Mensual</h3>
-              <select id="cashflowYear" class="border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-black outline-none" onchange="App.accounting?.loadCashflow?.(this.value)">
-                <option value="2026">2026</option><option value="2027">2027</option>
+              <h3 class="font-black text-slate-700 text-sm">Flujo de Caja</h3>
+              <select id="cfYear" class="border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-black outline-none" onchange="AccountingModule.loadCashflow(this.value)">
+                <option value="2026">2026</option>
+                <option value="2027">2027</option>
               </select>
             </div>
-            <div class="h-64"><canvas id="cashflowChart"></canvas></div>
+            <div class="h-64"><canvas id="chartCashflow"></canvas></div>
           </div>
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div class="bg-white rounded-2xl p-4 border border-green-100 shadow-sm text-center">
               <p class="text-xl font-black text-green-600" id="cfEntradas">RD$0</p>
-              <p class="text-[10px] font-black text-slate-400 uppercase mt-1">Entradas del Ao</p>
+              <p class="text-[10px] font-black text-slate-400 uppercase mt-1">Entradas</p>
             </div>
-            <div class="bg-white rounded-2xl p-4 border border-amber-100 shadow-sm text-center">
-              <p class="text-xl font-black text-amber-600" id="cfProyeccion">RD$0</p>
-              <p class="text-[10px] font-black text-slate-400 uppercase mt-1">Proyeccin Pendiente</p>
+            <div class="bg-white rounded-2xl p-4 border border-red-100 shadow-sm text-center">
+              <p class="text-xl font-black text-red-600" id="cfSalidas">RD$0</p>
+              <p class="text-[10px] font-black text-slate-400 uppercase mt-1">Salidas</p>
             </div>
             <div class="bg-white rounded-2xl p-4 border border-blue-100 shadow-sm text-center">
-              <p class="text-xl font-black text-blue-600" id="cfCobranza">0%</p>
-              <p class="text-[10px] font-black text-slate-400 uppercase mt-1">% Cobranza</p>
+              <p class="text-xl font-black text-blue-600" id="cfBalance">RD$0</p>
+              <p class="text-[10px] font-black text-slate-400 uppercase mt-1">Balance</p>
             </div>
           </div>
         </div>
 
-        <!-- Tab: Por Alumno -->
-        <div id="cont-students" class="cont-panel hidden space-y-4">
-          <div class="flex gap-3 flex-wrap">
-            <input id="contStudentSearch" type="text" placeholder="Buscar alumno..." class="border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold outline-none focus:border-blue-400 flex-1 min-w-48" oninput="App.accounting?.searchStudent?.(this.value)">
-          </div>
-          <div id="contStudentResults" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div class="col-span-full text-center py-8 text-slate-400 text-sm">Busca un alumno para ver su expediente financiero</div>
-          </div>
-        </div>
-
-        <!-- Tab: Por Aula -->
-        <div id="cont-classrooms" class="cont-panel hidden">
-          <div id="contByClassroom" class="space-y-4">
-            <div class="animate-pulse h-16 bg-slate-100 rounded-2xl"></div>
-            <div class="animate-pulse h-16 bg-slate-100 rounded-2xl"></div>
-          </div>
-        </div>
-
-        <!-- Tab: Direccin -->
-        <div id="cont-director" class="cont-panel hidden space-y-5">
+        <!-- Tab: Facturación -->
+        <div id="cont-facturacion" class="cont-panel hidden space-y-5">
           <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm text-center">
-              <p class="text-xl font-black text-green-600" id="dirIngresos">RD$0</p>
-              <p class="text-[10px] font-black text-slate-400 uppercase mt-1">Ingresos Ao</p>
+              <p class="text-xl font-black text-slate-800" id="factEmitidas">0</p>
+              <p class="text-[10px] font-black text-slate-400 uppercase mt-1">Emitidas</p>
             </div>
             <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm text-center">
-              <p class="text-xl font-black text-red-600" id="dirPendiente">RD$0</p>
-              <p class="text-[10px] font-black text-slate-400 uppercase mt-1">Por Cobrar</p>
+              <p class="text-xl font-black text-slate-800" id="factPagadas">0</p>
+              <p class="text-[10px] font-black text-slate-400 uppercase mt-1">Pagadas</p>
             </div>
             <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm text-center">
-              <p class="text-xl font-black text-amber-600" id="dirMorosidad">0%</p>
-              <p class="text-[10px] font-black text-slate-400 uppercase mt-1">% Morosidad</p>
+              <p class="text-xl font-black text-slate-800" id="factAnuladas">0</p>
+              <p class="text-[10px] font-black text-slate-400 uppercase mt-1">Anuladas</p>
             </div>
             <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm text-center">
-              <p class="text-xl font-black text-blue-600" id="dirCobranza">0%</p>
-              <p class="text-[10px] font-black text-slate-400 uppercase mt-1">% Cobranza</p>
+              <p class="text-xl font-black text-slate-800" id="factPendientes">0</p>
+              <p class="text-[10px] font-black text-slate-400 uppercase mt-1">Pendientes</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab: Cuentas por Cobrar -->
+        <div id="cont-cxc" class="cont-panel hidden space-y-5">
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+            <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
+              <p class="text-xl font-black text-slate-800" id="cxcTotal">RD$0</p>
+              <p class="text-[10px] font-black text-slate-400 uppercase mt-1">Total</p>
+            </div>
+            <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
+              <p class="text-xl font-black text-amber-600" id="cxcCorriente">RD$0</p>
+              <p class="text-[10px] font-black text-slate-400 uppercase mt-1">Corriente</p>
+            </div>
+            <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
+              <p class="text-xl font-black text-red-600" id="cxcVencido">RD$0</p>
+              <p class="text-[10px] font-black text-slate-400 uppercase mt-1">Vencido</p>
             </div>
           </div>
           <div class="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
-            <h3 class="font-black text-slate-700 mb-4 text-sm">Ranking de Morosidad por Aula</h3>
-            <div id="dirMorosidadRanking" class="space-y-3">
+            <h3 class="font-black text-slate-700 mb-4 text-sm">Ranking de Morosidad</h3>
+            <div id="cxcRanking" class="space-y-3">
               <div class="animate-pulse h-8 bg-slate-100 rounded-xl"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab: Reportes -->
+        <div id="cont-reportes" class="cont-panel hidden space-y-5">
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <button onclick="AccountingModule.exportReporteDiarioPDF()" class="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm text-left hover:border-green-300 transition-all">
+              <div class="flex items-center gap-3 mb-3">
+                <div class="p-3 rounded-xl bg-green-50"><i data-lucide="file-text" class="w-5 h-5 text-green-600"></i></div>
+                <div>
+                  <h4 class="font-black text-slate-800">Reporte Diario</h4>
+                  <p class="text-xs text-slate-500">Resumen de ingresos del día</p>
+                </div>
+              </div>
+              <div class="flex items-center gap-2 text-xs font-black text-green-600">
+                <i data-lucide="download" class="w-4 h-4"></i> Descargar PDF
+              </div>
+            </button>
+            <button onclick="AccountingModule.exportReporteMensualPDF()" class="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm text-left hover:border-blue-300 transition-all">
+              <div class="flex items-center gap-3 mb-3">
+                <div class="p-3 rounded-xl bg-blue-50"><i data-lucide="bar-chart-3" class="w-5 h-5 text-blue-600"></i></div>
+                <div>
+                  <h4 class="font-black text-slate-800">Reporte Mensual</h4>
+                  <p class="text-xs text-slate-500">Análisis completo del mes</p>
+                </div>
+              </div>
+              <div class="flex items-center gap-2 text-xs font-black text-blue-600">
+                <i data-lucide="download" class="w-4 h-4"></i> Descargar PDF
+              </div>
+            </button>
+            <button onclick="AccountingModule.exportReporteMorosidadPDF()" class="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm text-left hover:border-amber-300 transition-all">
+              <div class="flex items-center gap-3 mb-3">
+                <div class="p-3 rounded-xl bg-amber-50"><i data-lucide="alert-triangle" class="w-5 h-5 text-amber-600"></i></div>
+                <div>
+                  <h4 class="font-black text-slate-800">Reporte de Morosidad</h4>
+                  <p class="text-xs text-slate-500">Deudores y antigüedad de saldos</p>
+                </div>
+              </div>
+              <div class="flex items-center gap-2 text-xs font-black text-amber-600">
+                <i data-lucide="download" class="w-4 h-4"></i> Descargar PDF
+              </div>
+            </button>
+          </div>
+        </div>
+
+        <!-- Tab: Configuración -->
+        <div id="cont-configuracion" class="cont-panel hidden space-y-5">
+          <div class="bg-slate-50 rounded-3xl border border-slate-200 p-6">
+            <h3 class="font-black text-slate-800 mb-5 flex items-center gap-2">
+              <i data-lucide="settings-2" class="w-5 h-5" style="color:#0B63C7"></i> Configuración de Cobro
+            </h3>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <div>
+                <label class="block text-xs font-black text-slate-500 uppercase tracking-wider mb-1.5">Día Generación Automática</label>
+                <div class="flex items-center gap-2">
+                  <input type="number" id="confGenDay" min="1" max="28" value="25"
+                    class="w-full px-3 py-2.5 border-2 border-slate-100 rounded-xl text-sm font-bold bg-white outline-none focus:border-blue-400">
+                  <span class="text-xs text-slate-400 font-medium whitespace-nowrap">del mes anterior</span>
+                </div>
+              </div>
+              <div>
+                <label class="block text-xs font-black text-slate-500 uppercase tracking-wider mb-1.5">Día Límite de Pago</label>
+                <div class="flex items-center gap-2">
+                  <input type="number" id="confDueDay" min="1" max="28" value="5"
+                    class="w-full px-3 py-2.5 border-2 border-slate-100 rounded-xl text-sm font-bold bg-white outline-none focus:border-blue-400">
+                  <span class="text-xs text-slate-400 font-medium whitespace-nowrap">del mes actual</span>
+                </div>
+              </div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-5">
+              <button id="btnSavePaymentConfig" class="py-2.5 text-white text-xs font-black uppercase rounded-xl flex items-center justify-center gap-2 hover:opacity-90 transition-all" style="background:#0B63C7">
+                <i data-lucide="save" class="w-4 h-4"></i> Guardar Configuración
+              </button>
+              <button id="btnGeneratePaymentsNow" class="py-2.5 text-white text-xs font-black uppercase rounded-xl flex items-center justify-center gap-2 hover:opacity-90 transition-all" style="background:#28B54D">
+                <i data-lucide="play-circle" class="w-4 h-4"></i> Generar pagos ahora
+              </button>
+              <button id="btnSendPaymentReminders" class="py-2.5 text-white text-xs font-black uppercase rounded-xl flex items-center justify-center gap-2 hover:opacity-90 transition-all" style="background:#FF8A00">
+                <i data-lucide="bell" class="w-4 h-4"></i> Enviar recordatorios
+              </button>
+              <button id="btnExportMorosidad" class="py-2.5 text-white text-xs font-black uppercase rounded-xl flex items-center justify-center gap-2 hover:opacity-90 transition-all" style="background:#475569">
+                <i data-lucide="download" class="w-4 h-4"></i> Exportar morosidad
+              </button>
             </div>
           </div>
         </div>
@@ -2689,55 +2788,14 @@
             const btn = e.target.closest('[data-cont-tab]');
             if (!btn) return;
             const tab = btn.dataset.contTab;
-            document.querySelectorAll('.cont-tab').forEach(b => b.classList.remove('active-cont','border-blue-500','bg-blue-50','text-blue-700'));
+            document.querySelectorAll('.cont-tab').forEach(b => b.classList.remove('active-cont','border-green-500','bg-green-50','text-green-700'));
             btn.classList.add('active-cont');
             document.querySelectorAll('.cont-panel').forEach(p => p.classList.add('hidden'));
             const panel = document.getElementById('cont-'+tab);
             if (panel) panel.classList.remove('hidden');
             import('./js/directora/accounting.module.js').then(m => m.AccountingModule?.loadTab?.(tab)).catch(() => {});
           });
-          // Init date picker
-          document.getElementById('dailyDate') && (document.getElementById('dailyDate').value = new Date().toISOString().split('T')[0]);
         </script>
-
-        <!-- CONFIGURACIÓN DE COBRO -->
-        <div class="bg-slate-50 rounded-3xl border border-slate-200 p-6 mt-6">
-          <h3 class="font-black text-slate-800 mb-5 flex items-center gap-2">
-            <i data-lucide="settings-2" class="w-5 h-5" style="color:#0B63C7"></i> Configuración de Cobro
-          </h3>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            <div>
-              <label class="block text-xs font-black text-slate-500 uppercase tracking-wider mb-1.5">Día Generación Automática</label>
-              <div class="flex items-center gap-2">
-                <input type="number" id="confGenDay" min="1" max="28" value="25"
-                  class="w-full px-3 py-2.5 border-2 border-slate-100 rounded-xl text-sm font-bold bg-white outline-none focus:border-blue-400">
-                <span class="text-xs text-slate-400 font-medium whitespace-nowrap">del mes anterior</span>
-              </div>
-            </div>
-            <div>
-              <label class="block text-xs font-black text-slate-500 uppercase tracking-wider mb-1.5">Día Límite de Pago</label>
-              <div class="flex items-center gap-2">
-                <input type="number" id="confDueDay" min="1" max="28" value="5"
-                  class="w-full px-3 py-2.5 border-2 border-slate-100 rounded-xl text-sm font-bold bg-white outline-none focus:border-blue-400">
-                <span class="text-xs text-slate-400 font-medium whitespace-nowrap">del mes actual</span>
-              </div>
-            </div>
-          </div>
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-5">
-            <button id="btnSavePaymentConfig" class="py-2.5 text-white text-xs font-black uppercase rounded-xl flex items-center justify-center gap-2 hover:opacity-90 transition-all" style="background:#0B63C7">
-              <i data-lucide="save" class="w-4 h-4"></i> Guardar Configuración
-            </button>
-            <button id="btnGeneratePaymentsNow" class="py-2.5 text-white text-xs font-black uppercase rounded-xl flex items-center justify-center gap-2 hover:opacity-90 transition-all" style="background:#28B54D">
-              <i data-lucide="play-circle" class="w-4 h-4"></i> Generar pagos ahora
-            </button>
-            <button id="btnSendPaymentReminders" class="py-2.5 text-white text-xs font-black uppercase rounded-xl flex items-center justify-center gap-2 hover:opacity-90 transition-all" style="background:#FF8A00">
-              <i data-lucide="bell" class="w-4 h-4"></i> Enviar recordatorios
-            </button>
-            <button id="btnExportMorosidad" class="py-2.5 text-white text-xs font-black uppercase rounded-xl flex items-center justify-center gap-2 hover:opacity-90 transition-all" style="background:#475569">
-              <i data-lucide="download" class="w-4 h-4"></i> Exportar morosidad
-            </button>
-          </div>
-        </div>
       </section>
 
       <!-- CUENTAS POR COBRAR -->
