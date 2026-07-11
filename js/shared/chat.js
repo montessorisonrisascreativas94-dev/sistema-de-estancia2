@@ -59,7 +59,7 @@ export const ChatModule = {
 
         const [teacherRes, staffRes] = await Promise.all([
           teacherId ? supabase.from('profiles').select('id, name, avatar_url, role').eq('id', teacherId).single() : Promise.resolve({ data: null }),
-          supabase.from('profiles').select('id, name, avatar_url, role').in('role', ['directora', 'asistente']).order('name')
+          supabase.from('profiles').select('id, name, avatar_url, role').in('role', ['directora', 'asistente', 'maestra']).order('name')
         ]);
 
         const contacts = [];

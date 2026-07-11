@@ -496,12 +496,12 @@ export const DailyReportModule = {
       case 'bath':
         icon = '🚽'; label = 'Fue al baño'; break;
       case 'temp':
-        icon = '🌡️'; label = 'Temperatura';
-        detail = e.value ? `${e.value}°` : '';
-        if (e.value >= 38) detail += ' ⚠️ Fiebre';
+        icon = '\uD83C\uDF21'; label = 'Temperatura';
+        detail = e.value ? `${e.value}\u00B0` : '';
+        if (e.value >= 38) detail += ' ⚠ Fiebre';
         break;
       case 'med':
-        icon = '💊'; label = 'Medicamento';
+        icon = '\uD83D\uDC8A'; label = 'Medicamento';
         detail = [e.name, e.dose].filter(Boolean).join(' — '); break;
       case 'note':
         icon = '📝'; label = 'Nota'; detail = e.text || ''; break;

@@ -460,9 +460,9 @@ function renderDailySummary(log) {
       milk:   (e) => ({ icon:'🍼', label:'Biberón',       detail: e.oz ? e.oz + ' oz' : '' }),
       sleep:  (e) => ({ icon:'😴', label:'Durmió',        detail: e.end_time ? ('hasta ' + fmtTime(e.end_time)) : 'En siesta...' }),
       diaper: (e) => ({ icon: e.subtype==='wet'?'💧':'💩', label: e.subtype==='wet'?'Pañal mojado':'Pañal sucio', detail: '' }),
-      food:   (e) => ({ icon:'🍽️', label: e.meal||'Comida', detail: e.amount||'' }),
-      temp:   (e) => ({ icon:'🌡️', label:'Temperatura',   detail: e.value ? e.value + '°C' : '' }),
-      med:    (e) => ({ icon:'💊', label:'Medicamento',   detail: e.name||'' }),
+      food:   (e) => ({ icon:'\uD83C\uDF7D', label: e.meal||'Comida', detail: e.amount||'' }),
+      temp:   (e) => ({ icon:'\uD83C\uDF21', label:'Temperatura',   detail: e.value ? e.value + '\u00B0C' : '' }),
+      med:    (e) => ({ icon:'\uD83D\uDC8A', label:'Medicamento',   detail: e.name||'' }),
       note:   (e) => ({ icon:'📝', label:'Nota',          detail: e.text||'' }),
       bath:   (_) => ({ icon:'🛁', label:'Baño',          detail: '' }),
     };
@@ -476,7 +476,7 @@ function renderDailySummary(log) {
     if (log.mood) items.push({ icon: moodMap[log.mood.toLowerCase()]||'😊', label:'Ánimo', detail: log.mood, timeStr: fmtTime(log.created_at) });
     const fl = { todo:'Comio todo ✅', poco:'Comio poco ⚠️', nada:'No comio ❌' };
     if (log.food?.breakfast) items.push({ icon:'🍳', label:'Desayuno', detail: fl[log.food.breakfast]||log.food.breakfast, timeStr:'' });
-    if (log.food?.lunch)     items.push({ icon:'🍽️', label:'Almuerzo', detail: fl[log.food.lunch]||log.food.lunch,         timeStr:'' });
+    if (log.food?.lunch)     items.push({ icon:'\uD83C\uDF7D', label:'Almuerzo', detail: fl[log.food.lunch]||log.food.lunch,         timeStr:'' });
     if (log.food?.snack)     items.push({ icon:'🥪', label:'Merienda', detail: fl[log.food.snack]||log.food.snack,         timeStr:'' });
     if (log.nap === 'si')    items.push({ icon:'💤', label:'Siesta', detail:'Durmi\u00f3 su siesta', timeStr:'' });
     else if (log.nap === 'no') items.push({ icon:'☀️', label:'Sin siesta', detail:'No durmi\u00f3 siesta', timeStr:'' });
