@@ -30,6 +30,7 @@ import { AccessModule } from './access.module.js';
 import { SchoolYearModule } from './school-year.module.js';
 
 window.CajaModule = CajaModule;
+window.CajaCobroV2 = CajaCobroV2;
 import { AttendanceModule } from './attendance.module.js';
 import { RealtimeManager } from '../shared/realtime-manager.js';
 import { QueryCache } from '../shared/query-cache.js';
@@ -200,7 +201,9 @@ export function goToSection(sectionId) {
       case 'finanzas':
         _renderFinanzas();
         break;
-      case 'caja':        CajaModule.init(); break;
+      case 'caja':
+        initCajaCobro('caja');
+        break;
       case 'pagos':
         NewPaymentsModule.init();
         break;

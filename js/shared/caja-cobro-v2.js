@@ -1,6 +1,6 @@
-/**
- * Caja Cobro v2 — Panel Directora y Asistente
- * Flujo: Lista pendientes → Cobrar → Modal compacto responsive → Carrito → Pago → Factura
+﻿/**
+ * Caja Cobro v2 â€” Panel Directora y Asistente
+ * Flujo: Lista pendientes â†’ Cobrar â†’ Modal compacto responsive â†’ Carrito â†’ Pago â†’ Factura
  */
 import { supabase } from './supabase.js';
 import { Helpers } from './helpers.js';
@@ -10,19 +10,19 @@ const today = () => new Date().toISOString().split('T')[0];
 const MONTHS_SHORT = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 const MONTHS_FULL  = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
-// ── CATÁLOGO (LocalStorage) ───────────────────────────────────────────────────
+// â”€â”€ CATÃLOGO (LocalStorage) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const CATALOG_KEY = 'caja_extra_concepts_v2';
 const DEFAULT_CATALOG = [
-  {id:'uniforme',    label:'Uniforme',     amount:3200, icon:'👕'},
-  {id:'transporte',  label:'Transporte',   amount:2500, icon:'🚌'},
-  {id:'libros',      label:'Libros',       amount:1500, icon:'📚'},
-  {id:'materiales',  label:'Materiales',   amount:800,  icon:'🎨'},
-  {id:'actividades', label:'Actividades',  amount:500,  icon:'🎉'},
-  {id:'excursiones', label:'Excursiones',  amount:1000, icon:'🏕️'},
-  {id:'comedor',     label:'Comedor',      amount:1800, icon:'🍽️'},
-  {id:'tutorias',    label:'Tutorías',     amount:1200, icon:'📝'},
-  {id:'certificados',label:'Certificados', amount:300,  icon:'🏆'},
-  {id:'otro',        label:'Otro',         amount:0,    icon:'➕'},
+  {id:'uniforme',    label:'Uniforme',     amount:3200, icon:'ðŸ‘•'},
+  {id:'transporte',  label:'Transporte',   amount:2500, icon:'ðŸšŒ'},
+  {id:'libros',      label:'Libros',       amount:1500, icon:'ðŸ“š'},
+  {id:'materiales',  label:'Materiales',   amount:800,  icon:'ðŸŽ¨'},
+  {id:'actividades', label:'Actividades',  amount:500,  icon:'ðŸŽ‰'},
+  {id:'excursiones', label:'Excursiones',  amount:1000, icon:'ðŸ•ï¸'},
+  {id:'comedor',     label:'Comedor',      amount:1800, icon:'ðŸ½ï¸'},
+  {id:'tutorias',    label:'TutorÃ­as',     amount:1200, icon:'ðŸ“'},
+  {id:'certificados',label:'Certificados', amount:300,  icon:'ðŸ†'},
+  {id:'otro',        label:'Otro',         amount:0,    icon:'âž•'},
 ];
 
 function getCatalog() {
@@ -31,7 +31,7 @@ function getCatalog() {
 }
 function saveCatalog(list) { localStorage.setItem(CATALOG_KEY, JSON.stringify(list)); }
 
-// ── Estado del módulo ─────────────────────────────────────────────────────────
+// â”€â”€ Estado del mÃ³dulo â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 let _cart      = [];
 let _student   = null;
 let _charges   = [];
@@ -43,9 +43,9 @@ export function initCajaCobro(containerId = 'cajaContainer') {
   renderCajaMain();
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // PANTALLA PRINCIPAL
-// ══════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 async function renderCajaMain() {
   const el = document.getElementById(_containerId);
   if (!el) return;
@@ -59,28 +59,28 @@ async function renderCajaMain() {
     ${[['Cobrado Hoy','kpiCobrado','#28B54D'],['Pendientes','kpiPend','#FF8A00'],['Vencidos','kpiVenc','#EF4444'],['Transferencias','kpiTransf','#8B5CF6']]
       .map(([l,id,c])=>`<div style="background:white;border-radius:14px;padding:12px 14px;border:1px solid #f1f5f9">
         <div style="font-size:.62rem;font-weight:900;color:${c};text-transform:uppercase;letter-spacing:.1em">${l}</div>
-        <div style="font-size:1.3rem;font-weight:900;color:#1a2340;margin-top:3px" id="${id}">—</div>
+        <div style="font-size:1.3rem;font-weight:900;color:#1a2340;margin-top:3px" id="${id}">â€”</div>
       </div>`).join('')}
   </div>
   <div style="display:flex;align-items:center;gap:8px;background:white;border-radius:13px;border:1px solid #f1f5f9;padding:10px 14px;margin-bottom:12px">
     <i data-lucide="search" style="width:16px;height:16px;color:#94a3b8;flex-shrink:0"></i>
     <input id="cajaSearch" placeholder="Buscar estudiante..." oninput="CajaCobroV2.filterTable(this.value)"
       style="flex:1;border:none;outline:none;font-size:.875rem;font-weight:600;color:#1a2340;background:transparent">
-    <button onclick="CajaCobroV2.reload()" style="padding:5px 12px;border-radius:8px;border:none;background:#f1f5f9;color:#64748b;font-size:.72rem;font-weight:900;cursor:pointer">↻</button>
+    <button onclick="CajaCobroV2.reload()" style="padding:5px 12px;border-radius:8px;border:none;background:#f1f5f9;color:#64748b;font-size:.72rem;font-weight:900;cursor:pointer">â†»</button>
   </div>
   <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
-    ${[['all','Todos'],['overdue','🔴 Vencidos'],['pending','🟡 Pendientes'],['review','🔵 Revisión'],['paid','🟢 Al día']]
+    ${[['all','Todos'],['overdue','ðŸ”´ Vencidos'],['pending','ðŸŸ¡ Pendientes'],['review','ðŸ”µ RevisiÃ³n'],['paid','ðŸŸ¢ Al dÃ­a']]
       .map(([f,l],i)=>`<button class="caja-filter-btn${i===0?' on':''}" onclick="CajaCobroV2.setFilter('${f}',this)">${l}</button>`).join('')}
   </div>
   <div style="background:white;border-radius:14px;border:1px solid #f1f5f9;overflow:hidden">
     <div style="padding:10px 16px;border-bottom:1px solid #f8fafc;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-      <span style="font-size:.75rem;font-weight:900;color:#64748b;text-transform:uppercase">Estudiantes — <span id="cajaCount" style="color:#0D9488">…</span></span>
-      <button onclick="CajaCobroV2.openPendingTransfers()" style="padding:5px 12px;border-radius:9px;border:2px solid #8B5CF6;background:#F3E8FF;color:#7C3AED;font-size:.68rem;font-weight:900;cursor:pointer">🕐 Transferencias pend.</button>
+      <span style="font-size:.75rem;font-weight:900;color:#64748b;text-transform:uppercase">Estudiantes â€” <span id="cajaCount" style="color:#0D9488">â€¦</span></span>
+      <button onclick="CajaCobroV2.openPendingTransfers()" style="padding:5px 12px;border-radius:9px;border:2px solid #8B5CF6;background:#F3E8FF;color:#7C3AED;font-size:.68rem;font-weight:900;cursor:pointer">ðŸ• Transferencias pend.</button>
     </div>
     <div style="overflow-x:auto">
       <table style="width:100%;min-width:600px;border-collapse:collapse">
         <thead><tr style="background:#f8fafc">
-          ${['','Estudiante','Curso','Debe','Vence','Acción'].map(h=>`<th style="padding:9px 14px;text-align:left;font-size:.62rem;font-weight:900;color:#94a3b8;text-transform:uppercase;letter-spacing:.08em">${h}</th>`).join('')}
+          ${['','Estudiante','Curso','Debe','Vence','AcciÃ³n'].map(h=>`<th style="padding:9px 14px;text-align:left;font-size:.62rem;font-weight:900;color:#94a3b8;text-transform:uppercase;letter-spacing:.08em">${h}</th>`).join('')}
         </tr></thead>
         <tbody id="cajaTbody"><tr><td colspan="6" style="text-align:center;padding:28px;color:#94a3b8;font-size:.85rem">Cargando...</td></tr></tbody>
       </table>
@@ -90,9 +90,9 @@ async function renderCajaMain() {
   await CajaCobroV2.loadStudents();
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// MÓDULO EXPORTADO
-// ══════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// MÃ“DULO EXPORTADO
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 export const CajaCobroV2 = {
   _all: [],
   _filter: 'all',
@@ -134,12 +134,12 @@ export const CajaCobroV2 = {
     const now = new Date(); now.setHours(0,0,0,0);
     tbody.innerHTML = filtered.map(s=>{
       const dot = s.status==='overdue'?'#EF4444':s.status==='review'?'#8B5CF6':s.status==='pending'?'#F59E0B':'#28B54D';
-      const dueLabel = s.nextDue ? new Date(s.nextDue+'T00:00:00').toLocaleDateString('es-ES',{day:'2-digit',month:'short'}) : '—';
+      const dueLabel = s.nextDue ? new Date(s.nextDue+'T00:00:00').toLocaleDateString('es-ES',{day:'2-digit',month:'short'}) : 'â€”';
       const isToday = s.nextDue===today();
       return `<tr style="border-bottom:1px solid #f8fafc" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background=''">
         <td style="padding:10px 14px"><span style="width:9px;height:9px;border-radius:50%;background:${dot};display:inline-block"></span></td>
         <td style="padding:10px 14px"><div style="font-weight:800;color:#1a2340;font-size:.85rem">${Helpers.escapeHTML(s.name)}</div><div style="font-size:.68rem;color:#94a3b8">${s.matricula||''}</div></td>
-        <td style="padding:10px 14px;font-size:.78rem;color:#64748b;font-weight:600">${s.classrooms?.name||'—'}</td>
+        <td style="padding:10px 14px;font-size:.78rem;color:#64748b;font-weight:600">${s.classrooms?.name||'â€”'}</td>
         <td style="padding:10px 14px">${s.balance>0?`<span style="font-weight:900;font-size:.875rem;color:${dot}">${fmt(s.balance)}</span>`:`<span style="color:#94a3b8;font-size:.78rem">Sin deuda</span>`}</td>
         <td style="padding:10px 14px;font-size:.75rem;font-weight:800;color:${isToday?'#EF4444':'#64748b'}">${isToday?'Hoy':dueLabel}</td>
         <td style="padding:10px 14px;text-align:center">
@@ -166,7 +166,7 @@ export const CajaCobroV2 = {
 
   reload() { this.loadStudents(); },
 
-  // ── MODAL DE COBRO ──────────────────────────────────────────────────────────
+  // â”€â”€ MODAL DE COBRO â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   async openCobrarModal(studentId) {
     _cart = []; _method = null; _student = null; _charges = [];
 
@@ -214,14 +214,14 @@ export const CajaCobroV2 = {
     <div id="cajaModalInner" style="background:#f8fafc;border-radius:16px;width:100%;max-width:500px;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,.28);margin:auto;position:relative;display:flex;flex-direction:column">
 
       <!-- Header compacto -->
-      <div style="background:linear-gradient(135deg,#166534,#15803d);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-shrink:0">
+      <div style="background:linear-gradient(135deg,#0B63C7,#0850A0);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-shrink:0">
         <div style="display:flex;align-items:center;gap:10px;min-width:0">
           <div style="width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;color:white;font-weight:900;font-size:1rem;flex-shrink:0">
             ${(stu?.name||'?').charAt(0).toUpperCase()}
           </div>
           <div style="min-width:0">
-            <div style="font-weight:900;font-size:.9rem;color:white;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${Helpers.escapeHTML(stu?.name||'—')}</div>
-            <div style="font-size:.65rem;color:rgba(255,255,255,.75);font-weight:600">${stu?.classrooms?.name||''} · ${stu?.matricula||''}</div>
+            <div style="font-weight:900;font-size:.9rem;color:white;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${Helpers.escapeHTML(stu?.name||'â€”')}</div>
+            <div style="font-size:.65rem;color:rgba(255,255,255,.75);font-weight:600">${stu?.classrooms?.name||''} Â· ${stu?.matricula||''}</div>
           </div>
         </div>
         <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
@@ -229,27 +229,27 @@ export const CajaCobroV2 = {
             <div style="font-size:.58rem;color:rgba(255,255,255,.7);font-weight:900;text-transform:uppercase">Pendiente</div>
             <div style="font-size:1rem;font-weight:900;color:white">${fmt(_charges.reduce((s,c)=>s+Number(c.amount||0),0))}</div>
           </div>
-          <button onclick="document.getElementById('${modalId}').remove()" style="width:30px;height:30px;border-radius:50%;border:none;background:rgba(255,255,255,.2);color:white;font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">✕</button>
+          <button onclick="document.getElementById('${modalId}').remove()" style="width:30px;height:30px;border-radius:50%;border:none;background:rgba(255,255,255,.2);color:white;font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">âœ•</button>
         </div>
       </div>
 
       <!-- Tabs -->
       <div style="display:flex;background:white;border-bottom:2px solid #f1f5f9;flex-shrink:0" id="cajaTabs">
-        ${[['meses','📅 Mensualidades'],['conceptos','🏷️ Conceptos'],['pago','💳 Método'],['resumen','🧾 Resumen']].map(([t,l],i)=>`
+        ${[['meses','ðŸ“… Mensualidades'],['conceptos','ðŸ·ï¸ Conceptos'],['pago','ðŸ’³ MÃ©todo'],['resumen','ðŸ§¾ Resumen']].map(([t,l],i)=>`
           <button onclick="CajaCobroV2._showTab('${t}')" id="cajaTab_${t}"
-            style="flex:1;padding:8px 4px;border:none;font-size:.62rem;font-weight:900;cursor:pointer;transition:all .15s;border-bottom:2px solid transparent;margin-bottom:-2px;${i===0?'color:#166534;border-bottom-color:#166534;background:white':'color:#94a3b8;background:white'}">
+            style="flex:1;padding:8px 4px;border:none;font-size:.62rem;font-weight:900;cursor:pointer;transition:all .15s;border-bottom:2px solid transparent;margin-bottom:-2px;${i===0?'color:#0B63C7;border-bottom-color:#0B63C7;background:white':'color:#94a3b8;background:white'}">
             ${l}
           </button>`).join('')}
       </div>
 
-      <!-- Tab content — scrollable -->
+      <!-- Tab content â€” scrollable -->
       <div id="cajaTabContent" style="overflow-y:auto;max-height:calc(85vh - 160px);min-height:280px;flex:1">
 
         <!-- TAB: Mensualidades -->
         <div id="cajaPane_meses" style="padding:12px">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-            <span style="font-size:.62rem;font-weight:900;color:#94a3b8;text-transform:uppercase">Año ${new Date().getFullYear()} — clic para seleccionar</span>
-            <button onclick="CajaCobroV2._selectAllPending()" style="font-size:.6rem;font-weight:900;color:#166534;border:1px solid #166534;background:transparent;border-radius:6px;padding:2px 8px;cursor:pointer">Todos pendientes</button>
+            <span style="font-size:.62rem;font-weight:900;color:#94a3b8;text-transform:uppercase">AÃ±o ${new Date().getFullYear()} â€” clic para seleccionar</span>
+            <button onclick="CajaCobroV2._selectAllPending()" style="font-size:.6rem;font-weight:900;color:#0B63C7;border:1px solid #0B63C7;background:transparent;border-radius:6px;padding:2px 8px;cursor:pointer">Todos pendientes</button>
           </div>
           <!-- Grid compacto 4 cols x 3 filas -->
           <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:5px">
@@ -262,7 +262,7 @@ export const CajaCobroV2 = {
               const bg    = isPaid ? '#f0fdf4' : isOverdue ? '#fff1f2' : isCurrent ? '#eff6ff' : '#f8fafc';
               const bc    = isPaid ? '#bbf7d0' : isOverdue ? '#fecdd3' : isCurrent ? '#bfdbfe' : '#e2e8f0';
               const tc    = isPaid ? '#16a34a' : isOverdue ? '#ef4444' : isCurrent ? '#2563eb' : '#64748b';
-              const ico   = isPaid ? '✓' : isOverdue ? '!' : isCurrent ? '→' : '○';
+              const ico   = isPaid ? 'âœ“' : isOverdue ? '!' : isCurrent ? 'â†’' : 'â—‹';
               return `<button id="month_${i}" onclick="CajaCobroV2.toggleMonth(${i},'${m}',${amt})"
                 style="padding:7px 4px;border-radius:9px;border:2px solid ${bc};background:${bg};cursor:${isPaid?'not-allowed':'pointer'};transition:all .12s;text-align:center;display:flex;flex-direction:column;align-items:center;gap:1px"
                 ${isPaid?'disabled':''} data-month="${i}" data-label="${m}" data-amount="${amt}" data-paid="${isPaid}">
@@ -272,9 +272,9 @@ export const CajaCobroV2 = {
               </button>`;
             }).join('')}
           </div>
-          <div id="monthSelInfo" style="margin-top:8px;font-size:.72rem;font-weight:800;color:#166534;text-align:center"></div>
+          <div id="monthSelInfo" style="margin-top:8px;font-size:.72rem;font-weight:800;color:#0B63C7;text-align:center"></div>
           <div style="margin-top:10px;display:flex;justify-content:flex-end">
-            <button onclick="CajaCobroV2._showTab('conceptos')" style="padding:6px 16px;background:#166534;color:white;border:none;border-radius:8px;font-size:.72rem;font-weight:900;cursor:pointer">Siguiente →</button>
+            <button onclick="CajaCobroV2._showTab('conceptos')" style="padding:6px 16px;background:#0B63C7;color:white;border:none;border-radius:8px;font-size:.72rem;font-weight:900;cursor:pointer">Siguiente â†’</button>
           </div>
         </div>
 
@@ -286,30 +286,30 @@ export const CajaCobroV2 = {
               <button onclick="CajaCobroV2.addExtraConcept('${c.id}','${Helpers.escapeHTML(c.label)}',${c.amount})"
                 id="concept_${c.id}"
                 style="padding:8px 5px;border-radius:10px;border:2px solid #e2e8f0;background:white;cursor:pointer;transition:all .12s;text-align:center;display:flex;flex-direction:column;align-items:center;gap:3px">
-                <span style="font-size:1.1rem">${c.icon||'🏷️'}</span>
+                <span style="font-size:1.1rem">${c.icon||'ðŸ·ï¸'}</span>
                 <span style="font-size:.65rem;font-weight:800;color:#1a2340;line-height:1.2">${Helpers.escapeHTML(c.label)}</span>
-                <span style="font-size:.65rem;font-weight:900;color:#166534">${c.amount>0?fmt(c.amount):'Libre'}</span>
+                <span style="font-size:.65rem;font-weight:900;color:#0B63C7">${c.amount>0?fmt(c.amount):'Libre'}</span>
               </button>`).join('')}
           </div>
           <div style="background:#f8fafc;border-radius:10px;padding:10px;border:1px solid #e2e8f0">
             <div style="font-size:.62rem;font-weight:900;color:#94a3b8;text-transform:uppercase;margin-bottom:6px">Concepto libre</div>
             <div style="display:flex;gap:5px">
-              <input id="freeConceptLabel" placeholder="Descripción" style="flex:2;padding:7px 8px;border:1px solid #e2e8f0;border-radius:8px;font-size:.75rem;font-weight:600;outline:none;min-width:0">
+              <input id="freeConceptLabel" placeholder="DescripciÃ³n" style="flex:2;padding:7px 8px;border:1px solid #e2e8f0;border-radius:8px;font-size:.75rem;font-weight:600;outline:none;min-width:0">
               <input id="freeConceptAmt" type="number" placeholder="RD$" style="flex:1;padding:7px 8px;border:1px solid #e2e8f0;border-radius:8px;font-size:.75rem;font-weight:600;outline:none;min-width:0">
-              <button onclick="CajaCobroV2.addFreeConcept()" style="padding:7px 10px;border-radius:8px;border:none;background:#166534;color:white;font-size:.72rem;font-weight:900;cursor:pointer;white-space:nowrap">+ Agregar</button>
+              <button onclick="CajaCobroV2.addFreeConcept()" style="padding:7px 10px;border-radius:8px;border:none;background:#0B63C7;color:white;font-size:.72rem;font-weight:900;cursor:pointer;white-space:nowrap">+ Agregar</button>
             </div>
           </div>
           <div style="margin-top:10px;display:flex;justify-content:space-between">
-            <button onclick="CajaCobroV2._showTab('meses')" style="padding:6px 16px;background:#f1f5f9;color:#64748b;border:none;border-radius:8px;font-size:.72rem;font-weight:900;cursor:pointer">← Atrás</button>
-            <button onclick="CajaCobroV2._showTab('pago')" style="padding:6px 16px;background:#166534;color:white;border:none;border-radius:8px;font-size:.72rem;font-weight:900;cursor:pointer">Siguiente →</button>
+            <button onclick="CajaCobroV2._showTab('meses')" style="padding:6px 16px;background:#f1f5f9;color:#64748b;border:none;border-radius:8px;font-size:.72rem;font-weight:900;cursor:pointer">â† AtrÃ¡s</button>
+            <button onclick="CajaCobroV2._showTab('pago')" style="padding:6px 16px;background:#0B63C7;color:white;border:none;border-radius:8px;font-size:.72rem;font-weight:900;cursor:pointer">Siguiente â†’</button>
           </div>
         </div>
 
-        <!-- TAB: Método de Pago -->
+        <!-- TAB: MÃ©todo de Pago -->
         <div id="cajaPane_pago" style="padding:12px;display:none">
-          <div style="font-size:.62rem;font-weight:900;color:#94a3b8;text-transform:uppercase;margin-bottom:8px">Selecciona el método</div>
+          <div style="font-size:.62rem;font-weight:900;color:#94a3b8;text-transform:uppercase;margin-bottom:8px">Selecciona el mÃ©todo</div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px">
-            ${[['efectivo','💵','Efectivo'],['tarjeta','💳','Tarjeta'],['transferencia','🏦','Transferencia'],['cheque','📝','Cheque'],['mixto','🔀','Mixto']].map(([v,ico,l])=>`
+            ${[['efectivo','ðŸ’µ','Efectivo'],['tarjeta','ðŸ’³','Tarjeta'],['transferencia','ðŸ¦','Transferencia'],['cheque','ðŸ“','Cheque'],['mixto','ðŸ”€','Mixto']].map(([v,ico,l])=>`
               <button onclick="CajaCobroV2.selectMethod('${v}',this)" data-method="${v}"
                 style="padding:10px 6px;border-radius:10px;border:2px solid #e2e8f0;background:white;font-size:.72rem;font-weight:800;cursor:pointer;transition:all .12s;display:flex;flex-direction:column;align-items:center;gap:3px;color:#64748b">
                 <span style="font-size:1.2rem">${ico}</span>${l}
@@ -317,8 +317,8 @@ export const CajaCobroV2 = {
           </div>
           <div id="methodDetail" style="margin-top:4px"></div>
           <div style="margin-top:10px;display:flex;justify-content:space-between">
-            <button onclick="CajaCobroV2._showTab('conceptos')" style="padding:6px 16px;background:#f1f5f9;color:#64748b;border:none;border-radius:8px;font-size:.72rem;font-weight:900;cursor:pointer">← Atrás</button>
-            <button onclick="CajaCobroV2._showTab('resumen')" style="padding:6px 16px;background:#166534;color:white;border:none;border-radius:8px;font-size:.72rem;font-weight:900;cursor:pointer">Ver Resumen →</button>
+            <button onclick="CajaCobroV2._showTab('conceptos')" style="padding:6px 16px;background:#f1f5f9;color:#64748b;border:none;border-radius:8px;font-size:.72rem;font-weight:900;cursor:pointer">â† AtrÃ¡s</button>
+            <button onclick="CajaCobroV2._showTab('resumen')" style="padding:6px 16px;background:#0B63C7;color:white;border:none;border-radius:8px;font-size:.72rem;font-weight:900;cursor:pointer">Ver Resumen â†’</button>
           </div>
         </div>
 
@@ -337,29 +337,29 @@ export const CajaCobroV2 = {
               <span>Subtotal</span><span id="cartSub" style="font-weight:700">RD$0.00</span>
             </div>
             <div id="cartMoraRow" style="display:none;justify-content:space-between;font-size:.75rem;color:#ef4444;margin-bottom:3px">
-              <span>⚠ Mora</span><span id="cartMora" style="font-weight:800">+RD$0.00</span>
+              <span>âš  Mora</span><span id="cartMora" style="font-weight:800">+RD$0.00</span>
             </div>
             <div style="border-top:2px solid #f1f5f9;margin:5px 0"></div>
-            <div style="display:flex;justify-content:space-between;font-size:.95rem;font-weight:900;color:#166534">
+            <div style="display:flex;justify-content:space-between;font-size:.95rem;font-weight:900;color:#0B63C7">
               <span>TOTAL</span><span id="cartTotal">RD$0.00</span>
             </div>
           </div>
 
           <!-- Historial reciente -->
           ${(history||[]).length ? `<div style="margin-bottom:10px">
-            <div style="font-size:.6rem;font-weight:900;color:#94a3b8;text-transform:uppercase;margin-bottom:4px">Últimos pagos</div>
+            <div style="font-size:.6rem;font-weight:900;color:#94a3b8;text-transform:uppercase;margin-bottom:4px">Ãšltimos pagos</div>
             ${(history||[]).slice(0,3).map(h=>`<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #f1f5f9;font-size:.7rem">
-              <span style="color:#64748b">${h.paid_date?new Date(h.paid_date).toLocaleDateString('es-ES',{day:'2-digit',month:'short'}):'—'}</span>
-              <span style="font-weight:700;color:#166534">${fmt(h.amount)}</span>
-              <span style="color:#94a3b8;text-transform:capitalize">${h.method||'—'}</span>
+              <span style="color:#64748b">${h.paid_date?new Date(h.paid_date).toLocaleDateString('es-ES',{day:'2-digit',month:'short'}):'â€”'}</span>
+              <span style="font-weight:700;color:#0B63C7">${fmt(h.amount)}</span>
+              <span style="color:#94a3b8;text-transform:capitalize">${h.method||'â€”'}</span>
             </div>`).join('')}
           </div>` : ''}
 
           <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
-            <button onclick="CajaCobroV2._showTab('pago')" style="padding:6px 16px;background:#f1f5f9;color:#64748b;border:none;border-radius:8px;font-size:.72rem;font-weight:900;cursor:pointer">← Atrás</button>
+            <button onclick="CajaCobroV2._showTab('pago')" style="padding:6px 16px;background:#f1f5f9;color:#64748b;border:none;border-radius:8px;font-size:.72rem;font-weight:900;cursor:pointer">â† AtrÃ¡s</button>
             <button id="btnConfirmarCobro" onclick="CajaCobroV2.confirmCobro()" disabled
-              style="padding:12px 28px;border-radius:12px;border:none;background:linear-gradient(135deg,#166534,#15803d);color:white;font-size:.82rem;font-weight:900;cursor:pointer;opacity:.45;pointer-events:none;transition:all .15s">
-              ✓ Cobrar y Emitir Factura
+              style="padding:12px 28px;border-radius:12px;border:none;background:linear-gradient(135deg,#0B63C7,#0850A0);color:white;font-size:.82rem;font-weight:900;cursor:pointer;opacity:.45;pointer-events:none;transition:all .15s">
+              âœ“ Cobrar y Emitir Factura
             </button>
           </div>
         </div>
@@ -384,8 +384,8 @@ export const CajaCobroV2 = {
       const tabBtn = document.getElementById('cajaTab_'+t);
       if (pane) pane.style.display = t===tab ? 'block' : 'none';
       if (tabBtn) {
-        tabBtn.style.color = t===tab ? '#166534' : '#94a3b8';
-        tabBtn.style.borderBottomColor = t===tab ? '#166534' : 'transparent';
+        tabBtn.style.color = t===tab ? '#0B63C7' : '#94a3b8';
+        tabBtn.style.borderBottomColor = t===tab ? '#0B63C7' : 'transparent';
         tabBtn.style.fontWeight = t===tab ? '900' : '700';
       }
     });
@@ -400,7 +400,7 @@ export const CajaCobroV2 = {
       const isCurrent = i === new Date().getMonth();
       if ((isOverdue || isCurrent) && !_cart.find(c=>c._monthIdx===i)) {
         _cart.push({ _monthIdx: i, concept: 'Colegiatura '+m, amount: Number(btn.dataset.amount||0), type: 'colegiatura' });
-        btn.style.borderColor = '#166534';
+        btn.style.borderColor = '#0B63C7';
         btn.style.background  = '#f0fdf4';
       }
     });
@@ -413,12 +413,12 @@ export const CajaCobroV2 = {
     if (!el) return;
     const months = _cart.filter(c=>c.type==='colegiatura');
     el.textContent = months.length
-      ? `${months.length} mes${months.length>1?'es':''} seleccionado${months.length>1?'s':''} — ${fmt(months.reduce((s,c)=>s+c.amount,0))}`
+      ? `${months.length} mes${months.length>1?'es':''} seleccionado${months.length>1?'s':''} â€” ${fmt(months.reduce((s,c)=>s+c.amount,0))}`
       : '';
   },
 
 
-  // ── TOGGLE MES (libre — cualquier mes va al carrito) ──────────────────────
+  // â”€â”€ TOGGLE MES (libre â€” cualquier mes va al carrito) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   toggleMonth(idx, label, amount) {
     const btn = document.getElementById('month_' + idx);
     if (!btn || btn.dataset.paid === 'true') return;
@@ -429,14 +429,14 @@ export const CajaCobroV2 = {
       btn.style.background  = '#f8fafc';
     } else {
       _cart.push({ _monthIdx: idx, concept: 'Colegiatura ' + label, amount: Number(amount), type: 'colegiatura' });
-      btn.style.borderColor = '#166534';
+      btn.style.borderColor = '#0B63C7';
       btn.style.background  = '#f0fdf4';
     }
     this._updateCart();
     this._updateMonthInfo();
   },
 
-  // ── AGREGAR CONCEPTO DEL CATÁLOGO ─────────────────────────────────────────
+  // â”€â”€ AGREGAR CONCEPTO DEL CATÃLOGO â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   addExtraConcept(id, label, amount) {
     const amt = Number(amount) || 0;
     const inCart = _cart.findIndex(c => c._conceptId === id);
@@ -458,11 +458,11 @@ export const CajaCobroV2 = {
     this._updateCart();
   },
 
-  // ── CONCEPTO LIBRE ────────────────────────────────────────────────────────
+  // â”€â”€ CONCEPTO LIBRE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   addFreeConcept() {
     const lbl = document.getElementById('freeConceptLabel')?.value?.trim();
     const amt = Number(document.getElementById('freeConceptAmt')?.value || 0);
-    if (!lbl) { Helpers.toast('Escribe una descripción','warning'); return; }
+    if (!lbl) { Helpers.toast('Escribe una descripciÃ³n','warning'); return; }
     if (!amt)  { Helpers.toast('Ingresa un monto','warning'); return; }
     _cart.push({ _conceptId: 'free_'+Date.now(), concept: lbl, amount: amt, type: 'extra' });
     document.getElementById('freeConceptLabel').value = '';
@@ -470,7 +470,7 @@ export const CajaCobroV2 = {
     this._updateCart();
   },
 
-  // ── ACTUALIZAR CARRITO ────────────────────────────────────────────────────
+  // â”€â”€ ACTUALIZAR CARRITO â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   _updateCart() {
     const cartEl   = document.getElementById('cartItems');
     const subEl    = document.getElementById('cartSub');
@@ -493,7 +493,7 @@ export const CajaCobroV2 = {
         <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 8px;border-radius:8px;background:white;border:1px solid #f1f5f9;font-size:.75rem">
           <span style="font-weight:600;color:#1a2340;flex:1;margin-right:6px">${Helpers.escapeHTML(c.concept)}</span>
           <span style="font-weight:900;color:#0D9488;white-space:nowrap">${fmt(c.amount)}</span>
-          <button onclick="CajaCobroV2.removeCartItem(${i})" style="margin-left:6px;border:none;background:transparent;color:#EF4444;cursor:pointer;font-size:.9rem;padding:0 3px">✕</button>
+          <button onclick="CajaCobroV2.removeCartItem(${i})" style="margin-left:6px;border:none;background:transparent;color:#EF4444;cursor:pointer;font-size:.9rem;padding:0 3px">âœ•</button>
         </div>`).join('');
     }
 
@@ -525,13 +525,13 @@ export const CajaCobroV2 = {
     this._updateCart();
   },
 
-  // ── MÉTODO DE PAGO ────────────────────────────────────────────────────────
+  // â”€â”€ MÃ‰TODO DE PAGO â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   selectMethod(method, btn) {
     _method = method;
     document.querySelectorAll('[data-method]').forEach(b => {
       b.style.borderColor = '#e2e8f0'; b.style.background = 'white'; b.style.color = '#64748b';
     });
-    if (btn) { btn.style.borderColor='#166534'; btn.style.background='#f0fdf4'; btn.style.color='#166534'; }
+    if (btn) { btn.style.borderColor='#0B63C7'; btn.style.background='#f0fdf4'; btn.style.color='#0B63C7'; }
 
     const detail = document.getElementById('methodDetail');
     if (!detail) { this._updateCart(); return; }
@@ -539,30 +539,30 @@ export const CajaCobroV2 = {
     const inp = 'width:100%;padding:7px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:.78rem;font-weight:600;outline:none;box-sizing:border-box;margin-bottom:5px';
     const lbl = (t) => `<div style="font-size:.6rem;font-weight:900;color:#94a3b8;text-transform:uppercase;margin-bottom:3px;margin-top:6px">${t}</div>`;
     const uploadBtn = (id, label) => `
-      <label style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:2px dashed #e2e8f0;border-radius:9px;cursor:pointer;background:#f8fafc;transition:all .12s" onmouseover="this.style.borderColor='#166534'" onmouseout="this.style.borderColor='#e2e8f0'">
-        <span style="font-size:.75rem;font-weight:800;color:#64748b">📎 ${label}</span>
+      <label style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:2px dashed #e2e8f0;border-radius:9px;cursor:pointer;background:#f8fafc;transition:all .12s" onmouseover="this.style.borderColor='#0B63C7'" onmouseout="this.style.borderColor='#e2e8f0'">
+        <span style="font-size:.75rem;font-weight:800;color:#64748b">ðŸ“Ž ${label}</span>
         <input type="file" id="${id}" accept="image/*,application/pdf" style="display:none" onchange="CajaCobroV2._previewUpload('${id}','prev_${id}')">
-        <span id="prev_${id}" style="font-size:.65rem;color:#166534;font-weight:700;margin-left:auto"></span>
+        <span id="prev_${id}" style="font-size:.65rem;color:#0B63C7;font-weight:700;margin-left:auto"></span>
       </label>`;
 
-    const bankOpts = ['Banreservas','Banco Popular Dominicano','Banco BHD','Banco Santa Cruz','Banco Caribe','Banco Vimenca','Bancamérica','Banesco','Scotiabank','Otro']
+    const bankOpts = ['Banreservas','Banco Popular Dominicano','Banco BHD','Banco Santa Cruz','Banco Caribe','Banco Vimenca','BancamÃ©rica','Banesco','Scotiabank','Otro']
       .map(b=>`<option value="${b}">${b}</option>`).join('');
 
     if (method === 'efectivo') {
       detail.innerHTML = `
         ${lbl('Monto recibido')}
         <input id="cashReceived" type="number" placeholder="RD$" oninput="CajaCobroV2.calcChange()" style="${inp}">
-        <div style="font-size:.8rem;font-weight:900;color:#166534;margin-top:2px">Cambio: <span id="cashChange">RD$0.00</span></div>`;
+        <div style="font-size:.8rem;font-weight:900;color:#0B63C7;margin-top:2px">Cambio: <span id="cashChange">RD$0.00</span></div>`;
 
     } else if (method === 'transferencia') {
       detail.innerHTML = `
         ${lbl('Banco de origen')}
         <select id="tfBanco" style="${inp}"><option value="">Seleccionar banco...</option>${bankOpts}</select>
-        ${lbl('No. de referencia / confirmación')}
+        ${lbl('No. de referencia / confirmaciÃ³n')}
         <input id="tfRef" placeholder="Ej: 00123456789" style="${inp}">
         ${lbl('Comprobante de transferencia *')}
         ${uploadBtn('tfComprobante','Subir comprobante (foto/PDF)')}
-        ${lbl('¿Requiere factura con NCF?')}
+        ${lbl('Â¿Requiere factura con NCF?')}
         <button type="button" onclick="document.getElementById('ncfBlock').style.display=document.getElementById('ncfBlock').style.display==='none'?'block':'none'"
           style="font-size:.65rem;font-weight:900;color:#0B63C7;border:1px solid #0B63C7;background:transparent;border-radius:6px;padding:3px 10px;cursor:pointer;margin-bottom:4px">
           + RNC / Factura Fiscal
@@ -570,7 +570,7 @@ export const CajaCobroV2 = {
         <div id="ncfBlock" style="display:none">
           ${lbl('RNC de la empresa')}
           <input id="tfRNC" placeholder="Ej: 1-31-12345-6" style="${inp}">
-          ${lbl('Nombre / Razón Social')}
+          ${lbl('Nombre / RazÃ³n Social')}
           <input id="tfFiscalName" placeholder="Empresa S.R.L." style="${inp}">
         </div>`;
 
@@ -578,9 +578,9 @@ export const CajaCobroV2 = {
       detail.innerHTML = `
         ${lbl('Banco emisor')}
         <select id="chqBanco" style="${inp}"><option value="">Seleccionar banco...</option>${bankOpts}</select>
-        ${lbl('Número de cheque')}
+        ${lbl('NÃºmero de cheque')}
         <input id="chqNum" placeholder="Ej: 0001234" style="${inp}">
-        ${lbl('Fecha de emisión')}
+        ${lbl('Fecha de emisiÃ³n')}
         <input id="chqFecha" type="date" style="${inp}" value="${new Date().toISOString().split('T')[0]}">
         ${lbl('Foto frente del cheque *')}
         ${uploadBtn('chqFrente','Frente del cheque')}
@@ -590,8 +590,8 @@ export const CajaCobroV2 = {
     } else if (method === 'tarjeta') {
       detail.innerHTML = `
         <div style="display:flex;gap:8px;margin-bottom:5px">
-          ${['Débito','Crédito'].map(t=>`<label style="display:flex;align-items:center;gap:4px;font-size:.75rem;font-weight:700;cursor:pointer">
-            <input type="radio" name="cardType" value="${t.toLowerCase()}" style="accent-color:#166534"> ${t}
+          ${['DÃ©bito','CrÃ©dito'].map(t=>`<label style="display:flex;align-items:center;gap:4px;font-size:.75rem;font-weight:700;cursor:pointer">
+            <input type="radio" name="cardType" value="${t.toLowerCase()}" style="accent-color:#0B63C7"> ${t}
           </label>`).join('')}
         </div>
         ${lbl('Tipo de tarjeta')}
@@ -599,9 +599,9 @@ export const CajaCobroV2 = {
           <option value="">Seleccionar...</option>
           <option>Visa</option><option>Mastercard</option><option>Amex</option><option>Otra</option>
         </select>
-        ${lbl('Últimos 4 dígitos')}
+        ${lbl('Ãšltimos 4 dÃ­gitos')}
         <input id="cardLast4" type="number" maxlength="4" placeholder="1234" style="${inp}" oninput="if(this.value.length>4)this.value=this.value.slice(0,4)">
-        ${lbl('No. de autorización')}
+        ${lbl('No. de autorizaciÃ³n')}
         <input id="cardAuth" placeholder="Ej: A123456" style="${inp}">`;
 
     } else if (method === 'mixto') {
@@ -621,7 +621,7 @@ export const CajaCobroV2 = {
   _previewUpload(inputId, previewId) {
     const file = document.getElementById(inputId)?.files[0];
     const prev = document.getElementById(previewId);
-    if (prev && file) prev.textContent = '✓ ' + file.name.slice(0,20);
+    if (prev && file) prev.textContent = 'âœ“ ' + file.name.slice(0,20);
   },
 
   calcChange() {
@@ -631,7 +631,7 @@ export const CajaCobroV2 = {
     if (changeEl) changeEl.textContent = fmt(Math.max(0, received - total));
   },
 
-  // ── CONFIRMAR COBRO ───────────────────────────────────────────────────────
+  // â”€â”€ CONFIRMAR COBRO â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   async confirmCobro() {
     if (!_cart.length || !_method || !_student) return;
     const btn = document.getElementById('btnConfirmarCobro');
@@ -657,14 +657,14 @@ export const CajaCobroV2 = {
       const { error } = await supabase.from('payments').insert(inserts);
       if (error) throw error;
 
-      // Cerrar modal y mostrar éxito
+      // Cerrar modal y mostrar Ã©xito
       document.querySelectorAll('[id^="cajaModal_"]').forEach(e=>e.remove());
       this._showSuccess(total);
       this.loadStudents();
 
     } catch (err) {
       Helpers.toast('Error: ' + (err.message||''), 'error');
-      if (btn) { btn.disabled=false; btn.textContent='✓ Cobrar y Emitir Factura'; }
+      if (btn) { btn.disabled=false; btn.textContent='âœ“ Cobrar y Emitir Factura'; }
     }
   },
 
@@ -672,11 +672,11 @@ export const CajaCobroV2 = {
     const el = document.createElement('div');
     el.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
     el.innerHTML = `<div style="background:white;border-radius:20px;padding:32px;max-width:340px;width:100%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.25)">
-      <div style="width:64px;height:64px;background:#f0fdf4;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:2rem">✅</div>
-      <div style="font-size:1.1rem;font-weight:900;color:#1a2340;margin-bottom:6px">¡Pago registrado!</div>
-      <div style="font-size:1.5rem;font-weight:900;color:#166534;margin-bottom:16px">${fmt(total)}</div>
+      <div style="width:64px;height:64px;background:#f0fdf4;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:2rem">âœ…</div>
+      <div style="font-size:1.1rem;font-weight:900;color:#1a2340;margin-bottom:6px">Â¡Pago registrado!</div>
+      <div style="font-size:1.5rem;font-weight:900;color:#0B63C7;margin-bottom:16px">${fmt(total)}</div>
       <div style="display:flex;flex-direction:column;gap:4px;text-align:left;margin-bottom:16px">
-        ${['✓ Pago registrado','✓ Caja actualizada','✓ Estado financiero actualizado'].map(t=>`<div style="font-size:.8rem;font-weight:700;color:#16A34A">${t}</div>`).join('')}
+        ${['âœ“ Pago registrado','âœ“ Caja actualizada','âœ“ Estado financiero actualizado'].map(t=>`<div style="font-size:.8rem;font-weight:700;color:#16A34A">${t}</div>`).join('')}
       </div>
       <button onclick="this.closest('div[style]').remove()" style="width:100%;padding:11px;border-radius:12px;border:none;background:#0D9488;color:white;font-size:.875rem;font-weight:900;cursor:pointer">Cerrar</button>
     </div>`;
@@ -684,7 +684,7 @@ export const CajaCobroV2 = {
     setTimeout(() => el.remove(), 5000);
   },
 
-  // ── TRANSFERENCIAS PENDIENTES ─────────────────────────────────────────────
+  // â”€â”€ TRANSFERENCIAS PENDIENTES â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   async openPendingTransfers() {
     const { data: transfers } = await supabase.from('payments')
       .select('id,amount,method,concept,students:student_id(name),created_at,receipt_url,bank_name,reference')
@@ -695,23 +695,23 @@ export const CajaCobroV2 = {
     overlay.onclick = e => { if(e.target===overlay) overlay.remove(); };
     overlay.innerHTML = `<div style="background:white;border-radius:18px;width:100%;max-width:560px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.25);margin:auto">
       <div style="padding:16px 20px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between">
-        <div style="font-weight:900;color:#1a2340">🕐 Transferencias pendientes (${(transfers||[]).length})</div>
-        <button onclick="this.closest('div[style]').remove()" style="border:none;background:#f1f5f9;border-radius:50%;width:30px;height:30px;cursor:pointer;font-size:.9rem">✕</button>
+        <div style="font-weight:900;color:#1a2340">ðŸ• Transferencias pendientes (${(transfers||[]).length})</div>
+        <button onclick="this.closest('div[style]').remove()" style="border:none;background:#f1f5f9;border-radius:50%;width:30px;height:30px;cursor:pointer;font-size:.9rem">âœ•</button>
       </div>
       <div style="padding:14px;display:flex;flex-direction:column;gap:8px;max-height:70vh;overflow-y:auto">
         ${!(transfers||[]).length ? '<p style="text-align:center;color:#94a3b8;padding:20px">Sin transferencias pendientes</p>' :
           (transfers||[]).map(t=>`<div style="border:1px solid #f1f5f9;border-radius:12px;padding:12px">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
               <div>
-                <div style="font-weight:800;font-size:.875rem;color:#1a2340">${Helpers.escapeHTML(t.students?.name||'—')}</div>
-                <div style="font-size:.7rem;color:#94a3b8">${t.bank_name||'—'} · Ref: ${t.reference||'—'}</div>
+                <div style="font-weight:800;font-size:.875rem;color:#1a2340">${Helpers.escapeHTML(t.students?.name||'â€”')}</div>
+                <div style="font-size:.7rem;color:#94a3b8">${t.bank_name||'â€”'} Â· Ref: ${t.reference||'â€”'}</div>
               </div>
               <span style="font-weight:900;font-size:1rem;color:#0D9488">${fmt(t.amount)}</span>
             </div>
             ${t.receipt_url?`<div style="margin-bottom:8px"><img src="${t.receipt_url}" style="width:100%;max-height:180px;object-fit:cover;border-radius:8px;cursor:pointer" onclick="window.open('${t.receipt_url}','_blank')"></div>`:''}
             <div style="display:flex;gap:6px">
-              <button onclick="CajaCobroV2.approveTransfer(${t.id},this)" style="flex:1;padding:8px;border-radius:9px;border:none;background:#0D9488;color:white;font-size:.75rem;font-weight:900;cursor:pointer">✓ Aprobar</button>
-              <button onclick="CajaCobroV2.rejectTransfer(${t.id},this)" style="flex:1;padding:8px;border-radius:9px;border:none;background:#FEF2F2;color:#EF4444;font-size:.75rem;font-weight:900;cursor:pointer;border:1px solid #FECACA">✕ Rechazar</button>
+              <button onclick="CajaCobroV2.approveTransfer(${t.id},this)" style="flex:1;padding:8px;border-radius:9px;border:none;background:#0D9488;color:white;font-size:.75rem;font-weight:900;cursor:pointer">âœ“ Aprobar</button>
+              <button onclick="CajaCobroV2.rejectTransfer(${t.id},this)" style="flex:1;padding:8px;border-radius:9px;border:none;background:#FEF2F2;color:#EF4444;font-size:.75rem;font-weight:900;cursor:pointer;border:1px solid #FECACA">âœ• Rechazar</button>
             </div>
           </div>`).join('')}
       </div>
@@ -736,7 +736,7 @@ export const CajaCobroV2 = {
     btn?.closest('div[style]')?.remove();
   },
 
-  // ── GESTIONAR CATÁLOGO ────────────────────────────────────────────────────
+  // â”€â”€ GESTIONAR CATÃLOGO â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   openCatalogManager() {
     const catalog = getCatalog();
     const overlay = document.createElement('div');
@@ -750,8 +750,8 @@ export const CajaCobroV2 = {
   _renderCatalogModal(overlay, catalog) {
     overlay.innerHTML = `<div style="background:white;border-radius:18px;width:100%;max-width:480px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.25);margin:auto">
       <div style="padding:14px 18px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between">
-        <div style="font-weight:900;color:#1a2340;font-size:.95rem">📦 Catálogo de Conceptos</div>
-        <button onclick="document.getElementById('catalogManagerOverlay')?.remove()" style="border:none;background:#f1f5f9;border-radius:50%;width:30px;height:30px;cursor:pointer">✕</button>
+        <div style="font-weight:900;color:#1a2340;font-size:.95rem">ðŸ“¦ CatÃ¡logo de Conceptos</div>
+        <button onclick="document.getElementById('catalogManagerOverlay')?.remove()" style="border:none;background:#f1f5f9;border-radius:50%;width:30px;height:30px;cursor:pointer">âœ•</button>
       </div>
 
       <!-- Agregar nuevo -->
@@ -773,7 +773,7 @@ export const CajaCobroV2 = {
           <div style="flex:1;font-size:.82rem;font-weight:700;color:#1a2340">${Helpers.escapeHTML(c.label)}</div>
           <input type="number" value="${c.amount}" onchange="CajaCobroV2._updateCatalogPrice(${i},this.value)"
             style="width:90px;padding:5px 8px;border:1px solid #e2e8f0;border-radius:8px;font-size:.8rem;font-weight:700;outline:none;text-align:right">
-          <button onclick="CajaCobroV2._deleteCatalogItem(${i})" style="border:none;background:#FEF2F2;color:#EF4444;border-radius:7px;padding:5px 9px;cursor:pointer;font-size:.8rem;font-weight:900">✕</button>
+          <button onclick="CajaCobroV2._deleteCatalogItem(${i})" style="border:none;background:#FEF2F2;color:#EF4444;border-radius:7px;padding:5px 9px;cursor:pointer;font-size:.8rem;font-weight:900">âœ•</button>
         </div>`).join('')}
       </div>
     </div>`;
@@ -832,3 +832,5 @@ function calcMora() {
 }
 
 window.CajaCobroV2 = CajaCobroV2;
+
+
