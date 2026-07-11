@@ -60,7 +60,7 @@ function generateProfessionalReceipt(
   const schoolAddress = school?.address || 'Calle Principal #123, Col. Centro';
   const schoolCity = [school?.city, school?.state, school?.zip_code].filter(Boolean).join(', ') || 'Ciudad, Estado, C.P. 12345';
   const schoolPhone = school?.phone ? `Tel: ${school.phone}` : 'Tel: (123) 456-7890';
-  const schoolEmail = school?.email ? `Email: ${school.email}` : 'Email: contacto@karpuskids.com';
+  const schoolEmail = school?.email ? `Email: ${school.email}` : 'Email: contacto@montessorisonrisascreativas.com';
   const schoolRfc = school?.rnc ? `RNC: ${school.rnc}` : 'RNC: KKI123456ABC';
 
   const lines: string[] = [];
@@ -188,14 +188,14 @@ function generateProfessionalReceipt(
   return lines.join('\n');
 }
 
-Deno.serve(async (req) =&gt; {
+Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
 
   try {
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL')              ?? '';
     const SERVICE_KEY  = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
     const RESEND_KEY   = Deno.env.get('RESEND_API_KEY')            ?? '';
-    const FROM_EMAIL   = Deno.env.get('FROM_EMAIL')                ?? 'Karpus Kids &lt;avisos@karpuskids.com&gt;';
+    const FROM_EMAIL   = Deno.env.get('FROM_EMAIL')                ?? 'Karpus Kids <avisos@montessorisonrisascreativas.com>';
 
     if (!SUPABASE_URL || !SERVICE_KEY) return json({ error: 'Missing env vars' }, 500);
     const supabase = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } });
@@ -299,90 +299,90 @@ Deno.serve(async (req) =&gt; {
     const finalInvoice = { ...invoice, ascii_receipt: professionalReceipt };
 
     // 7. Enviar email si solicitado
-    if (send_email &amp;&amp; resend &amp;&amp; student.p1_email) {
+    if (send_email && resend && student.p1_email) {
       // Datos del colegio para el email
       const schoolName = school?.school_name || 'COLEGIO MONTESSORI SONRISAS CREATIVAS';
-      const schoolEmailAddress = school?.email || 'contacto@karpuskids.com';
+      const schoolEmailAddress = school?.email || 'contacto@montessorisonrisascreativas.com';
       const schoolPhoneNumber = school?.phone || '(123) 456-7890';
       
       // Construir HTML del email profesional
       const html = `
-        &lt;!DOCTYPE html&gt;
-        &lt;html lang="es"&gt;
-        &lt;head&gt;
-          &lt;meta charset="UTF-8"&gt;
-          &lt;meta name="viewport" content="width=device-width, initial-scale=1.0"&gt;
-          &lt;title&gt;Recibo de Pago - ${student.name}&lt;/title&gt;
-        &lt;/head&gt;
-        &lt;body style="margin:0;padding:0;background:#f5f7fa;font-family:'Arial',sans-serif;"&gt;
-          &lt;div style="max-width:800px;margin:0 auto;background:#ffffff;"&gt;
+        <!DOCTYPE html>
+        <html lang="es">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Recibo de Pago - ${student.name}</title>
+        </head>
+        <body style="margin:0;padding:0;background:#f5f7fa;font-family:'Arial',sans-serif;">
+          <div style="max-width:800px;margin:0 auto;background:#ffffff;">
             
-            &lt;!-- Encabezado del colegio --&gt;
-            &lt;div style="background:linear-gradient(135deg,#16a34a 0%,#22c55e 100%);padding:40px 30px;text-align:center;"&gt;
-              &lt;div style="font-size:48px;margin-bottom:10px;"&gt;🏫&lt;/div&gt;
-              &lt;h1 style="margin:0;color:#ffffff;font-size:28px;font-weight:800;letter-spacing:-0.5px;"&gt;${schoolName}&lt;/h1&gt;
-              &lt;p style="margin:10px 0 0;color:rgba(255,255,255,0.95);font-size:16px;font-weight:500;"&gt;ESTANCIA INFANTIL&lt;/p&gt;
-            &lt;/div&gt;
+            <!-- Encabezado del colegio -->
+            <div style="background:linear-gradient(135deg,#16a34a 0%,#22c55e 100%);padding:40px 30px;text-align:center;">
+              <div style="font-size:48px;margin-bottom:10px;">🏫</div>
+              <h1 style="margin:0;color:#ffffff;font-size:28px;font-weight:800;letter-spacing:-0.5px;">${schoolName}</h1>
+              <p style="margin:10px 0 0;color:rgba(255,255,255,0.95);font-size:16px;font-weight:500;">ESTANCIA INFANTIL</p>
+            </div>
 
-            &lt;div style="padding:40px 30px;"&gt;
+            <div style="padding:40px 30px;">
               
-              &lt;!-- Saludo inicial --&gt;
-              &lt;div style="margin-bottom:30px;"&gt;
-                &lt;p style="margin:0;color:#374151;font-size:18px;line-height:1.6;"&gt;
-                  Estimado(a) &lt;strong&gt;${student.p1_name || 'Padre/Madre de Familia'}&lt;/strong&gt;,
-                &lt;/p&gt;
-                &lt;p style="margin:10px 0 0;color:#6b7280;font-size:16px;line-height:1.6;"&gt;
-                  Agradecemos su pago! A continuación, encontrará su recibo oficial de pago por concepto de &lt;strong&gt;${payment.concept || 'Servicios Educativos'}&lt;/strong&gt;.
-                &lt;/p&gt;
-              &lt;/div&gt;
+              <!-- Saludo inicial -->
+              <div style="margin-bottom:30px;">
+                <p style="margin:0;color:#374151;font-size:18px;line-height:1.6;">
+                  Estimado(a) <strong>${student.p1_name || 'Padre/Madre de Familia'}</strong>,
+                </p>
+                <p style="margin:10px 0 0;color:#6b7280;font-size:16px;line-height:1.6;">
+                  Agradecemos su pago! A continuación, encontrará su recibo oficial de pago por concepto de <strong>${payment.concept || 'Servicios Educativos'}</strong>.
+                </p>
+              </div>
 
-              &lt;!-- Resumen rápido --&gt;
-              &lt;div style="background:#f0fdf4;border:2px solid #bbf7d0;border-radius:12px;padding:24px;margin-bottom:30px;"&gt;
-                &lt;div style="display:flex;flex-wrap:wrap;gap:20px;"&gt;
-                  &lt;div style="flex:1;min-width:200px;"&gt;
-                    &lt;p style="margin:0;color:#166534;font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;"&gt;Recibo&lt;/p&gt;
-                    &lt;p style="margin:5px 0 0;color:#374151;font-size:20px;font-weight:800;"&gt;${receiptNumber}&lt;/p&gt;
-                  &lt;/div&gt;
-                  &lt;div style="flex:1;min-width:200px;"&gt;
-                    &lt;p style="margin:0;color:#166534;font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;"&gt;Estudiante&lt;/p&gt;
-                    &lt;p style="margin:5px 0 0;color:#374151;font-size:18px;font-weight:700;"&gt;${student.name}&lt;/p&gt;
-                  &lt;/div&gt;
-                  &lt;div style="flex:1;min-width:150px;"&gt;
-                    &lt;p style="margin:0;color:#166534;font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;"&gt;Monto&lt;/p&gt;
-                    &lt;p style="margin:5px 0 0;color:#16a34a;font-size:28px;font-weight:900;"&gt;${formatCurrency(payment.amount)}&lt;/p&gt;
-                  &lt;/div&gt;
-                &lt;/div&gt;
-              &lt;/div&gt;
+              <!-- Resumen rápido -->
+              <div style="background:#f0fdf4;border:2px solid #bbf7d0;border-radius:12px;padding:24px;margin-bottom:30px;">
+                <div style="display:flex;flex-wrap:wrap;gap:20px;">
+                  <div style="flex:1;min-width:200px;">
+                    <p style="margin:0;color:#166534;font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">Recibo</p>
+                    <p style="margin:5px 0 0;color:#374151;font-size:20px;font-weight:800;">${receiptNumber}</p>
+                  </div>
+                  <div style="flex:1;min-width:200px;">
+                    <p style="margin:0;color:#166534;font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">Estudiante</p>
+                    <p style="margin:5px 0 0;color:#374151;font-size:18px;font-weight:700;">${student.name}</p>
+                  </div>
+                  <div style="flex:1;min-width:150px;">
+                    <p style="margin:0;color:#166534;font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">Monto</p>
+                    <p style="margin:5px 0 0;color:#16a34a;font-size:28px;font-weight:900;">${formatCurrency(payment.amount)}</p>
+                  </div>
+                </div>
+              </div>
 
-              &lt;!-- Recibo ASCII profesional --&gt;
-              &lt;div style="background:#1f2937;border-radius:12px;padding:20px;margin-bottom:30px;overflow-x:auto;"&gt;
-                &lt;p style="margin:0 0 15px;color:#9ca3af;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1px;"&gt;📄 Recibo Oficial&lt;/p&gt;
-                &lt;pre style="margin:0;padding:0;color:#e5e7eb;font-size:11px;line-height:1.4;font-family:'Courier New',Courier,monospace;white-space:pre;"&gt;${professionalReceipt}&lt;/pre&gt;
-              &lt;/div&gt;
+              <!-- Recibo ASCII profesional -->
+              <div style="background:#1f2937;border-radius:12px;padding:20px;margin-bottom:30px;overflow-x:auto;">
+                <p style="margin:0 0 15px;color:#9ca3af;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1px;">📄 Recibo Oficial</p>
+                <pre style="margin:0;padding:0;color:#e5e7eb;font-size:11px;line-height:1.4;font-family:'Courier New',Courier,monospace;white-space:pre;">${professionalReceipt}</pre>
+              </div>
 
-              &lt;!-- Información adicional --&gt;
-              &lt;div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:24px;margin-bottom:30px;"&gt;
-                &lt;h3 style="margin:0 0 15px;color:#374151;font-size:16px;font-weight:800;"&gt;📋 Información Importante&lt;/h3&gt;
-                &lt;ul style="margin:0;padding-left:20px;color:#6b7280;font-size:14px;line-height:1.8;"&gt;
-                  &lt;li&gt;Este recibo es válido como comprobante oficial de pago&lt;/li&gt;
-                  &lt;li&gt;Conserve este documento para sus registros contables&lt;/li&gt;
-                  &lt;li&gt;Para cualquier aclaración, contáctenos en ${schoolEmailAddress} o ${schoolPhoneNumber}&lt;/li&gt;
-                &lt;/ul&gt;
-              &lt;/div&gt;
+              <!-- Información adicional -->
+              <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:24px;margin-bottom:30px;">
+                <h3 style="margin:0 0 15px;color:#374151;font-size:16px;font-weight:800;">📋 Información Importante</h3>
+                <ul style="margin:0;padding-left:20px;color:#6b7280;font-size:14px;line-height:1.8;">
+                  <li>Este recibo es válido como comprobante oficial de pago</li>
+                  <li>Conserve este documento para sus registros contables</li>
+                  <li>Para cualquier aclaración, contáctenos en ${schoolEmailAddress} o ${schoolPhoneNumber}</li>
+                </ul>
+              </div>
 
-              &lt;!-- Pie de página --&gt;
-              &lt;div style="text-align:center;padding-top:20px;border-top:1px solid #e5e7eb;"&gt;
-                &lt;p style="margin:0;color:#9ca3af;font-size:13px;line-height:1.6;"&gt;
-                  &lt;strong&gt;¡Gracias por su confianza en ${schoolName}!&lt;/strong&gt;&lt;br&gt;
+              <!-- Pie de página -->
+              <div style="text-align:center;padding-top:20px;border-top:1px solid #e5e7eb;">
+                <p style="margin:0;color:#9ca3af;font-size:13px;line-height:1.6;">
+                  <strong>¡Gracias por su confianza en ${schoolName}!</strong><br>
                   Este correo fue generado automáticamente. Por favor no responda a esta dirección.
-                &lt;/p&gt;
-              &lt;/div&gt;
+                </p>
+              </div>
 
-            &lt;/div&gt;
+            </div>
 
-          &lt;/div&gt;
-        &lt;/body&gt;
-        &lt;/html&gt;
+          </div>
+        </body>
+        </html>
       `;
 
       try {

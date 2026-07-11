@@ -1,4 +1,4 @@
-﻿import { supabase } from '../shared/supabase.js';
+import { supabase } from '../shared/supabase.js';
 import { TABLES } from '../shared/constants.js';
 import { Helpers } from '../shared/helpers.js';
 

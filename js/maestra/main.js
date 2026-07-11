@@ -155,7 +155,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // 🔔 Inicializar Notificaciones Push
   // 🔥 FIX: Permitir subdominios como www. y otros para la inicialización
   const host = window.location.hostname;
-  const isProd = host === 'karpuskids.com' || host === 'www.karpuskids.com' || host.endsWith('.karpuskids.com');
+  const isProd = host === 'montessorisonrisascreativas.com' || host === 'www.montessorisonrisascreativas.com' || host.endsWith('.montessorisonrisascreativas.com');
   
   if (isProd) {
     try { initOneSignal(auth.user); } catch(_) {}

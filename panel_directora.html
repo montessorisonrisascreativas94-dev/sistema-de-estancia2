@@ -16,6 +16,20 @@
       navigator.serviceWorker.register('/OneSignalSDKWorker.js', { scope: '/' }).catch(() => {});
     }
   </script>
+  <!-- OneSignal SDK -->
+  <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+  <script>
+    window.OneSignalDeferred = window.OneSignalDeferred || [];
+    window.OneSignalDeferred.push(async function(OneSignal) {
+      await OneSignal.init({
+        appId: "dd57c85f-852f-418e-bc8b-09a119f6c2eb",
+        safari_web_id: "web.onesignal.auto.0d8cfe1b-addf-4fe0-8094-42e4bf6360cd",
+        notifyButton: {
+          enable: true
+        }
+      });
+    });
+  </script>
   <title>Colegio Montessori Sonrisas Creativas  Panel Directora</title>
   <link rel="icon" href="logo/favicon.ico" type="image/x-icon">
   <link rel="manifest" href="manifest.json">
@@ -45,19 +59,19 @@
        PALETA DE COLORES VERDE CORPORATIVO
        ========================================= */
     :root {
-      --primary: #047857; /* Verde corporativo principal */
-      --primary-dark: #065f46; /* Verde oscuro */
-      --primary-light: #10b981; /* Verde claro */
-      --secondary: #059669; /* Verde secundario */
-      --accent: #34d399; /* Verde acento */
+      --primary: #0B63C7; /* Azul corporativo principal */
+      --primary-dark: #0850A0; /* Azul oscuro */
+      --primary-light: #2563EB; /* Azul claro */
+      --secondary: #1D4ED8; /* Azul secundario */
+      --accent: #3B82F6; /* Azul acento */
       --yellow-accent: #FFD43B;
-      --surface: #f6fef9;
+      --surface: #f8fbff;
       --panel: #ffffff;
-      --panel-soft: #f0fdf4;
-      --text: #064e3b;
+      --panel-soft: #eff6ff;
+      --text: #1e3a8a;
       --muted: #64748b;
-      --border: #bbf7d0;
-      --shadow: 0 20px 45px rgba(6, 78, 59, 0.08);
+      --border: #bfdbfe;
+      --shadow: 0 20px 45px rgba(30, 58, 138, 0.08);
     }
 
     body {
@@ -247,8 +261,8 @@
     }
 
     .table-panel .data-table thead th {
-      background: #ecfdf5;
-      color: #064e3b;
+      background: #eff6ff;
+      color: #1e3a8a;
       font-size: 0.72rem;
       font-weight: 800;
       letter-spacing: 0.12em;
@@ -284,7 +298,7 @@
     ----------------------------------------------- */
     aside#sidebar {
       width: 288px; /* directora usa 288px en lugar de 280px */
-      background: linear-gradient(160deg, #047857 0%, #065f46 60%, #064e3b 100%);
+      background: linear-gradient(160deg, #0B63C7 0%, #0850A0 60%, #1e3a8a 100%);
       color: white;
       position: fixed;
       height: 100dvh;
@@ -295,7 +309,7 @@
       scrollbar-width: none;
       transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
                   transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      box-shadow: 4px 0 24px rgba(6, 78, 59, 0.15);
+      box-shadow: 4px 0 24px rgba(30, 58, 138, 0.15);
     }
     aside#sidebar::-webkit-scrollbar { display: none; }
 
@@ -492,12 +506,12 @@
       border: 1px solid rgba(11,99,199,0.08);
     }
 
-    /* Header base verde corporativo */
+    /* Header base azul corporativo */
     .modal-header {
       padding: 1.25rem 1.5rem;
       border-bottom: none;
       display: flex; align-items: center; justify-content: space-between;
-      background: linear-gradient(135deg, #047857 0%, #065f46 100%);
+      background: linear-gradient(135deg, #0B63C7 0%, #0850A0 100%);
       border-radius: 22px 22px 0 0;
       color: white;
       position: relative;
@@ -516,8 +530,8 @@
 
     /* Variantes de color de header modal por tipo */
     .modal-header--orange { background: linear-gradient(135deg, #FF7A00 0%, #D96500 100%); }
-    .modal-header--primary  { background: linear-gradient(135deg, #047857 0%, #065f46 100%); }
-    .modal-header--success { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
+    .modal-header--primary  { background: linear-gradient(135deg, #0B63C7 0%, #0850A0 100%); }
+    .modal-header--success { background: linear-gradient(135deg, #28B54D 0%, #22c55e 100%); }
     .modal-header--rose   { background: linear-gradient(135deg, #e11d48 0%, #be123c 100%); }
 
     .modal-header h2,
@@ -945,9 +959,9 @@
     <div id="sidebarOverlay" class="fixed inset-0 bg-black/50 z-40 backdrop-blur-sm transition-opacity" style="display:none;"></div>
     
     <!-- SIDEBAR -->
-    <aside id="sidebar" class="kk-sidebar bg-gradient-to-b from-[#047857] via-[#065f46] to-[#064e3b] shadow-2xl flex flex-col flex-shrink-0" style="border-right:none;">
+    <aside id="sidebar" class="kk-sidebar bg-gradient-to-b from-[#0B63C7] via-[#0850A0] to-[#1e3a8a] shadow-2xl flex flex-col flex-shrink-0" style="border-right:none;">
       <!-- Toggle collapse -->
-      <button id="toggleSidebar" class="absolute -right-3 top-8 bg-white rounded-full p-1.5 shadow-lg border border-slate-100 text-slate-500 hover:text-[#047857] hidden md:flex items-center justify-center z-10 transition-all hover:scale-110">
+      <button id="toggleSidebar" class="absolute -right-3 top-8 bg-white rounded-full p-1.5 shadow-lg border border-slate-100 text-slate-500 hover:text-[#0B63C7] hidden md:flex items-center justify-center z-10 transition-all hover:scale-110">
         <i data-lucide="chevron-left" id="toggleSidebarIcon" class="w-3.5 h-3.5"></i>
       </button>
 
@@ -1188,14 +1202,14 @@
             <div class="flex items-center gap-3 w-full md:w-auto">
               <div class="relative w-full md:w-64">
                 <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"></i>
-                <input id="searchTeacher" placeholder="Buscar por nombre..." class="pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm w-full focus:ring-2 focus:ring-[#047857] outline-none bg-slate-50 focus:bg-white transition-all">
+                <input id="searchTeacher" placeholder="Buscar por nombre..." class="pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm w-full focus:ring-2 focus:ring-[#0B63C7] outline-none bg-slate-50 focus:bg-white transition-all">
               </div>
             </div>
             <div class="flex gap-3 w-full md:w-auto justify-end">
-              <button id="btnAddAssistant" class="px-4 py-2.5 bg-emerald-100 text-[#047857] hover:bg-emerald-100 rounded-xl text-sm font-bold transition-colors flex items-center gap-2">
+              <button id="btnAddAssistant" class="px-4 py-2.5 bg-blue-100 text-[#0B63C7] hover:bg-blue-200 rounded-xl text-sm font-bold transition-colors flex items-center gap-2">
                 <i data-lucide="user-plus" class="w-4 h-4"></i> Asistente
               </button>
-              <button onclick="App.teachers.openModal()" class="px-4 py-2.5 text-white hover:opacity-90 rounded-xl text-sm font-bold shadow-md transition-all flex items-center gap-2" style="background:#047857;">
+              <button onclick="App.teachers.openModal()" class="px-4 py-2.5 text-white hover:opacity-90 rounded-xl text-sm font-bold shadow-md transition-all flex items-center gap-2" style="background:#0B63C7;">
                 <i data-lucide="plus" class="w-4 h-4"></i> Nuevo Maestro
               </button>
             </div>

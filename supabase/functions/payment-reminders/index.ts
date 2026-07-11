@@ -46,7 +46,7 @@ Deno.serve(async (req) => {
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL')              ?? '';
     const SERVICE_KEY  = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
     const RESEND_KEY   = Deno.env.get('RESEND_API_KEY')            ?? '';
-    const FROM_EMAIL   = Deno.env.get('FROM_EMAIL')                ?? 'Karpus Kids <avisos@karpuskids.com>';
+    const FROM_EMAIL   = Deno.env.get('FROM_EMAIL')                ?? 'Karpus Kids <avisos@montessorisonrisascreativas.com>';
 
     if (!SUPABASE_URL || !SERVICE_KEY) return json({ error: 'Missing env vars' }, 500);
 
@@ -262,7 +262,7 @@ async function processReminders(
       </p>
     </div>
     <div style="text-align:center;">
-      <a href="https://karpuskids.com/panel_padres.html" style="display:inline-block;background:linear-gradient(135deg,#dc2626,#b91c1c);color:#fff;padding:14px 32px;border-radius:10px;font-weight:800;font-size:15px;text-decoration:none;box-shadow:0 4px 12px rgba(220,38,38,0.35);">Pagar Ahora →</a>
+      <a href="https://montessorisonrisascreativas.com/panel_padres.html" style="display:inline-block;background:linear-gradient(135deg,#dc2626,#b91c1c);color:#fff;padding:14px 32px;border-radius:10px;font-weight:800;font-size:15px;text-decoration:none;box-shadow:0 4px 12px rgba(220,38,38,0.35);">Pagar Ahora →</a>
     </div>
   </div>
   <div style="background:#f9fafb;border-top:1px solid #f0f0f0;padding:16px 32px;text-align:center;">
@@ -316,7 +316,7 @@ async function processReminders(
       </p>
     </div>
     <div style="text-align:center;">
-      <a href="https://karpuskids.com/panel_padres.html" style="display:inline-block;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;padding:14px 32px;border-radius:10px;font-weight:800;font-size:15px;text-decoration:none;box-shadow:0 4px 12px rgba(37,99,235,0.35);">Pagar Ahora →</a>
+      <a href="https://montessorisonrisascreativas.com/panel_padres.html" style="display:inline-block;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;padding:14px 32px;border-radius:10px;font-weight:800;font-size:15px;text-decoration:none;box-shadow:0 4px 12px rgba(37,99,235,0.35);">Pagar Ahora →</a>
     </div>
   </div>
   <div style="background:#f9fafb;border-top:1px solid #f0f0f0;padding:16px 32px;text-align:center;">

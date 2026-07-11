@@ -1,19 +1,19 @@
-﻿import { SafeAppState } from '../shared/state.js';
+import { SafeAppState } from '../shared/state.js';
 
 /**
- * 🧠 FACTORY PARA ESTADO INICIAL
+ * ?? FACTORY PARA ESTADO INICIAL
  * (Evita bugs con fechas y referencias)
  */
 function createInitialState() {
   return {
-    // 👤 Autenticación
+    // ?? Autenticaci�n
     user: null,
     profile: null,
 
-    // 🎯 Navegación
+    // ?? Navegaci�n
     currentSection: 'dashboard',
 
-    // 📊 DASHBOARD
+    // ?? DASHBOARD
     dashboardData: {
       kpis: {
         total: 0,
@@ -34,7 +34,7 @@ function createInitialState() {
       },
 
       classrooms: {
-        all: [] // 🔥 consistente con el resto
+        all: [] // ?? consistente con el resto
       },
 
       payments: {
@@ -62,10 +62,10 @@ function createInitialState() {
       }
     },
 
-    // 📈 ESTADÍSTICAS
+    // ?? ESTAD�STICAS
     stats: {},
 
-    // 👨‍🎓 ESTUDIANTES
+    // ????? ESTUDIANTES
     students: {
       all: [],
       selected: null,
@@ -76,33 +76,33 @@ function createInitialState() {
       }
     },
 
-    // 🏫 AULAS
+    // ?? AULAS
     classrooms: {
       all: [],
       selected: null
     },
 
-    // 👩‍🏫 MAESTROS
+    // ????? MAESTROS
     teachers: {
       all: [],
       selected: null
     },
 
-    // 💳 PAGOS
+    // ?? PAGOS
     payments: {
       all: [],
       filters: {
         status: 'all',
-        year: new Date().getFullYear(), // OK aquí (factory)
+        year: new Date().getFullYear(), // OK aqu� (factory)
         search: ''
       },
       selected: null
     },
 
-    // 📅 ASISTENCIA
+    // ?? ASISTENCIA
     attendance: {
       entries: [],
-      selectedDate: new Date().toISOString().split('T')[0], // OK aquí
+      selectedDate: new Date().toISOString().split('T')[0], // OK aqu�
       stats: {
         present: 0,
         absent: 0,
@@ -110,7 +110,7 @@ function createInitialState() {
       }
     },
 
-    // 📋 REPORTES
+    // ?? REPORTES
     inquiries: {
       all: [],
       filters: {
@@ -119,7 +119,7 @@ function createInitialState() {
       selected: null
     },
 
-    // 💬 CHAT
+    // ?? CHAT
     chat: {
       contacts: [],
       selectedUser: null,
@@ -127,24 +127,24 @@ function createInitialState() {
       unreadCount: 0
     },
 
-    // 📰 MURO
+    // ?? MURO
     wall: {
       posts: [],
       page: 1,
-      hasMore: true // 🔥 útil para paginación real
+      hasMore: true // ?? �til para paginaci�n real
     }
   };
 }
 
 /**
- * 🧠 INSTANCIA GLOBAL
+ * ?? INSTANCIA GLOBAL
  */
 export const AppState = new SafeAppState(createInitialState(), { 
   persistenceKey: 'karpus_directora_state' 
 });
 
 /**
- * 🔄 RESET COMPLETO (CLAVE para logout)
+ * ?? RESET COMPLETO (CLAVE para logout)
  */
 export function resetAppState() {
   AppState.setState(createInitialState());

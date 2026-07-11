@@ -121,10 +121,10 @@ Deno.serve(async (req) => {
     }
 
     const fullLink = link
-      ? (link.startsWith('http') ? link : 'https://karpuskids.com/' + link.replace(/^\//, ''))
-      : 'https://karpuskids.com/';
+      ? (link.startsWith('http') ? link : 'https://montessorisonrisascreativas.com/' + link.replace(/^\//, ''))
+      : 'https://montessorisonrisascreativas.com/';
 
-    const ICON_URL = 'https://karpuskids.com/img/mundo.jpg';
+    const ICON_URL = 'https://montessorisonrisascreativas.com/img/mundo.jpg';
 
     const basePayload = {
       app_id:               ONESIGNAL_APP_ID,

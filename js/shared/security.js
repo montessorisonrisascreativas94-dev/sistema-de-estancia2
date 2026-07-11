@@ -101,7 +101,7 @@ export const Security = {
 
     // 2. Detectar DevTools abiertos (disuasión básica)
     // Solo en producción
-    if (window.location.hostname === 'karpuskids.com') {
+    if (window.location.hostname === 'montessorisonrisascreativas.com') {
       let devtoolsOpen = false;
       const threshold = 160;
       setInterval(() => {

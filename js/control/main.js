@@ -1,17 +1,17 @@
-﻿import { supabase, ensureRole } from '../shared/supabase.js';
+import { supabase, ensureRole } from '../shared/supabase.js';
 import { logError, auditLog } from '../shared/db-utils.js';
 
-// Bloquear redirección por SIGNED_OUT desde el primer momento
+// Bloquear redirecci�n por SIGNED_OUT desde el primer momento
 // (antes de DOMContentLoaded, para que onAuthStateChange no interrumpa el init)
 window._karpusInitializing = true;
 
-// Función global para cerrar sesión desde onclick inline
+// Funci�n global para cerrar sesi�n desde onclick inline
 window._signOutAndRedirect = async () => {
   try { await supabase.auth.signOut(); } catch (_) {}
   window.location.href = 'login.html';
 };
 
-// ── State ─────────────────────────────────────────────────────────────────────
+// -- State ---------------------------------------------------------------------
 let allUsers    = [];
 let allAudit    = [];
 let allPayments = [];
@@ -22,7 +22,7 @@ let allPunches  = [];
 let fraudEvents = [];
 let currentUser = null;
 
-// ── Init ──────────────────────────────────────────────────────────────────────
+// -- Init ----------------------------------------------------------------------
 function _setLoaderMsg(msg) {
   const loader = document.getElementById('loader');
   if (!loader) return;
@@ -38,9 +38,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (loader) {
       loader.innerHTML = `
         <div style="text-align:center;padding:32px;">
-          <div style="font-size:32px;margin-bottom:12px;">⚠️</div>
+          <div style="font-size:32px;margin-bottom:12px;">??</div>
           <p style="color:#f87171;font-weight:800;font-size:14px;margin-bottom:8px;">Tiempo de espera agotado</p>
-          <p style="color:#94a3b8;font-size:12px;margin-bottom:20px;">No se pudo conectar con el servidor. Verifica tu conexión.</p>
+          <p style="color:#94a3b8;font-size:12px;margin-bottom:20px;">No se pudo conectar con el servidor. Verifica tu conexi�n.</p>
           <button onclick="window.location.href='login.html'" style="background:#6366f1;color:white;border:none;padding:10px 24px;border-radius:10px;font-weight:800;cursor:pointer;font-size:13px;">Volver al Login</button>
           <button onclick="window.location.reload()" style="background:rgba(255,255,255,.1);color:#94a3b8;border:1px solid rgba(255,255,255,.1);padding:10px 24px;border-radius:10px;font-weight:800;cursor:pointer;font-size:13px;margin-left:8px;">Reintentar</button>
         </div>`;
@@ -48,8 +48,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   }, 15000);
 
   try {
-    // ── Paso 1: Sesión local ──────────────────────────────────────────────────
-    _setLoaderMsg('Verificando sesión...');
+    // -- Paso 1: Sesi�n local --------------------------------------------------
+    _setLoaderMsg('Verificando sesi�n...');
     const { data: sessionData, error: sessionErr } = await supabase.auth.getSession();
 
     if (sessionErr || !sessionData?.session?.user) {
@@ -63,7 +63,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     let userId    = session.user.id;
     let userEmail = session.user.email;
 
-    // ── Paso 2: Refrescar token si está próximo a expirar ────────────────────
+    // -- Paso 2: Refrescar token si est� pr�ximo a expirar --------------------
     _setLoaderMsg('Validando credenciales...');
     const expiresAt = session.expires_at || 0;
     const nowSec    = Math.floor(Date.now() / 1000);
@@ -81,7 +81,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       userEmail = refreshed.session.user.email;
     }
 
-    // ── Paso 3: Obtener perfil ────────────────────────────────────────────────
+    // -- Paso 3: Obtener perfil ------------------------------------------------
     _setLoaderMsg('Verificando permisos...');
     console.log('[Paso 3] Iniciando carga de perfil para:', userId);
     let profile = null;
@@ -91,7 +91,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
       const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
       if (cached && cached.role && cached.ts && (Date.now() - cached.ts) < 3600000) {
-        console.log('[Paso 3] Perfil cargado desde caché:', cached.role);
+        console.log('[Paso 3] Perfil cargado desde cach�:', cached.role);
         profile = { id: userId, email: userEmail, name: cached.name || userEmail.split('@')[0], role: cached.role };
       }
     } catch (_) {}
@@ -117,13 +117,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         const el = document.getElementById('loader');
         if (el) el.innerHTML = [
           '<div style="text-align:center;padding:32px">',
-          '<div style="font-size:32px;margin-bottom:12px">⚠️</div>',
-          '<p style="color:#f87171;font-weight:800;font-size:14px;margin-bottom:8px">Sin conexión con Supabase</p>',
-          '<p style="color:#94a3b8;font-size:12px;margin-bottom:16px">El servidor no respondió en 8s.</p>',
+          '<div style="font-size:32px;margin-bottom:12px">??</div>',
+          '<p style="color:#f87171;font-weight:800;font-size:14px;margin-bottom:8px">Sin conexi�n con Supabase</p>',
+          '<p style="color:#94a3b8;font-size:12px;margin-bottom:16px">El servidor no respondi� en 8s.</p>',
           '<p style="color:#64748b;font-size:11px;margin-bottom:16px">Email: ' + userEmail + '</p>',
           '<div style="display:flex;gap:8px;justify-content:center">',
           '<button onclick="window.location.reload()" style="background:#6366f1;color:white;border:none;padding:10px 20px;border-radius:10px;font-weight:800;cursor:pointer;font-size:12px">Reintentar</button>',
-          '<button onclick="window._signOutAndRedirect()" style="background:rgba(255,255,255,.1);color:#94a3b8;border:1px solid rgba(255,255,255,.1);padding:10px 20px;border-radius:10px;font-weight:800;cursor:pointer;font-size:12px">Cerrar Sesión</button>',
+          '<button onclick="window._signOutAndRedirect()" style="background:rgba(255,255,255,.1);color:#94a3b8;border:1px solid rgba(255,255,255,.1);padding:10px 20px;border-radius:10px;font-weight:800;cursor:pointer;font-size:12px">Cerrar Sesi�n</button>',
           '</div></div>'
         ].join('');
       }, 8000);
@@ -140,18 +140,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.log('[Paso 3] Respuesta DB:', { data, error });
 
         if (!error && data) {
-          // Manejar si viene como array o como objeto único
+          // Manejar si viene como array o como objeto �nico
           const rawProfile = Array.isArray(data) ? data[0] : data;
           
           if (rawProfile) {
             profile = rawProfile;
             console.log('[Paso 3] Perfil obtenido:', profile.role);
-            // Guardar en cache para próximas cargas
+            // Guardar en cache para pr�ximas cargas
             try {
               localStorage.setItem(CACHE_KEY, JSON.stringify({ role: profile.role, name: profile.name, ts: Date.now() }));
             } catch (_) {}
           } else {
-            console.warn('[Paso 3] No se encontró perfil para el ID:', userId);
+            console.warn('[Paso 3] No se encontr� perfil para el ID:', userId);
           }
         } else if (error) {
           console.error('[Paso 3] Error en consulta de perfil:', error);
@@ -162,7 +162,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           return;
         }
       } catch (e) {
-        console.error('[Paso 3] Excepción en consulta de perfil:', e);
+        console.error('[Paso 3] Excepci�n en consulta de perfil:', e);
         clearTimeout(profileTimer);
         if (timedOut) return;
         clearTimeout(loaderTimeout);
@@ -178,11 +178,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       clearTimeout(loaderTimeout);
       window._karpusInitializing = false;
       const el = document.getElementById('loader');
-      if (el) el.innerHTML = '<div style="text-align:center;padding:32px;max-width:440px"><div style="font-size:32px;margin-bottom:12px">🔒</div><p style="color:#f87171;font-weight:800;font-size:14px;margin-bottom:8px">Sin perfil configurado</p><p style="color:#94a3b8;font-size:12px;margin-bottom:8px">Tu cuenta no tiene un perfil en la tabla profiles.</p><p style="color:#64748b;font-size:11px;margin-bottom:4px">Email: ' + userEmail + '</p><p style="color:#64748b;font-size:10px;margin-bottom:16px;font-family:monospace">UUID: ' + userId + '</p><div style="background:#1e293b;border:1px solid rgba(99,102,241,.3);border-radius:10px;padding:12px;margin-bottom:16px;text-align:left"><p style="color:#94a3b8;font-size:11px;font-weight:700;margin-bottom:6px">Ejecuta en Supabase SQL Editor:</p><code style="color:#a5b4fc;font-size:10px;line-height:1.6;display:block;white-space:pre-wrap">INSERT INTO public.profiles (id, email, name, role, accepted_terms) VALUES (\'' + userId + '\', \'' + userEmail + '\', \'Administrador\', \'admin\', true) ON CONFLICT (id) DO UPDATE SET role = \'admin\';</code></div><div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap"><button onclick="window.location.reload()" style="background:#6366f1;color:white;border:none;padding:10px 20px;border-radius:10px;font-weight:800;cursor:pointer;font-size:12px">Reintentar</button><button onclick="window._signOutAndRedirect()" style="background:rgba(255,255,255,.1);color:#94a3b8;border:1px solid rgba(255,255,255,.1);padding:10px 20px;border-radius:10px;font-weight:800;cursor:pointer;font-size:12px">Cerrar Sesión</button></div></div>';
+      if (el) el.innerHTML = '<div style="text-align:center;padding:32px;max-width:440px"><div style="font-size:32px;margin-bottom:12px">??</div><p style="color:#f87171;font-weight:800;font-size:14px;margin-bottom:8px">Sin perfil configurado</p><p style="color:#94a3b8;font-size:12px;margin-bottom:8px">Tu cuenta no tiene un perfil en la tabla profiles.</p><p style="color:#64748b;font-size:11px;margin-bottom:4px">Email: ' + userEmail + '</p><p style="color:#64748b;font-size:10px;margin-bottom:16px;font-family:monospace">UUID: ' + userId + '</p><div style="background:#1e293b;border:1px solid rgba(99,102,241,.3);border-radius:10px;padding:12px;margin-bottom:16px;text-align:left"><p style="color:#94a3b8;font-size:11px;font-weight:700;margin-bottom:6px">Ejecuta en Supabase SQL Editor:</p><code style="color:#a5b4fc;font-size:10px;line-height:1.6;display:block;white-space:pre-wrap">INSERT INTO public.profiles (id, email, name, role, accepted_terms) VALUES (\'' + userId + '\', \'' + userEmail + '\', \'Administrador\', \'admin\', true) ON CONFLICT (id) DO UPDATE SET role = \'admin\';</code></div><div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap"><button onclick="window.location.reload()" style="background:#6366f1;color:white;border:none;padding:10px 20px;border-radius:10px;font-weight:800;cursor:pointer;font-size:12px">Reintentar</button><button onclick="window._signOutAndRedirect()" style="background:rgba(255,255,255,.1);color:#94a3b8;border:1px solid rgba(255,255,255,.1);padding:10px 20px;border-radius:10px;font-weight:800;cursor:pointer;font-size:12px">Cerrar Sesi�n</button></div></div>';
       return;
     }
 
-    // ── Paso 4: Verificar rol ─────────────────────────────────────────────────
+    // -- Paso 4: Verificar rol -------------------------------------------------
     console.log('[Paso 4] Verificando rol permitido...');
     const allowedRoles = ['admin', 'directora'];
     const userRole = (profile.role || '').toLowerCase();
@@ -195,7 +195,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (loader) {
         loader.innerHTML = `
           <div style="text-align:center;padding:32px;">
-            <div style="font-size:32px;margin-bottom:12px;">🚫</div>
+            <div style="font-size:32px;margin-bottom:12px;">??</div>
             <p style="color:#f87171;font-weight:800;font-size:14px;margin-bottom:8px;">Acceso denegado</p>
             <p style="color:#94a3b8;font-size:12px;margin-bottom:4px;">Tu rol: <strong style="color:#f1f5f9;">${userRole || '(sin rol)'}</strong></p>
             <p style="color:#94a3b8;font-size:12px;margin-bottom:20px;">Solo administradores y directoras pueden acceder.</p>
@@ -208,7 +208,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
 
-    // ── Paso 5: Mostrar panel ─────────────────────────────────────────────────
+    // -- Paso 5: Mostrar panel -------------------------------------------------
     console.log('[Paso 5] Inicializando panel para:', profile.name);
     clearTimeout(loaderTimeout);
     window._karpusInitializing = false;
@@ -248,7 +248,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const msg = err?.message || String(err);
       loader.innerHTML = `
         <div style="text-align:center;padding:32px;">
-          <div style="font-size:32px;margin-bottom:12px;">⚠️</div>
+          <div style="font-size:32px;margin-bottom:12px;">??</div>
           <p style="color:#f87171;font-weight:800;font-size:14px;margin-bottom:8px;">Error inesperado</p>
           <p style="color:#94a3b8;font-size:12px;margin-bottom:20px;">${msg}</p>
           <button onclick="window.location.href='login.html'" style="background:#6366f1;color:white;border:none;padding:10px 24px;border-radius:10px;font-weight:800;cursor:pointer;font-size:13px;">Volver al Login</button>
@@ -259,7 +259,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 });
 
-// ── Navigation ────────────────────────────────────────────────────────────────
+// -- Navigation ----------------------------------------------------------------
 window.goTo = function(id) {
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
@@ -268,16 +268,16 @@ window.goTo = function(id) {
 
   const titles = {
     dashboard:    ['Dashboard', 'Vista general del sistema'],
-    auditoria:    ['Auditoría', 'Registro completo de movimientos'],
-    fraude:       ['Alertas de Fraude', 'Detección automática de patrones sospechosos'],
+    auditoria:    ['Auditor�a', 'Registro completo de movimientos'],
+    fraude:       ['Alertas de Fraude', 'Detecci�n autom�tica de patrones sospechosos'],
     usuarios:     ['Usuarios', 'Todos los usuarios del sistema'],
-    padres:       ['Padres', 'Gestión de padres de familia'],
+    padres:       ['Padres', 'Gesti�n de padres de familia'],
     maestras:     ['Maestras y Asistentes', 'Personal docente'],
-    directoras:   ['Directoras', 'Administración escolar'],
+    directoras:   ['Directoras', 'Administraci�n escolar'],
     pagos:        ['Pagos', 'Historial financiero completo'],
     asistencia:   ['Asistencia', 'Control de entradas y salidas'],
     errores:      ['Errores del Sistema', 'Log de errores y excepciones'],
-    configuracion:['Configuración', 'Ajustes del panel de control'],
+    configuracion:['Configuraci�n', 'Ajustes del panel de control'],
   };
   const [title, sub] = titles[id] || ['Panel', ''];
   document.getElementById('pageTitle').textContent    = title;
@@ -295,7 +295,7 @@ window.goTo = function(id) {
   if (id === 'seguridad')   { renderBruteForce(); loadSecurityStats(); loadPaymentAudit(); }
 };
 
-// ── Refresh ───────────────────────────────────────────────────────────────────
+// -- Refresh -------------------------------------------------------------------
 window.refreshAll = async function() {
   console.log('[refreshAll] Iniciando carga de datos...');
   try {
@@ -306,11 +306,11 @@ window.refreshAll = async function() {
     console.log('[refreshAll] Datos cargados, renderizando dashboard...');
     renderDashboard();
   } catch (err) {
-    console.error('[refreshAll] Error crítico:', err);
+    console.error('[refreshAll] Error cr�tico:', err);
   }
 };
 
-// ── Load data ─────────────────────────────────────────────────────────────────
+// -- Load data -----------------------------------------------------------------
 async function loadUsers() {
   try {
     console.log('[loadUsers] Cargando usuarios...');
@@ -335,7 +335,7 @@ async function loadUsers() {
 async function loadPunches() {
   try {
     console.log('[loadPunches] Cargando accesos...');
-    // Last 30 days of door punches — used for "último acceso"
+    // Last 30 days of door punches � used for "�ltimo acceso"
     const since = new Date(); since.setDate(since.getDate() - 30);
     const { data } = await supabase
       .from('door_punches')
@@ -353,7 +353,7 @@ async function loadPunches() {
 
 async function loadAudit() {
   try {
-    console.log('[loadAudit] Cargando auditoría...');
+    console.log('[loadAudit] Cargando auditor�a...');
     // Try audit_logs first, fallback to system_events
     let data = null;
     const { data: d1, error: e1 } = await supabase
@@ -364,7 +364,7 @@ async function loadAudit() {
     if (!e1) {
       data = d1;
     } else {
-      console.warn('[loadAudit] audit_logs falló, usando system_events...');
+      console.warn('[loadAudit] audit_logs fall�, usando system_events...');
       // Fallback: system_events
       const { data: d2 } = await supabase
         .from('system_events')
@@ -374,7 +374,7 @@ async function loadAudit() {
       data = (d2 || []).map(e => ({
         id: e.id,
         user_id: e.payload?.user_id || null,
-        action: e.action || e.type || '—',
+        action: e.action || e.type || '�',
         payload: e.payload,
         created_at: e.created_at
       }));
@@ -475,7 +475,7 @@ async function loadAttendance() {
   }
 }
 
-// ── Dashboard ─────────────────────────────────────────────────────────────────
+// -- Dashboard -----------------------------------------------------------------
 async function renderDashboard() {
   try {
     const now = new Date();
@@ -494,7 +494,7 @@ async function renderDashboard() {
     const badgeFraud = document.getElementById('badge-fraud');
     if (badgeFraud) badgeFraud.textContent = fraudEvents.length;
     
-    // ✅ HEALTHCHECK: Estado del Ciclo de Pagos
+    // ? HEALTHCHECK: Estado del Ciclo de Pagos
     const { data: health } = await supabase.rpc('check_payment_cycle_health');
     const healthWidget = document.getElementById('paymentHealthWidget');
     if (healthWidget) {
@@ -517,14 +517,14 @@ async function renderDashboard() {
 }
 
 window.App.runEmergencyCycle = async function() {
-  if (!confirm('¿Ejecutar ciclo de pagos de emergencia?')) return;
+  if (!confirm('�Ejecutar ciclo de pagos de emergencia?')) return;
   const { data, error } = await supabase.rpc('run_payment_cycle');
   if (error) alert('Error: ' + error.message);
-  else alert('Éxito: ' + data.generated + ' cobros generados.');
+  else alert('�xito: ' + data.generated + ' cobros generados.');
   window.location.reload();
 };
 
-// ── Charts ────────────────────────────────────────────────────────────────────
+// -- Charts --------------------------------------------------------------------
 let chartActivity = null, chartRoles = null, chartPaymentsChart = null, chartAttendChart = null;
 
 function renderCharts() {
@@ -568,7 +568,7 @@ function renderCharts() {
   }
 }
 
-// ── Recent audit ──────────────────────────────────────────────────────────────
+// -- Recent audit --------------------------------------------------------------
 function renderRecentAudit() {
   const tbody = document.getElementById('recentAuditBody');
   if (!tbody) return;
@@ -576,8 +576,8 @@ function renderRecentAudit() {
   if (!recent.length) { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:16px;color:var(--muted);">Sin registros</td></tr>'; return; }
   tbody.innerHTML = recent.map(a => {
     const user = allUsers.find(u => u.id === a.user_id);
-    const name = user?.name || user?.email || a.user_id?.slice(0,8) || '—';
-    const time = a.created_at ? new Date(a.created_at).toLocaleTimeString('es-DO', { hour: '2-digit', minute: '2-digit' }) : '—';
+    const name = user?.name || user?.email || a.user_id?.slice(0,8) || '�';
+    const time = a.created_at ? new Date(a.created_at).toLocaleTimeString('es-DO', { hour: '2-digit', minute: '2-digit' }) : '�';
     const action = a.action || 'movimiento';
     const typeBadge = { 'payment.approved': 'badge-green', 'attendance.check_in': 'badge-blue', 'error': 'badge-red' };
     const badge = typeBadge[action] || 'badge-gray';
@@ -590,20 +590,20 @@ function renderRecentAudit() {
   }).join('');
 }
 
-// ── Full audit table ──────────────────────────────────────────────────────────
+// -- Full audit table ----------------------------------------------------------
 function renderAuditTable(data) {
   const tbody = document.getElementById('auditBody');
   if (!tbody) return;
   document.getElementById('auditCount').textContent = data.length + ' registros';
-  if (!data.length) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--muted);">Sin registros de auditoría</td></tr>'; return; }
+  if (!data.length) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--muted);">Sin registros de auditor�a</td></tr>'; return; }
   const roleBadge = { padre: 'badge-blue', maestra: 'badge-green', directora: 'badge-orange', asistente: 'badge-purple', admin: 'badge-yellow' };
   tbody.innerHTML = data.map((a, i) => {
     const user = allUsers.find(u => u.id === a.user_id);
-    const name  = user?.name  || '—';
-    const email = user?.email || a.user_id?.slice(0,12) || '—';
-    const role  = user?.role  || '—';
-    const dt = a.created_at ? new Date(a.created_at).toLocaleString('es-DO') : '—';
-    const action = a.action || '—';
+    const name  = user?.name  || '�';
+    const email = user?.email || a.user_id?.slice(0,12) || '�';
+    const role  = user?.role  || '�';
+    const dt = a.created_at ? new Date(a.created_at).toLocaleString('es-DO') : '�';
+    const action = a.action || '�';
     const badge = action.includes('payment') ? 'badge-green' : action.includes('attendance') ? 'badge-blue' : 'badge-gray';
     return `<tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors">
       <td class="py-3 px-4 text-slate-400 text-xs font-bold">${i+1}</td>
@@ -636,7 +636,7 @@ window.filterAudit = function() {
 };
 
 window.exportAudit = function() {
-  const rows = [['Fecha','Usuario','Email','Rol','Acción','Detalle']];
+  const rows = [['Fecha','Usuario','Email','Rol','Acci�n','Detalle']];
   allAudit.forEach(a => {
     const user = allUsers.find(u => u.id === a.user_id);
     rows.push([a.created_at, user?.name||'', user?.email||'', user?.role||'', a.action||'', JSON.stringify(a.payload || {}).replace(/,/g,';')]);
@@ -648,7 +648,7 @@ window.exportAudit = function() {
   URL.revokeObjectURL(url);
 };
 
-// ── Fraud detection ───────────────────────────────────────────────────────────
+// -- Fraud detection -----------------------------------------------------------
 function detectFraud() {
   fraudEvents = [];
   const loginsByUser = {};
@@ -659,12 +659,12 @@ function detectFraud() {
   Object.entries(loginsByUser).forEach(([uid, times]) => {
     if (times.length >= 5) {
       const user = allUsers.find(u => u.id === uid);
-      fraudEvents.push({ type: 'Múltiples logins', user: user?.name || uid, detail: `${times.length} accesos registrados`, risk: 'medio', date: times[0] });
+      fraudEvents.push({ type: 'M�ltiples logins', user: user?.name || uid, detail: `${times.length} accesos registrados`, risk: 'medio', date: times[0] });
     }
   });
   allPayments.forEach(p => {
     if (Number(p.amount || 0) > 50000) {
-      fraudEvents.push({ type: 'Pago inusual', user: p.students?.p1_name || p.students?.name || '—', detail: `Monto: RD$${Number(p.amount).toLocaleString()}`, risk: 'alto', date: p.created_at });
+      fraudEvents.push({ type: 'Pago inusual', user: p.students?.p1_name || p.students?.name || '�', detail: `Monto: RD$${Number(p.amount).toLocaleString()}`, risk: 'alto', date: p.created_at });
     }
   });
   const payKey = {};
@@ -689,7 +689,7 @@ function renderFraud() {
   const rulesEl = document.getElementById('fraudRules');
   if (rulesEl) {
     const rules = [
-      { icon: 'bi-person-x-fill', color: '#ef4444', title: 'Múltiples logins', desc: 'Detecta +5 accesos del mismo usuario', count: fraudEvents.filter(f => f.type === 'Múltiples logins').length },
+      { icon: 'bi-person-x-fill', color: '#ef4444', title: 'M�ltiples logins', desc: 'Detecta +5 accesos del mismo usuario', count: fraudEvents.filter(f => f.type === 'M�ltiples logins').length },
       { icon: 'bi-cash-coin',     color: '#f97316', title: 'Pagos inusuales',  desc: 'Montos superiores a RD$50,000',       count: fraudEvents.filter(f => f.type === 'Pago inusual').length },
       { icon: 'bi-files',         color: '#eab308', title: 'Pagos duplicados', desc: 'Mismo estudiante, mismo mes',          count: fraudEvents.filter(f => f.type === 'Pago duplicado').length },
       { icon: 'bi-person-dash',   color: '#6366f1', title: 'Sin rol asignado', desc: 'Usuarios sin rol en el sistema',       count: fraudEvents.filter(f => f.type === 'Sin rol asignado').length },
@@ -709,12 +709,12 @@ function renderFraud() {
   const tbody = document.getElementById('fraudBody');
   document.getElementById('fraudCount').textContent = fraudEvents.length + ' eventos';
   if (!fraudEvents.length) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted);">✅ Sin eventos sospechosos detectados</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted);">? Sin eventos sospechosos detectados</td></tr>';
     return;
   }
   const riskBadge = { alto: 'badge-red', medio: 'badge-yellow', bajo: 'badge-blue' };
   tbody.innerHTML = fraudEvents.map(f => `<tr class="border-b border-rose-50 hover:bg-rose-50/20 transition-colors">
-    <td class="py-3 px-4 text-[10px] text-slate-400 font-mono">${f.date ? new Date(f.date).toLocaleString('es-DO') : '—'}</td>
+    <td class="py-3 px-4 text-[10px] text-slate-400 font-mono">${f.date ? new Date(f.date).toLocaleString('es-DO') : '�'}</td>
     <td class="py-3 px-4 font-black text-slate-700 uppercase text-xs">${escH(f.user)}</td>
     <td class="py-3 px-4 font-bold text-orange-600 text-xs">${f.type}</td>
     <td class="py-3 px-4 text-slate-400 text-xs italic">${escH(f.detail)}</td>
@@ -733,11 +733,11 @@ function renderFraudAlertsList() {
   }
   const riskColor = { alto: 'alert-red', medio: 'alert-yellow', bajo: 'alert-green' };
   el.innerHTML = fraudEvents.slice(0, 5).map(f =>
-    `<div class="alert ${riskColor[f.risk]||'alert-yellow'}"><i class="bi bi-exclamation-triangle-fill"></i><div><div style="font-weight:900;">${f.type}</div><div style="font-size:12px;opacity:.8;">${f.user} — ${f.detail}</div></div></div>`
+    `<div class="alert ${riskColor[f.risk]||'alert-yellow'}"><i class="bi bi-exclamation-triangle-fill"></i><div><div style="font-weight:900;">${f.type}</div><div style="font-size:12px;opacity:.8;">${f.user} � ${f.detail}</div></div></div>`
   ).join('');
 }
 
-// ── Helper: last access (session or physical punch) ──────────────────────────
+// -- Helper: last access (session or physical punch) --------------------------
 function getLastAccess(userId) {
   const user = allUsers.find(u => u.id === userId);
   const sessionAccess = user?.last_sign_in_at ? new Date(user.last_sign_in_at).getTime() : 0;
@@ -746,12 +746,12 @@ function getLastAccess(userId) {
   const punchAccess = punch ? new Date(punch.punched_at).getTime() : 0;
   
   const mostRecent = Math.max(sessionAccess, punchAccess);
-  if (mostRecent === 0) return '—';
+  if (mostRecent === 0) return '�';
   
   return new Date(mostRecent).toLocaleString('es-DO', { dateStyle: 'short', timeStyle: 'short' });
 }
 
-// ── Users table ───────────────────────────────────────────────────────────────
+// -- Users table ---------------------------------------------------------------
 function renderUsers(data) {
   const tbody = document.getElementById('usersBody');
   if (!tbody) return;
@@ -759,7 +759,7 @@ function renderUsers(data) {
   if (!data.length) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--muted);">Sin usuarios</td></tr>'; return; }
   const roleBadge = { padre: 'badge-blue', maestra: 'badge-green', directora: 'badge-orange', asistente: 'badge-purple', admin: 'badge-yellow' };
   tbody.innerHTML = data.map(u => {
-    const created = u.created_at ? new Date(u.created_at).toLocaleDateString('es-DO') : '—';
+    const created = u.created_at ? new Date(u.created_at).toLocaleDateString('es-DO') : '�';
     const lastAccess = getLastAccess(u.id);
     const initials = (u.name || u.email || '?')[0].toUpperCase();
     return `<tr>
@@ -767,8 +767,8 @@ function renderUsers(data) {
         <div style="width:32px;height:32px;background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;color:white;flex-shrink:0;">${initials}</div>
         <div><div style="font-weight:800;font-size:12px;">${escH(u.name||'Sin nombre')}</div><div style="font-size:10px;color:var(--muted);">${escH(u.phone||'')}</div></div>
       </div></td>
-      <td style="font-size:12px;color:var(--muted);">${escH(u.email||'—')}</td>
-      <td><span class="badge ${roleBadge[u.role]||'badge-gray'}">${u.role||'—'}</span></td>
+      <td style="font-size:12px;color:var(--muted);">${escH(u.email||'�')}</td>
+      <td><span class="badge ${roleBadge[u.role]||'badge-gray'}">${u.role||'�'}</span></td>
       <td style="font-size:11px;color:var(--muted);">${created}</td>
       <td style="font-size:11px;color:var(--muted);">${lastAccess}</td>
       <td><span class="badge badge-green">Activo</span></td>
@@ -800,26 +800,26 @@ window.viewUser = function(id) {
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:28px;width:min(90vw,480px);max-height:90vh;overflow-y:auto;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
         <h3 style="font-size:16px;font-weight:900;color:var(--text);">Detalle de usuario</h3>
-        <button onclick="document.getElementById('userModal').style.display='none'" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;">✕</button>
+        <button onclick="document.getElementById('userModal').style.display='none'" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;">?</button>
       </div>
       <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px;">
         <div style="width:52px;height:52px;background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:900;color:white;flex-shrink:0;">${(u.name||u.email||'?')[0].toUpperCase()}</div>
         <div>
           <div style="font-size:16px;font-weight:900;color:var(--text);">${escH(u.name||'Sin nombre')}</div>
-          <div style="font-size:12px;color:var(--muted);">${escH(u.email||'—')}</div>
+          <div style="font-size:12px;color:var(--muted);">${escH(u.email||'�')}</div>
         </div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;">
-        ${_infoRow('Rol', u.role||'—')}
-        ${_infoRow('Teléfono', u.phone||'—')}
-        ${_infoRow('Creado', u.created_at ? new Date(u.created_at).toLocaleDateString('es-DO') : '—')}
-        ${_infoRow('Último acceso', lastAccess)}
+        ${_infoRow('Rol', u.role||'�')}
+        ${_infoRow('Tel�fono', u.phone||'�')}
+        ${_infoRow('Creado', u.created_at ? new Date(u.created_at).toLocaleDateString('es-DO') : '�')}
+        ${_infoRow('�ltimo acceso', lastAccess)}
         ${_infoRow('ID', u.id?.slice(0,16)+'...')}
         ${students.length ? _infoRow('Estudiantes', students.map(s=>s.name).join(', ')) : ''}
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <button class="btn btn-primary" onclick="resetPassword('${u.id}','${escH(u.email||'')}');document.getElementById('userModal').style.display='none'">
-          <i class="bi bi-key"></i> Cambiar contraseña
+          <i class="bi bi-key"></i> Cambiar contrase�a
         </button>
         <button class="btn btn-ghost" onclick="document.getElementById('userModal').style.display='none'">Cerrar</button>
       </div>
@@ -842,35 +842,35 @@ function _createModal() {
   return el;
 }
 
-// ── Password reset ────────────────────────────────────────────────────────────
+// -- Password reset ------------------------------------------------------------
 window.resetPassword = function(userId, email) {
   const modal = document.getElementById('userModal') || _createModal();
   modal.innerHTML = `
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:28px;width:min(90vw,400px);">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-        <h3 style="font-size:16px;font-weight:900;color:var(--text);">Cambiar contraseña</h3>
-        <button onclick="document.getElementById('userModal').style.display='none'" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;">✕</button>
+        <h3 style="font-size:16px;font-weight:900;color:var(--text);">Cambiar contrase�a</h3>
+        <button onclick="document.getElementById('userModal').style.display='none'" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;">?</button>
       </div>
       <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">Usuario: <strong style="color:var(--text);">${escH(email)}</strong></p>
       <div style="margin-bottom:12px;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-          <label style="font-size:11px;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;">Nueva contraseña</label>
+          <label style="font-size:11px;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;">Nueva contrase�a</label>
           <button class="btn btn-ghost" style="padding:2px 8px;font-size:9px;" onclick="generateRandomPassword()">
             <i class="bi bi-magic"></i> Generar segura
           </button>
         </div>
         <div style="position:relative;">
-          <input class="inp" id="newPwdInput" type="text" placeholder="Mínimo 6 caracteres" autocomplete="off">
+          <input class="inp" id="newPwdInput" type="text" placeholder="M�nimo 6 caracteres" autocomplete="off">
           <i class="bi bi-eye-fill" style="position:absolute;right:12px;top:12px;color:var(--muted);cursor:pointer;" onclick="togglePwdVisibility()"></i>
         </div>
       </div>
       <div style="margin-bottom:16px;">
-        <label style="font-size:11px;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;display:block;margin-bottom:6px;">Confirmar contraseña</label>
-        <input class="inp" id="newPwdConfirm" type="text" placeholder="Repite la contraseña" autocomplete="off">
+        <label style="font-size:11px;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;display:block;margin-bottom:6px;">Confirmar contrase�a</label>
+        <input class="inp" id="newPwdConfirm" type="text" placeholder="Repite la contrase�a" autocomplete="off">
       </div>
       <div id="pwdMsg" style="font-size:12px;font-weight:700;margin-bottom:12px;"></div>
       <div style="display:flex;gap:8px;">
-        <button class="btn btn-primary" onclick="doResetPassword('${userId}')"><i class="bi bi-check-lg"></i> Guardar contraseña</button>
+        <button class="btn btn-primary" onclick="doResetPassword('${userId}')"><i class="bi bi-check-lg"></i> Guardar contrase�a</button>
         <button class="btn btn-ghost" onclick="document.getElementById('userModal').style.display='none'">Cancelar</button>
       </div>
     </div>`;
@@ -885,7 +885,7 @@ window.generateRandomPassword = function() {
   document.getElementById('newPwdConfirm').value = pwd;
   const msg = document.getElementById('pwdMsg');
   msg.style.color = '#6366f1';
-  msg.textContent = '💡 Clave generada. Cópiala y dásela al usuario.';
+  msg.textContent = '?? Clave generada. C�piala y d�sela al usuario.';
 };
 
 window.togglePwdVisibility = function() {
@@ -899,11 +899,11 @@ window.doResetPassword = async function(userId) {
   const pwd  = document.getElementById('newPwdInput')?.value || '';
   const pwd2 = document.getElementById('newPwdConfirm')?.value || '';
   const msg  = document.getElementById('pwdMsg');
-  if (pwd.length < 6) { msg.style.color = '#f87171'; msg.textContent = 'La contraseña debe tener al menos 6 caracteres.'; return; }
-  if (pwd !== pwd2)   { msg.style.color = '#f87171'; msg.textContent = 'Las contraseñas no coinciden.'; return; }
+  if (pwd.length < 6) { msg.style.color = '#f87171'; msg.textContent = 'La contrase�a debe tener al menos 6 caracteres.'; return; }
+  if (pwd !== pwd2)   { msg.style.color = '#f87171'; msg.textContent = 'Las contrase�as no coinciden.'; return; }
 
-  // Confirmación antes de ejecutar
-  if (!confirm('¿Confirmas el cambio de contraseña para este usuario?\n\nEsta acción quedará registrada en el historial de auditoría.')) return;
+  // Confirmaci�n antes de ejecutar
+  if (!confirm('�Confirmas el cambio de contrase�a para este usuario?\n\nEsta acci�n quedar� registrada en el historial de auditor�a.')) return;
 
   msg.style.color = '#94a3b8'; msg.textContent = 'Guardando...';
   try {
@@ -912,22 +912,22 @@ window.doResetPassword = async function(userId) {
     });
     if (error || data?.error) throw new Error(error?.message || data?.error || 'Error desconocido');
 
-    // Auditoría inmutable
+    // Auditor�a inmutable
     await supabase.from('audit_logs').insert({
       user_id: currentUser.id,
       action: 'admin.reset_password',
       payload: { target_id: userId, changed_by: currentUser.email }
     });
 
-    msg.style.color = '#4ade80'; msg.textContent = '✅ Contraseña actualizada correctamente.';
+    msg.style.color = '#4ade80'; msg.textContent = '? Contrase�a actualizada correctamente.';
     setTimeout(() => { document.getElementById('userModal').style.display = 'none'; }, 1500);
   } catch (e) {
-    msg.style.color = '#f87171'; msg.textContent = '❌ Error: ' + e.message;
+    msg.style.color = '#f87171'; msg.textContent = '? Error: ' + e.message;
     logError('panel_control', e.message, e.stack || '', 'doResetPassword').catch(() => {});
   }
 };
 
-// ── Padres table (with student count + last access) ───────────────────────────
+// -- Padres table (with student count + last access) ---------------------------
 function renderPadres() {
   const tbody = document.getElementById('roleBody-padres');
   if (!tbody) return;
@@ -938,9 +938,9 @@ function renderPadres() {
     const payments = allPayments.filter(p => students.some(s => s.id === p.student_id));
     const lastAccess = getLastAccess(u.id);
     return `<tr>
-      <td style="font-weight:800;">${escH(u.name||'—')}</td>
-      <td style="color:var(--muted);font-size:12px;">${escH(u.email||'—')}</td>
-      <td>${students.length ? students.map(s => escH(s.name)).join(', ') : '<span style="color:var(--muted);">—</span>'}</td>
+      <td style="font-weight:800;">${escH(u.name||'�')}</td>
+      <td style="color:var(--muted);font-size:12px;">${escH(u.email||'�')}</td>
+      <td>${students.length ? students.map(s => escH(s.name)).join(', ') : '<span style="color:var(--muted);">�</span>'}</td>
       <td style="font-weight:800;color:#4ade80;">${payments.length}</td>
       <td style="font-size:11px;color:var(--muted);">${lastAccess}</td>
       <td><span class="badge badge-green">Activo</span></td>
@@ -948,7 +948,7 @@ function renderPadres() {
   }).join('');
 }
 
-// ── Maestras table (with classroom + last access) ─────────────────────────────
+// -- Maestras table (with classroom + last access) -----------------------------
 function renderMaestras() {
   const tbody = document.getElementById('roleBody-maestras');
   if (!tbody) return;
@@ -958,10 +958,10 @@ function renderMaestras() {
     const classroom = allClassrooms.find(c => c.teacher_id === u.id);
     const lastAccess = getLastAccess(u.id);
     return `<tr>
-      <td style="font-weight:800;">${escH(u.name||'—')}</td>
-      <td style="color:var(--muted);font-size:12px;">${escH(u.email||'—')}</td>
+      <td style="font-weight:800;">${escH(u.name||'�')}</td>
+      <td style="color:var(--muted);font-size:12px;">${escH(u.email||'�')}</td>
       <td><span class="badge ${u.role==='asistente'?'badge-purple':'badge-green'}">${u.role}</span></td>
-      <td style="color:var(--muted);">${classroom ? escH(classroom.name) : '—'}</td>
+      <td style="color:var(--muted);">${classroom ? escH(classroom.name) : '�'}</td>
       <td style="font-size:11px;color:var(--muted);">${lastAccess}</td>
       <td><span class="badge badge-green">Activo</span></td>
     </tr>`;
@@ -975,8 +975,8 @@ function renderRoleTable(role, data) {
   tbody.innerHTML = data.map(u => {
     const lastAccess = getLastAccess(u.id);
     return `<tr>
-      <td style="font-weight:800;">${escH(u.name||'—')}</td>
-      <td style="color:var(--muted);font-size:12px;">${escH(u.email||'—')}</td>
+      <td style="font-weight:800;">${escH(u.name||'�')}</td>
+      <td style="color:var(--muted);font-size:12px;">${escH(u.email||'�')}</td>
       <td>Colegio Montessori Sonrisas Creativas</td>
       <td style="font-size:11px;color:var(--muted);">${lastAccess}</td>
       <td><span class="badge badge-green">Activo</span></td>
@@ -984,7 +984,7 @@ function renderRoleTable(role, data) {
   }).join('');
 }
 
-// ── Payments ──────────────────────────────────────────────────────────────────
+// -- Payments ------------------------------------------------------------------
 function renderPayments() {
   const approved = allPayments.filter(p => p.status === 'paid' || p.status === 'approved').length;
   const pending  = allPayments.filter(p => p.status === 'pending').length;
@@ -997,7 +997,7 @@ function renderPayments() {
 
   const months = {};
   allPayments.filter(p => p.status === 'paid' || p.status === 'approved').forEach(p => {
-    const m = p.month_paid || p.created_at?.slice(0,7) || '—';
+    const m = p.month_paid || p.created_at?.slice(0,7) || '�';
     months[m] = (months[m] || 0) + Number(p.amount || 0);
   });
   const labels = Object.keys(months).sort().slice(-6);
@@ -1016,17 +1016,17 @@ function renderPayments() {
   if (!tbody) return;
   const statusBadge = { paid: 'badge-green', approved: 'badge-green', pending: 'badge-yellow', rejected: 'badge-red', review: 'badge-blue', overdue: 'badge-red' };
   tbody.innerHTML = allPayments.slice(0, 100).map(p => `<tr>
-    <td style="font-size:11px;color:var(--muted);">${p.created_at ? new Date(p.created_at).toLocaleDateString('es-DO') : '—'}</td>
-    <td style="font-weight:800;">${escH(p.student?.name||'—')}</td>
-    <td style="color:var(--muted);">${escH(p.student?.p1_name||'—')}</td>
+    <td style="font-size:11px;color:var(--muted);">${p.created_at ? new Date(p.created_at).toLocaleDateString('es-DO') : '�'}</td>
+    <td style="font-weight:800;">${escH(p.student?.name||'�')}</td>
+    <td style="color:var(--muted);">${escH(p.student?.p1_name||'�')}</td>
     <td style="font-weight:900;color:#4ade80;">RD$${Number(p.amount||0).toLocaleString()}</td>
-    <td>${escH(p.method||'—')}</td>
-    <td>${escH(p.bank||'—')}</td>
-    <td><span class="badge ${statusBadge[p.status]||'badge-gray'}">${p.status||'—'}</span></td>
+    <td>${escH(p.method||'�')}</td>
+    <td>${escH(p.bank||'�')}</td>
+    <td><span class="badge ${statusBadge[p.status]||'badge-gray'}">${p.status||'�'}</span></td>
   </tr>`).join('') || '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--muted);">Sin pagos</td></tr>';
 }
 
-// ── Attendance ────────────────────────────────────────────────────────────────
+// -- Attendance ----------------------------------------------------------------
 function renderAttendance() {
   const today = new Date().toISOString().split('T')[0];
   document.getElementById('attendanceDate').textContent = new Date().toLocaleDateString('es-DO', { dateStyle: 'full' });
@@ -1053,22 +1053,22 @@ function renderAttendance() {
   const statusBadge = { present: 'badge-green', absent: 'badge-red', late: 'badge-yellow', retirado: 'badge-blue' };
   tbody.innerHTML = todayData.map(a => {
     // Resolve student name: from join or from allStudents
-    const studentName = a.student?.name || allStudents.find(s => s.id === a.student_id)?.name || String(a.student_id || '—');
-    const classroomName = a.classroom?.name || allClassrooms.find(c => c.id === a.classroom_id)?.name || '—';
-    const checkIn  = a.check_in  ? new Date(a.check_in).toLocaleTimeString('es-DO',{hour:'2-digit',minute:'2-digit'}) : '—';
-    const checkOut = a.check_out ? new Date(a.check_out).toLocaleTimeString('es-DO',{hour:'2-digit',minute:'2-digit'}) : '—';
+    const studentName = a.student?.name || allStudents.find(s => s.id === a.student_id)?.name || String(a.student_id || '�');
+    const classroomName = a.classroom?.name || allClassrooms.find(c => c.id === a.classroom_id)?.name || '�';
+    const checkIn  = a.check_in  ? new Date(a.check_in).toLocaleTimeString('es-DO',{hour:'2-digit',minute:'2-digit'}) : '�';
+    const checkOut = a.check_out ? new Date(a.check_out).toLocaleTimeString('es-DO',{hour:'2-digit',minute:'2-digit'}) : '�';
     return `<tr>
       <td style="font-weight:800;">${escH(studentName)}</td>
       <td><span class="badge badge-blue">Estudiante</span></td>
       <td style="color:#4ade80;">${checkIn}</td>
       <td style="color:#60a5fa;">${checkOut}</td>
       <td style="color:var(--muted);">${escH(classroomName)}</td>
-      <td><span class="badge ${statusBadge[a.status]||'badge-gray'}">${a.status||'—'}</span></td>
+      <td><span class="badge ${statusBadge[a.status]||'badge-gray'}">${a.status||'�'}</span></td>
     </tr>`;
   }).join('');
 }
 
-// ── Errors ────────────────────────────────────────────────────────────────────
+// -- Errors --------------------------------------------------------------------
 async function renderErrors() {
   const tbody = document.getElementById('errorsBody');
   if (!tbody) return;
@@ -1080,27 +1080,27 @@ async function renderErrors() {
       .limit(100);
     if (dbErrors?.length) {
       tbody.innerHTML = dbErrors.map(e => `<tr>
-        <td style="font-size:11px;color:var(--muted);">${e.created_at ? new Date(e.created_at).toLocaleString('es-DO') : '—'}</td>
-        <td><span class="badge badge-orange">${escH(e.panel||'—')}</span></td>
-        <td style="color:var(--muted);font-size:11px;">${escH(e.user_id?.slice(0,8)||'—')}</td>
-        <td style="color:#f87171;font-size:12px;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escH(e.message||'—')}</td>
-        <td style="font-size:10px;color:var(--muted);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escH(e.url||'—')}</td>
+        <td style="font-size:11px;color:var(--muted);">${e.created_at ? new Date(e.created_at).toLocaleString('es-DO') : '�'}</td>
+        <td><span class="badge badge-orange">${escH(e.panel||'�')}</span></td>
+        <td style="color:var(--muted);font-size:11px;">${escH(e.user_id?.slice(0,8)||'�')}</td>
+        <td style="color:#f87171;font-size:12px;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escH(e.message||'�')}</td>
+        <td style="font-size:10px;color:var(--muted);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escH(e.url||'�')}</td>
       </tr>`).join('');
       return;
     }
   } catch (err) {
     logError('panel_control', err?.message || String(err), err?.stack || '', 'renderErrors').catch(() => {});
   }
-  tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted);">✅ Sin errores registrados</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted);">? Sin errores registrados</td></tr>';
 }
 
 window.clearErrors = async function() {
-  if (!confirm('¿Limpiar todos los errores registrados?')) return;
+  if (!confirm('�Limpiar todos los errores registrados?')) return;
   await supabase.from('system_errors').delete().lt('created_at', new Date().toISOString());
   renderErrors();
 };
 
-// ── Brute Force Monitor ───────────────────────────────────────────────────────
+// -- Brute Force Monitor -------------------------------------------------------
 window.renderBruteForce = async function() {
   const container = document.getElementById('bruteForceList');
   if (!container) return;
@@ -1117,7 +1117,7 @@ window.renderBruteForce = async function() {
     if (error) throw error;
 
     if (!data?.length) {
-      container.innerHTML = '<div class="alert alert-green"><i class="bi bi-shield-check-fill"></i> Sin intentos sospechosos en las últimas 24 horas.</div>';
+      container.innerHTML = '<div class="alert alert-green"><i class="bi bi-shield-check-fill"></i> Sin intentos sospechosos en las �ltimas 24 horas.</div>';
       return;
     }
 
@@ -1126,13 +1126,13 @@ window.renderBruteForce = async function() {
       const rowStyle = suspicious ? 'background:rgba(239,68,68,0.08);' : '';
       return `<div style="${rowStyle}display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border);">
         <div>
-          <div style="font-size:13px;font-weight:800;color:var(--text);">${escH(r.email || '—')}</div>
-          <div style="font-size:10px;color:var(--muted);">Último intento: ${r.last_attempt ? new Date(r.last_attempt).toLocaleString('es-DO') : '—'}</div>
+          <div style="font-size:13px;font-weight:800;color:var(--text);">${escH(r.email || '�')}</div>
+          <div style="font-size:10px;color:var(--muted);">�ltimo intento: ${r.last_attempt ? new Date(r.last_attempt).toLocaleString('es-DO') : '�'}</div>
         </div>
         <div style="display:flex;gap:12px;align-items:center;">
           <span class="badge ${r.failed_attempts > 0 ? 'badge-red' : 'badge-gray'}">${r.failed_attempts} fallidos</span>
           <span class="badge badge-green">${r.successful_logins} exitosos</span>
-          ${suspicious ? '<span class="badge badge-red" style="animation:pulse 1s infinite;">⚠️ SOSPECHOSO</span>' : ''}
+          ${suspicious ? '<span class="badge badge-red" style="animation:pulse 1s infinite;">?? SOSPECHOSO</span>' : ''}
         </div>
       </div>`;
     }).join('');
@@ -1147,7 +1147,7 @@ window.renderBruteForce = async function() {
         .limit(200);
 
       if (!raw?.length) {
-        container.innerHTML = '<div class="alert alert-green"><i class="bi bi-shield-check-fill"></i> Sin intentos en las últimas 24 horas.</div>';
+        container.innerHTML = '<div class="alert alert-green"><i class="bi bi-shield-check-fill"></i> Sin intentos en las �ltimas 24 horas.</div>';
         return;
       }
 
@@ -1166,12 +1166,12 @@ window.renderBruteForce = async function() {
         return `<div style="${suspicious ? 'background:rgba(239,68,68,0.08);' : ''}display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border);">
           <div>
             <div style="font-size:13px;font-weight:800;color:var(--text);">${escH(email)}</div>
-            <div style="font-size:10px;color:var(--muted);">Último: ${new Date(stats.last).toLocaleString('es-DO')}</div>
+            <div style="font-size:10px;color:var(--muted);">�ltimo: ${new Date(stats.last).toLocaleString('es-DO')}</div>
           </div>
           <div style="display:flex;gap:8px;align-items:center;">
             <span class="badge ${stats.failed > 0 ? 'badge-red' : 'badge-gray'}">${stats.failed} fallidos</span>
             <span class="badge badge-green">${stats.success} exitosos</span>
-            ${suspicious ? '<span class="badge badge-red">⚠️ SOSPECHOSO</span>' : ''}
+            ${suspicious ? '<span class="badge badge-red">?? SOSPECHOSO</span>' : ''}
           </div>
         </div>`;
       }).join('');
@@ -1181,7 +1181,7 @@ window.renderBruteForce = async function() {
   }
 };
 
-// ── Config ────────────────────────────────────────────────────────────────────
+// -- Config --------------------------------------------------------------------
 window.saveAdminProfile = async function() {
   const name = document.getElementById('cfgName')?.value.trim();
   if (!name) return;
@@ -1198,8 +1198,8 @@ window.changeUserRole = async function() {
   const msg   = document.getElementById('roleChangeMsg');
   if (!email || !role) { msg.style.color = '#f87171'; msg.textContent = 'Completa todos los campos.'; return; }
 
-  // Confirmación antes de ejecutar
-  if (!confirm(`¿Confirmas cambiar el rol de "${email}" a "${role}"?\n\nEsta acción es sensible y quedará registrada en auditoría.`)) return;
+  // Confirmaci�n antes de ejecutar
+  if (!confirm(`�Confirmas cambiar el rol de "${email}" a "${role}"?\n\nEsta acci�n es sensible y quedar� registrada en auditor�a.`)) return;
 
   try {
     const { data: targetUser } = await supabase.from('profiles').select('id, role').eq('email', email).maybeSingle();
@@ -1208,7 +1208,7 @@ window.changeUserRole = async function() {
     const { error } = await supabase.from('profiles').update({ role }).eq('email', email);
     if (error) throw error;
 
-    // Auditoría inmutable
+    // Auditor�a inmutable
     await supabase.from('audit_logs').insert({
       user_id: currentUser.id,
       action: 'admin.change_role',
@@ -1222,7 +1222,7 @@ window.changeUserRole = async function() {
     });
 
     msg.style.color = '#4ade80';
-    msg.textContent = `✅ Rol de ${email} cambiado a "${role}" correctamente.`;
+    msg.textContent = `? Rol de ${email} cambiado a "${role}" correctamente.`;
     await loadUsers();
   } catch (e) {
     msg.style.color = '#f87171';
@@ -1231,7 +1231,7 @@ window.changeUserRole = async function() {
   }
 };
 
-// ── Test email ────────────────────────────────────────────────────────────────
+// -- Test email ----------------------------------------------------------------
 window.testEmail = async function() {
   const btn = document.getElementById('btnTestEmail');
   if (btn) { btn.disabled = true; btn.textContent = 'Enviando...'; }
@@ -1239,23 +1239,23 @@ window.testEmail = async function() {
     const { data, error } = await supabase.functions.invoke('send-email', {
       body: {
         to: 'impulsodigital@gmail.com',
-        subject: '✅ Test de correo — Colegio Montessori Sonrisas Creativas',
-        html: '<div style="font-family:Arial;padding:20px;"><h2 style="color:#16a34a;">✅ Sistema de correo funcionando</h2><p>Correo de prueba desde el Panel de Control de Colegio Montessori Sonrisas Creativas.</p><p style="color:#6b7280;font-size:12px;">Enviado: ' + new Date().toLocaleString('es-DO') + '</p></div>'
+        subject: '? Test de correo � Colegio Montessori Sonrisas Creativas',
+        html: '<div style="font-family:Arial;padding:20px;"><h2 style="color:#16a34a;">? Sistema de correo funcionando</h2><p>Correo de prueba desde el Panel de Control de Colegio Montessori Sonrisas Creativas.</p><p style="color:#6b7280;font-size:12px;">Enviado: ' + new Date().toLocaleString('es-DO') + '</p></div>'
       }
     });
     if (error) throw new Error(error.message || JSON.stringify(error));
     if (data?.error) throw new Error(data.error);
     document.getElementById('emailTestResult').innerHTML =
-      '<span style="color:#4ade80;font-weight:900;">✅ Correo enviado (ID: ' + (data?.id || 'ok') + ')</span>';
+      '<span style="color:#4ade80;font-weight:900;">? Correo enviado (ID: ' + (data?.id || 'ok') + ')</span>';
   } catch (e) {
     document.getElementById('emailTestResult').innerHTML =
-      '<span style="color:#f87171;font-weight:900;">❌ Error: ' + escH(e.message) + '</span>';
+      '<span style="color:#f87171;font-weight:900;">? Error: ' + escH(e.message) + '</span>';
   } finally {
-    if (btn) { btn.disabled = false; btn.textContent = '📧 Probar correo'; }
+    if (btn) { btn.disabled = false; btn.textContent = '?? Probar correo'; }
   }
 };
 
-// ── Realtime ──────────────────────────────────────────────────────────────────
+// -- Realtime ------------------------------------------------------------------
 function startRealtime() {
   supabase.channel('admin-realtime')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'payments' }, async () => {
@@ -1271,13 +1271,13 @@ function startRealtime() {
     .subscribe();
 }
 
-// ── Logout ────────────────────────────────────────────────────────────────────
+// -- Logout --------------------------------------------------------------------
 window.doLogout = async function() {
   await supabase.auth.signOut();
   window.location.href = 'login.html';
 };
 
-// ── Security Stats ────────────────────────────────────────────────────────────
+// -- Security Stats ------------------------------------------------------------
 window.loadSecurityStats = async function() {
   try {
     const since24h = new Date(Date.now() - 24*60*60*1000).toISOString();
@@ -1294,23 +1294,23 @@ window.loadSecurityStats = async function() {
     ]);
 
     const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-    set('activeUsersToday', activeRes.status === 'fulfilled' ? (activeRes.value.count || 0) : '—');
-    set('errorsToday', errorsRes.status === 'fulfilled' ? (errorsRes.value.count || 0) : '—');
+    set('activeUsersToday', activeRes.status === 'fulfilled' ? (activeRes.value.count || 0) : '�');
+    set('errorsToday', errorsRes.status === 'fulfilled' ? (errorsRes.value.count || 0) : '�');
 
     const cronEl = document.getElementById('cronStatus');
     if (cronEl) {
       if (cronRes.status === 'fulfilled' && cronRes.value.data?.length > 0) {
-        cronEl.textContent = '✅ Activo';
+        cronEl.textContent = '? Activo';
         cronEl.className = 'badge badge-green';
       } else {
-        cronEl.textContent = '⚠️ No configurado';
+        cronEl.textContent = '?? No configurado';
         cronEl.className = 'badge badge-yellow';
       }
     }
   } catch (_) {}
 };
 
-// ── Payment Audit ─────────────────────────────────────────────────────────────
+// -- Payment Audit -------------------------------------------------------------
 window.loadPaymentAudit = async function() {
   const tbody = document.getElementById('paymentAuditBody');
   if (!tbody) return;
@@ -1323,7 +1323,7 @@ window.loadPaymentAudit = async function() {
       .limit(30);
 
     if (!data?.length) {
-      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--muted);">Sin registros de auditoría de pagos</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--muted);">Sin registros de auditor�a de pagos</td></tr>';
       return;
     }
 
@@ -1337,21 +1337,21 @@ window.loadPaymentAudit = async function() {
 
     tbody.innerHTML = data.map(a => {
       const al = actionLabels[a.action] || { label: a.action, cls: 'badge-gray' };
-      const adminName = a.profiles?.name || a.profiles?.email || a.user_id?.slice(0,8) || '—';
-      const detail = a.payload?.month || a.payload?.period_name || a.payload?.payment_id || '—';
+      const adminName = a.profiles?.name || a.profiles?.email || a.user_id?.slice(0,8) || '�';
+      const detail = a.payload?.month || a.payload?.period_name || a.payload?.payment_id || '�';
       return `<tr>
-        <td style="font-size:11px;color:var(--muted);">${a.created_at ? new Date(a.created_at).toLocaleString('es-DO') : '—'}</td>
+        <td style="font-size:11px;color:var(--muted);">${a.created_at ? new Date(a.created_at).toLocaleString('es-DO') : '�'}</td>
         <td><span class="badge ${al.cls}">${al.label}</span></td>
         <td style="font-size:12px;font-weight:700;">${escH(adminName)}</td>
         <td style="font-size:11px;color:var(--muted);">${escH(String(detail))}</td>
       </tr>`;
     }).join('');
   } catch (err) {
-    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--muted);">Error al cargar auditoría</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--muted);">Error al cargar auditor�a</td></tr>';
   }
 };
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// -- Helpers -------------------------------------------------------------------
 function escH(str) {
   return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }

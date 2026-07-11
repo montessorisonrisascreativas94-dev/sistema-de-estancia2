@@ -11,7 +11,7 @@ const CORS = {
 };
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY') ?? '';
-const FROM_ADDRESS   = Deno.env.get('FROM_EMAIL') ?? 'Karpus Kids <avisos@karpuskids.com>';
+const FROM_ADDRESS   = Deno.env.get('FROM_EMAIL') ?? 'Karpus Kids <avisos@montessorisonrisascreativas.com>';
 
 const json = (data: unknown, status = 200) =>
   new Response(JSON.stringify(data), {

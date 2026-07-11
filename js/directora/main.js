@@ -422,7 +422,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 3. Inicializar OneSignal
     // ? FIX: Solo inicializar en el dominio correcto para evitar errores de consola
     const host = window.location.hostname;
-    const isProd = host === 'karpuskids.com' || host === 'www.karpuskids.com' || host.endsWith('.karpuskids.com') || host === 'localhost';
+    const isProd = host === 'montessorisonrisascreativas.com' || host === 'www.montessorisonrisascreativas.com' || host.endsWith('.montessorisonrisascreativas.com') || host === 'localhost';
     
     if (isProd) {
       try { initOneSignal(auth.user); } catch(e) {

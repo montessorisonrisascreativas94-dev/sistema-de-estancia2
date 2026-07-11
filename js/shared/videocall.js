@@ -1,4 +1,4 @@
-锘縤mport { supabase, sendPush } from './supabase.js';
+import { supabase, sendPush } from './supabase.js';
 import { Helpers } from './helpers.js';
 
 export const VideoCallModule = {
@@ -6,11 +6,11 @@ export const VideoCallModule = {
   _api: null,
 
   /**
-   * 馃搮 Programar una reuni贸n profesional
+   * ?? Programar una reuni髇 profesional
    * @param {Object} data { title, description, start_time, type, target_id, host_id }
    */
   async scheduleMeeting(data) {
-    // Generar sala 煤nica y segura
+    // Generar sala 鷑ica y segura
     const roomName = `karpus_${data.type}_${Date.now()}_${Math.random().toString(36).substring(7)}`;
 
     const { data: meeting, error } = await supabase
@@ -25,14 +25,14 @@ export const VideoCallModule = {
 
     if (error) throw error;
 
-    // 馃殌 Enviar Invitaciones Autom谩ticas
+    // ?? Enviar Invitaciones Autom醫icas
     await this._notifyParticipants(meeting);
 
     return meeting;
   },
 
   /**
-   * 馃敂 Sistema de Invitaci贸n Inteligente
+   * ?? Sistema de Invitaci髇 Inteligente
    */
   async _notifyParticipants(meeting) {
     let userIds = [];
@@ -57,7 +57,7 @@ export const VideoCallModule = {
 
       const notifications = userIds.map(uid => sendPush({
         user_id: uid,
-        title: '馃帴 Invitaci贸n a Videollamada',
+        title: '?? Invitaci髇 a Videollamada',
         message: `${meeting.title} - ${timeStr}`,
         link: 'videocall'
       }));
@@ -68,7 +68,7 @@ export const VideoCallModule = {
   },
 
   /**
-   * 馃摜 Obtener mis reuniones (L贸gica Unificada)
+   * ?? Obtener mis reuniones (L骻ica Unificada)
    */
   async getMyMeetings() {
     const { data, error } = await supabase

@@ -1,5 +1,5 @@
-Ôªø/**
- * üì∞ WALL MODULE - M√≥dulo de Muro/Forum (Sincronizado con WallModule compartido)
+/**
+ * ?? WALL MODULE - MÛdulo de Muro/Forum (Sincronizado con WallModule compartido)
  */
 
 import { supabase } from '../shared/supabase.js';
@@ -10,7 +10,7 @@ export const WallModule = {
   ...SharedWallModule,
 
   /**
-   * Sobrescribir init para manejar l√≥gica espec√≠fica de Directora si es necesario
+   * Sobrescribir init para manejar lÛgica especÌfica de Directora si es necesario
    */
   async init(containerId, options = {}, appState = null) {
     // Forzar color de acento azul para directora
@@ -20,20 +20,20 @@ export const WallModule = {
     // Asignar _appState ANTES de llamar al shared init
     this._appState = appState;
     
-    // Llamar al init del m√≥dulo compartido
+    // Llamar al init del mÛdulo compartido
     await SharedWallModule.init.call(this, containerId, options, appState);
   },
 
   /**
-   * Modal para crear nuevo post (Espec√≠fico de Directora/Maestra)
+   * Modal para crear nuevo post (EspecÌfico de Directora/Maestra)
    */
   openNewPostModal() {
     const html = `
       <div class="modal-header bg-gradient-to-r from-[#0B63C7] to-[#0850A0] text-white p-6 rounded-t-3xl flex justify-between items-center">
         <div class="flex items-center gap-3">
-          <div class="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center text-2xl shadow-inner">üìù</div>
+          <div class="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center text-2xl shadow-inner">??</div>
           <div>
-            <h3 class="text-xl font-black">Crear Publicaci√≥n</h3>
+            <h3 class="text-xl font-black">Crear PublicaciÛn</h3>
             <p class="text-xs text-white/70 font-bold uppercase tracking-widest">Muro Escolar</p>
           </div>
         </div>
@@ -42,7 +42,7 @@ export const WallModule = {
       <div class="p-8 bg-white space-y-6">
         <div>
           <label class="block text-[11px] font-black text-slate-400 uppercase tracking-wider mb-2 ml-1">Contenido del Mensaje</label>
-          <textarea id="postContent" rows="4" class="w-full px-4 py-3 border-2 border-slate-100 rounded-2xl outline-none focus:ring-4 focus:ring-blue-100 focus:border-[#0B63C7] bg-slate-50/50 transition-all text-sm font-medium resize-none" placeholder="¬øQu√© quieres compartir hoy con los padres?"></textarea>
+          <textarea id="postContent" rows="4" class="w-full px-4 py-3 border-2 border-slate-100 rounded-2xl outline-none focus:ring-4 focus:ring-blue-100 focus:border-[#0B63C7] bg-slate-50/50 transition-all text-sm font-medium resize-none" placeholder="øQuÈ quieres compartir hoy con los padres?"></textarea>
         </div>
 
         <div>
@@ -61,8 +61,8 @@ export const WallModule = {
             <input type="file" id="postMediaFile" class="absolute inset-0 opacity-0 cursor-pointer" accept="image/*,video/*">
           </div>
           <div class="flex-1">
-            <h4 class="text-sm font-black text-slate-800 mb-1">üì∏ MULTIMEDIA</h4>
-            <p class="text-xs text-slate-500">Sube una imagen o video para acompa√±ar tu publicaci√≥n. M√°ximo 10MB.</p>
+            <h4 class="text-sm font-black text-slate-800 mb-1">?? MULTIMEDIA</h4>
+            <p class="text-xs text-slate-500">Sube una imagen o video para acompaÒar tu publicaciÛn. M·ximo 10MB.</p>
           </div>
         </div>
       </div>
@@ -109,7 +109,7 @@ export const WallModule = {
     if (!file || !preview) return;
 
     if (file.size > 10 * 1024 * 1024) {
-      Helpers.toast('Archivo muy grande (M√°x 10MB)', 'error');
+      Helpers.toast('Archivo muy grande (M·x 10MB)', 'error');
       e.target.value = '';
       return;
     }
@@ -154,7 +154,7 @@ export const WallModule = {
 
         if (uploadError) throw uploadError;
 
-        // Obtener URL p√∫blica completa ‚Äî no solo el path
+        // Obtener URL p˙blica completa ó no solo el path
         const { data: urlData } = supabase.storage.from('posts').getPublicUrl(filePath);
         mediaUrl = urlData.publicUrl;
       }
@@ -169,9 +169,9 @@ export const WallModule = {
 
       if (error) throw error;
 
-      Helpers.toast('Publicaci√≥n compartida correctamente', 'success');
+      Helpers.toast('PublicaciÛn compartida correctamente', 'success');
       App.ui.closeModal();
-      // await this.loadPosts(); // Comentado: Realtime se encarga de la actualizaci√≥n
+      // await this.loadPosts(); // Comentado: Realtime se encarga de la actualizaciÛn
     } catch (err) {
       Helpers.toast('Error al publicar', 'error');
     } finally {

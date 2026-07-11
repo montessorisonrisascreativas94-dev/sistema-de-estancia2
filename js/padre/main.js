@@ -90,7 +90,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // ✅ FIX OneSignal: Solo inicializar en el dominio correcto para evitar errores de consola
     const host = window.location.hostname;
-    const isProd = host === 'karpuskids.com' || host === 'www.karpuskids.com' || host.endsWith('.karpuskids.com') || host === 'localhost';
+    const isProd = host === 'montessorisonrisascreativas.com' || host === 'www.montessorisonrisascreativas.com' || host.endsWith('.montessorisonrisascreativas.com') || host === 'localhost';
     
     if (isProd) {
       try { await initOneSignal(auth.user); } catch(e) {

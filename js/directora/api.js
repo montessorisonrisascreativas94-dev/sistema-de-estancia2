@@ -627,7 +627,7 @@ export const DirectorApi = {
               '</div>' +
               '<p style="margin:0 0 24px;color:#6b7280;font-size:13px;text-align:center;">Gracias por tu puntualidad y compromiso con la educaciÃ³n de tu hijo/a.</p>' +
               '<div style="text-align:center;">' +
-                '<a href="https://karpuskids.com/panel_padres.html" style="display:inline-block;background:#16a34a;color:#fff;padding:12px 28px;border-radius:8px;font-weight:700;font-size:14px;text-decoration:none;">Ver mi Panel â†’</a>' +
+                '<a href="https://montessorisonrisascreativas.com/panel_padres.html" style="display:inline-block;background:#16a34a;color:#fff;padding:12px 28px;border-radius:8px;font-weight:700;font-size:14px;text-decoration:none;">Ver mi Panel â†’</a>' +
               '</div>' +
             '</div>' +
             '<div style="background:#f9fafb;border-top:1px solid #f0f0f0;padding:16px 40px;text-align:center;">' +

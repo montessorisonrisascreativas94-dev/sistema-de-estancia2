@@ -478,7 +478,7 @@ export function initOneSignal(currentUser = null) {
 async function _initOneSignalAsync(currentUser) {
   try {
     const host = window.location.hostname;
-    const isProd = host === 'karpuskids.com' || host === 'www.karpuskids.com' || host.endsWith('.karpuskids.com');
+    const isProd = host === 'montessorisonrisascreativas.com' || host === 'www.montessorisonrisascreativas.com' || host.endsWith('.montessorisonrisascreativas.com');
     if (!isProd) return; // No inicializar en localhost
 
     if (window.OneSignalInitialized) return;

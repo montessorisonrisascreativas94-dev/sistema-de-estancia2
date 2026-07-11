@@ -1,4 +1,4 @@
-﻿/**
+/**
  * ?? WALL API - Acceso a datos para muro/forum
  * 
  * Responsabilidad: Consultas a Supabase para posts, comentarios y likes
@@ -42,7 +42,7 @@ async function queryBuilder(query, context = 'Query') {
 
 export const WallApi = {
   /**
-   * Obtener posts con paginaci�n
+   * Obtener posts con paginaci?n
    */
   async getPosts(page = 1, limit = 10) {
     const start = (page - 1) * limit;
@@ -73,7 +73,7 @@ export const WallApi = {
   },
 
   /**
-   * Obtener un post espec�fico
+   * Obtener un post espec?fico
    */
   async getPost(id) {
     return await queryBuilder(

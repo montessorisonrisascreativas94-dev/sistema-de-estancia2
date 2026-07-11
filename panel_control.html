@@ -8,6 +8,20 @@
   <meta name="theme-color" content="#0B63C7">
   <link rel="icon" href="logo/favicon.ico" type="image/x-icon">
   <link rel="manifest" href="manifest.json">
+  <!-- OneSignal -->
+  <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+  <script>
+    window.OneSignalDeferred = window.OneSignalDeferred || [];
+    window.OneSignalDeferred.push(async function(OneSignal) {
+      await OneSignal.init({
+        appId: "dd57c85f-852f-418e-bc8b-09a119f6c2eb",
+        safari_web_id: "web.onesignal.auto.0d8cfe1b-addf-4fe0-8094-42e4bf6360cd",
+        notifyButton: {
+          enable: true
+        }
+      });
+    });
+  </script>
   <style>html{display:none;}</style>
   <script>if(self===top){document.documentElement.style.display='block';}else{top.location=self.location;}</script>
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Baloo+2:wght@700;800;900&display=swap" rel="stylesheet">

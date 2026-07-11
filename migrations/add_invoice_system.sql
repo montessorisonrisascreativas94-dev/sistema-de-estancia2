@@ -84,7 +84,7 @@ BEGIN
     v_receipt := v_receipt || '│  ║    ' || RPAD(COALESCE(v_school.address, 'Calle Principal #123, Col. Centro'), 38) || '║  │' || E'\n';
     v_receipt := v_receipt || '│  ║    ' || RPAD(COALESCE(v_school.city || ', ' || v_school.state || ', C.P. ' || v_school.zip_code, 'San Cristóbal, Rep. Dom.'), 38) || '║  │' || E'\n';
     v_receipt := v_receipt || '│  ║    Tel: ' || RPAD(COALESCE(v_school.phone, '(829) 803-8424'), 33) || '║  │' || E'\n';
-    v_receipt := v_receipt || '│  ║    Email: ' || RPAD(COALESCE(v_school.email, 'contacto@karpuskids.com'), 30) || '║  │' || E'\n';
+    v_receipt := v_receipt || '│  ║    Email: ' || RPAD(COALESCE(v_school.email, 'contacto@montessorisonrisascreativas.com'), 30) || '║  │' || E'\n';
     v_receipt := v_receipt || '│  ║    RFC/RNC: ' || RPAD(COALESCE(v_school.rnc, 'KKI123456ABC'), 27) || '║  │' || E'\n';
     v_receipt := v_receipt || '│  ║                                                      ║  │' || E'\n';
     v_receipt := v_receipt || '│  ╚══════════════════════════════════════════════════════╝  │' || E'\n';

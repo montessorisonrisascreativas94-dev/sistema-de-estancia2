@@ -1,4 +1,4 @@
-ï»¿import { Helpers } from '../shared/helpers.js';
+import { Helpers } from '../shared/helpers.js';
 import { UIPremium } from '../shared/ui-premium.js';
 
 const UIHelpers = {
@@ -41,7 +41,7 @@ const DirectorUI = {
    * Renderiza los KPI cards del dashboard
    */
   renderDashboard(data) {
-    if (!data) return; // guard â€” no renderizar si no hay datos
+    if (!data) return; // guard — no renderizar si no hay datos
 
     const set = (id, val) => {
       const el = document.getElementById(id);
@@ -60,7 +60,7 @@ const DirectorUI = {
     // Aulas activas
     set('kpiClassrooms', kpis.classrooms > 0 ? kpis.classrooms : (data?.classrooms?.length ?? 0));
 
-    // NiÃ±os presentes hoy
+    // Niños presentes hoy
     const presentToday = data?.attendance?.today?.present ?? kpis.present ?? kpis.attendance_today ?? 0;
     const totalToday   = data?.attendance?.today?.total ?? studentCount;
     set('kpiAttendance', presentToday);
@@ -79,10 +79,10 @@ const DirectorUI = {
     // Incidencias
     set('kpiIncidents', data?.inquiries?.count ?? kpis.pendingInquiries ?? kpis.inquiries ?? 0);
 
-    // âœ¨ Hacer KPIs interactivos
+    // ? Hacer KPIs interactivos
     this._initInteractiveKPIs();
 
-    // âœ¨ Inicializar Pull-to-Refresh
+    // ? Inicializar Pull-to-Refresh
     UIPremium.initPullToRefresh('dashboard', async () => {
       const { DashboardService } = await import('./dashboard.service.js');
       const refreshed = await DashboardService.getFullData(true);
@@ -90,7 +90,7 @@ const DirectorUI = {
     });
 
     // Lanzar widgets inteligentes en background (no bloquea el render)
-    // Smart widgets â€” carga lazy si el mÃ³dulo existe
+    // Smart widgets — carga lazy si el módulo existe
     import('./automation.js').then(({ AutomationModule }) => {
       AutomationModule.renderSmartWidgets('smartAlertsContainer');
     }).catch(() => {});

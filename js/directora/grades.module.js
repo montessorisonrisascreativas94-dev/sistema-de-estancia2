@@ -1,11 +1,11 @@
-Ôªøimport { DirectorApi } from './api.js';
+import { DirectorApi } from './api.js';
 import { Helpers } from '../shared/helpers.js';
 import { supabase } from '../shared/supabase.js';
 import { AppState } from './state.js';
 import { auditLog } from '../shared/db-utils.js';
 
 function scoreFromEvidence(g) {
-  // Return null for ungraded ‚Äî don't count as 0 in averages
+  // Return null for ungraded ó don't count as 0 in averages
   if (g.stars != null && g.stars > 0) return Number(g.stars);
   if (g.grade_letter) {
     const map = { A: 5, B: 4, C: 3, D: 2, E: 1 };
@@ -51,7 +51,7 @@ export const GradesModule = {
       classFilter._bound = true;
       classFilter.addEventListener('change', () => this.applyFilters());
       
-      // Poblar opciones de aulas en el filtro de calificaciones si est√°n disponibles
+      // Poblar opciones de aulas en el filtro de calificaciones si est·n disponibles
       const { data: rooms } = await DirectorApi.getClassrooms();
       if (rooms) {
         classFilter.innerHTML = '<option value="all">Todas las aulas</option>' +
@@ -73,7 +73,7 @@ export const GradesModule = {
 
       sel.innerHTML = '<option value="">Todos los periodos</option>' +
         this._periods.map(p =>
-          '<option value="' + p.id + '">' + Helpers.escapeHTML(p.name) + ' ' + (p.status === 'closed' ? 'üîí' : 'üü¢') + '</option>'
+          '<option value="' + p.id + '">' + Helpers.escapeHTML(p.name) + ' ' + (p.status === 'closed' ? '??' : '??') + '</option>'
         ).join('');
 
       const active = this._periods.find(p => p.is_active) || this._periods.find(p => p.status === 'open');
@@ -81,14 +81,14 @@ export const GradesModule = {
         sel.value = active.id;
         this._currentPeriodId = String(active.id);
       } else if (this._periods.length > 0) {
-        // Si no hay ninguno activo/abierto, seleccionar el m√°s reciente por defecto
+        // Si no hay ninguno activo/abierto, seleccionar el m·s reciente por defecto
         sel.value = this._periods[0].id;
         this._currentPeriodId = String(this._periods[0].id);
       }
       
       const btnClose = document.getElementById('btnClosePeriod');
       if (btnClose) btnClose.style.display = active && active.status === 'open' ? 'flex' : 'none';
-    } catch (_) { /* silencioso ‚Äî periods table may not exist */ }
+    } catch (_) { /* silencioso ó periods table may not exist */ }
   },
 
   async loadGrades() {
@@ -114,9 +114,9 @@ export const GradesModule = {
       // 1. Obtener todos los estudiantes activos
       const studentsResult = await DirectorApi.getStudents();
       const students = studentsResult?.data || [];
-      // Don't throw on student error ‚Äî show empty list instead
+      // Don't throw on student error ó show empty list instead
 
-      // 2. Obtener evidencias calificadas ‚Äî simple select without join
+      // 2. Obtener evidencias calificadas ó simple select without join
       let query = supabase
         .from('task_evidences')
         .select('id, stars, grade_letter, status, comment, file_url, created_at, student_id, task_id')
@@ -192,7 +192,7 @@ export const GradesModule = {
         const scores = s.evidences.map(e => e.score).filter(sc => sc !== null && sc > 0);
         const avg = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : null;
         
-        // La √∫ltima tarea calificada es la primera del array (ya ordenado DESC por created_at)
+        // La ˙ltima tarea calificada es la primera del array (ya ordenado DESC por created_at)
         const lastTask = s.evidences[0];
 
         return {
@@ -209,7 +209,7 @@ export const GradesModule = {
       const errMsg = e?.message || String(e) || 'Error desconocido';
       tableBody.innerHTML = `<tr><td colspan="4" class="text-center py-12">
         <div class="flex flex-col items-center gap-3">
-          <div class="w-14 h-14 bg-rose-100 rounded-full flex items-center justify-center text-2xl">‚ö†Ô∏è</div>
+          <div class="w-14 h-14 bg-rose-100 rounded-full flex items-center justify-center text-2xl">??</div>
           <p class="font-bold text-slate-700">Error al cargar calificaciones</p>
           <p class="text-xs text-slate-400 max-w-sm text-center">${Helpers.escapeHTML(errMsg)}</p>
           <button onclick="App.grades.loadGrades()" class="px-4 py-2 bg-[#0B63C7] text-white rounded-xl font-black text-xs uppercase hover:bg-[#0850A0] transition-all">Reintentar</button>
@@ -235,7 +235,7 @@ export const GradesModule = {
       return;
     }
 
-    // Ordenar por √∫ltima actividad (created_at de la √∫ltima tarea)
+    // Ordenar por ˙ltima actividad (created_at de la ˙ltima tarea)
     filtered.sort((a, b) => new Date(b.lastTask?.created_at) - new Date(a.lastTask?.created_at));
 
     tableBody.innerHTML = filtered.map(s => {
@@ -280,10 +280,10 @@ export const GradesModule = {
               </span>
               <div class="min-w-0">
                 <div class="text-xs font-bold text-slate-700 truncate max-w-[160px]">${Helpers.escapeHTML(s.lastTask?.tasks?.title || s.lastTask?.title || 'Sin tareas')}</div>
-                <div class="text-[9px] text-slate-400 font-bold uppercase">${s.lastTask ? new Date(s.lastTask.created_at).toLocaleDateString() : '‚Äî'}</div>
+                <div class="text-[9px] text-slate-400 font-bold uppercase">${s.lastTask ? new Date(s.lastTask.created_at).toLocaleDateString() : 'ó'}</div>
               </div>
               <button onclick="event.stopPropagation();App.grades.openStudentHistory('${s.sid}','${Helpers.escapeHTML(s.name).replace(/'/g,"\\'")}');"
-                class="ml-auto p-1.5 bg-[#E8F2FF] text-[#0B63C7] rounded-lg hover:bg-blue-100 transition-colors shrink-0" title="Ver historial acad√©mico">
+                class="ml-auto p-1.5 bg-[#E8F2FF] text-[#0B63C7] rounded-lg hover:bg-blue-100 transition-colors shrink-0" title="Ver historial acadÈmico">
                 <i data-lucide="history" class="w-3.5 h-3.5"></i>
               </button>
             </div>
@@ -315,10 +315,10 @@ export const GradesModule = {
       <div class="bg-white rounded-3xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
         <div class="bg-[#0B63C7] p-6 text-white flex justify-between items-center">
           <div class="flex items-center gap-4">
-            <div class="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center text-2xl">üéì</div>
+            <div class="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center text-2xl">??</div>
             <div>
               <h3 class="text-2xl font-black">${Helpers.escapeHTML(data.name)}</h3>
-              <p class="text-sm font-bold text-blue-100 uppercase tracking-widest">${data.classroom} ‚Ä¢ Promedio: ${data.avg != null ? data.avg.toFixed(1) : 'N/A'}</p>
+              <p class="text-sm font-bold text-blue-100 uppercase tracking-widest">${data.classroom} ï Promedio: ${data.avg != null ? data.avg.toFixed(1) : 'N/A'}</p>
             </div>
           </div>
         </div>
@@ -331,7 +331,7 @@ export const GradesModule = {
                   <th class="px-6 py-4">Tarea / Evidencia</th>
                   <th class="px-6 py-4 text-center">Nota</th>
                   <th class="px-6 py-4 text-center">Fecha</th>
-                  <th class="px-6 py-4 text-right">Acci√≥n</th>
+                  <th class="px-6 py-4 text-right">AcciÛn</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-50">
@@ -343,7 +343,7 @@ export const GradesModule = {
                     </td>
                     <td class="px-6 py-4 text-center">
                       <span class="px-3 py-1 rounded-lg bg-white border border-slate-200 font-black text-[#0B63C7] shadow-sm">
-                        ${ev.score != null ? ev.score.toFixed(1) : '‚Äî'}
+                        ${ev.score != null ? ev.score.toFixed(1) : 'ó'}
                       </span>
                     </td>
                     <td class="px-6 py-4 text-center text-xs font-bold text-slate-500">
@@ -390,7 +390,7 @@ export const GradesModule = {
             </div>
             <div class="text-right">
                <div class="text-[10px] font-black text-slate-400 uppercase mb-1">Nota</div>
-               <div class="text-2xl font-black text-[#0B63C7]">${evidence.score != null ? evidence.score.toFixed(1) : '‚Äî'}</div>
+               <div class="text-2xl font-black text-[#0B63C7]">${evidence.score != null ? evidence.score.toFixed(1) : 'ó'}</div>
             </div>
           </div>
           <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100 mb-6">
@@ -416,35 +416,35 @@ export const GradesModule = {
     if (!period || period.status === 'closed') return Helpers.toast('Este periodo ya esta cerrado', 'warning');
     
     if (!confirm(
-      '¬øCerrar el periodo "' + period.name + '"?\n\n' +
-      '‚úÖ Se calcular√°n los promedios finales de todos los estudiantes.\n' +
-      'üîí Las notas quedar√°n bloqueadas para edici√≥n.\n' +
-      'üìã Se generar√°n las boletas de calificaciones.\n\n' +
-      '¬øDeseas continuar?'
+      'øCerrar el periodo "' + period.name + '"?\n\n' +
+      '? Se calcular·n los promedios finales de todos los estudiantes.\n' +
+      '?? Las notas quedar·n bloqueadas para ediciÛn.\n' +
+      '?? Se generar·n las boletas de calificaciones.\n\n' +
+      'øDeseas continuar?'
     )) return;
 
     const btn = document.getElementById('btnClosePeriod');
     if (btn) { btn.disabled = true; btn.textContent = 'Cerrando...'; }
 
     try {
-      // Usar RPC seguro que calcula promedios y cierra at√≥micamente
+      // Usar RPC seguro que calcula promedios y cierra atÛmicamente
       const { data, error } = await supabase.rpc('close_period', { p_period_id: parseInt(periodId) });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
       const cards = data?.cards_generated || 0;
-      Helpers.toast(`Periodo cerrado ‚úÖ ‚Äî ${cards} boleta${cards !== 1 ? 's' : ''} generada${cards !== 1 ? 's' : ''}`, 'success');
+      Helpers.toast(`Periodo cerrado ? ó ${cards} boleta${cards !== 1 ? 's' : ''} generada${cards !== 1 ? 's' : ''}`, 'success');
       auditLog('period.closed', { period_id: periodId, period_name: period.name });
       await this._loadPeriods();
       await this.loadGrades();
     } catch (e) {
-      // Fallback: cerrar sin RPC si no existe a√∫n
+      // Fallback: cerrar sin RPC si no existe a˙n
       try {
         const { error } = await supabase.from('periods')
           .update({ status: 'closed', is_active: false })
           .eq('id', periodId);
         if (error) throw error;
-        Helpers.toast('Periodo cerrado (sin c√°lculo de promedios ‚Äî ejecuta fix_period_close.sql)', 'warning');
+        Helpers.toast('Periodo cerrado (sin c·lculo de promedios ó ejecuta fix_period_close.sql)', 'warning');
         await this._loadPeriods();
         await this.loadGrades();
       } catch (e2) {
@@ -497,7 +497,7 @@ export const GradesModule = {
     if (!name || !start || !end) return Helpers.toast('Completa todos los campos', 'warning');
 
     try {
-      // Si el nuevo periodo es activo, desactivamos los dem√°s
+      // Si el nuevo periodo es activo, desactivamos los dem·s
       if (isActive) {
         await supabase.from('periods').update({ is_active: false }).eq('is_active', true);
       }
@@ -527,7 +527,7 @@ export const GradesModule = {
     const periodName = document.getElementById('gradesFilterPeriod')?.options[document.getElementById('gradesFilterPeriod')?.selectedIndex]?.text || 'Reporte';
 
     // 1. Preguntar formato (Simple Confirm para elegir)
-    const choice = confirm('¬øDeseas exportar en formato PDF?\n\n(Aceptar para PDF, Cancelar para CSV)');
+    const choice = confirm('øDeseas exportar en formato PDF?\n\n(Aceptar para PDF, Cancelar para CSV)');
     
     if (choice) {
       this._exportToPDF(periodName);
@@ -560,7 +560,7 @@ export const GradesModule = {
       // Header
       doc.setFontSize(20);
       doc.setTextColor(11, 99, 199); // Indigo 600
-      doc.text('Colegio Montessori Sonrisas Creativas ‚Äî Reporte de Calificaciones', 14, 22);
+      doc.text('Colegio Montessori Sonrisas Creativas ó Reporte de Calificaciones', 14, 22);
       
       doc.setFontSize(12);
       doc.setTextColor(100);
@@ -595,12 +595,12 @@ export const GradesModule = {
       doc.save(`reporte_calificaciones_${new Date().toISOString().split('T')[0]}.pdf`);
       Helpers.toast('PDF generado correctamente', 'success');
     } catch (err) {
-      Helpers.toast('Error al generar PDF. Aseg√∫rate de que las librer√≠as cargaron correctamente.', 'error');
+      Helpers.toast('Error al generar PDF. Aseg˙rate de que las librerÌas cargaron correctamente.', 'error');
     }
   },
 
   /**
-   * üìã Modo Auditor√≠a ‚Äî Historial completo de un estudiante por per√≠odos
+   * ?? Modo AuditorÌa ó Historial completo de un estudiante por perÌodos
    */
   async openStudentHistory(studentId, studentName) {
     try {
@@ -642,8 +642,8 @@ export const GradesModule = {
         <div class="bg-white rounded-3xl shadow-2xl w-full max-w-4xl overflow-hidden">
           <div class="bg-gradient-to-r from-[#0B63C7] to-[#0850A0] p-6 text-white flex items-center justify-between">
             <div>
-              <h3 class="text-xl font-black">Historial Acad√©mico</h3>
-              <p class="text-sm text-white/70 font-medium mt-0.5">${Helpers.escapeHTML(studentName)} ‚Äî Todos los per√≠odos</p>
+              <h3 class="text-xl font-black">Historial AcadÈmico</h3>
+              <p class="text-sm text-white/70 font-medium mt-0.5">${Helpers.escapeHTML(studentName)} ó Todos los perÌodos</p>
             </div>
             <button onclick="App.ui.closeModal()" class="w-10 h-10 bg-white/10 hover:bg-white/20 rounded-xl flex items-center justify-center transition-colors">
               <i data-lucide="x" class="w-5 h-5"></i>
@@ -653,7 +653,7 @@ export const GradesModule = {
             <table class="w-full text-sm min-w-[600px]">
               <thead class="bg-slate-50 border-b border-slate-100">
                 <tr>
-                  <th class="px-4 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider">Per√≠odo</th>
+                  <th class="px-4 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider">PerÌodo</th>
                   <th class="px-4 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider">Aula</th>
                   <th class="px-4 py-3 text-center text-[10px] font-black text-slate-400 uppercase tracking-wider">Tareas</th>
                   <th class="px-4 py-3 text-center text-[10px] font-black text-slate-400 uppercase tracking-wider">Formal</th>
@@ -666,7 +666,7 @@ export const GradesModule = {
             </table>
           </div>
           <div class="p-4 bg-slate-50 border-t border-slate-100 text-center">
-            <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Modo Auditor√≠a ‚Äî Solo visible para Directora y Asistente</p>
+            <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Modo AuditorÌa ó Solo visible para Directora y Asistente</p>
           </div>
         </div>
       `, true);

@@ -1,4 +1,4 @@
-﻿import { supabase } from '../shared/supabase.js';
+import { supabase } from '../shared/supabase.js';
 import { Helpers } from './helpers.js';
 import { AppState } from './appState.js';
 import { emitEvent, sendPush } from '../shared/supabase.js';
@@ -8,7 +8,7 @@ export const AttendanceModule = {
   _attendance: [],
 
   async init(studentId) {
-    // Usar el studentId pasado como parámetro — no buscar en auth
+    // Usar el studentId pasado como par�metro � no buscar en auth
     if (studentId) this._studentId = studentId;
     if (!this._studentId) return;
 
@@ -19,18 +19,18 @@ export const AttendanceModule = {
         const now = new Date();
         const val = e.target.value; // 'semana' | 'mes' | 'YYYY-MM'
         if (val === 'semana') {
-          // Últimos 7 días — mostrar mes actual
+          // �ltimos 7 d�as � mostrar mes actual
           this.loadAttendance(now.getFullYear(), now.getMonth() + 1);
         } else if (val === 'mes') {
           this.loadAttendance(now.getFullYear(), now.getMonth() + 1);
         } else if (val && val.includes('-')) {
-          // Formato "YYYY-MM" para meses específicos
+          // Formato "YYYY-MM" para meses espec�ficos
           const [y, m] = val.split('-').map(Number);
           this.loadAttendance(y, m);
         }
       });
 
-      // Poblar opciones de los últimos 6 meses
+      // Poblar opciones de los �ltimos 6 meses
       const now = new Date();
       for (let i = 0; i < 6; i++) {
         const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
@@ -47,7 +47,7 @@ export const AttendanceModule = {
     const now = new Date();
     await this.loadAttendance(now.getFullYear(), now.getMonth() + 1);
 
-    // ── Inicializar formulario de ausencia ──────────────────────────────────
+    // -- Inicializar formulario de ausencia ----------------------------------
     this._initAbsenceForm();
   },
 
@@ -101,7 +101,7 @@ export const AttendanceModule = {
     if (!reason) { Helpers.toast('Selecciona el motivo', 'warning'); return; }
 
     const student = AppState.get('currentStudent');
-    if (!student) { Helpers.toast('No se encontró el estudiante', 'error'); return; }
+    if (!student) { Helpers.toast('No se encontr� el estudiante', 'error'); return; }
 
     if (btn) { btn.disabled = true; btn.textContent = 'Enviando...'; }
 
@@ -138,12 +138,12 @@ export const AttendanceModule = {
           if (!notifyIds.includes(s.id)) notifyIds.push(s.id);
         });
 
-        const msg = `${student.name} no asistirá el ${new Date(date + 'T12:00:00').toLocaleDateString('es-DO', { weekday: 'long', day: 'numeric', month: 'long' })}. Motivo: ${reason}${note ? '. ' + note : ''}`;
+        const msg = `${student.name} no asistir� el ${new Date(date + 'T12:00:00').toLocaleDateString('es-DO', { weekday: 'long', day: 'numeric', month: 'long' })}. Motivo: ${reason}${note ? '. ' + note : ''}`;
 
         for (const uid of notifyIds) {
           sendPush({
             user_id: uid,
-            title:   `📅 Aviso de Ausencia — ${student.name}`,
+            title:   `?? Aviso de Ausencia � ${student.name}`,
             message: msg,
             type:    'attendance',
             link:    'panel-maestra.html'
@@ -161,7 +161,7 @@ export const AttendanceModule = {
         }).catch(() => {});
       }
 
-      // 3. Cerrar modal y mostrar confirmación
+      // 3. Cerrar modal y mostrar confirmaci�n
       document.getElementById('modalAbsence')?.classList.add('hidden');
       document.getElementById('modalAbsence')?.classList.remove('flex');
       document.getElementById('formAbsence')?.reset();
@@ -170,7 +170,7 @@ export const AttendanceModule = {
         b.classList.add('border-slate-50', 'bg-slate-50', 'text-slate-600');
       });
 
-      Helpers.toast('Aviso enviado a la maestra y dirección ✅', 'success');
+      Helpers.toast('Aviso enviado a la maestra y direcci�n ?', 'success');
 
     } catch (err) {
       Helpers.toast('Error al enviar: ' + (err.message || ''), 'error');
@@ -206,7 +206,7 @@ export const AttendanceModule = {
 
       this._attendance = data || [];
 
-      // KPIs — Normalizar estados para conteo robusto y asegurar que sean números
+      // KPIs � Normalizar estados para conteo robusto y asegurar que sean n�meros
       const present = this._attendance.filter(a => ['present', 'presente'].includes(a.status?.toLowerCase())).length;
       const late    = this._attendance.filter(a => ['late', 'tarde'].includes(a.status?.toLowerCase())).length;
       const absent  = this._attendance.filter(a => ['absent', 'ausente'].includes(a.status?.toLowerCase())).length;
@@ -220,7 +220,7 @@ export const AttendanceModule = {
 
     } catch (err) {
       if (calendar) {
-        calendar.innerHTML = Helpers.emptyState('Error al cargar asistencia', '❌');
+        calendar.innerHTML = Helpers.emptyState('Error al cargar asistencia', '?');
       }
     }
   },
@@ -233,7 +233,7 @@ export const AttendanceModule = {
     const daysInMonth = new Date(year, month, 0).getDate();
     const firstDay    = new Date(year, month - 1, 1).getDay();
 
-    // Parsear fecha del string "YYYY-MM-DD" directamente — evita problemas de timezone
+    // Parsear fecha del string "YYYY-MM-DD" directamente � evita problemas de timezone
     const attMap = new Map();
     this._attendance.forEach(a => {
       if (!a.date || typeof a.date !== 'string') return;
@@ -251,12 +251,12 @@ export const AttendanceModule = {
 
     let html = '';
 
-    // Celdas vacías al inicio del mes
+    // Celdas vac�as al inicio del mes
     for (let i = 0; i < firstDay; i++) {
       html += '<div class="aspect-square"></div>';
     }
 
-    // Días del mes
+    // D�as del mes
     for (let d = 1; d <= daysInMonth; d++) {
       const status  = attMap.get(d);
       const isToday = d === todayDay && month === todayMon && year === todayYear;

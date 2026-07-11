@@ -12,6 +12,20 @@
   <title>Colegio Montessori Sonrisas Creativas — Panel Maestra</title>
   <link rel="icon" href="logo/favicon.ico" type="image/x-icon">
   <link rel="manifest" href="manifest.json">
+  <!-- OneSignal -->
+  <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+  <script>
+    window.OneSignalDeferred = window.OneSignalDeferred || [];
+    window.OneSignalDeferred.push(async function(OneSignal) {
+      await OneSignal.init({
+        appId: "dd57c85f-852f-418e-bc8b-09a119f6c2eb",
+        safari_web_id: "web.onesignal.auto.0d8cfe1b-addf-4fe0-8094-42e4bf6360cd",
+        notifyButton: {
+          enable: true
+        }
+      });
+    });
+  </script>
   <!-- Suppress CORS/network errors from Edge Functions in GitHub Pages -->
   <script>
     window.addEventListener('unhandledrejection', function(e) {
@@ -1163,5 +1177,403 @@
     }
 
   </script>
+
+  <!-- Download App Banner Styles -->
+  <style>
+    .app-banner {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: linear-gradient(135deg, #0B63C7 0%, #0850A0 100%);
+      color: white;
+      padding: 16px 20px;
+      z-index: 9999;
+      box-shadow: 0 -4px 20px rgba(11, 99, 199, 0.3);
+      animation: slideUpBanner 0.5s ease-out;
+    }
+
+    @keyframes slideUpBanner {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
+    }
+
+    .app-banner-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    .app-banner-mascots {
+      display: flex;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .app-banner-mascot {
+      width: 48px;
+      height: 48px;
+      animation: floatMascot 2.5s ease-in-out infinite;
+    }
+
+    .app-banner-mascot:nth-child(2) { animation-delay: 0.3s; }
+    .app-banner-mascot:nth-child(3) { animation-delay: 0.6s; }
+
+    @keyframes floatMascot {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+
+    .app-banner-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .app-banner-title {
+      font-family: 'Baloo 2', cursive;
+      font-weight: 800;
+      font-size: 1.1rem;
+      margin-bottom: 4px;
+    }
+
+    .app-banner-text {
+      font-size: 0.85rem;
+      opacity: 0.9;
+    }
+
+    .app-banner-buttons {
+      display: flex;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+
+    .app-banner-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: white;
+      color: #0B63C7;
+      padding: 10px 18px;
+      border-radius: 12px;
+      text-decoration: none;
+      font-weight: 800;
+      font-size: 0.85rem;
+      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      cursor: pointer;
+      border: none;
+    }
+
+    .app-banner-btn:hover {
+      transform: translateY(-3px) scale(1.05);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+    }
+
+    .app-banner-close {
+      background: rgba(255, 255, 255, 0.2);
+      border: none;
+      color: white;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      cursor: pointer;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .app-banner-close:hover {
+      background: rgba(255, 255, 255, 0.3);
+      transform: rotate(90deg);
+    }
+
+    .app-modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(4px);
+      z-index: 10000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .app-modal-overlay.active {
+      display: flex;
+      animation: fadeInModal 0.3s ease-out;
+    }
+
+    @keyframes fadeInModal { from { opacity: 0; } to { opacity: 1; } }
+
+    .app-modal {
+      background: white;
+      border-radius: 24px;
+      max-width: 500px;
+      width: 100%;
+      padding: 32px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      animation: scaleInModal 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    @keyframes scaleInModal { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+    .app-modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+    }
+
+    .app-modal-title {
+      font-family: 'Baloo 2', cursive;
+      font-weight: 900;
+      font-size: 1.4rem;
+      color: #0B63C7;
+    }
+
+    .app-modal-close {
+      background: #E8F2FF;
+      border: none;
+      color: #0B63C7;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .app-modal-close:hover { background: #0B63C7; color: white; }
+
+    .app-modal-steps {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .app-modal-step {
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+    }
+
+    .app-modal-step-number {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, #FF7A00 0%, #FF9A00 100%);
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      flex-shrink: 0;
+    }
+
+    .app-modal-step-text { flex: 1; padding-top: 4px; }
+
+    .app-modal-step-title {
+      font-weight: 800;
+      color: #1e293b;
+      margin-bottom: 4px;
+    }
+
+    .app-modal-step-desc {
+      color: #64748B;
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+
+    .app-modal-footer { margin-top: 28px; }
+
+    .app-modal-btn {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, #0B63C7 0%, #0850A0 100%);
+      color: white;
+      border: none;
+      border-radius: 16px;
+      font-family: 'Baloo 2', cursive;
+      font-weight: 800;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .app-modal-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(11, 99, 199, 0.3);
+    }
+
+    @media (max-width: 768px) {
+      main { padding-bottom: 120px !important; }
+    }
+  </style>
+
+  <!-- Download App Banner -->
+  <div class="app-banner" id="appBanner">
+    <div class="app-banner-container">
+      <div class="app-banner-mascots">
+        <!-- Triangle Mascot -->
+        <svg class="app-banner-mascot" viewBox="0 0 220 275" xmlns="http://www.w3.org/2000/svg">
+          <polygon points="110,18 200,205 20,205" fill="#FF7A00" stroke="#D96500" stroke-width="5"/>
+          <circle cx="84" cy="125" r="20" fill="white"/>
+          <circle cx="136" cy="125" r="20" fill="white"/>
+          <circle cx="85" cy="126" r="11" fill="#333"/>
+          <circle cx="137" cy="126" r="11" fill="#333"/>
+          <circle cx="89" cy="122" r="4.5" fill="white"/>
+          <circle cx="141" cy="122" r="4.5" fill="white"/>
+          <ellipse cx="70" cy="140" rx="12" ry="7.5" fill="#FF9494" opacity="0.55"/>
+          <ellipse cx="150" cy="140" rx="12" ry="7.5" fill="#FF9494" opacity="0.55"/>
+          <path d="M 74 160 Q 110 184 146 160" stroke="#333" stroke-width="7.5" fill="none" stroke-linecap="round"/>
+        </svg>
+        <!-- Pentagon Mascot -->
+        <svg class="app-banner-mascot" viewBox="0 0 220 275" xmlns="http://www.w3.org/2000/svg">
+          <polygon points="110,65 192,120 164,210 56,210 28,120" fill="#28B54D" stroke="#1A8035" stroke-width="5"/>
+          <circle cx="87" cy="140" r="19" fill="white"/>
+          <circle cx="133" cy="140" r="19" fill="white"/>
+          <circle cx="88" cy="141" r="10.5" fill="#333"/>
+          <circle cx="134" cy="141" r="10.5" fill="#333"/>
+          <circle cx="91" cy="138" r="4.5" fill="white"/>
+          <circle cx="137" cy="138" r="4.5" fill="white"/>
+          <ellipse cx="73" cy="154" rx="10" ry="6.5" fill="#FF9494" opacity="0.55"/>
+          <ellipse cx="147" cy="154" rx="10" ry="6.5" fill="#FF9494" opacity="0.55"/>
+          <path d="M 77 170 Q 110 194 143 170" stroke="#333" stroke-width="6.5" fill="none" stroke-linecap="round"/>
+        </svg>
+        <!-- Sun Mascot -->
+        <svg class="app-banner-mascot" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+          <line x1="100" y1="6" x2="100" y2="28" stroke="#FFD43B" stroke-width="9" stroke-linecap="round"/>
+          <line x1="157" y1="28" x2="144" y2="42" stroke="#FFD43B" stroke-width="9" stroke-linecap="round"/>
+          <line x1="182" y1="80" x2="164" y2="86" stroke="#FFD43B" stroke-width="9" stroke-linecap="round"/>
+          <line x1="174" y1="140" x2="157" y2="132" stroke="#FFD43B" stroke-width="9" stroke-linecap="round"/>
+          <line x1="43" y1="28" x2="56" y2="42" stroke="#FFD43B" stroke-width="9" stroke-linecap="round"/>
+          <line x1="18" y1="80" x2="36" y2="86" stroke="#FFD43B" stroke-width="9" stroke-linecap="round"/>
+          <line x1="26" y1="140" x2="43" y2="132" stroke="#FFD43B" stroke-width="9" stroke-linecap="round"/>
+          <circle cx="100" cy="108" r="64" fill="#FFD43B" stroke="#F0C000" stroke-width="4"/>
+          <ellipse cx="82" cy="98" rx="12" ry="12" fill="white"/>
+          <ellipse cx="118" cy="98" rx="12" ry="12" fill="white"/>
+          <circle cx="83" cy="99" r="7" fill="#333"/>
+          <circle cx="119" cy="99" r="7" fill="#333"/>
+          <circle cx="86" cy="96" r="3" fill="white"/>
+          <circle cx="122" cy="96" r="3" fill="white"/>
+          <ellipse cx="72" cy="112" rx="9" ry="5.5" fill="#FFB3B3" opacity="0.6"/>
+          <ellipse cx="128" cy="112" rx="9" ry="5.5" fill="#FFB3B3" opacity="0.6"/>
+          <path d="M 80 124 Q 100 140 120 124" stroke="#333" stroke-width="5.5" fill="none" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="app-banner-content">
+        <div class="app-banner-title">¡Descarga nuestra app! 📱</div>
+        <div class="app-banner-text">Accede a todas las funciones desde tu teléfono móvil</div>
+      </div>
+      <div class="app-banner-buttons">
+        <a href="#" class="app-banner-btn" id="androidBtn">
+          <i class="bi bi-android2"></i>
+          Android
+        </a>
+        <button class="app-banner-btn" id="iosBtn">
+          <i class="bi bi-apple"></i>
+          iOS
+        </button>
+      </div>
+      <button class="app-banner-close" id="closeBanner" aria-label="Cerrar banner">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- iOS Instructions Modal -->
+  <div class="app-modal-overlay" id="iosModal">
+    <div class="app-modal">
+      <div class="app-modal-header">
+        <div class="app-modal-title">Cómo instalar en iOS 🍎</div>
+        <button class="app-modal-close" id="closeModal">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+      <div class="app-modal-steps">
+        <div class="app-modal-step">
+          <div class="app-modal-step-number">1</div>
+          <div class="app-modal-step-text">
+            <div class="app-modal-step-title">Abre Safari</div>
+            <div class="app-modal-step-desc">Asegúrate de estar usando el navegador Safari en tu iPhone o iPad</div>
+          </div>
+        </div>
+        <div class="app-modal-step">
+          <div class="app-modal-step-number">2</div>
+          <div class="app-modal-step-text">
+            <div class="app-modal-step-title">Toca el botón de compartir</div>
+            <div class="app-modal-step-desc">Busca el ícono de cuadrado con flecha hacia arriba en la parte inferior de la pantalla</div>
+          </div>
+        </div>
+        <div class="app-modal-step">
+          <div class="app-modal-step-number">3</div>
+          <div class="app-modal-step-text">
+            <div class="app-modal-step-title">Selecciona "Agregar a Inicio"</div>
+            <div class="app-modal-step-desc">Desplázate hacia abajo y busca la opción "Agregar a la pantalla de inicio"</div>
+          </div>
+        </div>
+        <div class="app-modal-step">
+          <div class="app-modal-step-number">4</div>
+          <div class="app-modal-step-text">
+            <div class="app-modal-step-title">Confirma la instalación</div>
+            <div class="app-modal-step-desc">Toca "Agregar" y la app aparecerá en tu pantalla de inicio</div>
+          </div>
+        </div>
+      </div>
+      <div class="app-modal-footer">
+        <button class="app-modal-btn" id="gotItBtn">¡Entendido!</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Banner and Modal Logic
+    document.addEventListener('DOMContentLoaded', function() {
+      const appBanner = document.getElementById('appBanner');
+      const closeBanner = document.getElementById('closeBanner');
+      const iosBtn = document.getElementById('iosBtn');
+      const iosModal = document.getElementById('iosModal');
+      const closeModal = document.getElementById('closeModal');
+      const gotItBtn = document.getElementById('gotItBtn');
+
+      // Check if user has already closed the banner
+      const bannerDismissed = localStorage.getItem('appBannerDismissed');
+      if (bannerDismissed) {
+        appBanner.style.display = 'none';
+      }
+
+      // Close banner
+      closeBanner.addEventListener('click', function() {
+        appBanner.style.animation = 'slideUpBanner 0.3s ease-in reverse';
+        setTimeout(() => {
+          appBanner.style.display = 'none';
+          localStorage.setItem('appBannerDismissed', 'true');
+        }, 300);
+      });
+
+      // Open iOS modal
+      iosBtn.addEventListener('click', function() {
+        iosModal.classList.add('active');
+      });
+
+      // Close modal
+      function closeModalFunc() {
+        iosModal.classList.remove('active');
+      }
+
+      closeModal.addEventListener('click', closeModalFunc);
+      gotItBtn.addEventListener('click', closeModalFunc);
+      iosModal.addEventListener('click', function(e) {
+        if (e.target === iosModal) {
+          closeModalFunc();
+        }
+      });
+    });
+  </script>
+
 </body>
 </html>

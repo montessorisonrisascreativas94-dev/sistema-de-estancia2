@@ -151,7 +151,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   WallModule.init('muroPostsContainer', { accentColor: 'teal', likeColor: 'emerald' }, AppState);
   
   // ? FIX OneSignal: Solo inicializar en el dominio correcto para evitar errores de consola
-  if (window.location.hostname === 'karpuskids.com' || window.location.hostname === 'localhost') {
+  if (window.location.hostname === 'montessorisonrisascreativas.com' || window.location.hostname === 'localhost') {
     try { initOneSignal(auth.user); } catch(_) { /* silencioso */ }
   } else {
   }

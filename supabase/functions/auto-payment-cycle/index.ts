@@ -45,11 +45,14 @@ Deno.serve(async (req) => {
     // ── Estudiantes activos con cuota ────────────────────────────────────────
     const { data: students, error: sErr } = await supabase
       .from('students')
-      .select('id, name, monthly_fee')
-      .eq('is_active', true)
-      .gt('monthly_fee', 0);
+      .select('id, name, student_enrollments!left(id,payment_plans!left(plan_installments(month_number,amount)))')
+      .eq('is_active', true);
     if (sErr) return json({ error: sErr.message }, 500);
-    if (!students?.length) return json({ ok: true, generated: 0, message: 'No active students with fee' });
+    const activeStudents = ((students || []) as any[]).filter((s: any) => {
+      const fee = Number(s.student_enrollments?.[0]?.payment_plans?.plan_installments?.[0]?.amount ?? 0);
+      return fee > 0;
+    });
+  if (!activeStudents.length) return json({ ok: true, generated: 0, message: 'No active students with fee plan' });
 
     // ── Determinar qué meses necesitan cobros ────────────────────────────────
     // Genera cobros para el mes actual + los últimos 3 meses (backfill)
@@ -80,7 +83,7 @@ Deno.serve(async (req) => {
         .not('status', 'eq', 'deleted');
 
       const existingIds = new Set((existing || []).map((p: { student_id: string }) => String(p.student_id)));
-      const missing = students.filter(s => !existingIds.has(String(s.id)));
+      const missing = activeStudents.filter(s => !existingIds.has(String(s.id)));
 
       if (!missing.length) {
         console.log(`[auto-payment-cycle] ${monthKey}: all students covered`);
@@ -90,7 +93,7 @@ Deno.serve(async (req) => {
 
       const inserts = missing.map(s => ({
         student_id: s.id,
-        amount:     s.monthly_fee,
+        amount:     Number(s.student_enrollments?.[0]?.payment_plans?.plan_installments?.[0]?.amount ?? 0),
         status:     'pending',
         due_date:   dueDate,
         month_paid: monthKey,

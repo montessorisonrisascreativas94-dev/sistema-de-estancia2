@@ -1,4 +1,4 @@
-﻿import { DirectorApi } from './api.js';
+import { DirectorApi } from './api.js';
 import { supabase } from '../shared/supabase.js';
 
 // ? DELEGATED EVENT HANDLERS (XSS Safe)
@@ -12,9 +12,9 @@ const ACTIONS = {
   'btn-logout': () => window.supabase?.auth?.signOut()?.then(() => window.location.href = 'index.html'),
 };
 
-// ?? Delegaci�n optimizada
+// ?? Delegaci?n optimizada
 document.addEventListener('click', e => {
-  // 1. Manejo de Secciones (Navegaci�n)
+  // 1. Manejo de Secciones (Navegaci?n)
   const navTarget = e.target.closest('[data-section]');
   if (navTarget) {
     const section = navTarget.dataset.section;
@@ -39,7 +39,7 @@ document.addEventListener('click', e => {
     }
   }
 
-  // 3. Manejo de Acciones Gen�ricas (data-action)
+  // 3. Manejo de Acciones Gen?ricas (data-action)
   const genericTarget = e.target.closest('[data-action]');
   if (genericTarget) {
     const action = genericTarget.dataset.action;
