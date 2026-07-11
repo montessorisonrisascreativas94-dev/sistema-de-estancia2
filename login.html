@@ -3,13 +3,22 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Acceso Portal · Sonrisas Creativas</title>
+  <meta name="robots" content="noindex, nofollow"/>
+  <meta http-equiv="X-Content-Type-Options" content="nosniff"/>
+  <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin"/>
+  <title>Acceso Portal · Colegio Sonrisas Creativas</title>
+  <meta name="description" content="Portal de acceso para padres, maestros y administradores del Colegio Montessori Sonrisas Creativas."/>
+  <link rel="icon" href="logo/favicon.ico" type="image/x-icon"/>
+  <link rel="apple-touch-icon" href="logo/apple-touch-icon.png"/>
+  <link rel="manifest" href="manifest.json"/>
+  <meta name="theme-color" content="#0B63C7"/>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Baloo+2:wght@600;700;800;900&display=swap" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
   <style>
   *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
   :root {
     --blue:    #0B63C7;  --blue-d:  #0850A0;  --blue-lt: #E8F2FF;
     --orange:  #FF7A00;  --orange-d:#D96500;  --orange-lt:#FFF0E0;
@@ -691,42 +700,53 @@
     </div>
 
     <!-- Error -->
-    <div id="login-error" class="err-box"></div>
+    <div id="login-error" class="err-box" role="alert" aria-live="polite" aria-atomic="true"></div>
 
     <!-- Form -->
-    <form id="login-form" novalidate>
+    <form id="login-form" novalidate autocomplete="on" aria-label="Formulario de acceso">
 
       <div class="field">
         <label for="email">Correo Electrónico</label>
         <div class="input-shell">
-          <div class="input-icon-box"><i class="bi bi-envelope-heart-fill"></i></div>
+          <div class="input-icon-box" aria-hidden="true"><i class="bi bi-envelope-heart-fill"></i></div>
           <input id="email" type="email" class="field-input"
-            placeholder="tucorreo@ejemplo.com" autocomplete="email" required>
+            placeholder="tucorreo@ejemplo.com"
+            autocomplete="email"
+            aria-required="true"
+            aria-describedby="email-hint"
+            spellcheck="false"
+            required>
         </div>
+        <span id="email-hint" class="sr-only">Ingresa tu correo electrónico institucional</span>
       </div>
 
       <div class="field">
         <label for="password">Contraseña</label>
         <div class="input-shell">
-          <div class="input-icon-box"><i class="bi bi-lock-fill"></i></div>
+          <div class="input-icon-box" aria-hidden="true"><i class="bi bi-lock-fill"></i></div>
           <input id="password" type="password" class="field-input"
-            placeholder="••••••••" autocomplete="current-password" required>
-          <button type="button" id="toggle-pw" class="eye-btn" aria-label="Mostrar contraseña">
-            <i class="bi bi-eye-fill" id="eye-icon"></i>
+            placeholder="••••••••"
+            autocomplete="current-password"
+            aria-required="true"
+            aria-describedby="pw-hint"
+            required>
+          <button type="button" id="toggle-pw" class="eye-btn" aria-label="Mostrar contraseña" aria-pressed="false">
+            <i class="bi bi-eye-fill" id="eye-icon" aria-hidden="true"></i>
           </button>
         </div>
+        <span id="pw-hint" class="sr-only">Mínimo 6 caracteres</span>
       </div>
 
       <div class="terms-row">
-        <input type="checkbox" id="terms" required>
+        <input type="checkbox" id="terms" required aria-required="true">
         <label for="terms">
-          Acepto la <a href="politica-privacidad.html" target="_blank">Política de Privacidad</a>
-          y los <a href="terminos-uso.html" target="_blank">Términos de Uso</a>
+          Acepto la <a href="politica-privacidad.html" target="_blank" rel="noopener noreferrer">Política de Privacidad</a>
+          y los <a href="terminos-uso.html" target="_blank" rel="noopener noreferrer">Términos de Uso</a>
         </label>
       </div>
 
-      <button type="submit" class="btn-submit" id="submitBtn">
-        <i class="bi bi-stars"></i>
+      <button type="submit" class="btn-submit" id="submitBtn" aria-describedby="login-error">
+        <i class="bi bi-stars" aria-hidden="true"></i>
         ✨ Entrar a Mi Mundo Montessori
       </button>
     </form>
@@ -734,6 +754,9 @@
     <div class="form-bottom">
       <a href="recuperar.html" class="forgot-link">¿Olvidaste tu contraseña?</a>
     </div>
+    <noscript>
+      <p style="color:#EF4444;font-size:.85rem;text-align:center;margin-top:12px;font-weight:700">⚠️ Este portal requiere JavaScript para funcionar.</p>
+    </noscript>
   </div>
 </div><!-- /form-panel -->
 
@@ -944,6 +967,8 @@ if(togglePw){
     const isPass=pwInput.type==='password';
     pwInput.type=isPass?'text':'password';
     eyeIcon.className=isPass?'bi bi-eye-slash-fill':'bi bi-eye-fill';
+    togglePw.setAttribute('aria-pressed', isPass ? 'true' : 'false');
+    togglePw.setAttribute('aria-label', isPass ? 'Ocultar contraseña' : 'Mostrar contraseña');
   });
 }
 

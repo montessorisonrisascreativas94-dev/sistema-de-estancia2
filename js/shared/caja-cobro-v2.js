@@ -7,21 +7,22 @@ import { Helpers } from './helpers.js';
 
 const fmt   = n => 'RD$' + Number(n||0).toLocaleString('es-DO',{minimumFractionDigits:2});
 const today = () => new Date().toISOString().split('T')[0];
-const MONTHS_SHORT = ['Ago','Sep','Oct','Nov','Dic','Ene','Feb','Mar','Abr','May','Jun'];
-const MONTHS_FULL  = ['Agosto','Septiembre','Octubre','Noviembre','Diciembre','Enero','Febrero','Marzo','Abril','Mayo','Junio'];
+const MONTHS_SHORT = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+const MONTHS_FULL  = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
 // ── CATÁLOGO (LocalStorage) ───────────────────────────────────────────────────
 const CATALOG_KEY = 'caja_extra_concepts_v2';
 const DEFAULT_CATALOG = [
-  {id:'uniforme',    label:'Uniforme',     amount:3200},
-  {id:'transporte',  label:'Transporte',   amount:2500},
-  {id:'libros',      label:'Libros',       amount:1500},
-  {id:'materiales',  label:'Materiales',   amount:800 },
-  {id:'actividades', label:'Actividades',  amount:500 },
-  {id:'excursiones', label:'Excursiones',  amount:1000},
-  {id:'comedor',     label:'Comedor',      amount:1800},
-  {id:'tutorias',    label:'Tutorías',     amount:1200},
-  {id:'certificados',label:'Certificados', amount:300 },
+  {id:'uniforme',    label:'Uniforme',     amount:3200, icon:'👕'},
+  {id:'transporte',  label:'Transporte',   amount:2500, icon:'🚌'},
+  {id:'libros',      label:'Libros',       amount:1500, icon:'📚'},
+  {id:'materiales',  label:'Materiales',   amount:800,  icon:'🎨'},
+  {id:'actividades', label:'Actividades',  amount:500,  icon:'🎉'},
+  {id:'excursiones', label:'Excursiones',  amount:1000, icon:'🏕️'},
+  {id:'comedor',     label:'Comedor',      amount:1800, icon:'🍽️'},
+  {id:'tutorias',    label:'Tutorías',     amount:1200, icon:'📝'},
+  {id:'certificados',label:'Certificados', amount:300,  icon:'🏆'},
+  {id:'otro',        label:'Otro',         amount:0,    icon:'➕'},
 ];
 
 function getCatalog() {
@@ -100,7 +101,7 @@ export const CajaCobroV2 = {
     const todayStr = today();
     const [{ data: pays }, { data: students }, { data: pending }] = await Promise.all([
       supabase.from('payments').select('amount').eq('status','paid').gte('paid_date',todayStr+'T00:00:00').lte('paid_date',todayStr+'T23:59:59').limit(500),
-      supabase.from('students').select('id,name,matricula,classroom_id,classrooms:classroom_id(name),monthly_fee,p1_name,p1_phone').eq('is_active',true).is('deleted_at',null).order('name').limit(500),
+      supabase.from('students').select('id,name,matricula,classroom_id,classrooms:classroom_id(name),p1_name,p1_phone').eq('is_active',true).is('deleted_at',null).order('name').limit(500),
       supabase.from('payments').select('student_id,amount,status,due_date').in('status',['pending','overdue','review']).limit(2000),
     ]);
     const set = (id,v) => { const e=document.getElementById(id); if(e) e.textContent=v; };
@@ -171,8 +172,8 @@ export const CajaCobroV2 = {
 
     // Cargar datos
     const [{ data: stu }, { data: charges }, { data: history }, { data: enrollment }] = await Promise.all([
-      supabase.from('students').select('id,name,matricula,p1_name,p1_phone,monthly_fee,classrooms:classroom_id(name,level),scholarship_type,scholarship_amount').eq('id',studentId).single(),
-      supabase.from('payments').select('id,concept,amount,status,due_date,month_paid,type').eq('student_id',studentId).in('status',['pending','overdue']).order('due_date').limit(50),
+      supabase.from('students').select('id,name,matricula,p1_name,p1_phone,classrooms:classroom_id(name,level)').eq('id',studentId).single(),
+      supabase.from('payments').select('id,concept,amount,status,due_date,month_paid').eq('student_id',studentId).in('status',['pending','overdue']).order('due_date').limit(50),
       supabase.from('payments').select('amount,method,paid_date,concept').eq('student_id',studentId).eq('status','paid').order('paid_date',{ascending:false}).limit(5),
       supabase.from('student_enrollments').select('id,payment_plans:payment_plan_id(name,plan_installments(month_number,month_name,amount,type))').eq('student_id',studentId).order('created_at',{ascending:false}).limit(1).maybeSingle(),
     ]);
@@ -186,8 +187,8 @@ export const CajaCobroV2 = {
 
     // Cuotas del plan
     const installments = enrollment?.payment_plans?.plan_installments || [];
-    // Construir mapa mensual: si hay plan usamos sus montos, si no usamos monthly_fee
-    const monthlyFee = Number(stu?.monthly_fee||0);
+    // Construir mapa mensual: si hay plan usamos sus montos, si no usamos primer installment
+    const monthlyFee = installments.length > 0 ? Number(installments[0].amount||0) : 0;
 
     // Calcular mora total
     let totalMora = 0;
@@ -201,137 +202,221 @@ export const CajaCobroV2 = {
     const modalId = 'cajaModal_' + Date.now();
     const overlay = document.createElement('div');
     overlay.id = modalId;
-    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(6px);z-index:9998;display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto';
+    // Sidebar-aware: offset left on desktop if sidebar is visible
+    const sbWidth = document.getElementById('sidebar')?.offsetWidth || 0;
+    overlay.style.cssText = `position:fixed;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(6px);z-index:9998;display:flex;align-items:flex-start;justify-content:center;padding:12px;overflow-y:auto;padding-left:${sbWidth > 0 ? sbWidth + 12 : 12}px`;
     overlay.onclick = e => { if(e.target===overlay) overlay.remove(); };
 
+    const nowMonth = new Date().getMonth(); // 0-indexed
     const catalog = getCatalog();
 
     overlay.innerHTML = `
-    <div style="background:#f8fafc;border-radius:18px;width:100%;max-width:900px;min-width:0;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.25);margin:auto;position:relative">
+    <div id="cajaModalInner" style="background:#f8fafc;border-radius:16px;width:100%;max-width:500px;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,.28);margin:auto;position:relative;display:flex;flex-direction:column">
 
-      <!-- Header -->
-      <div style="background:white;padding:14px 20px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
-        <div style="display:flex;align-items:center;gap:12px">
-          <div style="width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,#0D9488,#0F766E);display:flex;align-items:center;justify-content:center;color:white;font-weight:900;font-size:1.1rem;flex-shrink:0">
+      <!-- Header compacto -->
+      <div style="background:linear-gradient(135deg,#166534,#15803d);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-shrink:0">
+        <div style="display:flex;align-items:center;gap:10px;min-width:0">
+          <div style="width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;color:white;font-weight:900;font-size:1rem;flex-shrink:0">
             ${(stu?.name||'?').charAt(0).toUpperCase()}
           </div>
-          <div>
-            <div style="font-weight:900;font-size:1rem;color:#1a2340">${Helpers.escapeHTML(stu?.name||'—')}</div>
-            <div style="font-size:.7rem;color:#94a3b8;font-weight:600">${stu?.classrooms?.name||''} · ${stu?.matricula||''} · Tutor: ${stu?.p1_name||'—'}</div>
+          <div style="min-width:0">
+            <div style="font-weight:900;font-size:.9rem;color:white;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${Helpers.escapeHTML(stu?.name||'—')}</div>
+            <div style="font-size:.65rem;color:rgba(255,255,255,.75);font-weight:600">${stu?.classrooms?.name||''} · ${stu?.matricula||''}</div>
           </div>
         </div>
-        <div style="display:flex;align-items:center;gap:10px">
+        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
           <div style="text-align:right">
-            <div style="font-size:.62rem;color:#94a3b8;font-weight:900;text-transform:uppercase">Balance pendiente</div>
-            <div style="font-size:1.2rem;font-weight:900;color:#EF4444">${fmt(_charges.reduce((s,c)=>s+Number(c.amount||0),0))}</div>
+            <div style="font-size:.58rem;color:rgba(255,255,255,.7);font-weight:900;text-transform:uppercase">Pendiente</div>
+            <div style="font-size:1rem;font-weight:900;color:white">${fmt(_charges.reduce((s,c)=>s+Number(c.amount||0),0))}</div>
           </div>
-          <button onclick="document.getElementById('${modalId}').remove()" style="width:34px;height:34px;border-radius:50%;border:none;background:#f1f5f9;color:#64748b;font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">✕</button>
+          <button onclick="document.getElementById('${modalId}').remove()" style="width:30px;height:30px;border-radius:50%;border:none;background:rgba(255,255,255,.2);color:white;font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">✕</button>
         </div>
       </div>
 
-      <!-- Body: 3 columnas en desktop, stack en móvil -->
-      <div id="cajaModalBody" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;min-height:400px">
+      <!-- Tabs -->
+      <div style="display:flex;background:white;border-bottom:2px solid #f1f5f9;flex-shrink:0" id="cajaTabs">
+        ${[['meses','📅 Mensualidades'],['conceptos','🏷️ Conceptos'],['pago','💳 Método'],['resumen','🧾 Resumen']].map(([t,l],i)=>`
+          <button onclick="CajaCobroV2._showTab('${t}')" id="cajaTab_${t}"
+            style="flex:1;padding:8px 4px;border:none;font-size:.62rem;font-weight:900;cursor:pointer;transition:all .15s;border-bottom:2px solid transparent;margin-bottom:-2px;${i===0?'color:#166534;border-bottom-color:#166534;background:white':'color:#94a3b8;background:white'}">
+            ${l}
+          </button>`).join('')}
+      </div>
 
-        <!-- COL 1: Mensualidades -->
-        <div style="padding:14px;border-right:1px solid #e2e8f0;background:white;overflow-y:auto;max-height:520px">
-          <div style="font-size:.65rem;font-weight:900;color:#94a3b8;text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px">📅 Mensualidades</div>
-          <div id="monthsGrid" style="display:flex;flex-direction:column;gap:4px">
+      <!-- Tab content — scrollable -->
+      <div id="cajaTabContent" style="overflow-y:auto;max-height:calc(85vh - 160px);min-height:280px;flex:1">
+
+        <!-- TAB: Mensualidades -->
+        <div id="cajaPane_meses" style="padding:12px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <span style="font-size:.62rem;font-weight:900;color:#94a3b8;text-transform:uppercase">Año ${new Date().getFullYear()} — clic para seleccionar</span>
+            <button onclick="CajaCobroV2._selectAllPending()" style="font-size:.6rem;font-weight:900;color:#166534;border:1px solid #166534;background:transparent;border-radius:6px;padding:2px 8px;cursor:pointer">Todos pendientes</button>
+          </div>
+          <!-- Grid compacto 4 cols x 3 filas -->
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:5px">
             ${MONTHS_FULL.map((m,i)=>{
               const inst = installments.find(x=>x.month_number===i+1);
               const amt  = inst ? Number(inst.amount) : monthlyFee;
-              const isPaid = paidSet.has(String(i+1)) || paidSet.has(m);
+              const isPaid    = paidSet.has(String(i+1)) || paidSet.has(m);
+              const isOverdue = !isPaid && i < nowMonth;
+              const isCurrent = i === nowMonth;
+              const bg    = isPaid ? '#f0fdf4' : isOverdue ? '#fff1f2' : isCurrent ? '#eff6ff' : '#f8fafc';
+              const bc    = isPaid ? '#bbf7d0' : isOverdue ? '#fecdd3' : isCurrent ? '#bfdbfe' : '#e2e8f0';
+              const tc    = isPaid ? '#16a34a' : isOverdue ? '#ef4444' : isCurrent ? '#2563eb' : '#64748b';
+              const ico   = isPaid ? '✓' : isOverdue ? '!' : isCurrent ? '→' : '○';
               return `<button id="month_${i}" onclick="CajaCobroV2.toggleMonth(${i},'${m}',${amt})"
-                style="display:flex;justify-content:space-between;align-items:center;padding:7px 10px;border-radius:9px;border:2px solid ${isPaid?'#dcfce7':'#f1f5f9'};background:${isPaid?'#f0fdf4':'#f8fafc'};cursor:${isPaid?'not-allowed':'pointer'};transition:all .15s;text-align:left;width:100%"
+                style="padding:7px 4px;border-radius:9px;border:2px solid ${bc};background:${bg};cursor:${isPaid?'not-allowed':'pointer'};transition:all .12s;text-align:center;display:flex;flex-direction:column;align-items:center;gap:1px"
                 ${isPaid?'disabled':''} data-month="${i}" data-label="${m}" data-amount="${amt}" data-paid="${isPaid}">
-                <span style="font-size:.78rem;font-weight:700;color:${isPaid?'#16A34A':'#1a2340'}">${isPaid?'✓ ':''} ${MONTHS_SHORT[i]}</span>
-                <span style="font-size:.78rem;font-weight:900;color:${isPaid?'#16A34A':'#64748b'}">${fmt(amt)}</span>
+                <span style="font-size:.58rem;font-weight:900;color:${tc}">${ico}</span>
+                <span style="font-size:.7rem;font-weight:800;color:${isPaid?'#16a34a':'#1a2340'}">${MONTHS_SHORT[i]}</span>
+                <span style="font-size:.58rem;font-weight:700;color:${tc}">${amt>0?fmt(amt).replace('RD$',''):''}</span>
               </button>`;
             }).join('')}
           </div>
+          <div id="monthSelInfo" style="margin-top:8px;font-size:.72rem;font-weight:800;color:#166534;text-align:center"></div>
+          <div style="margin-top:10px;display:flex;justify-content:flex-end">
+            <button onclick="CajaCobroV2._showTab('conceptos')" style="padding:6px 16px;background:#166534;color:white;border:none;border-radius:8px;font-size:.72rem;font-weight:900;cursor:pointer">Siguiente →</button>
+          </div>
         </div>
 
-        <!-- COL 2: Otros conceptos -->
-        <div style="padding:14px;border-right:1px solid #e2e8f0;background:white;overflow-y:auto;max-height:520px">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-            <div style="font-size:.65rem;font-weight:900;color:#94a3b8;text-transform:uppercase;letter-spacing:.1em">📦 Otros Conceptos</div>
-            <button onclick="CajaCobroV2.openCatalogManager()" style="font-size:.62rem;font-weight:900;color:#0D9488;border:none;background:transparent;cursor:pointer;text-transform:uppercase;padding:2px 6px;border-radius:6px;border:1px solid #0D9488">+ Gestionar</button>
+        <!-- TAB: Conceptos -->
+        <div id="cajaPane_conceptos" style="padding:12px;display:none">
+          <div style="font-size:.62rem;font-weight:900;color:#94a3b8;text-transform:uppercase;margin-bottom:8px">Conceptos adicionales</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:12px">
+            ${catalog.slice(0,6).map(c=>`
+              <button onclick="CajaCobroV2.addExtraConcept('${c.id}','${Helpers.escapeHTML(c.label)}',${c.amount})"
+                id="concept_${c.id}"
+                style="padding:8px 5px;border-radius:10px;border:2px solid #e2e8f0;background:white;cursor:pointer;transition:all .12s;text-align:center;display:flex;flex-direction:column;align-items:center;gap:3px">
+                <span style="font-size:1.1rem">${c.icon||'🏷️'}</span>
+                <span style="font-size:.65rem;font-weight:800;color:#1a2340;line-height:1.2">${Helpers.escapeHTML(c.label)}</span>
+                <span style="font-size:.65rem;font-weight:900;color:#166534">${c.amount>0?fmt(c.amount):'Libre'}</span>
+              </button>`).join('')}
           </div>
-          <div id="conceptsGrid" style="display:flex;flex-direction:column;gap:4px">
-            ${catalog.map(c=>`<button onclick="CajaCobroV2.addExtraConcept('${c.id}','${Helpers.escapeHTML(c.label)}',${c.amount})"
-              style="display:flex;justify-content:space-between;align-items:center;padding:7px 10px;border-radius:9px;border:2px solid #f1f5f9;background:#f8fafc;cursor:pointer;transition:all .15s;text-align:left;width:100%"
-              id="concept_${c.id}">
-              <span style="font-size:.78rem;font-weight:700;color:#1a2340">${Helpers.escapeHTML(c.label)}</span>
-              <span style="font-size:.78rem;font-weight:900;color:#64748b">${fmt(c.amount)}</span>
-            </button>`).join('')}
-          </div>
-          <div style="margin-top:10px">
+          <div style="background:#f8fafc;border-radius:10px;padding:10px;border:1px solid #e2e8f0">
             <div style="font-size:.62rem;font-weight:900;color:#94a3b8;text-transform:uppercase;margin-bottom:6px">Concepto libre</div>
-            <input id="freeConceptLabel" placeholder="Descripción" style="width:100%;padding:7px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:.78rem;font-weight:600;outline:none;margin-bottom:4px;box-sizing:border-box">
-            <div style="display:flex;gap:4px">
-              <input id="freeConceptAmt" type="number" placeholder="Monto" style="flex:1;padding:7px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:.78rem;font-weight:600;outline:none">
-              <button onclick="CajaCobroV2.addFreeConcept()" style="padding:7px 12px;border-radius:8px;border:none;background:#0D9488;color:white;font-size:.72rem;font-weight:900;cursor:pointer">+</button>
+            <div style="display:flex;gap:5px">
+              <input id="freeConceptLabel" placeholder="Descripción" style="flex:2;padding:7px 8px;border:1px solid #e2e8f0;border-radius:8px;font-size:.75rem;font-weight:600;outline:none;min-width:0">
+              <input id="freeConceptAmt" type="number" placeholder="RD$" style="flex:1;padding:7px 8px;border:1px solid #e2e8f0;border-radius:8px;font-size:.75rem;font-weight:600;outline:none;min-width:0">
+              <button onclick="CajaCobroV2.addFreeConcept()" style="padding:7px 10px;border-radius:8px;border:none;background:#166534;color:white;font-size:.72rem;font-weight:900;cursor:pointer;white-space:nowrap">+ Agregar</button>
             </div>
           </div>
+          <div style="margin-top:10px;display:flex;justify-content:space-between">
+            <button onclick="CajaCobroV2._showTab('meses')" style="padding:6px 16px;background:#f1f5f9;color:#64748b;border:none;border-radius:8px;font-size:.72rem;font-weight:900;cursor:pointer">← Atrás</button>
+            <button onclick="CajaCobroV2._showTab('pago')" style="padding:6px 16px;background:#166534;color:white;border:none;border-radius:8px;font-size:.72rem;font-weight:900;cursor:pointer">Siguiente →</button>
+          </div>
         </div>
 
-        <!-- COL 3: Carrito + Pago -->
-        <div style="padding:14px;background:#f8fafc;display:flex;flex-direction:column;gap:10px;overflow-y:auto;max-height:520px">
-          <div style="font-size:.65rem;font-weight:900;color:#94a3b8;text-transform:uppercase;letter-spacing:.1em">🛒 Carrito</div>
-          <div id="cartItems" style="display:flex;flex-direction:column;gap:4px;min-height:60px">
-            <div style="color:#94a3b8;font-size:.78rem;text-align:center;padding:16px 0">Selecciona meses o conceptos</div>
+        <!-- TAB: Método de Pago -->
+        <div id="cajaPane_pago" style="padding:12px;display:none">
+          <div style="font-size:.62rem;font-weight:900;color:#94a3b8;text-transform:uppercase;margin-bottom:8px">Selecciona el método</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px">
+            ${[['efectivo','💵','Efectivo'],['tarjeta','💳','Tarjeta'],['transferencia','🏦','Transferencia'],['cheque','📝','Cheque'],['mixto','🔀','Mixto']].map(([v,ico,l])=>`
+              <button onclick="CajaCobroV2.selectMethod('${v}',this)" data-method="${v}"
+                style="padding:10px 6px;border-radius:10px;border:2px solid #e2e8f0;background:white;font-size:.72rem;font-weight:800;cursor:pointer;transition:all .12s;display:flex;flex-direction:column;align-items:center;gap:3px;color:#64748b">
+                <span style="font-size:1.2rem">${ico}</span>${l}
+              </button>`).join('')}
           </div>
-          <div style="background:white;border-radius:10px;padding:10px 12px;border:1px solid #e2e8f0">
-            <div style="display:flex;justify-content:space-between;font-size:.78rem;color:#64748b;margin-bottom:4px">
+          <div id="methodDetail" style="margin-top:4px"></div>
+          <div style="margin-top:10px;display:flex;justify-content:space-between">
+            <button onclick="CajaCobroV2._showTab('conceptos')" style="padding:6px 16px;background:#f1f5f9;color:#64748b;border:none;border-radius:8px;font-size:.72rem;font-weight:900;cursor:pointer">← Atrás</button>
+            <button onclick="CajaCobroV2._showTab('resumen')" style="padding:6px 16px;background:#166534;color:white;border:none;border-radius:8px;font-size:.72rem;font-weight:900;cursor:pointer">Ver Resumen →</button>
+          </div>
+        </div>
+
+        <!-- TAB: Resumen -->
+        <div id="cajaPane_resumen" style="padding:12px;display:none">
+          <div style="font-size:.62rem;font-weight:900;color:#94a3b8;text-transform:uppercase;margin-bottom:8px">Resumen del cobro</div>
+
+          <!-- Carrito -->
+          <div id="cartItems" style="display:flex;flex-direction:column;gap:4px;margin-bottom:8px;min-height:40px">
+            <div style="color:#94a3b8;font-size:.75rem;text-align:center;padding:12px 0">Sin items</div>
+          </div>
+
+          <!-- Totales -->
+          <div style="background:white;border-radius:10px;padding:10px 12px;border:1px solid #e2e8f0;margin-bottom:10px">
+            <div style="display:flex;justify-content:space-between;font-size:.75rem;color:#64748b;margin-bottom:3px">
               <span>Subtotal</span><span id="cartSub" style="font-weight:700">RD$0.00</span>
             </div>
-            <div id="cartMoraRow" style="display:none;justify-content:space-between;font-size:.78rem;color:#EF4444;margin-bottom:4px">
+            <div id="cartMoraRow" style="display:none;justify-content:space-between;font-size:.75rem;color:#ef4444;margin-bottom:3px">
               <span>⚠ Mora</span><span id="cartMora" style="font-weight:800">+RD$0.00</span>
             </div>
-            <div id="cartDiscRow" style="display:none;justify-content:space-between;font-size:.78rem;color:#16A34A;margin-bottom:4px">
-              <span>Descuento</span><span id="cartDisc" style="font-weight:800">-RD$0.00</span>
-            </div>
-            <div style="border-top:2px solid #f1f5f9;margin:6px 0"></div>
-            <div style="display:flex;justify-content:space-between;font-size:.95rem;font-weight:900;color:#0D9488">
+            <div style="border-top:2px solid #f1f5f9;margin:5px 0"></div>
+            <div style="display:flex;justify-content:space-between;font-size:.95rem;font-weight:900;color:#166534">
               <span>TOTAL</span><span id="cartTotal">RD$0.00</span>
             </div>
           </div>
 
-          <!-- Método de pago -->
-          <div>
-            <div style="font-size:.62rem;font-weight:900;color:#94a3b8;text-transform:uppercase;margin-bottom:6px">Método</div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px">
-              ${[['efectivo','💵 Efectivo'],['tarjeta','💳 Tarjeta'],['transferencia','🏦 Transfer.'],['cheque','📝 Cheque'],['mixto','🔀 Mixto']].map(([v,l])=>`
-              <button onclick="CajaCobroV2.selectMethod('${v}',this)" data-method="${v}"
-                style="padding:8px 4px;border-radius:9px;border:2px solid #f1f5f9;background:#f8fafc;font-size:.68rem;font-weight:800;cursor:pointer;transition:all .15s;text-align:center;color:#64748b">
-                ${l}</button>`).join('')}
-            </div>
-            <div id="methodDetail" style="margin-top:8px"></div>
-          </div>
-
           <!-- Historial reciente -->
-          ${(history||[]).length?`<div>
-            <div style="font-size:.62rem;font-weight:900;color:#94a3b8;text-transform:uppercase;margin-bottom:4px">Último historial</div>
-            ${(history||[]).map(h=>`<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #f1f5f9;font-size:.72rem">
+          ${(history||[]).length ? `<div style="margin-bottom:10px">
+            <div style="font-size:.6rem;font-weight:900;color:#94a3b8;text-transform:uppercase;margin-bottom:4px">Últimos pagos</div>
+            ${(history||[]).slice(0,3).map(h=>`<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #f1f5f9;font-size:.7rem">
               <span style="color:#64748b">${h.paid_date?new Date(h.paid_date).toLocaleDateString('es-ES',{day:'2-digit',month:'short'}):'—'}</span>
-              <span style="font-weight:700;color:#0D9488">${fmt(h.amount)}</span>
+              <span style="font-weight:700;color:#166534">${fmt(h.amount)}</span>
               <span style="color:#94a3b8;text-transform:capitalize">${h.method||'—'}</span>
             </div>`).join('')}
-          </div>`:'' }
+          </div>` : ''}
 
-          <!-- Botón confirmar -->
-          <button id="btnConfirmarCobro" onclick="CajaCobroV2.confirmCobro()" disabled
-            style="width:100%;padding:13px;border-radius:12px;border:none;background:linear-gradient(135deg,#0D9488,#0F766E);color:white;font-size:.85rem;font-weight:900;cursor:pointer;opacity:.45;pointer-events:none;transition:all .18s;margin-top:auto">
-            ✓ Cobrar y Emitir Factura
-          </button>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
+            <button onclick="CajaCobroV2._showTab('pago')" style="padding:6px 16px;background:#f1f5f9;color:#64748b;border:none;border-radius:8px;font-size:.72rem;font-weight:900;cursor:pointer">← Atrás</button>
+            <button id="btnConfirmarCobro" onclick="CajaCobroV2.confirmCobro()" disabled
+              style="padding:12px 28px;border-radius:12px;border:none;background:linear-gradient(135deg,#166534,#15803d);color:white;font-size:.82rem;font-weight:900;cursor:pointer;opacity:.45;pointer-events:none;transition:all .15s">
+              ✓ Cobrar y Emitir Factura
+            </button>
+          </div>
         </div>
+
       </div>
-      <!-- Responsive: stack on mobile -->
-      <style>@media(max-width:700px){#cajaModalBody{grid-template-columns:1fr!important}#cajaModalBody>div{border-right:none!important;border-bottom:1px solid #e2e8f0;max-height:none!important}}</style>
+      <style>
+        @media(max-width:600px){
+          #cajaModalInner{max-width:98vw!important}
+          #cajaTabs button{font-size:.55rem!important;padding:6px 2px!important}
+        }
+      </style>
     </div>`;
 
     document.body.appendChild(overlay);
     if (window.lucide) lucide.createIcons();
+    this._updateCart();
   },
+
+  _showTab(tab) {
+    ['meses','conceptos','pago','resumen'].forEach(t => {
+      const pane = document.getElementById('cajaPane_'+t);
+      const tabBtn = document.getElementById('cajaTab_'+t);
+      if (pane) pane.style.display = t===tab ? 'block' : 'none';
+      if (tabBtn) {
+        tabBtn.style.color = t===tab ? '#166534' : '#94a3b8';
+        tabBtn.style.borderBottomColor = t===tab ? '#166534' : 'transparent';
+        tabBtn.style.fontWeight = t===tab ? '900' : '700';
+      }
+    });
+    if (tab === 'resumen') this._updateCart();
+  },
+
+  _selectAllPending() {
+    MONTHS_FULL.forEach((m,i) => {
+      const btn = document.getElementById('month_'+i);
+      if (!btn || btn.dataset.paid === 'true' || btn.disabled) return;
+      const isOverdue = i < new Date().getMonth();
+      const isCurrent = i === new Date().getMonth();
+      if ((isOverdue || isCurrent) && !_cart.find(c=>c._monthIdx===i)) {
+        _cart.push({ _monthIdx: i, concept: 'Colegiatura '+m, amount: Number(btn.dataset.amount||0), type: 'colegiatura' });
+        btn.style.borderColor = '#166534';
+        btn.style.background  = '#f0fdf4';
+      }
+    });
+    this._updateCart();
+    this._updateMonthInfo();
+  },
+
+  _updateMonthInfo() {
+    const el = document.getElementById('monthSelInfo');
+    if (!el) return;
+    const months = _cart.filter(c=>c.type==='colegiatura');
+    el.textContent = months.length
+      ? `${months.length} mes${months.length>1?'es':''} seleccionado${months.length>1?'s':''} — ${fmt(months.reduce((s,c)=>s+c.amount,0))}`
+      : '';
+  },
+
 
   // ── TOGGLE MES (libre — cualquier mes va al carrito) ──────────────────────
   toggleMonth(idx, label, amount) {
@@ -340,14 +425,15 @@ export const CajaCobroV2 = {
     const inCart = _cart.findIndex(c => c._monthIdx === idx);
     if (inCart >= 0) {
       _cart.splice(inCart, 1);
-      btn.style.borderColor = '#f1f5f9';
+      btn.style.borderColor = '#e2e8f0';
       btn.style.background  = '#f8fafc';
     } else {
       _cart.push({ _monthIdx: idx, concept: 'Colegiatura ' + label, amount: Number(amount), type: 'colegiatura' });
-      btn.style.borderColor = '#0D9488';
-      btn.style.background  = '#f0fdfa';
+      btn.style.borderColor = '#166534';
+      btn.style.background  = '#f0fdf4';
     }
     this._updateCart();
+    this._updateMonthInfo();
   },
 
   // ── AGREGAR CONCEPTO DEL CATÁLOGO ─────────────────────────────────────────
@@ -443,24 +529,99 @@ export const CajaCobroV2 = {
   selectMethod(method, btn) {
     _method = method;
     document.querySelectorAll('[data-method]').forEach(b => {
-      b.style.borderColor = '#f1f5f9'; b.style.background = '#f8fafc'; b.style.color = '#64748b';
+      b.style.borderColor = '#e2e8f0'; b.style.background = 'white'; b.style.color = '#64748b';
     });
-    if (btn) { btn.style.borderColor='#0D9488'; btn.style.background='#f0fdfa'; btn.style.color='#0D9488'; }
+    if (btn) { btn.style.borderColor='#166534'; btn.style.background='#f0fdf4'; btn.style.color='#166534'; }
+
     const detail = document.getElementById('methodDetail');
-    if (!detail) return;
+    if (!detail) { this._updateCart(); return; }
+
+    const inp = 'width:100%;padding:7px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:.78rem;font-weight:600;outline:none;box-sizing:border-box;margin-bottom:5px';
+    const lbl = (t) => `<div style="font-size:.6rem;font-weight:900;color:#94a3b8;text-transform:uppercase;margin-bottom:3px;margin-top:6px">${t}</div>`;
+    const uploadBtn = (id, label) => `
+      <label style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:2px dashed #e2e8f0;border-radius:9px;cursor:pointer;background:#f8fafc;transition:all .12s" onmouseover="this.style.borderColor='#166534'" onmouseout="this.style.borderColor='#e2e8f0'">
+        <span style="font-size:.75rem;font-weight:800;color:#64748b">📎 ${label}</span>
+        <input type="file" id="${id}" accept="image/*,application/pdf" style="display:none" onchange="CajaCobroV2._previewUpload('${id}','prev_${id}')">
+        <span id="prev_${id}" style="font-size:.65rem;color:#166534;font-weight:700;margin-left:auto"></span>
+      </label>`;
+
+    const bankOpts = ['Banreservas','Banco Popular Dominicano','Banco BHD','Banco Santa Cruz','Banco Caribe','Banco Vimenca','Bancamérica','Banesco','Scotiabank','Otro']
+      .map(b=>`<option value="${b}">${b}</option>`).join('');
+
     if (method === 'efectivo') {
-      detail.innerHTML = `<div style="font-size:.62rem;font-weight:900;color:#94a3b8;text-transform:uppercase;margin-bottom:4px">Monto recibido</div>
-        <input id="cashReceived" type="number" placeholder="RD$" oninput="CajaCobroV2.calcChange()" style="width:100%;padding:7px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:.85rem;font-weight:700;outline:none;box-sizing:border-box">
-        <div style="margin-top:5px;font-size:.78rem;font-weight:900;color:#0D9488">Cambio: <span id="cashChange">RD$0.00</span></div>`;
+      detail.innerHTML = `
+        ${lbl('Monto recibido')}
+        <input id="cashReceived" type="number" placeholder="RD$" oninput="CajaCobroV2.calcChange()" style="${inp}">
+        <div style="font-size:.8rem;font-weight:900;color:#166534;margin-top:2px">Cambio: <span id="cashChange">RD$0.00</span></div>`;
+
     } else if (method === 'transferencia') {
-      detail.innerHTML = `<div style="display:flex;flex-direction:column;gap:5px">
-        <input id="tfBanco" placeholder="Banco" style="width:100%;padding:7px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:.78rem;font-weight:600;outline:none;box-sizing:border-box">
-        <input id="tfRef" placeholder="Referencia" style="width:100%;padding:7px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:.78rem;font-weight:600;outline:none;box-sizing:border-box">
-      </div>`;
+      detail.innerHTML = `
+        ${lbl('Banco de origen')}
+        <select id="tfBanco" style="${inp}"><option value="">Seleccionar banco...</option>${bankOpts}</select>
+        ${lbl('No. de referencia / confirmación')}
+        <input id="tfRef" placeholder="Ej: 00123456789" style="${inp}">
+        ${lbl('Comprobante de transferencia *')}
+        ${uploadBtn('tfComprobante','Subir comprobante (foto/PDF)')}
+        ${lbl('¿Requiere factura con NCF?')}
+        <button type="button" onclick="document.getElementById('ncfBlock').style.display=document.getElementById('ncfBlock').style.display==='none'?'block':'none'"
+          style="font-size:.65rem;font-weight:900;color:#0B63C7;border:1px solid #0B63C7;background:transparent;border-radius:6px;padding:3px 10px;cursor:pointer;margin-bottom:4px">
+          + RNC / Factura Fiscal
+        </button>
+        <div id="ncfBlock" style="display:none">
+          ${lbl('RNC de la empresa')}
+          <input id="tfRNC" placeholder="Ej: 1-31-12345-6" style="${inp}">
+          ${lbl('Nombre / Razón Social')}
+          <input id="tfFiscalName" placeholder="Empresa S.R.L." style="${inp}">
+        </div>`;
+
+    } else if (method === 'cheque') {
+      detail.innerHTML = `
+        ${lbl('Banco emisor')}
+        <select id="chqBanco" style="${inp}"><option value="">Seleccionar banco...</option>${bankOpts}</select>
+        ${lbl('Número de cheque')}
+        <input id="chqNum" placeholder="Ej: 0001234" style="${inp}">
+        ${lbl('Fecha de emisión')}
+        <input id="chqFecha" type="date" style="${inp}" value="${new Date().toISOString().split('T')[0]}">
+        ${lbl('Foto frente del cheque *')}
+        ${uploadBtn('chqFrente','Frente del cheque')}
+        ${lbl('Foto reverso del cheque *')}
+        ${uploadBtn('chqReverso','Reverso del cheque')}`;
+
+    } else if (method === 'tarjeta') {
+      detail.innerHTML = `
+        <div style="display:flex;gap:8px;margin-bottom:5px">
+          ${['Débito','Crédito'].map(t=>`<label style="display:flex;align-items:center;gap:4px;font-size:.75rem;font-weight:700;cursor:pointer">
+            <input type="radio" name="cardType" value="${t.toLowerCase()}" style="accent-color:#166534"> ${t}
+          </label>`).join('')}
+        </div>
+        ${lbl('Tipo de tarjeta')}
+        <select id="cardBrand" style="${inp}">
+          <option value="">Seleccionar...</option>
+          <option>Visa</option><option>Mastercard</option><option>Amex</option><option>Otra</option>
+        </select>
+        ${lbl('Últimos 4 dígitos')}
+        <input id="cardLast4" type="number" maxlength="4" placeholder="1234" style="${inp}" oninput="if(this.value.length>4)this.value=this.value.slice(0,4)">
+        ${lbl('No. de autorización')}
+        <input id="cardAuth" placeholder="Ej: A123456" style="${inp}">`;
+
+    } else if (method === 'mixto') {
+      detail.innerHTML = `
+        ${lbl('Monto efectivo')}
+        <input id="mixEfectivo" type="number" placeholder="RD$" style="${inp}">
+        ${lbl('Monto transferencia')}
+        <input id="mixTransfer" type="number" placeholder="RD$" style="${inp}">
+        ${lbl('Referencia transferencia')}
+        <input id="mixRef" placeholder="Referencia" style="${inp}">`;
     } else {
       detail.innerHTML = '';
     }
     this._updateCart();
+  },
+
+  _previewUpload(inputId, previewId) {
+    const file = document.getElementById(inputId)?.files[0];
+    const prev = document.getElementById(previewId);
+    if (prev && file) prev.textContent = '✓ ' + file.name.slice(0,20);
   },
 
   calcChange() {
@@ -486,11 +647,10 @@ export const CajaCobroV2 = {
         student_id:  _student.id,
         amount:      c.amount,
         concept:     c.concept,
-        type:        c.type || 'extra',
         method:      _method,
         status:      'paid',
         paid_date:   now,
-        month_paid:  c.type==='colegiatura' ? c._monthIdx+1 : null,
+        month_paid:  c.type==='colegiatura' ? String(c._monthIdx+1) : null,
         created_at:  now,
       }));
 
@@ -514,7 +674,7 @@ export const CajaCobroV2 = {
     el.innerHTML = `<div style="background:white;border-radius:20px;padding:32px;max-width:340px;width:100%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.25)">
       <div style="width:64px;height:64px;background:#f0fdf4;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:2rem">✅</div>
       <div style="font-size:1.1rem;font-weight:900;color:#1a2340;margin-bottom:6px">¡Pago registrado!</div>
-      <div style="font-size:1.5rem;font-weight:900;color:#0D9488;margin-bottom:16px">${fmt(total)}</div>
+      <div style="font-size:1.5rem;font-weight:900;color:#166534;margin-bottom:16px">${fmt(total)}</div>
       <div style="display:flex;flex-direction:column;gap:4px;text-align:left;margin-bottom:16px">
         ${['✓ Pago registrado','✓ Caja actualizada','✓ Estado financiero actualizado'].map(t=>`<div style="font-size:.8rem;font-weight:700;color:#16A34A">${t}</div>`).join('')}
       </div>

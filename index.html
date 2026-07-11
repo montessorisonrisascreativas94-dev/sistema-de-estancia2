@@ -3,7 +3,24 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Colegio Montessori Sonrisas Creativas</title>
+  <title>Colegio Montessori Sonrisas Creativas — Santo Domingo</title>
+  <meta name="description" content="Colegio Montessori Sonrisas Creativas en Santo Domingo. Educación inicial y primaria de calidad con metodología Montessori. Admisiones abiertas." />
+  <meta name="keywords" content="Colegio Montessori, Santo Domingo, educación inicial, primaria, admisiones, Sonrisas Creativas" />
+  <link rel="canonical" href="https://karpuskids.com/" />
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Colegio Montessori Sonrisas Creativas" />
+  <meta property="og:description" content="Educación inicial y primaria Montessori en Santo Domingo. Tu hijo merece lo mejor." />
+  <meta property="og:url" content="https://karpuskids.com/" />
+  <meta property="og:image" content="https://karpuskids.com/logo/android-chrome-512x512.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <!-- Favicon -->
+  <link rel="icon" href="logo/favicon.ico" type="image/x-icon" />
+  <link rel="apple-touch-icon" href="logo/apple-touch-icon.png" />
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#28B54D" />
+  <!-- Preload críticos -->
+  <link rel="preload" href="img/monte.jpg" as="image" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Baloo+2:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -1300,33 +1317,36 @@
   </style>
 </head>
 <body>
+  <!-- Skip to content (accessibility) -->
+  <a href="#main-content" class="sr-only" style="position:absolute;left:-9999px;top:4px;z-index:9999;background:#28B54D;color:white;padding:8px 16px;border-radius:8px;font-weight:900;font-size:.85rem;text-decoration:none" onfocus="this.style.left='4px'" onblur="this.style.left='-9999px'">Saltar al contenido</a>
+
   <!-- NAVBAR -->
-  <nav class="navbar" id="navbar">
+  <nav class="navbar" id="navbar" role="navigation" aria-label="Navegación principal">
     <div class="container">
       <div class="nav-inner">
-        <a href="#hero" class="logo" style="display:flex;align-items:center;gap:10px;">
-          <img src="img/monte.png" alt="Sonrisas Creativas" style="height:42px;width:auto;object-fit:contain" onerror="this.outerHTML='<div style=&quot;width:42px;height:42px;background:linear-gradient(135deg,#28B54D,#0B63C7);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px&quot;>🌱</div>'">
+        <a href="#hero" class="logo" style="display:flex;align-items:center;gap:10px;" aria-label="Inicio — Colegio Montessori Sonrisas Creativas">
+          <img src="logo/favicon-32x32.png" alt="Logo Sonrisas Creativas" width="32" height="32" style="height:32px;width:32px;object-fit:contain;border-radius:6px" loading="eager">
           <span class="logo-text display-font">Sonrisas Creativas</span>
         </a>
-        <ul class="nav-links">
-          <li><a href="#hero" class="nav-link">Inicio</a></li>
+        <ul class="nav-links" role="list">
+          <li><a href="#hero" class="nav-link" aria-current="page">Inicio</a></li>
           <li><a href="#why-us" class="nav-link">Nuestro Colegio</a></li>
           <li><a href="#programs" class="nav-link">Programas</a></li>
           <li><a href="#schedules" class="nav-link">Horarios</a></li>
           <li><a href="#tariffs" class="nav-link">Tarifas</a></li>
           <li><a href="#timeline" class="nav-link">Admisiones</a></li>
           <li><a href="#contact-form" class="nav-link">Contacto</a></li>
-          <li><a href="login.html" class="nav-link nav-cta">Iniciar Sesión</a></li>
+          <li><a href="login.html" class="nav-link nav-cta" rel="noopener" aria-label="Iniciar sesión en el portal familiar">Iniciar Sesión</a></li>
         </ul>
-        <button class="mobile-btn" id="mobileBtn" aria-label="Menú"><i class="bi bi-list"></i></button>
+        <button type="button" class="mobile-btn" id="mobileBtn" aria-label="Abrir menú de navegación" aria-expanded="false" aria-controls="mobileMenu"><i class="bi bi-list" aria-hidden="true"></i></button>
       </div>
     </div>
   </nav>
 
   <!-- MOBILE MENU -->
-  <div class="mobile-overlay" id="mobileOverlay"></div>
-  <div class="mobile-menu" id="mobileMenu">
-    <button class="mobile-close" id="mobileClose"><i class="bi bi-x-lg"></i></button>
+  <div class="mobile-overlay" id="mobileOverlay" aria-hidden="true"></div>
+  <nav class="mobile-menu" id="mobileMenu" aria-label="Menú móvil" aria-hidden="true">
+    <button type="button" class="mobile-close" id="mobileClose" aria-label="Cerrar menú"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
     <a href="#hero" class="mobile-nav-link">Inicio</a>
     <a href="#why-us" class="mobile-nav-link">Nuestro Colegio</a>
     <a href="#programs" class="mobile-nav-link">Programas</a>
@@ -1334,9 +1354,10 @@
     <a href="#tariffs" class="mobile-nav-link">Tarifas</a>
     <a href="#timeline" class="mobile-nav-link">Admisiones</a>
     <a href="#contact-form" class="mobile-nav-link">Contacto</a>
-    <a href="login.html" class="btn btn-orange" style="margin-top:20px">Iniciar Sesión</a>
-  </div>
+    <a href="login.html" class="btn btn-orange" style="margin-top:20px" rel="noopener">Iniciar Sesión</a>
+  </nav>
 
+  <main id="main-content">
   <!-- HERO -->
   <section class="hero" id="hero">
     <div class="hero-blobs">
@@ -1398,7 +1419,7 @@
             </svg>
             <!-- Imagen central -->
             <div class="hero-img-frame" style="position:relative;z-index:2">
-              <img src="img/monte.jpg" alt="Sonrisas Creativas" style="width:100%;height:100%;object-fit:cover;border-radius:inherit" onerror="this.outerHTML='<span style=font-size:80px>👶</span>'">
+              <img src="img/monte.jpg" alt="Estudiantes del Colegio Montessori Sonrisas Creativas" style="width:100%;height:100%;object-fit:cover;border-radius:inherit" loading="eager">
             </div>
             <!-- Pentágono verde -->
             <svg width="100" height="115" viewBox="0 0 220 270" style="position:absolute;bottom:-10px;right:0;animation:mascotWave 3.2s ease-in-out infinite 0.5s;filter:drop-shadow(0 6px 14px rgba(40,181,77,.4))" aria-hidden="true">
@@ -1719,17 +1740,17 @@
       </div>
 
       <div class="tariff-levels" data-aos="fade-up">
-        <button class="tariff-level-btn active" data-level="estancia">👶 Estancia</button>
-        <button class="tariff-level-btn" data-level="maternal">🧸 Maternal</button>
-        <button class="tariff-level-btn" data-level="inicial">🌈 Inicial</button>
-        <button class="tariff-level-btn" data-level="primaria">📚 Primaria</button>
+        <button type="button" class="tariff-level-btn active" data-level="estancia">👶 Estancia</button>
+        <button type="button" class="tariff-level-btn" data-level="maternal">🧸 Maternal</button>
+        <button type="button" class="tariff-level-btn" data-level="inicial">🌈 Inicial</button>
+        <button type="button" class="tariff-level-btn" data-level="primaria">📚 Primaria</button>
       </div>
 
       <div class="tariff-levels-container">
         <!-- ESTANCIA -->
         <div class="tariff-level active" id="level-estancia">
           <div class="tariff-schedule" data-aos="fade-up">
-            <button class="tariff-schedule-btn">
+            <button type="button" class="tariff-schedule-btn">
               <span>🕗 Jornada Regular (8:00 AM - 12:00 PM)</span>
               <i class="bi bi-chevron-down"></i>
             </button>
@@ -1758,7 +1779,7 @@
           </div>
 
           <div class="tariff-schedule" data-aos="fade-up" data-aos-delay="100">
-            <button class="tariff-schedule-btn">
+            <button type="button" class="tariff-schedule-btn">
               <span>🕐 Jornada Extendida (8:00 AM - 3:00 PM)</span>
               <i class="bi bi-chevron-down"></i>
             </button>
@@ -1787,7 +1808,7 @@
           </div>
 
           <div class="tariff-schedule" data-aos="fade-up" data-aos-delay="200">
-            <button class="tariff-schedule-btn">
+            <button type="button" class="tariff-schedule-btn">
               <span>🕔 Jornada Completa (8:00 AM - 5:00 PM)</span>
               <i class="bi bi-chevron-down"></i>
             </button>
@@ -1819,7 +1840,7 @@
         <!-- MATERNAL -->
         <div class="tariff-level" id="level-maternal">
           <div class="tariff-schedule" data-aos="fade-up">
-            <button class="tariff-schedule-btn">
+            <button type="button" class="tariff-schedule-btn">
               <span>🕗 Jornada Regular (8:00 AM - 12:00 PM)</span>
               <i class="bi bi-chevron-down"></i>
             </button>
@@ -1851,7 +1872,7 @@
         <!-- INICIAL -->
         <div class="tariff-level" id="level-inicial">
           <div class="tariff-schedule" data-aos="fade-up">
-            <button class="tariff-schedule-btn">
+            <button type="button" class="tariff-schedule-btn">
               <span>🕗 Jornada Regular (8:00 AM - 12:00 PM)</span>
               <i class="bi bi-chevron-down"></i>
             </button>
@@ -1880,7 +1901,7 @@
           </div>
 
           <div class="tariff-schedule" data-aos="fade-up" data-aos-delay="100">
-            <button class="tariff-schedule-btn">
+            <button type="button" class="tariff-schedule-btn">
               <span>🕐 Jornada Extendida (8:00 AM - 3:00 PM)</span>
               <i class="bi bi-chevron-down"></i>
             </button>
@@ -1909,7 +1930,7 @@
           </div>
 
           <div class="tariff-schedule" data-aos="fade-up" data-aos-delay="200">
-            <button class="tariff-schedule-btn">
+            <button type="button" class="tariff-schedule-btn">
               <span>🕔 Jornada Completa (8:00 AM - 5:00 PM)</span>
               <i class="bi bi-chevron-down"></i>
             </button>
@@ -1941,7 +1962,7 @@
         <!-- PRIMARIA -->
         <div class="tariff-level" id="level-primaria">
           <div class="tariff-schedule" data-aos="fade-up">
-            <button class="tariff-schedule-btn">
+            <button type="button" class="tariff-schedule-btn">
               <span>🕗 Jornada Regular (8:00 AM - 1:30 PM)</span>
               <i class="bi bi-chevron-down"></i>
             </button>
@@ -2095,7 +2116,7 @@
       </div>
       <div class="faq-container">
         <div class="faq-item" data-aos="fade-up" data-aos-delay="0">
-          <button class="faq-toggle">
+          <button type="button" class="faq-toggle">
             <h4>¿Cuáles son los horarios disponibles?</h4>
             <i class="bi bi-chevron-down"></i>
           </button>
@@ -2104,7 +2125,7 @@
           </div>
         </div>
         <div class="faq-item" data-aos="fade-up" data-aos-delay="100">
-          <button class="faq-toggle">
+          <button type="button" class="faq-toggle">
             <h4>¿Aceptan niños desde qué edad?</h4>
             <i class="bi bi-chevron-down"></i>
           </button>
@@ -2113,7 +2134,7 @@
           </div>
         </div>
         <div class="faq-item" data-aos="fade-up" data-aos-delay="200">
-          <button class="faq-toggle">
+          <button type="button" class="faq-toggle">
             <h4>¿Hay servicio de transporte?</h4>
             <i class="bi bi-chevron-down"></i>
           </button>
@@ -2122,7 +2143,7 @@
           </div>
         </div>
         <div class="faq-item" data-aos="fade-up" data-aos-delay="300">
-          <button class="faq-toggle">
+          <button type="button" class="faq-toggle">
             <h4>¿Cómo funciona el pago?</h4>
             <i class="bi bi-chevron-down"></i>
           </button>
@@ -2131,7 +2152,7 @@
           </div>
         </div>
         <div class="faq-item" data-aos="fade-up" data-aos-delay="400">
-          <button class="faq-toggle">
+          <button type="button" class="faq-toggle">
             <h4>¿Puedo pagar mensualmente?</h4>
             <i class="bi bi-chevron-down"></i>
           </button>
@@ -2140,7 +2161,7 @@
           </div>
         </div>
         <div class="faq-item" data-aos="fade-up" data-aos-delay="500">
-          <button class="faq-toggle">
+          <button type="button" class="faq-toggle">
             <h4>¿Cuándo inicia el año escolar?</h4>
             <i class="bi bi-chevron-down"></i>
           </button>
@@ -2149,7 +2170,7 @@
           </div>
         </div>
         <div class="faq-item" data-aos="fade-up" data-aos-delay="600">
-          <button class="faq-toggle">
+          <button type="button" class="faq-toggle">
             <h4>¿Qué documentos necesito?</h4>
             <i class="bi bi-chevron-down"></i>
           </button>
@@ -2158,7 +2179,7 @@
           </div>
         </div>
         <div class="faq-item" data-aos="fade-up" data-aos-delay="700">
-          <button class="faq-toggle">
+          <button type="button" class="faq-toggle">
             <h4>¿Cuál es el proceso de inscripción?</h4>
             <i class="bi bi-chevron-down"></i>
           </button>
@@ -2300,13 +2321,15 @@
     </div>
   </section>
 
+  </main><!-- /main-content -->
+
   <!-- FOOTER -->
-  <footer class="footer">
+  <footer class="footer" role="contentinfo">
     <div class="container">
       <div class="footer-inner">
         <div class="footer-brand">
-          <a href="#hero" class="logo" style="display:flex;align-items:center;gap:10px;">
-            <img src="img/monte.png" alt="Sonrisas Creativas" style="height:44px;width:auto;object-fit:contain;filter:brightness(0) invert(1)" onerror="this.style.display='none'">
+          <a href="#hero" class="logo" style="display:flex;align-items:center;gap:10px;" aria-label="Sonrisas Creativas — Inicio">
+            <img src="logo/favicon-32x32.png" alt="Logo Sonrisas Creativas" width="36" height="36" style="height:36px;width:36px;object-fit:contain;border-radius:8px;filter:brightness(0) invert(1)" loading="lazy">
             <span class="logo-text display-font" style="color:white">Sonrisas Creativas</span>
           </a>
           <p class="footer-desc">Colegio Montessori donde cada niño descubre su potencial a través del amor, la creatividad y el respeto. Educando con corazón desde hace más de 10 años.</p>
@@ -2344,7 +2367,7 @@
   </footer>
 
   <!-- SCRIPTS -->
-  <script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
+  <script src="https://unpkg.com/aos@2.3.4/dist/aos.js" defer></script>
   <script>
     // Init AOS
     AOS.init({ duration: 700, easing: 'ease-out-cubic', once: true, offset: 60 });
@@ -2439,5 +2462,10 @@
       });
     });
   </script>
+  <noscript>
+    <style>.aos-init{opacity:1!important;transform:none!important}</style>
+    <p style="text-align:center;padding:20px;background:#fff3cd;color:#856404">Este sitio funciona mejor con JavaScript habilitado.</p>
+  </noscript>
 </body>
 </html>
+

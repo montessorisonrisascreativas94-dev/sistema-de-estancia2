@@ -169,14 +169,14 @@
     }
   </style>
 </head>
-<body class="bg-[#FFF8ED] text-slate-800 font-sans panel-asistente-body">
+<body class="bg-[#F0FDF4] text-slate-800 font-sans panel-asistente-body">
   <div class="app">
     <!-- OVERLAY MOBILE -->
     <div id="sidebarOverlay" class="fixed inset-0 bg-black/50 z-40 backdrop-blur-sm" style="display:none;"></div>
 
     <!-- SIDEBAR -->
-    <aside id="sidebar" class="kk-sidebar bg-gradient-to-b from-[#0d9488] via-[#0a8a80] to-[#077a70] shadow-2xl flex flex-col flex-shrink-0" style="border-right:none;">
-      <button id="toggleSidebar" class="absolute -right-3 top-8 bg-white rounded-full p-1.5 shadow-lg border border-slate-100 text-slate-500 hover:text-teal-600 hidden md:flex items-center justify-center z-10 transition-all hover:scale-110">
+    <aside id="sidebar" class="kk-sidebar shadow-2xl flex flex-col flex-shrink-0" style="background:linear-gradient(180deg,#14532d 0%,#166534 50%,#15803d 100%);border-right:none;">
+      <button id="toggleSidebar" class="absolute -right-3 top-8 bg-white rounded-full p-1.5 shadow-lg border border-slate-100 text-slate-500 hover:text-green-700 hidden md:flex items-center justify-center z-10 transition-all hover:scale-110">
         <i data-lucide="chevron-left" id="toggleSidebarIcon" class="w-3.5 h-3.5"></i>
       </button>
 
@@ -389,60 +389,56 @@
         <!-- 📊 KPI CARDS PROFESIONALES -->
         <div class="grid grid-cols-2 xl:grid-cols-4 gap-3 mb-5">
           <!-- Estudiantes -->
-          <div class="bg-gradient-to-br from-[#0B63C7] to-[#0850A0] p-4 rounded-2xl shadow-lg text-white relative overflow-hidden group cursor-pointer hover:-translate-y-1 transition-all" data-section="estudiantes">
+          <div class="p-4 rounded-2xl shadow-lg text-white relative overflow-hidden group cursor-pointer hover:-translate-y-1 transition-all" style="background:linear-gradient(135deg,#0B63C7,#0850A0)" data-section="estudiantes">
             <div class="relative z-10">
               <div class="flex items-center justify-between mb-3">
-                <div class="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center">
+                <div class="w-9 h-9 rounded-xl flex items-center justify-center" style="background:rgba(255,255,255,0.2)">
                   <i data-lucide="users" class="w-4 h-4"></i>
                 </div>
-                <span class="text-[9px] font-black text-blue-200 uppercase tracking-widest">Estudiantes</span>
+                <span class="text-[9px] font-black uppercase tracking-widest" style="color:rgba(255,255,255,0.7)">Estudiantes</span>
               </div>
               <p class="text-3xl font-black leading-none" id="statStudents">—</p>
-              <p class="text-[11px] text-blue-200 mt-1 font-bold">Total activos</p>
+              <p class="text-[11px] mt-1 font-bold" style="color:rgba(255,255,255,0.7)">Total activos</p>
             </div>
-            <div class="absolute -bottom-3 -right-3 w-16 h-16 bg-white/8 rounded-full"></div>
           </div>
           <!-- Asistencia -->
-          <div class="bg-gradient-to-br from-[#0d9488] to-[#077a70] p-4 rounded-2xl shadow-lg text-white relative overflow-hidden group hover:-translate-y-1 transition-all">
+          <div class="p-4 rounded-2xl shadow-lg text-white relative overflow-hidden group hover:-translate-y-1 transition-all" style="background:linear-gradient(135deg,#14532d,#166534)">
             <div class="relative z-10">
               <div class="flex items-center justify-between mb-3">
-                <div class="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center">
+                <div class="w-9 h-9 rounded-xl flex items-center justify-center" style="background:rgba(255,255,255,0.2)">
                   <i data-lucide="check-circle" class="w-4 h-4"></i>
                 </div>
-                <span class="text-[9px] font-black text-teal-200 uppercase tracking-widest">Asistencia</span>
+                <span class="text-[9px] font-black uppercase tracking-widest" style="color:rgba(255,255,255,0.7)">Asistencia</span>
               </div>
               <p class="text-3xl font-black leading-none" id="statAttendance">—</p>
-              <p class="text-[11px] text-teal-200 mt-1 font-bold">Presentes hoy</p>
+              <p class="text-[11px] mt-1 font-bold" style="color:rgba(255,255,255,0.7)">Presentes hoy</p>
             </div>
-            <div class="absolute -bottom-3 -right-3 w-16 h-16 bg-white/8 rounded-full"></div>
           </div>
           <!-- Por Cobrar -->
-          <div class="bg-gradient-to-br from-[#FF7A00] to-[#D96500] p-4 rounded-2xl shadow-lg text-white relative overflow-hidden group cursor-pointer hover:-translate-y-1 transition-all" data-section="pagos">
+          <div class="p-4 rounded-2xl shadow-lg text-white relative overflow-hidden group cursor-pointer hover:-translate-y-1 transition-all" style="background:linear-gradient(135deg,#FF8A00,#D96500)" data-section="pagos">
             <div class="relative z-10">
               <div class="flex items-center justify-between mb-3">
-                <div class="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center">
+                <div class="w-9 h-9 rounded-xl flex items-center justify-center" style="background:rgba(255,255,255,0.2)">
                   <i data-lucide="clock" class="w-4 h-4"></i>
                 </div>
-                <span class="text-[9px] font-black text-orange-200 uppercase tracking-widest">Pendientes</span>
+                <span class="text-[9px] font-black uppercase tracking-widest" style="color:rgba(255,255,255,0.7)">Pendientes</span>
               </div>
               <p class="text-3xl font-black leading-none" id="statPayments">—</p>
-              <p class="text-[11px] text-orange-200 mt-1 font-bold">Por cobrar</p>
+              <p class="text-[11px] mt-1 font-bold" style="color:rgba(255,255,255,0.7)">Por cobrar</p>
             </div>
-            <div class="absolute -bottom-3 -right-3 w-16 h-16 bg-white/8 rounded-full"></div>
           </div>
           <!-- Ingresos -->
-          <div class="bg-gradient-to-br from-[#28B54D] to-[#1A8035] p-4 rounded-2xl shadow-lg text-white relative overflow-hidden group cursor-pointer hover:-translate-y-1 transition-all" data-section="pagos">
+          <div class="p-4 rounded-2xl shadow-lg text-white relative overflow-hidden group cursor-pointer hover:-translate-y-1 transition-all" style="background:linear-gradient(135deg,#28B54D,#1A8035)" data-section="pagos">
             <div class="relative z-10">
               <div class="flex items-center justify-between mb-3">
-                <div class="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center">
+                <div class="w-9 h-9 rounded-xl flex items-center justify-center" style="background:rgba(255,255,255,0.2)">
                   <i data-lucide="trending-up" class="w-4 h-4"></i>
                 </div>
-                <span class="text-[9px] font-black text-green-200 uppercase tracking-widest">Ingresos</span>
+                <span class="text-[9px] font-black uppercase tracking-widest" style="color:rgba(255,255,255,0.7)">Ingresos</span>
               </div>
               <p class="text-xl font-black leading-none" id="statIncome">—</p>
-              <p class="text-[11px] text-green-200 mt-1 font-bold">Este mes</p>
+              <p class="text-[11px] mt-1 font-bold" style="color:rgba(255,255,255,0.7)">Este mes</p>
             </div>
-            <div class="absolute -bottom-3 -right-3 w-16 h-16 bg-white/8 rounded-full"></div>
           </div>
         </div>
 
@@ -926,81 +922,7 @@
 
 <!-- CONTABILIDAD -->
       <section id="contabilidad" class="section">
-        <!-- Header Contabilidad -->
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-          <div>
-            <div class="flex items-center gap-2 mb-1">
-              <span class="w-9 h-9 bg-emerald-100 text-emerald-600 rounded-xl flex items-center justify-center shrink-0">
-                <i data-lucide="bar-chart-big" class="w-5 h-5"></i>
-              </span>
-              <h1 class="text-2xl font-black text-slate-800 tracking-tight">Contabilidad y Reportes</h1>
-            </div>
-            <p class="text-slate-400 text-sm font-medium mt-0.5">Reportes diarios, pagos y seguimiento de estudiantes</p>
-          </div>
-        </div>
-
-        <!-- Tabs de Reportes -->
-        <div class="flex gap-2 mb-6 border-b border-slate-200 pb-2 overflow-x-auto">
-          <button data-accounting-tab="daily" class="px-4 py-2 rounded-xl font-bold text-sm transition-all bg-teal-600 text-white">
-            <i data-lucide="calendar" class="w-4 h-4 inline mr-2"></i>Diario
-          </button>
-          <button data-accounting-tab="payments" class="px-4 py-2 rounded-xl font-bold text-sm transition-all bg-slate-100 text-slate-600">
-            <i data-lucide="credit-card" class="w-4 h-4 inline mr-2"></i>Pagos
-          </button>
-          <button data-accounting-tab="students" class="px-4 py-2 rounded-xl font-bold text-sm transition-all bg-slate-100 text-slate-600">
-            <i data-lucide="users" class="w-4 h-4 inline mr-2"></i>Por Estudiante
-          </button>
-        </div>
-
-        <!-- Contenedor de Reportes -->
-        <div id="accounting-daily" class="accounting-section">
-          <!-- Daily Reports Content -->
-        </div>
-        <div id="accounting-payments" class="accounting-section hidden">
-          <!-- Payments Content -->
-        </div>
-        <div id="accounting-students" class="accounting-section hidden">
-          <!-- Students Content -->
-        </div>
-
-        <!-- CONFIGURACIÓN DE COBRO -->
-        <div class="bg-slate-50 rounded-2xl border border-slate-200 p-5 mt-6">
-          <h3 class="font-bold text-slate-700 text-sm mb-4 flex items-center gap-2">
-            <i data-lucide="settings-2" class="w-4 h-4 text-teal-600"></i> Configuración de Cobro
-          </h3>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label class="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Día Generación Automática</label>
-              <div class="flex items-center gap-2">
-                <input type="number" id="confGenDay" min="1" max="28" value="25"
-                  class="w-full px-3 py-2.5 border-2 border-slate-100 rounded-xl text-sm font-bold bg-white outline-none focus:border-teal-400">
-                <span class="text-xs text-slate-400 font-medium whitespace-nowrap">del mes anterior</span>
-              </div>
-            </div>
-            <div>
-              <label class="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Día Límite de Pago</label>
-              <div class="flex items-center gap-2">
-                <input type="number" id="confDueDay" min="1" max="28" value="5"
-                  class="w-full px-3 py-2.5 border-2 border-slate-100 rounded-xl text-sm font-bold bg-white outline-none focus:border-teal-400">
-                <span class="text-xs text-slate-400 font-medium whitespace-nowrap">del mes actual</span>
-              </div>
-            </div>
-          </div>
-          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-4">
-            <button id="btnSavePaymentConfig" class="py-2.5 text-white text-xs font-black uppercase rounded-xl flex items-center justify-center gap-1.5 hover:opacity-90" style="background:#0D9488">
-              <i data-lucide="save" class="w-3.5 h-3.5"></i> Guardar
-            </button>
-            <button id="btnGeneratePayments" class="py-2.5 text-white text-xs font-black uppercase rounded-xl flex items-center justify-center gap-1.5 hover:opacity-90" style="background:#28B54D">
-              <i data-lucide="play-circle" class="w-3.5 h-3.5"></i> Generar pagos
-            </button>
-            <button id="btnSendPaymentReminders" class="py-2.5 text-white text-xs font-black uppercase rounded-xl flex items-center justify-center gap-1.5 hover:opacity-90" style="background:#FF8A00">
-              <i data-lucide="bell" class="w-3.5 h-3.5"></i> Recordatorios
-            </button>
-            <button id="btnExportMorosidad" class="py-2.5 text-white text-xs font-black uppercase rounded-xl flex items-center justify-center gap-1.5 hover:opacity-90" style="background:#475569">
-              <i data-lucide="download" class="w-3.5 h-3.5"></i> Morosidad
-            </button>
-          </div>
-        </div>
+        <!-- JS renders full shell via AssistantAccountingModule.init() -->
       </section>
 
       <!-- CHAT -->

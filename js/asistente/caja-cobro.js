@@ -175,7 +175,7 @@ async function _loadStudents() {
       const processedStudents = (students || []).map(s => {
         const enroll = s.student_enrollments?.[0];
         const charges = (enroll?.student_charges || []).filter(c => ['pending','overdue'].includes(c.status));
-        const totalOwed = charges.reduce((sum, c) => sum + (c.amount || 0), 0;
+        const totalOwed = charges.reduce((sum, c) => sum + (c.amount || 0), 0);
         const hasMora = charges.some(c => c.due_date && new Date(c.due_date) < new Date());
         const status = charges.some(c => c.status === 'overdue') ? 'overdue' 
                      : charges.length > 0 ? 'pending' 
@@ -552,7 +552,7 @@ export const CajaCobro = {
   async selectStudent(studentId) {
     const { data: student } = await supabase.from('students')
       .select(`
-        id, name, matricula, p1_name, p1_phone, monthly_fee,
+        id, name, matricula, p1_name, p1_phone,
         classrooms (name, level)
       `).eq('id', studentId).single();
     if (!student) return Helpers.toast('Estudiante no encontrado', 'error');
@@ -628,12 +628,16 @@ export const CajaCobro = {
     try {
       const paymentIds = [];
       for (const item of _state.cart) {
+        const rnc  = document.getElementById('ncfRNC')?.value?.trim()||null;
+        const nfcN = document.getElementById('ncfName')?.value?.trim()||null;
+        const ncfNotes = [rnc?`RNC:${rnc}`:null, nfcN?`Empresa:${nfcN}`:null].filter(Boolean).join(' | ')||null;
         const { data: pay, error } = await supabase.from('payments').insert({
           student_id: _state.selectedStudent.id,
           amount: item.amount,
           concept: item.label,
           method: _state.selectedPaymentMethod || 'efectivo',
           status: 'paid',
+          notes: ncfNotes,
           paid_date: new Date().toISOString(),
           created_at: new Date().toISOString()
         }).select().single();
@@ -819,15 +823,13 @@ function openCobroModal() {
           </div>
         </div>
 
-        <!-- Otros conceptos (catálogo) -->
+        <!-- Otros conceptos (catálogo — máx 4) -->
         <div class="bg-white rounded-2xl border border-slate-100 p-4">
-          <div class="flex items-center justify-between mb-3">
-            <h4 class="text-sm font-black text-slate-800 flex items-center gap-2">
-              <i data-lucide="tag" class="w-4 h-4 text-[#FF7A00]"></i> Conceptos Extra
-            </h4>
-          </div>
-          <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
-            ${_state.concepts.map(conc => `
+          <h4 class="text-sm font-black text-slate-800 flex items-center gap-2 mb-3">
+            <i data-lucide="tag" class="w-4 h-4 text-[#FF7A00]"></i> Conceptos Extra
+          </h4>
+          <div class="grid grid-cols-2 gap-2">
+            ${_state.concepts.slice(0,4).map(conc => `
               <button onclick='CajaCobro._addCatalogConcept(${JSON.stringify({id: conc.id, label: conc.name, amount: conc.amount}).replace(/'/g, "&apos;")})'
                 class="p-3 text-left border-2 border-slate-100 rounded-xl hover:border-[#0B63C7] hover:bg-[#E8F2FF] transition-all">
                 <div class="text-xs font-black text-slate-700 truncate">${Helpers.escapeHTML(conc.name)}</div>
@@ -872,6 +874,30 @@ function openCobroModal() {
           </div>
           <div id="paymentMethodDetails" class="mt-3"></div>
         </div>
+
+        <!-- Factura con NCF (opcional) -->
+        <div class="bg-white rounded-2xl border border-slate-100 p-4">
+          <button type="button" onclick="const fb=document.getElementById('ncfBlock');fb.classList.toggle('hidden');"
+            class="flex items-center gap-2 text-xs font-black text-slate-500 hover:text-[#0B63C7] w-full transition-colors">
+            <i data-lucide="receipt" class="w-4 h-4"></i>
+            Solicitar Comprobante Fiscal (NCF)
+            <i data-lucide="chevron-down" class="w-3 h-3 ml-auto"></i>
+          </button>
+          <div id="ncfBlock" class="hidden mt-3 space-y-3 p-4 rounded-xl" style="background:#EFF6FF;border:1px solid #BFDBFE">
+            <p class="text-[10px] font-black uppercase tracking-wider" style="color:#2563EB">Datos para factura con NCF</p>
+            <div>
+              <label class="block text-[10px] font-black text-slate-400 uppercase mb-1">RNC de la Empresa</label>
+              <input type="text" id="ncfRNC" placeholder="Ej: 1-31-12345-6"
+                class="w-full border-2 border-slate-100 rounded-xl px-3 py-2 text-xs font-bold outline-none focus:border-[#0B63C7] bg-white">
+            </div>
+            <div>
+              <label class="block text-[10px] font-black text-slate-400 uppercase mb-1">Nombre / Razón Social</label>
+              <input type="text" id="ncfName" placeholder="Empresa S.R.L."
+                class="w-full border-2 border-slate-100 rounded-xl px-3 py-2 text-xs font-bold outline-none focus:border-[#0B63C7] bg-white">
+            </div>
+          </div>
+        </div>
+
       </div>
 
       <div class="p-4 bg-white border-t border-slate-100 flex items-center justify-between gap-3">
