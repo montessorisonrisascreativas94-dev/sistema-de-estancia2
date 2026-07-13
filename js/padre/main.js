@@ -125,6 +125,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     AppState.set('students', students);
     AppState.set('currentStudent', currentStudent);
 
+    // If classrooms join came back null but classroom_id exists, fetch it separately
+    for (const s of students) {
+      if (!s.classrooms && s.classroom_id) {
+        const { data: cls } = await supabase
+          .from('classrooms')
+          .select('id, name, level, teacher_id')
+          .eq('id', s.classroom_id)
+          .maybeSingle();
+        if (cls) s.classrooms = cls;
+      }
+    }
+
+    // Re-set state after classroom enrichment so all consumers see the updated data
+    AppState.set('students', students);
+    AppState.set('currentStudent', students[0]);
+
     // Actualizar sidebar y header ANTES de cargar datos
     updateHeaderProfile(auth.profile, currentStudent, students);
     setupNavigation();
@@ -884,7 +900,25 @@ function updateHeaderProfile(profile, student, allStudents = []) {
 
   const sidebarClassroom = document.getElementById('sidebarClassroomName');
   if (sidebarClassroom) {
-    sidebarClassroom.textContent = student?.classrooms?.name || 'Sin aula asignada';
+    const classroomName = student?.classrooms?.name;
+    if (classroomName) {
+      sidebarClassroom.textContent = classroomName;
+    } else if (student?.classroom_id) {
+      // Fallback: fetch classroom name directly
+      sidebarClassroom.textContent = 'Cargando...';
+      import('../shared/supabase.js').then(({ supabase }) => {
+        supabase.from('classrooms').select('name').eq('id', student.classroom_id).maybeSingle()
+          .then(({ data }) => {
+            sidebarClassroom.textContent = data?.name || 'Aula ' + student.classroom_id;
+            if (data?.name) {
+              // Cache the result on the student object
+              if (student) student.classrooms = { ...student.classrooms, name: data.name };
+            }
+          }).catch(() => { sidebarClassroom.textContent = 'Aula asignada'; });
+      });
+    } else {
+      sidebarClassroom.textContent = 'Sin aula asignada';
+    }
   }
 
   // UX: Añadir indicador visual y disparador si hay múltiples estudiantes

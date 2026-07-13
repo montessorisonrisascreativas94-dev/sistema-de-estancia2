@@ -157,7 +157,8 @@ export const TeachersModule = {
       const { error } = res || {};
       if (error) throw new Error(error?.message || error?.details || JSON.stringify(error));
       
-      Helpers.toast(id ? 'Maestra actualizada' : 'Maestra creada', 'success');
+      const roleName = { 'maestra': 'Maestra', 'asistente': 'Asistente', 'encargada': 'Encargada' }[payload.role] || 'Personal';
+      Helpers.toast(id ? `${roleName} actualizado/a` : `${roleName} creada`, 'success');
       UI.closeModal();
       this.init();
     } catch (e) {

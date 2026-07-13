@@ -136,7 +136,7 @@ export const DirectorApi = {
       
       const results = await Promise.allSettled([
         supabase.from('students').select('*', { count: 'exact', head: true }).eq('is_active', true),
-        supabase.from('profiles').select('*', { count: 'exact', head: true }).in('role', ['maestra', 'asistente']),
+        supabase.from('profiles').select('*', { count: 'exact', head: true }).in('role', ['maestra', 'asistente', 'encargada']),
         supabase.from('classrooms').select('*', { count: 'exact', head: true }),
         supabase.from('attendance').select('*', { count: 'exact', head: true }).eq('date', today).in('status', ['present', 'late']),
         supabase.from('inquiries').select('*', { count: 'exact', head: true }).in('status', ['pending', 'in_progress', 'open']),
@@ -460,7 +460,7 @@ export const DirectorApi = {
     // Ya optimizado con head: true
     const [students, teachers, classrooms, inquiries] = await Promise.all([
       supabase.from(TABLES.STUDENTS).select('*', { count: 'exact', head: true }).eq('is_active', true),
-      supabase.from(TABLES.PROFILES).select('*', { count: 'exact', head: true }).in('role', ['maestra', 'asistente']),
+      supabase.from(TABLES.PROFILES).select('*', { count: 'exact', head: true }).in('role', ['maestra', 'asistente', 'encargada']),
       supabase.from(TABLES.CLASSROOMS).select('*', { count: 'exact', head: true }),
       supabase.from('inquiries').select('*', { count: 'exact', head: true }).eq('status', 'pending')
     ]);
@@ -525,7 +525,7 @@ export const DirectorApi = {
         const { data, error } = await withTimeout(() =>
           supabase.from(TABLES.PROFILES)
             .select('id, name, role, email, phone, avatar_url, is_active, classrooms!classrooms_teacher_id_fkey(id, name)')
-            .in('role', ['maestra', 'asistente'])
+            .in('role', ['maestra', 'asistente', 'encargada'])
             .order('name')
         );
         if (error) throw error;

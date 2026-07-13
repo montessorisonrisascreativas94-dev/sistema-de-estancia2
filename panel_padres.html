@@ -262,34 +262,78 @@
        RESPONSIVE
        ============================================ */
     @media (max-width: 767px) {
+      /* ── SIDEBAR: hidden by default, slides in on .open ── */
       #sidebar {
         position: fixed;
         z-index: 50;
         left: 0;
         top: 0;
         height: 100dvh;
-        width: 280px;
+        width: min(280px, 85vw);
         transform: translateX(-100%);
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       }
       #sidebar.open {
         transform: translateX(0);
+        box-shadow: 8px 0 32px rgba(0,0,0,0.2);
       }
       #sidebarOverlay {
         position: fixed;
         inset: 0;
         z-index: 40;
+        background: rgba(0,0,0,0.5);
+        backdrop-filter: blur(4px);
       }
-      /* Mobile scrolling fix */
+
+      /* ── MAIN CONTENT: no margin-left, full width ── */
+      #layoutShell, main {
+        margin-left: 0 !important;
+        width: 100% !important;
+        overflow-x: hidden !important;
+      }
+
+      /* ── BODY: scrollable on mobile ── */
       body.panel-padre-body {
         overflow-y: auto !important;
         overflow-x: hidden !important;
         height: auto !important;
         position: relative !important;
       }
-      #layoutShell {
-        overflow: visible !important;
-        height: auto !important;
+
+      /* ── GRID: single column on mobile ── */
+      .grid { grid-template-columns: 1fr !important; }
+      .grid-cols-2 { grid-template-columns: repeat(2, 1fr) !important; }
+      .lg\:grid-cols-3, .lg\:grid-cols-4, .md\:grid-cols-2 { grid-template-columns: 1fr !important; }
+
+      /* ── TABLES: horizontal scroll ── */
+      table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+      .overflow-x-auto { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
+
+      /* ── MODALS: scrollable, don't overflow viewport ── */
+      .fixed.inset-0 > div,
+      [id*="modal"] > div {
+        max-height: 90dvh !important;
+        overflow-y: auto !important;
+        width: calc(100vw - 32px) !important;
+        margin: 0 auto !important;
       }
+
+      /* ── PADDING: reduced on mobile ── */
+      .p-4.md\:p-6, .p-4.md\:p-8 { padding: 16px !important; }
+      .px-6.py-4 { padding: 12px 16px !important; }
+
+      /* ── TOUCH TARGETS: min 44px ── */
+      button, a, [role="button"] { min-height: 44px; }
+      .btn, button[type="submit"] { min-height: 48px; font-size: 15px; }
+
+      /* ── FORMS: larger inputs on mobile ── */
+      input, select, textarea {
+        font-size: 16px !important; /* prevents zoom on iOS */
+        min-height: 48px !important;
+      }
+
+      /* ── CLOUD CARD: no hover transform on mobile ── */
+      .cloud-card:hover { transform: none !important; }
     }
     @media (min-width: 768px) {
       #sidebar {

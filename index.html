@@ -329,6 +329,43 @@
       .nav-links { display: none; }
       .mobile-btn { display: flex; align-items: center; justify-content: center; }
     }
+    /* ── MOBILE RESPONSIVE FIXES ── */
+    @media(max-width:768px) {
+      /* Prevent horizontal overflow */
+      html, body { overflow-x: hidden; max-width: 100%; }
+      .container { padding: 0 16px; }
+      .section { padding: 56px 0; }
+      /* Navbar stays in viewport */
+      .navbar { padding: 14px 0; }
+      .logo-text { font-size: 1.1rem; }
+      .logo-icon { width: 40px; height: 40px; font-size: 20px; }
+      .mobile-btn { width: 44px; height: 44px; border-radius: 12px; font-size: 22px; }
+      /* Mobile menu full-height drawer */
+      .mobile-menu {
+        width: min(300px, 85vw);
+        padding: 72px 20px 24px;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+      .mobile-close { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; font-size: 28px; }
+      .mobile-nav-link { padding: 16px 0; font-size: 17px; min-height: 44px; display: flex; align-items: center; }
+      /* Buttons touch-friendly */
+      .btn { padding: 14px 28px; font-size: 15px; min-height: 44px; }
+      .btn-sm { padding: 11px 20px; font-size: 13px; }
+      /* Section titles scale down */
+      .section-title { font-size: clamp(1.6rem, 6vw, 2.4rem); }
+      .section-sub { font-size: 1rem; }
+      /* Hero */
+      .hero { padding-top: 80px; min-height: auto; padding-bottom: 40px; }
+      /* Images responsive */
+      img { max-width: 100%; height: auto; }
+    }
+    @media(max-width:480px) {
+      .container { padding: 0 12px; }
+      .section { padding: 44px 0; }
+      .section-title { font-size: clamp(1.4rem, 7vw, 2rem); }
+      .btn { padding: 13px 22px; font-size: 14px; }
+    }
 
     /* HERO */
     .hero {
@@ -2420,11 +2457,15 @@
       mobileMenu.classList.add('active');
       mobileOverlay.classList.add('active');
       document.body.style.overflow = 'hidden';
+      mobileMenu.setAttribute('aria-hidden', 'false');
+      mobileBtn.setAttribute('aria-expanded', 'true');
     }
     function closeMenu() {
       mobileMenu.classList.remove('active');
       mobileOverlay.classList.remove('active');
       document.body.style.overflow = '';
+      mobileMenu.setAttribute('aria-hidden', 'true');
+      mobileBtn.setAttribute('aria-expanded', 'false');
     }
     mobileBtn.addEventListener('click', openMenu);
     mobileClose.addEventListener('click', closeMenu);

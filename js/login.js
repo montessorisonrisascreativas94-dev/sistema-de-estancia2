@@ -283,6 +283,7 @@ async function redirectByRole(userId) {
       maestra:   'panel-maestra.html',
       padre:     'panel_padres.html',
       asistente: 'panel_asistente.html',
+      encargada: 'panel_encargada.html',
       admin:     'panel_control.html'
     };
 

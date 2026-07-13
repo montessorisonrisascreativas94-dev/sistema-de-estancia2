@@ -47,31 +47,69 @@ export const ChatModule = {
    * Carga los contactos para el padre (Restringido a Maestra y Directora)
    */
   async loadPadreContacts(studentId) {
+    // Invalidate stale cache to force fresh load
+    QueryCache.invalidate(`padre_contacts_${studentId}`);
     return QueryCache.get(`padre_contacts_${studentId}`, async () => {
       try {
+        // 1. Try to get classroom teacher from student
         const { data: student } = await supabase
           .from('students')
-          .select('classroom_id, classrooms(teacher_id)')
+          .select('classroom_id, classrooms(id, name, teacher_id)')
           .eq('id', studentId)
-          .single();
-        
-        const teacherId = student?.classrooms?.teacher_id;
+          .maybeSingle();
 
-        const [teacherRes, staffRes] = await Promise.all([
-          teacherId ? supabase.from('profiles').select('id, name, avatar_url, role').eq('id', teacherId).single() : Promise.resolve({ data: null }),
-          supabase.from('profiles').select('id, name, avatar_url, role').in('role', ['directora', 'asistente', 'maestra']).order('name')
-        ]);
+        const teacherId = student?.classrooms?.teacher_id || null;
+
+        // 2. Load all staff (directora, asistente, maestra) — always returns contacts
+        const { data: staff } = await supabase
+          .from('profiles')
+          .select('id, name, avatar_url, role')
+          .in('role', ['directora', 'asistente', 'maestra'])
+          .order('role')
+          .order('name');
 
         const contacts = [];
-        if (teacherRes.data) contacts.push({ ...teacherRes.data, roleLabel: 'Maestra Titular' });
-        (staffRes.data || []).forEach(s => {
-          if (s.id !== teacherId) contacts.push({ ...s, roleLabel: s.role === 'directora' ? 'Directora' : 'Administración' });
+        const seen = new Set();
+
+        // Teacher first (if found)
+        if (teacherId) {
+          const teacher = (staff || []).find(s => s.id === teacherId);
+          if (teacher) {
+            contacts.push({ ...teacher, roleLabel: 'Maestra Titular' });
+            seen.add(teacher.id);
+          }
+        }
+
+        // Rest of staff
+        (staff || []).forEach(s => {
+          if (!seen.has(s.id)) {
+            contacts.push({
+              ...s,
+              roleLabel: s.role === 'directora' ? 'Directora'
+                       : s.role === 'asistente' ? 'Asistente'
+                       : 'Maestra'
+            });
+            seen.add(s.id);
+          }
         });
+
         return contacts;
       } catch (err) {
-        return [];
+        console.warn('[Chat] loadPadreContacts error:', err?.message);
+        // Fallback: load any staff without classroom filter
+        try {
+          const { data: fallback } = await supabase
+            .from('profiles')
+            .select('id, name, avatar_url, role')
+            .in('role', ['directora', 'asistente', 'maestra'])
+            .order('name');
+          return (fallback || []).map(s => ({
+            ...s,
+            roleLabel: s.role === 'directora' ? 'Directora' : s.role === 'asistente' ? 'Asistente' : 'Maestra'
+          }));
+        } catch (_) { return []; }
       }
-    }, 5 * 60_000); // 5 min TTL
+    }, 2 * 60_000); // 2 min TTL
   },
 
   /**
