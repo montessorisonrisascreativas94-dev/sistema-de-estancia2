@@ -176,6 +176,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     _openStudentModal: (id) => StudentsModule.openModal(id),
     _deleteStudent: (id, name) => StudentsModule._deleteStudent(id, name),
     _genMatricula: () => window._genMatricula?.(),
+    printAllCarnets: () => StudentsModule.printAllCarnets(),
     _openRoomModal: (id) => RoomsModule.openModal(id),
     openNewPostModal,
     submitNewPost
@@ -306,6 +307,18 @@ async function submitNewPost() {
     const { error } = await supabase.from('posts').insert(insertPayload);
 
     if (error) throw error;
+
+    // Notificar a padres si el post es de un aula específica
+    if (insertPayload.classroom_id) {
+      const { emitEvent } = await import('../shared/supabase.js').catch(() => ({ emitEvent: null }));
+      const prof = AppState.get('profile');
+      emitEvent?.('post.created', {
+        classroom_id: insertPayload.classroom_id,
+        teacher_name: prof?.name || 'Administración',
+        content_preview: (content || '').substring(0, 80)
+      }).catch(() => {});
+    }
+
     Helpers.toast('Publicado correctamente', 'success');
     window._closeAsistenteModal();
   } catch (err) {

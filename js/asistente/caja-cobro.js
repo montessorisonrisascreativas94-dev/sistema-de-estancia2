@@ -1,7 +1,7 @@
 /**
  * Caja Cobro — Panel Asistente (Rediseño)
  */
-import { supabase, SUPABASE_URL, SUPABASE_ANON_KEY } from '../shared/supabase.js';
+import { supabase, SUPABASE_URL, SUPABASE_ANON_KEY, emitEvent, notifyPaymentApproved } from '../shared/supabase.js';
 import { Helpers } from '../shared/helpers.js';
 import { AppState } from './state.js';
 import { InvoiceModule } from '../shared/invoice.js';
@@ -652,6 +652,19 @@ export const CajaCobro = {
       }
 
       closeCobroModal();
+
+      // Notify parent + generate invoice
+      try {
+        const total2 = _state.cart.reduce((s,i)=>s+i.amount,0);
+        const student = _state.selectedStudent;
+        if (student) {
+          emitEvent('payment.approved', {
+            student_name: student.name,
+            amount: 'RD' + total2.toLocaleString('es-DO',{minimumFractionDigits:2}),
+            month: _state.cart.filter(i=>i.type==='cuota').map(i=>i.label).join(', ') || 'Colegiatura'
+          }).catch(()=>{});
+        }
+      } catch(_) {}
 
       InvoiceModule.downloadSingle({
         id: paymentIds[0],

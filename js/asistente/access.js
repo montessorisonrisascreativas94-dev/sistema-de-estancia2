@@ -185,6 +185,19 @@ export const AccessModule = {
       if (pErr) throw pErr;
 
       this._showPunchFeedback(student, type);
+
+      // Notify parent via push notification
+      if (student.parent_id) {
+        const time = now.toLocaleTimeString('es-DO', { hour: '2-digit', minute: '2-digit' });
+        const isEntry = type !== 'retirado';
+        emitEvent(isEntry ? 'attendance.checkin' : 'attendance.checkout', {
+          parent_id:    student.parent_id,
+          student_name: student.name,
+          time,
+          link: 'panel_padres.html'
+        }).catch(() => {});
+      }
+
       await this.loadStats();
       await this.loadHistory();
 

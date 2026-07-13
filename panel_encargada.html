@@ -1,0 +1,1111 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex,nofollow">
+  <meta http-equiv="X-Content-Type-Options" content="nosniff">
+  <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://*.supabase.co wss://*.supabase.co; script-src 'self' 'unsafe-inline' https://cdn.onesignal.com https://onesignal.com https://api.onesignal.com https://meet.jit.si https://8x8.vc https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://cdn.onesignal.com https://onesignal.com https://api.onesignal.com https://meet.jit.si https://8x8.vc https://fonts.googleapis.com https://fonts.gstatic.com https://cdn.jsdelivr.net; frame-src https://meet.jit.si https://8x8.vc; worker-src 'self' blob:; object-src 'none'; base-uri 'self';">
+  <style>html{display:none;}</style>
+  <script>if(self===top){document.documentElement.style.display='block';}else{top.location=self.location;}</script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/OneSignalSDKWorker.js', { scope: '/' }).catch(() => {});
+    }
+  </script>
+  <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+  <script>
+    window.OneSignalDeferred = window.OneSignalDeferred || [];
+    window.OneSignalDeferred.push(async function(OneSignal) {
+      await OneSignal.init({
+        appId: "dd57c85f-852f-418e-bc8b-09a119f6c2eb",
+        safari_web_id: "web.onesignal.auto.0d8cfe1b-addf-4fe0-8094-42e4bf6360cd",
+        notifyButton: { enable: true }
+      });
+    });
+  </script>
+  <title>Colegio Montessori Sonrisas Creativas - Panel Encargada de Educación</title>
+  <link rel="icon" href="logo/favicon.ico" type="image/x-icon">
+  <link rel="manifest" href="manifest.json">
+  
+  <link rel="stylesheet" href="css/theme.css" />
+  <link rel="stylesheet" href="css/layout.css" />
+  <link rel="stylesheet" href="css/karpus-modern.css" />
+  <link rel="stylesheet" href="css/karpus-tailwind.css">
+  <link rel="stylesheet" href="css/premium-mobile.css">
+  <script src="js/shared/chart.min.js" defer></script>
+  <script src="js/shared/jspdf.min.js" defer></script>
+  <script src="js/shared/jspdf-autotable.min.js" defer></script>
+  <script>
+    window.addEventListener('load', () => {
+      if (!window.Chart) {
+        window.Chart = function() { return { destroy: () => {}, update: () => {} }; };
+        window.Chart.register = () => {};
+      }
+      if (!window.jspdf) window.jspdf = { jsPDF: function() { return { save: () => {}, text: () => {}, addPage: () => {} }; } };
+    });
+  </script>
+  
+  <style>
+    :root {
+      --primary: #0B63C7;
+      --primary-dark: #0850A0;
+      --primary-light: #2563EB;
+      --secondary: #1D4ED8;
+      --accent: #3B82F6;
+      --yellow-accent: #FFD43B;
+      --surface: #f8fbff;
+      --panel: #ffffff;
+      --panel-soft: #eff6ff;
+      --text: #1e3a8a;
+      --muted: #64748b;
+      --border: #bfdbfe;
+      --shadow: 0 20px 45px rgba(30, 58, 138, 0.08);
+    }
+
+    body {
+      background: var(--surface);
+      color: var(--text);
+    }
+
+    .main {
+      background: linear-gradient(180deg, #f8fbff 0%, #f3f7fb 100%);
+      padding: 1.5rem 1rem 2.5rem;
+    }
+
+    .section {
+      display: none;
+      overflow: visible;
+      padding: 0.25rem 0.25rem 2rem;
+    }
+
+    .section.active {
+      display: block;
+      overflow: visible;
+      animation: fadeInDir 0.3s ease-out;
+    }
+
+    .section-shell {
+      background: linear-gradient(180deg, rgba(255,255,255,0.97), rgba(248,251,255,0.95));
+      border: 1px solid var(--border);
+      border-radius: 28px;
+      box-shadow: var(--shadow);
+      padding: 1.4rem;
+      backdrop-filter: blur(8px);
+    }
+
+    .section-header {
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+      margin-bottom: 1.25rem;
+      padding: 1rem 1.1rem;
+      background: linear-gradient(135deg, #E8F2FF 0%, #F0F9FF 100%);
+      border: 1px solid #DBEAFE;
+      border-radius: 22px;
+      box-shadow: 0 4px 14px rgba(11,99,199,0.06);
+    }
+
+    .section-title {
+      font-size: clamp(1.2rem, 1.8vw, 1.6rem);
+      font-weight: 900;
+      color: var(--text);
+      line-height: 1.2;
+      margin: 0;
+    }
+
+    .section-subtitle {
+      color: var(--muted);
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin: 0;
+    }
+
+    .metric-card,
+    .quick-action-card,
+    .table-panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      box-shadow: 0 14px 35px rgba(15, 23, 42, 0.06);
+    }
+
+    .metric-card {
+      padding: 1.1rem 1.1rem 1.2rem;
+      transition: transform 0.25s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.2s ease;
+      border-left: 4px solid var(--primary);
+      position: relative;
+      overflow: hidden;
+    }
+    .metric-card::after {
+      content: '';
+      position: absolute;
+      top: -20px; right: -20px;
+      width: 80px; height: 80px;
+      border-radius: 50%;
+      background: currentColor;
+      opacity: 0.04;
+      pointer-events: none;
+    }
+    .metric-card:hover {
+      transform: translateY(-3px) scale(1.01);
+      box-shadow: 0 20px 45px rgba(15, 23, 42, 0.1);
+    }
+
+    .metric-card--primary   { border-left-color: var(--primary); }
+    .metric-card--secondary { border-left-color: var(--secondary); }
+    .metric-card--success   { border-left-color: var(--primary-light); }
+    .metric-card--amber     { border-left-color: var(--yellow-accent); }
+    .metric-card--slate     { border-left-color: #64748b; }
+    .metric-card--rose      { border-left-color: #ef4444; }
+
+    .metric-card--primary   .metric-icon { background: #ecfdf5; color: var(--primary); }
+    .metric-card--secondary .metric-icon { background: #ecfdf5; color: var(--secondary); }
+    .metric-card--success   .metric-icon { background: #ecfdf5; color: var(--primary-light); }
+    .metric-card--amber     .metric-icon { background: #FFFBE6; color: #B8860B; }
+    .metric-card--slate     .metric-icon { background: #F1F5F9; color: #64748b; }
+    .metric-card--rose      .metric-icon { background: #FFF1F2; color: #e11d48; }
+
+    .metric-icon {
+      width: 2.6rem;
+      height: 2.6rem;
+      border-radius: 0.9rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: #ecfdf5;
+      color: var(--primary);
+      margin-bottom: 0.8rem;
+      transition: transform 0.2s ease;
+    }
+    .metric-card:hover .metric-icon { transform: scale(1.1) rotate(-3deg); }
+
+    .metric-label {
+      font-size: 0.72rem;
+      font-weight: 900;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 0.35rem;
+    }
+
+    .metric-value {
+      font-size: 1.6rem;
+      font-weight: 900;
+      color: var(--text);
+      line-height: 1.1;
+    }
+
+    .quick-action-card {
+      padding: 1.3rem;
+      transition: transform 0.25s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.2s ease, border-color 0.2s ease;
+      border-left: 4px solid var(--primary);
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+    }
+    .quick-action-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, transparent 60%, rgba(255,255,255,0.5));
+      pointer-events: none;
+    }
+    .quick-action-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.1);
+    }
+
+    .quick-action-card--primary  { border-left-color: var(--primary); }
+    .quick-action-card--primary:hover  { border-color: var(--primary); box-shadow:0 18px 40px rgba(6, 78, 59, 0.12); }
+    .quick-action-card--secondary{ border-left-color: var(--secondary); }
+    .quick-action-card--secondary:hover{ border-color: var(--secondary); box-shadow:0 18px 40px rgba(5, 150, 105, 0.12); }
+    .quick-action-card--success { border-left-color: var(--primary-light); }
+    .quick-action-card--success:hover { border-color: var(--primary-light); box-shadow:0 18px 40px rgba(16, 185, 129, 0.12); }
+    .quick-action-card--amber { border-left-color: var(--yellow-accent); }
+    .quick-action-card--slate { border-left-color: #64748b; }
+    .quick-action-card--rose  { border-left-color: #ef4444; }
+
+    .quick-action-card--primary   .metric-icon { background: #ecfdf5; color: var(--primary); }
+    .quick-action-card--secondary .metric-icon { background: #ecfdf5; color: var(--secondary); }
+    .quick-action-card--success   .metric-icon { background: #ecfdf5; color: var(--primary-light); }
+    .quick-action-card--amber     .metric-icon { background: #FFFBE6; color: #B8860B; }
+    .quick-action-card--slate     .metric-icon { background: #F1F5F9; color: #64748b; }
+    .quick-action-card--rose      .metric-icon { background: #FFF1F2; color: #e11d48; }
+
+    .table-panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      box-shadow: 0 14px 35px rgba(15, 23, 42, 0.06);
+      overflow: hidden;
+      padding: 1rem;
+    }
+
+    .table-panel .data-table thead th {
+      background: #eff6ff;
+      color: #1e3a8a;
+      font-size: 0.72rem;
+      font-weight: 900;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 0.9rem 1rem;
+    }
+
+    .table-panel .data-table td {
+      padding: 0.95rem 1rem;
+      border-bottom: 1px solid #edf2f7;
+    }
+
+    .table-panel .data-table tr:hover {
+      background: #f8fbff;
+    }
+
+    .action-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.45rem 0.75rem;
+      border-radius: 9999px;
+      background: #f4f7fb;
+      color: #33506c;
+      font-size: 0.76rem;
+      font-weight: 800;
+      border: 1px solid #e6edf4;
+    }
+
+    aside#sidebar {
+      width: 288px;
+      background: linear-gradient(160deg, #0B63C7 0%, #0850A0 60%, #1e3a8a 100%);
+      color: white;
+      position: fixed;
+      height: 100dvh;
+      top: 0; left: 0;
+      z-index: 1050;
+      overflow-y: auto;
+      overflow-x: hidden;
+      scrollbar-width: none;
+      transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                  transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 4px 0 24px rgba(30, 58, 138, 0.15);
+    }
+    aside#sidebar::-webkit-scrollbar { display: none; }
+
+    @media (min-width: 769px) {
+      body.panel-encargada-body aside#sidebar { width: 288px; }
+      body.sidebar-collapsed.panel-encargada-body aside#sidebar { width: 80px !important; }
+    }
+
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes scaleIn {
+      from { opacity: 0; transform: scale(0.95) translateY(10px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    .animate-scaleIn { animation: scaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
+
+    #layoutShell {
+      transition: margin-left .25s ease;
+    }
+    @media (min-width: 769px) {
+      .app-content-wrapper {
+        height: 100dvh;
+        overflow: hidden;
+        transition: margin-left 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+    }
+    @media (max-width: 767px) {
+      html, body { 
+        overflow-y: auto !important; 
+        overflow-x: hidden !important; 
+        height: auto !important; 
+        min-height: 100% !important;
+        position: relative !important;
+        display: block !important;
+        -webkit-overflow-scrolling: touch !important;
+        overscroll-behavior: auto !important;
+      }
+      .app {
+        display: block !important;
+        height: auto !important;
+        min-height: 100vh !important;
+        overflow: visible !important;
+      }
+      .app-content-wrapper { 
+        margin-left: 0 !important; 
+        height: auto !important; 
+        overflow: visible !important; 
+        display: block !important; 
+      }
+      .main { 
+        height: auto !important; 
+        overflow: visible !important; 
+        min-height: 100vh !important;
+        padding-bottom: 80px !important; 
+        display: block !important;
+      }
+      #layoutShell {
+        overflow: visible !important;
+        height: auto !important;
+        display: block !important;
+      }
+      .section, .section.active {
+        overflow: visible !important;
+        height: auto !important;
+        display: none;
+      }
+      .section.active {
+        display: block !important;
+      }
+    }
+
+    .nav-btn, .kk-nav-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 16px; width: 100%; color: #94a3b8;
+      border-radius: 8px; margin-bottom: 4px;
+      text-align: left; transition: all 0.2s ease;
+      position: relative; cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+    .nav-btn [data-lucide], .kk-nav-item [data-lucide] { transition: color 0.2s ease; }
+    .nav-btn:hover, .nav-btn.active, .kk-nav-item:hover, .kk-nav-item.active { background: rgba(255,255,255,0.15); color: white; }
+    .nav-btn .badge, .kk-nav-item .kk-badge { display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 5px;border-radius:50px;background:#FF7A00;color:white;font-size:9px;font-weight:900;line-height:1; }
+
+    .data-table {
+      width: 100%; border-collapse: collapse; background: white;
+      border-radius: 8px; border: 1px solid #e2e8f0;
+    }
+    .data-table td { padding: 12px 16px; border-bottom: 1px solid #f1f5f9; color: #334155; }
+    .data-table tr:hover { background: #f8fafc; }
+    .table-scroll-wrap {
+      width: 100%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      border-radius: 12px;
+    }
+    .table-scroll-wrap .data-table { min-width: 600px; }
+
+    .chat-app {
+      display: flex;
+      height: calc(100dvh - 120px);
+      min-height: 500px;
+      background: white;
+      border-radius: 24px;
+      overflow: hidden;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 4px 20px -5px rgba(0,0,0,0.05);
+    }
+    .chat-list {
+      display: flex; flex-direction: column;
+      width: 35%; flex-shrink: 0;
+      border-right: 1px solid #f1f5f9; background: #f8fafc;
+      overflow-y: auto;
+    }
+    .chat-conversation {
+      display: flex; flex-direction: column;
+      width: 65%; background: white; min-width: 0;
+    }
+    #chatMessagesContainer {
+      flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
+      padding: 20px; display: flex; flex-direction: column;
+      gap: 8px; background: #ffffff;
+    }
+    .msg-bubble {
+      padding: 10px 16px; border-radius: 20px; font-size: 14px;
+      max-width: 80%; box-shadow: 0 1px 2px rgba(0,0,0,0.08); line-height: 1.5;
+    }
+    .msg-me { background: #0B63C7; color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
+    .msg-them { background: #f0f2f5; color: #1c1e21; align-self: flex-start; border-bottom-left-radius: 4px; }
+    #chatInputArea {
+      position: sticky; bottom: 0;
+      background: white; padding: 16px; border-top: 1px solid #f1f5f9; z-index: 2;
+    }
+    @media (max-width: 768px) {
+      .chat-app { height: calc(100dvh - 100px); border-radius: 16px; min-height: 400px; }
+      .chat-list { width: 100%; border-right: none; }
+      .chat-conversation { display: none; width: 100%; }
+      .chat-app.show-chat .chat-list { display: none; }
+      .chat-app.show-chat .chat-conversation { display: flex; }
+    }
+
+    .modal-content {
+      background: white;
+      border-radius: 24px;
+      width: 95% !important;
+      max-width: 600px !important;
+      max-height: 85dvh !important;
+      overflow-y: auto !important;
+      box-shadow: 0 25px 80px rgba(11,99,199,0.18);
+      animation: scaleIn 0.28s cubic-bezier(0.34,1.56,0.64,1);
+      border: 1px solid rgba(11,99,199,0.08);
+    }
+
+    .modal-header {
+      padding: 1.25rem 1.5rem;
+      border-bottom: none;
+      display: flex; align-items: center; justify-content: space-between;
+      background: linear-gradient(135deg, #0B63C7 0%, #0850A0 100%);
+      border-radius: 22px 22px 0 0;
+      color: white;
+      position: relative;
+      overflow: hidden;
+    }
+    .modal-header::before {
+      content: '';
+      position: absolute;
+      top: -30px; right: -30px;
+      width: 100px; height: 100px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.08);
+      pointer-events: none;
+    }
+
+    .modal-header--orange { background: linear-gradient(135deg, #FF7A00 0%, #D96500 100%); }
+    .modal-header--primary  { background: linear-gradient(135deg, #0B63C7 0%, #0850A0 100%); }
+    .modal-header--success { background: linear-gradient(135deg, #28B54D 0%, #22c55e 100%); }
+    .modal-header--rose   { background: linear-gradient(135deg, #e11d48 0%, #be123c 100%); }
+
+    .modal-header h2,
+    .modal-header h3 { color: white !important; font-weight: 900; position: relative; z-index: 1; }
+
+    .modal-header .close-btn,
+    .modal-header button[onclick*="close"],
+    .modal-header button[data-dismiss] {
+      background: rgba(255,255,255,0.22);
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 10px;
+      color: white;
+      padding: 6px 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative; z-index: 1;
+    }
+    .modal-header .close-btn:hover { background: rgba(255,255,255,0.3); transform: scale(1.05); }
+
+    .modal-body { padding: 1.5rem; }
+    .modal-body label {
+      font-size: 0.78rem; font-weight: 900; color: #4A5568;
+      text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 6px;
+    }
+    .modal-body input:not([type=checkbox]):not([type=radio]),
+    .modal-body select,
+    .modal-body textarea {
+      width: 100%; padding: 10px 14px;
+      border: 2px solid #E2E8F0; border-radius: 14px;
+      font-size: 0.95rem; font-weight: 700; color: #1A2340;
+      background: #F8FAFC; outline: none; transition: all 0.25s;
+    }
+    .modal-body input:focus,
+    .modal-body select:focus,
+    .modal-body textarea:focus {
+      border-color: var(--primary);
+      background: white;
+      box-shadow: 0 0 0 4px rgba(6, 120, 87, 0.1);
+    }
+    .modal-footer {
+      padding: 1rem 1.5rem;
+      border-top: 2px solid #F0F4F8;
+      display: flex; justify-content: flex-end; gap: 0.75rem;
+      background: #F8FAFC;
+      border-radius: 0 0 22px 22px;
+    }
+    .modal-footer .btn-cancel,
+    .modal-footer button[data-action="cancel"] {
+      padding: 10px 20px; border-radius: 14px;
+      border: 2px solid #E2E8F0; background: white;
+      color: #4A5568; font-weight: 800; cursor: pointer;
+      transition: all 0.2s;
+    }
+    .modal-footer .btn-cancel:hover { border-color: #CBD5E0; background: #F8FAFC; }
+    .modal-footer .btn-save,
+    .modal-footer button[data-action="save"],
+    .modal-footer button[type="submit"] {
+      padding: 10px 24px; border-radius: 14px;
+      background: var(--primary); color: white;
+      border: none; font-weight: 900; cursor: pointer;
+      box-shadow: 0 4px 14px rgba(6, 120, 87, 0.3);
+      transition: all 0.25s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    .modal-footer .btn-save:hover,
+    .modal-footer button[type="submit"]:hover {
+      background: var(--primary-dark);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(6, 120, 87, 0.35);
+    }
+    .modal-container.hidden { display: none !important; }
+
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
+      gap: 1rem;
+    }
+
+    .badge-paid,    .status-paid    { background:#E6F7EB; color:#1A8035; border:1px solid #B7EFC5; }
+    .badge-pending, .status-pending { background:#FFFBE6; color:#B8860B; border:1px solid #FFE89A; }
+    .badge-review,  .status-review  { background:#FFF0E0; color:#D96500; border:1px solid #FFD4A3; }
+    .badge-overdue, .status-overdue { background:#FFE4E8; color:#B91C1C; border:1px solid #FECDD3; }
+    .badge-absent                      { background:#FFE4E8; color:#B91C1C; }
+    .badge-present                     { background:#E6F7EB; color:#1A8035; }
+    .badge-late                        { background:#FFFBE6; color:#B8860B; }
+
+    .kpi-card-blue   { background:#E8F2FF; border:1px solid #DBEAFE; color:#0850A0; }
+    .kpi-card-orange { background:#FFF0E0; border:1px solid #FFD4A3; color:#D96500; }
+    .kpi-card-green  { background:#E6F7EB; border:1px solid #B7EFC5; color:#1A8035; }
+    .kpi-card-yellow { background:#FFFBE6; border:1px solid #FFE89A; color:#B8860B; }
+
+    .staff-card {
+      background:white; border-radius:20px; padding:20px;
+      border:2px solid #E8F2FF; box-shadow:0 4px 16px rgba(11,99,199,0.07);
+      transition:all 0.25s cubic-bezier(.34,1.56,.64,1);
+    }
+    .staff-card:hover { transform:translateY(-4px); box-shadow:0 12px 32px rgba(11,99,199,0.13); border-color:#0B63C7; }
+
+    .student-card {
+      background:white; border-radius:20px; padding:18px;
+      border:2px solid transparent; box-shadow:0 4px 14px rgba(0,0,0,0.06);
+      transition:all 0.25s ease; position:relative; overflow:hidden;
+    }
+    .student-card:hover { transform:translateY(-3px); box-shadow:0 10px 28px rgba(11,99,199,0.12); border-color:#0B63C7; }
+    .student-card::before {
+      content:''; position:absolute; top:0; left:0; right:0; height:4px;
+      background:linear-gradient(90deg,#0B63C7,#FF7A00,#28B54D,#FFD43B);
+    }
+
+    .page-header {
+      display:flex; flex-direction:column; gap:4px; margin-bottom:1.5rem;
+    }
+    .page-header h1 {
+      font-size:1.5rem; font-weight:900; color:#1A2340; line-height:1.2;
+      display:flex; align-items:center; gap:12px;
+    }
+    .page-header .page-icon {
+      width:36px; height:36px; border-radius:12px;
+      background:#E8F2FF; color:#0B63C7;
+      display:flex; align-items:center; justify-content:center;
+      flex-shrink:0;
+    }
+    .page-header p { font-size:0.85rem; color:#718096; font-weight:600; margin-left:48px; }
+
+    .action-bar {
+      background:white; border-radius:16px; padding:14px 18px;
+      box-shadow:0 2px 12px rgba(11,99,199,0.07);
+      border:1px solid #E8F2FF;
+      display:flex; flex-wrap:wrap; align-items:center; gap:12px;
+      margin-bottom:1.5rem;
+    }
+
+    .tr-hover:hover td { background:#F8FAFC; }
+    .td-name { font-weight:900; color:#1A2340; }
+    .td-meta { font-size:0.8rem; color:#718096; font-weight:700; }
+
+    .row-paid    td:first-child { border-left:3px solid #28B54D; }
+    .row-pending td:first-child { border-left:3px solid #FFD43B; }
+    .row-review  td:first-child { border-left:3px solid #FF7A00; }
+    .row-overdue td:first-child { border-left:3px solid #EF4444; }
+
+    .kk-nav-group-toggle { position: relative; }
+    .kk-nav-chevron {
+      margin-left: auto;
+      transition: transform 0.25s ease;
+      color: rgba(255,255,255,0.5);
+    }
+    .kk-nav-group-toggle.open .kk-nav-chevron {
+      transform: rotate(180deg);
+      color: rgba(255,255,255,0.9);
+    }
+    .kk-nav-sub {
+      padding-left: 14px;
+      margin-top: 2px;
+      overflow: hidden;
+      animation: navSubOpen 0.2s ease-out both;
+    }
+    @keyframes navSubOpen {
+      from { opacity:0; transform:translateY(-6px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+    .kk-nav-sub-item {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      width: 100%;
+      padding: 8px 12px 8px 10px;
+      border-radius: 10px;
+      font-size: 12.5px;
+      font-weight: 800;
+      color: rgba(255,255,255,0.78);
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      text-align: left;
+      margin-bottom: 2px;
+      transition: all 0.18s ease;
+      border-left: 2px solid transparent;
+    }
+    .kk-nav-sub-item:hover {
+      background: rgba(255,255,255,0.1);
+      color: white;
+      border-left-color: rgba(255,212,59,0.6);
+      padding-left: 14px;
+    }
+    .kk-nav-sub-item.active {
+      background: rgba(255,255,255,0.16);
+      color: white;
+      border-left-color: #FFD43B;
+      font-weight: 900;
+    }
+
+    .kk-nav-item.active,
+    .kk-nav-item[aria-current="page"] {
+      background:rgba(255,255,255,0.22) !important;
+      border-left:4px solid #FFD43B !important;
+      color:white !important;
+      transform:translateX(5px);
+      box-shadow:0 4px 14px rgba(0,0,0,0.1);
+    }
+    .kk-nav-item:hover:not(.active) {
+      background:rgba(255,255,255,0.14) !important;
+      color:white !important;
+    }
+
+    .modal-header-icon {
+      width:36px; height:36px; border-radius:10px;
+      background:rgba(255,255,255,0.22);
+      display:flex; align-items:center; justify-content:center;
+      margin-right:12px; flex-shrink:0;
+    }
+
+    .empty-state {
+      text-align:center; padding:3rem 1rem; color:#94A3B8;
+    }
+    .empty-state .empty-icon {
+      width:64px; height:64px; border-radius:20px;
+      background:#F1F5F9; margin:0 auto 16px;
+      display:flex; align-items:center; justify-content:center;
+    }
+    .empty-state h3 { font-weight:900; color:#64748B; margin-bottom:6px; }
+    .empty-state p  { font-size:0.85rem; }
+
+    .tab-pill {
+      display:inline-flex; align-items:center; gap:6px;
+      padding:8px 18px; border-radius:50px;
+      font-size:0.78rem; font-weight:900; cursor:pointer;
+      border:none; background:transparent; color:#94A3B8;
+      transition:all 0.2s;
+    }
+    .tab-pill.active {
+      background:#0B63C7; color:white;
+      box-shadow:0 4px 14px rgba(11,99,199,0.3);
+    }
+    .tab-pill:hover:not(.active) { background:#F1F5F9; color:#1A2340; }
+
+    @keyframes shimmer {
+      0%   { background-position: -400px 0; }
+      100% { background-position:  400px 0; }
+    }
+    .skeleton-line {
+      background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+      background-size: 800px 100%;
+      animation: shimmer 1.6s infinite linear;
+      border-radius: 8px;
+      height: 14px;
+    }
+
+    .kk-nav-item:focus-visible,
+    .btn-action:focus-visible,
+    .tab-pill:focus-visible {
+      outline: 3px solid #FFD43B;
+      outline-offset: 2px;
+    }
+
+    @media print {
+      #sidebar, header, .no-print, #scrollTopBtn, .fab-wrap { display:none !important; }
+      .app-content-wrapper { margin:0 !important; }
+      body { background:white; }
+    }
+
+    @media (max-width: 640px) {
+      .hide-mobile { display: none !important; }
+      .overflow-x-auto { -webkit-overflow-scrolling: touch; }
+      canvas { max-width: 100% !important; }
+      .modal-content { width: 95%; max-height: 85dvh; }
+      .btn-mobile-full { width: 100% !important; justify-content: center; }
+    }
+
+    body { padding-bottom: 0 !important; }
+    @keyframes fadeInDir { from { opacity:0; transform: translateY(8px); } to { opacity:1; transform: translateY(0); } }
+  </style>
+</head>
+<body class="bg-[#F4F7FB] text-slate-800 font-nunito panel-encargada-body">
+  
+  <div id="initial-loading">
+    <div class="loader-spin mb-4"></div>
+    <h2 class="text-xl font-bold text-slate-700 animate-pulse">Sonrisas Creativas</h2>
+    <p class="text-sm text-slate-400">Cargando panel de Encargada de Educación...</p>
+  </div>
+
+  <div class="app">
+    <div id="sidebarOverlay" class="fixed inset-0 bg-black/50 z-40 backdrop-blur-sm transition-opacity" style="display:none;"></div>
+    
+    <aside id="sidebar" class="kk-sidebar bg-gradient-to-b from-[#0B63C7] via-[#0850A0] to-[#1e3a8a] shadow-2xl flex flex-col flex-shrink-0" style="border-right:none;">
+      <button id="toggleSidebar" class="absolute -right-3 top-8 bg-white rounded-full p-1.5 shadow-lg border border-slate-100 text-slate-500 hover:text-[#0B63C7] hidden md:flex items-center justify-center z-10 transition-all hover:scale-110">
+        <i data-lucide="chevron-left" id="toggleSidebarIcon" class="w-3.5 h-3.5"></i>
+      </button>
+
+      <div class="kk-sidebar-logo">
+        <div class="kk-sidebar-logo-img">
+          <img src="img/monte.jpg" alt="Colegio Montessori Sonrisas Creativas" loading="eager">
+        </div>
+        <div class="kk-sidebar-logo-text label">
+          <div class="brand font-bold text-lg">Sonrisas Creativas</div>
+          <div class="sub">Encargada de Educación</div>
+        </div>
+      </div>
+
+      <div class="kk-sidebar-profile label mx-2">
+        <div class="kk-sidebar-profile-avatar relative group cursor-pointer" id="sidebarAvatar">
+          <img id="sidebarProfileAvatar" src="img/monte.jpg" alt="Avatar" class="w-full h-full object-cover transition-opacity group-hover:opacity-60">
+          <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+            <i data-lucide="camera" class="w-4 h-4 text-white"></i>
+          </div>
+          <input type="file" id="sidebarAvatarInput" accept="image/*" class="hidden">
+        </div>
+        <div class="kk-sidebar-profile-info label">
+          <div class="kk-sidebar-profile-role">Encargada de Educación</div>
+          <div class="kk-sidebar-profile-name" id="sidebarName">Cargando...</div>
+        </div>
+      </div>
+
+      <nav class="flex-1 overflow-y-auto kk-scroll px-2 py-2 space-y-1 relative z-10">
+        <button data-section="dashboard" class="kk-nav-item" data-tooltip="Dashboard">
+          <i data-lucide="layout-dashboard" class="text-blue-300"></i>
+          <span class="label">Dashboard</span>
+        </button>
+
+        <div class="kk-nav-group">
+          <button class="kk-nav-item kk-nav-group-toggle w-full" data-group="maestras" data-tooltip="Maestras">
+            <i data-lucide="users" class="text-green-300 shrink-0"></i>
+            <span class="label flex-1 text-left">Maestras</span>
+            <i data-lucide="chevron-down" class="kk-nav-chevron w-3.5 h-3.5 label opacity-60 shrink-0"></i>
+          </button>
+          <div class="kk-nav-sub" id="group-maestras" style="display:none">
+            <button data-section="eficiencia" class="kk-nav-sub-item">
+              <i data-lucide="trending-up" class="w-3.5 h-3.5 text-green-200 shrink-0"></i>
+              <span>Eficiencia</span>
+            </button>
+            <button data-section="ranking" class="kk-nav-sub-item">
+              <i data-lucide="trophy" class="w-3.5 h-3.5 text-yellow-200 shrink-0"></i>
+              <span>Ranking</span>
+            </button>
+          </div>
+        </div>
+
+        <button data-section="padres-opinion" class="kk-nav-item" data-tooltip="Opinión de Padres">
+          <i data-lucide="message-square-heart" class="text-pink-300"></i>
+          <span class="label">Opinión de Padres</span>
+        </button>
+
+        <button data-section="permisos" class="kk-nav-item" data-tooltip="Permisos">
+          <i data-lucide="calendar-check" class="text-amber-300"></i>
+          <span class="label">Permisos</span>
+        </button>
+
+        <button data-section="accesos-qr" class="kk-nav-item" data-tooltip="Accesos QR">
+          <i data-lucide="scan-line" class="text-lime-300"></i>
+          <span class="label">Accesos QR</span>
+        </button>
+
+        <button data-section="chat" class="kk-nav-item" data-tooltip="Chat Institucional">
+          <i data-lucide="messages-square" class="text-sky-300"></i>
+          <span class="label">Chat Institucional</span>
+        </button>
+
+        <div class="kk-nav-group">
+          <button class="kk-nav-item kk-nav-group-toggle w-full" data-group="reportes" data-tooltip="Reportes">
+            <i data-lucide="file-bar-chart-2" class="text-cyan-300 shrink-0"></i>
+            <span class="label flex-1 text-left">Reportes</span>
+            <i data-lucide="chevron-down" class="kk-nav-chevron w-3.5 h-3.5 label opacity-60 shrink-0"></i>
+          </button>
+          <div class="kk-nav-sub" id="group-reportes" style="display:none">
+            <button data-section="reportes-cumplimiento" class="kk-nav-sub-item">
+              <i data-lucide="clipboard-check" class="w-3.5 h-3.5 text-cyan-200 shrink-0"></i>
+              <span>Cumplimiento</span>
+            </button>
+            <button data-section="control-rutinas" class="kk-nav-sub-item">
+              <i data-lucide="clock" class="w-3.5 h-3.5 text-teal-200 shrink-0"></i>
+              <span>Control de Rutinas</span>
+            </button>
+            <button data-section="reportes-tareas" class="kk-nav-sub-item">
+              <i data-lucide="clipboard-list" class="w-3.5 h-3.5 text-blue-200 shrink-0"></i>
+              <span>Tareas</span>
+            </button>
+            <button data-section="comparativo-aulas" class="kk-nav-sub-item">
+              <i data-lucide="bar-chart-3" class="w-3.5 h-3.5 text-indigo-200 shrink-0"></i>
+              <span>Comparativo Aulas</span>
+            </button>
+          </div>
+        </div>
+
+        <button data-section="alertas" class="kk-nav-item" data-tooltip="Alertas Inteligentes">
+          <i data-lucide="bell-alert" class="text-rose-300"></i>
+          <span class="label">Alertas Inteligentes</span>
+          <span id="badge-alertas" class="hidden kk-badge">0</span>
+        </button>
+
+        <button data-section="centro-estadisticas" class="kk-nav-item" data-tooltip="Centro de Estadísticas">
+          <i data-lucide="bar-chart-horizontal" class="text-violet-300"></i>
+          <span class="label">Centro de Estadísticas</span>
+        </button>
+
+        <button data-section="configuracion" class="kk-nav-item" data-tooltip="Configuración">
+          <i data-lucide="sliders-horizontal" class="text-slate-300 shrink-0"></i>
+          <span class="label">Configuración</span>
+        </button>
+      </nav>
+
+      <div class="p-3 relative z-10 border-t border-white/10">
+        <button id="btnLogout" class="kk-logout-btn">
+          <i data-lucide="log-out" class="w-4 h-4"></i>
+          <span class="label">Cerrar Sesión</span>
+        </button>
+      </div>
+    </aside>
+
+    <div class="app-content-wrapper">
+      <header class="header">
+        <button id="menuBtn" class="md:hidden p-2.5 rounded-xl bg-white shadow-sm border border-slate-100 text-slate-600 hover:bg-[#ecfdf5] hover:text-[#047857] transition-colors active:scale-95"
+          style="position:relative;z-index:200;"
+          data-managed="true"
+          aria-label="Abrir menú">
+          <i data-lucide="menu" class="w-5 h-5"></i>
+        </button>
+        <h2 class="text-lg font-bold text-slate-800 hidden md:block">Colegio Montessori Sonrisas Creativas - Panel Encargada</h2>
+        <span class="text-xs font-semibold text-slate-400 uppercase tracking-widest md:hidden">Panel Encargada</span>
+      </header>
+
+      <main class="main" id="layoutShell">
+        <section id="dashboard" class="section active">
+          <div class="section-shell">
+            <div class="section-header">
+              <h1 class="section-title">Panel Inteligente</h1>
+              <p class="section-subtitle">Resumen general del desempeño docente y cumplimiento.</p>
+            </div>
+
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+              <div class="metric-card metric-card--primary">
+                <div class="metric-icon"><i data-lucide="users" class="w-5 h-5"></i></div>
+                <div class="metric-label">Total Maestras</div>
+                <div class="metric-value" id="kpiTotalMaestras">-</div>
+              </div>
+              <div class="metric-card metric-card--success">
+                <div class="metric-icon"><i data-lucide="check-circle" class="w-5 h-5"></i></div>
+                <div class="metric-label">Maestras Activas</div>
+                <div class="metric-value" id="kpiMaestrasActivas">-</div>
+              </div>
+              <div class="metric-card metric-card--blue">
+                <div class="metric-icon"><i data-lucide="school" class="w-5 h-5"></i></div>
+                <div class="metric-label">Aulas Activas</div>
+                <div class="metric-value" id="kpiAulasActivas">-</div>
+              </div>
+              <div class="metric-card metric-card--amber">
+                <div class="metric-icon"><i data-lucide="user-round" class="w-5 h-5"></i></div>
+                <div class="metric-label">Niños</div>
+                <div class="metric-value" id="kpiNinos">-</div>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+              <div class="metric-card metric-card--success">
+                <div class="metric-icon"><i data-lucide="sparkles" class="w-5 h-5"></i></div>
+                <div class="metric-label">Índice de Eficiencia</div>
+                <div class="metric-value" id="kpiEficiencia">-</div>
+              </div>
+              <div class="metric-card metric-card--primary">
+                <div class="metric-icon"><i data-lucide="target" class="w-5 h-5"></i></div>
+                <div class="metric-label">Promedio Institucional</div>
+                <div class="metric-value" id="kpiPromedioInstitucional">-</div>
+              </div>
+              <div class="metric-card metric-card--amber">
+                <div class="metric-icon"><i data-lucide="calendar-check" class="w-5 h-5"></i></div>
+                <div class="metric-label">Cumplimiento Diario</div>
+                <div class="metric-value" id="kpiCumplimientoDiario">-</div>
+              </div>
+              <div class="metric-card metric-card--slate">
+                <div class="metric-icon"><i data-lucide="calendar" class="w-5 h-5"></i></div>
+                <div class="metric-label">Cumplimiento Mensual</div>
+                <div class="metric-value" id="kpiCumplimientoMensual">-</div>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div class="bg-white rounded-2xl border border-slate-200 p-6">
+                <h3 class="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                  <i data-lucide="award" class="w-5 h-5 text-yellow-500"></i>
+                  Mejor Maestra del Mes
+                </h3>
+                <div id="mejorMaestra" class="text-center text-slate-400">Cargando...</div>
+              </div>
+              <div class="bg-white rounded-2xl border border-slate-200 p-6">
+                <h3 class="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                  <i data-lucide="home" class="w-5 h-5 text-blue-500"></i>
+                  Aula con Mejor Desempeño
+                </h3>
+                <div id="mejorAula" class="text-center text-slate-400">Cargando...</div>
+              </div>
+            </div>
+
+            <div class="mt-6 bg-white rounded-2xl border border-slate-200 p-6">
+              <h3 class="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                <i data-lucide="alert-triangle" class="w-5 h-5 text-rose-500"></i>
+                Alertas Pendientes
+              </h3>
+              <div id="alertasPendientes" class="text-slate-400">No hay alertas en este momento.</div>
+            </div>
+          </div>
+        </section>
+
+        <section id="eficiencia" class="section">
+          <div class="section-shell">
+            <div class="section-header">
+              <h1 class="section-title">Eficiencia de Maestras</h1>
+              <p class="section-subtitle">Monitoreo detallado del desempeño docente.</p>
+            </div>
+            <div id="eficienciaContent" class="text-slate-400">Cargando...</div>
+          </div>
+        </section>
+
+        <section id="ranking" class="section">
+          <div class="section-shell">
+            <div class="section-header">
+              <h1 class="section-title">Ranking de Maestras</h1>
+              <p class="section-subtitle">Top 10 maestras basadas en eficiencia, opiniones y cumplimiento.</p>
+            </div>
+            <div id="rankingContent" class="text-slate-400">Cargando...</div>
+          </div>
+        </section>
+
+        <section id="padres-opinion" class="section">
+          <div class="section-shell">
+            <div class="section-header">
+              <h1 class="section-title">Reporte de Opinión de Padres</h1>
+              <p class="section-subtitle">Resumen de valoraciones y comentarios.</p>
+            </div>
+            <div id="opinionesContent" class="text-slate-400">Cargando...</div>
+          </div>
+        </section>
+
+        <section id="permisos" class="section">
+          <div class="section-shell">
+            <div class="section-header">
+              <h1 class="section-title">Reportes de Permisos</h1>
+              <p class="section-subtitle">Control de permisos solicitados por docentes.</p>
+            </div>
+            <div id="permisosContent" class="text-slate-400">Cargando...</div>
+          </div>
+        </section>
+
+        <section id="accesos-qr" class="section">
+          <div class="section-shell">
+            <div class="section-header">
+              <h1 class="section-title">Accesos QR</h1>
+              <p class="section-subtitle">Gestión de códigos QR para niños y maestras.</p>
+            </div>
+            <div id="qrContent" class="text-slate-400">Cargando...</div>
+          </div>
+        </section>
+
+        <section id="chat" class="section">
+          <div class="section-shell">
+            <div class="section-header">
+              <h1 class="section-title">Chat Institucional</h1>
+              <p class="section-subtitle">Comunicación directa con las maestras.</p>
+            </div>
+            <div id="chatContent" class="text-slate-400">Cargando...</div>
+          </div>
+        </section>
+
+        <section id="reportes-cumplimiento" class="section">
+          <div class="section-shell">
+            <div class="section-header">
+              <h1 class="section-title">Reportes de Cumplimiento</h1>
+              <p class="section-subtitle">Diario, semanal, mensual y anual.</p>
+            </div>
+            <div id="cumplimientoContent" class="text-slate-400">Cargando...</div>
+          </div>
+        </section>
+
+        <section id="control-rutinas" class="section">
+          <div class="section-shell">
+            <div class="section-header">
+              <h1 class="section-title">Control de Rutinas</h1>
+              <p class="section-subtitle">Monitoreo de horarios, rutinas y tiempos.</p>
+            </div>
+            <div id="rutinasContent" class="text-slate-400">Cargando...</div>
+          </div>
+        </section>
+
+        <section id="reportes-tareas" class="section">
+          <div class="section-shell">
+            <div class="section-header">
+              <h1 class="section-title">Reportes de Tareas</h1>
+              <p class="section-subtitle">Seguimiento de tareas asignadas y entregadas.</p>
+            </div>
+            <div id="tareasContent" class="text-slate-400">Cargando...</div>
+          </div>
+        </section>
+
+        <section id="comparativo-aulas" class="section">
+          <div class="section-shell">
+            <div class="section-header">
+              <h1 class="section-title">Comparativo por Aulas</h1>
+              <p class="section-subtitle">Rendimiento, cumplimiento, participación y más.</p>
+            </div>
+            <div id="comparativoContent" class="text-slate-400">Cargando...</div>
+          </div>
+        </section>
+
+        <section id="alertas" class="section">
+          <div class="section-shell">
+            <div class="section-header">
+              <h1 class="section-title">Alertas Inteligentes</h1>
+              <p class="section-subtitle">Alertas generadas automáticamente por bajo rendimiento, incumplimientos, etc.</p>
+            </div>
+            <div id="alertasContent" class="text-slate-400">Cargando...</div>
+          </div>
+        </section>
+
+        <section id="centro-estadisticas" class="section">
+          <div class="section-shell">
+            <div class="section-header">
+              <h1 class="section-title">Centro de Estadísticas</h1>
+              <p class="section-subtitle">Gráficos interactivos y análisis detallados.</p>
+            </div>
+            <div id="estadisticasContent" class="text-slate-400">Cargando...</div>
+          </div>
+        </section>
+
+        <section id="configuracion" class="section">
+          <div class="section-shell">
+            <div class="section-header">
+              <h1 class="section-title">Configuración</h1>
+              <p class="section-subtitle">Ajustes del panel de Encargada de Educación.</p>
+            </div>
+            <div id="configuracionContent" class="text-slate-400">Cargando...</div>
+          </div>
+        </section>
+
+      </main>
+    </div>
+  </div>
+
+  <div id="globalModalContainer" class="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm hidden">
+    <div id="globalModal" class="modal-content"></div>
+  </div>
+
+  <script src="js/shared/supabase.js" defer></script>
+  <script src="js/shared/helpers.js" defer></script>
+  <script src="js/shared/lucide.min.js" defer></script>
+  <script src="js/encargada/main.js" type="module" defer></script>
+
+</body>
+</html>

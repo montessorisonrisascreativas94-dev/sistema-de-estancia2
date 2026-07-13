@@ -447,6 +447,18 @@ export const StudentsModule = {
     }
   },
 
+  async printAllCarnets() {
+    // Get students from AppState
+    const students = AppState.get('students') || [];
+    // Map them to the format expected by Helpers.printAllCarnets: { name, matricula, classroom }
+    const formattedStudents = students.map(s => ({
+      name: s.name,
+      matricula: s.matricula,
+      classroom: s.classrooms?.name || '',
+    }));
+    await Helpers.printAllCarnets(formattedStudents);
+  },
+
   async delete(id) {
     const student = (AppState.get('students') || []).find(s => String(s.id) === String(id));
     const name = student?.name || 'este estudiante';
@@ -750,7 +762,7 @@ export const StudentsModule = {
     window.generateMatricula = () => {
       const el = document.getElementById('stMatricula');
       if (el) {
-        el.value = 'KK-' + new Date().getFullYear() + '-' + String(Math.floor(Math.random() * 9000) + 1000);
+        el.value = 'MSC-' + new Date().getFullYear() + '-' + String(Math.floor(Math.random() * 9000) + 1000);
         // Auto-generar QR al generar matrícula
         window.generateStudentQR();
       }
@@ -773,37 +785,35 @@ export const StudentsModule = {
       if (!container) return;
 
       if (!matricula) {
-        Helpers.toast('Genera o ingresa una matrícula primero', 'warning');
+        Helpers.toast('Genera o ingresa una matricula primero', 'warning');
         return;
       }
 
       await _loadQRLib();
       container.innerHTML = '';
-      label && (label.textContent = matricula);
-
-      // QR just contains the matricula (super short, no overflow!)
-      const qrData = matricula;
+      // Always use MSC- prefix in QR data for scanner compatibility
+      const mat = matricula.startsWith('MSC-') ? matricula : 'MSC-' + matricula;
+      label && (label.textContent = mat);
 
       try {
         new window.QRCode(container, {
-          text: qrData,
+          text: mat,
           width: 160,
           height: 160,
           colorDark: '#1e293b',
           colorLight: '#ffffff',
-          correctLevel: window.QRCode.CorrectLevel.L // Low ECC allows more capacity
+          correctLevel: window.QRCode.CorrectLevel.H // High ECC for better scanning
         });
       } catch (error) {
-        console.error('Error generando QR:', error);
         container.innerHTML = '<p class="text-xs text-red-500 font-bold text-center">Error al generar QR</p>';
-        Helpers.toast('Error al generar QR: texto demasiado largo', 'error');
       }
     };
 
-    // Imprimir QR
+    // Imprimir QR — carnet profesional doble cara
     window.printStudentQR = () => {
       const matricula = document.getElementById('stMatricula')?.value?.trim();
-      const name = document.getElementById('stName')?.value?.trim();
+      const name      = document.getElementById('stName')?.value?.trim();
+      const classroom = document.getElementById('stClassroom') ? document.getElementById('stClassroom').options[document.getElementById('stClassroom').selectedIndex]?.text : '';
       const container = document.getElementById('qr-container');
       if (!container || !matricula) { Helpers.toast('Genera el QR primero', 'warning'); return; }
 
@@ -811,8 +821,10 @@ export const StudentsModule = {
       if (!qrImg) { Helpers.toast('Genera el QR primero', 'warning'); return; }
 
       const win = window.open('', '_blank');
-      win.document.write(Helpers.getQRPrintTemplate(qrImg, name, matricula));
-      win.document.close();
+      if (win) {
+        win.document.write(Helpers.getQRPrintTemplate(qrImg, name, matricula, { classroom }));
+        win.document.close();
+      }
     };
 
     // Auto-generar QR si ya hay matrícula (modo edición)

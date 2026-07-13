@@ -223,7 +223,7 @@ export const MaestraApi = {
   async createTask(payload) {
     const cleanPayload = {
       ...payload,
-      grading_system: 'letter_stars'
+      grading_system: 'numeric'
     };
     delete cleanPayload.points;
 
@@ -272,15 +272,17 @@ export const MaestraApi = {
   /**
    * Calificar tarea
    */
-  async gradeTask(taskId, studentId, gradeLetter, stars, feedback) {
+  async gradeTask(taskId, studentId, gradeLetter, stars, feedback, numericScore = null) {
     if (!taskId || !studentId) throw new Error('Task ID and Student ID are required');
 
     const starsVal   = parseInt(stars) || null;
     const validStars = (starsVal && starsVal >= 1 && starsVal <= 5) ? starsVal : null;
+    const validNumeric = (numericScore !== null && numericScore !== undefined && !isNaN(numericScore) && numericScore >= 0 && numericScore <=100) ? numericScore : null;
 
     const updates = {
       grade_letter: gradeLetter || null,
       stars:        validStars,
+      numeric_score: validNumeric,
       comment:      feedback || null,
       status:       'graded'
     };
@@ -300,14 +302,14 @@ export const MaestraApi = {
         .from('task_evidences')
         .update(updates)
         .eq('id', existing.id)
-        .select('id, grade_letter, stars, status')
+        .select('id, grade_letter, stars, numeric_score, status')
         .maybeSingle();
     } else {
       // Insert new record
       result = await supabase
         .from('task_evidences')
         .insert({ task_id: taskId, student_id: studentId, ...updates })
-        .select('id, grade_letter, stars, status')
+        .select('id, grade_letter, stars, numeric_score, status')
         .maybeSingle();
     }
 

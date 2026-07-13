@@ -19,6 +19,7 @@ import { ImageLoader } from '../shared/image-loader.js';
 import { OnboardingGuide } from '../shared/onboarding.js';
 import { Prefetch } from '../shared/prefetch.js';
 import { VideoCallUI } from '../shared/videocall-ui.js';
+import { ParentRatingModule } from './parent_rating.js';
 
 import { UIPremium } from '../shared/ui-premium.js';
 
@@ -29,6 +30,10 @@ window.App = {
   openDigitalID: openDigitalID,
   switchStudent: switchStudent,
   updateHeaderProfile: updateHeaderProfile,
+  openRatingModal: () => {
+    const modal = document.getElementById('rating-modal');
+    if (modal) modal.classList.remove('hidden');
+  },
   sharePadreQR: () => {
     const student = AppState.get('currentStudent');
     const container = document.getElementById('padre-qr-container');
@@ -76,6 +81,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const auth = await ensureRole('padre');
     if (!auth) return;
+    
+    // Initialize Parent Rating Module
+    window.user = auth.user;
+    ParentRatingModule.init();
 
     AppState.set('user', auth.user);
     AppState.set('profile', auth.profile);
@@ -155,8 +164,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // Mostrar skeletons inmediatamente
-  const summary = document.getElementById('dailySummaryCard');
-  if (summary) summary.innerHTML = Helpers.skeleton(1, 'h-40');
+  const timeline = document.getElementById('dailyEmojiTimeline');
+  if (timeline) {
+    timeline.innerHTML = `
+      <div class="flex items-center gap-3 p-3 bg-slate-50 rounded-2xl animate-pulse">
+        <div class="w-10 h-10 bg-slate-200 rounded-xl shrink-0"></div>
+        <div class="flex-1 h-4 bg-slate-200 rounded-xl"></div>
+        <div class="w-16 h-4 bg-slate-200 rounded-xl"></div>
+      </div>`;
+  }
 
     // Carga paralela — no bloquea UI
     refreshDashboard().then(() => {

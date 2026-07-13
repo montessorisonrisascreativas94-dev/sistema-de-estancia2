@@ -697,6 +697,40 @@ export const CajaCobroV2 = {
       const { error } = await supabase.from('payments').insert(inserts);
       if (error) throw error;
 
+      // Notificar pago al padre + generar factura
+      try {
+        const { emitEvent: emit } = await import('./supabase.js');
+        const colegiaturas = _cart.filter(c => c.type === 'colegiatura');
+        const monthPaid = colegiaturas.length > 0
+          ? colegiaturas.map(c => c._monthIdx + 1).join(',')
+          : null;
+
+        // Fetch first inserted payment id for invoice
+        const { data: newPays } = await supabase
+          .from('payments')
+          .select('id, amount, month_paid')
+          .eq('student_id', _student.id)
+          .eq('status', 'paid')
+          .gte('paid_date', todayStr + 'T00:00:00')
+          .order('created_at', { ascending: false })
+          .limit(1);
+
+        if (newPays?.[0]?.id) {
+          // Generate invoice and send email
+          supabase.functions.invoke('generate-invoice', {
+            body: { payment_id: newPays[0].id, send_email: true }
+          }).catch(() => {});
+        }
+
+        // Notify payment approved to parent
+        emit('payment.approved', {
+          payment_id:   newPays?.[0]?.id || null,
+          student_name: _student.name,
+          amount:       'RD$' + total.toLocaleString('es-DO', { minimumFractionDigits: 2 }),
+          month:        monthPaid || 'Colegiatura'
+        }).catch(() => {});
+      } catch (_) {}
+
       // Cerrar modal y mostrar éxito
       document.querySelectorAll('[id^="cajaModal_"]').forEach(e=>e.remove());
       this._showSuccess(total);

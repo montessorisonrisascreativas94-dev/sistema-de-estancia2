@@ -159,22 +159,52 @@ export const GradesModule = {
   },
 
   calculateGPA(grades, taskEvidences) {
-    // Calcular promedio combinando grades + task_evidences con grade_letter
-    const letterToScore = { 'A': 100, 'B': 85, 'C': 70, 'D': 55 };
+    // Calcular promedio combinando grades + task_evidences con nuevo sistema 0-100
     const scores = [];
-    grades.forEach(g => { if (parseFloat(g.score)) scores.push(parseFloat(g.score)); });
-    taskEvidences.forEach(t => { if (t.grade_letter && letterToScore[t.grade_letter]) scores.push(letterToScore[t.grade_letter]); });
+    // Process grades with numeric score first
+    grades.forEach(g => {
+      if (g.numeric_score != null) {
+        const score = parseFloat(g.numeric_score);
+        if (!isNaN(score) && score >= 0 && score <= 100) {
+          scores.push(score);
+          return;
+        }
+      }
+      // Fallback to legacy score field
+      if (parseFloat(g.score)) {
+        scores.push(parseFloat(g.score));
+      }
+    });
+    // Process task evidences
+    taskEvidences.forEach(t => {
+      if (t.numeric_score != null) {
+        const score = parseFloat(t.numeric_score);
+        if (!isNaN(score) && score >= 0 && score <= 100) {
+          scores.push(score);
+          return;
+        }
+      }
+      // Fallback to legacy systems
+      const letterToScore = { 'A': 95, 'B': 85, 'C': 75, 'D': 60, 'E': 40 };
+      if (t.grade_letter && letterToScore[t.grade_letter]) {
+        scores.push(letterToScore[t.grade_letter]);
+      } else if (t.stars != null && t.stars > 0) {
+        scores.push(t.stars * 20);
+      }
+    });
     if (!scores.length) return '—';
     const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
-    return avg.toFixed(1);
+    return Math.round(avg).toString();
   },
 
   getGPALabel(gpa) {
     if (gpa === '—') return { label: 'Sin datos aún', color: 'text-slate-400' };
     const n = parseFloat(gpa);
-    if (n >= 90) return { label: '\u00a1Excelente progreso!', color: 'text-emerald-200' };
-    if (n >= 75) return { label: 'Muy buen desempe\u00f1o', color: 'text-emerald-200' };
-    if (n >= 60) return { label: 'Progreso aceptable', color: 'text-yellow-200' };
+    if (n >= 95) return { label: '¡Excelente progreso!', color: 'text-emerald-200' };
+    if (n >= 90) return { label: 'Muy buen desempeño', color: 'text-emerald-200' };
+    if (n >= 80) return { label: 'Buen progreso', color: 'text-blue-200' };
+    if (n >= 70) return { label: 'Progreso aceptable', color: 'text-yellow-200' };
+    if (n >= 60) return { label: 'Requiere mejoras', color: 'text-orange-200' };
     return { label: 'Necesita mejorar', color: 'text-red-200' };
   },
 

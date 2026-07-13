@@ -323,7 +323,7 @@ export async function viewTaskSubmissions(taskId) {
 
     const { data: submissions, error: subError } = await supabase
       .from('task_evidences')
-      .select('id, task_id, student_id, status, grade_letter, stars, file_url, comment, created_at')
+      .select('id, task_id, student_id, status, grade_letter, stars, numeric_score, file_url, comment, created_at')
       .eq('task_id', taskId);
     if (subError) throw subError;
 
@@ -391,22 +391,10 @@ export async function viewTaskSubmissions(taskId) {
                     </div>
                     <div class="flex items-center gap-2">
                       <div class="flex-1">
-                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Nota</label>
-                        <select id="grade-${s.id}" ${disabledSelect}
-                          class="w-full px-4 py-3 rounded-xl text-sm font-bold bg-slate-50 border-2 border-slate-100 focus:border-green-500 outline-none transition-all ${!periodOpen ? 'opacity-50 cursor-not-allowed' : ''}">
-                          <option value="">-</option>
-                          <option value="A" ${sub?.grade_letter === 'A' ? 'selected' : ''}>A (Excelente)</option>
-                          <option value="B" ${sub?.grade_letter === 'B' ? 'selected' : ''}>B (Bien)</option>
-                          <option value="C" ${sub?.grade_letter === 'C' ? 'selected' : ''}>C (Suficiente)</option>
-                          <option value="D" ${sub?.grade_letter === 'D' ? 'selected' : ''}>D (Mejorable)</option>
-                        </select>
-                      </div>
-                      <div class="flex-1">
-                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Estrellas</label>
-                        <select id="stars-${s.id}" ${disabledSelect}
-                          class="w-full px-4 py-3 rounded-xl text-sm font-bold bg-slate-50 border-2 border-slate-100 focus:border-green-500 outline-none transition-all ${!periodOpen ? 'opacity-50 cursor-not-allowed' : ''}">
-                          ${[0,1,2,3,4,5].map(n => `<option value="${n}" ${sub?.stars === n ? 'selected' : ''}>${'⭐'.repeat(n) || 'Ninguna'}</option>`).join('')}
-                        </select>
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Calificación (0-100)</label>
+                        <input type="number" id="numeric-${s.id}" min="0" max="100" ${disabledSelect}
+                          class="w-full px-4 py-3 rounded-xl text-sm font-bold bg-slate-50 border-2 border-slate-100 focus:border-green-500 outline-none transition-all ${!periodOpen ? 'opacity-50 cursor-not-allowed' : ''}"
+                          value="${sub?.numeric_score !== null && sub?.numeric_score !== undefined ? sub.numeric_score : ''}" placeholder="0-100">
                       </div>
                       <button onclick="${periodOpen ? `App.submitGrade('${taskId}', '${s.id}')` : 'void(0)'}" ${btnDisabled}>
                         <i data-lucide="save" class="w-4 h-4"></i>
@@ -436,21 +424,22 @@ export async function submitGrade(taskId, studentId) {
     return;
   }
 
-  const grade = document.getElementById(`grade-${studentId}`)?.value;
-  const stars = document.getElementById(`stars-${studentId}`)?.value;
+  const numericScore = parseFloat(document.getElementById(`numeric-${studentId}`)?.value);
   const feedback = document.getElementById(`feedback-${studentId}`)?.value;
 
-  if (!grade) return safeToast('Selecciona una nota para calificar.', 'warning');
+  if (isNaN(numericScore) || numericScore < 0 || numericScore > 100) {
+    return safeToast('Ingresa una calificación válida entre 0 y 100.', 'warning');
+  }
 
   try {
-    await MaestraApi.gradeTask(taskId, studentId, grade, parseInt(stars), feedback);
+    await MaestraApi.gradeTask(taskId, studentId, null, null, feedback, numericScore);
     
     const student = (AppState.get('students') || []).find(s => s.id === studentId);
     if (student?.parent_id) {
       sendPush({
         user_id: student.parent_id,
         title: 'Tarea Calificada 🏆',
-        message: `La maestra ha calificado una tarea de ${student.name}. Nota: ${grade}`,
+        message: `La maestra ha calificado una tarea de ${student.name}. Nota: ${numericScore}/100`,
         link: 'panel_padres.html#grades'
       }).catch(() => {});
     }

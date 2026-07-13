@@ -5,10 +5,21 @@ import { AppState } from './state.js';
 import { auditLog } from '../shared/db-utils.js';
 
 function scoreFromEvidence(g) {
-  // Return null for ungraded — don't count as 0 in averages
-  if (g.stars != null && g.stars > 0) return Number(g.stars);
+  // Return null for ungraded ï¿½ don't count as 0 in averages
+  // New system: use numeric score (0-100) if available, otherwise map legacy systems
+  if (g.numeric_score != null) {
+    const score = Number(g.numeric_score);
+    if (!isNaN(score) && score >= 0 && score <= 100) {
+      return score;
+    }
+  }
+  // Fallback for legacy data
+  if (g.stars != null && g.stars > 0) {
+    // Map 1-5 stars to 0-100 scale (20, 40, 60, 80, 100)
+    return Number(g.stars) * 20;
+  }
   if (g.grade_letter) {
-    const map = { A: 5, B: 4, C: 3, D: 2, E: 1 };
+    const map = { A: 95, B: 85, C: 75, D: 60, E: 40 };
     return map[g.grade_letter] ?? null;
   }
   return null; // null = not graded, excluded from average
@@ -16,10 +27,12 @@ function scoreFromEvidence(g) {
 
 function getLevel(score) {
   if (score === null || score === undefined) return { label: 'Sin calificar', cls: 'bg-slate-100 text-slate-500' };
-  if (score >= 4.5) return { label: 'Excelente',     cls: 'bg-emerald-100 text-emerald-700' };
-  if (score >= 3.5) return { label: 'Bueno',          cls: 'bg-blue-100 text-blue-700' };
-  if (score >= 2.5) return { label: 'En proceso',     cls: 'bg-amber-100 text-amber-700' };
-  return              { label: 'Requiere apoyo', cls: 'bg-rose-100 text-rose-700' };
+  if (score >= 95) return { label: 'Excelente', cls: 'bg-emerald-100 text-emerald-700' };
+  if (score >= 90) return { label: 'Muy Bueno', cls: 'bg-green-100 text-green-700' };
+  if (score >= 80) return { label: 'Bueno', cls: 'bg-blue-100 text-blue-700' };
+  if (score >= 70) return { label: 'Aceptable', cls: 'bg-amber-100 text-amber-700' };
+  if (score >= 60) return { label: 'Requiere Mejoras', cls: 'bg-orange-100 text-orange-700' };
+  return { label: 'Bajo DesempeÃ±o', cls: 'bg-rose-100 text-rose-700' };
 }
 
 export const GradesModule = {
@@ -51,7 +64,7 @@ export const GradesModule = {
       classFilter._bound = true;
       classFilter.addEventListener('change', () => this.applyFilters());
       
-      // Poblar opciones de aulas en el filtro de calificaciones si están disponibles
+      // Poblar opciones de aulas en el filtro de calificaciones si estï¿½n disponibles
       const { data: rooms } = await DirectorApi.getClassrooms();
       if (rooms) {
         classFilter.innerHTML = '<option value="all">Todas las aulas</option>' +
@@ -81,14 +94,14 @@ export const GradesModule = {
         sel.value = active.id;
         this._currentPeriodId = String(active.id);
       } else if (this._periods.length > 0) {
-        // Si no hay ninguno activo/abierto, seleccionar el más reciente por defecto
+        // Si no hay ninguno activo/abierto, seleccionar el mï¿½s reciente por defecto
         sel.value = this._periods[0].id;
         this._currentPeriodId = String(this._periods[0].id);
       }
       
       const btnClose = document.getElementById('btnClosePeriod');
       if (btnClose) btnClose.style.display = active && active.status === 'open' ? 'flex' : 'none';
-    } catch (_) { /* silencioso — periods table may not exist */ }
+    } catch (_) { /* silencioso ï¿½ periods table may not exist */ }
   },
 
   async loadGrades() {
@@ -114,9 +127,9 @@ export const GradesModule = {
       // 1. Obtener todos los estudiantes activos
       const studentsResult = await DirectorApi.getStudents();
       const students = studentsResult?.data || [];
-      // Don't throw on student error — show empty list instead
+      // Don't throw on student error ï¿½ show empty list instead
 
-      // 2. Obtener evidencias calificadas — simple select without join
+      // 2. Obtener evidencias calificadas ï¿½ simple select without join
       let query = supabase
         .from('task_evidences')
         .select('id, stars, grade_letter, status, comment, file_url, created_at, student_id, task_id')
@@ -192,7 +205,7 @@ export const GradesModule = {
         const scores = s.evidences.map(e => e.score).filter(sc => sc !== null && sc > 0);
         const avg = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : null;
         
-        // La última tarea calificada es la primera del array (ya ordenado DESC por created_at)
+        // La ï¿½ltima tarea calificada es la primera del array (ya ordenado DESC por created_at)
         const lastTask = s.evidences[0];
 
         return {
@@ -235,7 +248,7 @@ export const GradesModule = {
       return;
     }
 
-    // Ordenar por última actividad (created_at de la última tarea)
+    // Ordenar por ï¿½ltima actividad (created_at de la ï¿½ltima tarea)
     filtered.sort((a, b) => new Date(b.lastTask?.created_at) - new Date(a.lastTask?.created_at));
 
     tableBody.innerHTML = filtered.map(s => {
@@ -261,7 +274,7 @@ export const GradesModule = {
           <td class="px-6 py-4 text-center">
             <div class="flex flex-col items-center gap-1">
               <span class="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700 font-black text-sm border border-slate-200">
-                ${s.avg != null ? s.avg.toFixed(1) : 'N/A'}
+                ${s.avg != null ? Math.round(s.avg) : 'N/A'}
               </span>
               <div class="w-16 bg-slate-100 rounded-full h-1 overflow-hidden">
                 <div class="${barColor} h-full rounded-full" style="width:${rateBar}%"></div>
@@ -280,10 +293,10 @@ export const GradesModule = {
               </span>
               <div class="min-w-0">
                 <div class="text-xs font-bold text-slate-700 truncate max-w-[160px]">${Helpers.escapeHTML(s.lastTask?.tasks?.title || s.lastTask?.title || 'Sin tareas')}</div>
-                <div class="text-[9px] text-slate-400 font-bold uppercase">${s.lastTask ? new Date(s.lastTask.created_at).toLocaleDateString() : '—'}</div>
+                <div class="text-[9px] text-slate-400 font-bold uppercase">${s.lastTask ? new Date(s.lastTask.created_at).toLocaleDateString() : 'ï¿½'}</div>
               </div>
               <button onclick="event.stopPropagation();App.grades.openStudentHistory('${s.sid}','${Helpers.escapeHTML(s.name).replace(/'/g,"\\'")}');"
-                class="ml-auto p-1.5 bg-[#E8F2FF] text-[#0B63C7] rounded-lg hover:bg-blue-100 transition-colors shrink-0" title="Ver historial académico">
+                class="ml-auto p-1.5 bg-[#E8F2FF] text-[#0B63C7] rounded-lg hover:bg-blue-100 transition-colors shrink-0" title="Ver historial acadï¿½mico">
                 <i data-lucide="history" class="w-3.5 h-3.5"></i>
               </button>
             </div>
@@ -318,7 +331,7 @@ export const GradesModule = {
             <div class="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center text-2xl">??</div>
             <div>
               <h3 class="text-2xl font-black">${Helpers.escapeHTML(data.name)}</h3>
-              <p class="text-sm font-bold text-blue-100 uppercase tracking-widest">${data.classroom} • Promedio: ${data.avg != null ? data.avg.toFixed(1) : 'N/A'}</p>
+              <p class="text-sm font-bold text-blue-100 uppercase tracking-widest">${data.classroom} ï¿½ Promedio: ${data.avg != null ? data.avg.toFixed(1) : 'N/A'}</p>
             </div>
           </div>
         </div>
@@ -331,7 +344,7 @@ export const GradesModule = {
                   <th class="px-6 py-4">Tarea / Evidencia</th>
                   <th class="px-6 py-4 text-center">Nota</th>
                   <th class="px-6 py-4 text-center">Fecha</th>
-                  <th class="px-6 py-4 text-right">Acción</th>
+                  <th class="px-6 py-4 text-right">Acciï¿½n</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-50">
@@ -343,7 +356,7 @@ export const GradesModule = {
                     </td>
                     <td class="px-6 py-4 text-center">
                       <span class="px-3 py-1 rounded-lg bg-white border border-slate-200 font-black text-[#0B63C7] shadow-sm">
-                        ${ev.score != null ? ev.score.toFixed(1) : '—'}
+                        ${ev.score != null ? ev.score.toFixed(1) : 'ï¿½'}
                       </span>
                     </td>
                     <td class="px-6 py-4 text-center text-xs font-bold text-slate-500">
@@ -390,7 +403,7 @@ export const GradesModule = {
             </div>
             <div class="text-right">
                <div class="text-[10px] font-black text-slate-400 uppercase mb-1">Nota</div>
-               <div class="text-2xl font-black text-[#0B63C7]">${evidence.score != null ? evidence.score.toFixed(1) : '—'}</div>
+               <div class="text-2xl font-black text-[#0B63C7]">${evidence.score != null ? evidence.score.toFixed(1) : 'ï¿½'}</div>
             </div>
           </div>
           <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100 mb-6">
@@ -416,35 +429,35 @@ export const GradesModule = {
     if (!period || period.status === 'closed') return Helpers.toast('Este periodo ya esta cerrado', 'warning');
     
     if (!confirm(
-      '¿Cerrar el periodo "' + period.name + '"?\n\n' +
-      '? Se calcularán los promedios finales de todos los estudiantes.\n' +
-      '?? Las notas quedarán bloqueadas para edición.\n' +
-      '?? Se generarán las boletas de calificaciones.\n\n' +
-      '¿Deseas continuar?'
+      'ï¿½Cerrar el periodo "' + period.name + '"?\n\n' +
+      '? Se calcularï¿½n los promedios finales de todos los estudiantes.\n' +
+      '?? Las notas quedarï¿½n bloqueadas para ediciï¿½n.\n' +
+      '?? Se generarï¿½n las boletas de calificaciones.\n\n' +
+      'ï¿½Deseas continuar?'
     )) return;
 
     const btn = document.getElementById('btnClosePeriod');
     if (btn) { btn.disabled = true; btn.textContent = 'Cerrando...'; }
 
     try {
-      // Usar RPC seguro que calcula promedios y cierra atómicamente
+      // Usar RPC seguro que calcula promedios y cierra atï¿½micamente
       const { data, error } = await supabase.rpc('close_period', { p_period_id: parseInt(periodId) });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
       const cards = data?.cards_generated || 0;
-      Helpers.toast(`Periodo cerrado ? — ${cards} boleta${cards !== 1 ? 's' : ''} generada${cards !== 1 ? 's' : ''}`, 'success');
+      Helpers.toast(`Periodo cerrado ? ï¿½ ${cards} boleta${cards !== 1 ? 's' : ''} generada${cards !== 1 ? 's' : ''}`, 'success');
       auditLog('period.closed', { period_id: periodId, period_name: period.name });
       await this._loadPeriods();
       await this.loadGrades();
     } catch (e) {
-      // Fallback: cerrar sin RPC si no existe aún
+      // Fallback: cerrar sin RPC si no existe aï¿½n
       try {
         const { error } = await supabase.from('periods')
           .update({ status: 'closed', is_active: false })
           .eq('id', periodId);
         if (error) throw error;
-        Helpers.toast('Periodo cerrado (sin cálculo de promedios — ejecuta fix_period_close.sql)', 'warning');
+        Helpers.toast('Periodo cerrado (sin cï¿½lculo de promedios ï¿½ ejecuta fix_period_close.sql)', 'warning');
         await this._loadPeriods();
         await this.loadGrades();
       } catch (e2) {
@@ -497,7 +510,7 @@ export const GradesModule = {
     if (!name || !start || !end) return Helpers.toast('Completa todos los campos', 'warning');
 
     try {
-      // Si el nuevo periodo es activo, desactivamos los demás
+      // Si el nuevo periodo es activo, desactivamos los demï¿½s
       if (isActive) {
         await supabase.from('periods').update({ is_active: false }).eq('is_active', true);
       }
@@ -527,7 +540,7 @@ export const GradesModule = {
     const periodName = document.getElementById('gradesFilterPeriod')?.options[document.getElementById('gradesFilterPeriod')?.selectedIndex]?.text || 'Reporte';
 
     // 1. Preguntar formato (Simple Confirm para elegir)
-    const choice = confirm('¿Deseas exportar en formato PDF?\n\n(Aceptar para PDF, Cancelar para CSV)');
+    const choice = confirm('ï¿½Deseas exportar en formato PDF?\n\n(Aceptar para PDF, Cancelar para CSV)');
     
     if (choice) {
       this._exportToPDF(periodName);
@@ -560,7 +573,7 @@ export const GradesModule = {
       // Header
       doc.setFontSize(20);
       doc.setTextColor(11, 99, 199); // Indigo 600
-      doc.text('Colegio Montessori Sonrisas Creativas — Reporte de Calificaciones', 14, 22);
+      doc.text('Colegio Montessori Sonrisas Creativas ï¿½ Reporte de Calificaciones', 14, 22);
       
       doc.setFontSize(12);
       doc.setTextColor(100);
@@ -595,12 +608,12 @@ export const GradesModule = {
       doc.save(`reporte_calificaciones_${new Date().toISOString().split('T')[0]}.pdf`);
       Helpers.toast('PDF generado correctamente', 'success');
     } catch (err) {
-      Helpers.toast('Error al generar PDF. Asegúrate de que las librerías cargaron correctamente.', 'error');
+      Helpers.toast('Error al generar PDF. Asegï¿½rate de que las librerï¿½as cargaron correctamente.', 'error');
     }
   },
 
   /**
-   * ?? Modo Auditoría — Historial completo de un estudiante por períodos
+   * ?? Modo Auditorï¿½a ï¿½ Historial completo de un estudiante por perï¿½odos
    */
   async openStudentHistory(studentId, studentName) {
     try {
@@ -642,8 +655,8 @@ export const GradesModule = {
         <div class="bg-white rounded-3xl shadow-2xl w-full max-w-4xl overflow-hidden">
           <div class="bg-gradient-to-r from-[#0B63C7] to-[#0850A0] p-6 text-white flex items-center justify-between">
             <div>
-              <h3 class="text-xl font-black">Historial Académico</h3>
-              <p class="text-sm text-white/70 font-medium mt-0.5">${Helpers.escapeHTML(studentName)} — Todos los períodos</p>
+              <h3 class="text-xl font-black">Historial Acadï¿½mico</h3>
+              <p class="text-sm text-white/70 font-medium mt-0.5">${Helpers.escapeHTML(studentName)} ï¿½ Todos los perï¿½odos</p>
             </div>
             <button onclick="App.ui.closeModal()" class="w-10 h-10 bg-white/10 hover:bg-white/20 rounded-xl flex items-center justify-center transition-colors">
               <i data-lucide="x" class="w-5 h-5"></i>
@@ -653,7 +666,7 @@ export const GradesModule = {
             <table class="w-full text-sm min-w-[600px]">
               <thead class="bg-slate-50 border-b border-slate-100">
                 <tr>
-                  <th class="px-4 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider">Período</th>
+                  <th class="px-4 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider">Perï¿½odo</th>
                   <th class="px-4 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider">Aula</th>
                   <th class="px-4 py-3 text-center text-[10px] font-black text-slate-400 uppercase tracking-wider">Tareas</th>
                   <th class="px-4 py-3 text-center text-[10px] font-black text-slate-400 uppercase tracking-wider">Formal</th>
@@ -666,7 +679,7 @@ export const GradesModule = {
             </table>
           </div>
           <div class="p-4 bg-slate-50 border-t border-slate-100 text-center">
-            <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Modo Auditoría — Solo visible para Directora y Asistente</p>
+            <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Modo Auditorï¿½a ï¿½ Solo visible para Directora y Asistente</p>
           </div>
         </div>
       `, true);

@@ -172,6 +172,17 @@ export const StudentsModule = {
     }
   },
 
+  async printAllCarnets() {
+    const students = this._allStudents || [];
+    const formattedStudents = students.map(s => ({
+      name: s.name,
+      matricula: s.matricula,
+      classroom: s.classrooms?.name || '',
+      avatarUrl: s.avatar_url || null
+    }));
+    await Helpers.printAllCarnets(formattedStudents);
+  },
+
   async _deleteStudent(id, name) {
     const ok = confirm(`\u00bfEst\u00e1s seguro de eliminar al estudiante "${name}"?\n\nEsta acci\u00f3n no se puede deshacer.`);
     if (!ok) return;
@@ -349,12 +360,12 @@ export const StudentsModule = {
     };
 
     window._genMatricula = () => {
-      const el = document.getElementById('stMatricula');
-      if (el) {
-        el.value = 'KK-' + new Date().getFullYear() + '-' + String(Math.floor(Math.random() * 9000) + 1000);
-        window._renderStudentQR(el.value);
-      }
-    };
+        const el = document.getElementById('stMatricula');
+        if (el) {
+          el.value = 'MSC-' + new Date().getFullYear() + '-' + String(Math.floor(Math.random() * 9000) + 1000);
+          window._renderStudentQR(el.value);
+        }
+      };
 
     // QR generation for student
     window._renderStudentQR = async (matricula) => {

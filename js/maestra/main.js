@@ -1213,6 +1213,13 @@ async function submitNewPost() {
 
     if (error) throw error;
 
+    // Notificar a padres del aula via Edge Function
+    emitEvent('post.created', {
+      classroom_id: classroom.id,
+      teacher_name: AppState.get('profile')?.name || 'Maestra',
+      content_preview: (content || '').substring(0, 80)
+    }).catch(() => {});
+
     safeToast('Publicación creada con éxito', 'success');
     Modal.close('newPostModal');
     WallModule.loadPosts('muroPostsContainer');

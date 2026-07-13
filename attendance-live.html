@@ -331,7 +331,9 @@
 
   <header class="sc-header">
     <div class="sc-logo">
-      <div class="sc-logo-icon">🌱</div>
+      <div class="sc-logo-icon">
+        <img src="img/montes.png" alt="Logo" style="width: 48px; height: 48px; object-fit: contain;">
+      </div>
       <div class="sc-logo-text">
         <div class="sc-title">Sonrisas Creativas</div>
         <div class="sc-subtitle">Ponche Digital · Entrada / Salida</div>
@@ -416,7 +418,28 @@
     updateClock();
     setInterval(updateClock, 1000);
 
-    function startScanner() {
+    // Function to explicitly request camera permission
+    async function requestCameraPermission() {
+      try {
+        const facingMode = isFacingBack ? "environment" : "user";
+        await navigator.mediaDevices.getUserMedia({ 
+          video: { facingMode: facingMode } 
+        });
+        return true;
+      } catch (err) {
+        console.error("Camera permission denied:", err);
+        return false;
+      }
+    }
+
+    async function startScanner() {
+      // Always request camera permission first
+      const permissionGranted = await requestCameraPermission();
+      if (!permissionGranted) {
+        alert("Permiso de cámara denegado. Por favor, permite el acceso a la cámara para usar el escáner.");
+        return;
+      }
+
       const facingMode = isFacingBack ? { facingMode: "environment" } : { facingMode: "user" };
       const config = { fps: 10, qrbox: { width: 250, height: 250 } };
       
@@ -469,7 +492,18 @@
       try {
         data = JSON.parse(qrData);
       } catch(e) {
-        data = { name: qrData, role: 'Usuario', type: 'in' };
+        // Handle possible formats: maybe "matricula|nombre|role|type" or similar
+        const parts = qrData.split('|');
+        if (parts.length >= 2) {
+          data = {
+            matricula: parts[0],
+            name: parts[1],
+            role: parts[2] || 'Estudiante',
+            type: parts[3] || 'in'
+          };
+        } else {
+          data = { name: qrData, role: 'Usuario', type: 'in' };
+        }
       }
 
       if (data.type === 'in') {

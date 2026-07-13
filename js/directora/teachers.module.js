@@ -242,6 +242,7 @@ export const TeachersModule = {
             <select id="tRole" class="${inputClass}">
               <option value="maestra">Maestra</option>
               <option value="asistente">Asistente</option>
+              <option value="encargada">Encargada</option>
             </select>
           </div>
           <div>

@@ -558,6 +558,9 @@
               <input type="text" id="searchStudentInput" placeholder="Buscar por nombre o matrícula..."
                 class="w-full pl-12 pr-4 py-3 bg-white border-2 border-slate-100 rounded-2xl text-sm font-bold text-slate-700 outline-none focus:border-teal-400 focus:ring-4 focus:ring-teal-50 transition-all shadow-sm">
             </div>
+            <button id="btnPrintCarnets" onclick="App.printAllCarnets()" class="px-6 py-3 rounded-2xl text-sm font-black flex items-center gap-2 transition-all hover:opacity-90" style="background:#8B5CF6;color:white" title="Imprimir todos los carnets en PDF">
+              <i data-lucide="id-card" class="w-4 h-4"></i> Carnets PDF
+            </button>
             <button id="btnAddStudent" class="px-6 py-3 bg-teal-600 hover:bg-teal-700 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-teal-100 transition-all active:scale-95 flex items-center gap-2 shrink-0">
               <i data-lucide="user-plus" class="w-4 h-4"></i> Nuevo
             </button>

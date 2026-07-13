@@ -463,6 +463,25 @@ export const PaymentsModule = {
       Helpers.toast('Pago aprobado ✅', 'success');
       this.closeModal();
       this.loadPayments(); this.loadStats();
+
+      // Notificar al padre y generar factura
+      try {
+        const { notifyPaymentApproved } = await import('../shared/supabase.js');
+        const { data: p } = await supabase.from('payments')
+          .select('amount, month_paid, students:student_id(name, p1_email, p2_email, parent_id)')
+          .eq('id', id).single();
+        if (p) {
+          const emails = [p.students?.p1_email, p.students?.p2_email].filter(e => e?.includes('@'));
+          const amtStr = Number(p.amount || 0).toLocaleString('es-DO', { minimumFractionDigits: 2 });
+          await notifyPaymentApproved(id, emails[0] || null, p.students?.name || 'Estudiante', amtStr, p.month_paid || 'Colegiatura');
+        }
+      } catch (_) {}
+
+      // Generar factura
+      try {
+        await supabase.functions.invoke('generate-invoice', { body: { payment_id: id, send_email: true } });
+      } catch (_) {}
+
     } catch (e) { Helpers.toast('Error al aprobar: ' + e.message, 'error'); }
   },
 

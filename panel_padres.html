@@ -267,7 +267,7 @@
         z-index: 50;
         left: 0;
         top: 0;
-        height: 100vh;
+        height: 100dvh;
         width: 280px;
         transform: translateX(-100%);
       }
@@ -278,6 +278,17 @@
         position: fixed;
         inset: 0;
         z-index: 40;
+      }
+      /* Mobile scrolling fix */
+      body.panel-padre-body {
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        height: auto !important;
+        position: relative !important;
+      }
+      #layoutShell {
+        overflow: visible !important;
+        height: auto !important;
       }
     }
     @media (min-width: 768px) {
@@ -596,6 +607,20 @@
               </div>
               <button onclick="App.navigateTo('payments')" class="w-full lg:w-auto shrink-0 bg-white text-[#1A8035] font-black text-sm px-6 py-3 rounded-2xl hover:bg-green-50 transition-all active:scale-95 shadow-md">
                 Pagar Ahora
+              </button>
+            </div>
+          </div>
+
+          <!-- ⭐ Banner de valoración pendiente — naranja sólido -->
+          <div id="pending-rating-banner" class="hidden mb-8 rounded-[1.5rem] overflow-hidden shadow-lg w-full max-w-full box-border">
+            <div style="background:linear-gradient(135deg,#FF7A00 0%,#D96500 100%)" class="p-5 md:p-6 flex flex-col lg:flex-row items-center gap-4">
+              <div class="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-2xl shrink-0 shadow-md">⭐</div>
+              <div class="flex-1 text-center lg:text-left min-w-0 w-full">
+                <p class="font-black text-white text-base md:text-lg leading-tight break-words">Debe evaluar a la maestra de su hijo correspondiente al mes actual.</p>
+                <p class="text-white/90 text-xs md:text-sm font-bold mt-1 break-words">Ayúdanos a mejorar con tu opinión.</p>
+              </div>
+              <button onclick="App.openRatingModal()" class="w-full lg:w-auto shrink-0 bg-white text-[#D96500] font-black text-sm px-6 py-3 rounded-2xl hover:bg-orange-50 transition-all active:scale-95 shadow-md">
+                Evaluar Ahora
               </button>
             </div>
           </div>
@@ -1520,6 +1545,71 @@
         <button type="submit" form="newReportForm" class="flex-1 py-3 bg-[#0B63C7] text-white rounded-xl font-bold hover:bg-[#0850A0] active:scale-95 transition-all shadow-lg shadow-[#0B63C7]/20">
           Enviar Reporte
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Valoración de Maestra -->
+  <div id="rating-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+    <div id="rating-modal-overlay" class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
+    <div class="relative bg-white rounded-[2rem] shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+      <div class="p-6">
+        <div class="flex items-center justify-between mb-6">
+          <div class="flex items-center gap-3">
+            <div class="w-12 h-12 rounded-2xl bg-orange-100 flex items-center justify-center">
+              <i data-lucide="star" class="w-6 h-6 text-orange-600"></i>
+            </div>
+            <div>
+              <h2 class="font-black text-xl text-[#1A2340]">Valorar Maestra</h2>
+              <p class="text-xs font-bold text-[#64748B] uppercase tracking-widest">Tu opinión es importante</p>
+            </div>
+          </div>
+          <button onclick="document.getElementById('rating-modal').classList.add('hidden')" class="p-2 hover:bg-[#F8FAFC] rounded-xl transition-all">
+            <i data-lucide="x" class="w-5 h-5 text-[#64748B]"></i>
+          </button>
+        </div>
+
+        <form id="parent-rating-form" class="space-y-4">
+          <!-- Calificación con estrellas -->
+          <div>
+            <label class="block text-xs font-black text-[#64748B] uppercase tracking-[0.2em] mb-2">Calificación</label>
+            <div id="rating-stars" class="flex gap-2 justify-center">
+              <button type="button" data-rating="1" class="star text-4xl text-gray-300 hover:text-yellow-400 transition-colors">★</button>
+              <button type="button" data-rating="2" class="star text-4xl text-gray-300 hover:text-yellow-400 transition-colors">★</button>
+              <button type="button" data-rating="3" class="star text-4xl text-gray-300 hover:text-yellow-400 transition-colors">★</button>
+              <button type="button" data-rating="4" class="star text-4xl text-gray-300 hover:text-yellow-400 transition-colors">★</button>
+              <button type="button" data-rating="5" class="star text-4xl text-gray-300 hover:text-yellow-400 transition-colors">★</button>
+            </div>
+            <input type="hidden" id="rating-input" value="">
+          </div>
+
+          <!-- Comentario -->
+          <div>
+            <label class="block text-xs font-black text-[#64748B] uppercase tracking-[0.2em] mb-1.5">Comentario</label>
+            <textarea id="rating-comment" rows="3" class="w-full px-4 py-3 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-sm font-bold text-[#1A2340] outline-none focus:ring-2 focus:ring-[#0B63C7] focus:border-[#0B63C7] transition-all" placeholder="¿Qué te pareció el trabajo de la maestra?"></textarea>
+          </div>
+
+          <!-- Recomendaciones -->
+          <div>
+            <label class="block text-xs font-black text-[#64748B] uppercase tracking-[0.2em] mb-1.5">Recomendaciones</label>
+            <textarea id="rating-recommendations" rows="2" class="w-full px-4 py-3 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-sm font-bold text-[#1A2340] outline-none focus:ring-2 focus:ring-[#0B63C7] focus:border-[#0B63C7] transition-all" placeholder="¿Qué podría mejorar?"></textarea>
+          </div>
+
+          <!-- Observaciones adicionales -->
+          <div>
+            <label class="block text-xs font-black text-[#64748B] uppercase tracking-[0.2em] mb-1.5">Observaciones</label>
+            <textarea id="rating-observations" rows="2" class="w-full px-4 py-3 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-sm font-bold text-[#1A2340] outline-none focus:ring-2 focus:ring-[#0B63C7] focus:border-[#0B63C7] transition-all" placeholder="Observaciones adicionales"></textarea>
+          </div>
+
+          <div class="flex gap-3 pt-2">
+            <button type="button" onclick="document.getElementById('rating-modal').classList.add('hidden')" class="flex-1 py-3 bg-[#E2E8F0] text-[#64748B] rounded-xl font-bold hover:bg-[#CBD5E1] transition-all">
+              Cancelar
+            </button>
+            <button type="submit" class="flex-1 py-3 bg-[#FF7A00] text-white rounded-xl font-bold hover:bg-[#D96500] active:scale-95 transition-all shadow-lg shadow-orange-600/20">
+              Enviar Valoración
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   </div>

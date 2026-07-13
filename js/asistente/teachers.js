@@ -93,6 +93,7 @@ export const TeachersModule = {
             <select id="teacherRole" class="${IC} py-2">
               <option value="maestra">Maestra</option>
               <option value="asistente">Asistente</option>
+              <option value="encargada">Encargada</option>
             </select>
           </div>
           <div class="sm:col-span-2">

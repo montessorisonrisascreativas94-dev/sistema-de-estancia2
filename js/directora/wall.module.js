@@ -1,8 +1,8 @@
 /**
- * ?? WALL MODULE - Módulo de Muro/Forum (Sincronizado con WallModule compartido)
+ * ?? WALL MODULE - Mdulo de Muro/Forum (Sincronizado con WallModule compartido)
  */
 
-import { supabase } from '../shared/supabase.js';
+import { supabase, emitEvent } from '../shared/supabase.js';
 import { Helpers } from '../shared/helpers.js';
 import { WallModule as SharedWallModule } from '../shared/wall.js';
 
@@ -10,7 +10,7 @@ export const WallModule = {
   ...SharedWallModule,
 
   /**
-   * Sobrescribir init para manejar lógica específica de Directora si es necesario
+   * Sobrescribir init para manejar lgica especfica de Directora si es necesario
    */
   async init(containerId, options = {}, appState = null) {
     // Forzar color de acento azul para directora
@@ -20,12 +20,12 @@ export const WallModule = {
     // Asignar _appState ANTES de llamar al shared init
     this._appState = appState;
     
-    // Llamar al init del módulo compartido
+    // Llamar al init del mdulo compartido
     await SharedWallModule.init.call(this, containerId, options, appState);
   },
 
   /**
-   * Modal para crear nuevo post (Específico de Directora/Maestra)
+   * Modal para crear nuevo post (Especfico de Directora/Maestra)
    */
   openNewPostModal() {
     const html = `
@@ -33,7 +33,7 @@ export const WallModule = {
         <div class="flex items-center gap-3">
           <div class="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center text-2xl shadow-inner">??</div>
           <div>
-            <h3 class="text-xl font-black">Crear Publicación</h3>
+            <h3 class="text-xl font-black">Crear Publicacin</h3>
             <p class="text-xs text-white/70 font-bold uppercase tracking-widest">Muro Escolar</p>
           </div>
         </div>
@@ -42,7 +42,7 @@ export const WallModule = {
       <div class="p-8 bg-white space-y-6">
         <div>
           <label class="block text-[11px] font-black text-slate-400 uppercase tracking-wider mb-2 ml-1">Contenido del Mensaje</label>
-          <textarea id="postContent" rows="4" class="w-full px-4 py-3 border-2 border-slate-100 rounded-2xl outline-none focus:ring-4 focus:ring-blue-100 focus:border-[#0B63C7] bg-slate-50/50 transition-all text-sm font-medium resize-none" placeholder="¿Qué quieres compartir hoy con los padres?"></textarea>
+          <textarea id="postContent" rows="4" class="w-full px-4 py-3 border-2 border-slate-100 rounded-2xl outline-none focus:ring-4 focus:ring-blue-100 focus:border-[#0B63C7] bg-slate-50/50 transition-all text-sm font-medium resize-none" placeholder="Qu quieres compartir hoy con los padres?"></textarea>
         </div>
 
         <div>
@@ -62,7 +62,7 @@ export const WallModule = {
           </div>
           <div class="flex-1">
             <h4 class="text-sm font-black text-slate-800 mb-1">?? MULTIMEDIA</h4>
-            <p class="text-xs text-slate-500">Sube una imagen o video para acompañar tu publicación. Máximo 10MB.</p>
+            <p class="text-xs text-slate-500">Sube una imagen o video para acompaar tu publicacin. Mximo 10MB.</p>
           </div>
         </div>
       </div>
@@ -109,7 +109,7 @@ export const WallModule = {
     if (!file || !preview) return;
 
     if (file.size > 10 * 1024 * 1024) {
-      Helpers.toast('Archivo muy grande (Máx 10MB)', 'error');
+      Helpers.toast('Archivo muy grande (Mx 10MB)', 'error');
       e.target.value = '';
       return;
     }
@@ -154,7 +154,7 @@ export const WallModule = {
 
         if (uploadError) throw uploadError;
 
-        // Obtener URL pública completa — no solo el path
+        // Obtener URL pblica completa  no solo el path
         const { data: urlData } = supabase.storage.from('posts').getPublicUrl(filePath);
         mediaUrl = urlData.publicUrl;
       }
@@ -169,9 +169,18 @@ export const WallModule = {
 
       if (error) throw error;
 
-      Helpers.toast('Publicación compartida correctamente', 'success');
+      // Notify parents of classroom via Edge Function
+      if (classroomId) {
+        emitEvent('post.created', {
+          classroom_id: classroomId,
+          teacher_name: 'Directora',
+          content_preview: (content || '').substring(0, 80)
+        }).catch(() => {});
+      }
+
+      Helpers.toast('Publicacion compartida correctamente', 'success');
       App.ui.closeModal();
-      // await this.loadPosts(); // Comentado: Realtime se encarga de la actualización
+      // await this.loadPosts(); // Comentado: Realtime se encarga de la actualizacin
     } catch (err) {
       Helpers.toast('Error al publicar', 'error');
     } finally {
