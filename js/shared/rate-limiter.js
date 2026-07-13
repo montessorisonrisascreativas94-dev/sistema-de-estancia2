@@ -1,86 +1,45 @@
 /**
- * 🛡️ Karpus Kids — Rate Limiter del lado del cliente
- * Previene abuso en uploads, mensajes y otras acciones costosas.
- * Usa localStorage para persistir entre recargas.
+ * Rate Limiter — simple in-memory sliding window
+ * Usage:
+ *   import { createLimiter, checkRateLimit } from '../shared/rate-limiter.js';
+ *   const myLimiter = createLimiter(3, 60_000); // 3 per minute
+ *   if (!checkRateLimit(myLimiter, 'action name')) return;
  */
-
-export class RateLimiter {
-  /**
-   * @param {string} key       — identificador único de la acción (ej: 'upload_avatar')
-   * @param {number} maxCalls  — máximo de llamadas permitidas en la ventana
-   * @param {number} windowMs  — ventana de tiempo en ms (ej: 60_000 = 1 minuto)
-   */
-  constructor(key, maxCalls, windowMs) {
-    this._key      = `karpus_rl_${key}`;
-    this._max      = maxCalls;
-    this._window   = windowMs;
-  }
-
-  /** Retorna true si la acción está permitida, false si está bloqueada */
-  check() {
-    const now   = Date.now();
-    const state = this._getState();
-
-    // Limpiar entradas fuera de la ventana
-    const recent = state.filter(ts => now - ts < this._window);
-
-    if (recent.length >= this._max) {
-      return false;
-    }
-
-    recent.push(now);
-    this._setState(recent);
-    return true;
-  }
-
-  /** Tiempo restante en segundos hasta que se libere un slot */
-  remainingSeconds() {
-    const now   = Date.now();
-    const state = this._getState().filter(ts => now - ts < this._window);
-    if (state.length < this._max) return 0;
-    const oldest = Math.min(...state);
-    return Math.ceil((oldest + this._window - now) / 1000);
-  }
-
-  reset() {
-    try { localStorage.removeItem(this._key); } catch (_) {}
-  }
-
-  _getState() {
-    try { return JSON.parse(localStorage.getItem(this._key) || '[]'); } catch (_) { return []; }
-  }
-
-  _setState(arr) {
-    try { localStorage.setItem(this._key, JSON.stringify(arr)); } catch (_) {}
-  }
-}
-
-// ── Instancias predefinidas ───────────────────────────────────────────────────
-
-/** Máx 5 uploads por minuto */
-export const uploadLimiter = new RateLimiter('upload', 5, 60_000);
-
-/** Máx 20 mensajes de chat por minuto */
-export const messageLimiter = new RateLimiter('message', 20, 60_000);
-
-/** Máx 3 envíos de comprobante de pago por hora */
-export const paymentProofLimiter = new RateLimiter('payment_proof', 3, 60 * 60_000);
-
-/** Máx 10 comentarios en el muro por minuto */
-export const commentLimiter = new RateLimiter('comment', 10, 60_000);
 
 /**
- * Helper: verificar rate limit y mostrar toast si está bloqueado
- * @returns {boolean} true = permitido, false = bloqueado
+ * Creates a limiter: max `limit` calls within `windowMs` milliseconds
+ */
+export function createLimiter(limit = 5, windowMs = 60_000) {
+  return { limit, windowMs, timestamps: [] };
+}
+
+/**
+ * Returns true if the action is allowed, false if rate limit exceeded.
+ * Shows a toast warning when blocked.
  */
 export function checkRateLimit(limiter, actionLabel = 'esta acción') {
-  if (limiter.check()) return true;
-  const secs = limiter.remainingSeconds();
-  const msg  = `Demasiados intentos. Espera ${secs}s antes de ${actionLabel}.`;
-  if (window.Helpers?.toast) {
-    window.Helpers.toast(msg, 'warning');
-  } else {
-    console.warn('[RateLimit]', msg);
+  const now = Date.now();
+  // Remove timestamps outside the window
+  limiter.timestamps = limiter.timestamps.filter(t => now - t < limiter.windowMs);
+
+  if (limiter.timestamps.length >= limiter.limit) {
+    const wait = Math.ceil((limiter.windowMs - (now - limiter.timestamps[0])) / 1000);
+    // Show toast if Helpers is available
+    if (window.Helpers?.toast) {
+      window.Helpers.toast(
+        `Demasiados intentos para "${actionLabel}". Espera ${wait}s.`,
+        'warning'
+      );
+    }
+    return false;
   }
-  return false;
+
+  limiter.timestamps.push(now);
+  return true;
 }
+
+// Pre-built limiters for common actions
+export const messageLimiter      = createLimiter(20, 60_000);  // 20 messages / min
+export const paymentProofLimiter = createLimiter(3,  3_600_000); // 3 uploads / hour
+export const commentLimiter      = createLimiter(10, 60_000);  // 10 comments / min
+export const likeLimiter         = createLimiter(30, 60_000);  // 30 likes / min

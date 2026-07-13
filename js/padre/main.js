@@ -909,12 +909,11 @@ function updateHeaderProfile(profile, student, allStudents = []) {
       import('../shared/supabase.js').then(({ supabase }) => {
         supabase.from('classrooms').select('name').eq('id', student.classroom_id).maybeSingle()
           .then(({ data }) => {
-            sidebarClassroom.textContent = data?.name || 'Aula ' + student.classroom_id;
-            if (data?.name) {
-              // Cache the result on the student object
-              if (student) student.classrooms = { ...student.classrooms, name: data.name };
+            sidebarClassroom.textContent = data?.name || 'Sin aula asignada';
+            if (data?.name && student) {
+              student.classrooms = { ...(student.classrooms || {}), name: data.name };
             }
-          }).catch(() => { sidebarClassroom.textContent = 'Aula asignada'; });
+          }).catch(() => { sidebarClassroom.textContent = 'Sin aula asignada'; });
       });
     } else {
       sidebarClassroom.textContent = 'Sin aula asignada';

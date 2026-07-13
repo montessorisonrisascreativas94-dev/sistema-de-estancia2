@@ -22,7 +22,36 @@ export const FeedModule = {
 
     this._classroomId = student.classroom_id;
     await this.loadPosts();
+    this._bindFeedEvents();
     this.initRealtime();
+  },
+
+  /**
+   * Bind click delegation for likes, comments, comment toggles
+   * Called once after loadPosts — uses a single delegated listener on #classFeed
+   */
+  _bindFeedEvents() {
+    const container = document.getElementById('classFeed');
+    if (!container || container._feedBound) return;
+    container._feedBound = true;
+
+    container.addEventListener('click', async (e) => {
+      // ── LIKE ──────────────────────────────────────────────
+      const likeBtn = e.target.closest('[data-action="like"]');
+      if (likeBtn) {
+        const postId = likeBtn.dataset.postId;
+        if (postId) await this.toggleLike(postId);
+        return;
+      }
+
+      // ── TOGGLE COMMENT SECTION ────────────────────────────
+      const commentToggle = e.target.closest('[data-action="comment"]');
+      if (commentToggle) {
+        const postId = commentToggle.dataset.postId;
+        if (postId) this.showComments(postId);
+        return;
+      }
+    });
   },
 
   /**
@@ -208,17 +237,19 @@ export const FeedModule = {
   },
 
   /**
-   * Muestra/oculta sección de comentarios usando WallModule compartido
+   * Muestra/oculta sección de comentarios
    */
   showComments(postId) {
-    // Usar WallModule si está disponible (compartido con directora/maestra)
-    if (window.WallModule?.toggleCommentSection) {
-      window.WallModule.toggleCommentSection(postId);
-      return;
-    }
-    // Fallback: toggle inline
     const section = document.getElementById(`comments-section-${postId}`);
-    if (section) section.classList.toggle('hidden');
+    if (section) {
+      section.classList.toggle('hidden');
+      // Scroll into view when opening
+      if (!section.classList.contains('hidden')) {
+        section.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        const input = document.getElementById(`comment-input-${postId}`);
+        if (input) setTimeout(() => input.focus(), 150);
+      }
+    }
   },
 
   /**
@@ -228,6 +259,12 @@ export const FeedModule = {
     const input = document.getElementById(`comment-input-${postId}`);
     const content = input?.value.trim();
     if (!content) return;
+
+    // Rate limiting
+    try {
+      const { checkRateLimit, commentLimiter } = await import('../shared/rate-limiter.js');
+      if (!checkRateLimit(commentLimiter, 'comentarios')) return;
+    } catch (_) {} // rate-limiter optional
 
     const user    = AppState.get('user');
     const student = AppState.get('currentStudent');

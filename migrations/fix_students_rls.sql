@@ -200,3 +200,18 @@ CREATE POLICY "parent_ratings_staff_read" ON public.parent_ratings
   );
 
 SELECT 'parent_ratings table ready!' AS resultado;
+
+-- ============================================================
+-- FIX: profiles — padres can read staff profiles (needed for chat contacts)
+-- ============================================================
+
+-- Drop restrictive padre-only policy if it exists
+DROP POLICY IF EXISTS "profiles_padre_read"     ON public.profiles;
+DROP POLICY IF EXISTS "profiles_public_read"    ON public.profiles;
+DROP POLICY IF EXISTS "profiles_authenticated"  ON public.profiles;
+
+-- All authenticated users can read profiles (needed for chat contacts, muro, etc.)
+CREATE POLICY "profiles_authenticated_read" ON public.profiles
+  FOR SELECT USING (auth.role() = 'authenticated');
+
+SELECT 'profiles read policy updated — padres can now see staff contacts!' AS resultado;
