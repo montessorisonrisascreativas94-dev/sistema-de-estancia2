@@ -84,7 +84,7 @@ export const FeedModule = {
 
       if (postIds.length > 0) {
         const [likesRes, commentsRes] = await Promise.allSettled([
-          supabase.from('likes').select('post_id, user_id').in('post_id', postIds),
+          supabase.from('likes').select('id, post_id, user_id').in('post_id', postIds),
           supabase.from('comments').select('post_id, id, content, user_name, user_id, created_at').in('post_id', postIds)
         ]);
         if (likesRes.status === 'fulfilled' && likesRes.value.data) {
@@ -201,7 +201,7 @@ export const FeedModule = {
         ${mediaHTML}
 
         <div class="flex items-center gap-4 pt-4 border-t border-slate-50">
-          <button data-action="like" data-post-id="${p.id}" class="flex items-center gap-2 text-xs font-black uppercase tracking-tighter ${isLiked ? 'text-orange-600' : 'text-slate-400'} hover:scale-105 transition-all">
+          <button data-action="like" data-post-id="${p.id}" class="flex items-center gap-2 text-xs font-black uppercase tracking-tighter ${isLiked ? 'text-[#0B63C7]' : 'text-slate-400'} hover:scale-105 transition-all">
             <i data-lucide="heart" class="w-4 h-4 ${isLiked ? 'fill-current' : ''}"></i>
             ${likes.length} Me gusta
           </button>
@@ -229,7 +229,7 @@ export const FeedModule = {
           </div>
           <div class="flex gap-2">
             <input type="text" id="comment-input-${p.id}" class="flex-1 px-3 py-2 text-xs border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-400 outline-none" placeholder="Escribe un comentario..." onkeypress="if(event.key==='Enter') App.feed.sendComment('${p.id}')">
-            <button onclick="App.feed.sendComment('${p.id}')" class="p-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors"><i data-lucide="send" class="w-4 h-4"></i></button>
+            <button onclick="App.feed.sendComment('${p.id}')" class="p-2 bg-[#0B63C7] text-white rounded-xl hover:bg-[#094a91] transition-colors"><i data-lucide="send" class="w-4 h-4"></i></button>
           </div>
         </div>
       </div>
@@ -319,10 +319,11 @@ export const FeedModule = {
       }
 
       // Actualizar contador de comentarios en el botón
-      const countBtn = document.querySelector(`[data-post-id="${postId}"][data-action="comment"] span`);
+      const countBtn = document.querySelector(`[data-action="comment"][data-post-id="${postId}"]`);
       if (countBtn) {
-        const current = parseInt(countBtn.textContent) || 0;
-        countBtn.textContent = `${current + 1} Comentarios`;
+        const comments = AppState.get('feedPosts')?.find(p => String(p.id) === String(postId))?.comments || [];
+        countBtn.innerHTML = `<i data-lucide="message-circle" class="w-4 h-4"></i> ${comments.length + 1} Comentarios`;
+        if (window.lucide) lucide.createIcons();
       }
 
     } catch (err) {
@@ -370,7 +371,7 @@ export const FeedModule = {
           }
 
           if (btnComm && typeof newPost.comments_count === 'number') {
-            const span = btnComm.querySelector('span') || btnComm;
+            const span = btnComm.querySelector('span') || btnLike;
             span.textContent = `${newPost.comments_count} Comentarios`;
           }
         }
@@ -416,48 +417,56 @@ export const FeedModule = {
   },
 
   async toggleLike(postId) {
-    const user = AppState.get('user');
-    const posts = AppState.get('feedPosts');
-    const post = posts.find(p => p.id === postId);
-    const existingLike = post?.likes?.find(l => l.user_id === user.id);
+    const user  = AppState.get('user');
+    const posts = AppState.get('feedPosts') || [];
+    const post  = posts.find(p => String(p.id) === String(postId));
+    const existingLike = post?.likes?.find(l => l.user_id === user?.id);
 
-    // Optimistic UI — actualizar inmediatamente sin recargar
-    const btn = document.querySelector(`[data-action="like"][data-post-id="${postId}"]`);
-    const countSpan = btn?.querySelector('span');
-    const isLiked = !!existingLike;
-    const currentCount = post?.likes?.length || 0;
-    const newCount = isLiked ? currentCount - 1 : currentCount + 1;
+    const btn       = document.querySelector(`[data-action="like"][data-post-id="${postId}"]`);
+    const isLiked   = !!existingLike;
+    const curCount  = post?.likes?.length || 0;
+    const newCount  = isLiked ? curCount - 1 : curCount + 1;
 
+    // Optimistic UI — blue theme, update full button text
     if (btn) {
-      btn.className = btn.className.replace(/text-orange-\d+|text-slate-\d+/g, '');
-      btn.classList.add(isLiked ? 'text-slate-400' : 'text-orange-600');
+      btn.innerHTML = `<i data-lucide="heart" class="w-4 h-4 ${!isLiked ? 'fill-current' : ''}"></i> ${newCount} Me gusta`;
+      btn.className = btn.className
+        .replace(/text-\w+-\d+/g, '')
+        .trim() + (isLiked ? ' text-slate-400' : ' text-[#0B63C7]');
+      if (window.lucide) lucide.createIcons();
     }
-    if (countSpan) countSpan.textContent = `${newCount} Me gusta`;
 
-    // Actualizar estado local sin re-render (actualizamos directamente el array interno)
+    // Update local state
     if (post) {
       const updatedLikes = isLiked
         ? (post.likes || []).filter(l => l.user_id !== user.id)
         : [...(post.likes || []), { user_id: user.id, id: `temp-${Date.now()}` }];
-      // Mutar el array en el estado sin disparar suscriptores (evita re-render del feed)
-      const currentPosts = AppState.get('feedPosts');
-      const idx = currentPosts.findIndex(p => p.id === postId);
-      if (idx !== -1) currentPosts[idx] = { ...currentPosts[idx], likes: updatedLikes };
+      const idx = posts.findIndex(p => String(p.id) === String(postId));
+      if (idx !== -1) posts[idx] = { ...posts[idx], likes: updatedLikes };
     }
 
     try {
       if (existingLike) {
         await supabase.from('likes').delete().eq('id', existingLike.id);
       } else {
-        await supabase.from('likes').insert({ post_id: postId, user_id: user.id });
+        const { data: insertedLike } = await supabase.from('likes').insert({ post_id: postId, user_id: user.id }).select('id').single();
+        // Update the temp id with real id
+        if (post) {
+          const idx = posts.findIndex(p => String(p.id) === String(postId));
+          if (idx !== -1) {
+            const updatedLikes = posts[idx].likes.map(l => l.id?.startsWith('temp-') && insertedLike ? { ...l, id: insertedLike.id } : l);
+            posts[idx] = { ...posts[idx], likes: updatedLikes };
+          }
+        }
       }
-    } catch (_) {
-      // Revertir optimistic si falla
+    } catch (err) {
+      // Revert optimistic on error
+      console.error('Error toggling like:', err);
       if (btn) {
-        btn.classList.remove('text-slate-400', 'text-orange-600');
-        btn.classList.add(isLiked ? 'text-orange-600' : 'text-slate-400');
+        btn.innerHTML = `<i data-lucide="heart" class="w-4 h-4 ${isLiked ? 'fill-current' : ''}"></i> ${curCount} Me gusta`;
+        btn.className = btn.className.replace(/text-\w+-\d+/g,'').trim() + (isLiked ? ' text-[#0B63C7]' : ' text-slate-400');
+        if (window.lucide) lucide.createIcons();
       }
-      if (countSpan) countSpan.textContent = `${currentCount} Me gusta`;
     }
   }
 };

@@ -547,10 +547,20 @@ export const DirectorApi = {
         await supabase.from(TABLES.CLASSROOMS).update({ teacher_id: id }).eq('id', classroom_id);
       }
     }
-    // Only send columns that exist in profiles table â€” exclude email (can't update via profiles)
-    const ALLOWED = ['name', 'phone', 'role', 'bio', 'notes', 'access_code', 'avatar_url', 'onesignal_player_id', 'is_active'];
+    // Only send columns that exist in profiles table
+    const ALLOWED = ['name', 'phone', 'role', 'bio', 'notes', 'access_code', 'avatar_url', 'onesignal_player_id', 'is_active', 'email'];
     const safeData = Object.fromEntries(Object.entries(profileData).filter(([k]) => ALLOWED.includes(k)));
-    const result = await supabase.from(TABLES.PROFILES).update(safeData).eq('id', id);
+    // Check if profile exists
+    const { data: existingProfile } = await supabase.from(TABLES.PROFILES).select('id').eq('id', id).maybeSingle();
+    let result;
+    if (existingProfile) {
+      // Update existing profile, exclude email from update
+      const { email, ...updateData } = safeData;
+      result = await supabase.from(TABLES.PROFILES).update(updateData).eq('id', id);
+    } else {
+      // Insert new profile
+      result = await supabase.from(TABLES.PROFILES).insert({ id, ...safeData });
+    }
     QueryCache.invalidate('dir_teachers');
     QueryCache.invalidate('classrooms_list');
     return result;

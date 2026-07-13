@@ -196,18 +196,18 @@ export const ChatModule = {
 
     // Read receipt: show "Visto" for my sent messages that have been read
     const readReceipt = isMine && m.read_at
-      ? '<span class="text-[8px] text-green-300 font-bold ml-1">✓✓ Visto</span>'
-      : (isMine && m.is_read ? '<span class="text-[8px] text-green-300 font-bold ml-1">✓✓</span>' : '');
+      ? '<span class="text-[8px] text-blue-200 font-bold ml-1">✓✓ Visto</span>'
+      : (isMine && m.is_read ? '<span class="text-[8px] text-blue-200 font-bold ml-1">✓✓</span>' : '');
 
     div.innerHTML =
-      '<div class="w-8 h-8 rounded-full bg-green-100 text-green-700 flex items-center justify-center font-bold overflow-hidden shrink-0 aspect-square">' +
+      '<div class="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold overflow-hidden shrink-0 aspect-square">' +
         avatarHtml +
       '</div>' +
       '<div class="max-w-[80%] px-4 py-2 rounded-2xl text-sm shadow-sm ' +
-        (isMine ? 'bg-green-600 text-white rounded-tr-none' : 'bg-white border border-slate-100 text-slate-700 rounded-tl-none') +
+        (isMine ? 'bg-[#0B63C7] text-white rounded-tr-none' : 'bg-white border border-slate-100 text-slate-700 rounded-tl-none') +
       '">' +
         '<p class="whitespace-pre-wrap">' + escapeHtml(m.content) + '</p>' +
-        '<p class="text-[9px] ' + (isMine ? 'text-green-200' : 'text-slate-400') + ' mt-1 text-right uppercase font-bold flex items-center justify-end gap-1">' +
+        '<p class="text-[9px] ' + (isMine ? 'text-blue-100' : 'text-slate-400') + ' mt-1 text-right uppercase font-bold flex items-center justify-end gap-1">' +
           new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) +
           readReceipt +
         '</p>' +

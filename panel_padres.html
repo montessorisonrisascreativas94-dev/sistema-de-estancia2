@@ -1602,70 +1602,112 @@
     </div>
   </div>
 
-  <!-- Modal de Valoración de Maestra -->
-  <div id="rating-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
-    <div id="rating-modal-overlay" class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
-    <div class="relative bg-white rounded-[2rem] shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-      <div class="p-6">
-        <div class="flex items-center justify-between mb-6">
-          <div class="flex items-center gap-3">
-            <div class="w-12 h-12 rounded-2xl bg-orange-100 flex items-center justify-center">
-              <i data-lucide="star" class="w-6 h-6 text-orange-600"></i>
-            </div>
-            <div>
-              <h2 class="font-black text-xl text-[#1A2340]">Valorar Maestra</h2>
-              <p class="text-xs font-bold text-[#64748B] uppercase tracking-widest">Tu opinión es importante</p>
-            </div>
-          </div>
-          <button onclick="document.getElementById('rating-modal').classList.add('hidden')" class="p-2 hover:bg-[#F8FAFC] rounded-xl transition-all">
-            <i data-lucide="x" class="w-5 h-5 text-[#64748B]"></i>
-          </button>
-        </div>
-
-        <form id="parent-rating-form" class="space-y-4">
-          <!-- Calificación con estrellas -->
+  <!-- Modal de Valoración de Maestra — Diseño Mejorado -->
+  <div id="rating-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4" style="display:none">
+    <div id="rating-modal-overlay" class="absolute inset-0 bg-black/60 backdrop-blur-md" onclick="document.getElementById('rating-modal').style.display='none'"></div>
+    <div class="relative bg-white rounded-[2rem] shadow-2xl w-full max-w-md max-h-[90dvh] overflow-y-auto">
+      <!-- Header azul -->
+      <div style="background:linear-gradient(135deg,#0B63C7,#0850A0)" class="p-6 rounded-t-[2rem] flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center text-2xl">⭐</div>
           <div>
-            <label class="block text-xs font-black text-[#64748B] uppercase tracking-[0.2em] mb-2">Calificación</label>
-            <div id="rating-stars" class="flex gap-2 justify-center">
-              <button type="button" data-rating="1" class="star text-4xl text-gray-300 hover:text-yellow-400 transition-colors">★</button>
-              <button type="button" data-rating="2" class="star text-4xl text-gray-300 hover:text-yellow-400 transition-colors">★</button>
-              <button type="button" data-rating="3" class="star text-4xl text-gray-300 hover:text-yellow-400 transition-colors">★</button>
-              <button type="button" data-rating="4" class="star text-4xl text-gray-300 hover:text-yellow-400 transition-colors">★</button>
-              <button type="button" data-rating="5" class="star text-4xl text-gray-300 hover:text-yellow-400 transition-colors">★</button>
+            <h2 class="font-black text-xl text-white">Valorar Maestra</h2>
+            <p class="text-xs font-bold text-white/70 uppercase tracking-widest">Tu opinión es importante</p>
+          </div>
+        </div>
+        <button onclick="document.getElementById('rating-modal').style.display='none'" class="w-9 h-9 flex items-center justify-center bg-white/20 hover:bg-white/30 rounded-xl transition-all">
+          <i data-lucide="x" class="w-5 h-5 text-white"></i>
+        </button>
+      </div>
+
+      <div class="p-6">
+        <form id="parent-rating-form" class="space-y-5">
+          <!-- ESTRELLAS — grandes, interactivas, en azul -->
+          <div class="text-center">
+            <label class="block text-xs font-black text-[#64748B] uppercase tracking-[0.2em] mb-3">¿Cómo calificas a la maestra?</label>
+            <div id="rating-stars" class="flex gap-3 justify-center mb-2">
+              <button type="button" data-rating="1" class="star transition-all duration-150 hover:scale-125" style="font-size:2.8rem;color:#E2E8F0;line-height:1">★</button>
+              <button type="button" data-rating="2" class="star transition-all duration-150 hover:scale-125" style="font-size:2.8rem;color:#E2E8F0;line-height:1">★</button>
+              <button type="button" data-rating="3" class="star transition-all duration-150 hover:scale-125" style="font-size:2.8rem;color:#E2E8F0;line-height:1">★</button>
+              <button type="button" data-rating="4" class="star transition-all duration-150 hover:scale-125" style="font-size:2.8rem;color:#E2E8F0;line-height:1">★</button>
+              <button type="button" data-rating="5" class="star transition-all duration-150 hover:scale-125" style="font-size:2.8rem;color:#E2E8F0;line-height:1">★</button>
             </div>
+            <p id="rating-label" class="text-sm font-black text-[#64748B] min-h-[20px]">Selecciona una puntuación</p>
             <input type="hidden" id="rating-input" value="">
           </div>
 
           <!-- Comentario -->
           <div>
-            <label class="block text-xs font-black text-[#64748B] uppercase tracking-[0.2em] mb-1.5">Comentario</label>
-            <textarea id="rating-comment" rows="3" class="w-full px-4 py-3 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-sm font-bold text-[#1A2340] outline-none focus:ring-2 focus:ring-[#0B63C7] focus:border-[#0B63C7] transition-all" placeholder="¿Qué te pareció el trabajo de la maestra?"></textarea>
+            <label class="block text-xs font-black text-[#64748B] uppercase tracking-[0.2em] mb-1.5">Comentario *</label>
+            <textarea id="rating-comment" rows="3" required
+              class="w-full px-4 py-3 bg-[#F8FAFC] border-2 border-[#E2E8F0] rounded-2xl text-sm font-medium text-[#1A2340] outline-none focus:ring-2 focus:ring-[#0B63C7] focus:border-[#0B63C7] transition-all resize-none"
+              placeholder="¿Qué te pareció el trabajo de la maestra este mes?"></textarea>
           </div>
 
           <!-- Recomendaciones -->
           <div>
             <label class="block text-xs font-black text-[#64748B] uppercase tracking-[0.2em] mb-1.5">Recomendaciones</label>
-            <textarea id="rating-recommendations" rows="2" class="w-full px-4 py-3 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-sm font-bold text-[#1A2340] outline-none focus:ring-2 focus:ring-[#0B63C7] focus:border-[#0B63C7] transition-all" placeholder="¿Qué podría mejorar?"></textarea>
+            <textarea id="rating-recommendations" rows="2"
+              class="w-full px-4 py-3 bg-[#F8FAFC] border-2 border-[#E2E8F0] rounded-2xl text-sm font-medium text-[#1A2340] outline-none focus:ring-2 focus:ring-[#0B63C7] focus:border-[#0B63C7] transition-all resize-none"
+              placeholder="¿Qué podría mejorar?"></textarea>
           </div>
 
-          <!-- Observaciones adicionales -->
+          <!-- Observaciones -->
           <div>
-            <label class="block text-xs font-black text-[#64748B] uppercase tracking-[0.2em] mb-1.5">Observaciones</label>
-            <textarea id="rating-observations" rows="2" class="w-full px-4 py-3 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-sm font-bold text-[#1A2340] outline-none focus:ring-2 focus:ring-[#0B63C7] focus:border-[#0B63C7] transition-all" placeholder="Observaciones adicionales"></textarea>
+            <label class="block text-xs font-black text-[#64748B] uppercase tracking-[0.2em] mb-1.5">Observaciones adicionales</label>
+            <textarea id="rating-observations" rows="2"
+              class="w-full px-4 py-3 bg-[#F8FAFC] border-2 border-[#E2E8F0] rounded-2xl text-sm font-medium text-[#1A2340] outline-none focus:ring-2 focus:ring-[#0B63C7] focus:border-[#0B63C7] transition-all resize-none"
+              placeholder="Observaciones adicionales"></textarea>
           </div>
 
-          <div class="flex gap-3 pt-2">
-            <button type="button" onclick="document.getElementById('rating-modal').classList.add('hidden')" class="flex-1 py-3 bg-[#E2E8F0] text-[#64748B] rounded-xl font-bold hover:bg-[#CBD5E1] transition-all">
+          <div class="flex gap-3 pt-1">
+            <button type="button" onclick="document.getElementById('rating-modal').style.display='none'"
+              class="flex-1 py-3.5 bg-[#F1F5F9] text-[#64748B] rounded-2xl font-black text-sm hover:bg-[#E2E8F0] transition-all">
               Cancelar
             </button>
-            <button type="submit" class="flex-1 py-3 bg-[#FF7A00] text-white rounded-xl font-bold hover:bg-[#D96500] active:scale-95 transition-all shadow-lg shadow-orange-600/20">
-              Enviar Valoración
+            <button type="submit"
+              class="flex-1 py-3.5 text-white rounded-2xl font-black text-sm transition-all active:scale-95 shadow-lg"
+              style="background:linear-gradient(135deg,#0B63C7,#0850A0);box-shadow:0 6px 20px rgba(11,99,199,0.35)">
+              ⭐ Enviar Valoración
             </button>
           </div>
         </form>
       </div>
     </div>
   </div>
+  <!-- Star rating JS -->
+  <script>
+    (function() {
+      const labels = ['','Malo 😞','Regular 😐','Bueno 😊','Muy Bueno 😁','Excelente 🌟'];
+      const colors = ['','#EF4444','#FF7A00','#FFD43B','#28B54D','#0B63C7'];
+      document.addEventListener('DOMContentLoaded', () => {
+        const stars = document.querySelectorAll('#rating-stars .star');
+        const lbl   = document.getElementById('rating-label');
+        const inp   = document.getElementById('rating-input');
+        stars.forEach(btn => {
+          btn.addEventListener('click', () => {
+            const r = parseInt(btn.dataset.rating);
+            inp.value = r;
+            stars.forEach((s, i) => {
+              s.style.color = i < r ? colors[r] : '#E2E8F0';
+              s.style.transform = i < r ? 'scale(1.15)' : 'scale(1)';
+            });
+            if (lbl) { lbl.textContent = labels[r]; lbl.style.color = colors[r]; }
+          });
+          btn.addEventListener('mouseenter', () => {
+            const r = parseInt(btn.dataset.rating);
+            stars.forEach((s, i) => { s.style.color = i < r ? colors[r] : '#E2E8F0'; });
+          });
+          btn.addEventListener('mouseleave', () => {
+            const cur = parseInt(inp?.value || '0');
+            stars.forEach((s, i) => {
+              s.style.color = i < cur ? colors[cur] : '#E2E8F0';
+            });
+          });
+        });
+      });
+    })();
+  </script>
   
   <!-- Scripts Compartidos -->
   <script src="js/shared/supabase-js.min.js"></script>

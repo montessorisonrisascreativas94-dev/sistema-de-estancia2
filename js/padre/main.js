@@ -331,8 +331,25 @@ async function refreshDashboard() {
   AppState.set('todayAttendance', todayAtt?.status || null);
 
   renderDailySummary(logs);
-  renderLatestPosts(latestPosts); // Nueva función para renderizar posts en home
-  renderGradesChart(academic?.evidences || []); // Renderizar gráfico de calificaciones
+  renderLatestPosts(latestPosts);
+  renderGradesChart(academic?.evidences || []);
+
+  // ── Update quick stats row in the Resumen Diario card ──
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+  // Attendance
+  const attStatus = todayAtt?.status;
+  const attMap = { present:'✅ Presente', presente:'✅ Presente', late:'⏰ Tardanza', absent:'❌ Ausente' };
+  set('attendanceStatus', attMap[attStatus?.toLowerCase()] || (attStatus ? attStatus : '—'));
+  // Tasks
+  const evidences = academic?.evidences || [];
+  const pendingTasks = evidences.filter(e => !e.submitted && !e.status?.includes('submitted')).length;
+  set('tasksStatus', pendingTasks > 0 ? `${pendingTasks} pendiente${pendingTasks !== 1 ? 's' : ''}` : '✅ Al día');
+  // Last grade
+  const lastEv = evidences.length ? evidences[evidences.length - 1] : null;
+  set('lastGradeValue', lastEv ? (lastEv.score ?? lastEv.grade ?? lastEv.value ?? '—') : '—');
+  // Messages badge  
+  const unreadCount = AppState.get('unreadMessages') || 0;
+  set('messagesStatus', unreadCount > 0 ? `${unreadCount} nuevo${unreadCount !== 1 ? 's' : ''}` : 'Sin nuevos');
   
   // Load weekly summary for the dashboard
   DailyReportModule.setStudent(student.id);
