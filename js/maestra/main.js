@@ -1123,7 +1123,7 @@ async function startJitsi() {
     await VideoCallModule.startMeeting(meeting.id);
 
     // 4. Abrir en nueva pestaña (evita lobby membersOnly)
-    const _fullRoom = 'karpuskids-edu-2026_' + meeting.room_name;
+    const _fullRoom = 'ColegioSonrisas-edu-2026_' + meeting.room_name;
     window.open('https://meet.jit.si/' + _fullRoom, '_blank');
 
     safeToast('¡Clase iniciada! Los padres han sido notificados 🎥', 'success');

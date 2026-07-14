@@ -6,7 +6,7 @@
   <meta name="robots" content="noindex,nofollow">
   <meta http-equiv="X-Content-Type-Options" content="nosniff">
   <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://*.supabase.co wss://*.supabase.co; script-src 'self' 'unsafe-inline' https://cdn.onesignal.com https://onesignal.com https://api.onesignal.com https://meet.jit.si https://8x8.vc https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://cdn.onesignal.com https://onesignal.com https://api.onesignal.com https://meet.jit.si https://8x8.vc https://fonts.googleapis.com https://fonts.gstatic.com https://cdn.jsdelivr.net; frame-src https://meet.jit.si https://8x8.vc; worker-src 'self' blob:; object-src 'none'; base-uri 'self';">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://*.supabase.co wss://*.supabase.co; script-src 'self' 'unsafe-inline' https://cdn.onesignal.com https://onesignal.com https://api.onesignal.com https://meet.jit.si https://8x8.vc https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://onesignal.com https://cdn.onesignal.com; font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://cdn.onesignal.com https://onesignal.com https://api.onesignal.com https://meet.jit.si https://8x8.vc https://fonts.googleapis.com https://fonts.gstatic.com https://cdn.jsdelivr.net; frame-src https://meet.jit.si https://8x8.vc; worker-src 'self' blob:; object-src 'none'; base-uri 'self';">
   <style>html{display:none;}</style>
   <!-- X-Frame-Options debe ser configurado por el servidor, no por meta tag -->
   <script>if(self===top){document.documentElement.style.display='block';}else{top.location=self.location;}</script>
@@ -17,16 +17,24 @@
     }
   </script>
   <!-- OneSignal SDK -->
-  <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+  <script>
+  (function(){
+    var h=window.location.hostname;
+    var prod=h==='montessorisonrisascreativas.com'||h==='www.montessorisonrisascreativas.com'||h==='ColegioSonrisas.com'||h==='www.ColegioSonrisas.com';
+    if(!prod)return;
+    var s=document.createElement('script');s.src='https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js';s.defer=true;document.head.appendChild(s);
+  })();
+</script>
   <script>
     window.OneSignalDeferred = window.OneSignalDeferred || [];
     window.OneSignalDeferred.push(async function(OneSignal) {
+      var h = window.location.hostname;
+      var isProd = h === 'montessorisonrisascreativas.com' || h === 'www.montessorisonrisascreativas.com' || h === 'ColegioSonrisas.com' || h === 'www.ColegioSonrisas.com';
+      if (!isProd) return;
       await OneSignal.init({
         appId: "dd57c85f-852f-418e-bc8b-09a119f6c2eb",
         safari_web_id: "web.onesignal.auto.0d8cfe1b-addf-4fe0-8094-42e4bf6360cd",
-        notifyButton: {
-          enable: true
-        }
+        notifyButton: { enable: true }
       });
     });
   </script>
@@ -1336,7 +1344,7 @@
                 <i data-lucide="sheet" class="w-4 h-4"></i> Excel
               </button>
               <button id="btnPrintCarnets" onclick="App.students.printAllCarnets()" class="px-3 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-all hover:opacity-90" style="background:#8B5CF6;color:white" title="Imprimir todos los carnets en PDF">
-                <i data-lucide="id-card" class="w-4 h-4"></i> Carnets PDF
+                <i data-lucide="badge" class="w-4 h-4"></i> Carnets PDF
               </button>
               <button id="btnAddStudent" class="text-white rounded-xl px-4 py-2 shadow-md flex items-center gap-2 transition-all hover:opacity-90" style="background:#0B63C7;">
                 <i data-lucide="user-plus" class="w-4 h-4"></i> Nuevo Estudiante
@@ -2510,7 +2518,7 @@
             </div>
             <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
               <div class="flex items-center gap-2 mb-2">
-                <div class="p-2 rounded-lg bg-red-50"><i data-lucide="clock-alert" class="w-4 h-4 text-red-600"></i></div>
+                <div class="p-2 rounded-lg bg-red-50"><i data-lucide="alarm-clock" class="w-4 h-4 text-red-600"></i></div>
                 <span class="text-[10px] font-black uppercase tracking-wider text-slate-400">Mora Acumulada</span>
               </div>
               <p class="text-xl font-black text-slate-800" id="resMora">RD$0</p>

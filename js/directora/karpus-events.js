@@ -1,5 +1,5 @@
 /**
- * MODULO DE EVENTOS ULTRA-RÁPIDOS KARPUS KIDS
+ * MODULO DE EVENTOS ULTRA-RÁPIDOS Colegio Montessori Sonrisas Creativas
  */
 import { supabase } from '../shared/supabase.js';
 import { Helpers } from '../shared/helpers.js';

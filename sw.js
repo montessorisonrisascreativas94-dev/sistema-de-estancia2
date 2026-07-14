@@ -3,7 +3,7 @@ self.addEventListener('message', (event) => {
 });
 
 /**
- * Karpus Kids — Service Worker PWA
+ * Colegio Montessori Sonrisas Creativas — Service Worker PWA
  * IMPORTANTE: Este SW solo maneja caché PWA.
  * Las notificaciones push las maneja OneSignalSDKWorker.js en el mismo scope.
  * NO definir handlers push/notificationclick aquí para no interferir con OneSignal.

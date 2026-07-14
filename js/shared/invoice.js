@@ -1,5 +1,5 @@
 /**
- * Karpus Kids — Invoice Module v2
+ * Colegio Montessori Sonrisas Creativas — Invoice Module v2
  * Factura electrónica profesional Sonrisas Creativas
  * - downloadSingle(payment)  → PDF via ventana de impresión
  * - exportBatch(payments, opts) → CSV bien estructurado

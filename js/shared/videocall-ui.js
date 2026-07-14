@@ -1,5 +1,5 @@
 /**
- * 🎥 Karpus Kids — VideoCall UI
+ * 🎥 Colegio Montessori Sonrisas Creativas — VideoCall UI
  * Sistema unificado de videollamadas para todos los paneles.
  * Usa meet.jit.si — funciona sin cuenta, sin límite de tiempo en salas privadas.
  */
@@ -9,7 +9,7 @@ import { Helpers } from './helpers.js';
 // meet.jit.si funciona sin tenant y sin límite de tiempo para salas con nombre único
 const JITSI_DOMAIN = 'meet.jit.si';
 // Prefijo largo y único para evitar colisiones con otras organizaciones
-const ROOM_PREFIX = 'karpuskids-edu-2026';
+const ROOM_PREFIX = 'ColegioSonrisas-edu-2026';
 
 export const VideoCallUI = {
   _api: null,

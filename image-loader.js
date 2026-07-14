@@ -1,5 +1,5 @@
 /**
- * 🖼️ Karpus Kids — ImageLoader Pro
+ * 🖼️ Colegio Montessori Sonrisas Creativas — ImageLoader Pro
  * Maneja carga perezosa, optimización de Supabase y placeholders.
  */
 export const ImageLoader = {

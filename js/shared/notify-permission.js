@@ -1,5 +1,5 @@
 /**
- * 🔔 Notification Permission Manager — Karpus Kids
+ * 🔔 Notification Permission Manager — Colegio Montessori Sonrisas Creativas
  * Requests push notification permission.
  * - requestIfNeeded(): shows banner if not yet granted (no dismiss timeout)
  * - requestSilent(): auto-requests without UI (for app startup)

@@ -1,5 +1,5 @@
 /**
- * 🚀 Karpus Kids — VirtualList
+ * 🚀 Colegio Montessori Sonrisas Creativas — VirtualList
  * Renderiza solo los elementos visibles en el viewport.
  * Crítico para listas de 100+ items (pagos, estudiantes, posts).
  *

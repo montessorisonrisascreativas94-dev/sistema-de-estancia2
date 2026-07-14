@@ -17,15 +17,15 @@
   "main": "index.js",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/karpuskids5-maker/karpuskids.git"
+    "url": "git+https://github.com/ColegioSonrisas5-maker/ColegioSonrisas.git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/karpuskids5-maker/karpuskids/issues"
+    "url": "https://github.com/ColegioSonrisas5-maker/ColegioSonrisas/issues"
   },
-  "homepage": "https://github.com/karpuskids5-maker/karpuskids#readme",
+  "homepage": "https://github.com/ColegioSonrisas5-maker/ColegioSonrisas#readme",
   "dependencies": {
     "@supabase/supabase-js": "^2.90.0",
     "better-sqlite3": "^12.5.0",

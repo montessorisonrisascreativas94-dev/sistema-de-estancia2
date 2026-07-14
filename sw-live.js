@@ -1,5 +1,5 @@
 /**
- * Karpus Kids — Service Worker PWA for Attendance Live
+ * Colegio Montessori Sonrisas Creativas — Service Worker PWA for Attendance Live
  */
 
 const CACHE_NAME = 'karpus-live-v1';

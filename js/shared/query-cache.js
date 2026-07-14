@@ -1,5 +1,5 @@
 /**
- * ⚡ Karpus Kids — QueryCache v2
+ * ⚡ Colegio Montessori Sonrisas Creativas — QueryCache v2
  * Cache en memoria con TTL, deduplicación de requests en vuelo y
  * estrategia stale-while-revalidate para apertura instantánea del sistema.
  *

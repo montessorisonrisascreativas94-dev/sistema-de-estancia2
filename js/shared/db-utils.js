@@ -1,5 +1,5 @@
 /**
- * 🛡️ Karpus Kids — DB Utils
+ * 🛡️ Colegio Montessori Sonrisas Creativas — DB Utils
  * Utilidades para queries robustas a escala:
  *   - safeQuery: interceptor global de errores con toast automático
  *   - withRetry: reintentos con backoff exponencial

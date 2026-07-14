@@ -1,5 +1,5 @@
 /**
- * ⚡ Karpus Kids — ScrollModule
+ * ⚡ Colegio Montessori Sonrisas Creativas — ScrollModule
  * Sistema reutilizable de scroll inteligente para todos los paneles.
  * - Infinite scroll (tipo Instagram) para listas hacia abajo
  * - Top scroll (tipo WhatsApp) para cargar mensajes anteriores

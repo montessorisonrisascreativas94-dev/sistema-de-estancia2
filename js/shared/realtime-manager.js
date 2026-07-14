@@ -1,5 +1,5 @@
 /**
- * 📡 Karpus Kids — RealtimeManager
+ * 📡 Colegio Montessori Sonrisas Creativas — RealtimeManager
  * Gestión centralizada de canales Supabase Realtime.
  * Evita memory leaks por canales huérfanos y limita a MAX_CHANNELS activos.
  *

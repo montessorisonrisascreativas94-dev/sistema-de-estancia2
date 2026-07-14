@@ -1,5 +1,5 @@
 /**
- * Karpus Kids - Badge System v2
+ * Colegio Montessori Sonrisas Creativas - Badge System v2
  * Indicadores visuales en tiempo real para todos los paneles.
  * Compatible con: panel_padres, panel_directora, panel_asistente, panel-maestra
  */

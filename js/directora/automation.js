@@ -1,6 +1,6 @@
 /**
- * ?? Karpus Kids — Módulo de Automatización Inteligente
- * Detecta anomalías, genera alertas y automatiza análisis para la directora.
+ * ?? Colegio Montessori Sonrisas Creativas ï¿½ Mï¿½dulo de Automatizaciï¿½n Inteligente
+ * Detecta anomalï¿½as, genera alertas y automatiza anï¿½lisis para la directora.
  */
 
 import { supabase } from '../shared/supabase.js';
@@ -8,7 +8,7 @@ import { Helpers } from '../shared/helpers.js';
 
 export const AutomationModule = {
 
-  // -- 1. DETECCIÓN DE RIESGO DE RETIRO -------------------------------------
+  // -- 1. DETECCIï¿½N DE RIESGO DE RETIRO -------------------------------------
   // Estudiantes con 3+ ausencias consecutivas sin aviso de ausencia
   async getAtRiskStudents() {
     try {
@@ -36,10 +36,10 @@ export const AutomationModule = {
       // Detectar 3+ ausencias consecutivas
       const atRisk = [];
       for (const [sid, info] of Object.entries(byStudent)) {
-        const sorted = info.dates.sort((a, b) => b.localeCompare(a)); // más reciente primero
+        const sorted = info.dates.sort((a, b) => b.localeCompare(a)); // mï¿½s reciente primero
         if (sorted.length < 3) continue;
 
-        // Verificar si las últimas 3 son consecutivas
+        // Verificar si las ï¿½ltimas 3 son consecutivas
         let consecutive = 1;
         for (let i = 1; i < sorted.length; i++) {
           const prev = new Date(sorted[i - 1]);
@@ -82,8 +82,8 @@ export const AutomationModule = {
     } catch (_) { return []; }
   },
 
-  // -- 2. SEMÁFORO ACADÉMICO -------------------------------------------------
-  // Detecta si más del 30% del aula está por debajo del promedio mínimo
+  // -- 2. SEMï¿½FORO ACADï¿½MICO -------------------------------------------------
+  // Detecta si mï¿½s del 30% del aula estï¿½ por debajo del promedio mï¿½nimo
   async getAcademicAlerts() {
     try {
       const { data: evidences } = await supabase
@@ -152,7 +152,7 @@ export const AutomationModule = {
   },
 
   // -- 3. ALERTA DE BAJA ASISTENCIA ------------------------------------------
-  // Compara asistencia de hoy vs promedio de los últimos 7 días
+  // Compara asistencia de hoy vs promedio de los ï¿½ltimos 7 dï¿½as
   async getAttendanceAlert() {
     try {
       const today = new Date().toISOString().split('T')[0];
@@ -172,7 +172,7 @@ export const AutomationModule = {
       const todayTotal = todayData.length;
       const todayRate = todayTotal > 0 ? (todayPresent / todayTotal) * 100 : 0;
 
-      // Calcular promedio semanal por día
+      // Calcular promedio semanal por dï¿½a
       const byDay = {};
       for (const a of weekData) {
         if (!byDay[a.date]) byDay[a.date] = { present: 0, total: 0 };
@@ -202,7 +202,7 @@ export const AutomationModule = {
     } catch (_) { return null; }
   },
 
-  // -- 4. PRÓXIMOS VENCIMIENTOS ----------------------------------------------
+  // -- 4. PRï¿½XIMOS VENCIMIENTOS ----------------------------------------------
   async getUpcomingDues(days = 5) {
     try {
       const today = new Date().toISOString().split('T')[0];
@@ -345,7 +345,7 @@ export const AutomationModule = {
                 <div class="flex items-center justify-between bg-white rounded-xl px-3 py-2 border border-rose-100">
                   <div>
                     <p class="text-xs font-bold text-slate-800">${Helpers.escapeHTML(s.name)}</p>
-                    <p class="text-[10px] text-slate-400">${s.classroom} · ${s.consecutiveAbsences} ausencias seguidas</p>
+                    <p class="text-[10px] text-slate-400">${s.classroom} ï¿½ ${s.consecutiveAbsences} ausencias seguidas</p>
                   </div>
                   <span class="text-[9px] font-black text-rose-600 bg-rose-100 px-2 py-0.5 rounded-full uppercase">Llamar</span>
                 </div>`).join('')}
@@ -353,29 +353,29 @@ export const AutomationModule = {
           </div>`);
       }
 
-      // Widget: Semáforo académico
+      // Widget: Semï¿½foro acadï¿½mico
       if (academicAlerts.length > 0) {
         widgets.push(`
           <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4">
             <div class="flex items-center gap-2 mb-3">
               <span class="text-lg">??</span>
-              <p class="text-xs font-black text-amber-800 uppercase tracking-wide">Alerta Académica</p>
+              <p class="text-xs font-black text-amber-800 uppercase tracking-wide">Alerta Acadï¿½mica</p>
             </div>
             ${academicAlerts.slice(0, 2).map(a => `
               <div class="bg-white rounded-xl px-3 py-2 border border-amber-100 mb-2">
                 <p class="text-xs font-bold text-slate-800">${Helpers.escapeHTML(a.classroom)}</p>
-                <p class="text-[10px] text-amber-700">${a.belowMinCount} de ${a.totalStudents} estudiantes (${a.percentage}%) por debajo del mínimo · Promedio: ${a.globalAvg}</p>
+                <p class="text-[10px] text-amber-700">${a.belowMinCount} de ${a.totalStudents} estudiantes (${a.percentage}%) por debajo del mï¿½nimo ï¿½ Promedio: ${a.globalAvg}</p>
               </div>`).join('')}
           </div>`);
       }
 
-      // Widget: Próximos vencimientos
+      // Widget: Prï¿½ximos vencimientos
       if (upcomingDues.length > 0) {
         widgets.push(`
           <div class="bg-blue-50 border border-blue-200 rounded-2xl p-4">
             <div class="flex items-center gap-2 mb-3">
               <span class="text-lg">??</span>
-              <p class="text-xs font-black text-blue-800 uppercase tracking-wide">Próximos Vencimientos</p>
+              <p class="text-xs font-black text-blue-800 uppercase tracking-wide">Prï¿½ximos Vencimientos</p>
             </div>
             <div class="space-y-1.5">
               ${upcomingDues.slice(0, 3).map(p => `
@@ -386,7 +386,7 @@ export const AutomationModule = {
                   </div>
                   <div class="text-right">
                     <p class="text-xs font-black text-blue-700">${p.amount.toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                    <p class="text-[9px] font-bold ${p.daysLeft <= 1 ? 'text-rose-600' : 'text-slate-400'}">${p.daysLeft === 0 ? 'Hoy' : p.daysLeft === 1 ? 'Mañana' : `En ${p.daysLeft} días`}</p>
+                    <p class="text-[9px] font-bold ${p.daysLeft <= 1 ? 'text-rose-600' : 'text-slate-400'}">${p.daysLeft === 0 ? 'Hoy' : p.daysLeft === 1 ? 'Maï¿½ana' : `En ${p.daysLeft} dï¿½as`}</p>
                   </div>
                 </div>`).join('')}
             </div>
@@ -411,7 +411,7 @@ export const AutomationModule = {
         container.innerHTML = `
           <div class="flex items-center gap-3 py-3 px-4 bg-emerald-50 border border-emerald-200 rounded-2xl">
             <span class="text-lg">?</span>
-            <p class="text-xs font-bold text-emerald-700">Todo en orden — Sin alertas activas</p>
+            <p class="text-xs font-bold text-emerald-700">Todo en orden ï¿½ Sin alertas activas</p>
           </div>`;
       } else {
         container.innerHTML = `<div class="space-y-3">${widgets.join('')}</div>`;

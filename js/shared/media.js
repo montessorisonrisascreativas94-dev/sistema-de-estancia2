@@ -1,5 +1,5 @@
 /**
- * 🖼️ Karpus Kids — Media Utilities
+ * 🖼️ Colegio Montessori Sonrisas Creativas — Media Utilities
  * Optimización de URLs de imágenes y activación de lazy loading.
  */
 

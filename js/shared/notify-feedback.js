@@ -1,5 +1,5 @@
 /**
- * 🔔 Notification Feedback — Karpus Kids
+ * 🔔 Notification Feedback — Colegio Montessori Sonrisas Creativas
  * Shows a green confirmation card after push/email notifications are sent.
  * Usage: showNotifyFeedback({ sent: 3, type: 'task', label: 'Nueva Tarea' })
  */

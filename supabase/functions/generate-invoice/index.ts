@@ -195,7 +195,7 @@ Deno.serve(async (req) => {
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL')              ?? '';
     const SERVICE_KEY  = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
     const RESEND_KEY   = Deno.env.get('RESEND_API_KEY')            ?? '';
-    const FROM_EMAIL   = Deno.env.get('FROM_EMAIL')                ?? 'Karpus Kids <avisos@montessorisonrisascreativas.com>';
+    const FROM_EMAIL   = Deno.env.get('FROM_EMAIL')                ?? 'Colegio Montessori Sonrisas Creativas <avisos@montessorisonrisascreativas.com>';
 
     if (!SUPABASE_URL || !SERVICE_KEY) return json({ error: 'Missing env vars' }, 500);
     const supabase = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } });

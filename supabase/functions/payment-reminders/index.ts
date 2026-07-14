@@ -46,7 +46,7 @@ Deno.serve(async (req) => {
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL')              ?? '';
     const SERVICE_KEY  = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
     const RESEND_KEY   = Deno.env.get('RESEND_API_KEY')            ?? '';
-    const FROM_EMAIL   = Deno.env.get('FROM_EMAIL')                ?? 'Karpus Kids <avisos@montessorisonrisascreativas.com>';
+    const FROM_EMAIL   = Deno.env.get('FROM_EMAIL')                ?? 'Colegio Montessori Sonrisas Creativas <avisos@montessorisonrisascreativas.com>';
 
     if (!SUPABASE_URL || !SERVICE_KEY) return json({ error: 'Missing env vars' }, 500);
 
@@ -233,7 +233,7 @@ async function processReminders(
   <div style="background:linear-gradient(135deg,#dc2626,#b91c1c);padding:28px 32px;text-align:center;">
     <div style="font-size:40px;margin-bottom:8px;">🚨</div>
     <h1 style="margin:0;color:#fff;font-size:22px;font-weight:800;">Pago Vencido</h1>
-    <p style="margin:6px 0 0;color:rgba(255,255,255,0.85);font-size:13px;">Karpus Kids — Aviso de Mora</p>
+    <p style="margin:6px 0 0;color:rgba(255,255,255,0.85);font-size:13px;">Colegio Montessori Sonrisas Creativas — Aviso de Mora</p>
   </div>
   <div style="padding:28px 32px;">
     <p style="margin:0 0 20px;color:#374151;font-size:15px;line-height:1.6;">
@@ -266,7 +266,7 @@ async function processReminders(
     </div>
   </div>
   <div style="background:#f9fafb;border-top:1px solid #f0f0f0;padding:16px 32px;text-align:center;">
-    <p style="margin:0;font-size:11px;color:#9ca3af;">Karpus Kids · San Cristóbal, República Dominicana · Correo automático, por favor no respondas.</p>
+    <p style="margin:0;font-size:11px;color:#9ca3af;">Colegio Montessori Sonrisas Creativas · San Cristóbal, República Dominicana · Correo automático, por favor no respondas.</p>
   </div>
 </div>
 </body></html>`;
@@ -288,7 +288,7 @@ async function processReminders(
   <div style="background:linear-gradient(135deg,#2563eb,#1d4ed8);padding:28px 32px;text-align:center;">
     <div style="font-size:40px;margin-bottom:8px;">📅</div>
     <h1 style="margin:0;color:#fff;font-size:22px;font-weight:800;">Recordatorio de Pago</h1>
-    <p style="margin:6px 0 0;color:rgba(255,255,255,0.85);font-size:13px;">Karpus Kids — Aviso de Mensualidad</p>
+    <p style="margin:6px 0 0;color:rgba(255,255,255,0.85);font-size:13px;">Colegio Montessori Sonrisas Creativas — Aviso de Mensualidad</p>
   </div>
   <div style="padding:28px 32px;">
     <p style="margin:0 0 20px;color:#374151;font-size:15px;line-height:1.6;">
@@ -320,7 +320,7 @@ async function processReminders(
     </div>
   </div>
   <div style="background:#f9fafb;border-top:1px solid #f0f0f0;padding:16px 32px;text-align:center;">
-    <p style="margin:0;font-size:11px;color:#9ca3af;">Karpus Kids · San Cristóbal, República Dominicana · Correo automático, por favor no respondas.</p>
+    <p style="margin:0;font-size:11px;color:#9ca3af;">Colegio Montessori Sonrisas Creativas · San Cristóbal, República Dominicana · Correo automático, por favor no respondas.</p>
   </div>
 </div>
 </body></html>`;

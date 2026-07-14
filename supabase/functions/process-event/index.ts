@@ -21,7 +21,7 @@ Deno.serve(async (req) => {
     const SERVICE_KEY   = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
     const ANON_KEY      = Deno.env.get('SUPABASE_ANON_KEY')         ?? '';
     const RESEND_KEY    = Deno.env.get('RESEND_API_KEY')            ?? '';
-    const FROM_EMAIL    = Deno.env.get('FROM_EMAIL')                ?? 'Karpus Kids <avisos@montessorisonrisascreativas.com>';
+    const FROM_EMAIL    = Deno.env.get('FROM_EMAIL')                ?? 'Colegio Montessori Sonrisas Creativas <avisos@montessorisonrisascreativas.com>';
 
     if (!SUPABASE_URL || !SERVICE_KEY) return json({ error: 'Missing env vars' }, 500);
 
@@ -56,8 +56,8 @@ Deno.serve(async (req) => {
     };
 
     const LOGO_URL = 'https://montessorisonrisascreativas.com/img/mundo.jpg';
-    const emailHeader = '<div style="background:linear-gradient(135deg,#22c55e,#16a34a);padding:24px;text-align:center;border-radius:12px 12px 0 0"><img src="' + LOGO_URL + '" alt="Karpus Kids" style="width:64px;height:64px;border-radius:50%;border:3px solid rgba(255,255,255,0.4);object-fit:cover;margin:0 auto 10px;display:block"><h1 style="margin:0;color:white;font-family:sans-serif;font-size:20px;font-weight:800">Karpus Kids</h1><p style="margin:4px 0 0;color:rgba(255,255,255,0.8);font-family:sans-serif;font-size:12px;text-transform:uppercase;letter-spacing:1px">Centro Educativo</p></div>';
-    const emailFooter = '<div style="padding:16px;text-align:center;background:#f9fafb;border-radius:0 0 12px 12px;border-top:1px solid #e5e7eb"><p style="margin:0;font-size:11px;color:#9ca3af;font-family:sans-serif">Karpus Kids - Correo automatico, por favor no respondas.</p></div>';
+    const emailHeader = '<div style="background:linear-gradient(135deg,#22c55e,#16a34a);padding:24px;text-align:center;border-radius:12px 12px 0 0"><img src="' + LOGO_URL + '" alt="Colegio Montessori Sonrisas Creativas" style="width:64px;height:64px;border-radius:50%;border:3px solid rgba(255,255,255,0.4);object-fit:cover;margin:0 auto 10px;display:block"><h1 style="margin:0;color:white;font-family:sans-serif;font-size:20px;font-weight:800">Colegio Montessori Sonrisas Creativas</h1><p style="margin:4px 0 0;color:rgba(255,255,255,0.8);font-family:sans-serif;font-size:12px;text-transform:uppercase;letter-spacing:1px">Centro Educativo</p></div>';
+    const emailFooter = '<div style="padding:16px;text-align:center;background:#f9fafb;border-radius:0 0 12px 12px;border-top:1px solid #e5e7eb"><p style="margin:0;font-size:11px;color:#9ca3af;font-family:sans-serif">Colegio Montessori Sonrisas Creativas - Correo automatico, por favor no respondas.</p></div>';
     const emailWrap = (content: string) => '<div style="font-family:sans-serif;max-width:600px;margin:32px auto;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);border:1px solid #e5e7eb">' + emailHeader + '<div style="padding:24px;background:#ffffff">' + content + '</div>' + emailFooter + '</div>';
 
     let result: Record<string, unknown> = {};
@@ -126,7 +126,7 @@ Deno.serve(async (req) => {
               emails.push(resend.emails.send({
                 from: FROM_EMAIL,
                 to:   r.email,
-                subject: 'Nueva publicacion en el muro de Karpus Kids',
+                subject: 'Nueva publicacion en el muro de Colegio Montessori Sonrisas Creativas',
                 html: emailWrap('<h2 style="color:#f97316;margin:0 0 12px">Nueva Publicacion</h2><p style="color:#374151">Hola <b>' + r.name + '</b>,</p><p style="color:#374151"><b>' + (teacher_name || 'La maestra') + '</b> publico algo nuevo en el muro del aula.</p><a href="https://montessorisonrisascreativas.com/panel_padres.html" style="display:inline-block;padding:12px 24px;background:#f97316;color:white;text-decoration:none;border-radius:8px;font-weight:bold;margin-top:8px">Ver Publicacion</a>')
               }));
             }
@@ -211,7 +211,7 @@ Deno.serve(async (req) => {
             from: FROM_EMAIL,
             to:   parent_email,
             subject: (isEntry ? 'Entrada' : 'Salida') + ': ' + student_name,
-            html: emailWrap('<h2 style="color:' + color + ';margin:0 0 12px">' + (isEntry ? 'Entrada Registrada' : 'Salida Registrada') + '</h2><p style="color:#374151"><b>' + student_name + '</b> registro su ' + action + ' a las <b>' + time + '</b>.</p><p style="color:#6b7280;font-size:13px">Gracias por confiar en Karpus Kids para el cuidado de tu hijo.</p><a href="https://montessorisonrisascreativas.com/panel_padres.html" style="display:inline-block;padding:12px 24px;background:' + color + ';color:white;text-decoration:none;border-radius:8px;font-weight:bold;margin-top:8px">Ver mi Panel</a>')
+            html: emailWrap('<h2 style="color:' + color + ';margin:0 0 12px">' + (isEntry ? 'Entrada Registrada' : 'Salida Registrada') + '</h2><p style="color:#374151"><b>' + student_name + '</b> registro su ' + action + ' a las <b>' + time + '</b>.</p><p style="color:#6b7280;font-size:13px">Gracias por confiar en Colegio Montessori Sonrisas Creativas para el cuidado de tu hijo.</p><a href="https://montessorisonrisascreativas.com/panel_padres.html" style="display:inline-block;padding:12px 24px;background:' + color + ';color:white;text-decoration:none;border-radius:8px;font-weight:bold;margin-top:8px">Ver mi Panel</a>')
           });
         }
         
@@ -219,7 +219,7 @@ Deno.serve(async (req) => {
           await sendPushToUser(
             parent_id, 
             (isEntry ? 'Llegada' : 'Salida') + ' de ' + student_name, 
-            'Su hijo ha ' + (isEntry ? 'llegado a' : 'salido de') + ' Karpus Kids a las ' + time, 
+            'Su hijo ha ' + (isEntry ? 'llegado a' : 'salido de') + ' Colegio Montessori Sonrisas Creativas a las ' + time, 
             'attendance', 
             'panel_padres.html'
           );

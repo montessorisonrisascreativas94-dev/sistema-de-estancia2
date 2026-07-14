@@ -1,5 +1,5 @@
 /**
- * 🖼️ Karpus Kids — ImageLoader v2
+ * 🖼️ Colegio Montessori Sonrisas Creativas — ImageLoader v2
  * Lazy loading con skeleton shimmer, blur-up effect y compresión antes de subir.
  * v2: compresión WebP, cache de URLs, uploadToStorage helper.
  */

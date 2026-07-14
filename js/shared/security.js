@@ -1,5 +1,5 @@
 /**
- * 🛡️ Karpus Kids — Security Module
+ * 🛡️ Colegio Montessori Sonrisas Creativas — Security Module
  * Protección contra XSS, CSRF, clickjacking e inyección.
  * Importar en todos los paneles: import { Security } from '../shared/security.js';
  */
@@ -109,7 +109,7 @@ export const Security = {
         const heightDiff = window.outerHeight - window.innerHeight > threshold;
         if ((widthDiff || heightDiff) && !devtoolsOpen) {
           devtoolsOpen = true;
-          console.warn('%c⚠️ Karpus Kids — Zona Restringida', 'color:red;font-size:20px;font-weight:bold');
+          console.warn('%c⚠️ Colegio Montessori Sonrisas Creativas — Zona Restringida', 'color:red;font-size:20px;font-weight:bold');
           console.warn('%cSi eres un desarrollador autorizado, ignora este mensaje.', 'color:orange;font-size:14px');
         } else if (!widthDiff && !heightDiff) {
           devtoolsOpen = false;

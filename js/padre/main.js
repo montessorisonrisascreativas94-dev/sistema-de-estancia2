@@ -1175,7 +1175,7 @@ async function checkActiveMeetings() {
       if (!btn._vcInitialized) {
         btn.addEventListener('click', () => {
           navigateTo('videocall');
-          window.open('https://meet.jit.si/karpuskids-edu-2026_' + active.room_name, '_blank');
+          window.open('https://meet.jit.si/ColegioSonrisas-edu-2026_' + active.room_name, '_blank');
         });
         btn._vcInitialized = true;
       }

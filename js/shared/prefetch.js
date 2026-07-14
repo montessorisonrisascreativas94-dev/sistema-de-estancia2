@@ -1,5 +1,5 @@
 /**
- * ⚡ Karpus Kids — Prefetch System
+ * ⚡ Colegio Montessori Sonrisas Creativas — Prefetch System
  *
  * CONCEPTO:
  * Mientras el usuario ve el skeleton de carga de una sección,
