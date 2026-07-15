@@ -87,8 +87,8 @@ export async function renderDashboardV2(data) {
       <p class="text-sm text-slate-400 font-bold">Ciclo activo: <span class="text-emerald-600">${currentCycle}</span> · ${now.toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'})}</p>
     </div>
     <div class="flex gap-2 flex-wrap">
-      <button onclick="App.navigation?.goTo?.('caja')" class="px-4 py-2 text-white text-xs font-black uppercase rounded-xl" style="background:#047857">+ Registrar Cobro</button>
-      <button onclick="App.navigation?.goTo?.('ciclo-escolar')" class="px-4 py-2 text-white text-xs font-black uppercase rounded-xl" style="background:#065f46">Ciclo Escolar</button>
+      <button onclick="App.navigation?.goTo?.('caja')" class="px-4 py-2 text-white text-xs font-black uppercase rounded-xl shadow-md transition-all hover:opacity-90 active:scale-95" style="background:#0B63C7">+ Registrar Cobro</button>
+      <button onclick="App.navigation?.goTo?.('ciclo-escolar')" class="px-4 py-2 text-white text-xs font-black uppercase rounded-xl shadow-md transition-all hover:opacity-90 active:scale-95" style="background:#0850A0">Ciclo Escolar</button>
     </div>
   </div>
 

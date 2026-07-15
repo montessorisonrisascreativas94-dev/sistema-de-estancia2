@@ -137,20 +137,61 @@ export const TeachersModule = {
       } else {
         if (!password || password.length < 6) throw new Error('Contraseña requerida (mínimo 6 caracteres)');
         
-        const tempClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-           auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
-        });
-        
-        const { data: authData, error: authError } = await tempClient.auth.signUp({
+        // Use main supabase client for signUp (avoids multiple GoTrueClient warning)
+        // The tempClient approach causes "Multiple GoTrueClient instances" warnings
+        const { data: authData, error: authError } = await supabase.auth.signUp({
           email: emailVal,
           password: password,
           options: { data: { name: payload.name, role: payload.role, phone: payload.phone } }
         });
         
-        if (authError) throw authError;
-        if (authData.user) {
-           await DirectorApi.updateTeacher(authData.user.id, payload);
-           res = { data: authData.user, error: null };
+        if (authError) {
+          // If user already exists, try to find their profile and update it
+          if (authError.status === 422 || authError.message?.toLowerCase().includes('already registered')) {
+            const { data: existingProf } = await supabase.from('profiles').select('id').eq('email', emailVal).maybeSingle();
+            if (existingProf?.id) {
+              await DirectorApi.updateTeacher(existingProf.id, payload);
+              res = { data: existingProf, error: null };
+            } else {
+              throw authError;
+            }
+          } else {
+            throw authError;
+          }
+        } else if (authData.user) {
+          // Wait briefly for auth trigger, then upsert profile directly
+          await new Promise(r => setTimeout(r, 500));
+          
+          // Build safe profile payload — only columns that exist in profiles table
+          const ALLOWED = ['name', 'phone', 'role', 'bio', 'access_code', 'avatar_url', 'is_active'];
+          const profilePayload = {
+            id:    authData.user.id,
+            email: emailVal,
+            ...Object.fromEntries(Object.entries(payload).filter(([k]) => ALLOWED.includes(k)))
+          };
+
+          // Try upsert first
+          const { error: upsertErr } = await supabase
+            .from('profiles')
+            .upsert(profilePayload, { onConflict: 'id', ignoreDuplicates: false });
+          
+          if (upsertErr) {
+            console.warn('[Teachers] upsert failed, trying insert:', upsertErr.message);
+            // Fallback: plain insert (no .catch — use await with error check)
+            const { error: insertErr } = await supabase.from('profiles').insert(profilePayload);
+            if (insertErr) {
+              // Last resort: just update if profile already got created by trigger
+              const { email: _e, ...updatePayload } = profilePayload;
+              await supabase.from('profiles').update(updatePayload).eq('id', authData.user.id);
+            }
+          }
+          
+          // Assign classroom if needed
+          if (payload.classroom_id) {
+            await supabase.from('classrooms').update({ teacher_id: authData.user.id }).eq('id', payload.classroom_id);
+          }
+          
+          res = { data: authData.user, error: null };
         }
       }
       
@@ -158,9 +199,11 @@ export const TeachersModule = {
       if (error) throw new Error(error?.message || error?.details || JSON.stringify(error));
       
       const roleName = { 'maestra': 'Maestra', 'asistente': 'Asistente', 'encargada': 'Encargada' }[payload.role] || 'Personal';
-      Helpers.toast(id ? `${roleName} actualizado/a` : `${roleName} creada`, 'success');
+      Helpers.toast(id ? `${roleName} actualizado/a correctamente ✅` : `${roleName} creada correctamente ✅`, 'success');
       UI.closeModal();
-      this.init();
+      // Small delay to ensure DB has processed
+      await new Promise(r => setTimeout(r, 600));
+      await this.init();
     } catch (e) {
       Helpers.toast('Error al guardar: ' + (e.message || e), 'error');
     } finally {

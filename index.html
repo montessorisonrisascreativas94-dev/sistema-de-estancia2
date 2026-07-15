@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+﻿﻿<!DOCTYPE html>
 <html lang="es-DO">
 <head>
   <meta charset="UTF-8" />
@@ -866,6 +866,7 @@
     @media(max-width:1024px) { .schedules-grid { grid-template-columns: 1fr; max-width: 600px; margin-left: auto; margin-right: auto; } }
 
     /* PAYMENT PLANS */
+    .payment-plans { background: linear-gradient(160deg, #F0FDF4 0%, #ECFDF5 100%); }
     .payment-plans {
       background: var(--white);
       position: relative;
@@ -954,7 +955,7 @@
     @media(max-width:1024px) { .plans-grid { grid-template-columns: 1fr; max-width: 600px; margin-left: auto; margin-right: auto; } }
 
     /* TARIFFS */
-    .tariffs { background: var(--gray-bg); }
+    .tariffs-bg-ignore { background: var(--gray-bg); }
     .tariff-levels {
       display: flex;
       flex-wrap: wrap;
@@ -1080,7 +1081,7 @@
     }
 
     /* BENEFITS */
-    .benefits { background: var(--white); }
+    .benefits { background: linear-gradient(160deg, #F5F3FF 0%, #EEF2FF 50%, #EFF6FF 100%); }
     .benefits-grid {
       display: grid;
       grid-template-columns: repeat(3,1fr);
@@ -1291,7 +1292,7 @@
     }
 
     /* CONTACT FORM */
-    .contact-form-section { background: linear-gradient(135deg, #FFF0F5 0%, #FFF7E6 100%); }
+    .contact-form-section { background: linear-gradient(160deg, #FFF1F2 0%, #FFF7ED 50%, #FAFAFA 100%); }
     .form-container {
       max-width: 700px;
       margin: 56px auto 0;
@@ -1462,35 +1463,112 @@
       .footer-bottom { flex-direction: column; text-align: center; }
     }
 
+    /* ── PROFESSIONAL DESIGN ENHANCEMENTS ────────────────────────── */
+
+    /* Decorative dot pattern overlay for alternating sections */
+    .why-us, .schedules, .benefits, .timeline, .faq {
+      position: relative;
+    }
+    .why-us::before, .schedules::before, .benefits::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image: radial-gradient(circle, rgba(11,99,199,0.06) 1px, transparent 1px);
+      background-size: 28px 28px;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .why-us .container, .schedules .container, .benefits .container { position: relative; z-index: 1; }
+
+    /* Section heading — colored underline accent */
+    .section-title::after {
+      content: '';
+      display: block;
+      width: 60px;
+      height: 4px;
+      background: linear-gradient(90deg, var(--orange), var(--yellow));
+      border-radius: 4px;
+      margin: 14px auto 0;
+    }
+    .text-left .section-title::after { margin-left: 0; }
+
+    /* Program cards — enhanced gradient tops */
+    .program-top { padding: 28px 20px; display: flex; align-items: center; justify-content: center; }
+    .program-top.pt-1 { background: linear-gradient(160deg, #DBEAFE, #BFDBFE, #93C5FD); }
+    .program-top.pt-2 { background: linear-gradient(160deg, #DCFCE7, #BBF7D0, #86EFAC); }
+    .program-top.pt-3 { background: linear-gradient(160deg, #FFEDD5, #FED7AA, #FDBA74); }
+    .program-top.pt-4 { background: linear-gradient(160deg, #F3E8FF, #E9D5FF, #D8B4FE); }
+
+    /* Why cards — glassmorphism style */
+    .why-card {
+      background: rgba(255,255,255,0.85) !important;
+      backdrop-filter: blur(8px);
+      border: 1.5px solid rgba(11,99,199,0.10) !important;
+      transition: all 0.35s cubic-bezier(.34,1.56,.64,1) !important;
+    }
+    .why-card:hover {
+      background: white !important;
+      border-color: var(--blue) !important;
+      box-shadow: 0 20px 50px rgba(11,99,199,0.15) !important;
+      transform: translateY(-10px) !important;
+    }
+
+    /* School cards — warm border */
+    .school-card { border: 2px solid transparent; transition: all 0.3s ease; }
+    .school-card:hover { border-color: var(--orange) !important; transform: translateY(-6px); box-shadow: 0 16px 40px rgba(255,122,0,0.12) !important; }
+
+    /* Benefits section dot divider */
+    .benefits { background: linear-gradient(160deg, #F5F3FF 0%, #EEF2FF 50%, #EFF6FF 100%) !important; }
+
+    /* FAQ section background */
+    .faq { background: linear-gradient(160deg, #FFFBF0 0%, #FFF7ED 100%) !important; }
+
+    /* Timeline section background */
+    .timeline { background: linear-gradient(160deg, #F0FDF4 0%, #ECFDF5 50%, #F0FDFA 100%) !important; }
+
+    /* Payment plans section */
+    .payment-plans { background: linear-gradient(160deg, #EFF6FF 0%, #DBEAFE 100%) !important; }
+
+    /* Tariffs section */
+    .tariffs { background: linear-gradient(160deg, #FFF7ED 0%, #FFEDD5 100%) !important; }
+
+    /* Final CTA — always strong */
+    .final-cta { background: linear-gradient(135deg, var(--blue) 0%, var(--blue-dark) 100%) !important; }
+
+    /* Section transitions — smooth AOS overrides */
+    [data-aos] { transition-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1) !important; }
+    [data-aos="zoom-in"] { transition-timing-function: cubic-bezier(0.25, 0.46, 0.45, 0.94) !important; }
+    [data-aos="flip-left"] { transition-timing-function: cubic-bezier(0.25, 0.46, 0.45, 0.94) !important; }
+
+    /* Hero stat glass */
+    .hero-stat { background: rgba(255,255,255,0.12) !important; border-radius: 16px; padding: 14px 22px; border: 1px solid rgba(255,255,255,0.22); backdrop-filter: blur(4px); }
+
+    /* Section dividers — colored border-top accent */
+    .section { border-top: 3px solid transparent; }
+    .why-us     { border-top-color: #BFDBFE; }
+    .our-school { border-top-color: #FDE68A; }
+    .programs   { border-top-color: #A7F3D0; }
+    .schedules  { border-top-color: #99F6E4; }
+    .benefits   { border-top-color: #C4B5FD; }
+    .timeline   { border-top-color: #6EE7B7; }
+    .faq        { border-top-color: #FDE68A; }
+    .contact-form-section { border-top-color: #FDA4AF; }
+
+    /* Responsive: ensure emoji icons don't overflow */
+    .program-icon { font-size: 3.5rem; line-height: 1; display: block; text-align: center; }
+    @media(max-width:640px) { .program-icon { font-size: 2.8rem; } }
+
+    /* Why icons — colored gradient circles */
+    .why-icon {
+      width: 64px !important; height: 64px !important;
+      background: linear-gradient(135deg, var(--blue-light), #BFDBFE) !important;
+      border-radius: 20px !important;
+      box-shadow: 0 8px 24px rgba(11,99,199,0.18) !important;
+    }
+    .why-card:hover .why-icon { background: linear-gradient(135deg, var(--blue), var(--blue-dark)) !important; color: white !important; }
+
     /* WAVES */
     .wave-top, .wave-bot { line-height: 0; position: relative; overflow: hidden; }
-
-    /* ── DESIGN IMPROVEMENTS ─────────────────────────────────── */
-    /* Gallery/Benefits section — warm cream */
-    .gallery { background: linear-gradient(135deg, #FFFBF0 0%, #FFF3E0 100%) !important; }
-    .benefits { background: linear-gradient(135deg, #F0FDF4 0%, #EFF6FF 100%) !important; }
-
-    /* Why cards — subtle border accent on hover */
-    .why-card:hover { border-color: var(--blue) !important; }
-
-    /* Program cards — border on hover */
-    .program-card:hover { border-color: var(--orange) !important; transform: translateY(-10px) scale(1.02); box-shadow: 0 24px 60px rgba(255,122,0,0.15) !important; }
-
-    /* Timeline steps — colorful numbered circles */
-    .timeline-number { background: linear-gradient(135deg, var(--blue), var(--blue-dark)) !important; box-shadow: 0 4px 16px rgba(11,99,199,0.3) !important; color: white !important; font-size: 22px !important; font-weight: 900 !important; }
-
-    /* School cards hover */
-    .school-card:hover { transform: translateY(-6px); box-shadow: 0 16px 48px rgba(40,181,77,0.15); border-color: var(--green); }
-
-    /* Hero stat glass effect */
-    .hero-stat { background: rgba(255,255,255,0.12); border-radius: 16px; padding: 12px 20px; backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.2); }
-
-    /* Section titles spacing */
-    .section-title { margin-bottom: 20px; }
-
-    /* Responsive program icons */
-    .program-icon { font-size: 3.5rem; }
-    @media(max-width:640px) { .program-icon { font-size: 2.8rem; } }
   </style>
 </head>
 <body>
@@ -1633,22 +1711,22 @@
         <p class="section-sub">Sabemos que el bienestar de tu hijo es tu prioridad. Por eso creamos un ambiente seguro, amoroso y lleno de aprendizaje.</p>
       </div>
       <div class="why-us-grid">
-        <div class="why-card" data-aos="fade-up" data-aos-delay="0">
+        <div class="why-card" data-aos="fade-right" data-aos-delay="0" data-aos-duration="700">
           <div class="why-icon"><i class="bi bi-shield-check"></i></div>
           <h3>Ambiente 100% seguro</h3>
           <p>Instalaciones diseñadas para la seguridad y supervisiónal.</p>
         </div>
-        <div class="why-card" data-aos="fade-up" data-aos-delay="100">
+        <div class="why-card" data-aos="fade-left" data-aos-delay="100" data-aos-duration="700">
           <div class="why-icon"><i class="bi bi-heart-fill"></i></div>
           <h3>Personal calificado</h3>
           <p>Educadores certificados en Montessori con amor por la enseñanza.</p>
         </div>
-        <div class="why-card" data-aos="fade-up" data-aos-delay="200">
+        <div class="why-card" data-aos="fade-right" data-aos-delay="200" data-aos-duration="700">
           <div class="why-icon"><i class="bi bi-people-fill"></i></div>
           <h3>Comunicacióna</h3>
           <p>Te mantenemos informado del progreso diario de tu hijo.</p>
         </div>
-        <div class="why-card" data-aos="fade-up" data-aos-delay="300">
+        <div class="why-card" data-aos="fade-left" data-aos-delay="300" data-aos-duration="700">
           <div class="why-icon"><i class="bi bi-lightbulb-fill"></i></div>
           <h3>Aprendizaje divertido</h3>
           <p>método Montessori para que tu hijo descubra el mundo con curiosidad.</p>
@@ -1671,7 +1749,7 @@
         <p class="section-sub">Todo lo que necesitas saber sobre nuestra institucion, valores y equipo.</p>
       </div>
       <div class="our-school-grid">
-        <div class="school-card" data-aos="fade-up" data-aos-delay="0">
+        <div class="school-card" data-aos="zoom-in" data-aos-delay="0">
           <div class="school-icon"><i class="bi bi-history"></i></div>
           <h4>Nuestra historia</h4>
           <ul>
@@ -1680,7 +1758,7 @@
             <li><i class="bi bi-check-circle-fill"></i> Crecimiento constante</li>
           </ul>
         </div>
-        <div class="school-card" data-aos="fade-up" data-aos-delay="100">
+        <div class="school-card" data-aos="zoom-in" data-aos-delay="100">
           <div class="school-icon"><i class="bi bi-stars"></i></div>
           <h4>Misin y valores</h4>
           <ul>
@@ -1689,7 +1767,7 @@
             <li><i class="bi bi-check-circle-fill"></i> Desarrollo integral</li>
           </ul>
         </div>
-        <div class="school-card" data-aos="fade-up" data-aos-delay="200">
+        <div class="school-card" data-aos="zoom-in" data-aos-delay="200">
           <div class="school-icon"><i class="bi bi-house-heart-fill"></i></div>
           <h4>Instalaciones</h4>
           <ul>
@@ -1698,7 +1776,7 @@
             <li><i class="bi bi-check-circle-fill"></i> Espacio seguros y acogedores</li>
           </ul>
         </div>
-        <div class="school-card" data-aos="fade-up" data-aos-delay="300">
+        <div class="school-card" data-aos="zoom-in" data-aos-delay="300">
           <div class="school-icon"><i class="bi bi-person-badge-fill"></i></div>
           <h4>Nuestro equipo</h4>
           <ul>
@@ -1707,7 +1785,7 @@
             <li><i class="bi bi-check-circle-fill"></i> Personal administrativo dedicado</li>
           </ul>
         </div>
-        <div class="school-card" data-aos="fade-up" data-aos-delay="400">
+        <div class="school-card" data-aos="zoom-in" data-aos-delay="400">
           <div class="school-icon"><i class="bi bi-lock-fill"></i></div>
           <h4>Seguridad</h4>
           <ul>
@@ -1716,7 +1794,7 @@
             <li><i class="bi bi-check-circle-fill"></i> Personal autorizado nicamente</li>
           </ul>
         </div>
-        <div class="school-card" data-aos="fade-up" data-aos-delay="500">
+        <div class="school-card" data-aos="zoom-in" data-aos-delay="500">
           <div class="school-icon"><i class="bi bi-flower3"></i></div>
           <h4>Ambiente preparado</h4>
           <ul>
@@ -1743,7 +1821,7 @@
         <p class="section-sub">Elige el nivel perfecto para tu hijo según su edad y necesidades.</p>
       </div>
       <div class="programs-grid">
-        <div class="program-card" data-aos="fade-up" data-aos-delay="0">
+        <div class="program-card" data-aos="flip-left" data-aos-delay="0">
           <div class="program-top pt-1"><div class="program-icon">🍼</div></div>
           <div class="program-body">
             <span class="program-age">0 - 2 años</span>
@@ -1756,7 +1834,7 @@
             <a href="#contact-formás información</a>
           </div>
         </div>
-        <div class="program-card" data-aos="fade-up" data-aos-delay="80">
+        <div class="program-card" data-aos="flip-left" data-aos-delay="100">
           <div class="program-top pt-2"><div class="program-icon">🍼</div></div>
           <div class="program-body">
             <span class="program-age">2 - 3 años</span>
@@ -1769,7 +1847,7 @@
             <a href="#contact-formás información</a>
           </div>
         </div>
-        <div class="program-card" data-aos="fade-up" data-aos-delay="160">
+        <div class="program-card" data-aos="flip-left" data-aos-delay="200">
           <div class="program-top pt-3"><div class="program-icon">🍼</div></div>
           <div class="program-body">
             <span class="program-age">3 - 5 años</span>
@@ -1782,7 +1860,7 @@
             <a href="#contact-formás información</a>
           </div>
         </div>
-        <div class="program-card" data-aos="fade-up" data-aos-delay="240">
+        <div class="program-card" data-aos="flip-left" data-aos-delay="300">
           <div class="program-top pt-4"><div class="program-icon">🍼</div></div>
           <div class="program-body">
             <span class="program-age">6 - 12 años</span>
@@ -2225,42 +2303,42 @@
       </div>
       <div class="timeline-container">
         <div class="timeline-line"></div>
-        <div class="timeline-item" data-aos="fade-right" data-aos-delay="0">
+        <div class="timeline-item" data-aos="fade-right" data-aos-delay="0" data-aos-duration="700">
           <div class="timeline-number">1</div>
           <div class="timeline-content">
             <h4>Solicita Información</h4>
             <p>Completa nuestro formulario o contctanos directamente.</p>
           </div>
         </div>
-        <div class="timeline-item" data-aos="fade-left" data-aos-delay="100">
+        <div class="timeline-item" data-aos="fade-left" data-aos-delay="100" data-aos-duration="700">
           <div class="timeline-number">2</div>
           <div class="timeline-content">
             <h4>Agenda una visita</h4>
             <p>Conoce nuestras Instalaciones y a nuestro equipo.</p>
           </div>
         </div>
-        <div class="timeline-item" data-aos="fade-right" data-aos-delay="200">
+        <div class="timeline-item" data-aos="fade-right" data-aos-delay="200" data-aos-duration="700">
           <div class="timeline-number">3</div>
           <div class="timeline-content">
             <h4>Conoce nuestras Instalaciones</h4>
             <p>Un recorrido completo para que te sientas seguro.</p>
           </div>
         </div>
-        <div class="timeline-item" data-aos="fade-left" data-aos-delay="300">
+        <div class="timeline-item" data-aos="fade-left" data-aos-delay="300" data-aos-duration="700">
           <div class="timeline-number">4</div>
           <div class="timeline-content">
             <h4>Entrega de documentos</h4>
             <p>Acta de nacimiento, foto y datos de los padres/tutores.</p>
           </div>
         </div>
-        <div class="timeline-item" data-aos="fade-right" data-aos-delay="400">
+        <div class="timeline-item" data-aos="fade-right" data-aos-delay="400" data-aos-duration="700">
           <div class="timeline-number">5</div>
           <div class="timeline-content">
             <h4>Selecciona tu plan</h4>
             <p>Elige el plan de pago y horario que mejor se adapte.</p>
           </div>
         </div>
-        <div class="timeline-item" data-aos="fade-left" data-aos-delay="500">
+        <div class="timeline-item" data-aos="fade-left" data-aos-delay="500" data-aos-duration="700">
           <div class="timeline-number">6</div>
           <div class="timeline-content">
             <h4>Realiza la inscripción</h4>

@@ -303,11 +303,15 @@ export async function ensureRole(requiredRoles) {
   // 1. Si el perfil no existe, intentar crearlo automáticamente
   let resolvedProfile = profile;
   if (!profile && !profileRes.error) {
+    const autoRole = user.user_metadata?.role || 'padre';
+    // Only create profiles for known staff/parent roles
+    const validRoles = ['directora','maestra','asistente','encargada','padre','admin'];
+    const safeRole = validRoles.includes(autoRole) ? autoRole : 'padre';
     const { data: newProfile } = await supabase.from('profiles').insert({
       id:    user.id,
       email: user.email,
-      name:  user.user_metadata?.name || user.email?.split('@')[0] || 'Usuario',
-      role:  user.user_metadata?.role || 'padre'
+      name:  user.user_metadata?.name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Usuario',
+      role:  safeRole
     }).select('id, role, name, email, avatar_url, phone, bio').single();
     resolvedProfile = newProfile;
   }
@@ -322,9 +326,19 @@ export async function ensureRole(requiredRoles) {
       window.location.href = 'panel_control.html';
       return null;
     }
-    await supabase.auth.signOut();
-    window.location.href = 'login.html?error=role';
-    return null;
+    // Encargada behaves like asistente — redirect to asistente panel
+    if (resolvedProfile.role?.toLowerCase() === 'encargada') {
+      const isAsistePanel = window.location.pathname.includes('panel_asistente');
+      if (!isAsistePanel) {
+        window.location.href = 'panel_asistente.html';
+        return null;
+      }
+      // Allow encargada to use asistente panel
+    } else {
+      await supabase.auth.signOut();
+      window.location.href = 'login.html?error=role';
+      return null;
+    }
   }
 
   // 2. Verificar aceptación de términos (solo si es panel real, no login)

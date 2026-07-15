@@ -106,7 +106,7 @@ window.App = {
 document.addEventListener('DOMContentLoaded', async () => {
   
   // 1. Verificar Rol
-  const auth = await ensureRole(['asistente', 'admin', 'directora']);
+  const auth = await ensureRole(['asistente', 'admin', 'directora', 'encargada']);
   if (!auth) return;
   
   AppState.set('user', auth.user);

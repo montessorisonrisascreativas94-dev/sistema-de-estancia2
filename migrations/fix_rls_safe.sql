@@ -188,3 +188,54 @@ WHERE tablename IN (
 ORDER BY tablename, policyname;
 
 SELECT '✅ All RLS policies applied safely!' AS resultado;
+
+-- ============================================================
+-- FIX: school_years + school_settings RLS
+-- school_years 403 → directora/asistente can manage
+-- school_settings 400 → directora can update id=1
+-- ============================================================
+
+-- school_years
+ALTER TABLE public.school_years ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "school_years_staff_all"  ON public.school_years;
+DROP POLICY IF EXISTS "school_years_read"       ON public.school_years;
+
+CREATE POLICY "school_years_read" ON public.school_years
+  FOR SELECT USING (auth.role() = 'authenticated');
+
+CREATE POLICY "school_years_staff_all" ON public.school_years FOR ALL
+  USING      (COALESCE(get_my_role(),'') IN ('directora','admin'))
+  WITH CHECK (COALESCE(get_my_role(),'') IN ('directora','admin'));
+
+-- school_settings
+ALTER TABLE public.school_settings ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "school_settings_read"      ON public.school_settings;
+DROP POLICY IF EXISTS "school_settings_staff_all" ON public.school_settings;
+
+CREATE POLICY "school_settings_read" ON public.school_settings
+  FOR SELECT USING (auth.role() = 'authenticated');
+
+CREATE POLICY "school_settings_staff_all" ON public.school_settings FOR ALL
+  USING      (COALESCE(get_my_role(),'') IN ('directora','asistente','admin'))
+  WITH CHECK (COALESCE(get_my_role(),'') IN ('directora','asistente','admin'));
+
+-- Seed default school_settings row if not exists
+INSERT INTO public.school_settings (id, school_name, due_day, generation_day)
+VALUES (1, 'Colegio Montessori Sonrisas Creativas', 5, 25)
+ON CONFLICT (id) DO NOTHING;
+
+SELECT 'school_years + school_settings RLS applied!' AS resultado;
+
+-- ============================================================
+-- FIX: profiles_role_check constraint — add 'encargada' role
+-- ============================================================
+
+-- Drop old constraint and recreate with encargada included
+ALTER TABLE public.profiles
+  DROP CONSTRAINT IF EXISTS profiles_role_check;
+
+ALTER TABLE public.profiles
+  ADD CONSTRAINT profiles_role_check
+  CHECK (role IN ('directora', 'maestra', 'asistente', 'encargada', 'padre', 'admin'));
+
+SELECT 'profiles_role_check updated to include encargada!' AS resultado;
