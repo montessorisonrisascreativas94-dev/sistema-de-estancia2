@@ -96,11 +96,11 @@ export const AccountingModule = {
     const estadoLabels = ['Pagados','Pendientes','Vencidos'];
     const estadoData = [75,20,5];
 
-    this.renderChart('chartIngresosMensuales', 'bar', meses, [ingresosMensuales], ['Ingresos'], ['#28B54D']);
-    this.renderChart('chartIngresosGastos', 'bar', meses, [ingresosMensuales, gastosMensuales], ['Ingresos','Gastos'], ['#28B54D','#EF4444']);
-    this.renderChart('chartCobrosConcepto', 'doughnut', conceptos, [montosConcepto], [''], ['#28B54D','#0B63C7','#FF7A00','#FFD43B','#8B5CF6','#EC4899']);
-    this.renderChart('chartMetodosPago', 'doughnut', metodos, [montosMetodo], [''], ['#28B54D','#0B63C7','#FF7A00','#64748B']);
-    this.renderChart('chartMorosidad', 'doughnut', estadoLabels, [estadoData], [''], ['#28B54D','#FFD43B','#EF4444']);
+    this.renderChart('chartIngresosMensuales', 'bar', meses, [ingresosMensuales], ['Ingresos'], ['#0B63C7']);
+    this.renderChart('chartIngresosGastos', 'bar', meses, [ingresosMensuales, gastosMensuales], ['Ingresos','Gastos'], ['#0B63C7','#EF4444']);
+    this.renderChart('chartCobrosConcepto', 'doughnut', conceptos, [montosConcepto], [''], ['#0B63C7','#2563EB','#FF7A00','#FFD43B','#8B5CF6','#EC4899']);
+    this.renderChart('chartMetodosPago', 'doughnut', metodos, [montosMetodo], [''], ['#0B63C7','#2563EB','#FF7A00','#64748B']);
+    this.renderChart('chartMorosidad', 'doughnut', estadoLabels, [estadoData], [''], ['#0B63C7','#FFD43B','#EF4444']);
   },
 
   renderChart(canvasId, type, labels, datasets, datasetLabels, colors) {
@@ -185,7 +185,7 @@ export const AccountingModule = {
     const modalHtml = `
       <div class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[10000] flex items-center justify-center p-4" id="gastoModal">
         <div class="bg-white rounded-3xl overflow-hidden w-full max-w-md shadow-2xl animate-scaleIn">
-          <div class="p-6 border-b border-slate-100" style="background: linear-gradient(135deg,#28B54D,#239943)">
+          <div class="p-6 border-b border-slate-100" style="background: linear-gradient(135deg,#0B63C7,#0850A0)">
             <h3 class="text-lg font-black text-white">Nuevo Gasto</h3>
           </div>
           <div class="p-6 space-y-4">
@@ -214,7 +214,7 @@ export const AccountingModule = {
           </div>
           <div class="p-6 border-t border-slate-100 flex gap-3 justify-end bg-slate-50">
             <button onclick="AccountingModule.closeGastoModal()" class="px-5 py-2.5 text-slate-500 font-black text-xs uppercase border-2 border-slate-200 rounded-xl hover:bg-slate-100 transition-all">Cancelar</button>
-            <button onclick="AccountingModule.saveGasto()" class="px-5 py-2.5 text-white font-black text-xs uppercase rounded-xl transition-all" style="background:#28B54D">Guardar</button>
+            <button onclick="AccountingModule.saveGasto()" class="px-5 py-2.5 text-white font-black text-xs uppercase rounded-xl transition-all" style="background:#0B63C7">Guardar</button>
           </div>
         </div>
       </div>
@@ -269,7 +269,7 @@ export const AccountingModule = {
         <td class="px-4 py-3 text-sm text-slate-700">${n.periodo}</td>
         <td class="px-4 py-3 text-right font-black text-slate-800">${fmt(n.monto)}</td>
         <td class="px-4 py-3 text-center">
-          <span class="px-2 py-1 rounded-full text-xs font-black ${n.estado === 'Pagado' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}">${n.estado}</span>
+          <span class="px-2 py-1 rounded-full text-xs font-black ${n.estado === 'Pagado' ? 'bg-blue-100 text-blue-700' : 'bg-yellow-100 text-yellow-700'}">${n.estado}</span>
         </td>
         <td class="px-4 py-3 text-center">
           <button onclick="AccountingModule.deleteNomina(${idx})" class="text-red-600 hover:text-red-800">
@@ -281,17 +281,31 @@ export const AccountingModule = {
     if (window.lucide) lucide.createIcons();
   },
 
-  openNominaModal() {
+  async openNominaModal() {
+    // Load employees from profiles table (maestras, asistentes, encargadas)
+    const { data: employees } = await supabase
+      .from('profiles')
+      .select('id, name, role')
+      .in('role', ['maestra', 'asistente', 'encargada'])
+      .order('name');
+
+    const employeeOptions = (employees || []).map(e => 
+      `<option value="${e.id}" data-role="${e.role}" data-name="${Helpers.escapeHTML(e.name)}">${Helpers.escapeHTML(e.name)} - ${e.role}</option>`
+    ).join('');
+
     const modalHtml = `
       <div class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[10000] flex items-center justify-center p-4" id="nominaModal">
         <div class="bg-white rounded-3xl overflow-hidden w-full max-w-md shadow-2xl animate-scaleIn">
-          <div class="p-6 border-b border-slate-100" style="background: linear-gradient(135deg,#28B54D,#239943)">
+          <div class="p-6 border-b border-slate-100" style="background: linear-gradient(135deg,#0B63C7,#0850A0)">
             <h3 class="text-lg font-black text-white">Nuevo Pago de Nómina</h3>
           </div>
           <div class="p-6 space-y-4">
             <div>
               <label class="block text-xs font-black text-slate-500 uppercase tracking-wider mb-1.5">Empleado</label>
-              <input type="text" id="nominaEmpleado" placeholder="Nombre completo" class="w-full px-3 py-2.5 border-2 border-slate-100 rounded-xl text-sm font-bold outline-none focus:border-blue-400">
+              <select id="nominaEmpleadoSelect" class="w-full px-3 py-2.5 border-2 border-slate-100 rounded-xl text-sm font-bold outline-none focus:border-blue-400" onchange="AccountingModule._updatePuestoField()">
+                <option value="">Seleccionar empleado</option>
+                ${employeeOptions}
+              </select>
             </div>
             <div>
               <label class="block text-xs font-black text-slate-500 uppercase tracking-wider mb-1.5">Puesto</label>
@@ -315,7 +329,7 @@ export const AccountingModule = {
           </div>
           <div class="p-6 border-t border-slate-100 flex gap-3 justify-end bg-slate-50">
             <button onclick="AccountingModule.closeNominaModal()" class="px-5 py-2.5 text-slate-500 font-black text-xs uppercase border-2 border-slate-200 rounded-xl hover:bg-slate-100 transition-all">Cancelar</button>
-            <button onclick="AccountingModule.saveNomina()" class="px-5 py-2.5 text-white font-black text-xs uppercase rounded-xl transition-all" style="background:#28B54D">Guardar</button>
+            <button onclick="AccountingModule.saveNomina()" class="px-5 py-2.5 text-white font-black text-xs uppercase rounded-xl transition-all" style="background:#0B63C7">Guardar</button>
           </div>
         </div>
       </div>
@@ -326,12 +340,26 @@ export const AccountingModule = {
     if (window.lucide) lucide.createIcons();
   },
 
+  _updatePuestoField() {
+    const select = $el('nominaEmpleadoSelect');
+    const puestoInput = $el('nominaPuesto');
+    if (!select || !puestoInput) return;
+    const selectedOption = select.options[select.selectedIndex];
+    if (selectedOption && selectedOption.value) {
+      puestoInput.value = selectedOption.dataset.role;
+    } else {
+      puestoInput.value = '';
+    }
+  },
+
   closeNominaModal() {
     $el('nominaModal')?.remove();
   },
 
   saveNomina() {
-    const empleado = $el('nominaEmpleado').value;
+    const empleadoSelect = $el('nominaEmpleadoSelect');
+    const selectedOption = empleadoSelect?.options[empleadoSelect.selectedIndex];
+    const empleado = selectedOption?.dataset.name || '';
     const puesto = $el('nominaPuesto').value;
     const periodo = $el('nominaPeriodo').value;
     const monto = parseFloat($el('nominaMonto').value || '0');
@@ -367,7 +395,7 @@ export const AccountingModule = {
     if ($el('cfSalidas')) $el('cfSalidas').textContent = fmt(totalOut);
     if ($el('cfBalance')) $el('cfBalance').textContent = fmt(balance);
 
-    this.renderChart('chartCashflow', 'bar', meses, [ingresosMensuales, gastosMensuales], ['Ingresos','Gastos'], ['#28B54D','#EF4444']);
+    this.renderChart('chartCashflow', 'bar', meses, [ingresosMensuales, gastosMensuales], ['Ingresos','Gastos'], ['#0B63C7','#EF4444']);
   },
 
   async loadFacturacion() {

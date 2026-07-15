@@ -47,14 +47,14 @@ export const SchoolYearModule = {
             <h2 class="text-xl font-black text-slate-800">Ciclo Escolar</h2>
             <p class="text-sm text-slate-500">Configuración del año escolar, calendario y reincripción</p>
           </div>
-          <button onclick="SchoolYearModule.openModal()" class="px-4 py-2 bg-emerald-500 text-white font-bold rounded-lg hover:bg-emerald-600 transition-all">
+          <button onclick="SchoolYearModule.openModal()" class="px-4 py-2 bg-[#0B63C7] text-white font-bold rounded-lg hover:bg-[#0850A0] transition-all">
             <i data-lucide="plus" class="w-4 h-4 inline mr-2"></i> Nuevo Año
           </button>
         </div>
 
         <!-- Current Year Card -->
         ${this.state.currentYear ? `
-          <div class="bg-gradient-to-r from-emerald-500 to-green-600 rounded-2xl p-6 text-white shadow-lg">
+          <div class="bg-gradient-to-r from-[#0B63C7] to-[#0850A0] rounded-2xl p-6 text-white shadow-lg">
             <div class="flex items-center justify-between">
               <div>
                 <div class="text-sm font-bold opacity-80 uppercase">Año Escolar Actual</div>
@@ -102,14 +102,14 @@ export const SchoolYearModule = {
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label class="block text-sm font-bold text-slate-700 mb-2">Mes de Reincripción</label>
-              <select id="reenrollment-month" class="w-full border-2 border-slate-100 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-emerald-500">
+              <select id="reenrollment-month" class="w-full border-2 border-slate-100 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-[#0B63C7]">
                 ${['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'].map((month, index) => `
                   <option value="${index + 1}">${month}</option>
                 `).join('')}
               </select>
             </div>
             <div class="flex items-end">
-              <button onclick="SchoolYearModule.saveReenrollmentSettings()" class="px-6 py-3 bg-emerald-500 text-white font-black rounded-xl hover:bg-emerald-600 transition-all">
+              <button onclick="SchoolYearModule.saveReenrollmentSettings()" class="px-6 py-3 bg-[#0B63C7] text-white font-black rounded-xl hover:bg-[#0850A0] transition-all">
                 Guardar Configuración
               </button>
             </div>
@@ -147,8 +147,8 @@ export const SchoolYearModule = {
         <td class="px-4 py-4 text-sm text-slate-600">${new Date(year.end_date).toLocaleDateString('es-DO')}</td>
         <td class="px-4 py-4">
           <span class="px-3 py-1 text-xs font-bold rounded-full ${
-            year.is_current ? 'bg-emerald-100 text-emerald-700' : 
-            year.status === 'active' ? 'bg-blue-100 text-blue-700' : 
+            year.is_current ? 'bg-[#E8F2FF] text-[#0B63C7]' : 
+            year.status === 'active' ? 'bg-[#E8F2FF] text-[#0B63C7]' : 
             'bg-slate-100 text-slate-700'
           }">
             ${year.is_current ? 'Actual' : year.status}
@@ -211,21 +211,21 @@ export const SchoolYearModule = {
           <div class="p-6 space-y-4">
             <div>
               <label class="block text-sm font-bold text-slate-700 mb-2">Nombre del Año</label>
-              <input id="year-name" type="text" value="${year?.name || ''}" placeholder="Ej: 2024-2025" class="w-full border-2 border-slate-100 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-emerald-500">
+              <input id="year-name" type="text" value="${year?.name || ''}" placeholder="Ej: 2024-2025" class="w-full border-2 border-slate-100 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-[#0B63C7]">
             </div>
             <div class="grid grid-cols-2 gap-4">
               <div>
                 <label class="block text-sm font-bold text-slate-700 mb-2">Fecha de Inicio</label>
-                <input id="year-start" type="date" value="${year?.start_date || ''}" class="w-full border-2 border-slate-100 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-emerald-500">
+                <input id="year-start" type="date" value="${year?.start_date || ''}" class="w-full border-2 border-slate-100 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-[#0B63C7]">
               </div>
               <div>
                 <label class="block text-sm font-bold text-slate-700 mb-2">Fecha de Fin</label>
-                <input id="year-end" type="date" value="${year?.end_date || ''}" class="w-full border-2 border-slate-100 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-emerald-500">
+                <input id="year-end" type="date" value="${year?.end_date || ''}" class="w-full border-2 border-slate-100 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-[#0B63C7]">
               </div>
             </div>
             <div>
               <label class="block text-sm font-bold text-slate-700 mb-2">Estado</label>
-              <select id="year-status" class="w-full border-2 border-slate-100 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-emerald-500">
+              <select id="year-status" class="w-full border-2 border-slate-100 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-[#0B63C7]">
                 <option value="upcoming" ${year?.status === 'upcoming' ? 'selected' : ''}>Próximo</option>
                 <option value="active" ${year?.status === 'active' ? 'selected' : ''}>Activo</option>
                 <option value="closed" ${year?.status === 'closed' ? 'selected' : ''}>Cerrado</option>
@@ -235,7 +235,7 @@ export const SchoolYearModule = {
 
           <div class="p-6 border-t border-slate-100 flex justify-end gap-3">
             <button onclick="SchoolYearModule.closeModal()" class="px-5 py-2 text-slate-600 font-bold border-2 border-slate-200 rounded-xl hover:bg-slate-50 transition-all">Cancelar</button>
-            <button onclick="SchoolYearModule.saveYear()" class="px-5 py-2 bg-emerald-500 text-white font-black rounded-xl hover:bg-emerald-600 transition-all">Guardar</button>
+            <button onclick="SchoolYearModule.saveYear()" class="px-5 py-2 bg-[#0B63C7] text-white font-black rounded-xl hover:bg-[#0850A0] transition-all">Guardar</button>
           </div>
         </div>
       </div>
@@ -284,6 +284,8 @@ export const SchoolYearModule = {
       this.closeModal();
       await this.loadSchoolYears();
       this.render();
+      // Refresh cycle selectors in header/sidebar
+      if (window._loadCycleSelectors) await window._loadCycleSelectors();
     } catch (err) {
       console.error('Error saving school year:', err);
       Helpers.toast('Error al guardar año escolar', 'error');
@@ -308,6 +310,8 @@ export const SchoolYearModule = {
       Helpers.toast('Año escolar establecido como actual', 'success');
       await this.loadSchoolYears();
       this.render();
+      // Refresh cycle selectors in header/sidebar
+      if (window._loadCycleSelectors) await window._loadCycleSelectors();
     } catch (err) {
       console.error('Error setting as current:', err);
       Helpers.toast('Error al establecer como año actual', 'error');

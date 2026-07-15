@@ -172,11 +172,23 @@ export const StudentsModule = {
         .on('postgres_changes', 
           { event: '*', schema: 'public', table: 'students' },
           () => {
-            // Actualizar automáticamente cuando haya cambios en estudiantes
             this.init();
           }
         );
     });
+  },
+
+  async printAllCarnets() {
+    Helpers.toast('Generando carnets...', 'info');
+    const students = AppState.get('students') || [];
+    if (!students.length) { Helpers.toast('Sin estudiantes para imprimir', 'warning'); return; }
+    const list = students.map(s => ({
+      name:      s.name || '',
+      matricula: s.matricula || '',
+      classroom: s.classrooms?.name || s.classroom_name || '',
+      schedule:  s.schedule || ''
+    }));
+    await Helpers.printAllCarnets(list);
   },
 
   render(students) {

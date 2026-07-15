@@ -1,13 +1,12 @@
-﻿﻿﻿<!DOCTYPE html>
-<html lang="es-DO">
+﻿<html lang="es-DO">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   
-  <title>Colegio Montessori Sonrisas Creativas  Santo Domingo | Educaciónicial y Primaria</title>
-  <meta name="description" content="Colegio Montessori Sonrisas Creativas en Santo Domingo, Repblica Dominicana. Educaciónes abiertas todo el año.">
-  <meta name="keywords" content="colegio Montessori Santo Domingo, Educacióna">
+  <title>Colegio Montessori Sonrisas Creativas — Santo Domingo | Educacion Inicial y Primaria</title>
+  <meta name="description" content="Colegio Montessori Sonrisas Creativas en Santo Domingo, Republica Dominicana. Educacion inicial, preescolar y primaria con metodologia Montessori. Admisiones abiertas.">
+  <meta name="keywords" content="colegio Montessori Santo Domingo, educacion inicial RD, preescolar Montessori, primaria Montessori, admisiones, Sonrisas Creativas, colegio infantil, guarderia Santo Domingo">
   <meta name="author" content="Colegio Montessori Sonrisas Creativas">
   <meta name="robots" content="index, follow">
   <meta name="googlebot" content="index, follow">
@@ -17,7 +16,8 @@
   <!-- Open Graph -->
   <meta property="og:type" content="website">
   <meta property="og:title" content="Colegio Montessori Sonrisas Creativas | Santo Domingo">
-  <meta property="og:description" content="Educaciónder.">
+
+  <meta property="og:description" content="Educacion inicial y primaria Montessori en Santo Domingo. Tu hijo merece un espacio seguro y lleno de amor para aprender.">
   <meta property="og:url" content="https://montessorisonrisascreativas.com/">
   <meta property="og:image" content="https://montessorisonrisascreativas.com/logo/android-chrome-512x512.png">
   <meta property="og:image:width" content="512">
@@ -28,7 +28,10 @@
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Colegio Montessori Sonrisas Creativas | Santo Domingo">
-  <meta name="twitter:description" content="Educacióngo. Tu hijo merece lo mejor.">
+
+
+  <meta name="twitter:description" content="Educacion inicial y primaria Montessori en Santo Domingo. Tu hijo merece lo mejor.">
+
   <meta name="twitter:image" content="https://montessorisonrisascreativas.com/logo/android-chrome-512x512.png">
   
   <!-- Favicon -->
@@ -37,21 +40,7 @@
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#28B54D">
   <meta name="msapplication-TileColor" content="#28B54D">
-  <!-- OneSignal -->
-  <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
-  <script>
-    window.OneSignalDeferred = window.OneSignalDeferred || [];
-    window.OneSignalDeferred.push(async function(OneSignal) {
-      await OneSignal.init({
-        appId: "dd57c85f-852f-418e-bc8b-09a119f6c2eb",
-        safari_web_id: "web.onesignal.auto.0d8cfe1b-addf-4fe0-8094-42e4bf6360cd",
-        notifyButton: {
-          enable: true
-        }
-      });
-    });
-  </script>
-  <!-- Preload críticos -->
+  <!-- Preload criticos -->
   <link rel="preload" href="img/monte.jpg" as="image" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -524,7 +513,18 @@
     }
 
     /* WHY CHOOSE US */
-    .why-us { background: linear-gradient(135deg, #EFF6FF 0%, #F0FDF4 100%); }
+    .why-us {
+      background: var(--white);
+      position: relative;
+    }
+    .why-us::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at 80% 20%, rgba(11,99,199,0.04) 0%, transparent 60%),
+                  radial-gradient(ellipse at 20% 80%, rgba(40,181,77,0.04) 0%, transparent 60%);
+      pointer-events: none;
+    }
     .why-us-grid {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
@@ -598,7 +598,19 @@
     @media(max-width:640px) { .why-us-grid { grid-template-columns: 1fr; } }
 
     /* OUR SCHOOL */
-    .our-school { background: linear-gradient(135deg, #FFFBF0 0%, #FFF7E6 100%); }
+    .our-school {
+      background: linear-gradient(180deg, #F8FAFC 0%, #EFF6FF 60%, #F8FAFC 100%);
+      position: relative;
+      overflow: hidden;
+    }
+    .our-school::after {
+      content: '';
+      position: absolute;
+      top: -60px; right: -60px;
+      width: 350px; height: 350px;
+      background: radial-gradient(circle, rgba(11,99,199,0.05) 0%, transparent 70%);
+      pointer-events: none;
+    }
     .our-school-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -655,8 +667,28 @@
     @media(max-width:1024px) { .our-school-grid { grid-template-columns: repeat(2,1fr); } }
     @media(max-width:640px) { .our-school-grid { grid-template-columns: 1fr; } }
 
-    /* PROGRAMás */
-    .programs { background: var(--white); }
+    /* PROGRAMS */
+    .programs {
+      background: linear-gradient(180deg, #FAFCFF 0%, var(--white) 100%);
+      position: relative;
+      overflow: hidden;
+    }
+    .programs::before {
+      content: '';
+      position: absolute;
+      top: -100px; right: -100px;
+      width: 400px; height: 400px;
+      background: radial-gradient(circle, rgba(255,122,0,0.06) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .programs::after {
+      content: '';
+      position: absolute;
+      bottom: -80px; left: -80px;
+      width: 300px; height: 300px;
+      background: radial-gradient(circle, rgba(40,181,77,0.06) 0%, transparent 70%);
+      pointer-events: none;
+    }
     .programs-grid {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
@@ -743,7 +775,18 @@
     @media(max-width:640px) { .programs-grid { grid-template-columns: 1fr; } }
 
     /* SCHEDULES */
-    .schedules { background: linear-gradient(135deg, #EFF6FF 0%, #F0FDFA 100%); }
+    .schedules {
+      background: linear-gradient(135deg, #EFF6FF 0%, #F0FDF4 50%, #F8FAFC 100%);
+      position: relative;
+    }
+    .schedules::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image: radial-gradient(circle, rgba(11,99,199,0.06) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+    }
     .schedules-grid {
       display: grid;
       grid-template-columns: repeat(3,1fr);
@@ -822,7 +865,20 @@
     @media(max-width:1024px) { .schedules-grid { grid-template-columns: 1fr; max-width: 600px; margin-left: auto; margin-right: auto; } }
 
     /* PAYMENT PLANS */
-    .payment-plans { background: var(--white); }
+    .payment-plans {
+      background: var(--white);
+      position: relative;
+      overflow: hidden;
+    }
+    .payment-plans::before {
+      content: '';
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 800px; height: 800px;
+      background: radial-gradient(circle, rgba(11,99,199,0.03) 0%, transparent 65%);
+      pointer-events: none;
+    }
     .plans-grid {
       display: grid;
       grid-template-columns: repeat(3,1fr);
@@ -1076,7 +1132,19 @@
     @media(max-width:1024px) { .benefits-grid { grid-template-columns: 1fr; max-width: 600px; margin-left: auto; margin-right: auto; } }
 
     /* ENROLLMENT TIMELINE */
-    .timeline { background: var(--gray-bg); }
+    .timeline {
+      background: linear-gradient(180deg, #F8FAFC 0%, #EFF6FF 100%);
+      position: relative;
+    }
+    .timeline::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image:
+        radial-gradient(circle, rgba(11,99,199,0.05) 1.5px, transparent 1.5px);
+      background-size: 36px 36px;
+      pointer-events: none;
+    }
     .timeline-container {
       max-width: 900px;
       margin: 56px auto 0;
@@ -1153,7 +1221,19 @@
     }
 
     /* FAQ */
-    .faq { background: var(--white); }
+    .faq {
+      background: linear-gradient(180deg, #F8FAFC 0%, var(--white) 100%);
+      position: relative;
+    }
+    .faq::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(135deg, rgba(255,212,59,0.04) 0%, transparent 40%),
+        linear-gradient(225deg, rgba(40,181,77,0.04) 0%, transparent 40%);
+      pointer-events: none;
+    }
     .faq-container {
       max-width: 900px;
       margin: 56px auto 0;
@@ -1586,8 +1666,8 @@
     <div class="container">
       <div class="text-center" data-aos="fade-up">
         <div class="section-tag"><i class="bi bi-building"></i> Conoce nuestro colegio</div>
-        <h2 class="section-title">Un espacio diseñado para <span class="blue">crecer</span></h2>
-        <p class="section-sub">Todo lo que necesitas saber sobre nuestra institucin, valores y equipo.</p>
+        <h2 class="section-title">Un espacio diseado para <span class="blue">crecer</span></h2>
+        <p class="section-sub">Todo lo que necesitas saber sobre nuestra institucion, valores y equipo.</p>
       </div>
       <div class="our-school-grid">
         <div class="school-card" data-aos="fade-up" data-aos-delay="0">
@@ -1789,7 +1869,7 @@
           <h3>Plan A</h3>
           <p class="plan-type">Pago anual</p>
           <ul class="plan-benefits">
-            <li><i class="bi bi-check-circle-fill"></i> Un solo pago al iniciar el año</li>
+            <li><i class="bi bi-check-circle-fill"></i> Un solo pago al iniciar el años</li>
             <li><i class="bi bi-check-circle-fill"></i> 5% de descuento especial</li>
             <li><i class="bi bi-check-circle-fill"></i> Mayor comodidad para familias</li>
           </ul>
@@ -2115,7 +2195,7 @@
           <div class="benefit-icon">🎓</div>
           <div>
             <h4>Descuento hermano</h4>
-            <p>5% de descuento para el primer hermano inscrito en la institucin.</p>
+            <p>5% de descuento para el primer hermano inscrito en la institucion.</p>
           </div>
         </div>
         <div class="benefit-card" data-aos="fade-up" data-aos-delay="200">
@@ -2258,11 +2338,11 @@
         </div>
         <div class="faq-item" data-aos="fade-up" data-aos-delay="500">
           <button type="button" class="faq-toggle">
-            <h4>Cundo inicia el año escolar?</h4>
+            <h4>Cuando inicia el ano escolar?</h4>
             <i class="bi bi-chevron-down"></i>
           </button>
           <div class="faq-content">
-            <p>Nuestro año escolar inicia en agosto, pero aceptamos inscripciones durante todo el año según disponibilidad.</p>
+            <p>Nuestro ao escolar inicia en agosto, pero aceptamos inscripciones durante todo el año segn disponibilidad.</p>
           </div>
         </div>
         <div class="faq-item" data-aos="fade-up" data-aos-delay="600">
@@ -2346,7 +2426,7 @@
               </a>
               <div style="display:flex;align-items:flex-start;gap:12px;padding:10px 14px;background:#E8F2FF;border-radius:14px;font-weight:700;font-size:.9rem;color:#1A2340">
                 <i class="bi bi-geo-alt-fill" style="font-size:1.3rem;color:#0B63C7;flex-shrink:0;margin-top:2px"></i>
-                <span>Santo Domingo, Repblica Dominicana</span>
+                <span>Santo Domingo, Republica Dominicana</span>
               </div>
               <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:#FFFBE6;border-radius:14px;font-weight:700;font-size:.9rem;color:#1A2340">
                 <i class="bi bi-clock-fill" style="font-size:1.3rem;color:#FFD43B;flex-shrink:0"></i>
@@ -2568,4 +2648,5 @@
   </noscript>
 </body>
 </html>
+
 

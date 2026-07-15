@@ -745,7 +745,7 @@ document.addEventListener('DOMContentLoaded', async () => {
  */
 function _renderGestionAcademica() {
   const secs = [
-    { id:'maestros',        icon:'user-cog',       label:'Maestros',          desc:'Docentes y personal académico',     color:'#28B54D' },
+    { id:'maestros',        icon:'user-cog',       label:'Maestros',          desc:'Docentes y personal académico',     color:'#0B63C7' },
     { id:'estudiantes',     icon:'users',           label:'Estudiantes',       desc:'Expedientes y gestión de alumnos',  color:'#0B63C7' },
     { id:'aulas',           icon:'school',          label:'Aulas',             desc:'Salones, capacidad y horarios',     color:'#0D9488' },
     { id:'asistencia',      icon:'calendar-check-2',label:'Asistencia',        desc:'Control diario de asistencia',      color:'#EC4899' },
@@ -773,7 +773,7 @@ function _renderCicloEscolar() {
  */
 function _renderFinanzas() {
   const secs = [
-    { id:'caja',           icon:'landmark',        label:'Caja',              desc:'Cobros del día y emisión de facturas', color:'#28B54D' },
+    { id:'caja',           icon:'landmark',        label:'Caja',              desc:'Cobros del día y emisión de facturas', color:'#0B63C7' },
     { id:'pagos',          icon:'banknote',         label:'Pagos',             desc:'Control de mensualidades y estados',   color:'#F59E0B' },
     { id:'contabilidad',   icon:'bar-chart-big',    label:'Contabilidad',      desc:'Reportes financieros y flujo de caja', color:'#0B63C7' },
     { id:'cuentas-cobrar', icon:'receipt',          label:'Cuentas por Cobrar',desc:'Deudores, mora y recordatorios',       color:'#EF4444' },
@@ -824,18 +824,22 @@ async function _loadCycleSelectors() {
       .order('start_date',{ascending:false})
       .limit(10);
 
-    if (!years?.length) return;
+    // Header selector
+    const hdr = document.getElementById('headerCycleSelector');
+    // Sidebar selector
+    const sb = document.getElementById('sidebarCycleSelector');
+
+    if (!years?.length) {
+      if (hdr) hdr.innerHTML = '<option value="">No hay ciclos</option>';
+      if (sb) sb.innerHTML = '<option value="">No hay ciclos</option>';
+      return;
+    }
 
     const opts = years.map(y =>
       `<option value="${y.id}"${y.is_current?' selected':''}>${y.name}${y.is_current?' ✓':''}</option>`
     ).join('');
 
-    // Header selector
-    const hdr = document.getElementById('headerCycleSelector');
     if (hdr) hdr.innerHTML = opts;
-
-    // Sidebar selector
-    const sb = document.getElementById('sidebarCycleSelector');
     if (sb) sb.innerHTML = opts;
 
     // Guardar el ciclo activo en AppState
@@ -844,6 +848,9 @@ async function _loadCycleSelectors() {
 
   } catch (_) {}
 }
+
+// Expose _loadCycleSelectors to window for other modules
+window._loadCycleSelectors = _loadCycleSelectors;
 
 /**
  * ?? Notificaciones de Mensajes No Le�dos

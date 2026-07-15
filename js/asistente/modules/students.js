@@ -34,6 +34,16 @@ export const StudentsModule = {
     });
   },
 
+  async printAllCarnets() {
+    const list = this._allStudents.map(s => ({
+      name:      s.name || '',
+      matricula: s.matricula || '',
+      classroom: s.classrooms?.name || '',
+      schedule:  s.schedule || ''
+    }));
+    await Helpers.printAllCarnets(list);
+  },
+
   _bindSearch() {
     const input = document.getElementById('searchStudentInput');
     if (!input || input._bound) return;

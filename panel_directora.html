@@ -1296,7 +1296,7 @@
           </div>
 
           <div class="space-y-4">
-            <div class="bg-[#28B54D] p-6 rounded-3xl text-white shadow-lg shadow-green-100">
+            <div class="bg-[#0B63C7] p-6 rounded-3xl text-white shadow-lg shadow-blue-100">
               <p class="text-[10px] font-black uppercase opacity-70 mb-1">Permisos Hoy</p>
               <p class="text-4xl font-black" id="statPermitsToday">0</p>
             </div>
@@ -1340,7 +1340,7 @@
               <input id="searchStudent" placeholder="Buscar estudiante..." class="pl-10 pr-3 py-2.5 border border-slate-200 rounded-xl text-sm w-full focus:ring-2 focus:ring-[#0B63C7] outline-none bg-slate-50 focus:bg-white" />
             </div>
             <div class="ml-auto flex items-center gap-2">
-              <button id="btnExportStudents" class="px-3 py-2 bg-green-100 text-green-700 border border-green-200 rounded-xl text-sm hover:bg-green-200 font-bold flex items-center gap-2">
+              <button id="btnExportStudents" class="px-3 py-2 bg-blue-100 text-blue-700 border border-blue-200 rounded-xl text-sm hover:bg-blue-200 font-bold flex items-center gap-2">
                 <i data-lucide="sheet" class="w-4 h-4"></i> Excel
               </button>
               <button id="btnPrintCarnets" onclick="App.students.printAllCarnets()" class="px-3 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-all hover:opacity-90" style="background:#8B5CF6;color:white" title="Imprimir todos los carnets en PDF">
@@ -1732,7 +1732,7 @@
               <p class="text-[10px] font-black uppercase opacity-70 mb-1">Personal en Estancia</p>
               <p class="text-4xl font-black" id="statStaffIn">0</p>
             </div>
-            <div class="bg-[#28B54D] p-6 rounded-3xl text-white shadow-lg shadow-green-100">
+            <div class="bg-[#0B63C7] p-6 rounded-3xl text-white shadow-lg shadow-blue-100">
               <p class="text-[10px] font-black uppercase opacity-70 mb-1">Alumnos en Estancia</p>
               <p class="text-4xl font-black" id="statStudentsIn">0</p>
             </div>
@@ -2094,7 +2094,7 @@
 
             <!-- Botones -->
             <div class="flex flex-col gap-3">
-              <button id="confirmPaymentBtn" class="w-full py-4 bg-gradient-to-r from-[#28B54D] to-emerald-600 text-white font-black text-sm uppercase tracking-wide rounded-2xl shadow-lg hover:shadow-xl transition-all active:scale-[0.98]">
+              <button id="confirmPaymentBtn" class="w-full py-4 bg-gradient-to-r from-[#0B63C7] to-[#0850A0] text-white font-black text-sm uppercase tracking-wide rounded-2xl shadow-lg hover:shadow-xl transition-all active:scale-[0.98]">
                 <i data-lucide="check-circle" class="w-5 h-5 inline mr-2"></i>
                 Confirmar Pago
               </button>
@@ -2426,7 +2426,7 @@
 
             <div class="bg-white rounded shadow p-6">
               <h3 class="text-sm font-semibold mb-4">Acciones</h3>
-              <button id="btnSaveMainConfig" class="w-full py-2 bg-green-600 text-white rounded hover:bg-green-700 mb-3 flex items-center justify-center gap-2 transition-colors">
+              <button id="btnSaveMainConfig" class="w-full py-2 bg-[#0B63C7] text-white rounded hover:bg-[#0850A0] mb-3 flex items-center justify-center gap-2 transition-colors">
                 <i data-lucide="save" class="w-4 h-4"></i> Guardar Cambios
               </button>
 
@@ -2480,7 +2480,7 @@
 
         <!-- Tabs -->
         <div class="flex gap-2 flex-wrap border-b border-slate-200 pb-3 mb-6 overflow-x-auto" id="contTabs">
-          <button data-cont-tab="resumen"     class="cont-tab px-4 py-2 rounded-xl text-xs font-black uppercase border-2 border-green-500 bg-green-50 text-green-700">Resumen</button>
+          <button data-cont-tab="resumen"     class="cont-tab active-cont px-4 py-2 rounded-xl text-xs font-black uppercase border-2 border-[#0B63C7] bg-[#E8F2FF] text-[#0850A0]">Resumen</button>
           <button data-cont-tab="ingresos"    class="cont-tab px-4 py-2 rounded-xl text-xs font-black uppercase border-2 border-transparent text-slate-500 hover:bg-slate-50">Ingresos</button>
           <button data-cont-tab="gastos"      class="cont-tab px-4 py-2 rounded-xl text-xs font-black uppercase border-2 border-transparent text-slate-500 hover:bg-slate-50">Gastos</button>
           <button data-cont-tab="nomina"      class="cont-tab px-4 py-2 rounded-xl text-xs font-black uppercase border-2 border-transparent text-slate-500 hover:bg-slate-50">Nómina</button>
@@ -2558,7 +2558,7 @@
           <div class="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
             <div class="flex items-center justify-between mb-4">
               <h3 class="font-black text-slate-700 text-sm">Listado de Ingresos</h3>
-              <button onclick="AccountingModule.exportIngresosPDF()" class="px-4 py-2 bg-green-600 text-white rounded-xl text-xs font-black uppercase flex items-center gap-2">
+              <button onclick="AccountingModule.exportIngresosPDF()" class="px-4 py-2 bg-[#0B63C7] text-white rounded-xl text-xs font-black uppercase flex items-center gap-2">
                 <i data-lucide="download" class="w-4 h-4"></i> Exportar PDF
               </button>
             </div>
@@ -2587,7 +2587,7 @@
             <div class="flex items-center justify-between mb-4">
               <h3 class="font-black text-slate-700 text-sm">Gastos Registrados</h3>
               <div class="flex gap-2">
-                <button onclick="AccountingModule.openGastoModal()" class="px-4 py-2 bg-green-600 text-white rounded-xl text-xs font-black uppercase flex items-center gap-2">
+                <button onclick="AccountingModule.openGastoModal()" class="px-4 py-2 bg-[#0B63C7] text-white rounded-xl text-xs font-black uppercase flex items-center gap-2">
                   <i data-lucide="plus" class="w-4 h-4"></i> Nuevo Gasto
                 </button>
                 <button onclick="AccountingModule.exportGastosPDF()" class="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-black uppercase flex items-center gap-2">
@@ -2620,7 +2620,7 @@
             <div class="flex items-center justify-between mb-4">
               <h3 class="font-black text-slate-700 text-sm">Gestión de Nómina</h3>
               <div class="flex gap-2">
-                <button onclick="AccountingModule.openNominaModal()" class="px-4 py-2 bg-green-600 text-white rounded-xl text-xs font-black uppercase flex items-center gap-2">
+                <button onclick="AccountingModule.openNominaModal()" class="px-4 py-2 bg-[#0B63C7] text-white rounded-xl text-xs font-black uppercase flex items-center gap-2">
                   <i data-lucide="plus" class="w-4 h-4"></i> Nuevo Pago
                 </button>
                 <button onclick="AccountingModule.exportNominaPDF()" class="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-black uppercase flex items-center gap-2">
@@ -2792,7 +2792,7 @@
               <button id="btnSavePaymentConfig" class="py-2.5 text-white text-xs font-black uppercase rounded-xl flex items-center justify-center gap-2 hover:opacity-90 transition-all" style="background:#0B63C7">
                 <i data-lucide="save" class="w-4 h-4"></i> Guardar Configuración
               </button>
-              <button id="btnGeneratePaymentsNow" class="py-2.5 text-white text-xs font-black uppercase rounded-xl flex items-center justify-center gap-2 hover:opacity-90 transition-all" style="background:#28B54D">
+              <button id="btnGeneratePaymentsNow" class="py-2.5 text-white text-xs font-black uppercase rounded-xl flex items-center justify-center gap-2 hover:opacity-90 transition-all" style="background:#0B63C7">
                 <i data-lucide="play-circle" class="w-4 h-4"></i> Generar pagos ahora
               </button>
               <button id="btnSendPaymentReminders" class="py-2.5 text-white text-xs font-black uppercase rounded-xl flex items-center justify-center gap-2 hover:opacity-90 transition-all" style="background:#FF8A00">
@@ -2806,14 +2806,14 @@
         </div>
 
         <style>
-          .cont-tab.active-cont { border-color:#28B54D!important; background:#E6F7EB!important; color:#1A8035!important; }
+          .cont-tab.active-cont { border-color:#0B63C7!important; background:#E8F2FF!important; color:#0850A0!important; }
         </style>
         <script>
           document.getElementById('contTabs')?.addEventListener('click', function(e) {
             const btn = e.target.closest('[data-cont-tab]');
             if (!btn) return;
             const tab = btn.dataset.contTab;
-            document.querySelectorAll('.cont-tab').forEach(b => b.classList.remove('active-cont','border-green-500','bg-green-50','text-green-700'));
+            document.querySelectorAll('.cont-tab').forEach(b => b.classList.remove('active-cont','border-[#0B63C7]','bg-[#E8F2FF]','text-[#0850A0]'));
             btn.classList.add('active-cont');
             document.querySelectorAll('.cont-panel').forEach(p => p.classList.add('hidden'));
             const panel = document.getElementById('cont-'+tab);

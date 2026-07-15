@@ -92,6 +92,7 @@ window.App = {
   toggleLike: (pid) => window.App._toggleLike(pid),
   selectChatContact: (uid, name, role) => window.App._selectChatContact(uid, name, role),
   students: StudentsModule,
+  printAllCarnets: () => StudentsModule.printAllCarnets(),
   rooms: RoomsModule,
   teachers: {
     openModal:     (id)         => TeachersModule.openModal(id),
