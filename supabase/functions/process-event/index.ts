@@ -168,15 +168,25 @@ Deno.serve(async (req) => {
           if (!resolvedParentId) resolvedParentId = st?.parent_id;
         }
 
-        const payHtml = emailWrap('<h2 style="color:#16a34a;margin:0 0 12px">Pago Confirmado!</h2><p style="color:#374151">El pago de mensualidad de <b>' + student_name + '</b> fue aprobado.</p><div style="background:#f0fdf4;border-radius:8px;padding:16px;margin:16px 0;border:1px solid #bbf7d0"><table style="width:100%;border-collapse:collapse;font-size:14px"><tr><td style="padding:6px 0;color:#6b7280">Estudiante:</td><td style="padding:6px 0;font-weight:700;text-align:right">' + student_name + '</td></tr><tr><td style="padding:6px 0;color:#6b7280">Mes:</td><td style="padding:6px 0;font-weight:700;text-align:right">' + month + '</td></tr><tr><td style="padding:6px 0;color:#6b7280">Monto:</td><td style="padding:6px 0;font-weight:800;color:#16a34a;font-size:16px;text-align:right">' + amount + '</td></tr></table></div><a href="https://montessorisonrisascreativas.com/panel_padres.html" style="display:inline-block;padding:12px 24px;background:#16a34a;color:white;text-decoration:none;border-radius:8px;font-weight:bold">Ver mi Panel</a>');
+        const tasks: Promise<unknown>[] = [];
 
-        if (resend) {
-          for (const email of resolvedEmails) {
-            tasks.push(resend.emails.send({ from: FROM_EMAIL, to: email, subject: 'Pago Confirmado - ' + month, html: payHtml }));
-          }
+        // Delegate to generate-invoice for professional email + invoice
+        if (payment_id) {
+          tasks.push(
+            fetch(`${SUPABASE_URL}/functions/v1/generate-invoice`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${SERVICE_KEY}`,
+                'apikey': SERVICE_KEY
+              },
+              body: JSON.stringify({ payment_id, send_email: true })
+            }).catch(e => console.warn('[process-event] generate-invoice failed:', e))
+          );
         }
+
         if (resolvedParentId) {
-          tasks.push(sendPushToUser(resolvedParentId, 'Pago Confirmado', 'Tu pago de ' + amount + ' para ' + month + ' fue aprobado.', 'payment', 'panel_padres.html'));
+          tasks.push(sendPushToUser(resolvedParentId, 'Pago Confirmado - ' + student_name, 'Tu pago de ' + amount + ' para ' + month + ' fue aprobado. Se envio recibo a tu correo.', 'payment', 'panel_padres.html'));
         }
         await Promise.allSettled(tasks);
         result = { sent: true, email_to: resolvedEmails.join(',') || 'none', push_to: resolvedParentId || 'none' };

@@ -37,10 +37,18 @@ export const CajaModule = {
       mora: false,
     },
     selectedStudent: null,
-    cart: [], // [{id, label, amount, type, chargeId?, month?}]
+    cart: [], // [{id, label, amount, type, chargeId?, month?}
     totalMora: 0,
     totalDiscount: 0,
+    discountReason: '',
     concepts: [], // Dynamic concepts from DB
+    rnc: '',
+    empresa: '',
+    selectedPaymentMethod: 'efectivo',
+    montoRecibido: 0,
+    banco: '',
+    referencia: '',
+    cheque: '',
   },
 
   async init() {
@@ -227,7 +235,7 @@ export const CajaModule = {
             `}
           </td>
         </tr>
-        `;
+      `;
       }).join('') : `
         <tr><td colspan="6" class="text-center py-8 text-slate-400 text-sm">Sin estudiantes pendientes</td></tr>
       `;
@@ -236,7 +244,7 @@ export const CajaModule = {
       
       if (window.lucide) lucide.createIcons();
     } catch (e) {
-      console.error('Error loading pending payments:', e);
+      console.error('Error loading pending payments', e);
       tbody.innerHTML = '<tr><td colspan="6" class="text-center py-8 text-red-400 text-sm">Error al cargar</td></tr>';
     }
   },
@@ -377,7 +385,7 @@ export const CajaModule = {
           <div class="flex justify-between items-start">
             <div>
               <p class="font-black text-slate-800">${Helpers.escapeHTML(p.students?.name || 'Estudiante desconocido')}</p>
-              <p class="text-xs text-slate-500">${p.students?.classrooms?.name || ''} · ${Helpers.formatDate(p.created_at)}</p>
+              <p class="text-xs text-slate-400">${p.students?.classrooms?.name || ''} · ${Helpers.formatDate(p.created_at)}</p>
             </div>
             <p class="font-black text-lg text-slate-800">${fmtCurrency(p.amount)}</p>
           </div>
@@ -425,6 +433,11 @@ export const CajaModule = {
     this._state.cart = [];
     this._state.totalMora = 0;
     this._state.totalDiscount = 0;
+    this._state.discountReason = '';
+    this._state.rnc = '';
+    this._state.empresa = '';
+    this._state.selectedPaymentMethod = 'efectivo';
+    this._state.montoRecibido = 0;
 
     // Load student charges
     const { data: enrollments } = await supabase.from('student_enrollments')
@@ -445,6 +458,15 @@ export const CajaModule = {
 
     this._charges = charges;
 
+    // Load last payment
+    const { data: lastPayments } = await supabase.from('payments')
+      .select('paid_date, amount')
+      .eq('student_id', studentId)
+      .eq('status', 'paid')
+      .order('paid_date', {ascending: false})
+      .limit(1);
+    this._lastPayment = lastPayments?.[0] || null;
+
     // Render modal
     this._renderCobroModal();
   },
@@ -453,10 +475,12 @@ export const CajaModule = {
     const s = this._state.selectedStudent;
     const totalCart = this._state.cart.reduce((sum, item) => sum + item.amount, 0);
     const total = totalCart + this._state.totalMora - this._state.totalDiscount;
+    const cambio = Math.max(0, this._state.montoRecibido - total);
+    const currentUser = supabase.auth.user || { email: 'directora@escuela.com' };
 
     const modalHTML = `
     <div class="fixed inset-0 bg-black/60 backdrop-blur-sm z-9999 flex items-center justify-center p-4" id="cajaModalContainer">
-      <div class="bg-white rounded-3xl overflow-hidden w-full max-w-6xl max-h-[95vh] shadow-2xl">
+      <div class="bg-white rounded-3xl overflow-hidden w-full max-w-7xl max-h-[95vh] shadow-2xl">
         <!-- Encabezado -->
         <div class="p-6 border-b border-slate-100" style="background: linear-gradient(135deg, #28B54D, #239943)">
           <div class="flex items-center justify-between flex-wrap gap-4">
@@ -476,18 +500,18 @@ export const CajaModule = {
             </div>
             <div class="text-right text-white">
               <div class="text-xs font-bold opacity-80 uppercase">Balance General</div>
-              <div class="text-2xl font-black">${fmtCurrency(0)}</div>
+              <div class="text-2xl font-black">${fmtCurrency(this._charges.filter(c => c.status !== 'paid').reduce((sum, c) => sum + (c.amount || 0), 0))}</div>
               <div class="text-xs opacity-80 mt-1">
-                Último pago: —
+                Último pago: ${this._lastPayment ? `${new Date(this._lastPayment.paid_date).toLocaleDateString('es-DO')} · ${fmtCurrency(this._lastPayment.amount)}` : '—'}
               </div>
             </div>
           </div>
         </div>
 
         <!-- Cuerpo del modal -->
-        <div class="p-6 grid grid-cols-1 lg:grid-cols-5 gap-6 bg-slate-50/50 overflow-y-auto">
+        <div class="p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 bg-slate-50/50 overflow-y-auto">
           <!-- Panel izquierdo: Estado financiero y cuotas -->
-          <div class="lg:col-span-2 space-y-4">
+          <div class="lg:col-span-4 space-y-4">
             <div class="bg-white rounded-2xl border border-slate-100 p-4">
               <h4 class="text-sm font-black text-slate-800 mb-3">Estado financiero</h4>
               <p class="text-xs text-slate-400 mb-2">${new Date().getFullYear()}-${(new Date().getFullYear()+1).toString().slice(-2)}</p>
@@ -521,10 +545,12 @@ export const CajaModule = {
                   <label class="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100 cursor-pointer hover:border-blue-300 transition-all">
                     <input type="checkbox" class="cuota-check w-4 h-4 accent-blue-600"
                       data-id="${c.id}" data-concept="${Helpers.escapeHTML(c.concept || c.type)}"
-                      data-amount="${c.amount}" onchange="CajaModule._toggleCuota(this)">
+                      data-amount="${c.amount}" data-due="${c.due_date || ''}"
+                      ${this._state.cart.some(i => i.id === c.id && i.type === 'cuota') ? 'checked' : ''}
+                      onchange="CajaModule._toggleCuota(this)">
                     <div class="flex-1 min-w-0">
                       <div class="text-xs font-bold text-slate-700">${Helpers.escapeHTML(c.concept || c.type)}</div>
-                      <div class="text-[10px] text-slate-400">${c.due_date || ''}</div>
+                      <div class="text-[10px] text-slate-400">Vence: ${c.due_date || '—'}</div>
                     </div>
                     <div class="text-sm font-black text-slate-800">${fmtCurrency(c.amount)}</div>
                   </label>
@@ -533,8 +559,8 @@ export const CajaModule = {
             </div>
           </div>
 
-          <!-- Panel derecho: Catálogo y carrito (narrower) -->
-          <div class="lg:col-span-3 space-y-4">
+          <!-- Panel medio: Catálogo y carrito -->
+          <div class="lg:col-span-4 space-y-4">
             <!-- Otros conceptos -->
             <div class="bg-white rounded-2xl border border-slate-100 p-4">
               <div class="flex items-center justify-between mb-3">
@@ -543,7 +569,7 @@ export const CajaModule = {
                   + Agregar
                 </button>
               </div>
-              <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+              <div class="grid grid-cols-2 gap-2">
                 ${this._state.concepts.map(conc => `
                   <div class="p-3 text-center border-2 border-slate-100 rounded-xl hover:border-blue-300 hover:bg-blue-50 transition-all relative group">
                     <button onclick="CajaModule._addCatalogConcept({id: ${conc.id}, label: '${Helpers.escapeHTML(conc.name)}', amount: ${conc.amount}})"
@@ -589,35 +615,24 @@ export const CajaModule = {
                 `}
               </div>
 
-              <!-- Totales -->
-              <div class="border-t border-slate-100 pt-3">
-                <div class="flex justify-between text-sm py-1">
-                  <span class="text-slate-600">Subtotal</span>
-                  <span class="font-bold text-slate-800">${fmtCurrency(totalCart)}</span>
-                </div>
+              <!-- Discount -->
+              <div class="mb-4">
+                <button onclick="CajaModule._toggleDiscount()" class="w-full p-3 border-2 border-slate-100 rounded-xl text-xs font-bold text-slate-700 hover:border-blue-300 hover:bg-blue-50 transition-all">
+                  <i data-lucide="percentage" class="w-4 h-4 inline mr-2"></i>
+                  ${this._state.totalDiscount > 0 ? `Descuento aplicado: ${fmtCurrency(this._state.totalDiscount)}` : 'Agregar descuento'}
+                </button>
                 ${this._state.totalDiscount > 0 ? `
-                  <div class="flex justify-between text-sm py-1 text-green-600">
-                    <span>Descuento</span>
-                    <span class="font-bold">-${fmtCurrency(this._state.totalDiscount)}</span>
+                  <div class="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-xl">
+                    <p class="text-xs text-amber-700 font-bold">Motivo: ${this._state.discountReason || '—'}</p>
                   </div>
                 ` : ''}
-                ${this._state.totalMora > 0 ? `
-                  <div class="flex justify-between text-sm py-1 text-red-600">
-                    <span>Mora</span>
-                    <span class="font-bold">+${fmtCurrency(this._state.totalMora)}</span>
-                  </div>
-                ` : ''}
-                <div class="flex justify-between text-lg font-black py-2 border-t border-slate-200 mt-1">
-                  <span class="text-slate-800">TOTAL</span>
-                  <span class="text-blue-700">${fmtCurrency(total)}</span>
-                </div>
               </div>
             </div>
 
             <!-- Método de pago -->
             <div class="bg-white rounded-2xl border border-slate-100 p-4">
               <h4 class="text-sm font-black text-slate-800 mb-3">Método de pago</h4>
-              <div class="grid grid-cols-2 sm:grid-cols-5 gap-2" id="paymentMethods">
+              <div class="grid grid-cols-5 gap-2" id="paymentMethods">
                 ${[
                   {id:'efectivo', label:'💵 Efectivo'},
                   {id:'tarjeta', label:'💳 Tarjeta'},
@@ -627,7 +642,7 @@ export const CajaModule = {
                 ].map(m => `
                   <button onclick="CajaModule._selectPaymentMethod('${m.id}')"
                     data-method="${m.id}"
-                    class="p-3 text-center border-2 border-slate-100 rounded-xl hover:border-blue-300 transition-all method-btn">
+                    class="p-3 text-center border-2 border-slate-100 rounded-xl hover:border-blue-300 transition-all method-btn ${this._state.selectedPaymentMethod === m.id ? 'border-blue-500 bg-blue-50' : ''}">
                     <div class="text-xs font-bold text-slate-700">${m.label}</div>
                   </button>
                 `).join('')}
@@ -635,6 +650,128 @@ export const CajaModule = {
 
               <!-- Detalle del método -->
               <div id="paymentMethodDetails" class="mt-4"></div>
+            </div>
+          </div>
+
+          <!-- Panel derecho: POS-style summary -->
+          <div class="lg:col-span-4 space-y-4">
+            <!-- POS Ticket Summary -->
+            <div class="bg-white rounded-2xl border border-slate-100 p-4" style="background: linear-gradient(to bottom, #f8fafc, #ffffff)">
+              <h4 class="text-sm font-black text-slate-800 mb-3 border-b border-slate-200 pb-2 flex items-center justify-between">
+                <span>Resumen del Cobro</span>
+                <span class="text-xs text-slate-500">${new Date().toLocaleString('es-DO')}</span>
+              </h4>
+              
+              <div class="space-y-3 pt-2">
+                <div class="flex justify-between items-center text-sm">
+                  <span class="text-slate-600">Alumno:</span>
+                  <span class="font-black text-slate-800">${Helpers.escapeHTML(s.name)}</span>
+                </div>
+                <div class="flex justify-between items-center text-sm">
+                  <span class="text-slate-600">Curso:</span>
+                  <span class="font-black text-slate-800">${s.classrooms?.name || '—'}</span>
+                </div>
+              </div>
+
+              <div class="border-t border-dashed border-slate-200 my-3"></div>
+
+              <div class="space-y-1">
+                ${this._state.cart.map(item => `
+                  <div class="flex justify-between items-center text-sm">
+                    <span class="text-slate-700">${Helpers.escapeHTML(item.label)}</span>
+                    <span class="font-black text-slate-800">${fmtCurrency(item.amount)}</span>
+                  </div>
+                `).join('')}
+                ${this._state.cart.length === 0 ? `
+                  <div class="text-center py-2 text-slate-400 text-sm">No hay items</div>
+                ` : ''}
+              </div>
+
+              <div class="border-t border-dashed border-slate-200 my-3"></div>
+
+              <div class="space-y-2">
+                <div class="flex justify-between items-center text-sm">
+                  <span class="text-slate-600">Subtotal:</span>
+                  <span class="font-black text-slate-800">${fmtCurrency(totalCart)}</span>
+                </div>
+                ${this._state.totalDiscount > 0 ? `
+                  <div class="flex justify-between items-center text-sm text-green-600">
+                    <span>Descuento:</span>
+                    <span class="font-black">-${fmtCurrency(this._state.totalDiscount)}</span>
+                  </div>
+                ` : ''}
+                ${this._state.totalMora > 0 ? `
+                  <div class="flex justify-between items-center text-sm text-red-600">
+                    <span>Mora:</span>
+                    <span class="font-black">+${fmtCurrency(this._state.totalMora)}</span>
+                  </div>
+                ` : ''}
+                <div class="flex justify-between items-center text-lg font-black py-2 border-t border-slate-200 mt-1">
+                  <span class="text-slate-800">TOTAL:</span>
+                  <span class="text-blue-700">${fmtCurrency(total)}</span>
+                </div>
+              </div>
+
+              ${this._state.selectedPaymentMethod === 'efectivo' ? `
+                <div class="border-t border-dashed border-slate-200 my-3"></div>
+                <div class="space-y-2">
+                  <div class="flex justify-between items-center text-sm">
+                    <span class="text-slate-600">Recibido:</span>
+                    <span class="font-black text-slate-800">${fmtCurrency(this._state.montoRecibido)}</span>
+                  </div>
+                  <div class="flex justify-between items-center text-lg font-black">
+                    <span class="text-slate-800">Cambio:</span>
+                    <span class="text-green-600">${fmtCurrency(cambio)}</span>
+                  </div>
+                </div>
+              ` : ''}
+
+              <!-- RNC/Empresa -->
+              <div class="border-t border-dashed border-slate-200 my-3"></div>
+              <div class="space-y-2">
+                <button onclick="CajaModule._toggleRNC()" class="w-full p-2 border border-slate-200 rounded-lg text-xs font-bold text-slate-600 hover:border-blue-300 hover:bg-blue-50 transition-all">
+                ${this._state.rnc || this._state.empresa ? '✓ Datos fiscales' : 'Agregar RNC/Empresa'}
+              </button>
+              ${this._state.rnc || this._state.empresa ? `
+                <div class="p-2 bg-blue-50 border border-blue-200 rounded-lg text-xs">
+                  ${this._state.empresa ? `<p><strong>Empresa:</strong> ${Helpers.escapeHTML(this._state.empresa)}</p>` : ''}
+                  ${this._state.rnc ? `<p><strong>RNC:</strong> ${Helpers.escapeHTML(this._state.rnc)}</p>` : ''}
+                </div>
+              ` : ''}
+              </div>
+
+              <!-- System info -->
+              <div class="border-t border-dashed border-slate-200 my-3"></div>
+              <div class="space-y-1 text-xs text-slate-500">
+                <div class="flex justify-between">
+                  <span>Cajero/a:</span>
+                  <span class="font-bold">${currentUser.email}</span>
+                </div>
+                <div class="flex justify-between">
+                  <span>Hora:</span>
+                  <span class="font-bold">${new Date().toLocaleTimeString('es-DO')}</span>
+                </div>
+                <div class="flex justify-between">
+                  <span>Estado:</span>
+                  <span class="font-bold text-green-600"><i data-lucide="check-circle" class="w-3 h-3 inline mr-1"></i>Listo</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Action buttons -->
+            <div class="grid grid-cols-2 gap-2">
+              <button onclick="CajaModule._printReceipt()" class="p-3 bg-slate-100 text-slate-700 font-bold text-xs rounded-xl hover:bg-slate-200 transition-all">
+                <i data-lucide="printer" class="w-4 h-4 inline mr-1"></i>Imprimir
+              </button>
+              <button onclick="CajaModule._sendWhatsApp()" class="p-3 bg-green-100 text-green-700 font-bold text-xs rounded-xl hover:bg-green-200 transition-all">
+                <i data-lucide="smartphone" class="w-4 h-4 inline mr-1"></i>WhatsApp
+              </button>
+              <button onclick="CajaModule._sendEmail()" class="p-3 bg-blue-100 text-blue-700 font-bold text-xs rounded-xl hover:bg-blue-200 transition-all">
+                <i data-lucide="mail" class="w-4 h-4 inline mr-1"></i>Correo
+              </button>
+              <button onclick="CajaModule._downloadPDF()" class="p-3 bg-purple-100 text-purple-700 font-bold text-xs rounded-xl hover:bg-purple-200 transition-all">
+                <i data-lucide="file-text" class="w-4 h-4 inline mr-1"></i>PDF
+              </button>
             </div>
           </div>
         </div>
@@ -645,21 +782,28 @@ export const CajaModule = {
             class="px-5 py-3 text-slate-500 font-black text-xs uppercase border-2 border-slate-200 rounded-2xl hover:bg-slate-50 transition-all">
             Cancelar
           </button>
-          <button onclick="CajaModule._confirmPayment()" id="btnConfirmarPago" disabled
+          <button onclick="CajaModule._confirmPayment()" id="btnConfirmarPago" ${this._state.cart.length === 0 ? 'disabled' : ''}
             class="px-8 py-3 text-white font-black text-sm uppercase rounded-2xl transition-all"
             style="background: linear-gradient(135deg,#28B54D,#239943); box-shadow: 0 4px 12px rgba(40,181,77,0.3)">
-            COBRAR Y EMITIR FACTURA
+            ${this._state.cart.length === 0 ? 'Selecciona items' : 'COBRAR Y EMITIR FACTURA'}
           </button>
         </div>
       </div>
     </div>
     `;
 
+    const oldModal = document.getElementById('cajaModalContainer');
+    if (oldModal) oldModal.remove();
+
     const modalContainer = document.createElement('div');
     modalContainer.id = 'cajaModalContainer';
     modalContainer.innerHTML = modalHTML;
     document.body.appendChild(modalContainer);
+    
     if (window.lucide) lucide.createIcons();
+
+    // Re-render payment method details
+    this._selectPaymentMethod(this._state.selectedPaymentMethod);
   },
 
   _toggleCuota(el) {
@@ -698,95 +842,146 @@ export const CajaModule = {
   },
 
   _updateCartUI() {
-    const cartList = document.getElementById('cartList');
-    if (!cartList) return;
+    // Just re-render the whole modal for simplicity
+    if (document.getElementById('cajaModalContainer')) {
+      this._renderCobroModal();
+    }
+  },
+
+  _selectPaymentMethod(method) {
+    this._state.selectedPaymentMethod = method;
+    const detailsEl = document.getElementById('paymentMethodDetails');
+    if (!detailsEl) return;
 
     const totalCart = this._state.cart.reduce((sum, item) => sum + item.amount, 0);
     const total = totalCart + this._state.totalMora - this._state.totalDiscount;
 
-    // Update cart list
-    cartList.innerHTML = this._state.cart.length ? this._state.cart.map((item, idx) => `
-      <div class="flex items-center justify-between p-3 bg-blue-50 rounded-xl border border-blue-100">
-        <div>
-          <div class="text-sm font-bold text-slate-700">${Helpers.escapeHTML(item.label)}</div>
-        </div>
-        <div class="flex items-center gap-3">
-          <div class="font-black text-blue-700">${fmtCurrency(item.amount)}</div>
-          <button onclick="CajaModule._removeFromCart(${idx})"
-            class="w-7 h-7 rounded-lg bg-red-50 text-red-400 hover:bg-red-100 flex items-center justify-center">
-            <i data-lucide="x" class="w-4 h-4"></i>
-          </button>
-        </div>
-      </div>
-    `).join('') : `
-      <div class="text-center py-4 text-slate-300 text-sm font-bold">
-        <i data-lucide="shopping-cart" class="w-8 h-8 mx-auto mb-2 opacity-40"></i>
-        Selecciona conceptos
-      </div>
-    `;
-
-    // Update totals (we'll re-render the whole modal for simplicity)
-    if (document.getElementById('cajaModalContainer')) {
-      this._renderCobroModal();
-    }
-
-    // Enable confirm button if cart has items
-    const btn = document.getElementById('btnConfirmarPago');
-    if (btn) btn.disabled = this._state.cart.length === 0;
-  },
-
-  _selectPaymentMethod(method) {
-    document.querySelectorAll('.method-btn').forEach(b => b.classList.remove('border-blue-500','bg-blue-50'));
-    const selectedBtn = document.querySelector(`[data-method="${method}"]`);
-    if (selectedBtn) selectedBtn.classList.add('border-blue-500','bg-blue-50');
-    this._state.selectedPaymentMethod = method;
-
-    const detailsEl = document.getElementById('paymentMethodDetails');
-    if (!detailsEl) return;
-
     switch (method) {
       case 'efectivo':
         detailsEl.innerHTML = `
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div class="space-y-3">
             <div>
-              <label class="text-xs font-black text-slate-400 uppercase block mb-1">Monto recibido</label>
+              <label class="text-xs font-black text-slate-400 uppercase block mb-1">Monto Recibido</label>
               <input type="number" id="montoRecibido" step="0.01" placeholder="0.00"
+                value="${this._state.montoRecibido}"
                 class="w-full border-2 border-slate-100 rounded-xl px-3 py-2 text-sm font-bold outline-none focus:border-blue-400"
-                oninput="CajaModule._calculateChange()">
+                oninput="CajaModule._updateMontoRecibido(this.value)">
             </div>
-            <div>
-              <label class="text-xs font-black text-slate-400 uppercase block mb-1">Cambio</label>
-              <div id="montoCambio" class="w-full border-2 border-slate-100 rounded-xl px-3 py-2 text-sm font-bold text-green-600 bg-green-50">
-                RD$0.00
-              </div>
+            <div class="p-3 rounded-xl bg-green-50 border border-green-200">
+              <div class="text-xs font-black text-green-800 uppercase">Cambio:</div>
+              <div class="text-xl font-black text-green-700">${fmtCurrency(Math.max(0, this._state.montoRecibido - total))}</div>
             </div>
+          </div>
+        `;
+        break;
+      case 'tarjeta':
+        detailsEl.innerHTML = `
+          <div class="space-y-2">
+            <input type="text" placeholder="Banco" class="w-full border-2 border-slate-100 rounded-xl px-3 py-2 text-sm font-bold outline-none focus:border-blue-400">
+            <input type="text" placeholder="Últimos 4 dígitos" class="w-full border-2 border-slate-100 rounded-xl px-3 py-2 text-sm font-bold outline-none focus:border-blue-400">
           </div>
         `;
         break;
       case 'transferencia':
         detailsEl.innerHTML = `
           <div class="space-y-2">
+            <input type="text" id="bancoInput" placeholder="Banco" value="${this._state.banco}" oninput="CajaModule._updateBanco(this.value)" class="w-full border-2 border-slate-100 rounded-xl px-3 py-2 text-sm font-bold outline-none focus:border-blue-400">
+            <input type="text" id="referenciaInput" placeholder="Referencia" value="${this._state.referencia}" oninput="CajaModule._updateReferencia(this.value)" class="w-full border-2 border-slate-100 rounded-xl px-3 py-2 text-sm font-bold outline-none focus:border-blue-400">
+          </div>
+        `;
+        break;
+      case 'cheque':
+        detailsEl.innerHTML = `
+          <div class="space-y-2">
             <input type="text" placeholder="Banco" class="w-full border-2 border-slate-100 rounded-xl px-3 py-2 text-sm font-bold outline-none focus:border-blue-400">
-            <input type="text" placeholder="Referencia" class="w-full border-2 border-slate-100 rounded-xl px-3 py-2 text-sm font-bold outline-none focus:border-blue-400">
+            <input type="text" placeholder="Número de cheque" class="w-full border-2 border-slate-100 rounded-xl px-3 py-2 text-sm font-bold outline-none focus:border-blue-400">
+          </div>
+        `;
+        break;
+      case 'mixto':
+        detailsEl.innerHTML = `
+          <div class="space-y-2">
+            <p class="text-xs text-slate-500">Pago mixto - configura los montos</p>
           </div>
         `;
         break;
       default:
         detailsEl.innerHTML = '';
     }
-
-    // Enable confirm button if method selected
-    const btn = document.getElementById('btnConfirmarPago');
-    if (btn) btn.disabled = this._state.cart.length === 0;
   },
 
-  _calculateChange() {
+  _updateMontoRecibido(value) {
+    this._state.montoRecibido = parseFloat(value) || 0;
+    this._updateCartUI();
+  },
+
+  _updateBanco(value) { this._state.banco = value; },
+  _updateReferencia(value) { this._state.referencia = value; },
+
+  _toggleDiscount() {
+    if (this._state.totalDiscount > 0) {
+      if (confirm('¿Eliminar descuento?')) {
+        this._state.totalDiscount = 0;
+        this._state.discountReason = '';
+        this._updateCartUI();
+      }
+    } else {
+      const discountAmount = prompt('Monto del descuento (RD$):');
+      if (discountAmount) {
+        const reason = prompt('Motivo del descuento:');
+        this._state.totalDiscount = parseFloat(discountAmount) || 0;
+        this._state.discountReason = reason || '';
+        this._updateCartUI();
+      }
+    }
+  },
+
+  _toggleRNC() {
+    if (this._state.rnc || this._state.empresa) {
+      if (confirm('¿Eliminar datos fiscales?')) {
+        this._state.rnc = '';
+        this._state.empresa = '';
+        this._updateCartUI();
+      }
+    } else {
+      const empresa = prompt('Nombre de la Empresa:');
+      const rnc = prompt('RNC:');
+      if (empresa) this._state.empresa = empresa;
+      if (rnc) this._state.rnc = rnc;
+      this._updateCartUI();
+    }
+  },
+
+  _printReceipt() {
+    Helpers.toast('Imprimiendo recibo...', 'info');
+  },
+
+  _sendWhatsApp() {
+    Helpers.toast('Enviando a WhatsApp...', 'info');
+  },
+
+  _sendEmail() {
+    Helpers.toast('Enviando email...', 'info');
+  },
+
+  _downloadPDF() {
+    const s = this._state.selectedStudent;
     const totalCart = this._state.cart.reduce((sum, item) => sum + item.amount, 0);
     const total = totalCart + this._state.totalMora - this._state.totalDiscount;
-    const recibido = parseFloat(document.getElementById('montoRecibido')?.value || '0');
-    const cambio = Math.max(0, recibido - total);
-    const cambioEl = document.getElementById('montoCambio');
-    if (cambioEl) cambioEl.textContent = fmtCurrency(cambio);
+
+    InvoiceModule.downloadSingle({
+      id: Date.now(),
+      students: {
+        name: s.name,
+        classrooms: { name: s.classrooms?.name || '' },
+        p1_name: s.p1_name || ''
+      },
+      concept: this._state.cart.map(i => i.label).join(', '),
+      amount: total,
+      method: this._state.selectedPaymentMethod,
+      paid_date: new Date().toISOString(),
+      status: 'paid'
+    });
   },
 
   async _confirmPayment() {
@@ -796,26 +991,31 @@ export const CajaModule = {
     }
 
     const btn = document.getElementById('btnConfirmarPago');
-    if (btn) btn.disabled = true; btn.textContent = 'Procesando...';
+    if (btn) { btn.disabled = true; btn.textContent = 'Procesando...'; }
 
     try {
-      // Registrar pagos
       const s = this._state.selectedStudent;
       const paymentIds = [];
+
+      const notesParts = [];
+      if (this._state.rnc) notesParts.push(`RNC:${this._state.rnc}`);
+      if (this._state.empresa) notesParts.push(`Empresa:${this._state.empresa}`);
+      if (this._state.discountReason) notesParts.push(`Descuento:${this._state.discountReason} (${fmtCurrency(this._state.totalDiscount)})`);
+
       for (const item of this._state.cart) {
         const { data: pay, error } = await supabase.from('payments').insert({
           student_id: s.id,
           amount: item.amount,
           concept: item.label,
-          method: this._state.selectedPaymentMethod || 'efectivo',
+          method: this._state.selectedPaymentMethod,
           status: 'paid',
           paid_date: new Date().toISOString(),
-          created_at: new Date().toISOString()
+          created_at: new Date().toISOString(),
+          notes: notesParts.join('|')
         }).select().single();
         if (error) throw error;
         paymentIds.push(pay.id);
 
-        // Marcar cuota como pagada si es una cuota
         if (item.type === 'cuota' && item.id) {
           await supabase.from('student_charges')
             .update({ status: 'paid', paid_date: new Date().toISOString() })
@@ -823,42 +1023,29 @@ export const CajaModule = {
         }
       }
 
-      // Cerrar modal
+      if (paymentIds.length > 0) {
+        try {
+          await supabase.functions.invoke('generate-invoice', {
+            body: { payment_id: paymentIds[0], send_email: true }
+          });
+        } catch (invoiceErr) {
+          console.error('Error generando factura', invoiceErr);
+        }
+      }
+
       this._closeModal();
-
-      // Generar factura
-      InvoiceModule.downloadSingle({
-        id: paymentIds[0],
-        students: {
-          name: s.name,
-          classrooms: { name: s.classrooms?.name || '' },
-          p1_name: s.p1_name || ''
-        },
-        concept: this._state.cart.map(i => i.label).join(', '),
-        amount: this._state.cart.reduce((sum, i) => sum + i.amount, 0),
-        method: this._state.selectedPaymentMethod || 'efectivo',
-        paid_date: new Date().toISOString(),
-        status: 'paid'
-      });
-
-      Helpers.toast('Pago registrado! Factura generada.', 'success');
-      
-      // Recargar lista
+      Helpers.toast('Pago registrado!', 'success');
       await this._loadPendingPayments();
     } catch (e) {
-      console.error('Error confirming payment:', e);
+      console.error('Error confirming payment', e);
       Helpers.toast('Error al procesar pago', 'error');
-      if (btn) btn.disabled = false; btn.textContent = 'COBRAR Y EMITIR FACTURA';
+      if (btn) { btn.disabled = false; btn.textContent = 'COBRAR Y EMITIR FACTURA'; }
     }
   },
 
   _closeModal() {
     const modal = document.getElementById('cajaModalContainer');
     if (modal) modal.remove();
-  },
-
-  _viewStudentDetails(studentId) {
-    Helpers.toast('Ver detalles del estudiante', 'info');
   },
 
   _setupEventListeners() {},
@@ -872,8 +1059,7 @@ export const CajaModule = {
       if (error) throw error;
       this._state.concepts = data || [];
     } catch (e) {
-      console.error('Error loading concepts:', e);
-      // Fall back to static array if table doesn't exist
+      console.error('Error loading concepts', e);
       this._state.concepts = CONCEPTOS_CATALOGO.map(c => ({ id: c.id, name: c.label, amount: c.amount }));
     }
   },
@@ -925,7 +1111,6 @@ export const CajaModule = {
 
     try {
       if (id) {
-        // Edit existing
         const { error } = await supabase
           .from('payment_concepts')
           .update({ name, amount })
@@ -933,7 +1118,6 @@ export const CajaModule = {
         if (error) throw error;
         Helpers.toast('Concepto actualizado', 'success');
       } else {
-        // Create new
         const { error } = await supabase
           .from('payment_concepts')
           .insert({ name, amount });
@@ -942,12 +1126,11 @@ export const CajaModule = {
       }
       this._closeConceptModal();
       await this._loadConcepts();
-      // Re-render cobro modal if open
       if (this._state.selectedStudent) {
         this._renderCobroModal();
       }
     } catch (e) {
-      console.error('Error saving concept:', e);
+      console.error('Error saving concept', e);
       Helpers.toast('Error al guardar concepto', 'error');
     }
   },
@@ -963,12 +1146,11 @@ export const CajaModule = {
       if (error) throw error;
       Helpers.toast('Concepto eliminado', 'success');
       await this._loadConcepts();
-      // Re-render cobro modal if open
       if (this._state.selectedStudent) {
         this._renderCobroModal();
       }
     } catch (e) {
-      console.error('Error deleting concept:', e);
+      console.error('Error deleting concept', e);
       Helpers.toast('Error al eliminar concepto', 'error');
     }
   },
@@ -977,4 +1159,3 @@ export const CajaModule = {
     Helpers.toast('Generando reporte diario...', 'info');
   }
 };
-

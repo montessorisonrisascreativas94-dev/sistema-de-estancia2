@@ -182,7 +182,7 @@ export const CajaCobroV2 = {
 
     // Cargar datos
     const [{ data: stu }, { data: charges }, { data: history }, { data: enrollment }] = await Promise.all([
-      supabase.from('students').select('id,name,matricula,p1_name,p1_phone,classrooms:classroom_id(name,level)').eq('id',studentId).single(),
+      supabase.from('students').select('id,name,matricula,p1_name,p1_phone,classrooms:classroom_id(name,level),monthly_fee').eq('id',studentId).single(),
       supabase.from('payments').select('id,concept,amount,status,due_date,month_paid').eq('student_id',studentId).in('status',['pending','overdue']).order('due_date').limit(50),
       supabase.from('payments').select('amount,method,paid_date,concept').eq('student_id',studentId).eq('status','paid').order('paid_date',{ascending:false}).limit(5),
       supabase.from('student_enrollments').select('id,payment_plans:payment_plan_id(name,plan_installments(month_number,month_name,amount,type))').eq('student_id',studentId).order('created_at',{ascending:false}).limit(1).maybeSingle(),
@@ -191,14 +191,30 @@ export const CajaCobroV2 = {
     _student = stu;
     _charges = charges || [];
 
-    // Mapa de meses pagados
+    // Mapa de meses pagados — month_paid es YYYY-MM
     const { data: paidMonths } = await supabase.from('payments').select('month_paid').eq('student_id',studentId).eq('status','paid').not('month_paid','is',null).limit(100);
-    const paidSet = new Set((paidMonths||[]).map(p=>p.month_paid));
+    const paidSet = new Set();
+    (paidMonths||[]).forEach(p => {
+      if (!p.month_paid) return;
+      // Store both YYYY-MM and month number (1-12) for flexible lookup
+      paidSet.add(p.month_paid); // "2026-07"
+      const parts = String(p.month_paid).split('-');
+      if (parts.length >= 2) paidSet.add(parseInt(parts[1], 10)); // 7
+      paidSet.add(String(parseInt(parts[1], 10))); // "7"
+    });
 
-    // Cuotas del plan
+    // Cuotas del plan — buscar por mes calendario
     const installments = enrollment?.payment_plans?.plan_installments || [];
-    // Construir mapa mensual: si hay plan usamos sus montos, si no usamos primer installment
-    const monthlyFee = installments.length > 0 ? Number(installments[0].amount||0) : 0;
+    // Build installment amount map by month_number
+    const instMap = {};
+    installments.forEach((x) => { if (x.month_number) instMap[x.month_number] = Number(x.amount||0); });
+    // Fallback: use student's monthly fee, or max installment, or 0
+    const studentMonthlyFee = Number(stu?.monthly_fee || 0);
+    const defaultFee = studentMonthlyFee > 0 
+      ? studentMonthlyFee 
+      : (installments.length > 0 
+        ? Math.max(...installments.map(x => Number(x.amount||0))) 
+        : 0);
 
     // Calcular mora total
     let totalMora = 0;
@@ -268,9 +284,11 @@ export const CajaCobroV2 = {
           <!-- Grid compacto 4 cols x 3 filas -->
           <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
             ${MONTHS_FULL.map((m,i)=>{
-              const inst = installments.find(x=>x.month_number===i+1);
-              const amt  = inst ? Number(inst.amount) : monthlyFee;
-              const isPaid    = paidSet.has(String(i+1)) || paidSet.has(m);
+              const monthNum = i + 1; // 1-12
+              // Get amount: try instMap by month_number first, then default
+              const amt = instMap[monthNum] !== undefined ? instMap[monthNum] : defaultFee;
+              const yearKey = new Date().getFullYear() + '-' + String(monthNum).padStart(2,'0');
+              const isPaid    = paidSet.has(yearKey) || paidSet.has(monthNum) || paidSet.has(String(monthNum));
               const isOverdue = !isPaid && i < nowMonth;
               const isCurrent = i === nowMonth;
               const bg    = isPaid ? '#f0fdf4' : isOverdue ? '#fff1f2' : isCurrent ? '#eff6ff' : '#f8fafc';
@@ -588,11 +606,26 @@ export const CajaCobroV2 = {
     const bankOpts = ['Banreservas','Banco Popular Dominicano','Banco BHD','Banco Santa Cruz','Banco Caribe','Banco Vimenca','Bancamérica','Banesco','Scotiabank','Otro']
       .map(b=>`<option value="${b}">${b}</option>`).join('');
 
+    // Common RNC/Empresa section
+    const rncSection = `
+      ${lbl('¿Requiere factura con RNC?')}
+      <button type="button" onclick="document.getElementById('ncfBlock').style.display=document.getElementById('ncfBlock').style.display==='none'?'block':'none'"
+        style="font-size:.7rem;font-weight:900;color:#0B63C7;border:1px solid #0B63C7;background:transparent;border-radius:8px;padding:6px 14px;cursor:pointer;margin-bottom:6px">
+        + RNC / Factura Fiscal
+      </button>
+      <div id="ncfBlock" style="display:none">
+        ${lbl('RNC de la empresa')}
+        <input id="rncEmpresa" placeholder="Ej: 1-31-12345-6" style="${inp}">
+        ${lbl('Nombre / Razón Social')}
+        <input id="nombreEmpresa" placeholder="Empresa S.R.L." style="${inp}">
+      </div>`;
+
     if (method === 'efectivo') {
       detail.innerHTML = `
         ${lbl('Monto recibido')}
         <input id="cashReceived" type="number" placeholder="RD$" oninput="CajaCobroV2.calcChange()" style="${inp}">
-        <div style="font-size:.85rem;font-weight:900;color:#0B63C7;margin-top:4px">Cambio: <span id="cashChange">RD$0.00</span></div>`;
+        <div style="font-size:.85rem;font-weight:900;color:#0B63C7;margin-top:4px">Cambio: <span id="cashChange">RD$0.00</span></div>
+        ${rncSection}`;
 
     } else if (method === 'transferencia') {
       detail.innerHTML = `
@@ -602,17 +635,7 @@ export const CajaCobroV2 = {
         <input id="tfRef" placeholder="Ej: 00123456789" style="${inp}">
         ${lbl('Comprobante de transferencia *')}
         ${uploadBtn('tfComprobante','Subir comprobante (foto/PDF)')}
-        ${lbl('¿Requiere factura con NCF?')}
-        <button type="button" onclick="document.getElementById('ncfBlock').style.display=document.getElementById('ncfBlock').style.display==='none'?'block':'none'"
-          style="font-size:.7rem;font-weight:900;color:#0B63C7;border:1px solid #0B63C7;background:transparent;border-radius:8px;padding:6px 14px;cursor:pointer;margin-bottom:6px">
-          + RNC / Factura Fiscal
-        </button>
-        <div id="ncfBlock" style="display:none">
-          ${lbl('RNC de la empresa')}
-          <input id="tfRNC" placeholder="Ej: 1-31-12345-6" style="${inp}">
-          ${lbl('Nombre / Razón Social')}
-          <input id="tfFiscalName" placeholder="Empresa S.R.L." style="${inp}">
-        </div>`;
+        ${rncSection}`;
 
     } else if (method === 'cheque') {
       detail.innerHTML = `
@@ -625,7 +648,8 @@ export const CajaCobroV2 = {
         ${lbl('Foto frente del cheque *')}
         ${uploadBtn('chqFrente','Frente del cheque')}
         ${lbl('Foto reverso del cheque *')}
-        ${uploadBtn('chqReverso','Reverso del cheque')}`;
+        ${uploadBtn('chqReverso','Reverso del cheque')}
+        ${rncSection}`;
 
     } else if (method === 'tarjeta') {
       detail.innerHTML = `
@@ -642,7 +666,8 @@ export const CajaCobroV2 = {
         ${lbl('Últimos 4 dígitos')}
         <input id="cardLast4" type="number" maxlength="4" placeholder="1234" style="${inp}" oninput="if(this.value.length>4)this.value=this.value.slice(0,4)">
         ${lbl('No. de autorización')}
-        <input id="cardAuth" placeholder="Ej: A123456" style="${inp}">`;
+        <input id="cardAuth" placeholder="Ej: A123456" style="${inp}">
+        ${rncSection}`;
 
     } else if (method === 'mixto') {
       detail.innerHTML = `
@@ -651,9 +676,10 @@ export const CajaCobroV2 = {
         ${lbl('Monto transferencia')}
         <input id="mixTransfer" type="number" placeholder="RD$" style="${inp}">
         ${lbl('Referencia transferencia')}
-        <input id="mixRef" placeholder="Referencia" style="${inp}">`;
+        <input id="mixRef" placeholder="Referencia" style="${inp}">
+        ${rncSection}`;
     } else {
-      detail.innerHTML = '';
+      detail.innerHTML = rncSection;
     }
     this._updateCart();
   },
@@ -682,7 +708,15 @@ export const CajaCobroV2 = {
       const now   = new Date().toISOString();
       const todayStr = today();
 
-      // Insertar pagos
+      // Get RNC and Empresa
+      const rnc = document.getElementById('rncEmpresa')?.value?.trim();
+      const empresa = document.getElementById('nombreEmpresa')?.value?.trim();
+      let notes = '';
+      if (rnc) notes += `RNC:${rnc}|`;
+      if (empresa) notes += `Empresa:${empresa}|`;
+
+      // Insertar pagos — month_paid en formato YYYY-MM para consistencia
+      const currentYear = new Date().getFullYear();
       const inserts = _cart.map(c => ({
         student_id:  _student.id,
         amount:      c.amount,
@@ -690,8 +724,11 @@ export const CajaCobroV2 = {
         method:      _method,
         status:      'paid',
         paid_date:   now,
-        month_paid:  c.type==='colegiatura' ? String(c._monthIdx+1) : null,
+        month_paid:  c.type==='colegiatura'
+          ? currentYear + '-' + String(c._monthIdx+1).padStart(2,'0')
+          : null,
         created_at:  now,
+        notes: notes || null
       }));
 
       const { error } = await supabase.from('payments').insert(inserts);
