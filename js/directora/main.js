@@ -46,6 +46,7 @@ const debounce = (fn, delay) => {
 
 window.InscripcionesModule = InscripcionesModule;
 window.CatalogoModule = CatalogoModule;
+window.NewPaymentsModule = NewPaymentsModule;
 
 window.App = {
   navigation: { goTo: goToSection },

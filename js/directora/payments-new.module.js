@@ -1,690 +1,501 @@
 import { supabase } from '../shared/supabase.js';
 import { Helpers } from '../shared/helpers.js';
 import { InvoicingModule } from './invoicing.module.js';
-import { DirectorApi } from './api.js';
 
 const CURRENCY = 'RD$';
+const fmt = (n) => `${CURRENCY} ${Number(n || 0).toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 export const NewPaymentsModule = {
-  // Estado del módulo
+  // ── Estado único y limpio ─────────────────────────────────────────────────
   state: {
     selectedStudent: null,
-    cart: [],
-    currentTab: 'pending',
-    searchQuery: '',
-    loading: false,
-    mixedPayments: [
-      { method: 'efectivo', amount: 0 }
-    ],
-    lastInvoice: null
+    cart:            [],           // items seleccionados para cobrar
+    currentTab:      'pending',
+    discountPercent: 0,
+    discountAmount:  0,
+    paymentMethod:   'efectivo',
+    mixedPayments:   [{ method: 'efectivo', amount: 0 }],
+    lastInvoice:     null
   },
 
-  // Inicializar el módulo
+  // ── Init ──────────────────────────────────────────────────────────────────
   async init() {
-    console.log('🔄 Inicializando NewPaymentsModule...');
     this._bindEvents();
     this._loadInitialData();
   },
 
-  // Vincular eventos
+  // ── Bind events (once) ────────────────────────────────────────────────────
   _bindEvents() {
-    const self = this;
+    const on = (id, ev, fn) => { const el = document.getElementById(id); if (el) el.addEventListener(ev, fn.bind(this)); };
 
-    // Buscador de estudiantes
-    const searchInput = document.getElementById('newPaymentSearch');
-    if (searchInput) {
-      searchInput.addEventListener('input', (e) => {
-        self.state.searchQuery = e.target.value;
-        self._searchStudents(e.target.value);
+    on('newPaymentSearch', 'input', (e) => { this.state.searchQuery = e.target.value; this._searchStudents(e.target.value); });
+    on('tabPending',  'click', () => this._switchTab('pending'));
+    on('tabHistory',  'click', () => this._switchTab('history'));
+    on('clearCartBtn', 'click', () => this._clearCart());
+    on('continueToPaymentBtn', 'click', () => this._openModal());
+    on('closePaymentModalBtn', 'click', () => this._closeModal());
+    on('cancelPaymentModalBtn', 'click', () => this._closeModal());
+    on('confirmPaymentBtn', 'click', () => this._confirmPayment());
+    on('downloadInvoiceBtn', 'click', () => this._downloadInvoice());
+    on('sendInvoiceEmailBtn', 'click', () => this._sendInvoiceEmail());
+    on('closeSuccessModalBtn', 'click', () => this._closeSuccessModal());
+    on('addMixedMethodBtn', 'click', () => this._addMixedPaymentMethod());
+
+    // Métodos de pago — delegado al contenedor porque el HTML es estático
+    document.querySelectorAll('input[name="paymentMethod"]').forEach(inp => {
+      inp.addEventListener('change', (e) => {
+        this.state.paymentMethod = e.target.value;
+        this._updateMethodDetails(e.target.value);
       });
-    }
-
-    // Tabs (Pendientes / Historial)
-    const tabPending = document.getElementById('tabPending');
-    const tabHistory = document.getElementById('tabHistory');
-    if (tabPending) {
-      tabPending.addEventListener('click', () => self._switchTab('pending'));
-    }
-    if (tabHistory) {
-      tabHistory.addEventListener('click', () => self._switchTab('history'));
-    }
-
-    // Botones del carrito
-    const clearCartBtn = document.getElementById('clearCartBtn');
-    if (clearCartBtn) {
-      clearCartBtn.addEventListener('click', () => self._clearCart());
-    }
-
-    const continueBtn = document.getElementById('continueToPaymentBtn');
-    if (continueBtn) {
-      continueBtn.addEventListener('click', () => self._openPaymentMethodModal());
-    }
-
-    // Métodos de pago
-    const paymentMethodInputs = document.querySelectorAll('input[name="paymentMethod"]');
-    paymentMethodInputs.forEach(input => {
-      input.addEventListener('change', (e) => self._updateMethodDetails(e.target.value));
     });
-
-    // Botones del modal
-    const closeModalBtn = document.getElementById('closePaymentModalBtn');
-    const cancelModalBtn = document.getElementById('cancelPaymentModalBtn');
-    const confirmBtn = document.getElementById('confirmPaymentBtn');
-
-    if (closeModalBtn) closeModalBtn.addEventListener('click', () => self._closePaymentMethodModal());
-    if (cancelModalBtn) cancelModalBtn.addEventListener('click', () => self._closePaymentMethodModal());
-    if (confirmBtn) confirmBtn.addEventListener('click', () => self._confirmPayment());
-
-    // Botones del modal de éxito
-    const downloadInvoiceBtn = document.getElementById('downloadInvoiceBtn');
-    const sendEmailBtn = document.getElementById('sendInvoiceEmailBtn');
-    const closeSuccessBtn = document.getElementById('closeSuccessModalBtn');
-
-    if (downloadInvoiceBtn) downloadInvoiceBtn.addEventListener('click', () => self._downloadInvoice());
-    if (sendEmailBtn) sendEmailBtn.addEventListener('click', () => self._sendInvoiceEmail());
-    if (closeSuccessBtn) closeSuccessBtn.addEventListener('click', () => self._closeSuccessModal());
-
-    // Botón para agregar métodos de pago mixto
-    const addMixedMethodBtn = document.getElementById('addMixedMethodBtn');
-    if (addMixedMethodBtn) {
-      addMixedMethodBtn.addEventListener('click', () => self._addMixedPaymentMethod());
-    }
   },
 
-  // Cargar datos iniciales
   async _loadInitialData() {
-    // Cargar estudiantes iniciales (primeros 20)
     await this._searchStudents('');
   },
 
-  // Buscar estudiantes
+  // ── Buscar estudiantes ────────────────────────────────────────────────────
   async _searchStudents(query) {
     const container = document.getElementById('studentSearchResults');
     if (!container) return;
-
     container.innerHTML = '<div class="p-6 text-center"><div class="animate-spin w-6 h-6 border-2 border-[#0B63C7] border-t-transparent rounded-full mx-auto"></div></div>';
-
     try {
       let q = supabase.from('students').select('*');
-
-      if (query && query.trim()) {
-        const searchTerm = query.trim().toLowerCase();
-        q = q.or(
-          `name.ilike.%${searchTerm}%,matricula.ilike.%${searchTerm}%`
-        );
-      }
-
+      if (query && query.trim()) q = q.or(`name.ilike.%${query.trim()}%,matricula.ilike.%${query.trim()}%`);
       q = q.order('name').limit(20);
       const { data: students, error } = await q;
-      
       if (error) throw error;
-      
-      // Enrich with classroom names
+
       const classroomIds = [...new Set((students || []).map(s => s.classroom_id).filter(Boolean))];
       let classroomMap = {};
       if (classroomIds.length > 0) {
-        const { data: rooms } = await supabase
-          .from('classrooms')
-          .select('id, name')
-          .in('id', classroomIds);
+        const { data: rooms } = await supabase.from('classrooms').select('id,name').in('id', classroomIds);
         (rooms || []).forEach(r => { classroomMap[r.id] = r.name; });
       }
-      
-      // Enrich with parent profiles
       const parentIds = [...new Set((students || []).map(s => s.parent_id).filter(Boolean))];
       let parentMap = {};
       if (parentIds.length > 0) {
-        const { data: parents } = await supabase
-          .from('profiles')
-          .select('id, email, phone, name')
-          .in('id', parentIds);
+        const { data: parents } = await supabase.from('profiles').select('id,email,phone,name').in('id', parentIds);
         (parents || []).forEach(p => { parentMap[p.id] = p; });
       }
-      
-      const enrichedStudents = (students || []).map(s => ({
+      const enriched = (students || []).map(s => ({
         ...s,
         classrooms: s.classroom_id ? { name: classroomMap[s.classroom_id] || '' } : null,
-        profiles: s.parent_id ? parentMap[s.parent_id] : null
+        profiles:   s.parent_id    ? parentMap[s.parent_id] : null
       }));
 
-      if (!enrichedStudents || enrichedStudents.length === 0) {
-        container.innerHTML = `
-          <div class="p-8 text-center text-slate-400">
-            <i data-lucide="search" class="w-12 h-12 mx-auto mb-3 opacity-50"></i>
-            <p class="text-sm font-medium">No se encontraron estudiantes</p>
-          </div>
-        `;
-        if (window.lucide) lucide.createIcons();
-        return;
+      if (!enriched.length) {
+        container.innerHTML = `<div class="p-8 text-center text-slate-400"><i data-lucide="search" class="w-12 h-12 mx-auto mb-3 opacity-50"></i><p class="text-sm font-medium">No se encontraron estudiantes</p></div>`;
+        if (window.lucide) lucide.createIcons(); return;
       }
-
-      container.innerHTML = enrichedStudents.map(student => `
-        <div class="p-4 hover:bg-slate-50 cursor-pointer transition-colors border-b border-slate-100 last:border-b-0" data-student-id="${student.id}">
+      container.innerHTML = enriched.map(s => `
+        <div class="p-4 hover:bg-slate-50 cursor-pointer transition-colors border-b border-slate-100 last:border-b-0" data-student-id="${s.id}">
           <div class="flex items-center gap-3">
-            <div class="w-12 h-12 bg-gradient-to-br from-[#0B63C7] to-blue-600 rounded-xl flex items-center justify-center text-lg font-black text-white shadow-md">
-              ${(student.name || '?').charAt(0).toUpperCase()}
-            </div>
+            <div class="w-12 h-12 bg-gradient-to-br from-[#0B63C7] to-blue-600 rounded-xl flex items-center justify-center text-lg font-black text-white shadow-md">${(s.name||'?').charAt(0).toUpperCase()}</div>
             <div class="flex-1 min-w-0">
-              <h4 class="font-bold text-slate-800 truncate">${Helpers.escapeHTML(student.name || 'Sin nombre')}</h4>
-              <p class="text-xs text-slate-500">
-                ${student.classrooms?.name ? Helpers.escapeHTML(student.classrooms.name) : 'Sin aula'}
-                ${student.matricula ? `• ${Helpers.escapeHTML(student.matricula)}` : ''}
-              </p>
+              <h4 class="font-bold text-slate-800 truncate">${Helpers.escapeHTML(s.name||'Sin nombre')}</h4>
+              <p class="text-xs text-slate-500">${s.classrooms?.name ? Helpers.escapeHTML(s.classrooms.name) : 'Sin aula'}${s.matricula ? ` • ${Helpers.escapeHTML(s.matricula)}` : ''}</p>
             </div>
             <i data-lucide="chevron-right" class="w-5 h-5 text-slate-400"></i>
           </div>
-        </div>
-      `).join('');
-
-      // Vincular eventos de clic a los resultados
-      const studentItems = container.querySelectorAll('[data-student-id]');
-      studentItems.forEach(item => {
+        </div>`).join('');
+      container.querySelectorAll('[data-student-id]').forEach(item => {
         item.addEventListener('click', () => {
-          const studentId = item.dataset.studentId;
-          const student = enrichedStudents.find(s => String(s.id) === String(studentId));
-          if (student) {
-            this._selectStudent(student);
-          }
+          const s = enriched.find(st => String(st.id) === String(item.dataset.studentId));
+          if (s) this._selectStudent(s);
         });
       });
-
       if (window.lucide) lucide.createIcons();
-    } catch (error) {
-      console.error('Error al buscar estudiantes:', error);
-      container.innerHTML = `
-        <div class="p-8 text-center text-rose-500">
-          <i data-lucide="alert-circle" class="w-12 h-12 mx-auto mb-3 opacity-75"></i>
-          <p class="text-sm font-medium">Error al buscar estudiantes</p>
-        </div>
-      `;
+    } catch (err) {
+      container.innerHTML = `<div class="p-8 text-center text-rose-500"><i data-lucide="alert-circle" class="w-12 h-12 mx-auto mb-3 opacity-75"></i><p class="text-sm font-medium">Error al buscar estudiantes</p></div>`;
       if (window.lucide) lucide.createIcons();
     }
   },
 
-  // Seleccionar un estudiante
+  // ── Seleccionar estudiante ────────────────────────────────────────────────
   async _selectStudent(student) {
     this.state.selectedStudent = student;
     this.state.cart = [];
     this._renderStudentFile(student);
   },
 
-  // Renderizar expediente financiero
   async _renderStudentFile(student) {
     const noStudentEl = document.getElementById('noStudentSelected');
-    const fileEl = document.getElementById('studentFinancialFile');
-
+    const fileEl      = document.getElementById('studentFinancialFile');
     if (noStudentEl) noStudentEl.classList.add('hidden');
-    if (fileEl) fileEl.classList.remove('hidden');
+    if (fileEl)      fileEl.classList.remove('hidden');
 
-    // Actualizar avatar y datos básicos
+    const setTxt = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
     const avatarEl = document.getElementById('studentAvatar');
-    const nameEl = document.getElementById('studentName');
-    const classEl = document.getElementById('studentClassroom');
+    if (avatarEl) avatarEl.textContent = (student.name||'?').charAt(0).toUpperCase();
+    setTxt('studentName',      Helpers.escapeHTML(student.name||'Sin nombre'));
+    setTxt('studentClassroom', student.classrooms?.name ? Helpers.escapeHTML(student.classrooms.name) : 'Sin aula');
 
-    if (avatarEl) avatarEl.textContent = (student.name || '?').charAt(0).toUpperCase();
-    if (nameEl) nameEl.textContent = Helpers.escapeHTML(student.name || 'Sin nombre');
-    if (classEl) classEl.textContent = student.classrooms?.name ? Helpers.escapeHTML(student.classrooms.name) : 'Sin aula';
-
-    // Cargar y renderizar items pendientes
     await this._loadPendingItems(student);
     await this._loadPaymentHistory(student);
     this._updateCartUI();
   },
 
-  // Cargar items pendientes
+  // ── Items pendientes ──────────────────────────────────────────────────────
   async _loadPendingItems(student) {
     const container = document.getElementById('pendingItemsContainer');
     if (!container) return;
-
     container.innerHTML = '<div class="p-6 text-center"><div class="animate-spin w-6 h-6 border-2 border-[#0B63C7] border-t-transparent rounded-full mx-auto"></div></div>';
-
     try {
-      // Cargar pagos pendientes de la base de datos
       const { data: payments, error } = await supabase
-        .from('payments')
-        .select('*')
-        .eq('student_id', student.id)
-        .in('status', ['pending', 'overdue', 'review'])
-        .order('due_date', { ascending: true });
-
+        .from('payments').select('*').eq('student_id', student.id)
+        .in('status', ['pending','overdue','review']).order('due_date', { ascending: true });
       if (error) throw error;
 
-      // Si no hay pagos, mostrar algunos items de ejemplo
-      const items = (payments && payments.length > 0) ? payments.map(p => ({
-        id: p.id,
-        concept: p.concept || 'Mensualidad',
-        amount: Number(p.amount || 0),
-        dueDate: p.due_date,
-        status: this._getStatus(p),
-        type: 'payment'
-      })) : this._getExampleItems(student);
+      const items = (payments && payments.length > 0)
+        ? payments.map(p => ({
+            id:      p.id,
+            concept: p.concept || 'Mensualidad',
+            amount:  Number(p.amount || 0),
+            dueDate: p.due_date,
+            status:  this._calcStatus(p),
+            type:    'payment'
+          }))
+        : this._exampleItems(student);
 
-      if (items.length === 0) {
-        container.innerHTML = `
-          <div class="p-8 text-center text-slate-400">
-            <i data-lucide="inbox" class="w-12 h-12 mx-auto mb-3 opacity-50"></i>
-            <p class="text-sm font-medium">No hay pagos pendientes</p>
-          </div>
-        `;
-        if (window.lucide) lucide.createIcons();
-        return;
+      if (!items.length) {
+        container.innerHTML = `<div class="p-8 text-center text-slate-400"><i data-lucide="inbox" class="w-12 h-12 mx-auto mb-3 opacity-50"></i><p class="text-sm font-medium">No hay pagos pendientes</p></div>`;
+        if (window.lucide) lucide.createIcons(); return;
       }
-
       container.innerHTML = items.map(item => `
-        <div class="p-4 bg-white border border-slate-100 rounded-2xl mb-3 hover:border-[#0B63C7] transition-colors ${this._isInCart(item.id) ? 'ring-2 ring-[#0B63C7] bg-blue-50' : ''}">
+        <div class="p-4 bg-white border border-slate-100 rounded-2xl mb-3 hover:border-[#0B63C7] transition-colors ${this._inCart(item.id) ? 'ring-2 ring-[#0B63C7] bg-blue-50' : ''}">
           <div class="flex items-center justify-between gap-4">
             <div class="flex-1 min-w-0">
               <h4 class="font-bold text-slate-800 truncate">${Helpers.escapeHTML(item.concept)}</h4>
               <div class="flex items-center gap-2 mt-1">
-                ${item.dueDate ? `
-                  <span class="text-xs text-slate-500">
-                    <i data-lucide="calendar" class="w-3 h-3 inline mr-1"></i>
-                    Vence: ${new Date(item.dueDate + 'T00:00:00').toLocaleDateString('es-ES')}
-                  </span>
-                ` : ''}
-                ${item.status === 'overdue' ? `
-                  <span class="text-xs font-black text-rose-600 bg-rose-100 px-2 py-0.5 rounded-full">Vencido</span>
-                ` : item.status === 'review' ? `
-                  <span class="text-xs font-black text-orange-600 bg-orange-100 px-2 py-0.5 rounded-full">En revisión</span>
-                ` : ''}
+                ${item.dueDate ? `<span class="text-xs text-slate-500"><i data-lucide="calendar" class="w-3 h-3 inline mr-1"></i>Vence: ${new Date(item.dueDate+'T00:00:00').toLocaleDateString('es-ES')}</span>` : ''}
+                ${item.status === 'overdue' ? `<span class="text-xs font-black text-rose-600 bg-rose-100 px-2 py-0.5 rounded-full">Vencido</span>` : ''}
+                ${item.status === 'review'  ? `<span class="text-xs font-black text-orange-600 bg-orange-100 px-2 py-0.5 rounded-full">En revisión</span>` : ''}
               </div>
             </div>
             <div class="text-right">
-              <p class="text-lg font-black text-slate-800">${CURRENCY} ${item.amount.toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-              <button 
-                class="mt-2 px-4 py-1.5 ${this._isInCart(item.id) ? 'bg-slate-200 text-slate-600' : 'bg-gradient-to-r from-[#0B63C7] to-blue-600 text-white'} rounded-xl text-xs font-black uppercase tracking-wide transition-all hover:shadow-md active:scale-95"
-                data-item-id="${item.id}"
-              >
-                ${this._isInCart(item.id) ? 'Quitar' : 'Agregar'}
+              <p class="text-lg font-black text-slate-800">${fmt(item.amount)}</p>
+              <button class="mt-2 px-4 py-1.5 ${this._inCart(item.id) ? 'bg-slate-200 text-slate-600' : 'bg-gradient-to-r from-[#0B63C7] to-blue-600 text-white'} rounded-xl text-xs font-black uppercase tracking-wide transition-all hover:shadow-md active:scale-95" data-item-id="${item.id}">
+                ${this._inCart(item.id) ? 'Quitar' : 'Agregar'}
               </button>
             </div>
           </div>
-        </div>
-      `).join('');
+        </div>`).join('');
 
-      // Vincular eventos de agregar/quitar
       container.querySelectorAll('[data-item-id]').forEach(btn => {
         btn.addEventListener('click', () => {
-          const itemId = btn.dataset.itemId;
-          const item = items.find(i => String(i.id) === String(itemId));
-          if (item) {
-            if (this._isInCart(itemId)) {
-              this._removeFromCart(itemId);
-            } else {
-              this._addToCart(item);
-            }
-          }
+          const item = items.find(i => String(i.id) === String(btn.dataset.itemId));
+          if (!item) return;
+          if (this._inCart(item.id)) this._removeFromCart(item.id);
+          else this._addToCart(item);
         });
       });
-
       if (window.lucide) lucide.createIcons();
-    } catch (error) {
-      console.error('Error al cargar items pendientes:', error);
-      container.innerHTML = `
-        <div class="p-8 text-center text-rose-500">
-          <i data-lucide="alert-circle" class="w-12 h-12 mx-auto mb-3 opacity-75"></i>
-          <p class="text-sm font-medium">Error al cargar pagos pendientes</p>
-        </div>
-      `;
+    } catch (err) {
+      container.innerHTML = `<div class="p-8 text-center text-rose-500"><i data-lucide="alert-circle" class="w-12 h-12 mx-auto mb-3 opacity-75"></i><p class="text-sm font-medium">Error al cargar pagos pendientes</p></div>`;
       if (window.lucide) lucide.createIcons();
     }
   },
 
-  // Cargar historial de pagos
+  // ── Historial ─────────────────────────────────────────────────────────────
   async _loadPaymentHistory(student) {
     const container = document.getElementById('historyContainer');
     if (!container) return;
-
     try {
       const { data: payments, error } = await supabase
-        .from('payments')
-        .select('*')
-        .eq('student_id', student.id)
-        .eq('status', 'paid')
-        .order('paid_date', { ascending: false })
-        .limit(20);
-
+        .from('payments').select('*').eq('student_id', student.id)
+        .eq('status','paid').order('paid_date', { ascending: false }).limit(20);
       if (error) throw error;
-
-      if (!payments || payments.length === 0) {
-        container.innerHTML = `
-          <div class="p-8 text-center text-slate-400">
-            <i data-lucide="history" class="w-12 h-12 mx-auto mb-3 opacity-50"></i>
-            <p class="text-sm font-medium">No hay pagos registrados</p>
-          </div>
-        `;
-        if (window.lucide) lucide.createIcons();
-        return;
+      if (!payments || !payments.length) {
+        container.innerHTML = `<div class="p-8 text-center text-slate-400"><i data-lucide="history" class="w-12 h-12 mx-auto mb-3 opacity-50"></i><p class="text-sm font-medium">No hay pagos registrados</p></div>`;
+        if (window.lucide) lucide.createIcons(); return;
       }
-
-      container.innerHTML = payments.map(payment => `
+      container.innerHTML = payments.map(p => `
         <div class="p-4 bg-white border border-slate-100 rounded-2xl mb-3">
           <div class="flex items-center justify-between gap-4">
             <div class="flex-1 min-w-0">
-              <h4 class="font-bold text-slate-800 truncate">${Helpers.escapeHTML(payment.concept || 'Mensualidad')}</h4>
-              <p class="text-xs text-slate-500">
-                ${payment.paid_date ? new Date(payment.paid_date).toLocaleDateString('es-ES') : '-'}
-              </p>
+              <h4 class="font-bold text-slate-800 truncate">${Helpers.escapeHTML(p.concept||'Mensualidad')}</h4>
+              <p class="text-xs text-slate-500">${p.paid_date ? new Date(p.paid_date).toLocaleDateString('es-ES') : '-'}</p>
             </div>
             <div class="text-right">
-              <p class="text-lg font-black text-emerald-600">${CURRENCY} ${Number(payment.amount || 0).toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+              <p class="text-lg font-black text-emerald-600">${fmt(p.amount)}</p>
               <span class="text-xs font-black text-emerald-600 bg-emerald-100 px-2 py-0.5 rounded-full">Pagado</span>
             </div>
           </div>
-        </div>
-      `).join('');
-
+        </div>`).join('');
       if (window.lucide) lucide.createIcons();
-    } catch (error) {
-      console.error('Error al cargar historial:', error);
-      container.innerHTML = `
-        <div class="p-8 text-center text-rose-500">
-          <i data-lucide="alert-circle" class="w-12 h-12 mx-auto mb-3 opacity-75"></i>
-          <p class="text-sm font-medium">Error al cargar historial</p>
-        </div>
-      `;
-      if (window.lucide) lucide.createIcons();
-    }
+    } catch (_) {}
   },
 
-  // Items de ejemplo
-  _getExampleItems(student) {
-    const currentMonth = new Date().getMonth();
-    const currentYear = new Date().getFullYear();
-    const items = [];
-
-    const concepts = ['Mensualidad', 'Materiales', 'Uniforme', 'Excursión'];
-    for (let i = 0; i < 3; i++) {
-      const month = (currentMonth - i + 12) % 12;
-      const dueDate = new Date(currentYear, month, 5).toISOString().split('T')[0];
-      const isOverdue = new Date(dueDate + 'T00:00:00') < new Date().setHours(0, 0, 0, 0);
-      items.push({
-        id: `example-${i}`,
-        concept: `${concepts[i]} ${this._getMonthName(month)}`,
-        amount: 9850,
-        dueDate,
-        status: isOverdue ? 'overdue' : 'pending',
-        type: 'payment'
-      });
-    }
-    return items;
+  // ── Helpers ───────────────────────────────────────────────────────────────
+  _exampleItems(student) {
+    const now = new Date();
+    const months = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    return [0,1,2].map(i => {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 5);
+      const dueStr = d.toISOString().split('T')[0];
+      return {
+        id:      `ex-${i}`,
+        concept: `Mensualidad ${months[d.getMonth()]} ${d.getFullYear()}`,
+        amount:  3000,
+        dueDate: dueStr,
+        status:  d < new Date().setHours(0,0,0,0) ? 'overdue' : 'pending',
+        type:    'payment'
+      };
+    });
   },
 
-  _getMonthName(month) {
-    const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-    return months[month];
+  _calcStatus(p) {
+    if (p.status === 'paid')   return 'paid';
+    if (p.status === 'review') return 'review';
+    if (!p.due_date)           return 'pending';
+    return new Date(p.due_date+'T00:00:00') < new Date().setHours(0,0,0,0) ? 'overdue' : 'pending';
   },
 
-  _getStatus(payment) {
-    if (payment.status === 'paid') return 'paid';
-    if (payment.status === 'review') return 'review';
-    if (!payment.due_date) return 'pending';
-    const due = new Date(payment.due_date + 'T00:00:00');
-    const now = new Date().setHours(0, 0, 0, 0);
-    return now > due ? 'overdue' : 'pending';
+  _overdueDays(dueDateStr) {
+    if (!dueDateStr) return 0;
+    return Math.max(0, Math.ceil((Date.now() - new Date(dueDateStr+'T00:00:00').getTime()) / 86400000));
   },
 
-  // Carrito
-  _isInCart(itemId) {
-    return this.state.cart.some(item => String(item.id) === String(itemId));
-  },
+  // ── Carrito ───────────────────────────────────────────────────────────────
+  _inCart(id) { return this.state.cart.some(i => String(i.id) === String(id)); },
 
   _addToCart(item) {
-    if (!this._isInCart(item.id)) {
+    if (!this._inCart(item.id)) {
       this.state.cart.push(item);
       this._updateCartUI();
-      if (this.state.selectedStudent) {
-        this._loadPendingItems(this.state.selectedStudent);
-      }
+      if (this.state.selectedStudent) this._loadPendingItems(this.state.selectedStudent);
     }
   },
 
-  _removeFromCart(itemId) {
-    this.state.cart = this.state.cart.filter(item => String(item.id) !== String(itemId));
+  _removeFromCart(id) {
+    this.state.cart = this.state.cart.filter(i => String(i.id) !== String(id));
     this._updateCartUI();
-    if (this.state.selectedStudent) {
-      this._loadPendingItems(this.state.selectedStudent);
-    }
+    if (this.state.selectedStudent) this._loadPendingItems(this.state.selectedStudent);
   },
 
   _clearCart() {
     this.state.cart = [];
-    this.state.mixedPayments = [ { method: 'efectivo', amount: 0 } ];
+    this.state.mixedPayments = [{ method: 'efectivo', amount: 0 }];
     this._updateCartUI();
-    if (this.state.selectedStudent) {
-      this._loadPendingItems(this.state.selectedStudent);
-    }
+    if (this.state.selectedStudent) this._loadPendingItems(this.state.selectedStudent);
   },
 
-  // Calculadora automática completa
+  // ── Cálculo de totales (FUENTE ÚNICA DE VERDAD) ──────────────────────────
   _calculateTotals() {
     let subtotal = 0;
-    let mora = 0;
-    let descuentoHermanos = 0;
-    let descuentoPagoAnticipado = 0;
-    let beca = 0;
-    let creditoFavor = 0;
+    let mora     = 0;
 
-    this.state.cart.forEach(item => {
-      subtotal += item.amount;
-      
-      // Calcular mora
+    for (const item of this.state.cart) {
+      subtotal += Number(item.amount) || 0;
+      // Mora para vencidos (2% anual diario)
       if (item.status === 'overdue' && item.dueDate) {
-        const dueDate = new Date(item.dueDate + 'T00:00:00');
-        const today = new Date().setHours(0, 0, 0, 0);
-        const diffDays = Math.max(0, Math.ceil((today - dueDate.getTime()) / (1000 * 60 * 60 * 24)));
-        
-        // Mora: 2% del monto por día de atraso (ejemplo configurable)
-        mora += (item.amount * 0.02 * diffDays);
+        mora += parseFloat(((item.amount * 0.02 / 365) * this._overdueDays(item.dueDate)).toFixed(2));
       }
-    });
-
-    // Descuento por hermanos (10% si hay 2+ hermanos activos)
-    if (this.state.selectedStudent) {
-      // Simulamos la lógica, en la realidad consultaríamos la base de datos
-      const tieneHermanos = false; // Cambiar a true para probar
-      if (tieneHermanos) {
-        descuentoHermanos = subtotal * 0.10; // 10%
-      }
-
-      // Descuento por pago anticipado (5% si paga antes de la fecha de vencimiento)
-      const pagoAnticipado = this.state.cart.some(item => {
-        if (!item.dueDate) return false;
-        const dueDate = new Date(item.dueDate + 'T00:00:00');
-        const today = new Date().setHours(0, 0, 0, 0);
-        return today < dueDate.getTime();
-      });
-      if (pagoAnticipado) {
-        descuentoPagoAnticipado = subtotal * 0.05; // 5%
-      }
-
-      // Beca (ejemplo: 5% de beca académica)
-      const tieneBeca = false; // Simulación
-      if (tieneBeca) {
-        beca = subtotal * 0.05;
-      }
-
-      // Crédito a favor
-      creditoFavor = 0; // Simulación
     }
 
-    const descuentosTotales = descuentoHermanos + descuentoPagoAnticipado + beca + creditoFavor;
-    const total = subtotal - descuentosTotales + mora;
+    const pct            = Math.min(100, Math.max(0, parseFloat(this.state.discountPercent) || 0));
+    const discountAmount = pct > 0 ? parseFloat((subtotal * pct / 100).toFixed(2)) : 0;
+    const total          = parseFloat((subtotal - discountAmount + mora).toFixed(2));
 
-    return { 
-      subtotal, 
-      mora, 
-      descuentoHermanos, 
-      descuentoPagoAnticipado, 
-      beca, 
-      creditoFavor,
-      descuentosTotales, 
-      total 
-    };
+    return { subtotal, mora, discountAmount, discountPercent: pct, total };
   },
 
+  // ── Actualizar UI del carrito lateral ────────────────────────────────────
   _updateCartUI() {
     const cartContainer = document.getElementById('cartContainer');
-    const cartItemsEl = document.getElementById('cartItems');
-    const subtotalEl = document.getElementById('cartSubtotal');
-    const descuentoHermanosEl = document.getElementById('cartDescuentoHermanos');
-    const descuentoHermanosRowEl = document.getElementById('cartDescuentoHermanosRow');
-    const descuentoPagoAnticipadoEl = document.getElementById('cartDescuentoPagoAnticipado');
-    const descuentoPagoAnticipadoRowEl = document.getElementById('cartDescuentoPagoAnticipadoRow');
-    const becaEl = document.getElementById('cartBeca');
-    const becaRowEl = document.getElementById('cartBecaRow');
-    const creditoFavorEl = document.getElementById('cartCreditoFavor');
-    const creditoFavorRowEl = document.getElementById('cartCreditoFavorRow');
-    const moraEl = document.getElementById('cartMora');
-    const moraRowEl = document.getElementById('cartMoraRow');
-    const totalEl = document.getElementById('cartTotal');
-
     if (!cartContainer) return;
 
     if (this.state.cart.length === 0) {
       cartContainer.classList.add('hidden');
       return;
     }
-
     cartContainer.classList.remove('hidden');
 
+    const cartItemsEl = document.getElementById('cartItems');
     if (cartItemsEl) {
       cartItemsEl.innerHTML = this.state.cart.map(item => `
         <div class="flex items-center justify-between p-3 bg-white rounded-xl border border-slate-100 mb-2">
           <div class="flex-1 min-w-0 mr-3">
             <p class="font-bold text-slate-800 truncate text-sm">${Helpers.escapeHTML(item.concept)}</p>
-            ${item.status === 'overdue' ? `<p class="text-xs text-rose-600">+ mora (${this._getOverdueDays(item.dueDate)} días)</p>` : ''}
+            ${item.status === 'overdue' ? `<p class="text-xs text-rose-600">+ mora (${this._overdueDays(item.dueDate)} días)</p>` : ''}
           </div>
           <div class="flex items-center gap-3">
-            <span class="font-black text-slate-800 text-sm">${CURRENCY} ${item.amount.toLocaleString('es-DO', { minimumFractionDigits: 2 })}</span>
+            <span class="font-black text-slate-800 text-sm">${fmt(item.amount)}</span>
             <button class="p-1.5 bg-slate-100 text-slate-500 rounded-lg hover:bg-slate-200 transition-colors" data-remove-item="${item.id}">
               <i data-lucide="x" class="w-4 h-4"></i>
             </button>
           </div>
-        </div>
-      `).join('');
-
+        </div>`).join('');
       cartItemsEl.querySelectorAll('[data-remove-item]').forEach(btn => {
-        btn.addEventListener('click', () => {
-          this._removeFromCart(btn.dataset.removeItem);
-        });
+        btn.addEventListener('click', () => this._removeFromCart(btn.dataset.removeItem));
       });
-
       if (window.lucide) lucide.createIcons();
     }
 
-    const { subtotal, mora, descuentoHermanos, descuentoPagoAnticipado, beca, creditoFavor, total } = this._calculateTotals();
+    const { subtotal, mora, discountAmount, total } = this._calculateTotals();
 
-    if (subtotalEl) subtotalEl.textContent = `${CURRENCY} ${subtotal.toLocaleString('es-DO', { minimumFractionDigits: 2 })}`;
-    
-    if (descuentoHermanosEl) descuentoHermanosEl.textContent = `- ${CURRENCY} ${descuentoHermanos.toLocaleString('es-DO', { minimumFractionDigits: 2 })}`;
-    if (descuentoHermanosRowEl) descuentoHermanosRowEl.classList.toggle('hidden', descuentoHermanos === 0);
-    
-    if (descuentoPagoAnticipadoEl) descuentoPagoAnticipadoEl.textContent = `- ${CURRENCY} ${descuentoPagoAnticipado.toLocaleString('es-DO', { minimumFractionDigits: 2 })}`;
-    if (descuentoPagoAnticipadoRowEl) descuentoPagoAnticipadoRowEl.classList.toggle('hidden', descuentoPagoAnticipado === 0);
-    
-    if (becaEl) becaEl.textContent = `- ${CURRENCY} ${beca.toLocaleString('es-DO', { minimumFractionDigits: 2 })}`;
-    if (becaRowEl) becaRowEl.classList.toggle('hidden', beca === 0);
-    
-    if (creditoFavorEl) creditoFavorEl.textContent = `- ${CURRENCY} ${creditoFavor.toLocaleString('es-DO', { minimumFractionDigits: 2 })}`;
-    if (creditoFavorRowEl) creditoFavorRowEl.classList.toggle('hidden', creditoFavor === 0);
-    
-    if (moraEl) moraEl.textContent = `+ ${CURRENCY} ${mora.toLocaleString('es-DO', { minimumFractionDigits: 2 })}`;
-    if (moraRowEl) moraRowEl.classList.toggle('hidden', mora === 0);
-    
-    if (totalEl) totalEl.textContent = `${CURRENCY} ${total.toLocaleString('es-DO', { minimumFractionDigits: 2 })}`;
+    const setTxt = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+    const hideRow = (id, hide) => { const el = document.getElementById(id); if (el) el.classList.toggle('hidden', hide); };
+
+    setTxt('cartSubtotal', fmt(subtotal));
+    setTxt('cartTotal',    fmt(total));
+    setTxt('cartMora',     `+ ${fmt(mora)}`);
+    hideRow('cartMoraRow',               mora === 0);
+    hideRow('cartDescuentoHermanosRow',  true);
+    hideRow('cartDescuentoPagoAnticipadoRow', true);
+    hideRow('cartBecaRow',              true);
+    hideRow('cartCreditoFavorRow',      true);
   },
 
-  _getOverdueDays(dueDateStr) {
-    if (!dueDateStr) return 0;
-    const dueDate = new Date(dueDateStr + 'T00:00:00');
-    const today = new Date().setHours(0, 0, 0, 0);
-    return Math.max(0, Math.ceil((today - dueDate.getTime()) / (1000 * 60 * 60 * 24)));
-  },
-
-  // Tabs
+  // ── Tabs ──────────────────────────────────────────────────────────────────
   _switchTab(tab) {
     this.state.currentTab = tab;
-    const pendingTab = document.getElementById('tabPending');
-    const historyTab = document.getElementById('tabHistory');
-    const pendingContainer = document.getElementById('pendingItemsContainer');
-    const historyContainer = document.getElementById('historyContainer');
-
-    if (pendingTab) pendingTab.classList.toggle('border-[#0B63C7]', tab === 'pending');
-    if (pendingTab) pendingTab.classList.toggle('text-[#0B63C7]', tab === 'pending');
-    if (pendingTab) pendingTab.classList.toggle('bg-white', tab === 'pending');
-    if (pendingTab) pendingTab.classList.toggle('text-slate-500', tab !== 'pending');
-    if (pendingTab) pendingTab.classList.toggle('border-transparent', tab !== 'pending');
-
-    if (historyTab) historyTab.classList.toggle('border-[#0B63C7]', tab === 'history');
-    if (historyTab) historyTab.classList.toggle('text-[#0B63C7]', tab === 'history');
-    if (historyTab) historyTab.classList.toggle('bg-white', tab === 'history');
-    if (historyTab) historyTab.classList.toggle('text-slate-500', tab !== 'history');
-    if (historyTab) historyTab.classList.toggle('border-transparent', tab !== 'history');
-
-    if (pendingContainer) pendingContainer.classList.toggle('hidden', tab !== 'pending');
-    if (historyContainer) historyContainer.classList.toggle('hidden', tab !== 'history');
+    const setPending = tab === 'pending';
+    const tabStyle = (id, active) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.classList.toggle('border-[#0B63C7]', active);
+      el.classList.toggle('text-[#0B63C7]',   active);
+      el.classList.toggle('bg-white',          active);
+      el.classList.toggle('text-slate-500',   !active);
+      el.classList.toggle('border-transparent',!active);
+    };
+    tabStyle('tabPending', setPending);
+    tabStyle('tabHistory', !setPending);
+    const pendingC = document.getElementById('pendingItemsContainer');
+    const historyC = document.getElementById('historyContainer');
+    if (pendingC) pendingC.classList.toggle('hidden', !setPending);
+    if (historyC) historyC.classList.toggle('hidden',  setPending);
   },
 
-  // Modal de método de pago
-  _openPaymentMethodModal() {
-    if (this.state.cart.length === 0) {
-      alert('Selecciona al menos un item para pagar');
+  // ── Modal de cobro ────────────────────────────────────────────────────────
+  _openModal() {
+    if (!this.state.cart.length) {
+      Helpers.toast('Selecciona al menos un concepto para cobrar', 'warning');
       return;
     }
-    // Reset mixed payments to start fresh
+    // Reset descuento al abrir
+    this.state.discountPercent = 0;
+    this.state.discountAmount  = 0;
+    const discInput = document.getElementById('discountPercent');
+    if (discInput) discInput.value = '0';
+    const preview = document.getElementById('discountPreview');
+    if (preview) preview.classList.add('hidden');
+
     const { total } = this._calculateTotals();
-    this.state.mixedPayments = [ { method: 'efectivo', amount: total } ];
-    
+    this.state.mixedPayments = [{ method: 'efectivo', amount: total }];
+
     const modal = document.getElementById('paymentMethodModal');
     if (modal) modal.classList.remove('hidden');
-    this._renderPaymentSummary();
+
+    // Reiniciar método a efectivo
+    this.state.paymentMethod = 'efectivo';
+    const efectivoRadio = document.querySelector('input[name="paymentMethod"][value="efectivo"]');
+    if (efectivoRadio) efectivoRadio.checked = true;
     this._updateMethodDetails('efectivo');
+
+    // Renderizar resumen DESPUÉS de que el modal sea visible
+    requestAnimationFrame(() => this._renderModalSummary());
   },
 
-  _closePaymentMethodModal() {
+  _closeModal() {
     const modal = document.getElementById('paymentMethodModal');
     if (modal) modal.classList.add('hidden');
   },
 
-  _renderPaymentSummary() {
-    const container = document.getElementById('paymentSummaryItems');
-    const totalEl = document.getElementById('paymentSummaryTotal');
+  // ── Renderizar resumen DENTRO del modal ──────────────────────────────────
+  _renderModalSummary() {
+    const { subtotal, discountAmount, discountPercent, mora, total } = this._calculateTotals();
 
+    // ① Conceptos del carrito
+    const container = document.getElementById('paymentSummaryItems');
     if (container) {
-      container.innerHTML = this.state.cart.map(item => `
-        <div class="flex items-center justify-between py-2">
-          <span class="font-medium text-slate-800">${Helpers.escapeHTML(item.concept)}</span>
-          <span class="font-bold text-slate-800">${CURRENCY} ${item.amount.toLocaleString('es-DO', { minimumFractionDigits: 2 })}</span>
+      const student = this.state.selectedStudent;
+      const studentHdr = student ? `
+        <div class="mb-3 px-1 pb-3 border-b border-slate-100">
+          <p class="text-xs font-black text-slate-400 uppercase tracking-wider">Estudiante</p>
+          <p class="font-bold text-slate-800">${Helpers.escapeHTML(student.name||'')}</p>
+          ${student.matricula ? `<p class="text-xs text-slate-500">${Helpers.escapeHTML(student.matricula)}</p>` : ''}
+        </div>` : '';
+
+      const itemsHTML = this.state.cart.length
+        ? this.state.cart.map(item => `
+            <div class="flex items-center justify-between py-2 border-b border-slate-100 last:border-0">
+              <div class="flex-1 min-w-0 pr-2">
+                <p class="font-bold text-slate-800 text-sm">${Helpers.escapeHTML(item.concept||'Concepto')}</p>
+                ${item.dueDate ? `<p class="text-[10px] text-slate-400">Vence: ${new Date(item.dueDate+'T00:00:00').toLocaleDateString('es-DO')}</p>` : ''}
+                ${item.status === 'overdue' ? `<p class="text-[10px] text-rose-500 font-bold">Vencido · ${this._overdueDays(item.dueDate)} días</p>` : ''}
+              </div>
+              <span class="font-black text-slate-800 shrink-0">${fmt(item.amount)}</span>
+            </div>`).join('')
+        : '<p class="text-sm text-slate-400 text-center py-2">Sin conceptos seleccionados</p>';
+
+      const moraRow = mora > 0
+        ? `<div class="flex justify-between py-1 text-rose-600 text-sm"><span class="font-bold">Mora</span><span class="font-black">+${fmt(mora)}</span></div>` : '';
+
+      const discRow = discountAmount > 0
+        ? `<div class="flex justify-between py-1 text-[#28B54D] text-sm"><span class="font-bold">Descuento (${discountPercent}%)</span><span class="font-black">-${fmt(discountAmount)}</span></div>` : '';
+
+      const subtotalRow = `<div class="flex justify-between py-1 text-sm text-slate-600"><span>Subtotal</span><span class="font-bold text-slate-800">${fmt(subtotal)}</span></div>`;
+
+      container.innerHTML = `
+        ${studentHdr}
+        <div class="mb-3 p-3 bg-slate-50 rounded-xl border border-slate-100">
+          <p class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-2">📋 Conceptos seleccionados</p>
+          ${itemsHTML}
         </div>
-      `).join('');
+        <div class="space-y-0.5 px-1">
+          ${subtotalRow}${moraRow}${discRow}
+        </div>`;
     }
 
-    const { total } = this._calculateTotals();
-    if (totalEl) totalEl.textContent = `${CURRENCY} ${total.toLocaleString('es-DO', { minimumFractionDigits: 2 })}`;
+    // ② Total principal — elemento que estaba mostrando RD$0.00
+    const totalEl = document.getElementById('paymentSummaryTotal');
+    if (totalEl) totalEl.textContent = fmt(total);
   },
 
+  // ── Descuento % (llamado desde HTML via oninput) ─────────────────────────
+  _applyDiscountPercent(rawValue) {
+    const pct = Math.min(100, Math.max(0, parseFloat(rawValue) || 0));
+    this.state.discountPercent = pct;
+    const { subtotal, discountAmount, total } = this._calculateTotals();
+    this.state.discountAmount = discountAmount;
+
+    const preview = document.getElementById('discountPreview');
+    if (preview) {
+      if (pct > 0) {
+        preview.classList.remove('hidden');
+        const setTxt = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+        setTxt('discountLabel',    `Descuento (${pct}%):`);
+        setTxt('discountAmount',   `-${fmt(discountAmount)}`);
+        setTxt('discountSubtotal', fmt(subtotal));
+        setTxt('discountTotal',    fmt(total));
+      } else {
+        preview.classList.add('hidden');
+      }
+    }
+    // Actualizar resumen y total del modal
+    this._renderModalSummary();
+  },
+
+  // ── Detalles del método ────────────────────────────────────────────────────
   _updateMethodDetails(method) {
-    // Ocultar todos los detalles
-    ['efectivoDetails', 'tarjetaDetails', 'transferenciaDetails', 'mixtoDetails'].forEach(id => {
+    ['efectivoDetails','tarjetaDetails','transferenciaDetails','mixtoDetails'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.classList.add('hidden');
     });
-
-    // Mostrar el método seleccionado
-    const methodId = `${method}Details`;
-    const el = document.getElementById(methodId);
+    const el = document.getElementById(`${method}Details`);
     if (el) el.classList.remove('hidden');
+    if (method === 'mixto') this._renderMixedPayments();
   },
 
-  // Métodos para pago mixto
+  // ── Pago mixto ────────────────────────────────────────────────────────────
   _addMixedPaymentMethod() {
-    const availableMethods = ['efectivo', 'tarjeta', 'transferencia'];
-    const usedMethods = this.state.mixedPayments.map(mp => mp.method);
-    const nextMethod = availableMethods.find(m => !usedMethods.includes(m));
-    
-    if (nextMethod) {
-      this.state.mixedPayments.push({ method: nextMethod, amount: 0 });
+    const used   = this.state.mixedPayments.map(mp => mp.method);
+    const next   = ['efectivo','tarjeta','transferencia'].find(m => !used.includes(m));
+    if (next) {
+      this.state.mixedPayments.push({ method: next, amount: 0 });
       this._renderMixedPayments();
     }
   },
@@ -692,139 +503,127 @@ export const NewPaymentsModule = {
   _renderMixedPayments() {
     const container = document.getElementById('mixedPaymentItems');
     if (!container) return;
-    
-    const methodNames = {
-      efectivo: 'Efectivo',
-      tarjeta: 'Tarjeta',
-      transferencia: 'Transferencia'
-    };
-    
-    container.innerHTML = this.state.mixedPayments.map((mp, index) => `
+    const names = { efectivo: 'Efectivo', tarjeta: 'Tarjeta', transferencia: 'Transferencia' };
+    container.innerHTML = this.state.mixedPayments.map((mp, i) => `
       <div class="flex items-center gap-3 p-3 bg-white rounded-xl border border-slate-100 mb-2">
-        <div class="flex-1">
-          <p class="font-bold text-slate-800 text-sm">${methodNames[mp.method]}</p>
-        </div>
+        <div class="flex-1"><p class="font-bold text-slate-800 text-sm">${names[mp.method]}</p></div>
         <div class="flex items-center gap-2">
-          <input 
-            type="number" 
-            class="w-32 px-3 py-2 border border-slate-200 rounded-xl text-sm font-bold"
-            placeholder="0.00"
-            value="${mp.amount}"
-            data-mixed-index="${index}"
-          />
-          ${this.state.mixedPayments.length > 1 ? `
-            <button class="p-2 bg-rose-100 text-rose-600 rounded-lg hover:bg-rose-200" data-mixed-remove="${index}">
-              <i data-lucide="trash-2" class="w-4 h-4"></i>
-            </button>
-          ` : ''}
+          <input type="number" class="w-32 px-3 py-2 border border-slate-200 rounded-xl text-sm font-bold" placeholder="0.00" value="${mp.amount}" data-mixed-index="${i}">
+          ${this.state.mixedPayments.length > 1 ? `<button class="p-2 bg-rose-100 text-rose-600 rounded-lg hover:bg-rose-200" data-mixed-remove="${i}"><i data-lucide="trash-2" class="w-4 h-4"></i></button>` : ''}
         </div>
-      </div>
-    `).join('');
-    
-    // Bind events
-    container.querySelectorAll('input[data-mixed-index]').forEach(input => {
-      input.addEventListener('change', (e) => {
-        const idx = parseInt(e.target.dataset.mixedIndex);
-        this.state.mixedPayments[idx].amount = parseFloat(e.target.value) || 0;
-      });
+      </div>`).join('');
+    container.querySelectorAll('input[data-mixed-index]').forEach(inp => {
+      inp.addEventListener('change', (e) => { this.state.mixedPayments[parseInt(e.target.dataset.mixedIndex)].amount = parseFloat(e.target.value)||0; });
     });
-    
     container.querySelectorAll('[data-mixed-remove]').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        const idx = parseInt(e.currentTarget.dataset.mixedRemove);
-        this.state.mixedPayments.splice(idx, 1);
-        this._renderMixedPayments();
-      });
+      btn.addEventListener('click', () => { this.state.mixedPayments.splice(parseInt(btn.dataset.mixedRemove),1); this._renderMixedPayments(); });
     });
-    
     if (window.lucide) lucide.createIcons();
   },
 
-  // Confirmar pago
+  // ── Confirmar pago ────────────────────────────────────────────────────────
   async _confirmPayment() {
-    const confirmBtn = document.getElementById('confirmPaymentBtn');
-    if (confirmBtn) {
-      confirmBtn.disabled = true;
-      confirmBtn.textContent = 'Procesando...';
-    }
+    const btn = document.getElementById('confirmPaymentBtn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Procesando...'; }
 
     try {
       const student = this.state.selectedStudent;
-      if (!student) {
-        throw new Error('No hay estudiante seleccionado');
-      }
+      if (!student) throw new Error('No hay estudiante seleccionado');
 
-      const { total } = this._calculateTotals();
+      const { total, discountAmount, discountPercent, subtotal } = this._calculateTotals();
+
       const selectedMethodInput = document.querySelector('input[name="paymentMethod"]:checked');
       const paymentMethod = selectedMethodInput ? selectedMethodInput.value : 'efectivo';
-      const needsEcf = document.getElementById('needsEcf')?.checked || false;
 
-      // 1. Mark payments as paid
       let firstPaymentId = null;
+
       for (const item of this.state.cart) {
-        if (item.type === 'payment' && !item.id.startsWith('example-')) {
-          await supabase.from('payments')
-            .update({ 
-              status: 'paid', 
-              paid_date: new Date().toISOString(),
-              method: paymentMethod
-            })
-            .eq('id', item.id);
-          
+        // Calcular descuento proporcional para cada item
+        const itemDiscount = subtotal > 0 ? parseFloat(((item.amount / subtotal) * discountAmount).toFixed(2)) : 0;
+        const finalAmount  = parseFloat((item.amount - itemDiscount).toFixed(2));
+
+        if (item.type === 'payment' && !String(item.id).startsWith('ex-')) {
+          // Item real de DB → update
+          const { error: updateErr } = await supabase.from('payments').update({
+            status:           'paid',
+            paid_date:        new Date().toISOString(),
+            method:           paymentMethod,
+            amount:           finalAmount,
+            discount_amount:  itemDiscount,
+            discount_percent: discountPercent
+          }).eq('id', item.id);
+          if (updateErr) console.warn('[Payment] update err:', updateErr.message);
           if (!firstPaymentId) firstPaymentId = item.id;
+        } else {
+          // Item de ejemplo → insertar nuevo registro
+          const { data: newP, error: insErr } = await supabase.from('payments').insert({
+            student_id:       student.id,
+            concept:          item.concept,
+            amount:           finalAmount,
+            status:           'paid',
+            paid_date:        new Date().toISOString(),
+            method:           paymentMethod,
+            discount_amount:  itemDiscount,
+            discount_percent: discountPercent
+          }).select('id').single();
+          if (insErr) console.warn('[Payment] insert err:', insErr.message);
+          if (!firstPaymentId && newP?.id) firstPaymentId = newP.id;
         }
       }
 
-      // 2. Generate invoice
-      let invoice = null;
+      // Generar factura (edge function) — falla silenciosamente si no está desplegada
       if (firstPaymentId) {
         try {
           const { data: authData } = await supabase.auth.getUser();
-          const userId = authData?.user?.id;
-          
-          invoice = await InvoicingModule.generateInvoice(firstPaymentId, userId);
+          const invoice = await InvoicingModule.generateInvoice(firstPaymentId, authData?.user?.id);
           this.state.lastInvoice = invoice;
-          Helpers.toast('Factura generada exitosamente!', 'success');
         } catch (invoiceErr) {
-          console.error('Error generando factura:', invoiceErr);
+          // generate-invoice 404 / CORS en localhost — no bloquea el flujo
+          console.info('[Invoice] generation skipped:', invoiceErr?.message);
         }
       }
 
-      // 3. Send notification to parent (simulated)
+      // Intentar notificar al padre (no bloquea)
       try {
-        if (student.profiles?.email) {
+        if (student.profiles?.email || student.p1_email) {
           const { notifyPaymentApproved } = await import('../shared/supabase.js');
-          const amtStr = total.toLocaleString('es-DO', { minimumFractionDigits: 2 });
-          await notifyPaymentApproved(firstPaymentId, student.profiles.email, student.name, amtStr, 'Pago');
+          await notifyPaymentApproved(firstPaymentId, student.profiles?.email || student.p1_email, student.name, fmt(total), 'Pago');
         }
-      } catch (notifyErr) {
-        console.error('Error notificando:', notifyErr);
-      }
+      } catch (_) {}
 
-      this._closePaymentMethodModal();
-      this._showSuccessModal();
+      // Reset y refrescar
+      this.state.discountPercent = 0;
+      this.state.discountAmount  = 0;
+      this._closeModal();
+      this._showSuccessModal(total, paymentMethod);
       this._clearCart();
       if (this.state.selectedStudent) {
         await this._loadPendingItems(this.state.selectedStudent);
         await this._loadPaymentHistory(this.state.selectedStudent);
       }
 
-    } catch (error) {
-      console.error('Error al confirmar pago:', error);
-      Helpers.toast('Error al procesar el pago. Inténtalo de nuevo.', 'error');
+    } catch (err) {
+      console.error('[ConfirmPayment]', err);
+      Helpers.toast('Error al procesar el pago: ' + (err.message || err), 'error');
     } finally {
-      if (confirmBtn) {
-        confirmBtn.disabled = false;
-        confirmBtn.innerHTML = '<i data-lucide="check-circle" class="w-5 h-5 inline mr-2"></i> Confirmar Pago';
-        if (window.lucide) lucide.createIcons();
-      }
+      if (btn) { btn.disabled = false; btn.innerHTML = '<i data-lucide="check-circle" class="w-5 h-5 inline mr-2"></i> Confirmar Pago'; if (window.lucide) lucide.createIcons(); }
     }
   },
 
-  // Modal de éxito
-  _showSuccessModal() {
+  // ── Modal de éxito ────────────────────────────────────────────────────────
+  _showSuccessModal(total, method) {
     const modal = document.getElementById('paymentSuccessModal');
-    if (modal) modal.classList.remove('hidden');
+    if (!modal) return;
+
+    // Actualizar mensaje con total
+    const msgEl = modal.querySelector('p.text-slate-600');
+    if (msgEl && total) {
+      const methods = { efectivo: 'Efectivo', tarjeta: 'Tarjeta', transferencia: 'Transferencia', mixto: 'Pago Mixto' };
+      msgEl.innerHTML = `El pago de <strong>${fmt(total)}</strong> fue registrado correctamente.<br><span class="text-xs text-slate-400">${methods[method] || method}</span>`;
+    }
+
+    Helpers.toast('✅ Pago registrado correctamente', 'success');
+    modal.classList.remove('hidden');
   },
 
   _closeSuccessModal() {
@@ -833,10 +632,10 @@ export const NewPaymentsModule = {
   },
 
   _downloadInvoice() {
-    if (this.state.lastInvoice) {
-      Helpers.toast('Descargando factura...', 'info');
+    if (this.state.lastInvoice?.pdf_url) {
+      window.open(this.state.lastInvoice.pdf_url, '_blank');
     } else {
-      Helpers.toast('No hay factura disponible para descargar', 'warning');
+      Helpers.toast('Factura no disponible para descarga (edge function no desplegada)', 'warning');
     }
     this._closeSuccessModal();
   },
@@ -845,8 +644,14 @@ export const NewPaymentsModule = {
     if (this.state.lastInvoice) {
       Helpers.toast('Enviando factura por email...', 'info');
     } else {
-      Helpers.toast('No hay factura disponible para enviar', 'warning');
+      Helpers.toast('No hay factura disponible', 'warning');
     }
     this._closeSuccessModal();
-  }
+  },
+
+  // ── Alias para compatibilidad con panel_directora.html ───────────────────
+  // (oninput="NewPaymentsModule._applyDiscountPercent(this.value)" en HTML)
+  _openPaymentMethodModal() { return this._openModal(); },
+  _closePaymentMethodModal() { return this._closeModal(); },
+  _renderPaymentSummary()   { return this._renderModalSummary(); }
 };

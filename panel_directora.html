@@ -2079,6 +2079,37 @@
               </div>
             </div>
 
+            <!-- Descuento % -->
+            <div class="mb-6 p-4 bg-[#E8F2FF] border border-[#0B63C7]/20 rounded-2xl">
+              <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center gap-2">
+                  <i data-lucide="percent" class="w-4 h-4 text-[#0B63C7]"></i>
+                  <span class="font-bold text-[#0B63C7] text-sm">Aplicar Descuento</span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <input type="number" id="discountPercent" min="0" max="100" step="1" value="0"
+                    placeholder="0"
+                    class="w-20 px-3 py-2 border-2 border-[#0B63C7]/30 rounded-xl text-sm font-black text-[#0B63C7] text-center outline-none focus:ring-2 focus:ring-[#0B63C7] bg-white"
+                    oninput="NewPaymentsModule._applyDiscountPercent(this.value)">
+                  <span class="font-black text-[#0B63C7]">%</span>
+                </div>
+              </div>
+              <div id="discountPreview" class="hidden p-3 bg-white rounded-xl border border-[#0B63C7]/20 text-sm">
+                <div class="flex justify-between text-slate-600">
+                  <span>Subtotal:</span>
+                  <span id="discountSubtotal" class="font-black text-slate-800"></span>
+                </div>
+                <div class="flex justify-between text-[#28B54D]">
+                  <span id="discountLabel">Descuento (0%):</span>
+                  <span id="discountAmount" class="font-black">-RD$0.00</span>
+                </div>
+                <div class="flex justify-between text-[#0B63C7] border-t border-slate-100 pt-2 mt-2">
+                  <span class="font-black uppercase">Total Final:</span>
+                  <span id="discountTotal" class="font-black text-lg"></span>
+                </div>
+              </div>
+            </div>
+
             <!-- Opción de e-CF -->
             <div class="mb-6 p-4 bg-violet-50 border border-violet-100 rounded-2xl">
               <div class="flex items-start gap-3">

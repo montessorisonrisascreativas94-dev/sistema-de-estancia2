@@ -24,7 +24,7 @@ function _isWithin12h(d) {
   return d ? (Date.now() - new Date(d).getTime()) < 43200000 : false;
 }
 async function _serverNow() {
-  try { const { data } = await supabase.rpc('get_server_timestamp'); if (data) return new Date(data); } catch(_) {}
+  // Just use client time since RPC doesn't exist
   return new Date();
 }
 function _isDuplicate(studentId, eventType) {
@@ -129,6 +129,14 @@ function _studentCard(s, log) {
 function _buildUI(students, suggested, openSleeps, complete, missingLunch, todayLabel, timeLabel) {
   const totalStu = students.length;
   const progressPct = totalStu > 0 ? Math.round((complete/totalStu)*100) : 0;
+  
+  // Helper to parse "HH:MM" to minutes since midnight
+  const timeToMinutes = (timeStr) => {
+    const [h, m] = timeStr.split(':').map(Number);
+    return h*60 + m;
+  };
+  const now = new Date();
+  const currentMinutes = now.getHours()*60 + now.getMinutes();
 
   return `
     <div class="space-y-5 pb-28" id="routineView">
@@ -136,6 +144,7 @@ function _buildUI(students, suggested, openSleeps, complete, missingLunch, today
         .ev-grp-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;min-height:64px;padding:12px 6px;border-radius:16px;border:2px solid #f1f5f9;background:white;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;transition:all .12s;width:100%;position:relative}
         .ev-grp-btn:active{transform:scale(.88)}
         .ev-grp-btn.done{background:var(--ec, #f0fdf4);border-color:var(--cc, #bbf7d0)}
+        .ev-grp-btn.past{opacity:0.5;cursor:not-allowed}
         .ev-grp-btn .icon{font-size:1.8rem;line-height:1}
         .ev-grp-btn .lbl{font-size:.58rem;font-weight:900;text-transform:uppercase;letter-spacing:.05em;color:#64748b;text-align:center;line-height:1.2}
         .ev-grp-btn.done .lbl{color:var(--cc, #16a34a)}
@@ -232,16 +241,17 @@ function _buildUI(students, suggested, openSleeps, complete, missingLunch, today
           <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Acciones para toda el aula</p>
           <span class="text-[9px] font-bold text-slate-300 uppercase">1 clic = todos</span>
         </div>
-        <div class="grid grid-cols-5 gap-2" id="groupEventsGrid">
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 p-4 bg-white rounded-2xl border border-slate-100 shadow-sm" id="groupEventsGrid">
           ${GROUP_EVENTS.map(ev=>{
             const done = students.length>0 && students.some(s=>_groupEventDone(_logsMap[s.id], ev));
+            const isPast = ev.schedule && timeToMinutes(ev.schedule) < currentMinutes;
             return `
-              <button class="ev-grp-btn${done?' done':''}" style="--ec:${done?ev.color+'22':''};--cc:${ev.color}"
-                onclick="App.routineQuickGroup('${ev.id}')"
+              <button class="flex items-center gap-3 px-4 py-3 rounded-xl border-2 ${done?'border-green-300 bg-green-50 font-bold':isPast?'border-slate-200 bg-slate-100':'border-slate-100 bg-slate-50 hover:border-green-400 hover:bg-green-50'} ${isPast?'past':''} transition-all cursor-pointer touch-manipulation"
+                onclick="${!isPast ? `App.routineQuickGroup('${ev.id}')` : 'event.preventDefault()'}"
                 ${done?'title="'+ev.label+' ya registrado"':''}>
-                <span class="icon">${ev.icon}</span>
-                <span class="lbl">${ev.label}</span>
-                ${done?'<span style="position:absolute;top:4px;right:4px;font-size:.55rem;color:'+ev.color+';font-weight:900">✓</span>':''}
+                <span style="font-size:1.5rem;">${ev.icon}</span>
+                <span class="${done?'text-green-700':isPast?'text-slate-400':'text-slate-700'} text-xs font-bold">${ev.label}</span>
+                ${done?'<span style="font-size:1rem;color:#28B54D;font-weight:900">✓</span>':''}
               </button>
             `;
           }).join('')}
@@ -275,13 +285,20 @@ export async function initRoutine() {
     <div class="grid grid-cols-3 gap-4">${Array(6).fill('<div class="h-28 bg-slate-50 rounded-2xl"></div>').join('')}</div>
   </div>`;
 
-  const students = AppState.get('students') || [];
+  const allStudents = AppState.get('students') || [];
   const today = _today();
   const now = new Date();
   const hour = now.getHours();
   const minutes = now.getMinutes();
   const todayLabel = now.toLocaleDateString('es-DO', { weekday:'long', day:'numeric', month:'long' });
   const timeLabel = _fmtTime(now);
+
+  // Load attendance and filter students to only present/late
+  const attendance = await MaestraApi.getAttendance(classroom.id, today);
+  const presentStudentIds = new Set(
+    attendance.filter(a => ['present', 'late'].includes(a.status)).map(a => a.student_id)
+  );
+  const students = allStudents.filter(s => presentStudentIds.has(s.id));
 
   // Load daily logs
   const logs = await MaestraApi.getDailyRoutine(classroom.id);
@@ -329,15 +346,17 @@ export async function initRoutine() {
 // ── Función para registrar un evento grupal rápidamente ──────────────────────
 export async function routineQuickGroup(eventId) {
   const classroom = AppState.get('classroom');
-  const students = AppState.get('students') || [];
+  const allStudents = AppState.get('students') || [];
   const ev = GROUP_EVENTS.find(e => e.id === eventId);
   if (!ev) return;
 
-  // Confirmation (optional for safety)
-  const confirmMsg = `¿Registrar ${ev.label} para TODOS los estudiantes?`;
-  if (!confirm(confirmMsg)) return;
-
   const today = _today();
+  // Load attendance to get present students
+  const attendance = await MaestraApi.getAttendance(classroom.id, today);
+  const presentStudentIds = new Set(
+    attendance.filter(a => ['present', 'late'].includes(a.status)).map(a => a.student_id)
+  );
+  const students = allStudents.filter(s => presentStudentIds.has(s.id));
   const serverTime = await _serverNow();
 
   try {

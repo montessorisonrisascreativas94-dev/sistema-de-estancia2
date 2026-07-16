@@ -2,8 +2,9 @@ import { DirectorApi } from './api.js';
 import { Helpers } from '../shared/helpers.js';
 import { UI } from './ui.module.js';
 import { AppState } from './state.js';
-import { supabase, createClient, SUPABASE_URL, SUPABASE_ANON_KEY } from '../shared/supabase.js';
+import { supabase } from '../shared/supabase.js';
 import { auditLog } from '../shared/db-utils.js';
+import { QueryCache } from '../shared/query-cache.js';
 
 export const TeachersModule = {
   async init(renderTargetId = 'teachersTableBody') {
@@ -159,31 +160,58 @@ export const TeachersModule = {
             throw authError;
           }
         } else if (authData.user) {
-          // Wait briefly for auth trigger, then upsert profile directly
-          await new Promise(r => setTimeout(r, 500));
+          // Wait briefly for auth trigger
+          await new Promise(r => setTimeout(r, 1500));
           
-          // Build safe profile payload — only columns that exist in profiles table
-          const ALLOWED = ['name', 'phone', 'role', 'bio', 'access_code', 'avatar_url', 'is_active'];
-          const profilePayload = {
-            id:    authData.user.id,
-            email: emailVal,
-            ...Object.fromEntries(Object.entries(payload).filter(([k]) => ALLOWED.includes(k)))
+          // First check if profile already exists (maybe created by trigger)
+          const { data: existingProfile } = await supabase.from('profiles').select('id').eq('id', authData.user.id).maybeSingle();
+          
+          // Map role: 'encargada' uses 'asistente' until constraint migration runs in Supabase
+          // Run fix_rls_safe.sql to allow 'encargada' natively
+          const VALID_ROLES = ['directora', 'maestra', 'asistente', 'encargada', 'padre', 'admin'];
+          const safeRole = VALID_ROLES.includes(payload.role) ? payload.role : 'maestra';
+          // Fallback: if constraint still blocks encargada, use asistente
+          const dbRole = safeRole;
+
+          const corePayload = {
+            name:        payload.name,
+            role:        dbRole,
+            phone:       payload.phone || null,
+            access_code: payload.access_code || null,
+            is_active:   payload.is_active !== false
           };
 
-          // Try upsert first
-          const { error: upsertErr } = await supabase
-            .from('profiles')
-            .upsert(profilePayload, { onConflict: 'id', ignoreDuplicates: false });
-          
-          if (upsertErr) {
-            console.warn('[Teachers] upsert failed, trying insert:', upsertErr.message);
-            // Fallback: plain insert (no .catch — use await with error check)
-            const { error: insertErr } = await supabase.from('profiles').insert(profilePayload);
+          if (existingProfile) {
+            // Profile already exists (trigger created it): update with correct data
+            const { error: updateErr } = await supabase.from('profiles')
+              .update(corePayload)
+              .eq('id', authData.user.id);
+            if (updateErr) console.warn('[Teachers] update profile failed:', updateErr.message);
+          } else {
+            // Profile doesn't exist: insert it
+            const insertPayload = { id: authData.user.id, email: emailVal, ...corePayload };
+            const { error: insertErr } = await supabase.from('profiles').insert(insertPayload);
             if (insertErr) {
-              // Last resort: just update if profile already got created by trigger
-              const { email: _e, ...updatePayload } = profilePayload;
-              await supabase.from('profiles').update(updatePayload).eq('id', authData.user.id);
+              console.warn('[Teachers] insert failed:', insertErr.message, insertErr.code);
+              // If check constraint blocks the role, fallback to 'asistente'
+              if (insertErr.message?.includes('check constraint') || insertErr.code === '23514') {
+                const { error: fbErr } = await supabase.from('profiles').insert({ ...insertPayload, role: 'asistente' });
+                if (fbErr) console.error('[Teachers] fallback insert also failed:', fbErr.message);
+                else Helpers.toast('⚠️ Rol guardado como "asistente" — ejecuta fix_rls_safe.sql para habilitar "encargada"', 'warning');
+              } else {
+                // Retry once after delay (Supabase trigger may be slow)
+                await new Promise(r => setTimeout(r, 800));
+                const { error: retryErr } = await supabase.from('profiles').insert(insertPayload);
+                if (retryErr) console.error('[Teachers] retry insert failed:', retryErr.message);
+              }
             }
+          }
+          
+          // Verify profile was saved
+          const { data: verifyOk } = await supabase.from('profiles').select('id').eq('id', authData.user.id).maybeSingle();
+          if (!verifyOk) {
+            console.error('[Teachers] Profile still missing after all attempts');
+            Helpers.toast('⚠️ Perfil no guardado. Ejecuta migrations/fix_rls_safe.sql en Supabase SQL Editor', 'warning');
           }
           
           // Assign classroom if needed
@@ -201,6 +229,8 @@ export const TeachersModule = {
       const roleName = { 'maestra': 'Maestra', 'asistente': 'Asistente', 'encargada': 'Encargada' }[payload.role] || 'Personal';
       Helpers.toast(id ? `${roleName} actualizado/a correctamente ✅` : `${roleName} creada correctamente ✅`, 'success');
       UI.closeModal();
+      // Invalidate cache so init() fetches fresh data from DB
+      QueryCache.invalidate('dir_teachers');
       // Small delay to ensure DB has processed
       await new Promise(r => setTimeout(r, 600));
       await this.init();

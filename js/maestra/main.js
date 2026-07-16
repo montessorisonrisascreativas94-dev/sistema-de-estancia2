@@ -24,6 +24,7 @@ import { UI } from './modules/ui.js';
 import { UIPremium } from '../shared/ui-premium.js';
 
 window.safeToast = UI.safeToast;
+window.UI = UI;
 const { safeToast, safeEscapeHTML, Modal } = UI;
 
 // Cache de marcas de tiempo para evitar recargas constantes
@@ -60,29 +61,19 @@ window.App = {
   handleAttendancePointerDown: Attendance.handleAttendancePointerDown,
   handleAttendancePointerUp: Attendance.handleAttendancePointerUp,
 
-  // Routine Express v2
-  initRoutine:              Routine.initRoutine,
-  updateRoutineField:       Routine.updateRoutineField,
-  saveRoutineLog:           Routine.saveRoutineLog,
-  openNewRoutineModal:      Routine.openNewRoutineModal,
-  openStudentRoutine:       Routine.openStudentRoutine,
-  registerInfantEvent:      Routine.registerInfantEvent,
-  saveInfantEntry:          Routine.saveInfantEntry,
-  openBulkRoutineModal:     Routine.openBulkRoutineModal,
-  updateRoutineFieldInModal:Routine.updateRoutineFieldInModal,
-  saveRoutineInModal:       Routine.saveRoutineInModal,
-  applyBulkRoutine:         Routine.applyBulkRoutine,
-  // Nuevas funciones Express
-  routineQuickEvent:        Routine.routineQuickEvent,
-  routineConfirmSave:       Routine.routineConfirmSave,
-  routineWakeAll:           Routine.routineWakeAll,
-  routineUndo:              Routine.routineUndo,
-  routineSaveMilk:          Routine.routineSaveMilk,
-  routineSaveTemp:          Routine.routineSaveTemp,
-  routineSaveNote:          Routine.routineSaveNote,
-  routineSaveMed:           Routine.routineSaveMed,
-  routineSingleField:       Routine.routineSingleField,
-  routineSaveSingle:        Routine.routineSaveSingle,
+  // Routine Express v3
+    initRoutine:              Routine.initRoutine,
+    openStudentRoutine:       Routine.openStudentRoutine,
+    openBulkRoutineModal:     Routine.openBulkRoutineModal,
+    routineQuickGroup:        Routine.routineQuickGroup,
+    routineSelectIndivStudent:Routine.routineSelectIndivStudent,
+    routineWakeAll:           Routine.routineWakeAll,
+    setStudentMood:           Routine.setStudentMood,
+    setStudentFood:           Routine.setStudentFood,
+    setStudentNap:            Routine.setStudentNap,
+    addStudentEvent:          Routine.addStudentEvent,
+    saveStudentNote:          Routine.saveStudentNote,
+    publishDailyLogs:         Routine.publishDailyLogs,
 
   // Tasks
   initTasks: Tasks.initTasks,

@@ -239,3 +239,62 @@ ALTER TABLE public.profiles
   CHECK (role IN ('directora', 'maestra', 'asistente', 'encargada', 'padre', 'admin'));
 
 SELECT 'profiles_role_check updated to include encargada!' AS resultado;
+
+-- ============================================================
+-- FIX: payments table — add discount columns if missing
+-- ============================================================
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name='payments' AND column_name='discount_amount'
+  ) THEN
+    ALTER TABLE public.payments ADD COLUMN discount_amount numeric(10,2) DEFAULT 0;
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name='payments' AND column_name='discount_percent'
+  ) THEN
+    ALTER TABLE public.payments ADD COLUMN discount_percent numeric(5,2) DEFAULT 0;
+  END IF;
+END $$;
+
+SELECT 'payments discount columns ready!' AS resultado;
+
+-- ============================================================
+-- FIX: invoices table — create + RLS if not exists
+-- ============================================================
+CREATE TABLE IF NOT EXISTS public.invoices (
+  id             bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  payment_id     bigint        REFERENCES public.payments(id) ON DELETE SET NULL,
+  invoice_number text          NOT NULL,
+  student_id     uuid          REFERENCES auth.users(id) ON DELETE SET NULL,
+  subtotal       numeric(10,2) NOT NULL DEFAULT 0,
+  discount_amount numeric(10,2) NOT NULL DEFAULT 0,
+  discount_percent numeric(5,2) NOT NULL DEFAULT 0,
+  total          numeric(10,2) NOT NULL DEFAULT 0,
+  payment_method text,
+  items          jsonb,
+  pdf_url        text,
+  sent_email     boolean       NOT NULL DEFAULT false,
+  created_by     uuid          REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at     timestamptz   NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.invoices ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "invoices_staff_all"    ON public.invoices;
+DROP POLICY IF EXISTS "invoices_padre_select" ON public.invoices;
+
+-- Staff can do everything
+CREATE POLICY "invoices_staff_all" ON public.invoices FOR ALL
+  USING      (COALESCE(get_my_role(),'') IN ('directora','asistente','admin'))
+  WITH CHECK (COALESCE(get_my_role(),'') IN ('directora','asistente','admin'));
+
+-- Parents can read invoices for their children
+CREATE POLICY "invoices_padre_select" ON public.invoices FOR SELECT
+  USING (
+    COALESCE(get_my_role(),'') = 'padre'
+    AND student_id IN (SELECT parent_id FROM public.students WHERE parent_id = auth.uid())
+  );
+
+SELECT 'invoices table + RLS ready!' AS resultado;

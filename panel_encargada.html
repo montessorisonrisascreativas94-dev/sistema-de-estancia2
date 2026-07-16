@@ -16,14 +16,16 @@
   </script>
   <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
   <script>
-    window.OneSignalDeferred = window.OneSignalDeferred || [];
-    window.OneSignalDeferred.push(async function(OneSignal) {
-      await OneSignal.init({
-        appId: "dd57c85f-852f-418e-bc8b-09a119f6c2eb",
-        safari_web_id: "web.onesignal.auto.0d8cfe1b-addf-4fe0-8094-42e4bf6360cd",
-        notifyButton: { enable: true }
+    if (location.hostname === 'montessorisonrisascreativas.co') {
+      window.OneSignalDeferred = window.OneSignalDeferred || [];
+      window.OneSignalDeferred.push(async function(OneSignal) {
+        await OneSignal.init({
+          appId: "dd57c85f-852f-418e-bc8b-09a119f6c2eb",
+          safari_web_id: "web.onesignal.auto.0d8cfe1b-addf-4fe0-8094-42e4bf6360cd",
+          notifyButton: { enable: true }
+        });
       });
-    });
+    }
   </script>
   <title>Colegio Montessori Sonrisas Creativas - Panel Encargada de Educación</title>
   <link rel="icon" href="logo/favicon.ico" type="image/x-icon">
@@ -49,19 +51,19 @@
   
   <style>
     :root {
-      --primary: #0B63C7;
-      --primary-dark: #0850A0;
-      --primary-light: #2563EB;
-      --secondary: #1D4ED8;
-      --accent: #3B82F6;
-      --yellow-accent: #FFD43B;
-      --surface: #f8fbff;
-      --panel: #ffffff;
-      --panel-soft: #eff6ff;
-      --text: #1e3a8a;
-      --muted: #64748b;
-      --border: #bfdbfe;
-      --shadow: 0 20px 45px rgba(30, 58, 138, 0.08);
+        --primary: #FF7A00;
+        --primary-dark: #D96500;
+        --primary-light: #FFA500;
+        --secondary: #F59E0B;
+        --accent: #FFD700;
+        --yellow-accent: #FFD43B;
+        --surface: #fff8f0;
+        --panel: #ffffff;
+        --panel-soft: #fff5e6;
+        --text: #8B4513;
+        --muted: #64748b;
+        --border: #ffd9b3;
+        --shadow: 0 20px 45px rgba(139, 69, 19, 0.08);
     }
 
     body {
@@ -276,19 +278,19 @@
     }
 
     aside#sidebar {
-      width: 288px;
-      background: linear-gradient(160deg, #0B63C7 0%, #0850A0 60%, #1e3a8a 100%);
-      color: white;
-      position: fixed;
-      height: 100dvh;
-      top: 0; left: 0;
-      z-index: 1050;
-      overflow-y: auto;
-      overflow-x: hidden;
-      scrollbar-width: none;
-      transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-                  transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      box-shadow: 4px 0 24px rgba(30, 58, 138, 0.15);
+        width: 288px;
+        background: linear-gradient(160deg, #FF7A00 0%, #D96500 60%, #8B4513 100%);
+        color: white;
+        position: fixed;
+        height: 100dvh;
+        top: 0; left: 0;
+        z-index: 1050;
+        overflow-y: auto;
+        overflow-x: hidden;
+        scrollbar-width: none;
+        transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                    transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 4px 0 24px rgba(139, 69, 19, 0.15);
     }
     aside#sidebar::-webkit-scrollbar { display: none; }
 
@@ -747,7 +749,7 @@
   <div class="app">
     <div id="sidebarOverlay" class="fixed inset-0 bg-black/50 z-40 backdrop-blur-sm transition-opacity" style="display:none;"></div>
     
-    <aside id="sidebar" class="kk-sidebar bg-gradient-to-b from-[#0B63C7] via-[#0850A0] to-[#1e3a8a] shadow-2xl flex flex-col flex-shrink-0" style="border-right:none;">
+    <aside id="sidebar" class="kk-sidebar shadow-2xl flex flex-col flex-shrink-0" style="background:linear-gradient(160deg,#FF7A00 0%,#E07000 50%,#B85900 100%);border-right:none;">
       <button id="toggleSidebar" class="absolute -right-3 top-8 bg-white rounded-full p-1.5 shadow-lg border border-slate-100 text-slate-500 hover:text-[#0B63C7] hidden md:flex items-center justify-center z-10 transition-all hover:scale-110">
         <i data-lucide="chevron-left" id="toggleSidebarIcon" class="w-3.5 h-3.5"></i>
       </button>
@@ -759,6 +761,31 @@
         <div class="kk-sidebar-logo-text label">
           <div class="brand font-bold text-lg">Sonrisas Creativas</div>
           <div class="sub">Encargada de Educación</div>
+        </div>
+        <!-- Triangular and Pentagonal Mascots -->
+        <div class="flex gap-2 mt-2 ml-auto">
+          <svg width="32" height="32" viewBox="0 0 180 200">
+            <polygon points="90,12 168,175 12,175" fill="#FF7A00" stroke="#D96500" stroke-width="4"/>
+            <circle cx="72" cy="110" r="14" fill="white"/>
+            <circle cx="108" cy="110" r="14" fill="white"/>
+            <circle cx="73" cy="111" r="7" fill="#1e293b"/>
+            <circle cx="109" cy="111" r="7" fill="#1e293b"/>
+            <circle cx="76" cy="108" r="3" fill="white"/>
+            <circle cx="112" cy="108" r="3" fill="white"/>
+            <path d="M 65 138 Q 90 155 115 138" stroke="#1e293b" stroke-width="5" fill="none" stroke-linecap="round"/>
+          </svg>
+          <svg width="32" height="32" viewBox="0 0 180 210">
+            <ellipse cx="90" cy="22" rx="46" ry="16" fill="#0B63C7"/>
+            <path d="M 52 28 Q 40 42 48 56 L 132 56 Q 140 42 128 28 Z" fill="#0B63C7"/>
+            <polygon points="90,56 168,112 140,198 40,198 12,112" fill="#28B54D" stroke="#1A8035" stroke-width="4"/>
+            <circle cx="75" cy="128" r="13" fill="white"/>
+            <circle cx="105" cy="128" r="13" fill="white"/>
+            <circle cx="76" cy="129" r="6" fill="#1e293b"/>
+            <circle cx="106" cy="129" r="6" fill="#1e293b"/>
+            <circle cx="79" cy="126" r="2.5" fill="white"/>
+            <circle cx="109" cy="126" r="2.5" fill="white"/>
+            <path d="M 66 155 Q 90 170 114 155" stroke="#1e293b" stroke-width="5" fill="none" stroke-linecap="round"/>
+          </svg>
         </div>
       </div>
 
@@ -1102,8 +1129,6 @@
     <div id="globalModal" class="modal-content"></div>
   </div>
 
-  <script src="js/shared/supabase.js" defer></script>
-  <script src="js/shared/helpers.js" defer></script>
   <script src="js/shared/lucide.min.js" defer></script>
   <script src="js/encargada/main.js" type="module" defer></script>
 
