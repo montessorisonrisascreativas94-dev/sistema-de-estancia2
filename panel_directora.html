@@ -2510,16 +2510,25 @@
         </div>
 
         <!-- Tabs -->
-        <div class="flex gap-2 flex-wrap border-b border-slate-200 pb-3 mb-6 overflow-x-auto" id="contTabs">
-          <button data-cont-tab="resumen"     class="cont-tab active-cont px-4 py-2 rounded-xl text-xs font-black uppercase border-2 border-[#0B63C7] bg-[#E8F2FF] text-[#0850A0]">Resumen</button>
-          <button data-cont-tab="ingresos"    class="cont-tab px-4 py-2 rounded-xl text-xs font-black uppercase border-2 border-transparent text-slate-500 hover:bg-slate-50">Ingresos</button>
-          <button data-cont-tab="gastos"      class="cont-tab px-4 py-2 rounded-xl text-xs font-black uppercase border-2 border-transparent text-slate-500 hover:bg-slate-50">Gastos</button>
-          <button data-cont-tab="nomina"      class="cont-tab px-4 py-2 rounded-xl text-xs font-black uppercase border-2 border-transparent text-slate-500 hover:bg-slate-50">Nómina</button>
-          <button data-cont-tab="cashflow"    class="cont-tab px-4 py-2 rounded-xl text-xs font-black uppercase border-2 border-transparent text-slate-500 hover:bg-slate-50">Flujo de Caja</button>
-          <button data-cont-tab="facturacion" class="cont-tab px-4 py-2 rounded-xl text-xs font-black uppercase border-2 border-transparent text-slate-500 hover:bg-slate-50">Facturación</button>
-          <button data-cont-tab="cxc"         class="cont-tab px-4 py-2 rounded-xl text-xs font-black uppercase border-2 border-transparent text-slate-500 hover:bg-slate-50">Cuentas por Cobrar</button>
-          <button data-cont-tab="reportes"    class="cont-tab px-4 py-2 rounded-xl text-xs font-black uppercase border-2 border-transparent text-slate-500 hover:bg-slate-50">Reportes</button>
-          <button data-cont-tab="configuracion"  class="cont-tab px-4 py-2 rounded-xl text-xs font-black uppercase border-2 border-transparent text-slate-500 hover:bg-slate-50">Configuración</button>
+        <div class="flex gap-2 flex-wrap border-b border-slate-200 pb-3 mb-6 overflow-x-auto scrollbar-none" id="contTabs">
+          <button data-cont-tab="resumen"               class="cont-tab active-cont px-4 py-2 rounded-xl text-xs font-black uppercase border-2 border-[#0B63C7] bg-[#E8F2FF] text-[#0850A0] whitespace-nowrap">📊 Dashboard</button>
+          <button data-cont-tab="estado-financiero"     class="cont-tab px-4 py-2 rounded-xl text-xs font-black uppercase border-2 border-transparent text-slate-500 hover:bg-slate-50 whitespace-nowrap">📋 Estado Financiero</button>
+          <button data-cont-tab="libro-diario"          class="cont-tab px-4 py-2 rounded-xl text-xs font-black uppercase border-2 border-transparent text-slate-500 hover:bg-slate-50 whitespace-nowrap">📖 Libro Diario</button>
+          <button data-cont-tab="libro-mayor"           class="cont-tab px-4 py-2 rounded-xl text-xs font-black uppercase border-2 border-transparent text-slate-500 hover:bg-slate-50 whitespace-nowrap">🗂️ Libro Mayor</button>
+          <button data-cont-tab="plan-cuentas"          class="cont-tab px-4 py-2 rounded-xl text-xs font-black uppercase border-2 border-transparent text-slate-500 hover:bg-slate-50 whitespace-nowrap">🌳 Plan de Cuentas</button>
+          <button data-cont-tab="centros-costos"        class="cont-tab px-4 py-2 rounded-xl text-xs font-black uppercase border-2 border-transparent text-slate-500 hover:bg-slate-50 whitespace-nowrap">🎯 Centros de Costos</button>
+          <button data-cont-tab="cxc-contable"          class="cont-tab px-4 py-2 rounded-xl text-xs font-black uppercase border-2 border-transparent text-slate-500 hover:bg-slate-50 whitespace-nowrap">🟢 CxC (Padres)</button>
+          <button data-cont-tab="cxp"                   class="cont-tab px-4 py-2 rounded-xl text-xs font-black uppercase border-2 border-transparent text-slate-500 hover:bg-slate-50 whitespace-nowrap">🔴 CxP (Suplidores)</button>
+          <button data-cont-tab="caja-general"          class="cont-tab px-4 py-2 rounded-xl text-xs font-black uppercase border-2 border-transparent text-slate-500 hover:bg-slate-50 whitespace-nowrap">💰 Caja General</button>
+          <button data-cont-tab="bancos"                class="cont-tab px-4 py-2 rounded-xl text-xs font-black uppercase border-2 border-transparent text-slate-500 hover:bg-slate-50 whitespace-nowrap">🏦 Bancos</button>
+          <button data-cont-tab="conciliacion-bancaria" class="cont-tab px-4 py-2 rounded-xl text-xs font-black uppercase border-2 border-transparent text-slate-500 hover:bg-slate-50 whitespace-nowrap">🔄 Conciliación Bancaria</button>
+          <button data-cont-tab="presupuesto"           class="cont-tab px-4 py-2 rounded-xl text-xs font-black uppercase border-2 border-transparent text-slate-500 hover:bg-slate-50 whitespace-nowrap">📉 Presupuesto</button>
+          <button data-cont-tab="cashflow"              class="cont-tab px-4 py-2 rounded-xl text-xs font-black uppercase border-2 border-transparent text-slate-500 hover:bg-slate-50 whitespace-nowrap">🌊 Flujo de Caja</button>
+          <button data-cont-tab="activos-fijos"         class="cont-tab px-4 py-2 rounded-xl text-xs font-black uppercase border-2 border-transparent text-slate-500 hover:bg-slate-50 whitespace-nowrap">🖥️ Activos Fijos</button>
+          <button data-cont-tab="inventario-contable"   class="cont-tab px-4 py-2 rounded-xl text-xs font-black uppercase border-2 border-transparent text-slate-500 hover:bg-slate-50 whitespace-nowrap">📦 Inventario Contable</button>
+          <button data-cont-tab="nomina"                class="cont-tab px-4 py-2 rounded-xl text-xs font-black uppercase border-2 border-transparent text-slate-500 hover:bg-slate-50 whitespace-nowrap">👥 Nómina Profesional</button>
+          <button data-cont-tab="dgii"                  class="cont-tab px-4 py-2 rounded-xl text-xs font-black uppercase border-2 border-transparent text-slate-500 hover:bg-slate-50 whitespace-nowrap">🇩🇴 Módulos DGII</button>
+          <button data-cont-tab="auditoria"             class="cont-tab px-4 py-2 rounded-xl text-xs font-black uppercase border-2 border-transparent text-slate-500 hover:bg-slate-50 whitespace-nowrap">🕵️ Auditoría</button>
         </div>
 
         <!-- Tab: Resumen -->
@@ -2584,95 +2593,410 @@
           </div>
         </div>
 
-        <!-- Tab: Ingresos -->
-        <div id="cont-ingresos" class="cont-panel hidden space-y-5">
-          <div class="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
-            <div class="flex items-center justify-between mb-4">
-              <h3 class="font-black text-slate-700 text-sm">Listado de Ingresos</h3>
-              <button onclick="AccountingModule.exportIngresosPDF()" class="px-4 py-2 bg-[#0B63C7] text-white rounded-xl text-xs font-black uppercase flex items-center gap-2">
-                <i data-lucide="download" class="w-4 h-4"></i> Exportar PDF
+        <!-- Tab: Estado Financiero -->
+        <div id="cont-estado-financiero" class="cont-panel hidden space-y-6">
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Estado de Resultados -->
+            <div class="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm">
+              <div class="flex justify-between items-center mb-4">
+                <h3 class="font-black text-slate-800 text-base">📋 Estado de Resultados</h3>
+                <span class="text-xs font-bold text-slate-400">Mensual recalculado</span>
+              </div>
+              <div class="space-y-4">
+                <div>
+                  <h4 class="font-black text-xs uppercase tracking-wider text-green-600 mb-2">Ingresos</h4>
+                  <div class="space-y-2 text-sm" id="estIngresosList">
+                    <div class="flex justify-between border-b pb-1"><span>Mensualidades</span><span class="font-bold" id="estIngMensualidades">RD$0.00</span></div>
+                    <div class="flex justify-between border-b pb-1"><span>Inscripciones</span><span class="font-bold" id="estIngInscripciones">RD$0.00</span></div>
+                    <div class="flex justify-between border-b pb-1"><span>Uniformes</span><span class="font-bold">RD$45,000.00</span></div>
+                    <div class="flex justify-between border-b pb-1"><span>Material Didáctico</span><span class="font-bold">RD$25,000.00</span></div>
+                    <div class="flex justify-between border-b pb-1"><span>Transporte</span><span class="font-bold">RD$30,000.00</span></div>
+                    <div class="flex justify-between border-b pb-1"><span>Comedor</span><span class="font-bold">RD$55,000.00</span></div>
+                    <div class="flex justify-between border-b pb-1"><span>Otros</span><span class="font-bold">RD$12,000.00</span></div>
+                    <div class="flex justify-between pt-1 font-black text-slate-800"><span>Total Ingresos</span><span id="estTotalIngresos">RD$0.00</span></div>
+                  </div>
+                </div>
+                <hr>
+                <div>
+                  <h4 class="font-black text-xs uppercase tracking-wider text-red-600 mb-2">Gastos</h4>
+                  <div class="space-y-2 text-sm" id="estGastosList">
+                    <div class="flex justify-between border-b pb-1"><span>Sueldos</span><span class="font-bold" id="estGastSueldos">RD$0.00</span></div>
+                    <div class="flex justify-between border-b pb-1"><span>Seguridad Social</span><span class="font-bold" id="estGastARS">RD$0.00</span></div>
+                    <div class="flex justify-between border-b pb-1"><span>Electricidad</span><span class="font-bold">RD$14,500.00</span></div>
+                    <div class="flex justify-between border-b pb-1"><span>Internet & Agua</span><span class="font-bold">RD$8,000.00</span></div>
+                    <div class="flex justify-between border-b pb-1"><span>Limpieza y Materiales</span><span class="font-bold">RD$12,300.00</span></div>
+                    <div class="flex justify-between border-b pb-1"><span>Publicidad & Mercadeo</span><span class="font-bold">RD$15,000.00</span></div>
+                    <div class="flex justify-between border-b pb-1"><span>Mantenimiento</span><span class="font-bold">RD$22,000.00</span></div>
+                    <div class="flex justify-between border-b pb-1"><span>Otros Gastos</span><span class="font-bold">RD$9,500.00</span></div>
+                    <div class="flex justify-between pt-1 font-black text-slate-800"><span>Total Gastos</span><span id="estTotalGastos">RD$0.00</span></div>
+                  </div>
+                </div>
+                <hr>
+                <div class="flex justify-between items-center bg-slate-50 p-3 rounded-2xl">
+                  <span class="font-black text-slate-700 text-sm">💡 Utilidad Neta</span>
+                  <span class="font-black text-base text-green-600" id="estUtilidadNeta">RD$0.00</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Balance General -->
+            <div class="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm">
+              <div class="flex justify-between items-center mb-4">
+                <h3 class="font-black text-slate-800 text-base">⚖️ Balance General</h3>
+                <span class="text-xs font-bold text-slate-400">Actualización Automática</span>
+              </div>
+              <div class="space-y-4">
+                <div>
+                  <h4 class="font-black text-xs uppercase tracking-wider text-blue-600 mb-2">Activos</h4>
+                  <div class="space-y-1 text-sm">
+                    <div class="flex justify-between"><span>11 Caja General</span><span class="font-bold text-slate-700" id="balCaja">RD$0.00</span></div>
+                    <div class="flex justify-between"><span>12 Bancos (Popular/Reservas)</span><span class="font-bold text-slate-700" id="balBancos">RD$0.00</span></div>
+                    <div class="flex justify-between"><span>13 Cuentas por Cobrar (Padres)</span><span class="font-bold text-slate-700" id="balCxC">RD$0.00</span></div>
+                    <div class="flex justify-between"><span>14 Inventarios</span><span class="font-bold text-slate-700">RD$85,000.00</span></div>
+                    <div class="flex justify-between"><span>15 Activos Fijos (Neto)</span><span class="font-bold text-slate-700" id="balActivosFijos">RD$450,000.00</span></div>
+                    <div class="flex justify-between font-black text-slate-800 border-t pt-1 mt-1"><span>Total Activos</span><span id="balTotalActivos">RD$0.00</span></div>
+                  </div>
+                </div>
+                <div>
+                  <h4 class="font-black text-xs uppercase tracking-wider text-amber-600 mb-2">Pasivos</h4>
+                  <div class="space-y-1 text-sm">
+                    <div class="flex justify-between"><span>21 Cuentas por Pagar (Suplidores)</span><span class="font-bold text-slate-700" id="balCxP">RD$0.00</span></div>
+                    <div class="flex justify-between"><span>22 Retenciones de Nómina por Pagar</span><span class="font-bold text-slate-700" id="balRetenciones">RD$0.00</span></div>
+                    <div class="flex justify-between"><span>23 Préstamos Bancarios</span><span class="font-bold text-slate-700">RD$150,000.00</span></div>
+                    <div class="flex justify-between font-black text-slate-800 border-t pt-1 mt-1"><span>Total Pasivos</span><span id="balTotalPasivos">RD$0.00</span></div>
+                  </div>
+                </div>
+                <div>
+                  <h4 class="font-black text-xs uppercase tracking-wider text-purple-600 mb-2">Patrimonio</h4>
+                  <div class="space-y-1 text-sm">
+                    <div class="flex justify-between"><span>31 Capital Social</span><span class="font-bold text-slate-700">RD$300,000.00</span></div>
+                    <div class="flex justify-between"><span>32 Resultados Acumulados</span><span class="font-bold text-slate-700" id="balResultados">RD$0.00</span></div>
+                    <div class="flex justify-between font-black text-slate-800 border-t pt-1 mt-1"><span>Total Patrimonio</span><span id="balTotalPatrimonio">RD$0.00</span></div>
+                  </div>
+                </div>
+                <div class="bg-blue-50 p-2.5 rounded-2xl flex justify-between items-center text-xs font-black">
+                  <span class="text-slate-600">Ecuación Contable (A = P + PT)</span>
+                  <span class="text-green-700" id="balEcuacionValida">✓ Cuadrado</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab: Libro Diario -->
+        <div id="cont-libro-diario" class="cont-panel hidden space-y-5">
+          <div class="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm">
+            <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
+              <div>
+                <h3 class="font-black text-slate-800 text-sm">📖 Libro Diario General</h3>
+                <p class="text-xs text-slate-500">Asientos generados automáticamente por cobros, compras y nómina</p>
+              </div>
+              <button onclick="AccountingModule.openManualAsientoModal()" class="px-4 py-2 bg-[#28B54D] text-white rounded-xl text-xs font-black uppercase flex items-center gap-2 hover:opacity-90">
+                <i data-lucide="plus-circle" class="w-4 h-4"></i> Asiento Manual
               </button>
             </div>
             <div class="overflow-x-auto">
               <table class="w-full text-sm">
-                <thead class="bg-slate-50 border-b border-slate-100">
+                <thead class="bg-slate-50 border-b">
                   <tr>
-                    <th class="px-4 py-3 text-left text-[10px] font-black text-slate-400 uppercase">Fecha</th>
-                    <th class="px-4 py-3 text-left text-[10px] font-black text-slate-400 uppercase">Concepto</th>
-                    <th class="px-4 py-3 text-left text-[10px] font-black text-slate-400 uppercase">Alumno</th>
-                    <th class="px-4 py-3 text-left text-[10px] font-black text-slate-400 uppercase">Método</th>
-                    <th class="px-4 py-3 text-right text-[10px] font-black text-slate-400 uppercase">Monto</th>
+                    <th class="px-4 py-3 text-left text-xs font-black text-slate-500">Fecha</th>
+                    <th class="px-4 py-3 text-left text-xs font-black text-slate-500">Concepto / Cuenta</th>
+                    <th class="px-4 py-3 text-left text-xs font-black text-slate-500">Ref / Centro</th>
+                    <th class="px-4 py-3 text-right text-xs font-black text-slate-500">Debe</th>
+                    <th class="px-4 py-3 text-right text-xs font-black text-slate-500">Haber</th>
                   </tr>
                 </thead>
-                <tbody id="ingresosTableBody">
-                  <tr><td colspan="5" class="text-center py-8 text-slate-400 text-sm">Cargando...</td></tr>
+                <tbody id="libroDiarioBody">
+                  <!-- Dynamic rows -->
                 </tbody>
               </table>
             </div>
           </div>
         </div>
 
-        <!-- Tab: Gastos -->
-        <div id="cont-gastos" class="cont-panel hidden space-y-5">
-          <div class="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
-            <div class="flex items-center justify-between mb-4">
-              <h3 class="font-black text-slate-700 text-sm">Gastos Registrados</h3>
-              <div class="flex gap-2">
-                <button onclick="AccountingModule.openGastoModal()" class="px-4 py-2 bg-[#0B63C7] text-white rounded-xl text-xs font-black uppercase flex items-center gap-2">
-                  <i data-lucide="plus" class="w-4 h-4"></i> Nuevo Gasto
-                </button>
-                <button onclick="AccountingModule.exportGastosPDF()" class="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-black uppercase flex items-center gap-2">
-                  <i data-lucide="download" class="w-4 h-4"></i> Exportar PDF
-                </button>
+        <!-- Tab: Libro Mayor -->
+        <div id="cont-libro-mayor" class="cont-panel hidden space-y-5">
+          <div class="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm">
+            <div class="flex justify-between items-center mb-4 flex-wrap gap-3">
+              <div>
+                <h3 class="font-black text-slate-800 text-sm">🗂️ Libro Mayor</h3>
+                <p class="text-xs text-slate-500">Historial individual y balances por cuenta contable</p>
               </div>
+              <select id="mayorAccountSelect" onchange="AccountingModule.loadMayorAccount(this.value)" class="px-3 py-2 border-2 border-slate-100 bg-slate-50 rounded-xl text-xs font-black outline-none focus:border-blue-400">
+                <option value="111">111 Caja Principal</option>
+                <option value="121">121 Banco Popular</option>
+                <option value="122">122 Banreservas</option>
+                <option value="131">131 Cuentas por Cobrar</option>
+                <option value="411">411 Ingresos por Mensualidades</option>
+                <option value="412">412 Ingresos por Inscripciones</option>
+                <option value="511">511 Gastos de Sueldos</option>
+                <option value="512">512 Gastos de ARS/AFP</option>
+                <option value="513">513 Gastos de Servicios</option>
+              </select>
             </div>
             <div class="overflow-x-auto">
               <table class="w-full text-sm">
-                <thead class="bg-slate-50 border-b border-slate-100">
+                <thead class="bg-slate-50 border-b">
                   <tr>
-                    <th class="px-4 py-3 text-left text-[10px] font-black text-slate-400 uppercase">Fecha</th>
-                    <th class="px-4 py-3 text-left text-[10px] font-black text-slate-400 uppercase">Concepto</th>
-                    <th class="px-4 py-3 text-left text-[10px] font-black text-slate-400 uppercase">Categoría</th>
-                    <th class="px-4 py-3 text-right text-[10px] font-black text-slate-400 uppercase">Monto</th>
-                    <th class="px-4 py-3 text-center text-[10px] font-black text-slate-400 uppercase">Acciones</th>
+                    <th class="px-4 py-3 text-left text-xs font-black text-slate-500">Fecha</th>
+                    <th class="px-4 py-3 text-left text-xs font-black text-slate-500">Descripción / Origen</th>
+                    <th class="px-4 py-3 text-right text-xs font-black text-slate-500">Debe</th>
+                    <th class="px-4 py-3 text-right text-xs font-black text-slate-500">Haber</th>
+                    <th class="px-4 py-3 text-right text-xs font-black text-slate-500">Balance</th>
                   </tr>
                 </thead>
-                <tbody id="gastosTableBody">
-                  <tr><td colspan="5" class="text-center py-8 text-slate-400 text-sm">No hay gastos registrados</td></tr>
+                <tbody id="libroMayorBody">
+                  <!-- Dynamic rows -->
                 </tbody>
               </table>
             </div>
           </div>
         </div>
 
-        <!-- Tab: Nómina -->
-        <div id="cont-nomina" class="cont-panel hidden space-y-5">
-          <div class="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
-            <div class="flex items-center justify-between mb-4">
-              <h3 class="font-black text-slate-700 text-sm">Gestión de Nómina</h3>
+        <!-- Tab: Plan de Cuentas -->
+        <div id="cont-plan-cuentas" class="cont-panel hidden space-y-5">
+          <div class="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm">
+            <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
+              <div>
+                <h3 class="font-black text-slate-800 text-sm">🌳 Plan de Cuentas Escolar</h3>
+                <p class="text-xs text-slate-500">Gestione la estructura contable de activos, pasivos, patrimonio, ingresos y gastos</p>
+              </div>
+              <button onclick="AccountingModule.openAddCuentaModal()" class="px-4 py-2 bg-[#0B63C7] text-white rounded-xl text-xs font-black uppercase flex items-center gap-2 hover:opacity-90">
+                <i data-lucide="plus" class="w-4 h-4"></i> Añadir Cuenta
+              </button>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-sm">
+                <thead class="bg-slate-50 border-b">
+                  <tr>
+                    <th class="px-4 py-3 text-left text-xs font-black text-slate-500">Código</th>
+                    <th class="px-4 py-3 text-left text-xs font-black text-slate-500">Nombre de la Cuenta</th>
+                    <th class="px-4 py-3 text-left text-xs font-black text-slate-500">Tipo</th>
+                    <th class="px-4 py-3 text-center text-xs font-black text-slate-500">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="planCuentasBody">
+                  <!-- Hierarchical structure -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab: Centros de Costos -->
+        <div id="cont-centros-costos" class="cont-panel hidden space-y-5">
+          <div class="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm">
+            <div class="flex justify-between items-center mb-4">
+              <div>
+                <h3 class="font-black text-slate-800 text-sm">🎯 Centros de Costos</h3>
+                <p class="text-xs text-slate-500">Distribución de ingresos y gastos para medir la rentabilidad de cada área</p>
+              </div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" id="centrosCostosGrid">
+              <!-- Dynamic Cards -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab: CxC Contable -->
+        <div id="cont-cxc-contable" class="cont-panel hidden space-y-5">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm text-center">
+              <p class="text-xl font-black text-slate-800" id="cxcContTotal">RD$0</p>
+              <p class="text-[10px] font-black text-slate-400 uppercase mt-1">Total por Cobrar</p>
+            </div>
+            <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm text-center">
+              <p class="text-xl font-black text-amber-500" id="cxcContCorriente">RD$0</p>
+              <p class="text-[10px] font-black text-slate-400 uppercase mt-1">Próximo a Vencer (🟡)</p>
+            </div>
+            <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm text-center">
+              <p class="text-xl font-black text-red-500" id="cxcContVencido">RD$0</p>
+              <p class="text-[10px] font-black text-slate-400 uppercase mt-1">Vencido (🔴)</p>
+            </div>
+          </div>
+          <div class="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm">
+            <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
+              <h3 class="font-black text-slate-800 text-sm">🟢 Control de Cobros de Padres</h3>
+              <button onclick="AccountingModule.sendCobrosReminders()" class="px-4 py-2 bg-[#FF8A00] text-white rounded-xl text-xs font-black uppercase flex items-center gap-2 hover:opacity-90">
+                <i data-lucide="bell" class="w-4 h-4"></i> Enviar Recordatorios Mora
+              </button>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-sm">
+                <thead class="bg-slate-50 border-b">
+                  <tr>
+                    <th class="px-4 py-3 text-left text-xs font-black text-slate-500">Padre / Alumno</th>
+                    <th class="px-4 py-3 text-left text-xs font-black text-slate-500">Monto Pendiente</th>
+                    <th class="px-4 py-3 text-left text-xs font-black text-slate-500">Fecha Vence</th>
+                    <th class="px-4 py-3 text-center text-xs font-black text-slate-500">Semáforo</th>
+                  </tr>
+                </thead>
+                <tbody id="cxcContBody">
+                  <!-- Dynamic lists -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab: CxP Suplidores -->
+        <div id="cont-cxp" class="cont-panel hidden space-y-5">
+          <div class="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm">
+            <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
+              <div>
+                <h3 class="font-black text-slate-800 text-sm">🔴 Cuentas por Pagar (Proveedores)</h3>
+                <p class="text-xs text-slate-500">Registro de compras de uniformes, materiales didácticos y servicios</p>
+              </div>
+              <button onclick="AccountingModule.openAddCxpModal()" class="px-4 py-2 bg-[#0B63C7] text-white rounded-xl text-xs font-black uppercase flex items-center gap-2 hover:opacity-90">
+                <i data-lucide="plus" class="w-4 h-4"></i> Registrar Compra/CXP
+              </button>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-sm">
+                <thead class="bg-slate-50 border-b">
+                  <tr>
+                    <th class="px-4 py-3 text-left text-xs font-black text-slate-500">Proveedor / Suplidor</th>
+                    <th class="px-4 py-3 text-left text-xs font-black text-slate-500">NCF</th>
+                    <th class="px-4 py-3 text-left text-xs font-black text-slate-500">Concepto</th>
+                    <th class="px-4 py-3 text-right text-xs font-black text-slate-500">Monto</th>
+                    <th class="px-4 py-3 text-center text-xs font-black text-slate-500">Estado</th>
+                    <th class="px-4 py-3 text-center text-xs font-black text-slate-500">Acción</th>
+                  </tr>
+                </thead>
+                <tbody id="cxpBody">
+                  <!-- Dynamic rows -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab: Caja General -->
+        <div id="cont-caja-general" class="cont-panel hidden space-y-5">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm">
+              <span class="text-xs text-slate-400 font-black">ESTADO DE CAJA</span>
+              <p class="text-xl font-black text-slate-800 mt-1" id="cajaStatusLabel">Cargando...</p>
+            </div>
+            <div class="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm">
+              <span class="text-xs text-slate-400 font-black">Efectivo Calculado</span>
+              <p class="text-xl font-black text-green-600 mt-1" id="cajaEfectivoCalculado">RD$0.00</p>
+            </div>
+            <div class="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm">
               <div class="flex gap-2">
-                <button onclick="AccountingModule.openNominaModal()" class="px-4 py-2 bg-[#0B63C7] text-white rounded-xl text-xs font-black uppercase flex items-center gap-2">
-                  <i data-lucide="plus" class="w-4 h-4"></i> Nuevo Pago
-                </button>
-                <button onclick="AccountingModule.exportNominaPDF()" class="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-black uppercase flex items-center gap-2">
-                  <i data-lucide="download" class="w-4 h-4"></i> Exportar PDF
+                <button onclick="AccountingModule.aperturaCaja()" class="flex-1 px-2.5 py-2 bg-green-600 text-white rounded-xl text-xs font-black uppercase hover:opacity-90">Apertura</button>
+                <button onclick="AccountingModule.arqueoCajaModal()" class="flex-1 px-2.5 py-2 bg-[#FF8A00] text-white rounded-xl text-xs font-black uppercase hover:opacity-90">Arqueo/Cierre</button>
+              </div>
+            </div>
+          </div>
+          <div class="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm">
+            <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
+              <h3 class="font-black text-slate-800 text-sm">💸 Historial de Movimientos de Caja</h3>
+              <button onclick="AccountingModule.openCajaTransModal()" class="px-4 py-2 bg-[#0B63C7] text-white rounded-xl text-xs font-black uppercase flex items-center gap-2 hover:opacity-90">
+                <i data-lucide="plus" class="w-4 h-4"></i> Transacción de Caja
+              </button>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-sm">
+                <thead class="bg-slate-50 border-b">
+                  <tr>
+                    <th class="px-4 py-3 text-left text-xs font-black text-slate-500">Fecha</th>
+                    <th class="px-4 py-3 text-left text-xs font-black text-slate-500">Tipo</th>
+                    <th class="px-4 py-3 text-left text-xs font-black text-slate-500">Detalle</th>
+                    <th class="px-4 py-3 text-right text-xs font-black text-slate-500">Monto</th>
+                  </tr>
+                </thead>
+                <tbody id="cajaGeneralBody">
+                  <!-- Dynamic rows -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab: Bancos -->
+        <div id="cont-bancos" class="cont-panel hidden space-y-5">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Banco Popular -->
+            <div class="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm">
+              <div class="flex justify-between items-center mb-4">
+                <h4 class="font-black text-slate-800 text-base">🏦 Banco Popular</h4>
+                <span class="px-2.5 py-1 bg-green-50 text-green-700 rounded-full text-xs font-black">Cuenta Activa</span>
+              </div>
+              <div class="space-y-3">
+                <div class="flex justify-between"><span>Saldo Contable:</span><span class="font-black text-slate-800" id="bancoPopCont">RD$0.00</span></div>
+                <div class="flex justify-between"><span>Saldo Bancario:</span><span class="font-black text-blue-700" id="bancoPopBanc">RD$0.00</span></div>
+                <div class="flex justify-between text-xs text-slate-400"><span>Pendiente Conciliar:</span><span id="bancoPopPend">RD$0.00</span></div>
+                <div class="flex justify-between text-xs text-slate-400"><span>Movimientos Conciliados:</span><span id="bancoPopConc">0</span></div>
+              </div>
+            </div>
+            <!-- Banreservas -->
+            <div class="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm">
+              <div class="flex justify-between items-center mb-4">
+                <h4 class="font-black text-slate-800 text-base">🏦 Banreservas</h4>
+                <span class="px-2.5 py-1 bg-green-50 text-green-700 rounded-full text-xs font-black">Cuenta Activa</span>
+              </div>
+              <div class="space-y-3">
+                <div class="flex justify-between"><span>Saldo Contable:</span><span class="font-black text-slate-800" id="bancoResCont">RD$0.00</span></div>
+                <div class="flex justify-between"><span>Saldo Bancario:</span><span class="font-black text-blue-700" id="bancoResBanc">RD$0.00</span></div>
+                <div class="flex justify-between text-xs text-slate-400"><span>Pendiente Conciliar:</span><span id="bancoResPend">RD$0.00</span></div>
+                <div class="flex justify-between text-xs text-slate-400"><span>Movimientos Conciliados:</span><span id="bancoResConc">0</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab: Conciliación Bancaria -->
+        <div id="cont-conciliacion-bancaria" class="cont-panel hidden space-y-5">
+          <div class="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm">
+            <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
+              <div>
+                <h3 class="font-black text-slate-800 text-sm">🔄 Conciliación Bancaria Inteligente</h3>
+                <p class="text-xs text-slate-500">Cargue el extracto del banco para comparar automáticamente con el sistema</p>
+              </div>
+              <div class="flex gap-2">
+                <input type="file" id="bankCsvInput" class="hidden" accept=".csv,.xlsx" onchange="AccountingModule.processBankStatement(event)">
+                <button onclick="$('#bankCsvInput').click()" class="px-4 py-2 bg-[#0B63C7] text-white rounded-xl text-xs font-black uppercase flex items-center gap-2 hover:opacity-90">
+                  <i data-lucide="upload" class="w-4 h-4"></i> Cargar Extracto CSV
                 </button>
               </div>
             </div>
             <div class="overflow-x-auto">
               <table class="w-full text-sm">
-                <thead class="bg-slate-50 border-b border-slate-100">
-                <tr>
-                  <th class="px-4 py-3 text-left text-[10px] font-black text-slate-400 uppercase">Empleado</th>
-                  <th class="px-4 py-3 text-left text-[10px] font-black text-slate-400 uppercase">Puesto</th>
-                  <th class="px-4 py-3 text-left text-[10px] font-black text-slate-400 uppercase">Periodo</th>
-                  <th class="px-4 py-3 text-right text-[10px] font-black text-slate-400 uppercase">Monto</th>
-                  <th class="px-4 py-3 text-center text-[10px] font-black text-slate-400 uppercase">Estado</th>
-                  <th class="px-4 py-3 text-center text-[10px] font-black text-slate-400 uppercase">Acciones</th>
-                </tr>
-              </thead>
-                <tbody id="nominaTableBody">
-                  <tr><td colspan="6" class="text-center py-8 text-slate-400 text-sm">No hay registros de nómina</td></tr>
+                <thead class="bg-slate-50 border-b">
+                  <tr>
+                    <th class="px-4 py-3 text-left text-xs font-black text-slate-500">Movimiento Banco</th>
+                    <th class="px-4 py-3 text-left text-xs font-black text-slate-500">Movimiento Sistema</th>
+                    <th class="px-4 py-3 text-center text-xs font-black text-slate-500">Diferencia</th>
+                    <th class="px-4 py-3 text-center text-xs font-black text-slate-500">Estado</th>
+                    <th class="px-4 py-3 text-center text-xs font-black text-slate-500">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="conciliacionBody">
+                  <!-- Matching records -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab: Presupuesto -->
+        <div id="cont-presupuesto" class="cont-panel hidden space-y-5">
+          <div class="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm">
+            <h3 class="font-black text-slate-800 text-sm mb-4">📉 Control de Presupuesto Escolar</h3>
+            <div class="overflow-x-auto">
+              <table class="w-full text-sm">
+                <thead class="bg-slate-50 border-b">
+                  <tr>
+                    <th class="px-4 py-3 text-left text-xs font-black text-slate-500">Categoría</th>
+                    <th class="px-4 py-3 text-right text-xs font-black text-slate-500">Presupuestado</th>
+                    <th class="px-4 py-3 text-right text-xs font-black text-slate-500">Real Ejecutado</th>
+                    <th class="px-4 py-3 text-right text-xs font-black text-slate-500">Desviación</th>
+                    <th class="px-4 py-3 text-center text-xs font-black text-slate-500">Porcentaje</th>
+                  </tr>
+                </thead>
+                <tbody id="presupuestoBody">
+                  <!-- Budgets -->
                 </tbody>
               </table>
             </div>
@@ -2681,9 +3005,12 @@
 
         <!-- Tab: Flujo de Caja -->
         <div id="cont-cashflow" class="cont-panel hidden space-y-5">
-          <div class="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
-            <div class="flex items-center justify-between mb-4">
-              <h3 class="font-black text-slate-700 text-sm">Flujo de Caja</h3>
+          <div class="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm">
+            <div class="flex justify-between items-center mb-4">
+              <div>
+                <h3 class="font-black text-slate-800 text-sm">🌊 Flujo de Caja Real vs Proyección</h3>
+                <p class="text-xs text-slate-500">Análisis histórico con proyección de cobros de los próximos 3 meses</p>
+              </div>
               <select id="cfYear" class="border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-black outline-none" onchange="AccountingModule.loadCashflow(this.value)">
                 <option value="2026">2026</option>
                 <option value="2027">2027</option>
@@ -2691,7 +3018,7 @@
             </div>
             <div class="h-64"><canvas id="chartCashflow"></canvas></div>
           </div>
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
             <div class="bg-white rounded-2xl p-4 border border-green-100 shadow-sm text-center">
               <p class="text-xl font-black text-green-600" id="cfEntradas">RD$0</p>
               <p class="text-[10px] font-black text-slate-400 uppercase mt-1">Entradas</p>
@@ -2702,136 +3029,263 @@
             </div>
             <div class="bg-white rounded-2xl p-4 border border-blue-100 shadow-sm text-center">
               <p class="text-xl font-black text-blue-600" id="cfBalance">RD$0</p>
-              <p class="text-[10px] font-black text-slate-400 uppercase mt-1">Balance</p>
+              <p class="text-[10px] font-black text-slate-400 uppercase mt-1">Saldo Final</p>
+            </div>
+            <div class="bg-white rounded-2xl p-4 border border-purple-100 shadow-sm text-center">
+              <p class="text-xl font-black text-purple-600" id="cfProyeccion">RD$0</p>
+              <p class="text-[10px] font-black text-slate-400 uppercase mt-1">Proyección Proximo Mes</p>
             </div>
           </div>
         </div>
 
-        <!-- Tab: Facturación -->
-        <div id="cont-facturacion" class="cont-panel hidden space-y-5">
-          <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm text-center">
-              <p class="text-xl font-black text-slate-800" id="factEmitidas">0</p>
-              <p class="text-[10px] font-black text-slate-400 uppercase mt-1">Emitidas</p>
-            </div>
-            <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm text-center">
-              <p class="text-xl font-black text-slate-800" id="factPagadas">0</p>
-              <p class="text-[10px] font-black text-slate-400 uppercase mt-1">Pagadas</p>
-            </div>
-            <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm text-center">
-              <p class="text-xl font-black text-slate-800" id="factAnuladas">0</p>
-              <p class="text-[10px] font-black text-slate-400 uppercase mt-1">Anuladas</p>
-            </div>
-            <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm text-center">
-              <p class="text-xl font-black text-slate-800" id="factPendientes">0</p>
-              <p class="text-[10px] font-black text-slate-400 uppercase mt-1">Pendientes</p>
-            </div>
-          </div>
-        </div>
-
-        <!-- Tab: Cuentas por Cobrar -->
-        <div id="cont-cxc" class="cont-panel hidden space-y-5">
-          <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
-            <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
-              <p class="text-xl font-black text-slate-800" id="cxcTotal">RD$0</p>
-              <p class="text-[10px] font-black text-slate-400 uppercase mt-1">Total</p>
-            </div>
-            <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
-              <p class="text-xl font-black text-amber-600" id="cxcCorriente">RD$0</p>
-              <p class="text-[10px] font-black text-slate-400 uppercase mt-1">Corriente</p>
-            </div>
-            <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
-              <p class="text-xl font-black text-red-600" id="cxcVencido">RD$0</p>
-              <p class="text-[10px] font-black text-slate-400 uppercase mt-1">Vencido</p>
-            </div>
-          </div>
-          <div class="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
-            <h3 class="font-black text-slate-700 mb-4 text-sm">Ranking de Morosidad</h3>
-            <div id="cxcRanking" class="space-y-3">
-              <div class="animate-pulse h-8 bg-slate-100 rounded-xl"></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Tab: Reportes -->
-        <div id="cont-reportes" class="cont-panel hidden space-y-5">
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            <button onclick="AccountingModule.exportReporteDiarioPDF()" class="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm text-left hover:border-green-300 transition-all">
-              <div class="flex items-center gap-3 mb-3">
-                <div class="p-3 rounded-xl bg-green-50"><i data-lucide="file-text" class="w-5 h-5 text-green-600"></i></div>
-                <div>
-                  <h4 class="font-black text-slate-800">Reporte Diario</h4>
-                  <p class="text-xs text-slate-500">Resumen de ingresos del día</p>
-                </div>
-              </div>
-              <div class="flex items-center gap-2 text-xs font-black text-green-600">
-                <i data-lucide="download" class="w-4 h-4"></i> Descargar PDF
-              </div>
-            </button>
-            <button onclick="AccountingModule.exportReporteMensualPDF()" class="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm text-left hover:border-blue-300 transition-all">
-              <div class="flex items-center gap-3 mb-3">
-                <div class="p-3 rounded-xl bg-blue-50"><i data-lucide="bar-chart-3" class="w-5 h-5 text-blue-600"></i></div>
-                <div>
-                  <h4 class="font-black text-slate-800">Reporte Mensual</h4>
-                  <p class="text-xs text-slate-500">Análisis completo del mes</p>
-                </div>
-              </div>
-              <div class="flex items-center gap-2 text-xs font-black text-blue-600">
-                <i data-lucide="download" class="w-4 h-4"></i> Descargar PDF
-              </div>
-            </button>
-            <button onclick="AccountingModule.exportReporteMorosidadPDF()" class="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm text-left hover:border-amber-300 transition-all">
-              <div class="flex items-center gap-3 mb-3">
-                <div class="p-3 rounded-xl bg-amber-50"><i data-lucide="alert-triangle" class="w-5 h-5 text-amber-600"></i></div>
-                <div>
-                  <h4 class="font-black text-slate-800">Reporte de Morosidad</h4>
-                  <p class="text-xs text-slate-500">Deudores y antigüedad de saldos</p>
-                </div>
-              </div>
-              <div class="flex items-center gap-2 text-xs font-black text-amber-600">
-                <i data-lucide="download" class="w-4 h-4"></i> Descargar PDF
-              </div>
-            </button>
-          </div>
-        </div>
-
-        <!-- Tab: Configuración -->
-        <div id="cont-configuracion" class="cont-panel hidden space-y-5">
-          <div class="bg-slate-50 rounded-3xl border border-slate-200 p-6">
-            <h3 class="font-black text-slate-800 mb-5 flex items-center gap-2">
-              <i data-lucide="settings-2" class="w-5 h-5" style="color:#0B63C7"></i> Configuración de Cobro
-            </h3>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+        <!-- Tab: Activos Fijos -->
+        <div id="cont-activos-fijos" class="cont-panel hidden space-y-5">
+          <div class="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm">
+            <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
               <div>
-                <label class="block text-xs font-black text-slate-500 uppercase tracking-wider mb-1.5">Día Generación Automática</label>
-                <div class="flex items-center gap-2">
-                  <input type="number" id="confGenDay" min="1" max="28" value="25"
-                    class="w-full px-3 py-2.5 border-2 border-slate-100 rounded-xl text-sm font-bold bg-white outline-none focus:border-blue-400">
-                  <span class="text-xs text-slate-400 font-medium whitespace-nowrap">del mes anterior</span>
-                </div>
+                <h3 class="font-black text-slate-800 text-sm">🖥️ Registro de Activos Fijos</h3>
+                <p class="text-xs text-slate-500">Mobiliario, computadoras, aires acondicionados y vehículos con depreciación mensual automática</p>
               </div>
+              <button onclick="AccountingModule.depreciarActivosAhora()" class="px-4 py-2 bg-[#FF8A00] text-white rounded-xl text-xs font-black uppercase flex items-center gap-2 hover:opacity-90">
+                <i data-lucide="trending-down" class="w-4 h-4"></i> Calcular Depreciación
+              </button>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-sm">
+                <thead class="bg-slate-50 border-b">
+                  <tr>
+                    <th class="px-4 py-3 text-left text-xs font-black text-slate-500">Activo</th>
+                    <th class="px-4 py-3 text-left text-xs font-black text-slate-500">Categoría</th>
+                    <th class="px-4 py-3 text-right text-xs font-black text-slate-500">Valor Inicial</th>
+                    <th class="px-4 py-3 text-right text-xs font-black text-slate-500">Depreciación Acum.</th>
+                    <th class="px-4 py-3 text-right text-xs font-black text-slate-500">Valor en Libros</th>
+                  </tr>
+                </thead>
+                <tbody id="activosFijosBody">
+                  <!-- Dynamic rows -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab: Inventario Contable -->
+        <div id="cont-inventario-contable" class="cont-panel hidden space-y-5">
+          <div class="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm">
+            <h3 class="font-black text-slate-800 text-sm mb-4">📦 Inventario de Artículos Escolares</h3>
+            <div class="overflow-x-auto">
+              <table class="w-full text-sm">
+                <thead class="bg-slate-50 border-b">
+                  <tr>
+                    <th class="px-4 py-3 text-left text-xs font-black text-slate-500">Artículo</th>
+                    <th class="px-4 py-3 text-left text-xs font-black text-slate-500">Categoría</th>
+                    <th class="px-4 py-3 text-center text-xs font-black text-slate-500">Stock</th>
+                    <th class="px-4 py-3 text-right text-xs font-black text-slate-500">Costo Unitario</th>
+                    <th class="px-4 py-3 text-right text-xs font-black text-slate-500">Valor de Inventario</th>
+                  </tr>
+                </thead>
+                <tbody id="inventarioContableBody">
+                  <!-- Dynamic rows -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab: Nómina -->
+        <div id="cont-nomina" class="cont-panel hidden space-y-5">
+          <div class="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm">
+            <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
               <div>
-                <label class="block text-xs font-black text-slate-500 uppercase tracking-wider mb-1.5">Día Límite de Pago</label>
-                <div class="flex items-center gap-2">
-                  <input type="number" id="confDueDay" min="1" max="28" value="5"
-                    class="w-full px-3 py-2.5 border-2 border-slate-100 rounded-xl text-sm font-bold bg-white outline-none focus:border-blue-400">
-                  <span class="text-xs text-slate-400 font-medium whitespace-nowrap">del mes actual</span>
+                <h3 class="font-black text-slate-800 text-sm">👥 Nómina Profesional Docente y Administrativa</h3>
+                <p class="text-xs text-slate-500">Cálculo automático quincenal y deducciones fiscales de ley (AFP, ARS, ISR)</p>
+              </div>
+              <button onclick="AccountingModule.processQuincena()" class="px-4 py-2 bg-[#28B54D] text-white rounded-xl text-xs font-black uppercase flex items-center gap-2 hover:opacity-90">
+                <i data-lucide="dollar-sign" class="w-4 h-4"></i> Procesar Nómina Quincena
+              </button>
+            </div>
+
+            <!-- Listado de Empleados con foto e información detallada -->
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-6" id="nominaEmpleadosGrid">
+              <!-- Employee Cards -->
+            </div>
+
+            <div class="border-t pt-5">
+              <h4 class="font-black text-slate-800 text-sm mb-3">Historial de Pagos de Nómina</h4>
+              <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                  <thead class="bg-slate-50 border-b border-slate-100">
+                    <tr>
+                      <th class="px-4 py-3 text-left text-[10px] font-black text-slate-400 uppercase">Empleado</th>
+                      <th class="px-4 py-3 text-left text-[10px] font-black text-slate-400 uppercase">Puesto</th>
+                      <th class="px-4 py-3 text-left text-[10px] font-black text-slate-400 uppercase">Periodo</th>
+                      <th class="px-4 py-3 text-right text-[10px] font-black text-slate-400 uppercase">Salario Base</th>
+                      <th class="px-4 py-3 text-right text-[10px] font-black text-slate-400 uppercase">Deducciones</th>
+                      <th class="px-4 py-3 text-right text-[10px] font-black text-slate-400 uppercase">Neto Pagado</th>
+                      <th class="px-4 py-3 text-center text-[10px] font-black text-slate-400 uppercase">Acción</th>
+                    </tr>
+                  </thead>
+                  <tbody id="nominaTableBody">
+                    <tr><td colspan="7" class="text-center py-8 text-slate-400 text-sm">Cargando...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab: DGII Módulos -->
+        <div id="cont-dgii" class="cont-panel hidden space-y-5">
+          <!-- Sub-menú DGII -->
+          <div class="flex gap-2 border-b border-slate-100 pb-2 mb-4 overflow-x-auto">
+            <button onclick="AccountingModule.loadDgiiSub('606')" class="dgii-subactive px-3 py-1.5 rounded-lg text-xs font-black uppercase text-[#0B63C7]" id="btnDgii606">Formato 606 (Compras)</button>
+            <button onclick="AccountingModule.loadDgiiSub('607')" class="px-3 py-1.5 rounded-lg text-xs font-black uppercase text-slate-500" id="btnDgii607">Formato 607 (Ventas)</button>
+            <button onclick="AccountingModule.loadDgiiSub('608')" class="px-3 py-1.5 rounded-lg text-xs font-black uppercase text-slate-500" id="btnDgii608">Formato 608 (Anulaciones)</button>
+            <button onclick="AccountingModule.loadDgiiSub('it1')" class="px-3 py-1.5 rounded-lg text-xs font-black uppercase text-slate-500" id="btnDgiiIT1">Declaración IT-1</button>
+            <button onclick="AccountingModule.loadDgiiSub('ir17')" class="px-3 py-1.5 rounded-lg text-xs font-black uppercase text-slate-500" id="btnDgiiIR17">Retenciones IR-17</button>
+          </div>
+
+          <!-- DGII Subpanels -->
+          <div id="dgii-606" class="dgii-panel space-y-4">
+            <div class="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm">
+              <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
+                <div>
+                  <h4 class="font-black text-slate-800 text-sm">📄 DGII Formato 606 - Reporte de Compras y Gastos</h4>
+                  <p class="text-xs text-slate-500">Muestra las compras con RNC y comprobante fiscal (NCF) registradas en el mes</p>
+                </div>
+                <button onclick="AccountingModule.exportTXT606()" class="px-4 py-2 bg-slate-800 text-white rounded-xl text-xs font-black uppercase flex items-center gap-2 hover:opacity-90">
+                  <i data-lucide="download" class="w-4 h-4"></i> Exportar TXT DGII
+                </button>
+              </div>
+              <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                  <thead class="bg-slate-50 border-b">
+                    <tr>
+                      <th class="px-3 py-2 text-left text-xs font-black">RNC/Cédula</th>
+                      <th class="px-3 py-2 text-left text-xs font-black">Tipo Bien/Servicio</th>
+                      <th class="px-3 py-2 text-left text-xs font-black">NCF</th>
+                      <th class="px-3 py-2 text-left text-xs font-black">Fecha</th>
+                      <th class="px-3 py-2 text-right text-xs font-black">Monto Facturado</th>
+                      <th class="px-3 py-2 text-right text-xs font-black">ITBIS Facturado</th>
+                    </tr>
+                  </thead>
+                  <tbody id="dgii606Body">
+                    <!-- 606 records -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div id="dgii-607" class="dgii-panel hidden space-y-4">
+            <div class="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm">
+              <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
+                <div>
+                  <h4 class="font-black text-slate-800 text-sm">📄 DGII Formato 607 - Reporte de Ventas de Bienes y Servicios</h4>
+                  <p class="text-xs text-slate-500">Generación automática basada en los pagos reales recibidos y facturas emitidas</p>
+                </div>
+                <button onclick="AccountingModule.exportTXT607()" class="px-4 py-2 bg-slate-800 text-white rounded-xl text-xs font-black uppercase flex items-center gap-2 hover:opacity-90">
+                  <i data-lucide="download" class="w-4 h-4"></i> Exportar TXT DGII
+                </button>
+              </div>
+              <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                  <thead class="bg-slate-50 border-b">
+                    <tr>
+                      <th class="px-3 py-2 text-left text-xs font-black">RNC/Cédula</th>
+                      <th class="px-3 py-2 text-left text-xs font-black">NCF</th>
+                      <th class="px-3 py-2 text-left text-xs font-black">Fecha</th>
+                      <th class="px-3 py-2 text-right text-xs font-black">Monto</th>
+                      <th class="px-3 py-2 text-right text-xs font-black">ITBIS</th>
+                    </tr>
+                  </thead>
+                  <tbody id="dgii607Body">
+                    <!-- 607 records -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div id="dgii-608" class="dgii-panel hidden space-y-4">
+            <div class="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm">
+              <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
+                <div>
+                  <h4 class="font-black text-slate-800 text-sm">📄 DGII Formato 608 - Reporte de Comprobantes Anulados</h4>
+                  <p class="text-xs text-slate-500">Genera los registros de facturas que han sido canceladas en el sistema</p>
+                </div>
+                <button onclick="AccountingModule.exportTXT608()" class="px-4 py-2 bg-slate-800 text-white rounded-xl text-xs font-black uppercase flex items-center gap-2 hover:opacity-90">
+                  <i data-lucide="download" class="w-4 h-4"></i> Exportar TXT DGII
+                </button>
+              </div>
+              <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                  <thead class="bg-slate-50 border-b">
+                    <tr>
+                      <th class="px-3 py-2 text-left text-xs font-black">NCF Anulado</th>
+                      <th class="px-3 py-2 text-left text-xs font-black">Fecha</th>
+                      <th class="px-3 py-2 text-left text-xs font-black">Motivo de Anulación</th>
+                    </tr>
+                  </thead>
+                  <tbody id="dgii608Body">
+                    <!-- 608 records -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div id="dgii-it1" class="dgii-panel hidden space-y-4">
+            <div class="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm">
+              <h4 class="font-black text-slate-800 text-sm mb-4">🇩🇴 Declaración Estimada IT-1 (ITBIS)</h4>
+              <div class="space-y-3 max-w-md text-sm">
+                <div class="flex justify-between border-b pb-1"><span>ITBIS Cobrado (en Ventas/Ingresos):</span><span class="font-bold text-slate-700" id="it1Cobrado">RD$0.00</span></div>
+                <div class="flex justify-between border-b pb-1"><span>ITBIS Pagado (en Compras/Gastos):</span><span class="font-bold text-slate-700" id="it1Pagado">RD$0.00</span></div>
+                <div class="flex justify-between font-black text-slate-800 bg-slate-50 p-2 rounded-xl mt-2">
+                  <span>= ITBIS Neto a Pagar/Favor:</span><span id="it1Neto">RD$0.00</span>
                 </div>
               </div>
             </div>
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-5">
-              <button id="btnSavePaymentConfig" class="py-2.5 text-white text-xs font-black uppercase rounded-xl flex items-center justify-center gap-2 hover:opacity-90 transition-all" style="background:#0B63C7">
-                <i data-lucide="save" class="w-4 h-4"></i> Guardar Configuración
-              </button>
-              <button id="btnGeneratePaymentsNow" class="py-2.5 text-white text-xs font-black uppercase rounded-xl flex items-center justify-center gap-2 hover:opacity-90 transition-all" style="background:#0B63C7">
-                <i data-lucide="play-circle" class="w-4 h-4"></i> Generar pagos ahora
-              </button>
-              <button id="btnSendPaymentReminders" class="py-2.5 text-white text-xs font-black uppercase rounded-xl flex items-center justify-center gap-2 hover:opacity-90 transition-all" style="background:#FF8A00">
-                <i data-lucide="bell" class="w-4 h-4"></i> Enviar recordatorios
-              </button>
-              <button id="btnExportMorosidad" class="py-2.5 text-white text-xs font-black uppercase rounded-xl flex items-center justify-center gap-2 hover:opacity-90 transition-all" style="background:#475569">
-                <i data-lucide="download" class="w-4 h-4"></i> Exportar morosidad
-              </button>
+          </div>
+
+          <div id="dgii-ir17" class="dgii-panel hidden space-y-4">
+            <div class="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm">
+              <h4 class="font-black text-slate-800 text-sm mb-4">🇩🇴 Retenciones de Nómina y Terceros IR-17</h4>
+              <div class="space-y-3 max-w-md text-sm">
+                <div class="flex justify-between border-b pb-1"><span>Retenciones ISR a Empleados (Nómina):</span><span class="font-bold text-slate-700" id="ir17IsrNomina">RD$0.00</span></div>
+                <div class="flex justify-between border-b pb-1"><span>Retenciones de ITBIS a Terceros:</span><span class="font-bold text-slate-700">RD$0.00</span></div>
+                <div class="flex justify-between border-b pb-1"><span>Retenciones sobre Alquileres / Servicios:</span><span class="font-bold text-slate-700">RD$0.00</span></div>
+                <div class="flex justify-between font-black text-slate-800 bg-slate-50 p-2 rounded-xl mt-2">
+                  <span>Total Retenciones del Mes:</span><span id="ir17Total">RD$0.00</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab: Auditoría -->
+        <div id="cont-auditoria" class="cont-panel hidden space-y-5">
+          <div class="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm">
+            <div class="flex justify-between items-center mb-4">
+              <div>
+                <h3 class="font-black text-slate-800 text-sm">🕵️ Registro de Auditoría de Seguridad Inmutable</h3>
+                <p class="text-xs text-slate-500">Historial completo de modificaciones del sistema con dirección IP y datos de auditoría antes/después</p>
+              </div>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-sm">
+                <thead class="bg-slate-50 border-b">
+                  <tr>
+                    <th class="px-4 py-3 text-left text-xs font-black text-slate-500">Fecha/Hora</th>
+                    <th class="px-4 py-3 text-left text-xs font-black text-slate-500">Usuario</th>
+                    <th class="px-4 py-3 text-left text-xs font-black text-slate-500">Acción</th>
+                    <th class="px-4 py-3 text-left text-xs font-black text-slate-500">Detalles (Antes / Después)</th>
+                  </tr>
+                </thead>
+                <tbody id="auditoriaLogsBody">
+                  <!-- Dynamic rows -->
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
