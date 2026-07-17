@@ -1457,9 +1457,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   }, 12000);
 
   try {
-    const auth = await ensureRole(['encargada', 'education_coordinator']);
+    const auth = await ensureRole('encargada');
     if (!auth) {
       clearTimeout(initialLoadTimeout);
+      const overlay = document.getElementById('sidebarOverlay');
+      if (overlay) overlay.style.display = 'none';
       const loader = document.getElementById('initial-loading');
       if (loader) { loader.style.opacity = '0'; setTimeout(() => loader.remove(), 300); }
       return;
@@ -1527,6 +1529,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (window.lucide) lucide.createIcons();
   } catch (err) {
     clearTimeout(initialLoadTimeout);
+    const overlay = document.getElementById('sidebarOverlay');
+    if (overlay) overlay.style.display = 'none';
     const loader = document.getElementById('initial-loading');
     if (loader) { loader.style.opacity = '0'; setTimeout(() => loader.remove(), 300); }
     const msg = (err?.message || '').toLowerCase();

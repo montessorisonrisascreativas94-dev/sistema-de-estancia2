@@ -28,6 +28,7 @@ let _state = {
   cart: [],
   totalMora: 0,
   totalDiscount: 0,
+  discountPercent: 0,
   selectedPaymentMethod: null,
   students: [],
   concepts: [],
@@ -559,6 +560,7 @@ export const CajaCobro = {
     _state.selectedStudent = student;
     _state.cart = [];
     _state.totalMora = _state.totalDiscount = 0;
+    _state.discountPercent = 0;
     _state.selectedPaymentMethod = null;
 
     const { data: enrollments } = await supabase.from('student_enrollments')
@@ -595,14 +597,14 @@ export const CajaCobro = {
     }
     _state.cart.push(item);
     _state.totalMora = _state.cart.reduce((s,i) => s + (i.mora || 0), 0);
-    _updateCartUI();
+    this._applyDiscount(_state.discountPercent || 0);
     Helpers.toast(`${item.label} agregado`, 'success');
   },
 
   removeFromCart(idx) {
     _state.cart.splice(idx, 1);
     _state.totalMora = _state.cart.reduce((s,i) => s + (i.mora || 0),0);
-    _updateCartUI();
+    this._applyDiscount(_state.discountPercent || 0);
   },
 
   _toggleCuota(el) {
@@ -615,6 +617,17 @@ export const CajaCobro = {
       const idx = _state.cart.findIndex(c => c.id === id && c.type === 'cuota');
       if (idx !== -1) this.removeFromCart(idx);
     }
+  },
+
+  _applyDiscount(value) {
+    let pct = Number(value || 0);
+    if (Number.isNaN(pct)) pct = 0;
+    pct = Math.max(0, Math.min(100, pct));
+    _state.discountPercent = pct;
+    const subtotal = _state.cart.reduce((s,i) => s + (i.amount || 0), 0);
+    _state.totalDiscount = Math.round((subtotal + _state.totalMora) * pct / 100 * 100) / 100;
+    _updateCartUI();
+    calculateChange();
   },
 
   _addCatalogConcept(conc) {
@@ -644,24 +657,29 @@ export const CajaCobro = {
     const btn = document.getElementById('btnConfirmarPago');
     if (btn) { btn.disabled = true; btn.textContent = 'Procesando...'; }
     try {
-      const paymentIds = [];
-      for (const item of _state.cart) {
-        const rnc  = document.getElementById('ncfRNC')?.value?.trim()||null;
-        const nfcN = document.getElementById('ncfName')?.value?.trim()||null;
-        const ncfNotes = [rnc?`RNC:${rnc}`:null, nfcN?`Empresa:${nfcN}`:null].filter(Boolean).join(' | ')||null;
-        const { data: pay, error } = await supabase.from('payments').insert({
-          student_id: _state.selectedStudent.id,
-          amount: item.amount,
-          concept: item.label,
-          method: _state.selectedPaymentMethod || 'efectivo',
-          status: 'paid',
-          notes: ncfNotes,
-          paid_date: new Date().toISOString(),
-          created_at: new Date().toISOString()
-        }).select().single();
-        if (error) throw error;
-        paymentIds.push(pay.id);
+      const subtotal = _state.cart.reduce((s,i) => s + (i.amount || 0), 0);
+      const total = Math.max(0, subtotal + _state.totalMora - _state.totalDiscount);
+      const rnc  = document.getElementById('ncfRNC')?.value?.trim()||null;
+      const nfcN = document.getElementById('ncfName')?.value?.trim()||null;
+      const discountLabel = _state.discountPercent > 0 ? `Descuento ${_state.discountPercent}% (-RD$${fmtN(_state.totalDiscount)})` : null;
+      const ncfNotes = [rnc ? `RNC:${rnc}` : null, nfcN ? `Empresa:${nfcN}` : null, discountLabel].filter(Boolean).join(' | ') || null;
+      const conceptLabel = _state.cart.map(i => i.label).join(', ') || 'Cobro';
+      const { data: pay, error } = await supabase.from('payments').insert({
+        student_id: _state.selectedStudent.id,
+        amount: total,
+        concept: conceptLabel,
+        method: _state.selectedPaymentMethod || 'efectivo',
+        status: 'paid',
+        notes: ncfNotes,
+        paid_date: new Date().toISOString(),
+        created_at: new Date().toISOString(),
+        discount_percent: _state.discountPercent || 0,
+        discount_amount: _state.totalDiscount || 0
+      }).select().single();
+      if (error) throw error;
+      const paymentIds = [pay.id];
 
+      for (const item of _state.cart) {
         if (item.type === 'cuota' && item.id) {
           await supabase.from('student_charges')
             .update({ status: 'paid', paid_date: new Date().toISOString() })
@@ -692,7 +710,9 @@ export const CajaCobro = {
           p1_name: _state.selectedStudent.p1_name || ''
         },
         concept: _state.cart.map(i => i.label).join(', '),
-        amount: _state.cart.reduce((s,i) => s+i.amount, 0),
+        amount: subtotal,
+        discount_percent: _state.discountPercent || 0,
+        discount_amount: _state.totalDiscount || 0,
         method: _state.selectedPaymentMethod || 'efectivo',
         paid_date: new Date().toISOString(),
         status: 'paid'
@@ -705,6 +725,7 @@ export const CajaCobro = {
       _state.paidMonths = new Set();
       _state.totalMora = 0;
       _state.totalDiscount = 0;
+      _state.discountPercent = 0;
       _state.selectedPaymentMethod = null;
       await _loadStudents();
     } catch (e) {
@@ -888,6 +909,20 @@ function openCobroModal() {
           </h4>
           <div id="cartList" class="space-y-2 min-h-[48px]">
             <div class="text-center py-3 text-slate-300 text-xs font-bold">Selecciona conceptos arriba</div>
+          </div>
+          <div class="mt-4 p-4 rounded-2xl bg-slate-50 border border-slate-100">
+            <div class="flex items-center justify-between gap-3">
+              <div>
+                <div class="text-xs font-black text-slate-600 uppercase tracking-wider">Descuento</div>
+                <div class="text-[10px] text-slate-400">Porcentaje aplicado al total.</div>
+              </div>
+              <div class="flex items-center gap-2">
+                <input id="discountPercent" type="number" min="0" max="100" step="0.1" value="${_state.discountPercent || 0}"
+                  class="w-20 border-2 border-slate-100 rounded-xl px-3 py-2 text-sm font-black text-slate-700 outline-none focus:border-teal-500"
+                  oninput="CajaCobro._applyDiscount(this.value)">
+                <span class="text-sm font-black text-slate-700">%</span>
+              </div>
+            </div>
           </div>
           <div class="mt-3 pt-3 border-t border-slate-100 space-y-1">
             ${_state.totalDiscount > 0 ? `<div class="flex justify-between text-xs text-green-600"><span class="font-bold">Descuento</span><span class="font-black">-RD$${fmtN(_state.totalDiscount)}</span></div>` : ''}

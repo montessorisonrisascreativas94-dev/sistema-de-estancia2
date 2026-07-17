@@ -38,8 +38,10 @@ export const InvoiceModule = {
     const parent  = p.students?.p1_name || p.parent_name || '-';
     const month   = this._formatMonth(p.month_paid);
     const amount  = Number(p.amount   || 0);
+    const discountPercent = Number(p.discount_percent || p.discountPercent || 0);
+    const discountAmount  = Number(p.discount_amount || p.discountAmount || 0);
     const mora    = Number(p.mora_amount || this._calcMoraClient(p.due_date) || 0);
-    const total   = amount + mora;
+    const total   = amount + mora - discountAmount;
     const paidAt  = p.paid_date ? new Date(p.paid_date).toLocaleDateString('es-ES',{year:'numeric',month:'long',day:'2-digit'}) : '-';
     const dueAt   = p.due_date  ? new Date(p.due_date+'T00:00:00').toLocaleDateString('es-ES',{year:'numeric',month:'long',day:'2-digit'}) : '-';
     const method  = (p.method || '-').toUpperCase();
@@ -175,6 +177,10 @@ export const InvoiceModule = {
           <td colspan="4">⚠ Mora acumulada — vence: ${dueAt}</td>
           <td>${this.CURRENCY} ${mora.toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
         </tr>` : ''}
+        ${discountAmount > 0 ? `<tr class="discount-row">
+          <td colspan="4">Descuento ${discountPercent}%</td>
+          <td>-${this.CURRENCY} ${discountAmount.toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+        </tr>` : ''}
       </tbody>
     </table>
   </div>
@@ -183,6 +189,7 @@ export const InvoiceModule = {
     <div class="total-box">
       <div class="total-row"><span>Subtotal</span><span>${this.CURRENCY} ${amount.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></div>
       ${mora > 0 ? `<div class="total-row" style="color:#dc2626"><span>Mora</span><span>${this.CURRENCY} ${mora.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></div>` : ''}
+      ${discountAmount > 0 ? `<div class="total-row" style="color:#16a34a"><span>Descuento (${discountPercent}%)</span><span>- ${this.CURRENCY} ${discountAmount.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></div>` : ''}
       <div class="total-final">
         <span>Total</span>
         <span>${this.CURRENCY} ${total.toLocaleString('es-DO',{minimumFractionDigits:2})}</span>

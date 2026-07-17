@@ -27,9 +27,10 @@ import { CatalogoModule } from '../shared/catalogo-conceptos.module.js';
 window.InscripcionesModule = InscripcionesModule;
 window.CatalogoModule = CatalogoModule;
 window.CajaCobro = CajaCobro;
+window.CajaCobroV2 = CajaCobroV2;
 
 // ?? Definir objeto App globalmente para evitar ReferenceError en onclicks del HTML
-// Global close modal fallback � always available even before openNewPostModal is called
+// Global close modal fallback — always available even before openNewPostModal is called
 window._closeAsistenteModal = () => {
   const gc = document.getElementById('globalModalContainer');
   if (gc) { gc.style.display = 'none'; gc.innerHTML = ''; }
