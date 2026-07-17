@@ -5,6 +5,7 @@ import { UIPremium } from '../shared/ui-premium.js';
 import { BadgeSystem } from '../shared/badges.js';
 import { RealtimeManager } from '../shared/realtime-manager.js';
 import { QueryCache } from '../shared/query-cache.js';
+import { TeacherEfficiencyModule } from './modules/teacher_efficiency.module.js';
 
 const debounce = (fn, delay) => {
   let timeout;
@@ -17,6 +18,9 @@ const debounce = (fn, delay) => {
 window.App = {
   navigation: { goTo: goToSection }
 };
+
+// Expose goToSection globally so HTML onclick= and common_ui can call it
+window.goToSection = goToSection;
 
 window.openGlobalModal = function(html, wide = false) {
   const container = document.getElementById('globalModalContainer');
@@ -272,55 +276,8 @@ async function loadDashboard() {
 }
 
 async function loadEfficiency() {
-  const el = document.getElementById('eficienciaContent');
-  if (!el) return;
-  el.innerHTML = '<div class="text-slate-400">Cargando...</div>';
-  try {
-    const { data: teachers } = await supabase.from('profiles').select('*').eq('role', 'teacher');
-    el.innerHTML = `
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        ${(teachers || []).map(t => `
-          <div class="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm hover:shadow-md transition-all">
-            <div class="flex items-center gap-4 mb-4">
-              <div class="w-14 h-14 rounded-full bg-gradient-to-br from-blue-100 to-blue-50 flex items-center justify-center text-xl font-bold text-blue-600">
-                ${(t.name || 'M')[0].toUpperCase()}
-              </div>
-              <div>
-                <h3 class="font-bold text-slate-800">${t.name || 'Maestra'}</h3>
-                <p class="text-xs text-slate-400">${t.classroom?.name || 'Sin aula'}</p>
-              </div>
-            </div>
-            <div class="space-y-3">
-              <div class="flex justify-between items-center text-sm">
-                <span class="text-slate-500 font-medium">Eficiencia</span>
-                <span class="font-bold text-blue-600">92%</span>
-              </div>
-              <div class="w-full bg-slate-100 rounded-full h-2">
-                <div class="bg-blue-500 h-2 rounded-full" style="width: 92%"></div>
-              </div>
-              <div class="grid grid-cols-3 gap-2 text-xs">
-                <div class="text-center p-2 bg-slate-50 rounded-xl">
-                  <p class="text-slate-400">Puntualidad</p>
-                  <p class="font-bold text-slate-700">98%</p>
-                </div>
-                <div class="text-center p-2 bg-slate-50 rounded-xl">
-                  <p class="text-slate-400">Rutinas</p>
-                  <p class="font-bold text-slate-700">95%</p>
-                </div>
-                <div class="text-center p-2 bg-slate-50 rounded-xl">
-                  <p class="text-slate-400">Comunicación</p>
-                  <p class="font-bold text-slate-700">88%</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        `).join('')}
-      </div>
-    `;
-    if (window.lucide) lucide.createIcons();
-  } catch (e) {
-    el.innerHTML = `<p class="text-rose-500">Error al cargar: ${e.message}</p>`;
-  }
+  // Delegado al módulo dedicado (importado arriba)
+  await TeacherEfficiencyModule.load();
 }
 
 async function loadRanking() {
@@ -453,7 +410,7 @@ async function loadParentReviews() {
         ` : `
           <div class="text-center py-10">
             <div class="w-16 h-16 rounded-full bg-slate-100 mx-auto mb-4 flex items-center justify-center">
-              <i data-lucide="message-square-heart" class="w-8 h-8 text-slate-300"></i>
+              <i data-lucide="heart" class="w-8 h-8 text-slate-300"></i>
             </div>
             <p class="text-slate-400">No hay valoraciones aún</p>
           </div>
@@ -701,7 +658,7 @@ async function loadQRAccess() {
             <i data-lucide="users" class="w-4 h-4 inline mr-2"></i>Maestras
           </button>
           <button id="qrTabStudents" class="px-6 py-3 rounded-xl font-black text-sm bg-slate-100 text-slate-600">
-            <i data-lucide="user-round" class="w-4 h-4 inline mr-2"></i>Niños
+            <i data-lucide="users" class="w-4 h-4 inline mr-2"></i>Niños
           </button>
         </div>
         
@@ -1468,17 +1425,19 @@ async function loadProfile() {
   } catch (_) {}
 }
 
+// ── Sidebar accordion toggle ─────────────────────────────────────────────
 function initSidebarDropdowns() {
   document.querySelectorAll('.kk-nav-group-toggle').forEach(btn => {
+    if (btn._dropdownBound) return;
+    btn._dropdownBound = true;
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
-      const group = btn.closest('.kk-nav-group');
+      const group   = btn.closest('.kk-nav-group');
       const submenu = group?.querySelector('.kk-nav-sub');
-      if (group && submenu) {
-        btn.classList.toggle('open');
-        group.classList.toggle('open');
-        submenu.style.display = submenu.style.display === 'none' || submenu.style.display === '' ? 'block' : 'none';
-      }
+      if (!group || !submenu) return;
+      btn.classList.toggle('open');
+      group.classList.toggle('open');
+      submenu.style.display = (submenu.style.display === 'none' || submenu.style.display === '') ? 'block' : 'none';
     });
   });
 }
@@ -1489,9 +1448,22 @@ window.addEventListener('unhandledrejection', (e) => {
 });
 
 document.addEventListener('DOMContentLoaded', async () => {
+  const initialLoadTimeout = setTimeout(() => {
+    const loader = document.getElementById('initial-loading');
+    if (loader) {
+      loader.style.opacity = '0';
+      setTimeout(() => loader.remove(), 300);
+    }
+  }, 12000);
+
   try {
     const auth = await ensureRole(['encargada', 'education_coordinator']);
-    if (!auth) return;
+    if (!auth) {
+      clearTimeout(initialLoadTimeout);
+      const loader = document.getElementById('initial-loading');
+      if (loader) { loader.style.opacity = '0'; setTimeout(() => loader.remove(), 300); }
+      return;
+    }
 
     AppState.set('user', auth.user);
     AppState.set('profile', auth.profile);
@@ -1504,6 +1476,19 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     loadProfile();
     goToSection('dashboard');
+
+    // ── Wire ALL sidebar nav buttons → goToSection() ────────────────
+    document.querySelectorAll('#sidebar [data-section]').forEach(btn => {
+      // Skip group-toggle buttons (they open/close accordions, not sections)
+      if (btn.classList.contains('kk-nav-group-toggle')) return;
+      btn.addEventListener('click', () => {
+        const sectionId = btn.dataset.section;
+        if (sectionId) goToSection(sectionId);
+      });
+    });
+
+    // ── Sidebar accordion dropdowns ──────────────────────────────────
+    initSidebarDropdowns();
 
     BadgeSystem.init(auth.user.id);
 
@@ -1537,9 +1522,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       loader.style.opacity = '0';
       setTimeout(() => loader.remove(), 500);
     }
+    clearTimeout(initialLoadTimeout);
 
     if (window.lucide) lucide.createIcons();
   } catch (err) {
+    clearTimeout(initialLoadTimeout);
     const loader = document.getElementById('initial-loading');
     if (loader) { loader.style.opacity = '0'; setTimeout(() => loader.remove(), 300); }
     const msg = (err?.message || '').toLowerCase();

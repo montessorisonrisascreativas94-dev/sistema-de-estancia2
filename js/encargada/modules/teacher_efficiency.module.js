@@ -1,173 +1,110 @@
-const TeacherEfficiencyModule = {
-    charts: {},
-    
-    init() {
-        console.log('TeacherEfficiencyModule inicializado');
-        this.loadTeacherEfficiency();
-        this.initializeEventListeners();
-    },
-    
-    initializeEventListeners() {
-        // Listen for events if needed
-    },
-    
-    async loadTeacherEfficiency() {
-        try {
-            await Promise.all([
-                this.loadEfficiencyData(),
-                this.loadEfficiencyChart()
-            ]);
-        } catch (error) {
-            console.error('Error al cargar datos de eficiencia:', error);
-        }
-    },
-    
-    async loadEfficiencyData() {
-        // Get state
-        const state = window.EncargadaAppState;
-        
-        // Mock data - replace with actual Supabase queries
-        const mockTeachers = [
-            { id: 1, name: 'María González', efficiency: 92, punctuality: 95, attendance: 98, reports: 88, parentRating: 90 },
-            { id: 2, name: 'Ana Martínez', efficiency: 88, punctuality: 90, attendance: 95, reports: 85, parentRating: 87 },
-            { id: 3, name: 'Carmen López', efficiency: 85, punctuality: 85, attendance: 90, reports: 82, parentRating: 84 },
-            { id: 4, name: 'Laura Rodríguez', efficiency: 80, punctuality: 82, attendance: 88, reports: 78, parentRating: 81 },
-            { id: 5, name: 'Sofía Pérez', efficiency: 75, punctuality: 78, attendance: 85, reports: 72, parentRating: 76 }
-        ];
-        
-        state.setState('teacherEfficiency', mockTeachers);
-        this.renderTeacherList(mockTeachers);
-    },
-    
-    renderTeacherList(teachers) {
-        const container = document.getElementById('teacher-efficiency-list');
-        if (!container) return;
-        
-        container.innerHTML = teachers.map(teacher => `
-            <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                <div class="flex justify-between items-start mb-3">
-                    <div>
-                        <h4 class="font-semibold text-gray-800">${teacher.name}</h4>
-                        <div class="flex items-center gap-2 mt-1">
-                            <span class="text-2xl font-bold text-purple-600">${teacher.efficiency}</span>
-                            <span class="text-sm text-gray-500">/100</span>
-                        </div>
-                    </div>
-                    <div class="text-right">
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            teacher.efficiency >= 90 ? 'bg-green-100 text-green-800' :
-                            teacher.efficiency >= 80 ? 'bg-blue-100 text-blue-800' :
-                            teacher.efficiency >= 70 ? 'bg-yellow-100 text-yellow-800' :
-                            'bg-red-100 text-red-800'
-                        }">
-                            ${
-                                teacher.efficiency >= 90 ? 'Excelente' :
-                                teacher.efficiency >= 80 ? 'Muy Bueno' :
-                                teacher.efficiency >= 70 ? 'Aceptable' :
-                                'Requiere Mejoras'
-                            }
-                        </span>
-                    </div>
-                </div>
-                
-                <div class="space-y-3">
-                    <div>
-                        <div class="flex justify-between text-xs mb-1">
-                            <span class="text-gray-600">Puntualidad</span>
-                            <span class="font-medium">${teacher.punctuality}%</span>
-                        </div>
-                        <div class="w-full bg-gray-200 rounded-full h-2">
-                            <div class="h-2 rounded-full" style="width: ${teacher.punctuality}%; background-color: ${
-                                teacher.punctuality >= 90 ? '#10b981' :
-                                teacher.punctuality >= 70 ? '#f59e0b' : '#ef4444'
-                            }"></div>
-                        </div>
-                    </div>
-                    
-                    <div>
-                        <div class="flex justify-between text-xs mb-1">
-                            <span class="text-gray-600">Asistencia</span>
-                            <span class="font-medium">${teacher.attendance}%</span>
-                        </div>
-                        <div class="w-full bg-gray-200 rounded-full h-2">
-                            <div class="h-2 rounded-full" style="width: ${teacher.attendance}%; background-color: ${
-                                teacher.attendance >= 90 ? '#10b981' :
-                                teacher.attendance >= 70 ? '#f59e0b' : '#ef4444'
-                            }"></div>
-                        </div>
-                    </div>
-                    
-                    <div>
-                        <div class="flex justify-between text-xs mb-1">
-                            <span class="text-gray-600">Reportes</span>
-                            <span class="font-medium">${teacher.reports}%</span>
-                        </div>
-                        <div class="w-full bg-gray-200 rounded-full h-2">
-                            <div class="h-2 rounded-full" style="width: ${teacher.reports}%; background-color: ${
-                                teacher.reports >= 90 ? '#10b981' :
-                                teacher.reports >= 70 ? '#f59e0b' : '#ef4444'
-                            }"></div>
-                        </div>
-                    </div>
-                    
-                    <div>
-                        <div class="flex justify-between text-xs mb-1">
-                            <span class="text-gray-600">Valoración Padres</span>
-                            <span class="font-medium">${teacher.parentRating}%</span>
-                        </div>
-                        <div class="w-full bg-gray-200 rounded-full h-2">
-                            <div class="h-2 rounded-full" style="width: ${teacher.parentRating}%; background-color: ${
-                                teacher.parentRating >= 90 ? '#10b981' :
-                                teacher.parentRating >= 70 ? '#f59e0b' : '#ef4444'
-                            }"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `).join('');
-    },
-    
-    async loadEfficiencyChart() {
-        const canvas = document.getElementById('efficiency-chart');
-        if (!canvas) return;
-        
-        const ctx = canvas.getContext('2d');
-        
-        // Mock data
-        const labels = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio'];
-        const data = [85, 88, 86, 90, 92, 91];
-        
-        if (this.charts.efficiency) {
-            this.charts.efficiency.destroy();
-        }
-        
-        this.charts.efficiency = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels,
-                datasets: [{
-                    label: 'Eficiencia Promedio',
-                    data,
-                    borderColor: '#8b5cf6',
-                    backgroundColor: 'rgba(139, 92, 246, 0.1)',
-                    tension: 0.4,
-                    fill: true
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: { display: false }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        max: 100
-                    }
-                }
-            }
-        });
-    }
-};
+/**
+ * TeacherEfficiencyModule — Panel Encargada
+ * Usa AppState + supabase importados correctamente.
+ * NO usa window.EncargadaAppState (no existe).
+ */
+import { supabase } from '../../shared/supabase.js';
+import { AppState } from '../state.js';
+import { Helpers } from '../../shared/helpers.js';
 
-window.TeacherEfficiencyModule = TeacherEfficiencyModule;
+export const TeacherEfficiencyModule = {
+  charts: {},
+
+  async init() {
+    await this.load();
+  },
+
+  async load() {
+    const container = document.getElementById('eficienciaContent');
+    if (!container) return;
+    container.innerHTML = '<div class="p-6 text-center"><div class="animate-spin w-6 h-6 border-2 border-[#FF7A00] border-t-transparent rounded-full mx-auto"></div></div>';
+
+    try {
+      // Cargar maestras reales desde Supabase
+      const { data: teachers, error } = await supabase
+        .from('profiles')
+        .select('id, name, role, is_active, avatar_url')
+        .in('role', ['maestra', 'asistente'])
+        .eq('is_active', true)
+        .order('name');
+
+      if (error) throw error;
+
+      const list = (teachers || []).map((t, i) => ({
+        id:           t.id,
+        name:         t.name || 'Sin nombre',
+        role:         t.role,
+        efficiency:   Math.max(70, 98 - i * 4),   // placeholder hasta tener tabla de métricas
+        punctuality:  Math.max(72, 99 - i * 3),
+        attendance:   Math.max(75, 100 - i * 2),
+        reports:      Math.max(68, 96 - i * 5),
+        parentRating: Math.max(70, 97 - i * 4)
+      }));
+
+      // Guardar en estado usando la clave correcta (teachers.all)
+      AppState.set('teachers', { ...AppState.get('teachers'), all: teachers || [] });
+
+      if (!list.length) {
+        container.innerHTML = `
+          <div class="p-10 text-center text-slate-400">
+            <div class="w-16 h-16 rounded-2xl bg-slate-100 mx-auto mb-4 flex items-center justify-center">
+              <i data-lucide="users" class="w-8 h-8 text-slate-300"></i>
+            </div>
+            <p class="font-bold">No hay maestras registradas aún</p>
+          </div>`;
+        if (window.lucide) lucide.createIcons();
+        return;
+      }
+
+      container.innerHTML = `
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          ${list.map(t => this._cardHTML(t)).join('')}
+        </div>`;
+      if (window.lucide) lucide.createIcons();
+
+    } catch (e) {
+      console.error('[TeacherEfficiency]', e);
+      container.innerHTML = `<p class="text-rose-500 p-4">Error al cargar: ${Helpers.escapeHTML(e.message)}</p>`;
+    }
+  },
+
+  _cardHTML(t) {
+    const badge = t.efficiency >= 90 ? ['bg-emerald-100 text-emerald-800', 'Excelente'] :
+                  t.efficiency >= 80 ? ['bg-blue-100 text-blue-800',    'Muy Bueno'] :
+                  t.efficiency >= 70 ? ['bg-amber-100 text-amber-800',  'Aceptable'] :
+                                       ['bg-rose-100 text-rose-800',    'Mejorar'];
+    const bar = (pct, color) => `
+      <div class="w-full bg-slate-100 rounded-full h-2">
+        <div class="h-2 rounded-full transition-all" style="width:${pct}%;background:${color}"></div>
+      </div>`;
+    const row = (label, pct) => {
+      const color = pct >= 90 ? '#28B54D' : pct >= 70 ? '#FF7A00' : '#ef4444';
+      return `<div>
+        <div class="flex justify-between text-xs mb-1">
+          <span class="text-slate-500">${label}</span>
+          <span class="font-bold" style="color:${color}">${pct}%</span>
+        </div>${bar(pct, color)}</div>`;
+    };
+    const initial = (t.name || 'M').charAt(0).toUpperCase();
+    return `
+      <div class="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm hover:shadow-md transition-all">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-[#FF7A00]/20 to-[#FF7A00]/10 flex items-center justify-center text-xl font-black text-[#FF7A00]">${initial}</div>
+          <div class="flex-1 min-w-0">
+            <h4 class="font-bold text-slate-800 truncate">${Helpers.escapeHTML(t.name)}</h4>
+            <span class="text-[10px] font-black uppercase tracking-wider text-slate-400">${t.role}</span>
+          </div>
+          <div class="flex flex-col items-end gap-1">
+            <span class="text-2xl font-black text-[#FF7A00]">${t.efficiency}</span>
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-black ${badge[0]}">${badge[1]}</span>
+          </div>
+        </div>
+        <div class="space-y-2.5">
+          ${row('Puntualidad', t.punctuality)}
+          ${row('Asistencia',  t.attendance)}
+          ${row('Reportes',    t.reports)}
+          ${row('Valoración Padres', t.parentRating)}
+        </div>
+      </div>`;
+  }
+};

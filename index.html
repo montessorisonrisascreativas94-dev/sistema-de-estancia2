@@ -1,1244 +1,2763 @@
 ﻿<!DOCTYPE html>
 <html lang="es-DO">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Colegio Montessori Sonrisas Creativas | Santo Domingo</title>
-    <meta name="description" content="La estancia infantil donde tu hijo aprende, juega y crece mientras tú tienes la tranquilidad de saber que está en las mejores manos. Educación Montessori + tecnología para padres.">
-    
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Playfair+Display:wght@600;700;800&display=swap" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
-    <link href="https://unpkg.com/aos@2.3.4/dist/aos.css" rel="stylesheet">
-    
-    <style>
-        :root {
-            --primary: #0B63C7;
-            --primary-dark: #0850A0;
-            --secondary: #FF7A00;
-            --accent: #FFD43B;
-            --success: #28B54D;
-            --text-dark: #1A2340;
-            --text-mid: #4A5568;
-            --text-light: #718096;
-            --bg-light: #F8FAFC;
-            --white: #FFFFFF;
-            --radius-xl: 28px;
-            --radius-lg: 20px;
-            --shadow-lg: 0 20px 60px rgba(11,99,199,0.15);
-            --shadow-md: 0 8px 32px rgba(11,99,199,0.1);
-        }
-        
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        html { scroll-behavior: smooth; }
-        body {
-            font-family: 'Poppins', sans-serif;
-            color: var(--text-dark);
-            line-height: 1.7;
-            overflow-x: hidden;
-            background: var(--white);
-        }
-        .container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
-        .section { padding: 100px 0; position: relative; }
-        .section-tag {
-            display: inline-flex;
-            align-items: center;
-            gap: 10px;
-            background: linear-gradient(135deg, #FFF0E0, #FFE8CC);
-            color: var(--secondary);
-            font-weight: 700;
-            font-size: 13px;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            padding: 10px 24px;
-            border-radius: 50px;
-            margin-bottom: 20px;
-        }
-        .section-title {
-            font-family: 'Playfair Display', serif;
-            font-size: clamp(2.2rem, 5vw, 3.5rem);
-            font-weight: 700;
-            color: var(--text-dark);
-            margin-bottom: 20px;
-            line-height: 1.2;
-        }
-        .section-title span { color: var(--primary); }
-        .section-sub {
-            font-size: 1.1rem;
-            color: var(--text-mid);
-            max-width: 600px;
-            line-height: 1.8;
-        }
-        .text-center { text-align: center; }
-        .text-center .section-sub { margin: 0 auto; }
-        
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 12px;
-            padding: 16px 36px;
-            border-radius: 50px;
-            font-weight: 700;
-            font-size: 16px;
-            text-decoration: none;
-            transition: all 0.3s cubic-bezier(.34,1.56,.64,1);
-            cursor: pointer;
-            border: none;
-            font-family: 'Poppins', sans-serif;
-        }
-        .btn-primary {
-            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-            color: white;
-            box-shadow: 0 8px 28px rgba(11,99,199,0.35);
-        }
-        .btn-primary:hover { transform: translateY(-4px) scale(1.02); box-shadow: 0 16px 48px rgba(11,99,199,0.45); }
-        .btn-secondary {
-            background: white;
-            color: var(--primary);
-            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-            border: 2px solid var(--primary);
-        }
-        .btn-secondary:hover { background: var(--primary); color: white; transform: translateY(-4px); }
-        
-        .navbar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            z-index: 1000;
-            padding: 20px 0;
-            transition: all 0.4s ease;
-            background: transparent;
-        }
-        .navbar.scrolled {
-            background: rgba(255,255,255,0.98);
-            backdrop-filter: blur(20px);
-            box-shadow: 0 4px 40px rgba(11,99,199,0.12);
-            padding: 14px 0;
-        }
-        .nav-inner {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-        .logo {
-            display: flex;
-            align-items: center;
-            gap: 14px;
-            text-decoration: none;
-        }
-        .logo-icon {
-            width: 48px;
-            height: 48px;
-            border-radius: 16px;
-            background: linear-gradient(135deg, var(--secondary), #FF9A3D);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 24px;
-            color: white;
-            box-shadow: 0 6px 20px rgba(255,122,0,0.4);
-        }
-        .logo-text {
-            font-family: 'Playfair Display', serif;
-            font-weight: 700;
-            font-size: 1.4rem;
-            color: white;
-            transition: color 0.4s;
-        }
-        .navbar.scrolled .logo-text { color: var(--primary); }
-        .nav-links {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            list-style: none;
-        }
-        .nav-link {
-            text-decoration: none;
-            color: rgba(255,255,255,0.95);
-            font-weight: 500;
-            font-size: 15px;
-            padding: 10px 18px;
-            border-radius: 50px;
-            transition: all 0.3s;
-        }
-        .navbar.scrolled .nav-link { color: var(--text-mid); }
-        .nav-link:hover, .navbar.scrolled .nav-link:hover {
-            color: var(--secondary);
-            background: var(--secondary-light);
-            background: rgba(255,122,0,0.1);
-        }
-        .nav-cta {
-            background: var(--secondary);
-            color: white !important;
-            padding: 12px 24px !important;
-            border-radius: 50px;
-            font-weight: 700;
-            box-shadow: 0 4px 16px rgba(255,122,0,0.35);
-        }
-        .nav-cta:hover {
-            background: #D96500 !important;
-            transform: translateY(-2px);
-            box-shadow: 0 8px 24px rgba(255,122,0,0.45);
-        }
-        .mobile-btn {
-            display: none;
-            background: var(--secondary);
-            border: none;
-            color: white;
-            width: 50px;
-            height: 50px;
-            border-radius: 14px;
-            font-size: 24px;
-            cursor: pointer;
-        }
-        .mobile-menu {
-            display: none;
-            position: fixed;
-            top: 0;
-            right: 0;
-            bottom: 0;
-            width: 320px;
-            background: white;
-            z-index: 2000;
-            flex-direction: column;
-            box-shadow: -10px 0 60px rgba(0,0,0,0.2);
-            padding: 80px 28px 28px;
-        }
-        .mobile-menu.active { display: flex; }
-        .mobile-close {
-            position: absolute;
-            top: 24px;
-            right: 24px;
-            background: none;
-            border: none;
-            font-size: 32px;
-            cursor: pointer;
-            color: var(--text-dark);
-        }
-        .mobile-nav-link {
-            text-decoration: none;
-            color: var(--text-dark);
-            font-weight: 600;
-            font-size: 17px;
-            padding: 14px 0;
-            border-bottom: 1px solid #f0f0f0;
-        }
-        .mobile-overlay {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.5);
-            z-index: 1999;
-        }
-        .mobile-overlay.active { display: block; }
-        
-        .hero {
-            min-height: 100vh;
-            position: relative;
-            overflow: hidden;
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 50%, #0F70E0 100%);
-            display: flex;
-            align-items: center;
-            padding-top: 120px;
-            padding-bottom: 80px;
-        }
-        .hero::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background-image: radial-gradient(circle at 20% 20%, rgba(255,212,59,0.15) 0%, transparent 50%),
-                              radial-gradient(circle at 80% 80%, rgba(255,122,0,0.15) 0%, transparent 50%);
-        }
-        .hero-grid {
-            display: grid;
-            grid-template-columns: 1.2fr 1fr;
-            gap: 80px;
-            align-items: center;
-            position: relative;
-            z-index: 10;
-        }
-        .hero-tag {
-            display: inline-flex;
-            align-items: center;
-            gap: 10px;
-            background: rgba(255,255,255,0.18);
-            backdrop-filter: blur(10px);
-            color: white;
-            padding: 12px 28px;
-            border-radius: 50px;
-            font-weight: 600;
-            font-size: 14px;
-            margin-bottom: 28px;
-            border: 1px solid rgba(255,255,255,0.3);
-        }
-        .hero-tag-dot {
-            width: 10px;
-            height: 10px;
-            background: var(--accent);
-            border-radius: 50%;
-            animation: pulse 1.5s infinite;
-        }
-        @keyframes pulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.6; transform: scale(1.4); } }
-        .hero-title {
-            font-family: 'Playfair Display', serif;
-            font-size: clamp(2.5rem, 5.5vw, 4.2rem);
-            font-weight: 700;
-            color: white;
-            line-height: 1.15;
-            margin-bottom: 24px;
-        }
-        .hero-title span { color: var(--accent); }
-        .hero-desc {
-            font-size: 1.15rem;
-            color: rgba(255,255,255,0.85);
-            line-height: 1.8;
-            margin-bottom: 40px;
-            max-width: 540px;
-        }
-        .hero-btns { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 48px; }
-        .hero-stats {
-            display: flex;
-            gap: 32px;
-            flex-wrap: wrap;
-        }
-        .hero-stat {
-            background: rgba(255,255,255,0.15);
-            backdrop-filter: blur(10px);
-            padding: 20px 28px;
-            border-radius: 20px;
-            border: 1px solid rgba(255,255,255,0.25);
-        }
-        .hero-stat h3 {
-            font-family: 'Playfair Display', serif;
-            font-size: 2.2rem;
-            font-weight: 700;
-            color: var(--accent);
-        }
-        .hero-stat p {
-            font-size: 0.95rem;
-            color: rgba(255,255,255,0.8);
-            font-weight: 500;
-        }
-        .hero-visual {
-            position: relative;
-            display: flex;
-            justify-content: center;
-        }
-        .hero-image-card {
-            width: 100%;
-            max-width: 480px;
-            aspect-ratio: 4/5;
-            border-radius: 40px;
-            background: linear-gradient(135deg, #FFF0E0, #FFE8CC);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 120px;
-            box-shadow: 0 30px 80px rgba(0,0,0,0.25);
-            border: 8px solid rgba(255,255,255,0.2);
-            position: relative;
-            overflow: hidden;
-        }
-        .floating-card {
-            position: absolute;
-            background: white;
-            padding: 16px 20px;
-            border-radius: 16px;
-            box-shadow: var(--shadow-md);
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-        .floating-card-1 { top: 40px; left: -60px; animation: float 3s ease-in-out infinite; }
-        .floating-card-2 { bottom: 60px; right: -40px; animation: float 3s ease-in-out infinite 1s; }
-        @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
-        .floating-icon {
-            width: 44px;
-            height: 44px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 22px;
-        }
-        .floating-card-1 .floating-icon { background: #E6F7EB; color: var(--success); }
-        .floating-card-2 .floating-icon { background: #E8F2FF; color: var(--primary); }
-        .floating-text { font-size: 0.9rem; font-weight: 600; color: var(--text-dark); }
-        .hero-wave {
-            position: absolute;
-            bottom: -2px;
-            left: 0;
-            width: 100%;
-            line-height: 0;
-        }
-        
-        .trust-section { background: var(--bg-light); }
-        .trust-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 24px;
-            margin-top: 60px;
-        }
-        .trust-card {
-            background: white;
-            border-radius: var(--radius-xl);
-            padding: 36px 28px;
-            text-align: center;
-            box-shadow: var(--shadow-md);
-            transition: all 0.4s cubic-bezier(.34,1.56,.64,1);
-            border: 2px solid transparent;
-        }
-        .trust-card:hover { transform: translateY(-12px); border-color: var(--primary); }
-        .trust-icon {
-            width: 70px;
-            height: 70px;
-            border-radius: 20px;
-            margin: 0 auto 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 32px;
-            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-            color: white;
-            box-shadow: 0 8px 24px rgba(11,99,199,0.3);
-        }
-        .trust-card:nth-child(2) .trust-icon { background: linear-gradient(135deg, var(--secondary), #FF9A3D); box-shadow: 0 8px 24px rgba(255,122,0,0.3); }
-        .trust-card:nth-child(3) .trust-icon { background: linear-gradient(135deg, var(--success), #1A8035); box-shadow: 0 8px 24px rgba(40,181,77,0.3); }
-        .trust-card:nth-child(4) .trust-icon { background: linear-gradient(135deg, #8B5CF6, #7C3AED); box-shadow: 0 8px 24px rgba(139,92,246,0.3); }
-        .trust-card h3 {
-            font-family: 'Playfair Display', serif;
-            font-size: 1.35rem;
-            font-weight: 700;
-            color: var(--text-dark);
-            margin-bottom: 10px;
-        }
-        .trust-card p { color: var(--text-mid); font-size: 0.95rem; line-height: 1.7; }
-        
-        .platform-section {
-            background: linear-gradient(135deg, #0F172A 0%, var(--primary-dark) 100%);
-            color: white;
-        }
-        .platform-section .section-title { color: white; }
-        .platform-section .section-sub { color: rgba(255,255,255,0.75); }
-        .platform-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 28px;
-            margin-top: 60px;
-        }
-        .platform-card {
-            background: rgba(255,255,255,0.08);
-            backdrop-filter: blur(10px);
-            border-radius: var(--radius-xl);
-            padding: 40px;
-            border: 1px solid rgba(255,255,255,0.15);
-            transition: all 0.4s;
-        }
-        .platform-card:hover {
-            background: rgba(255,255,255,0.12);
-            transform: translateY(-8px);
-            border-color: rgba(255,255,255,0.3);
-        }
-        .platform-card-header {
-            display: flex;
-            align-items: center;
-            gap: 18px;
-            margin-bottom: 24px;
-        }
-        .platform-icon {
-            width: 64px;
-            height: 64px;
-            border-radius: 18px;
-            background: linear-gradient(135deg, var(--secondary), #FF9A3D);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 30px;
-            box-shadow: 0 8px 24px rgba(255,122,0,0.3);
-        }
-        .platform-card h3 {
-            font-family: 'Playfair Display', serif;
-            font-size: 1.5rem;
-            font-weight: 700;
-            margin-bottom: 6px;
-        }
-        .platform-card p { color: rgba(255,255,255,0.75); line-height: 1.8; }
-        .platform-features {
-            margin-top: 24px;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 12px;
-        }
-        .platform-feature {
-            background: rgba(255,255,255,0.1);
-            padding: 8px 16px;
-            border-radius: 50px;
-            font-size: 0.9rem;
-            font-weight: 500;
-        }
-        
-        .innovation-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 28px;
-            margin-top: 60px;
-        }
-        .innovation-card {
-            background: white;
-            border-radius: var(--radius-xl);
-            overflow: hidden;
-            box-shadow: var(--shadow-md);
-            transition: all 0.4s;
-        }
-        .innovation-card:hover { transform: translateY(-10px); box-shadow: var(--shadow-lg); }
-        .innovation-top {
-            background: linear-gradient(135deg, #FFF0E0, #FFE8CC);
-            padding: 40px;
-            text-align: center;
-            font-size: 64px;
-        }
-        .innovation-bottom { padding: 32px; }
-        .innovation-bottom h3 {
-            font-family: 'Playfair Display', serif;
-            font-size: 1.4rem;
-            font-weight: 700;
-            margin-bottom: 12px;
-        }
-        .innovation-bottom p { color: var(--text-mid); line-height: 1.7; }
-        
-        .testimonial-section { background: var(--bg-light); }
-        .testimonial-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 28px;
-            margin-top: 60px;
-        }
-        .testimonial-card {
-            background: white;
-            border-radius: var(--radius-xl);
-            padding: 40px;
-            box-shadow: var(--shadow-md);
-            transition: all 0.4s;
-        }
-        .testimonial-card:hover { transform: translateY(-8px); }
-        .testimonial-stars { color: #FFD43B; font-size: 1.2rem; margin-bottom: 20px; }
-        .testimonial-text {
-            color: var(--text-dark);
-            font-size: 1.05rem;
-            line-height: 1.8;
-            margin-bottom: 28px;
-            font-style: italic;
-        }
-        .testimonial-author {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-        }
-        .testimonial-avatar {
-            width: 56px;
-            height: 56px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 1.5rem;
-            font-weight: 700;
-        }
-        .testimonial-info h4 { font-weight: 700; font-size: 1rem; }
-        .testimonial-info p { color: var(--text-mid); font-size: 0.9rem; }
-        
-        .comparison-table {
-            margin-top: 60px;
-            background: white;
-            border-radius: var(--radius-xl);
-            overflow: hidden;
-            box-shadow: var(--shadow-lg);
-        }
-        .comparison-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 0;
-            border-bottom: 1px solid #E3EBF5;
-        }
-        .comparison-row:last-child { border-bottom: none; }
-        .comparison-cell { padding: 28px 32px; }
-        .comparison-header {
-            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-            color: white;
-            font-weight: 700;
-            font-size: 1.1rem;
-            font-family: 'Playfair Display', serif;
-        }
-        .comparison-cell:nth-child(2) { background: var(--bg-light); }
-        .comparison-check { color: var(--success); font-size: 1.4rem; }
-        .comparison-x { color: #E53E3E; font-size: 1.4rem; }
-        
-        .process-grid {
-            display: grid;
-            grid-template-columns: repeat(6, 1fr);
-            gap: 24px;
-            margin-top: 60px;
-            position: relative;
-        }
-        .process-item {
-            background: white;
-            border-radius: var(--radius-xl);
-            padding: 32px 24px;
-            text-align: center;
-            box-shadow: var(--shadow-md);
-            position: relative;
-            z-index: 1;
-            transition: all 0.4s;
-        }
-        .process-item:hover { transform: translateY(-8px); }
-        .process-number {
-            width: 56px;
-            height: 56px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, var(--secondary), #FF9A3D);
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-family: 'Playfair Display', serif;
-            font-size: 1.6rem;
-            font-weight: 700;
-            margin: 0 auto 20px;
-            box-shadow: 0 6px 20px rgba(255,122,0,0.35);
-        }
-        .process-item h4 { font-weight: 700; font-size: 1rem; margin-bottom: 8px; }
-        .process-item p { color: var(--text-mid); font-size: 0.9rem; line-height: 1.6; }
-        
-        .cta-section {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-            color: white;
-            text-align: center;
-        }
-        .cta-section .section-title { color: white; }
-        .cta-section .section-sub { color: rgba(255,255,255,0.85); margin-bottom: 40px; }
-        .cta-btns { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
-        
-        .footer {
-            background: #0F172A;
-            color: white;
-            padding: 80px 0 32px;
-        }
-        .footer-grid {
-            display: grid;
-            grid-template-columns: 2fr 1fr 1fr 1fr;
-            gap: 60px;
-            margin-bottom: 56px;
-        }
-        .footer-brand .logo-text { color: white; margin-bottom: 20px; }
-        .footer-desc { color: rgba(255,255,255,0.7); line-height: 1.8; margin-bottom: 24px; }
-        .footer-socials { display: flex; gap: 12px; }
-        .footer-social {
-            width: 48px;
-            height: 48px;
-            border-radius: 14px;
-            background: rgba(255,255,255,0.1);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 1.3rem;
-            text-decoration: none;
-            transition: all 0.3s;
-        }
-        .footer-social:hover { background: var(--secondary); transform: translateY(-4px); }
-        .footer-col h4 { font-weight: 700; font-size: 1.1rem; margin-bottom: 24px; }
-        .footer-col ul { list-style: none; }
-        .footer-col a {
-            color: rgba(255,255,255,0.7);
-            text-decoration: none;
-            display: block;
-            padding: 8px 0;
-            transition: all 0.3s;
-        }
-        .footer-col a:hover { color: var(--accent); padding-left: 6px; }
-        .footer-bottom {
-            border-top: 1px solid rgba(255,255,255,0.1);
-            padding-top: 32px;
-            text-align: center;
-            color: rgba(255,255,255,0.6);
-            font-size: 0.95rem;
-        }
-        
-        @media(max-width: 1024px) {
-            .hero-grid { grid-template-columns: 1fr; text-align: center; gap: 60px; }
-            .hero-desc { margin: 0 auto 40px; }
-            .hero-btns { justify-content: center; }
-            .hero-stats { justify-content: center; }
-            .nav-links { display: none; }
-            .mobile-btn { display: flex; align-items: center; justify-content: center; }
-            .trust-grid { grid-template-columns: repeat(2, 1fr); }
-            .platform-grid { grid-template-columns: 1fr; }
-            .innovation-grid { grid-template-columns: 1fr; }
-            .testimonial-grid { grid-template-columns: 1fr; }
-            .process-grid { grid-template-columns: repeat(2, 1fr); }
-            .footer-grid { grid-template-columns: 1fr 1fr; }
-        }
-        @media(max-width: 640px) {
-            .container { padding: 0 16px; }
-            .section { padding: 70px 0; }
-            .trust-grid { grid-template-columns: 1fr; }
-            .process-grid { grid-template-columns: 1fr; }
-            .footer-grid { grid-template-columns: 1fr; gap: 40px; }
-            .comparison-row { grid-template-columns: 1fr; }
-            .comparison-cell:nth-child(1) { background: var(--bg-light); font-weight: 700; }
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  
+  <title>Colegio Montessori Sonrisas Creativas — Santo Domingo | Educacion Inicial y Primaria</title>
+  <meta name="description" content="Colegio Montessori Sonrisas Creativas en Santo Domingo, Republica Dominicana. Educacion inicial, preescolar y primaria con metodologia Montessori. Admisiones abiertas.">
+  <meta name="keywords" content="colegio Montessori Santo Domingo, educacion inicial RD, preescolar Montessori, primaria Montessori, admisiones, Sonrisas Creativas, colegio infantil, guarderia Santo Domingo">
+  <meta name="author" content="Colegio Montessori Sonrisas Creativas">
+  <meta name="robots" content="index, follow">
+  <meta name="googlebot" content="index, follow">
+  
+  <link rel="canonical" href="https://montessorisonrisascreativas.com/">
+  
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Colegio Montessori Sonrisas Creativas | Santo Domingo">
+
+  <meta property="og:description" content="Educacion inicial y primaria Montessori en Santo Domingo. Tu hijo merece un espacio seguro y lleno de amor para aprender.">
+  <meta property="og:url" content="https://montessorisonrisascreativas.com/">
+  <meta property="og:image" content="https://montessorisonrisascreativas.com/logo/android-chrome-512x512.png">
+  <meta property="og:image:width" content="512">
+  <meta property="og:image:height" content="512">
+  <meta property="og:locale" content="es_DO">
+  <meta property="og:site_name" content="Colegio Montessori Sonrisas Creativas">
+  
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Colegio Montessori Sonrisas Creativas | Santo Domingo">
+
+
+  <meta name="twitter:description" content="Educacion inicial y primaria Montessori en Santo Domingo. Tu hijo merece lo mejor.">
+
+  <meta name="twitter:image" content="https://montessorisonrisascreativas.com/logo/android-chrome-512x512.png">
+  
+  <!-- Favicon -->
+  <link rel="icon" href="logo/favicon.ico" type="image/x-icon">
+  <link rel="apple-touch-icon" href="logo/apple-touch-icon.png">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#28B54D">
+  <meta name="msapplication-TileColor" content="#28B54D">
+  <!-- Preload criticos -->
+  <link rel="preload" href="img/monte.jpg" as="image" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Baloo+2:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <link href="https://unpkg.com/aos@2.3.4/dist/aos.css" rel="stylesheet">
+  <style>
+    :root {
+      --blue: #0B63C7;
+      --blue-dark: #0850A0;
+      --blue-light: #E8F2FF;
+      --orange: #FF7A00;
+      --orange-dark: #D96500;
+      --orange-light: #FFF0E0;
+      --green: #28B54D;
+      --green-dark: #1A8035;
+      --green-light: #E6F7EB;
+      --yellow: #FFD43B;
+      --yellow-light: #FFFBE6;
+      --white: #FFFFFF;
+      --gray-bg: #F8FAFC;
+      --text-dark: #1A2340;
+      --text-mid: #4A5568;
+      --text-light: #718096;
+      --radius-xl: 24px;
+      --radius-2xl: 36px;
+      --shadow-sm: 0 4px 16px rgba(11,99,199,0.08);
+      --shadow-md: 0 8px 32px rgba(11,99,199,0.12);
+      --shadow-lg: 0 20px 60px rgba(11,99,199,0.16);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Nunito', sans-serif;
+      background: var(--white);
+      color: var(--text-dark);
+      line-height: 1.7;
+      overflow-x: hidden;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+    .section {
+      padding: 80px 0;
+      position: relative;
+      z-index: 1;
+    }
+    .section-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--yellow-light);
+      color: var(--orange);
+      font-weight: 900;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      padding: 8px 20px;
+      border-radius: 50px;
+      margin-bottom: 18px;
+    }
+    .section-title {
+      font-family: 'Baloo 2', cursive;
+      font-size: clamp(2rem, 4vw, 3rem);
+      font-weight: 800;
+      color: var(--text-dark);
+      margin-bottom: 16px;
+      line-height: 1.15;
+    }
+    .section-title span.blue { color: var(--blue); }
+    .section-title span.orange { color: var(--orange); }
+    .section-title span.green { color: var(--green); }
+    .section-sub {
+      font-size: 1.1rem;
+      color: var(--text-mid);
+      max-width: 600px;
+      line-height: 1.7;
+    }
+    .text-center { text-align: center; }
+    .text-center .section-sub { margin: 0 auto; }
+
+    /* BUTTONS */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 16px 36px;
+      border-radius: 50px;
+      font-weight: 900;
+      font-size: 16px;
+      text-decoration: none;
+      transition: all 0.3s cubic-bezier(.34,1.56,.64,1);
+      cursor: pointer;
+      border: none;
+      font-family: 'Nunito', sans-serif;
+    }
+    .btn-orange {
+      background: var(--orange);
+      color: white;
+      box-shadow: 0 8px 24px rgba(255,122,0,0.35);
+    }
+    .btn-orange:hover {
+      transform: translateY(-4px) scale(1.04);
+      box-shadow: 0 16px 40px rgba(255,122,0,0.45);
+    }
+    .btn-blue {
+      background: var(--blue);
+      color: white;
+      box-shadow: 0 8px 24px rgba(11,99,199,0.3);
+    }
+    .btn-blue:hover {
+      transform: translateY(-4px) scale(1.04);
+      box-shadow: 0 16px 40px rgba(11,99,199,0.4);
+    }
+    .btn-outline {
+      background: transparent;
+      color: var(--blue);
+      border: 2.5px solid var(--blue);
+    }
+    .btn-outline:hover {
+      background: var(--blue);
+      color: white;
+      transform: translateY(-3px);
+    }
+    .btn-green {
+      background: var(--green);
+      color: white;
+      box-shadow: 0 8px 24px rgba(40,181,77,0.3);
+    }
+    .btn-green:hover {
+      transform: translateY(-4px) scale(1.04);
+      box-shadow: 0 16px 40px rgba(40,181,77,0.4);
+    }
+    .btn-sm { padding: 12px 24px; font-size: 14px; }
+
+    /* NAVBAR */
+    .navbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 1000;
+      padding: 20px 0;
+      transition: all 0.4s ease;
+      background: transparent;
+    }
+    .navbar.scrolled {
+      background: rgba(255,255,255,0.97);
+      backdrop-filter: blur(12px);
+      box-shadow: 0 4px 30px rgba(11,99,199,0.1);
+      padding: 12px 0;
+    }
+    .nav-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+    }
+    .logo-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, var(--green), var(--green-dark));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      color: white;
+      box-shadow: 0 4px 14px rgba(40,181,77,0.35);
+    }
+    .logo-text {
+      font-family: 'Baloo 2', cursive;
+      font-weight: 800;
+      font-size: 1.35rem;
+      color: white;
+      transition: color 0.4s;
+    }
+    .navbar.scrolled .logo-text { color: var(--blue); }
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      list-style: none;
+    }
+    .nav-link {
+      text-decoration: none;
+      color: rgba(255,255,255,0.92);
+      font-weight: 700;
+      font-size: 14px;
+      padding: 8px 14px;
+      border-radius: 50px;
+      transition: all 0.3s;
+      position: relative;
+    }
+    .navbar.scrolled .nav-link { color: var(--text-mid); }
+    .nav-link:hover,
+    .navbar.scrolled .nav-link:hover {
+      color: var(--orange);
+      background: var(--orange-light);
+    }
+    .nav-cta {
+      background: var(--orange);
+      color: white !important;
+      padding: 10px 20px !important;
+      border-radius: 50px;
+      font-weight: 900;
+      box-shadow: 0 4px 16px rgba(255,122,0,0.3);
+    }
+    .nav-cta:hover {
+      background: var(--orange-dark) !important;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(255,122,0,0.4);
+    }
+    .navbar.scrolled .nav-cta { color: white !important; }
+    .mobile-btn {
+      display: none;
+      background: var(--orange);
+      border: none;
+      color: white;
+      width: 48px;
+      height: 48px;
+      border-radius: 14px;
+      font-size: 24px;
+      cursor: pointer;
+    }
+    .mobile-menu {
+      display: none;
+      position: fixed;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      width: 300px;
+      background: white;
+      z-index: 2000;
+      flex-direction: column;
+      box-shadow: -10px 0 60px rgba(0,0,0,0.2);
+      padding: 80px 24px 24px;
+    }
+    .mobile-menu.active { display: flex; }
+    .mobile-close {
+      position: absolute;
+      top: 24px;
+      right: 24px;
+      background: none;
+      border: none;
+      font-size: 32px;
+      cursor: pointer;
+      color: var(--text-dark);
+    }
+    .mobile-nav-link {
+      text-decoration: none;
+      color: var(--text-dark);
+      font-weight: 700;
+      font-size: 16px;
+      padding: 14px 0;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    .mobile-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 1999;
+    }
+    .mobile-overlay.active { display: block; }
+    @media(max-width:1024px) {
+      .nav-links { display: none; }
+      .mobile-btn { display: flex; align-items: center; justify-content: center; }
+    }
+    /* ── MOBILE RESPONSIVE FIXES ── */
+    @media(max-width:768px) {
+      /* Prevent horizontal overflow */
+      html, body { overflow-x: hidden; max-width: 100%; }
+      .container { padding: 0 16px; }
+      .section { padding: 56px 0; }
+      /* Navbar stays in viewport */
+      .navbar { padding: 14px 0; }
+      .logo-text { font-size: 1.1rem; }
+      .logo-icon { width: 40px; height: 40px; font-size: 20px; }
+      .mobile-btn { width: 44px; height: 44px; border-radius: 12px; font-size: 22px; }
+      /* Mobile menu full-height drawer */
+      .mobile-menu {
+        width: min(300px, 85vw);
+        padding: 72px 20px 24px;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+      .mobile-close { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; font-size: 28px; }
+      .mobile-nav-link { padding: 16px 0; font-size: 17px; min-height: 44px; display: flex; align-items: center; }
+      /* Buttons touch-friendly */
+      .btn { padding: 14px 28px; font-size: 15px; min-height: 44px; }
+      .btn-sm { padding: 11px 20px; font-size: 13px; }
+      /* Section titles scale down */
+      .section-title { font-size: clamp(1.6rem, 6vw, 2.4rem); }
+      .section-sub { font-size: 1rem; }
+      /* Hero */
+      .hero { padding-top: 80px; min-height: auto; padding-bottom: 40px; }
+      /* Images responsive */
+      img { max-width: 100%; height: auto; }
+    }
+    @media(max-width:480px) {
+      .container { padding: 0 12px; }
+      .section { padding: 44px 0; }
+      .section-title { font-size: clamp(1.4rem, 7vw, 2rem); }
+      .btn { padding: 13px 22px; font-size: 14px; }
+    }
+
+    /* HERO */
+    .hero {
+      min-height: 100vh;
+      position: relative;
+      overflow: hidden;
+      background: linear-gradient(135deg, var(--blue) 0%, var(--blue-dark) 40%, #1368D4 70%, var(--blue) 100%);
+      display: flex;
+      align-items: center;
+      padding-top: 100px;
+    }
+    .hero-blobs {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      overflow: hidden;
+    }
+    .hero-blob {
+      position: absolute;
+      border-radius: 50%;
+      opacity: 0.12;
+      animation: blobFloat 8s ease-in-out infinite;
+    }
+    .hero-blob-1 { width: 600px; height: 600px; background: var(--orange); top: -200px; right: -100px; animation-delay: 0s; }
+    .hero-blob-2 { width: 400px; height: 400px; background: var(--yellow); bottom: -150px; left: -100px; animation-delay: 3s; }
+    .hero-blob-3 { width: 300px; height: 300px; background: var(--green); top: 40%; right: 30%; animation-delay: 1.5s; }
+    @keyframes blobFloat {
+      0%,100% { transform: translate(0,0) scale(1); }
+      33% { transform: translate(20px,-30px) scale(1.05); }
+      66% { transform: translate(-15px,20px) scale(0.95); }
+    }
+    .hero-dots {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background-image: radial-gradient(circle, rgba(255,255,255,0.08) 1px, transparent 1px);
+      background-size: 40px 40px;
+    }
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 80px;
+      align-items: center;
+      position: relative;
+      z-index: 10;
+    }
+    .hero-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(255,255,255,0.15);
+      backdrop-filter: blur(10px);
+      color: white;
+      padding: 10px 22px;
+      border-radius: 50px;
+      font-weight: 700;
+      font-size: 14px;
+      margin-bottom: 28px;
+      border: 1px solid rgba(255,255,255,0.25);
+    }
+    .hero-tag-dot {
+      width: 8px;
+      height: 8px;
+      background: var(--yellow);
+      border-radius: 50%;
+      animation: tagPulse 1.5s infinite;
+    }
+    @keyframes tagPulse {
+      0%,100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.6; transform: scale(1.3); }
+    }
+    .hero-title {
+      font-family: 'Baloo 2', cursive;
+      font-size: clamp(2.6rem, 5vw, 4rem);
+      font-weight: 900;
+      color: white;
+      line-height: 1.1;
+      margin-bottom: 28px;
+    }
+    .hero-title .hl-orange { color: var(--yellow); }
+    .hero-title .hl-green { color: #6EE7B7; }
+    .hero-desc {
+      font-size: 1.2rem;
+      color: rgba(255,255,255,0.85);
+      line-height: 1.75;
+      margin-bottom: 44px;
+      max-width: 520px;
+    }
+    .hero-btns {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .hero-stats {
+      display: flex;
+      gap: 40px;
+      margin-top: 52px;
+    }
+    .hero-stat h3 {
+      font-family: 'Baloo 2', cursive;
+      font-size: 2rem;
+      font-weight: 900;
+      color: var(--yellow);
+    }
+    .hero-stat p {
+      font-size: 0.9rem;
+      color: rgba(255,255,255,0.7);
+      font-weight: 600;
+    }
+    .hero-visual {
+      position: relative;
+      display: flex;
+      justify-content: center;
+    }
+    .hero-img-wrap {
+      position: relative;
+      width: 100%;
+      max-width: 520px;
+    }
+    .hero-img-frame {
+      width: 100%;
+      aspect-ratio: 1 / 1.05;
+      border-radius: 40% 60% 55% 45% / 45% 55% 60% 40%;
+      overflow: hidden;
+      border: 6px solid rgba(255,255,255,0.3);
+      box-shadow: 0 30px 80px rgba(0,0,0,0.25);
+      animation: frameWobble 9s ease-in-out infinite;
+      background: linear-gradient(135deg, var(--green-light), var(--blue-light));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 150px;
+    }
+    @keyframes frameWobble {
+      0%,100% { border-radius: 40% 60% 55% 45% / 45% 55% 60% 40%; }
+      50% { border-radius: 55% 45% 40% 60% / 60% 40% 50% 50%; }
+    }
+    @media(max-width:1024px) {
+      .hero-grid { grid-template-columns: 1fr; text-align: center; gap: 60px; }
+      .hero-desc { margin: 0 auto 44px; }
+      .hero-btns { justify-content: center; }
+      .hero-stats { justify-content: center; }
+      .hero-visual { max-width: 400px; margin: 0 auto; }
+    }
+    @media(max-width:640px) {
+      .hero-btns { flex-direction: column; align-items: center; gap: 12px; width: 100%; }
+      .hero-btns .btn { width: 100%; max-width: 300px; }
+      .hero-stats { gap: 24px; }
+    }
+    .hero-wave {
+      position: absolute;
+      bottom: -2px;
+      left: 0;
+      width: 100%;
+      line-height: 0;
+    }
+
+    /* WHY CHOOSE US */
+    .why-us {
+      background: var(--white);
+      position: relative;
+    }
+    .why-us::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at 80% 20%, rgba(11,99,199,0.04) 0%, transparent 60%),
+                  radial-gradient(ellipse at 20% 80%, rgba(40,181,77,0.04) 0%, transparent 60%);
+      pointer-events: none;
+    }
+    .why-us-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 24px;
+      margin-top: 56px;
+    }
+    .why-card {
+      background: var(--white);
+      border-radius: var(--radius-xl);
+      padding: 32px 24px;
+      text-align: center;
+      box-shadow: var(--shadow-sm);
+      border: 2px solid transparent;
+      transition: all 0.4s cubic-bezier(.34,1.56,.64,1);
+      position: relative;
+      overflow: hidden;
+    }
+    .why-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: var(--radius-xl);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .why-card:nth-child(1)::before { background: linear-gradient(135deg, var(--blue-light), #F0F8FF); }
+    .why-card:nth-child(2)::before { background: linear-gradient(135deg, var(--orange-light), #FFF8F0); }
+    .why-card:nth-child(3)::before { background: linear-gradient(135deg, var(--green-light), #F0FAF4); }
+    .why-card:nth-child(4)::before { background: linear-gradient(135deg, var(--yellow-light), #FFFFF0); }
+    .why-card:hover::before { opacity: 1; }
+    .why-card:hover { transform: translateY(-12px); box-shadow: var(--shadow-lg); }
+    .why-card:nth-child(1):hover { border-color: var(--blue); }
+    .why-card:nth-child(2):hover { border-color: var(--orange); }
+    .why-card:nth-child(3):hover { border-color: var(--green); }
+    .why-card:nth-child(4):hover { border-color: var(--yellow); }
+    .why-icon {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 20px;
+      font-size: 32px;
+      position: relative;
+      z-index: 1;
+      transition: transform 0.3s;
+    }
+    .why-card:hover .why-icon { transform: scale(1.12) rotate(5deg); }
+    .why-card:nth-child(1) .why-icon { background: var(--blue-light); color: var(--blue); }
+    .why-card:nth-child(2) .why-icon { background: var(--orange-light); color: var(--orange); }
+    .why-card:nth-child(3) .why-icon { background: var(--green-light); color: var(--green); }
+    .why-card:nth-child(4) .why-icon { background: var(--yellow-light); color: #B8860B; }
+    .why-card h3 {
+      font-family: 'Baloo 2', cursive;
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: var(--text-dark);
+      margin-bottom: 10px;
+      position: relative;
+      z-index: 1;
+    }
+    .why-card p {
+      color: var(--text-mid);
+      font-size: 0.95rem;
+      line-height: 1.6;
+      position: relative;
+      z-index: 1;
+    }
+    @media(max-width:1024px) { .why-us-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media(max-width:640px) { .why-us-grid { grid-template-columns: 1fr; } }
+
+    /* OUR SCHOOL */
+    .our-school {
+      background: linear-gradient(180deg, #F8FAFC 0%, #EFF6FF 60%, #F8FAFC 100%);
+      position: relative;
+      overflow: hidden;
+    }
+    .our-school::after {
+      content: '';
+      position: absolute;
+      top: -60px; right: -60px;
+      width: 350px; height: 350px;
+      background: radial-gradient(circle, rgba(11,99,199,0.05) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .our-school-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+      margin-top: 56px;
+    }
+    .school-card {
+      background: white;
+      border-radius: var(--radius-xl);
+      padding: 32px 24px;
+      box-shadow: var(--shadow-sm);
+      transition: all 0.4s;
+    }
+    .school-card:hover {
+      transform: translateY(-8px);
+      box-shadow: var(--shadow-md);
+    }
+    .school-icon {
+      width: 64px;
+      height: 64px;
+      border-radius: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      margin-bottom: 16px;
+    }
+    .school-card:nth-child(1) .school-icon { background: var(--blue-light); color: var(--blue); }
+    .school-card:nth-child(2) .school-icon { background: var(--orange-light); color: var(--orange); }
+    .school-card:nth-child(3) .school-icon { background: var(--green-light); color: var(--green); }
+    .school-card:nth-child(4) .school-icon { background: var(--yellow-light); color: #B8860B; }
+    .school-card:nth-child(5) .school-icon { background: #F3E8FF; color: #8B5CF6; }
+    .school-card:nth-child(6) .school-icon { background: #FFE4E6; color: #F43F5E; }
+    .school-card h4 {
+      font-family: 'Baloo 2', cursive;
+      font-size: 1.2rem;
+      font-weight: 800;
+      color: var(--text-dark);
+      margin-bottom: 12px;
+    }
+    .school-card ul {
+      list-style: none;
+      padding-left: 0;
+    }
+    .school-card li {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 0;
+      color: var(--text-mid);
+      font-size: 0.95rem;
+    }
+    .school-card li i { color: var(--green); font-size: 18px; }
+    @media(max-width:1024px) { .our-school-grid { grid-template-columns: repeat(2,1fr); } }
+    @media(max-width:640px) { .our-school-grid { grid-template-columns: 1fr; } }
+
+    /* PROGRAMS */
+    .programs {
+      background: linear-gradient(180deg, #FAFCFF 0%, var(--white) 100%);
+      position: relative;
+      overflow: hidden;
+    }
+    .programs::before {
+      content: '';
+      position: absolute;
+      top: -100px; right: -100px;
+      width: 400px; height: 400px;
+      background: radial-gradient(circle, rgba(255,122,0,0.06) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .programs::after {
+      content: '';
+      position: absolute;
+      bottom: -80px; left: -80px;
+      width: 300px; height: 300px;
+      background: radial-gradient(circle, rgba(40,181,77,0.06) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .programs-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 24px;
+      margin-top: 56px;
+    }
+    .program-card {
+      background: white;
+      border-radius: var(--radius-xl);
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+      transition: all 0.4s cubic-bezier(.34,1.56,.64,1);
+      cursor: pointer;
+    }
+    .program-card:hover { transform: translateY(-10px) scale(1.02); box-shadow: var(--shadow-lg); }
+    .program-top {
+      height: 140px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .program-top::after {
+      content: '';
+      position: absolute;
+      bottom: -20px;
+      left: -20px;
+      right: -20px;
+      height: 50px;
+      background: white;
+      border-radius: 50%;
+    }
+    .pt-1 { background: linear-gradient(135deg, var(--yellow), var(--orange)); }
+    .pt-2 { background: linear-gradient(135deg, var(--green), #5DD87A); }
+    .pt-3 { background: linear-gradient(135deg, var(--blue), #4B9FFF); }
+    .pt-4 { background: linear-gradient(135deg, var(--orange), #FFB347); }
+    .program-icon {
+      font-size: 56px;
+      position: relative;
+      z-index: 1;
+      transition: transform 0.4s;
+    }
+    .program-card:hover .program-icon { transform: scale(1.2) rotate(-5deg); }
+    .program-body { padding: 24px; }
+    .program-age {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--orange);
+      background: var(--orange-light);
+      padding: 4px 12px;
+      border-radius: 50px;
+      margin-bottom: 10px;
+    }
+    .program-body h3 {
+      font-family: 'Baloo 2', cursive;
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: var(--text-dark);
+      margin-bottom: 12px;
+    }
+    .program-body .program-benefits {
+      list-style: none;
+      padding-left: 0;
+      margin-bottom: 20px;
+    }
+    .program-body .program-benefits li {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 0;
+      color: var(--text-mid);
+      font-size: 0.9rem;
+    }
+    .program-body .program-benefits li i {
+      color: var(--green);
+      font-size: 16px;
+    }
+    .program-body a.btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 12px 20px;
+      border-radius: 999px;
+      border: 2px solid transparent;
+      background: var(--blue);
+      color: white;
+      text-decoration: none;
+      font-weight: 700;
+      transition: transform 0.3s ease, background 0.3s ease, border-color 0.3s ease;
+    }
+    .program-body a.btn:hover {
+      transform: translateY(-2px);
+      background: var(--blue-dark);
+      border-color: var(--blue-dark);
+    }
+    .program-body a.btn.btn-outline {
+      background: transparent;
+      color: var(--blue);
+      border-color: var(--blue);
+    }
+    .program-body a.btn.btn-outline:hover {
+      background: var(--blue);
+      color: white;
+    }
+    .section-cta {
+      margin-top: 24px;
+    }
+    @media(max-width:1024px) { .programs-grid { grid-template-columns: repeat(2,1fr); } }
+    @media(max-width:640px) { .programs-grid { grid-template-columns: 1fr; } }
+
+    /* SCHEDULES */
+    .schedules {
+      background: linear-gradient(135deg, #EFF6FF 0%, #F0FDF4 50%, #F8FAFC 100%);
+      position: relative;
+    }
+    .schedules::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image: radial-gradient(circle, rgba(11,99,199,0.06) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+    }
+    .schedules-grid {
+      display: grid;
+      grid-template-columns: repeat(3,1fr);
+      gap: 28px;
+      margin-top: 56px;
+    }
+    .schedule-card {
+      background: white;
+      border-radius: var(--radius-2xl);
+      padding: 40px 32px;
+      box-shadow: var(--shadow-sm);
+      text-align: center;
+      border: 2px solid transparent;
+      transition: all 0.4s;
+    }
+    .schedule-card:hover {
+      transform: translateY(-10px);
+      box-shadow: var(--shadow-lg);
+    }
+    .schedule-icon {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 20px;
+      font-size: 36px;
+      color: white;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+    }
+    .schedule-card:nth-child(1) .schedule-icon { background: linear-gradient(135deg, var(--green), var(--green-dark)); }
+    .schedule-card:nth-child(2) .schedule-icon { background: linear-gradient(135deg, var(--orange), var(--orange-dark)); }
+    .schedule-card:nth-child(3) .schedule-icon { background: linear-gradient(135deg, var(--blue), var(--blue-dark)); }
+    .schedule-card h3 {
+      font-family: 'Baloo 2', cursive;
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--text-dark);
+      margin-bottom: 12px;
+    }
+    .schedule-time {
+      font-size: 1.2rem;
+      font-weight: 900;
+      color: var(--text-dark);
+      margin-bottom: 20px;
+      padding: 10px 20px;
+      border-radius: 14px;
+      display: inline-block;
+    }
+    .schedule-card:nth-child(1) .schedule-time { background: var(--green-light); color: var(--green-dark); }
+    .schedule-card:nth-child(2) .schedule-time { background: var(--orange-light); color: var(--orange-dark); }
+    .schedule-card:nth-child(3) .schedule-time { background: var(--blue-light); color: var(--blue-dark); }
+    .schedule-includes {
+      list-style: none;
+      padding-left: 0;
+      text-align: left;
+      margin-bottom: 24px;
+    }
+    .schedule-includes li {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 0;
+      color: var(--text-mid);
+      font-size: 0.95rem;
+    }
+    .schedule-includes li i { color: var(--green); font-size: 18px; }
+    .schedule-for {
+      color: var(--text-mid);
+      font-size: 0.95rem;
+      font-weight: 700;
+      padding-top: 16px;
+      border-top: 1px dashed #E2E8F0;
+    }
+    @media(max-width:1024px) { .schedules-grid { grid-template-columns: 1fr; max-width: 600px; margin-left: auto; margin-right: auto; } }
+
+    /* PAYMENT PLANS */
+    .payment-plans { background: linear-gradient(160deg, #F0FDF4 0%, #ECFDF5 100%); }
+    .payment-plans {
+      background: var(--white);
+      position: relative;
+      overflow: hidden;
+    }
+    .payment-plans::before {
+      content: '';
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 800px; height: 800px;
+      background: radial-gradient(circle, rgba(11,99,199,0.03) 0%, transparent 65%);
+      pointer-events: none;
+    }
+    .plans-grid {
+      display: grid;
+      grid-template-columns: repeat(3,1fr);
+      gap: 24px;
+      margin-top: 56px;
+    }
+    .plan-card {
+      background: white;
+      border: 3px solid var(--blue-light);
+      border-radius: var(--radius-2xl);
+      padding: 36px;
+      box-shadow: var(--shadow-sm);
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.4s;
+    }
+    .plan-card:nth-child(1) { border-color: var(--yellow); }
+    .plan-card:nth-child(2) { border-color: var(--orange-light); }
+    .plan-card:nth-child(3) { border-color: var(--green-light); }
+    .plan-card:hover {
+      transform: translateY(-10px);
+      box-shadow: var(--shadow-lg);
+    }
+    .plan-badge {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      background: var(--yellow);
+      color: #B8860B;
+      font-weight: 900;
+      font-size: 0.75rem;
+      padding: 6px 14px;
+      border-radius: 50px;
+      box-shadow: 0 4px 12px rgba(255,212,59,0.35);
+    }
+    .plan-icon {
+      font-size: 56px;
+      margin-bottom: 16px;
+    }
+    .plan-card h3 {
+      font-family: 'Baloo 2', cursive;
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--text-dark);
+      margin-bottom: 8px;
+    }
+    .plan-type {
+      font-size: 1.1rem;
+      color: var(--text-mid);
+      font-weight: 700;
+      margin-bottom: 24px;
+    }
+    .plan-benefits {
+      list-style: none;
+      padding-left: 0;
+      margin-bottom: 28px;
+    }
+    .plan-benefits li {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 0;
+      color: var(--text-mid);
+      font-size: 0.95rem;
+      text-align: left;
+    }
+    .plan-benefits li i {
+      color: var(--green);
+      font-size: 18px;
+    }
+    @media(max-width:1024px) { .plans-grid { grid-template-columns: 1fr; max-width: 600px; margin-left: auto; margin-right: auto; } }
+
+    /* TARIFFS */
+    .tariffs-bg-ignore { background: var(--gray-bg); }
+    .tariff-levels {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      justify-content: center;
+      margin-top: 48px;
+      margin-bottom: 40px;
+    }
+    .tariff-level-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 28px;
+      border-radius: 50px;
+      font-size: 1.1rem;
+      font-weight: 900;
+      font-family: 'Baloo 2', cursive;
+      cursor: pointer;
+      border: 3px solid transparent;
+      background: white;
+      color: var(--text-dark);
+      box-shadow: var(--shadow-sm);
+      transition: all 0.3s;
+    }
+    .tariff-level-btn:hover {
+      transform: translateY(-3px);
+      box-shadow: var(--shadow-md);
+    }
+    .tariff-level-btn.active {
+      background: linear-gradient(135deg, var(--blue), var(--blue-dark));
+      color: white;
+      box-shadow: 0 8px 24px rgba(11,99,199,0.3);
+    }
+    .tariff-levels-container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    .tariff-level {
+      display: none;
+    }
+    .tariff-level.active {
+      display: block;
+    }
+    .tariff-schedule {
+      margin-bottom: 24px;
+    }
+    .tariff-schedule-btn {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 28px;
+      background: white;
+      border: 2px solid var(--blue-light);
+      border-radius: var(--radius-xl);
+      font-size: 1.2rem;
+      font-weight: 900;
+      font-family: 'Baloo 2', cursive;
+      color: var(--text-dark);
+      cursor: pointer;
+      box-shadow: var(--shadow-sm);
+      transition: all 0.3s;
+    }
+    .tariff-schedule-btn:hover {
+      border-color: var(--blue);
+      box-shadow: var(--shadow-md);
+    }
+    .tariff-schedule-btn i {
+      font-size: 28px;
+      transition: transform 0.3s;
+    }
+    .tariff-schedule.open .tariff-schedule-btn i {
+      transform: rotate(180deg);
+    }
+    .tariff-schedule-content {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.4s ease;
+    }
+    .tariff-schedule.open .tariff-schedule-content {
+      max-height: 2000px;
+    }
+    .plan-options {
+      display: grid;
+      grid-template-columns: repeat(3,1fr);
+      gap: 20px;
+      padding: 24px;
+    }
+    .plan-option {
+      background: white;
+      border: 2px solid var(--blue-light);
+      border-radius: var(--radius-xl);
+      padding: 28px 24px;
+      text-align: center;
+      box-shadow: var(--shadow-sm);
+    }
+    .plan-option h4 {
+      font-family: 'Baloo 2', cursive;
+      font-size: 1.3rem;
+      font-weight: 800;
+      color: var(--text-dark);
+      margin-bottom: 16px;
+    }
+    .plan-price {
+      font-family: 'Baloo 2', cursive;
+      font-size: 2rem;
+      font-weight: 900;
+      color: var(--blue);
+      margin-bottom: 8px;
+    }
+    .plan-price-detail {
+      font-size: 0.95rem;
+      color: var(--text-mid);
+      font-weight: 700;
+      margin-bottom: 20px;
+    }
+    @media(max-width:1024px) {
+      .plan-options { grid-template-columns: 1fr; }
+    }
+    @media(max-width:640px) {
+      .tariff-levels { flex-direction: column; align-items: center; }
+      .tariff-level-btn { width: 100%; justify-content: center; }
+    }
+
+    /* BENEFITS */
+    .benefits { background: linear-gradient(160deg, #F5F3FF 0%, #EEF2FF 50%, #EFF6FF 100%); }
+    .benefits-grid {
+      display: grid;
+      grid-template-columns: repeat(3,1fr);
+      gap: 24px;
+      margin-top: 56px;
+    }
+    .benefit-card {
+      background: white;
+      border: 2px solid;
+      border-radius: var(--radius-xl);
+      padding: 32px 28px;
+      display: flex;
+      gap: 20px;
+      align-items: flex-start;
+      box-shadow: var(--shadow-sm);
+      transition: all 0.4s;
+    }
+    .benefit-card:nth-child(1) { border-color: var(--blue); background: linear-gradient(135deg, white, var(--blue-light)); }
+    .benefit-card:nth-child(2) { border-color: var(--orange); background: linear-gradient(135deg, white, var(--orange-light)); }
+    .benefit-card:nth-child(3) { border-color: var(--green); background: linear-gradient(135deg, white, var(--green-light)); }
+    .benefit-card:hover {
+      transform: translateY(-10px);
+      box-shadow: var(--shadow-md);
+    }
+    .benefit-icon {
+      width: 64px;
+      height: 64px;
+      border-radius: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      flex-shrink: 0;
+    }
+    .benefit-card:nth-child(1) .benefit-icon { background: var(--blue); color: white; }
+    .benefit-card:nth-child(2) .benefit-icon { background: var(--orange); color: white; }
+    .benefit-card:nth-child(3) .benefit-icon { background: var(--green); color: white; }
+    .benefit-card h4 {
+      font-family: 'Baloo 2', cursive;
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: var(--text-dark);
+      margin-bottom: 8px;
+    }
+    .benefit-card p {
+      color: var(--text-mid);
+      font-size: 0.95rem;
+      line-height: 1.6;
+    }
+    @media(max-width:1024px) { .benefits-grid { grid-template-columns: 1fr; max-width: 600px; margin-left: auto; margin-right: auto; } }
+
+    /* ENROLLMENT TIMELINE */
+    .timeline {
+      background: linear-gradient(180deg, #F8FAFC 0%, #EFF6FF 100%);
+      position: relative;
+    }
+    .timeline::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image:
+        radial-gradient(circle, rgba(11,99,199,0.05) 1.5px, transparent 1.5px);
+      background-size: 36px 36px;
+      pointer-events: none;
+    }
+    .timeline-container {
+      max-width: 900px;
+      margin: 56px auto 0;
+      position: relative;
+    }
+    .timeline-line {
+      position: absolute;
+      left: 50%;
+      top: 0;
+      bottom: 0;
+      width: 4px;
+      background: linear-gradient(180deg, var(--blue), var(--green));
+      transform: translateX(-50%);
+      border-radius: 2px;
+    }
+    .timeline-item {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      padding: 24px 0;
+      position: relative;
+    }
+    .timeline-item:nth-child(even) {
+      justify-content: flex-start;
+    }
+    .timeline-content {
+      width: 45%;
+      background: white;
+      padding: 24px 28px;
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-sm);
+      border: 2px solid var(--blue-light);
+      position: relative;
+    }
+    .timeline-number {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--blue), var(--blue-dark));
+      color: white;
+      font-family: 'Baloo 2', cursive;
+      font-size: 1.5rem;
+      font-weight: 900;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      box-shadow: 0 4px 16px rgba(11,99,199,0.3);
+      z-index: 2;
+    }
+    .timeline-content h4 {
+      font-family: 'Baloo 2', cursive;
+      font-size: 1.2rem;
+      font-weight: 800;
+      color: var(--text-dark);
+      margin-bottom: 6px;
+    }
+    .timeline-content p {
+      color: var(--text-mid);
+      font-size: 0.95rem;
+    }
+    @media(max-width:768px) {
+      .timeline-line { left: 28px; }
+      .timeline-item,
+      .timeline-item:nth-child(even) {
+        justify-content: flex-start;
+        padding-left: 76px;
+      }
+      .timeline-content { width: 100%; }
+      .timeline-number { left: 28px; }
+    }
+
+    /* FAQ */
+    .faq {
+      background: linear-gradient(180deg, #F8FAFC 0%, var(--white) 100%);
+      position: relative;
+    }
+    .faq::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(135deg, rgba(255,212,59,0.04) 0%, transparent 40%),
+        linear-gradient(225deg, rgba(40,181,77,0.04) 0%, transparent 40%);
+      pointer-events: none;
+    }
+    .faq-container {
+      max-width: 900px;
+      margin: 56px auto 0;
+    }
+    .faq-item {
+      margin-bottom: 16px;
+      background: white;
+      border: 2px solid var(--blue-light);
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+    }
+    .faq-toggle {
+      width: 100%;
+      text-align: left;
+      padding: 24px;
+      background: none;
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      cursor: pointer;
+      font-family: 'Nunito', sans-serif;
+    }
+    .faq-toggle h4 {
+      font-family: 'Baloo 2', cursive;
+      font-size: 1.15rem;
+      color: var(--text-dark);
+      margin: 0;
+      font-weight: 800;
+    }
+    .faq-toggle i {
+      font-size: 28px;
+      color: var(--blue);
+      transition: transform 0.3s;
+    }
+    .faq-item.open .faq-toggle i {
+      transform: rotate(180deg);
+    }
+    .faq-content {
+      padding: 0 24px;
+      max-height: 0;
+      overflow: hidden;
+      transition: all 0.3s;
+    }
+    .faq-item.open .faq-content {
+      padding-bottom: 24px;
+      max-height: 400px;
+    }
+    .faq-content p {
+      color: var(--text-mid);
+      line-height: 1.7;
+    }
+
+    /* CONTACT FORM */
+    .contact-form-section { background: linear-gradient(160deg, #FFF1F2 0%, #FFF7ED 50%, #FAFAFA 100%); }
+    .form-container {
+      max-width: 700px;
+      margin: 56px auto 0;
+      background: white;
+      border-radius: var(--radius-2xl);
+      padding: 48px;
+      box-shadow: var(--shadow-md);
+      border: 2px solid var(--blue-light);
+    }
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2,1fr);
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+    .form-full {
+      grid-column: 1 / -1;
+    }
+    .form-group label {
+      display: block;
+      font-weight: 800;
+      color: var(--text-dark);
+      margin-bottom: 8px;
+      font-size: 0.95rem;
+    }
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      padding: 14px 18px;
+      border: 2px solid var(--blue-light);
+      border-radius: 14px;
+      font-family: 'Nunito', sans-serif;
+      font-size: 1rem;
+      outline: none;
+      transition: border-color 0.3s;
+      background: white;
+    }
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+      border-color: var(--blue);
+    }
+    @media(max-width:640px) {
+      .form-grid { grid-template-columns: 1fr; }
+      .form-container { padding: 32px 24px; }
+    }
+
+    /* FINAL CTA */
+    .final-cta {
+      background: linear-gradient(135deg, var(--blue) 0%, var(--blue-dark) 100%);
+      color: white;
+      text-align: center;
+    }
+    .final-cta .section-title { color: white; }
+    .final-cta .section-sub {
+      color: rgba(255,255,255,0.85);
+      max-width: 700px;
+      margin: 0 auto 40px;
+    }
+    .final-cta-btns {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    /* FOOTER */
+    .footer {
+      background: linear-gradient(160deg, #0850A0 0%, var(--blue) 60%, #0850A0 100%);
+      color: white;
+      padding: 80px 0 32px;
+      position: relative;
+      overflow: hidden;
+    }
+    .footer::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image: radial-gradient(circle, rgba(255,255,255,0.04) 1px, transparent 1px);
+      background-size: 32px 32px;
+    }
+    .footer-inner {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr;
+      gap: 64px;
+      position: relative;
+      z-index: 1;
+    }
+    .footer-brand .logo {
+      margin-bottom: 20px;
+      display: inline-flex;
+    }
+    .footer-brand .logo-text { color: white !important; }
+    .footer-desc {
+      color: rgba(255,255,255,0.75);
+      line-height: 1.75;
+      font-size: 0.97rem;
+      margin-bottom: 28px;
+    }
+    .footer-socials {
+      display: flex;
+      gap: 12px;
+    }
+    .footer-social-btn {
+      width: 48px;
+      height: 48px;
+      border-radius: 14px;
+      background: rgba(255,255,255,0.12);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 22px;
+      text-decoration: none;
+      transition: all 0.3s;
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+    .footer-social-btn:hover {
+      background: var(--orange);
+      transform: translateY(-4px) scale(1.1);
+      border-color: var(--orange);
+    }
+    .footer-col h4 {
+      font-family: 'Baloo 2', cursive;
+      font-size: 1.15rem;
+      font-weight: 800;
+      margin-bottom: 22px;
+    }
+    .footer-col ul {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .footer-col a {
+      color: rgba(255,255,255,0.72);
+      text-decoration: none;
+      font-size: 0.95rem;
+      font-weight: 600;
+      transition: all 0.3s;
+    }
+    .footer-col a:hover {
+      color: var(--yellow);
+      padding-left: 6px;
+    }
+    .footer-divider {
+      border: none;
+      border-top: 1px solid rgba(255,255,255,0.15);
+      margin: 56px 0 24px;
+    }
+    .footer-bottom {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      color: rgba(255,255,255,0.6);
+      font-size: 0.9rem;
+      position: relative;
+      z-index: 1;
+    }
+    @media(max-width:1024px) {
+      .footer-inner { grid-template-columns: 1fr 1fr; }
+    }
+    @media(max-width:640px) {
+      .footer-inner { grid-template-columns: 1fr; gap: 40px; }
+      .footer-bottom { flex-direction: column; text-align: center; }
+    }
+
+    /* ── PROFESSIONAL DESIGN ENHANCEMENTS ────────────────────────── */
+
+    /* Decorative dot pattern overlay for alternating sections */
+    .why-us, .schedules, .benefits, .timeline, .faq {
+      position: relative;
+    }
+    .why-us::before, .schedules::before, .benefits::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image: radial-gradient(circle, rgba(11,99,199,0.06) 1px, transparent 1px);
+      background-size: 28px 28px;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .why-us .container, .schedules .container, .benefits .container { position: relative; z-index: 1; }
+
+    /* Section heading — colored underline accent */
+    .section-title::after {
+      content: '';
+      display: block;
+      width: 60px;
+      height: 4px;
+      background: linear-gradient(90deg, var(--orange), var(--yellow));
+      border-radius: 4px;
+      margin: 14px auto 0;
+    }
+    .text-left .section-title::after { margin-left: 0; }
+
+    /* Program cards — enhanced gradient tops */
+    .program-top { padding: 28px 20px; display: flex; align-items: center; justify-content: center; }
+    .program-top.pt-1 { background: linear-gradient(160deg, #DBEAFE, #BFDBFE, #93C5FD); }
+    .program-top.pt-2 { background: linear-gradient(160deg, #DCFCE7, #BBF7D0, #86EFAC); }
+    .program-top.pt-3 { background: linear-gradient(160deg, #FFEDD5, #FED7AA, #FDBA74); }
+    .program-top.pt-4 { background: linear-gradient(160deg, #F3E8FF, #E9D5FF, #D8B4FE); }
+
+    /* Why cards — glassmorphism style */
+    .why-card {
+      background: rgba(255,255,255,0.85) !important;
+      backdrop-filter: blur(8px);
+      border: 1.5px solid rgba(11,99,199,0.10) !important;
+      transition: all 0.35s cubic-bezier(.34,1.56,.64,1) !important;
+    }
+    .why-card:hover {
+      background: white !important;
+      border-color: var(--blue) !important;
+      box-shadow: 0 20px 50px rgba(11,99,199,0.15) !important;
+      transform: translateY(-10px) !important;
+    }
+
+    /* School cards — warm border */
+    .school-card { border: 2px solid transparent; transition: all 0.3s ease; }
+    .school-card:hover { border-color: var(--orange) !important; transform: translateY(-6px); box-shadow: 0 16px 40px rgba(255,122,0,0.12) !important; }
+
+    /* Benefits section dot divider */
+    .benefits { background: linear-gradient(160deg, #F5F3FF 0%, #EEF2FF 50%, #EFF6FF 100%) !important; }
+
+    /* FAQ section background */
+    .faq { background: linear-gradient(160deg, #FFFBF0 0%, #FFF7ED 100%) !important; }
+
+    /* Timeline section background */
+    .timeline { background: linear-gradient(160deg, #F0FDF4 0%, #ECFDF5 50%, #F0FDFA 100%) !important; }
+
+    /* Payment plans section */
+    .payment-plans { background: linear-gradient(160deg, #EFF6FF 0%, #DBEAFE 100%) !important; }
+
+    /* Tariffs section */
+    .tariffs { background: linear-gradient(160deg, #FFF7ED 0%, #FFEDD5 100%) !important; }
+
+    /* Final CTA — always strong */
+    .final-cta { background: linear-gradient(135deg, var(--blue) 0%, var(--blue-dark) 100%) !important; }
+
+    /* Section transitions — smooth AOS overrides */
+    [data-aos] { transition-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1) !important; }
+    [data-aos="zoom-in"] { transition-timing-function: cubic-bezier(0.25, 0.46, 0.45, 0.94) !important; }
+    [data-aos="flip-left"] { transition-timing-function: cubic-bezier(0.25, 0.46, 0.45, 0.94) !important; }
+
+    /* Hero stat glass */
+    .hero-stat { background: rgba(255,255,255,0.12) !important; border-radius: 16px; padding: 14px 22px; border: 1px solid rgba(255,255,255,0.22); backdrop-filter: blur(4px); }
+
+    /* Section dividers — colored border-top accent */
+    .section { border-top: 3px solid transparent; }
+    .why-us     { border-top-color: #BFDBFE; }
+    .our-school { border-top-color: #FDE68A; }
+    .programs   { border-top-color: #A7F3D0; }
+    .schedules  { border-top-color: #99F6E4; }
+    .benefits   { border-top-color: #C4B5FD; }
+    .timeline   { border-top-color: #6EE7B7; }
+    .faq        { border-top-color: #FDE68A; }
+    .contact-form-section { border-top-color: #FDA4AF; }
+
+    /* Responsive: ensure emoji icons don't overflow */
+    .program-icon { font-size: 3.5rem; line-height: 1; display: block; text-align: center; }
+    @media(max-width:640px) { .program-icon { font-size: 2.8rem; } }
+
+    /* Why icons — colored gradient circles */
+    .why-icon {
+      width: 64px !important; height: 64px !important;
+      background: linear-gradient(135deg, var(--blue-light), #BFDBFE) !important;
+      border-radius: 20px !important;
+      box-shadow: 0 8px 24px rgba(11,99,199,0.18) !important;
+    }
+    .why-card:hover .why-icon { background: linear-gradient(135deg, var(--blue), var(--blue-dark)) !important; color: white !important; }
+
+    /* WAVES */
+    .wave-top, .wave-bot { line-height: 0; position: relative; overflow: hidden; }
+  </style>
 </head>
 <body>
-    <nav class="navbar" id="navbar">
-        <div class="container">
-            <div class="nav-inner">
-                <a href="#hero" class="logo">
-                    <div class="logo-icon">🌟</div>
-                    <span class="logo-text">Sonrisas Creativas</span>
-                </a>
-                <ul class="nav-links">
-                    <li><a href="#hero" class="nav-link">Inicio</a></li>
-                    <li><a href="#trust" class="nav-link">Por qué nosotros</a></li>
-                    <li><a href="#platform" class="nav-link">Plataforma</a></li>
-                    <li><a href="#innovation" class="nav-link">Programas</a></li>
-                    <li><a href="#testimonials" class="nav-link">Testimonios</a></li>
-                    <li><a href="#contact" class="nav-link nav-cta">Agendar visita</a></li>
-                </ul>
-                <button class="mobile-btn" id="mobileBtn"><i class="bi bi-list"></i></button>
-            </div>
-        </div>
-    </nav>
-    
-    <div class="mobile-overlay" id="mobileOverlay"></div>
-    <div class="mobile-menu" id="mobileMenu">
-        <button class="mobile-close" id="mobileClose"><i class="bi bi-x-lg"></i></button>
-        <a href="#hero" class="mobile-nav-link">Inicio</a>
-        <a href="#trust" class="mobile-nav-link">Por qué nosotros</a>
-        <a href="#platform" class="mobile-nav-link">Plataforma</a>
-        <a href="#innovation" class="mobile-nav-link">Programas</a>
-        <a href="#testimonials" class="mobile-nav-link">Testimonios</a>
-        <a href="#contact" class="mobile-nav-link">Contacto</a>
-        <a href="login.html" class="btn btn-primary" style="margin-top: 20px; justify-content: center;">Portal familiar</a>
+  <!-- Skip to content (accessibility) -->
+  <a href="#main-content" class="sr-only" style="position:absolute;left:-9999px;top:4px;z-index:9999;background:#28B54D;color:white;padding:8px 16px;border-radius:8px;font-weight:900;font-size:.85rem;text-decoration:none" onfocus="this.style.left='4px'" onblur="this.style.left='-9999px'">Saltar al contenido</a>
+
+  <!-- NAVBAR -->
+  <nav class="navbar" id="navbar" role="navigation" aria-label="Navegacin principal">
+    <div class="container">
+      <div class="nav-inner">
+        <a href="#hero" class="logo" style="display:flex;align-items:center;gap:10px;" aria-label="Inicio  Colegio Montessori Sonrisas Creativas">
+          <img src="logo/favicon-32x32.png" alt="Logo Sonrisas Creativas" width="32" height="32" style="height:32px;width:32px;object-fit:contain;border-radius:6px" loading="eager">
+          <span class="logo-text display-font">Sonrisas Creativas</span>
+        </a>
+        <ul class="nav-links" role="list">
+          <li><a href="#hero" class="nav-link" aria-current="page">Inicio</a></li>
+          <li><a href="#why-us" class="nav-link">Nuestro Colegio</a></li>
+          <li><a href="#programs" class="nav-link">Programas</a></li>
+          <li><a href="#schedules" class="nav-link">Horarios</a></li>
+          <li><a href="#tariffs" class="nav-link">Tarifas</a></li>
+          <li><a href="#timeline" class="nav-link">Admisiones</a></li>
+          <li><a href="#contact-form" class="nav-link">Contacto</a></li>
+          <li><a href="login.html" class="nav-link nav-cta" rel="noopener" aria-label="Iniciar sesin en el portal familiar">Iniciar Sesin</a></li>
+        </ul>
+        <button type="button" class="mobile-btn" id="mobileBtn" aria-label="Abrir men de navegacin" aria-expanded="false" aria-controls="mobileMenu"><i class="bi bi-list" aria-hidden="true"></i></button>
+      </div>
     </div>
-    
-    <section class="hero" id="hero">
-        <div class="container">
-            <div class="hero-grid">
-                <div data-aos="fade-right" data-aos-duration="800">
-                    <div class="hero-tag">
-                        <div class="hero-tag-dot"></div>
-                        Inscripciones abiertas 2025-2026
-                    </div>
-                    <h1 class="hero-title">
-                        Tu hijo <span>seguro</span>, tú <span>tranquilo</span>.
-                    </h1>
-                    <p class="hero-desc">
-                        La estancia infantil donde tu hijo aprende, juega y crece mientras tú tienes la tranquilidad de saber que está en las mejores manos. Educación Montessori + tecnología para que los padres sigan el aprendizaje desde cualquier lugar.
-                    </p>
-                    <div class="hero-btns">
-                        <a href="https://wa.me/18095324903" class="btn btn-primary">
-                            <i class="bi bi-calendar-check-fill"></i> Agendar visita
-                        </a>
-                        <a href="login.html" class="btn btn-secondary">
-                            <i class="bi bi-box-arrow-in-right"></i> Portal familiar
-                        </a>
-                    </div>
-                    <div class="hero-stats">
-                        <div class="hero-stat" data-aos="fade-up" data-aos-delay="100">
-                            <h3>+500</h3>
-                            <p>Familias felices</p>
-                        </div>
-                        <div class="hero-stat" data-aos="fade-up" data-aos-delay="200">
-                            <h3>+10</h3>
-                            <p>Años de experiencia</p>
-                        </div>
-                        <div class="hero-stat" data-aos="fade-up" data-aos-delay="300">
-                            <h3>98%</h3>
-                            <p>Satisfacción</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="hero-visual" data-aos="fade-left" data-aos-delay="200">
-                    <div class="hero-image-card">
-                        🧒
-                        <div class="floating-card floating-card-1">
-                            <div class="floating-icon">✅</div>
-                            <div class="floating-text">Seguridad 24/7</div>
-                        </div>
-                        <div class="floating-card floating-card-2">
-                            <div class="floating-icon">📱</div>
-                            <div class="floating-text">App para padres</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+  </nav>
+
+  <!-- MOBILE MENU -->
+  <div class="mobile-overlay" id="mobileOverlay" aria-hidden="true"></div>
+  <nav class="mobile-menu" id="mobileMenu" aria-label="Men mvil" aria-hidden="true">
+    <button type="button" class="mobile-close" id="mobileClose" aria-label="Cerrar men"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
+    <a href="#hero" class="mobile-nav-link">Inicio</a>
+    <a href="#why-us" class="mobile-nav-link">Nuestro Colegio</a>
+    <a href="#programs" class="mobile-nav-link">Programas</a>
+    <a href="#schedules" class="mobile-nav-link">Horarios</a>
+    <a href="#tariffs" class="mobile-nav-link">Tarifas</a>
+    <a href="#timeline" class="mobile-nav-link">Admisiones</a>
+    <a href="#contact-form" class="mobile-nav-link">Contacto</a>
+    <a href="login.html" class="btn btn-orange" style="margin-top:20px" rel="noopener">Iniciar Sesin</a>
+  </nav>
+
+  <main id="main-content">
+  <!-- HERO -->
+  <section class="hero" id="hero">
+    <div class="hero-blobs">
+      <div class="hero-blob hero-blob-1"></div>
+      <div class="hero-blob hero-blob-2"></div>
+      <div class="hero-blob hero-blob-3"></div>
+    </div>
+    <div class="hero-dots"></div>
+    <div class="container" style="width:100%">
+      <div class="hero-grid">
+        <div class="hero-left">
+          <div class="hero-tag">
+            <div class="hero-tag-dot"></div>
+            Colegio Montessori  Santo Domingo
+          </div>
+          <h1 class="hero-title display-font">
+            Donde cada niño desarrolla su <span class="hl-orange">máximo potencial</span> desde sus primeros años de vida
+          </h1>
+          <p class="hero-desc">
+            Un espacio nico donde la creatividad, la curiosidad y el amor son los protagonistas de cada da. Tu hijo merece lo mejor.
+          </p>
+          <div class="hero-btns">
+            <a href="https://wa.me/18095324903" class="btn btn-orange" style="font-size:1rem;padding:14px 32px;border-radius:16px;box-shadow:0 6px 24px rgba(255,122,0,.4);font-weight:900;letter-spacing:.02em">
+              <i class="bi bi-calendar-check-fill"></i> Agendar visita
+            </a>
+            <a href="login.html" class="btn" style="background:rgba(255,255,255,0.18);backdrop-filter:blur(10px);color:white;border:2px solid rgba(255,255,255,0.5);font-size:1rem;padding:14px 32px;border-radius:16px;font-weight:900">
+              <i class="bi bi-box-arrow-in-right"></i> Portal familiar
+            </a>
+          </div>
+          <div class="hero-stats">
+            <div class="hero-stat" data-aos="fade-up" data-aos-delay="100"><h3>+10</h3><p>años de experiencia</p></div>
+            <div class="hero-stat" data-aos="fade-up" data-aos-delay="200"><h3>+500</h3><p>Familias felices</p></div>
+            <div class="hero-stat" data-aos="fade-up" data-aos-delay="300"><h3>5⭐</h3><p>Calificación promedio</p></div>
+          </div>
         </div>
-        <div class="hero-wave">
-            <svg viewBox="0 0 1440 80" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M0,40 C240,80 480,0 720,40 C960,80 1200,0 1440,40 L1440,80 L0,80 Z" fill="white"></path>
+        <div class="hero-visual" data-aos="fade-left" data-aos-delay="200">
+          <div class="hero-img-wrap" style="position:relative;display:flex;align-items:center;justify-content:center;">
+            <!-- Sol animado arriba -->
+            <svg width="90" height="90" viewBox="0 0 200 200" style="position:absolute;top:-30px;right:20px;animation:sunSpin 18s linear infinite,mascotFloat 4s ease-in-out infinite;filter:drop-shadow(0 4px 12px rgba(255,212,59,.5))" aria-hidden="true">
+              <line x1="100" y1="8"  x2="100" y2="28" stroke="#FFD43B" stroke-width="8" stroke-linecap="round"/>
+              <line x1="155" y1="28" x2="143" y2="42" stroke="#FFD43B" stroke-width="8" stroke-linecap="round"/>
+              <line x1="180" y1="80" x2="163" y2="86" stroke="#FFD43B" stroke-width="8" stroke-linecap="round"/>
+              <line x1="45"  y1="28" x2="57"  y2="42" stroke="#FFD43B" stroke-width="8" stroke-linecap="round"/>
+              <line x1="20"  y1="80" x2="37"  y2="86" stroke="#FFD43B" stroke-width="8" stroke-linecap="round"/>
+              <circle cx="100" cy="106" r="58" fill="#FFD43B" stroke="#F0C000" stroke-width="4"/>
+              <circle cx="82"  cy="97"  r="10" fill="white"/><circle cx="118" cy="97"  r="10" fill="white"/>
+              <circle cx="83"  cy="98"  r="6"  fill="#333"/> <circle cx="119" cy="98"  r="6"  fill="#333"/>
+              <path d="M 80 122 Q 100 138 120 122" stroke="#333" stroke-width="5" fill="none" stroke-linecap="round"/>
             </svg>
+            <!-- Tringulo naranja -->
+            <svg width="110" height="130" viewBox="0 0 220 270" style="position:absolute;bottom:-10px;left:0;animation:mascotBounce 2.6s ease-in-out infinite;filter:drop-shadow(0 6px 14px rgba(255,122,0,.4))" aria-hidden="true">
+              <polygon points="110,18 200,205 20,205" fill="#FF7A00" stroke="#D96500" stroke-width="5"/>
+              <circle cx="84"  cy="125" r="19" fill="white"/><circle cx="136" cy="125" r="19" fill="white"/>
+              <circle cx="85"  cy="126" r="10" fill="#333"/><circle cx="137" cy="126" r="10" fill="#333"/>
+              <circle cx="89"  cy="122" r="4"  fill="white"/><circle cx="141" cy="122" r="4"  fill="white"/>
+              <path d="M 74 158 Q 110 180 146 158" stroke="#333" stroke-width="7" fill="none" stroke-linecap="round"/>
+              <line x1="20"  y1="158" x2="-14" y2="126" stroke="#D96500" stroke-width="6" stroke-linecap="round"/>
+              <line x1="200" y1="158" x2="234" y2="126" stroke="#D96500" stroke-width="6" stroke-linecap="round"/>
+            </svg>
+            <!-- Imagen central -->
+            <div class="hero-img-frame" style="position:relative;z-index:2">
+              <img src="img/monte.jpg" alt="Estudiantes del Colegio Montessori Sonrisas Creativas" style="width:100%;height:100%;object-fit:cover;border-radius:inherit" loading="eager">
+            </div>
+            <!-- Pentgono verde -->
+            <svg width="100" height="115" viewBox="0 0 220 270" style="position:absolute;bottom:-10px;right:0;animation:mascotWave 3.2s ease-in-out infinite 0.5s;filter:drop-shadow(0 6px 14px rgba(40,181,77,.4))" aria-hidden="true">
+              <ellipse cx="110" cy="20" rx="60" ry="22" fill="#0B63C7"/>
+              <path d="M 60 30 Q 46 50 54 64 L 166 64 Q 174 50 160 30 Z" fill="#0B63C7"/>
+              <polygon points="110,64 192,120 162,208 58,208 28,120" fill="#28B54D" stroke="#1A8035" stroke-width="5"/>
+              <circle cx="87"  cy="138" r="18" fill="white"/><circle cx="133" cy="138" r="18" fill="white"/>
+              <circle cx="88"  cy="139" r="9"  fill="#333"/><circle cx="134" cy="139" r="9"  fill="#333"/>
+              <path d="M 77 168 Q 110 188 143 168" stroke="#333" stroke-width="6" fill="none" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <style>
+            @keyframes sunSpin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+            @keyframes mascotFloat{0%,100%{margin-top:0}50%{margin-top:-10px}}
+            @keyframes mascotBounce{0%,100%{transform:translateY(0) rotate(-4deg)}40%{transform:translateY(-18px) rotate(5deg)}70%{transform:translateY(-8px) rotate(2deg)}}
+            @keyframes mascotWave{0%,100%{transform:translateY(0) rotate(4deg)}30%{transform:translateY(-14px) rotate(-4deg)}60%{transform:translateY(-18px) rotate(5deg)}}
+          </style>
         </div>
-    </section>
-    
-    <section class="section trust-section" id="trust">
-        <div class="container">
-            <div class="text-center" data-aos="fade-up">
-                <div class="section-tag"><i class="bi bi-shield-check"></i> Tu tranquilidad primero</div>
-                <h2 class="section-title">Lo que realmente <span>importa</span> a los padres</h2>
-                <p class="section-sub">Sabemos que tu hijo es lo más importante. Por eso nos enfocamos en lo que realmente te preocupa.</p>
-            </div>
-            <div class="trust-grid">
-                <div class="trust-card" data-aos="fade-up" data-aos-delay="0">
-                    <div class="trust-icon">🔒</div>
-                    <h3>Seguridad total</h3>
-                    <p>Control de acceso biométrico, cámaras 24/7 y personal autorizado únicamente.</p>
-                </div>
-                <div class="trust-card" data-aos="fade-up" data-aos-delay="100">
-                    <div class="trust-icon">📱</div>
-                    <h3>Comunicación real</h3>
-                    <p>Reportes diarios, fotos y mensajes directos con las maestras desde nuestra app.</p>
-                </div>
-                <div class="trust-card" data-aos="fade-up" data-aos-delay="200">
-                    <div class="trust-icon">🎓</div>
-                    <h3>Aprendizaje real</h3>
-                    <p>Método Montessori certificado con enfoque en STEAM y desarrollo integral.</p>
-                </div>
-                <div class="trust-card" data-aos="fade-up" data-aos-delay="300">
-                    <div class="trust-icon">❤️</div>
-                    <h3>Personal calificado</h3>
-                    <p>Educadoras certificadas con años de experiencia y amor por los niños.</p>
-                </div>
-            </div>
+      </div>
+    </div>
+    <div class="hero-wave">
+      <svg viewBox="0 0 1440 80" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M0,40 C240,80 480,0 720,40 C960,80 1200,0 1440,40 L1440,80 L0,80 Z" fill="white"></path>
+      </svg>
+    </div>
+  </section>
+
+  <!-- WHY CHOOSE US -->
+  <section class="section why-us" id="why-us">
+    <div class="container">
+      <div class="text-center" data-aos="fade-up">
+        <div class="section-tag"><i class="bi bi-shield-check"></i> Por qué elegirnos</div>
+        <h2 class="section-title">La <span class="orange">tranquilidad</span> que buscas como padre</h2>
+        <p class="section-sub">Sabemos que el bienestar de tu hijo es tu prioridad. Por eso creamos un ambiente seguro, amoroso y lleno de aprendizaje.</p>
+      </div>
+      <div class="why-us-grid">
+        <div class="why-card" data-aos="fade-right" data-aos-delay="0" data-aos-duration="700">
+          <div class="why-icon"><i class="bi bi-shield-check"></i></div>
+          <h3>Ambiente 100% seguro</h3>
+          <p>Instalaciones diseñadas para la seguridad y supervisiónal.</p>
         </div>
-    </section>
-    
-    <section class="section platform-section" id="platform">
-        <div class="container">
-            <div class="text-center" data-aos="fade-up">
-                <div class="section-tag"><i class="bi bi-phone-fill"></i> Tecnología para ti</div>
-                <h2 class="section-title">La plataforma que <span>conecta familias</span></h2>
-                <p class="section-sub">Todo lo que necesitas saber de tu hijo, en tu teléfono, en tiempo real.</p>
-            </div>
-            <div class="platform-grid">
-                <div class="platform-card" data-aos="fade-up" data-aos-delay="0">
-                    <div class="platform-card-header">
-                        <div class="platform-icon">📱</div>
-                        <div>
-                            <h3>App para Padres</h3>
-                            <p style="color: rgba(255,255,255,0.7); font-size: 0.9rem;">Tu centro de control</p>
-                        </div>
-                    </div>
-                    <p>Accede a toda la información de tu hijo desde cualquier lugar. Notificaciones instantáneas, reportes diarios y comunicación directa con las maestras.</p>
-                    <div class="platform-features">
-                        <span class="platform-feature">📸 Fotos diarias</span>
-                        <span class="platform-feature">✅ Asistencia en tiempo real</span>
-                        <span class="platform-feature">💬 Chat con maestras</span>
-                        <span class="platform-feature">📊 Reportes de desarrollo</span>
-                    </div>
-                </div>
-                <div class="platform-card" data-aos="fade-up" data-aos-delay="100">
-                    <div class="platform-card-header">
-                        <div class="platform-icon">💳</div>
-                        <div>
-                            <h3>Pagos en Línea</h3>
-                            <p style="color: rgba(255,255,255,0.7); font-size: 0.9rem;">Sin complicaciones</p>
-                        </div>
-                    </div>
-                    <p>Administra las mensualidades desde la app. Historial de pagos, facturas digitales y opciones de pago flexibles para tu tranquilidad.</p>
-                    <div class="platform-features">
-                        <span class="platform-feature">💳 Tarjetas</span>
-                        <span class="platform-feature">🏦 Transferencias</span>
-                        <span class="platform-feature">📄 Facturas digitales</span>
-                        <span class="platform-feature">📅 Recordatorios</span>
-                    </div>
-                </div>
-                <div class="platform-card" data-aos="fade-up" data-aos-delay="200">
-                    <div class="platform-card-header">
-                        <div class="platform-icon">📷</div>
-                        <div>
-                            <h3>Reportes Diarios</h3>
-                            <p style="color: rgba(255,255,255,0.7); font-size: 0.9rem">Cada detalle importante</p>
-                        </div>
-                    </div>
-                    <p>Sabrás exactamente cómo estuvo el día de tu hijo: comidas, siesta, actividades, estado de ánimo y mucho más.</p>
-                    <div class="platform-features">
-                        <span class="platform-feature">🍎 Registro de comidas</span>
-                        <span class="platform-feature">😴 Control de siesta</span>
-                        <span class="platform-feature">🎨 Actividades del día</span>
-                        <span class="platform-feature">✨ Hitos importantes</span>
-                    </div>
-                </div>
-                <div class="platform-card" data-aos="fade-up" data-aos-delay="300">
-                    <div class="platform-card-header">
-                        <div class="platform-icon">🚌</div>
-                        <div>
-                            <h3>Seguimiento en Tiempo Real</h3>
-                            <p style="color: rgba(255,255,255,0.7); font-size: 0.9rem">Siempre informado</p>
-                        </div>
-                    </div>
-                    <p>Notificaciones de entrada y salida, autorizaciones para retiros y todo lo que necesitas para sentirte seguro.</p>
-                    <div class="platform-features">
-                        <span class="platform-feature">⏰ Hora de entrada</span>
-                        <span class="platform-feature">🏠 Hora de salida</span>
-                        <span class="platform-feature">✅ Autorizaciones</span>
-                        <span class="platform-feature">🔔 Notificaciones push</span>
-                    </div>
-                </div>
-            </div>
+        <div class="why-card" data-aos="fade-left" data-aos-delay="100" data-aos-duration="700">
+          <div class="why-icon"><i class="bi bi-heart-fill"></i></div>
+          <h3>Personal calificado</h3>
+          <p>Educadores certificados en Montessori con amor por la enseñanza.</p>
         </div>
-    </section>
-    
-    <section class="section" id="innovation">
-        <div class="container">
-            <div class="text-center" data-aos="fade-up">
-                <div class="section-tag"><i class="bi bi-stars"></i> Innovación educativa</div>
-                <h2 class="section-title">Mucho más que <span>Montessori</span></h2>
-                <p class="section-sub">Un colegio del siglo XXI con un enfoque en las habilidades del futuro.</p>
-            </div>
-            <div class="innovation-grid">
-                <div class="innovation-card" data-aos="fade-up" data-aos-delay="0">
-                    <div class="innovation-top">🔬</div>
-                    <div class="innovation-bottom">
-                        <h3>STEAM</h3>
-                        <p>Ciencia, Tecnología, Ingeniería, Arte y Matemáticas desde los primeros años. Aprendizaje basado en proyectos y experimentos reales.</p>
-                    </div>
-                </div>
-                <div class="innovation-card" data-aos="fade-up" data-aos-delay="100">
-                    <div class="innovation-top">🤖</div>
-                    <div class="innovation-bottom">
-                        <h3>Robótica</h3>
-                        <p>Programación y robótica educativa adaptada a cada edad. Desarrollamos el pensamiento computacional de forma divertida.</p>
-                    </div>
-                </div>
-                <div class="innovation-card" data-aos="fade-up" data-aos-delay="200">
-                    <div class="innovation-top">🧠</div>
-                    <div class="innovation-bottom">
-                        <h3>Inteligencia Emocional</h3>
-                        <p>Programas especializados para el desarrollo de habilidades sociales, empatía y manejo de emociones desde temprana edad.</p>
-                    </div>
-                </div>
-            </div>
+        <div class="why-card" data-aos="fade-right" data-aos-delay="200" data-aos-duration="700">
+          <div class="why-icon"><i class="bi bi-people-fill"></i></div>
+          <h3>Comunicacióna</h3>
+          <p>Te mantenemos informado del progreso diario de tu hijo.</p>
         </div>
-    </section>
-    
-    <section class="section testimonial-section" id="testimonials">
-        <div class="container">
-            <div class="text-center" data-aos="fade-up">
-                <div class="section-tag"><i class="bi bi-chat-heart-fill"></i> Lo que dicen</div>
-                <h2 class="section-title">Historias de <span>familias reales</span></h2>
-                <p class="section-sub">Padres que confían en nosotros cada día.</p>
-            </div>
-            <div class="testimonial-grid">
-                <div class="testimonial-card" data-aos="fade-up" data-aos-delay="0">
-                    <div class="testimonial-stars">★★★★★</div>
-                    <p class="testimonial-text">"La app para padres es increíble. Recibo fotos todos los días y puedo ver exactamente cómo está mi hijo. Me siento mucho más tranquila en el trabajo."</p>
-                    <div class="testimonial-author">
-                        <div class="testimonial-avatar">MR</div>
-                        <div class="testimonial-info">
-                            <h4>María Rodríguez</h4>
-                            <p>Mamá de Lucas (4 años)</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="testimonial-card" data-aos="fade-up" data-aos-delay="100">
-                    <div class="testimonial-stars">★★★★★</div>
-                    <p class="testimonial-text">"Pasamos por 3 colegios antes de encontrar Sonrisas Creativas. La diferencia es enorme: la seguridad, el personal y la comunicación son excepcionales."</p>
-                    <div class="testimonial-author">
-                        <div class="testimonial-avatar">CG</div>
-                        <div class="testimonial-info">
-                            <h4>Carlos García</h4>
-                            <p>Papá de Sofía (6 años)</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="testimonial-card" data-aos="fade-up" data-aos-delay="200">
-                    <div class="testimonial-stars">★★★★★</div>
-                    <p class="testimonial-text">"Mi hija ha aprendido más aquí en un año que en todo el tiempo anterior. El método Montessori realmente funciona y las maestras son maravillosas."</p>
-                    <div class="testimonial-author">
-                        <div class="testimonial-avatar">AS</div>
-                        <div class="testimonial-info">
-                            <h4>Ana Sánchez</h4>
-                            <p>Mamá de Emma (3 años)</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
+        <div class="why-card" data-aos="fade-left" data-aos-delay="300" data-aos-duration="700">
+          <div class="why-icon"><i class="bi bi-lightbulb-fill"></i></div>
+          <h3>Aprendizaje divertido</h3>
+          <p>método Montessori para que tu hijo descubra el mundo con curiosidad.</p>
         </div>
-    </section>
-    
-    <section class="section">
-        <div class="container">
-            <div class="text-center" data-aos="fade-up">
-                <div class="section-tag"><i class="bi bi-check-circle-fill"></i> La diferencia es clara</div>
-                <h2 class="section-title">¿Por qué <span>nosotros</span> y no otro?</h2>
-                <p class="section-sub">Veamos la diferencia.</p>
-            </div>
-            <div class="comparison-table" data-aos="fade-up" data-aos-delay="100">
-                <div class="comparison-row">
-                    <div class="comparison-cell comparison-header"></div>
-                    <div class="comparison-cell comparison-header">Otros colegios</div>
-                    <div class="comparison-cell comparison-header">Nosotros</div>
-                </div>
-                <div class="comparison-row">
-                    <div class="comparison-cell">Comunicación con padres</div>
-                    <div class="comparison-cell"><span class="comparison-x">✕</span> Lenta y esporádica</div>
-                    <div class="comparison-cell"><span class="comparison-check">✓</span> App en tiempo real</div>
-                </div>
-                <div class="comparison-row">
-                    <div class="comparison-cell">Pagos</div>
-                    <div class="comparison-cell"><span class="comparison-x">✕</span> Solo presenciales</div>
-                    <div class="comparison-cell"><span class="comparison-check">✓</span> Online + app</div>
-                </div>
-                <div class="comparison-row">
-                    <div class="comparison-cell">Reportes</div>
-                    <div class="comparison-cell"><span class="comparison-x">✕</span> Agenda de papel</div>
-                    <div class="comparison-cell"><span class="comparison-check">✓</span> Digitales diarios</div>
-                </div>
-                <div class="comparison-row">
-                    <div class="comparison-cell">Seguridad</div>
-                    <div class="comparison-cell"><span class="comparison-x">✕</span> Básica</div>
-                    <div class="comparison-cell"><span class="comparison-check">✓</span> Biométrica + cámaras</div>
-                </div>
-                <div class="comparison-row">
-                    <div class="comparison-cell">Tecnología educativa</div>
-                    <div class="comparison-cell"><span class="comparison-x">✕</span> Poca o ninguna</div>
-                    <div class="comparison-cell"><span class="comparison-check">✓</span> STEAM + Robótica</div>
-                </div>
-            </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- OUR SCHOOL -->
+  <div class="wave-top" style="background:white;margin-bottom:-2px">
+    <svg viewBox="0 0 1440 60" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M0,30 C360,0 720,60 1080,30 C1260,15 1380,40 1440,30 L1440,60 L0,60 Z" fill="#F8FAFC"></path>
+    </svg>
+  </div>
+  <section class="section our-school" id="our-school">
+    <div class="container">
+      <div class="text-center" data-aos="fade-up">
+        <div class="section-tag"><i class="bi bi-building"></i> Conoce nuestro colegio</div>
+        <h2 class="section-title">Un espacio diseado para <span class="blue">crecer</span></h2>
+        <p class="section-sub">Todo lo que necesitas saber sobre nuestra institucion, valores y equipo.</p>
+      </div>
+      <div class="our-school-grid">
+        <div class="school-card" data-aos="zoom-in" data-aos-delay="0">
+          <div class="school-icon"><i class="bi bi-history"></i></div>
+          <h4>Nuestra historia</h4>
+          <ul>
+            <li><i class="bi bi-check-circle-fill"></i> +10 años transformando vidas</li>
+            <li><i class="bi bi-check-circle-fill"></i> método Montessori desde el inicio</li>
+            <li><i class="bi bi-check-circle-fill"></i> Crecimiento constante</li>
+          </ul>
         </div>
-    </section>
-    
-    <section class="section" id="process">
-        <div class="container">
-            <div class="text-center" data-aos="fade-up">
-                <div class="section-tag"><i class="bi bi-list-check"></i> Tu camino con nosotros</div>
-                <h2 class="section-title">Proceso de <span>inscripción simple</span></h2>
-                <p class="section-sub">En solo 6 pasos, tu hijo forma parte de la familia.</p>
-            </div>
-            <div class="process-grid">
-                <div class="process-item" data-aos="fade-up" data-aos-delay="0">
-                    <div class="process-number">1</div>
-                    <h4>Solicita info</h4>
-                    <p>Llena el formulario o llámanos</p>
-                </div>
-                <div class="process-item" data-aos="fade-up" data-aos-delay="100">
-                    <div class="process-number">2</div>
-                    <h4>Agenda visita</h4>
-                    <p>Conoce nuestras instalaciones</p>
-                </div>
-                <div class="process-item" data-aos="fade-up" data-aos-delay="200">
-                    <div class="process-number">3</div>
-                    <h4>Tour virtual</h4>
-                    <p>Conoce todo el colegio</p>
-                </div>
-                <div class="process-item" data-aos="fade-up" data-aos-delay="300">
-                    <div class="process-number">4</div>
-                    <h4>Entrega docs</h4>
-                    <p>Documentación sencilla</p>
-                </div>
-                <div class="process-item" data-aos="fade-up" data-aos-delay="400">
-                    <div class="process-number">5</div>
-                    <h4>Elige plan</h4>
-                    <p>Flexible para ti</p>
-                </div>
-                <div class="process-item" data-aos="fade-up" data-aos-delay="500">
-                    <div class="process-number">6</div>
-                    <h4>¡Bienvenido!</h4>
-                    <p>Tu hijo empieza</p>
-                </div>
-            </div>
+        <div class="school-card" data-aos="zoom-in" data-aos-delay="100">
+          <div class="school-icon"><i class="bi bi-stars"></i></div>
+          <h4>Misin y valores</h4>
+          <ul>
+            <li><i class="bi bi-check-circle-fill"></i> Amor, respeto y libertad</li>
+            <li><i class="bi bi-check-circle-fill"></i> Aprendizaje activo</li>
+            <li><i class="bi bi-check-circle-fill"></i> Desarrollo integral</li>
+          </ul>
         </div>
-    </section>
-    
-    <section class="section cta-section" id="contact">
-        <div class="container">
-            <div class="text-center" data-aos="fade-up">
-                <div class="section-tag"><i class="bi bi-fire"></i> Últimos cupos disponibles</div>
-                <h2 class="section-title">¿Listo para conocernos?</h2>
-                <p class="section-sub">Agenda una visita gratuita y ven a ver por qué somos la mejor opción para tu hijo.</p>
-                <div class="cta-btns">
-                    <a href="https://wa.me/18095324903" class="btn btn-primary">
-                        <i class="bi bi-whatsapp"></i> Escribir ahora
-                    </a>
-                    <a href="#contact-form-section" class="btn btn-secondary">
-                        <i class="bi bi-envelope"></i> Formulario de contacto
-                    </a>
-                </div>
-            </div>
+        <div class="school-card" data-aos="zoom-in" data-aos-delay="200">
+          <div class="school-icon"><i class="bi bi-house-heart-fill"></i></div>
+          <h4>Instalaciones</h4>
+          <ul>
+            <li><i class="bi bi-check-circle-fill"></i> Aulas Montessori preparadas</li>
+            <li><i class="bi bi-check-circle-fill"></i> reas verdes y juegos</li>
+            <li><i class="bi bi-check-circle-fill"></i> Espacio seguros y acogedores</li>
+          </ul>
         </div>
-    </section>
-    
-    <section class="section" id="contact-form-section">
-        <div class="container">
-            <div class="text-center" data-aos="fade-up">
-                <div class="section-tag"><i class="bi bi-envelope-fill"></i> Contáctanos</div>
-                <h2 class="section-title">Estamos <span>aquí para ti</span></h2>
-                <p class="section-sub">Completa el formulario y te llamamos en menos de 24 horas.</p>
-            </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 60px; align-items: start;" data-aos="fade-up" data-aos-delay="100">
-                <div style="background: white; border-radius: var(--radius-xl); padding: 40px; box-shadow: var(--shadow-lg); border: 2px solid #E3EBF5;">
-                    <h3 style="font-family: 'Playfair Display', serif; font-size: 1.5rem; font-weight: 700; margin-bottom: 24px;">Solicitar Información</h3>
-                    <form id="contactForm" style="display: flex; flex-direction: column; gap: 16px;">
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-                            <div style="display: flex; flex-direction: column; gap: 8px;">
-                                <label style="font-weight: 600; color: var(--text-dark);">Nombre completo *</label>
-                                <input type="text" required placeholder="Tu nombre" style="padding: 14px 18px; border: 2px solid #E3EBF5; border-radius: 14px; font-size: 1rem; font-family: 'Poppins', sans-serif; outline: none; transition: border-color 0.3s;" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='#E3EBF5'">
-                            </div>
-                            <div style="display: flex; flex-direction: column; gap: 8px;">
-                                <label style="font-weight: 600; color: var(--text-dark);">Teléfono *</label>
-                                <input type="tel" required placeholder="809-XXX-XXXX" style="padding: 14px 18px; border: 2px solid #E3EBF5; border-radius: 14px; font-size: 1rem; font-family: 'Poppins', sans-serif; outline: none; transition: border-color 0.3s;" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='#E3EBF5'">
-                            </div>
-                        </div>
-                        <div style="display: flex; flex-direction: column; gap: 8px;">
-                            <label style="font-weight: 600; color: var(--text-dark);">Correo electrónico *</label>
-                            <input type="email" required placeholder="correo@ejemplo.com" style="padding: 14px 18px; border: 2px solid #E3EBF5; border-radius: 14px; font-size: 1rem; font-family: 'Poppins', sans-serif; outline: none; transition: border-color 0.3s;" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='#E3EBF5'">
-                        </div>
-                        <div style="display: flex; flex-direction: column; gap: 8px;">
-                            <label style="font-weight: 600; color: var(--text-dark);">Nivel de interés *</label>
-                            <select required style="padding: 14px 18px; border: 2px solid #E3EBF5; border-radius: 14px; font-size: 1rem; font-family: 'Poppins', sans-serif; outline: none; transition: border-color 0.3s; background: white;" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='#E3EBF5'">
-                                <option value="">Selecciona un nivel</option>
-                                <option value="estancia">Estancia Infantil (0-2 años)</option>
-                                <option value="maternal">Maternal (2-3 años)</option>
-                                <option value="inicial">Inicial (3-5 años)</option>
-                                <option value="primaria">Primaria (6-12 años)</option>
-                            </select>
-                        </div>
-                        <div style="display: flex; flex-direction: column; gap: 8px;">
-                            <label style="font-weight: 600; color: var(--text-dark);">Mensaje</label>
-                            <textarea rows="4" placeholder="¿Alguna duda o información adicional?" style="padding: 14px 18px; border: 2px solid #E3EBF5; border-radius: 14px; font-size: 1rem; font-family: 'Poppins', sans-serif; outline: none; transition: border-color 0.3s; resize: vertical;" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='#E3EBF5'"></textarea>
-                        </div>
-                        <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 16px; font-size: 1rem; border-radius: 14px; margin-top: 8px;">
-                            <i class="bi bi-send-fill"></i> Enviar solicitud
-                        </button>
-                    </form>
-                </div>
-                <div style="display: flex; flex-direction: column; gap: 24px;">
-                    <div style="background: white; border-radius: var(--radius-xl); padding: 32px; box-shadow: var(--shadow-md); border: 2px solid #E3EBF5;">
-                        <h3 style="font-family: 'Playfair Display', serif; font-size: 1.3rem; font-weight: 700; margin-bottom: 24px;">Información de contacto</h3>
-                        <div style="display: flex; flex-direction: column; gap: 16px;">
-                            <a href="https://wa.me/18095324903" style="display: flex; align-items: center; gap: 14px; text-decoration: none; color: var(--text-dark); padding: 14px 18px; background: var(--bg-light); border-radius: 14px; font-weight: 600; transition: all 0.3s;" onmouseover="this.style.background='var(--primary)'; this.style.color='white';" onmouseout="this.style.background='var(--bg-light)'; this.style.color='var(--text-dark)'">
-                                <i class="bi bi-whatsapp" style="font-size: 1.5rem; color: var(--success);"></i>
-                                <span>(809) 532-4903</span>
-                            </a>
-                            <a href="https://www.instagram.com/montessorisonrisascreativas/" target="_blank" style="display: flex; align-items: center; gap: 14px; text-decoration: none; color: var(--text-dark); padding: 14px 18px; background: var(--bg-light); border-radius: 14px; font-weight: 600; transition: all 0.3s;" onmouseover="this.style.background='var(--primary)'; this.style.color='white';" onmouseout="this.style.background='var(--bg-light)'; this.style.color='var(--text-dark)'">
-                                <i class="bi bi-instagram" style="font-size: 1.5rem; color: var(--secondary);"></i>
-                                <span>@montessorisonrisascreativas</span>
-                            </a>
-                            <div style="display: flex; align-items: flex-start; gap: 14px; padding: 14px 18px; background: var(--bg-light); border-radius: 14px; font-weight: 600; color: var(--text-dark);">
-                                <i class="bi bi-geo-alt-fill" style="font-size: 1.5rem; color: var(--primary); flex-shrink: 0; margin-top: 2px;"></i>
-                                <span>Santo Domingo, República Dominicana</span>
-                            </div>
-                            <div style="display: flex; align-items: center; gap: 14px; padding: 14px 18px; background: var(--bg-light); border-radius: 14px; font-weight: 600; color: var(--text-dark);">
-                                <i class="bi bi-clock-fill" style="font-size: 1.5rem; color: var(--primary); flex-shrink: 0;"></i>
-                                <span>Lun - Vie: 7:00 AM - 6:00 PM</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div style="border-radius: var(--radius-xl); overflow: hidden; box-shadow: var(--shadow-lg); border: 2px solid #E3EBF5; aspect-ratio: 4/3;">
-                        <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3783.7513091472947!2d-69.98194992498755!3d18.49492068259365!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8eaf8b0d97074f4d!3A0x67cd278ee42fc42f!2sColegio%20MSC!5e0!3m2!1ses-419!2sdo!4v1783250562616!5m2!1ses-419!2sdo" width="100%" height="100%" style="border:0; display:block;" allowfullscreen="" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" title="Ubicación Colegio Montessori Sonrisas Creativas"></iframe>
-                    </div>
-                </div>
-            </div>
+        <div class="school-card" data-aos="zoom-in" data-aos-delay="300">
+          <div class="school-icon"><i class="bi bi-person-badge-fill"></i></div>
+          <h4>Nuestro equipo</h4>
+          <ul>
+            <li><i class="bi bi-check-circle-fill"></i> Maestras certificadas</li>
+            <li><i class="bi bi-check-circle-fill"></i> Asistentes calificadas</li>
+            <li><i class="bi bi-check-circle-fill"></i> Personal administrativo dedicado</li>
+          </ul>
         </div>
-    </section>
-    
-    <footer class="footer">
-        <div class="container">
-            <div class="footer-grid">
-                <div class="footer-brand">
-                    <a href="#hero" class="logo" style="margin-bottom: 20px;">
-                        <div class="logo-icon">🌟</div>
-                        <span class="logo-text">Sonrisas Creativas</span>
-                    </a>
-                    <p class="footer-desc">La estancia infantil donde tu hijo aprende, juega y crece mientras tú tienes la tranquilidad de saber que está en las mejores manos.</p>
-                    <div class="footer-socials">
-                        <a href="https://www.instagram.com/montessorisonrisascreativas/" target="_blank" class="footer-social"><i class="bi bi-instagram"></i></a>
-                        <a href="https://wa.me/18095324903" class="footer-social"><i class="bi bi-whatsapp"></i></a>
-                        <a href="#" class="footer-social"><i class="bi bi-facebook"></i></a>
-                    </div>
-                </div>
-                <div class="footer-col">
-                    <h4>Secciones</h4>
-                    <ul>
-                        <li><a href="#trust">Por qué nosotros</a></li>
-                        <li><a href="#platform">Plataforma</a></li>
-                        <li><a href="#innovation">Programas</a></li>
-                        <li><a href="#testimonials">Testimonios</a></li>
-                    </ul>
-                </div>
-                <div class="footer-col">
-                    <h4>Programas</h4>
-                    <ul>
-                        <li><a href="#">Estancia Infantil</a></li>
-                        <li><a href="#">Maternal</a></li>
-                        <li><a href="#">Inicial</a></li>
-                        <li><a href="#">Primaria</a></li>
-                    </ul>
-                </div>
-                <div class="footer-col">
-                    <h4>Contacto</h4>
-                    <ul>
-                        <li><a href="https://wa.me/18095324903">(809) 532-4903</a></li>
-                        <li><a href="#contact">Agendar visita</a></li>
-                        <li><a href="login.html">Portal familiar</a></li>
-                    </ul>
-                </div>
-            </div>
-            <div class="footer-bottom">
-                <p>© 2025 Colegio Montessori Sonrisas Creativas. Todos los derechos reservados.</p>
-            </div>
+        <div class="school-card" data-aos="zoom-in" data-aos-delay="400">
+          <div class="school-icon"><i class="bi bi-lock-fill"></i></div>
+          <h4>Seguridad</h4>
+          <ul>
+            <li><i class="bi bi-check-circle-fill"></i> Control de acceso</li>
+            <li><i class="bi bi-check-circle-fill"></i> Cmaras de vigilancia</li>
+            <li><i class="bi bi-check-circle-fill"></i> Personal autorizado nicamente</li>
+          </ul>
         </div>
-    </footer>
-    
-    <script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
-    <script>
-        AOS.init({ duration: 800, once: true, offset: 80 });
-        
-        const navbar = document.getElementById('navbar');
-        window.addEventListener('scroll', () => {
-            if (window.scrollY > 50) {
-                navbar.classList.add('scrolled');
-            } else {
-                navbar.classList.remove('scrolled');
-            }
-        });
-        
-        const mobileBtn = document.getElementById('mobileBtn');
-        const mobileMenu = document.getElementById('mobileMenu');
-        const mobileOverlay = document.getElementById('mobileOverlay');
-        const mobileClose = document.getElementById('mobileClose');
-        
-        function openMobileMenu() {
-            mobileMenu.classList.add('active');
-            mobileOverlay.classList.add('active');
-            document.body.style.overflow = 'hidden';
+        <div class="school-card" data-aos="zoom-in" data-aos-delay="500">
+          <div class="school-icon"><i class="bi bi-flower3"></i></div>
+          <h4>Ambiente preparado</h4>
+          <ul>
+            <li><i class="bi bi-check-circle-fill"></i> Materiales Montessori originales</li>
+            <li><i class="bi bi-check-circle-fill"></i> Espacios organizados y limpios</li>
+            <li><i class="bi bi-check-circle-fill"></i> diseño acorde a los niños</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PROGRAMás -->
+  <div class="wave-bot" style="background:#F8FAFC;margin-bottom:-2px">
+    <svg viewBox="0 0 1440 60" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M0,20 C480,60 960,0 1440,20 L1440,60 L0,60 Z" fill="white"></path>
+    </svg>
+  </div>
+  <section class="section programs" id="programs">
+    <div class="container">
+      <div class="text-center" data-aos="fade-up">
+        <div class="section-tag"><i class="bi bi-mortarboard-fill"></i> Programás educativos</div>
+        <h2 class="section-title">Cada etapa, un <span class="green">programa ideal</span></h2>
+        <p class="section-sub">Elige el nivel perfecto para tu hijo según su edad y necesidades.</p>
+        <a href="#contact-form" class="btn btn-orange btn-sm section-cta">Más información <i class="bi bi-arrow-right-short"></i></a>
+      </div>
+      <div class="programs-grid">
+        <div class="program-card" data-aos="flip-left" data-aos-delay="0">
+          <div class="program-top pt-1"><div class="program-icon"><i class="bi bi-baby"></i></div></div>
+          <div class="program-body">
+            <span class="program-age">0 - 2 años</span>
+            <h3>Estancia Infantil</h3>
+            <ul class="program-benefits">
+              <li><i class="bi bi-check-circle-fill"></i> Estimulación</li>
+              <li><i class="bi bi-check-circle-fill"></i> Cuidado afectivo</li>
+              <li><i class="bi bi-check-circle-fill"></i> Desarrollo psicomotor</li>
+            </ul>
+            <a href="#contact-form" class="btn btn-sm btn-outline">Más información <i class="bi bi-arrow-right-short"></i></a>
+          </div>
+        </div>
+        <div class="program-card" data-aos="flip-left" data-aos-delay="100">
+          <div class="program-top pt-2"><div class="program-icon"><i class="bi bi-people-fill"></i></div></div>
+          <div class="program-body">
+            <span class="program-age">2 - 3 años</span>
+            <h3>Maternal</h3>
+            <ul class="program-benefits">
+              <li><i class="bi bi-check-circle-fill"></i> Independencia</li>
+              <li><i class="bi bi-check-circle-fill"></i> Desarrollo del lenguaje</li>
+              <li><i class="bi bi-check-circle-fill"></i> Socialización</li>
+            </ul>
+            <a href="#contact-form" class="btn btn-sm btn-outline">Más información <i class="bi bi-arrow-right-short"></i></a>
+          </div>
+        </div>
+        <div class="program-card" data-aos="flip-left" data-aos-delay="200">
+          <div class="program-top pt-3"><div class="program-icon"><i class="bi bi-book-half"></i></div></div>
+          <div class="program-body">
+            <span class="program-age">3 - 5 años</span>
+            <h3>Inicial</h3>
+            <ul class="program-benefits">
+              <li><i class="bi bi-check-circle-fill"></i> lectoescritura inicial</li>
+              <li><i class="bi bi-check-circle-fill"></i> Matemáticas Básicas</li>
+              <li><i class="bi bi-check-circle-fill"></i> inglés</li>
+            </ul>
+            <a href="#contact-form" class="btn btn-sm btn-outline">Más información <i class="bi bi-arrow-right-short"></i></a>
+          </div>
+        </div>
+        <div class="program-card" data-aos="flip-left" data-aos-delay="300">
+          <div class="program-top pt-4"><div class="program-icon"><i class="bi bi-star-fill"></i></div></div>
+          <div class="program-body">
+            <span class="program-age">6 - 12 años</span>
+            <h3>Primaria</h3>
+            <ul class="program-benefits">
+              <li><i class="bi bi-check-circle-fill"></i> Aprendizaje profundo</li>
+              <li><i class="bi bi-check-circle-fill"></i> Pensamiento crítico</li>
+              <li><i class="bi bi-check-circle-fill"></i> Valores y autonomía</li>
+            </ul>
+            <a href="#contact-form" class="btn btn-sm btn-outline">Más información <i class="bi bi-arrow-right-short"></i></a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SCHEDULES -->
+  <div class="wave-top" style="background:white;margin-bottom:-2px">
+    <svg viewBox="0 0 1440 60" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M0,30 C360,0 720,60 1080,30 C1260,15 1380,40 1440,30 L1440,60 L0,60 Z" fill="#F8FAFC"></path>
+    </svg>
+  </div>
+  <section class="section schedules" id="schedules">
+    <div class="container">
+      <div class="text-center" data-aos="fade-up">
+        <div class="section-tag"><i class="bi bi-clock-fill"></i> Horarios</div>
+        <h2 class="section-title">Flexibilidad para <span class="orange">tu familia</span></h2>
+        <p class="section-sub">Elige el horario que mejor se adapte a tu rutina diaria.</p>
+      </div>
+      <div class="schedules-grid">
+        <div class="schedule-card" data-aos="fade-up" data-aos-delay="0">
+          <div class="schedule-icon">☀️</div>
+          <h3>Jornada Regular</h3>
+          <div class="schedule-time">8:00 AM - 12:00 PM</div>
+          <ul class="schedule-includes">
+            <li><i class="bi bi-check-circle-fill"></i> Programa educativo completo</li>
+            <li><i class="bi bi-check-circle-fill"></i> Recreacin y juegos</li>
+            <li><i class="bi bi-check-circle-fill"></i> Actividades Montessori</li>
+          </ul>
+          <p class="schedule-for">Ideal para familias que buscan solo la formacin acadmica. (Preprimaria hasta la 1:00 PM)</p>
+        </div>
+        <div class="schedule-card" data-aos="fade-up" data-aos-delay="100">
+          <div class="schedule-icon">☀️</div>
+          <h3>Jornada Extendida</h3>
+          <div class="schedule-time">8:00 AM - 3:00 PM</div>
+          <ul class="schedule-includes">
+            <li><i class="bi bi-check-circle-fill"></i> Jornada acadmica completa</li>
+            <li><i class="bi bi-check-circle-fill"></i> Almuerzo incluido</li>
+            <li><i class="bi bi-check-circle-fill"></i> Actividades dirigidas</li>
+          </ul>
+          <p class="schedule-for">Perfecto para padres que trabajan hasta la tarde y necesitan Más tiempo.</p>
+        </div>
+        <div class="schedule-card" data-aos="fade-up" data-aos-delay="200">
+          <div class="schedule-icon">☀️</div>
+          <h3>Jornada Completa</h3>
+          <div class="schedule-time">8:00 AM - 5:00 PM</div>
+          <ul class="schedule-includes">
+            <li><i class="bi bi-check-circle-fill"></i> Todo lo de la jornada extendida</li>
+            <li><i class="bi bi-check-circle-fill"></i> Merienda saludable</li>
+            <li><i class="bi bi-check-circle-fill"></i> Descanso supervisado</li>
+          </ul>
+          <p class="schedule-for">Acompaamiento hasta finalizar tu jornada laboral con total tranquilidad.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PAYMENT PLANS -->
+  <div class="wave-bot" style="background:#F8FAFC;margin-bottom:-2px">
+    <svg viewBox="0 0 1440 60" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M0,20 C480,60 960,0 1440,20 L1440,60 L0,60 Z" fill="white"></path>
+    </svg>
+  </div>
+  <section class="section payment-plans" id="payment-plans">
+    <div class="container">
+      <div class="text-center" data-aos="fade-up">
+        <div class="section-tag"><i class="bi bi-credit-card-fill"></i> Planes de pago</div>
+        <h2 class="section-title">Flexibilidad para <span class="blue">tu economa</span></h2>
+        <p class="section-sub">Elige cmo quieres pagar sin afectar tu presupuesto familiar.</p>
+      </div>
+      <div class="plans-grid">
+        <div class="plan-card" data-aos="fade-up" data-aos-delay="0">
+          <div class="plan-badge">? Más popular</div>
+          <div class="plan-icon">💛</div>
+          <h3>Plan A</h3>
+          <p class="plan-type">Pago anual</p>
+          <ul class="plan-benefits">
+            <li><i class="bi bi-check-circle-fill"></i> Un solo pago al iniciar el años</li>
+            <li><i class="bi bi-check-circle-fill"></i> 5% de descuento especial</li>
+            <li><i class="bi bi-check-circle-fill"></i> Mayor comodidad para familias</li>
+          </ul>
+          <a href="#tariffs" class="btn btn-sm btn-orange">Ver tarifas</a>
+        </div>
+        <div class="plan-card" data-aos="fade-up" data-aos-delay="100">
+          <div class="plan-icon">💛</div>
+          <h3>Plan B</h3>
+          <p class="plan-type">Pago semestral</p>
+          <ul class="plan-benefits">
+            <li><i class="bi bi-check-circle-fill"></i> Dos pagos anuales</li>
+            <li><i class="bi bi-check-circle-fill"></i> Agosto y enero</li>
+            <li><i class="bi bi-check-circle-fill"></i> Balance entre comodidad y economa</li>
+          </ul>
+          <a href="#tariffs" class="btn btn-sm btn-blue">Ver tarifas</a>
+        </div>
+        <div class="plan-card" data-aos="fade-up" data-aos-delay="200">
+          <div class="plan-icon">🌟</div>
+          <h3>Plan C</h3>
+          <p class="plan-type">Pago mensual</p>
+          <ul class="plan-benefits">
+            <li><i class="bi bi-check-circle-fill"></i> inscripción inicial + 10 cuotas</li>
+            <li><i class="bi bi-check-circle-fill"></i> Mxima flexibilidad</li>
+            <li><i class="bi bi-check-circle-fill"></i> El plan favorito de las familias</li>
+          </ul>
+          <a href="#tariffs" class="btn btn-sm btn-green">Ver tarifas</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TARIFFS -->
+  <div class="wave-top" style="background:white;margin-bottom:-2px">
+    <svg viewBox="0 0 1440 60" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M0,30 C360,0 720,60 1080,30 C1260,15 1380,40 1440,30 L1440,60 L0,60 Z" fill="#F8FAFC"></path>
+    </svg>
+  </div>
+  <section class="section tariffs" id="tariffs">
+    <div class="container">
+      <div class="text-center" data-aos="fade-up">
+        <div class="section-tag"><i class="bi bi-cash-stack"></i> Tarifas</div>
+        <h2 class="section-title">Transparencia y <span class="green">clareza</span></h2>
+        <p class="section-sub">Selecciona el nivel y el horario para ver los precios exactos.</p>
+      </div>
+
+      <div class="tariff-levels" data-aos="fade-up">
+        <button type="button" class="tariff-level-btn active" data-level="estancia">🍼 Estancia</button>
+        <button type="button" class="tariff-level-btn" data-level="maternal">🌱 Maternal</button>
+        <button type="button" class="tariff-level-btn" data-level="inicial">🌟 Inicial</button>
+        <button type="button" class="tariff-level-btn" data-level="primaria">📚 Primaria</button>
+      </div>
+
+      <div class="tariff-levels-container">
+        <!-- ESTANCIA -->
+        <div class="tariff-level active" id="level-estancia">
+          <div class="tariff-schedule" data-aos="fade-up">
+            <button type="button" class="tariff-schedule-btn">
+              <span>☀️ Jornada Regular (8:00 AM - 12:00 PM)</span>
+              <i class="bi bi-chevron-down"></i>
+            </button>
+            <div class="tariff-schedule-content">
+              <div class="plan-options">
+                <div class="plan-option">
+                  <h4>Plan A - Anual</h4>
+                  <div class="plan-price">RD$100,000</div>
+                  <p class="plan-price-detail">Un solo pago anual</p>
+                  <a href="#contact-form" class="btn btn-sm btn-blue">Solicitar inscripción</a>
+                </div>
+                <div class="plan-option">
+                  <h4>Plan B - Semestral</h4>
+                  <div class="plan-price">2  RD$52,000</div>
+                  <p class="plan-price-detail">Total: RD$104,000</p>
+                  <a href="#contact-form" class="btn btn-sm btn-blue">Solicitar inscripción</a>
+                </div>
+                <div class="plan-option">
+                  <h4>Plan C - Mensual</h4>
+                  <div class="plan-price">RD$8,500</div>
+                  <p class="plan-price-detail">inscripción: RD$20,000 + 10 cuotas</p>
+                  <a href="#contact-form" class="btn btn-sm btn-green">Solicitar inscripción</a>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="tariff-schedule" data-aos="fade-up" data-aos-delay="100">
+            <button type="button" class="tariff-schedule-btn">
+              <span>🌤️ Jornada Extendida (8:00 AM - 3:00 PM)</span>
+              <i class="bi bi-chevron-down"></i>
+            </button>
+            <div class="tariff-schedule-content">
+              <div class="plan-options">
+                <div class="plan-option">
+                  <h4>Plan A - Anual</h4>
+                  <div class="plan-price">RD$130,000</div>
+                  <p class="plan-price-detail">Un solo pago anual</p>
+                  <a href="#contact-form" class="btn btn-sm btn-blue">Solicitar inscripción</a>
+                </div>
+                <div class="plan-option">
+                  <h4>Plan B - Semestral</h4>
+                  <div class="plan-price">2  RD$67,000</div>
+                  <p class="plan-price-detail">Total: RD$134,000</p>
+                  <a href="#contact-form" class="btn btn-sm btn-blue">Solicitar inscripción</a>
+                </div>
+                <div class="plan-option">
+                  <h4>Plan C - Mensual</h4>
+                  <div class="plan-price">RD$11,000</div>
+                  <p class="plan-price-detail">inscripción: RD$25,000 + 10 cuotas</p>
+                  <a href="#contact-form" class="btn btn-sm btn-green">Solicitar inscripción</a>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="tariff-schedule" data-aos="fade-up" data-aos-delay="200">
+            <button type="button" class="tariff-schedule-btn">
+              <span>🌙 Jornada Completa (8:00 AM - 5:00 PM)</span>
+              <i class="bi bi-chevron-down"></i>
+            </button>
+            <div class="tariff-schedule-content">
+              <div class="plan-options">
+                <div class="plan-option">
+                  <h4>Plan A - Anual</h4>
+                  <div class="plan-price">RD$160,000</div>
+                  <p class="plan-price-detail">Un solo pago anual</p>
+                  <a href="#contact-form" class="btn btn-sm btn-blue">Solicitar inscripción</a>
+                </div>
+                <div class="plan-option">
+                  <h4>Plan B - Semestral</h4>
+                  <div class="plan-price">2  RD$82,000</div>
+                  <p class="plan-price-detail">Total: RD$164,000</p>
+                  <a href="#contact-form" class="btn btn-sm btn-blue">Solicitar inscripción</a>
+                </div>
+                <div class="plan-option">
+                  <h4>Plan C - Mensual</h4>
+                  <div class="plan-price">RD$14,000</div>
+                  <p class="plan-price-detail">inscripción: RD$30,000 + 10 cuotas</p>
+                  <a href="#contact-form" class="btn btn-sm btn-green">Solicitar inscripción</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- MATERNAL -->
+        <div class="tariff-level" id="level-maternal">
+          <div class="tariff-schedule" data-aos="fade-up">
+            <button type="button" class="tariff-schedule-btn">
+              <span>☀️ Jornada Regular (8:00 AM - 12:00 PM)</span>
+              <i class="bi bi-chevron-down"></i>
+            </button>
+            <div class="tariff-schedule-content">
+              <div class="plan-options">
+                <div class="plan-option">
+                  <h4>Plan A - Anual</h4>
+                  <div class="plan-price">RD$110,000</div>
+                  <p class="plan-price-detail">Un solo pago anual</p>
+                  <a href="#contact-form" class="btn btn-sm btn-blue">Solicitar inscripción</a>
+                </div>
+                <div class="plan-option">
+                  <h4>Plan B - Semestral</h4>
+                  <div class="plan-price">2  RD$56,000</div>
+                  <p class="plan-price-detail">Total: RD$112,000</p>
+                  <a href="#contact-form" class="btn btn-sm btn-blue">Solicitar inscripción</a>
+                </div>
+                <div class="plan-option">
+                  <h4>Plan C - Mensual</h4>
+                  <div class="plan-price">RD$9,500</div>
+                  <p class="plan-price-detail">inscripción: RD$22,000 + 10 cuotas</p>
+                  <a href="#contact-form" class="btn btn-sm btn-green">Solicitar inscripción</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- INICIAL -->
+        <div class="tariff-level" id="level-inicial">
+          <div class="tariff-schedule" data-aos="fade-up">
+            <button type="button" class="tariff-schedule-btn">
+              <span>☀️ Jornada Regular (8:00 AM - 12:00 PM)</span>
+              <i class="bi bi-chevron-down"></i>
+            </button>
+            <div class="tariff-schedule-content">
+              <div class="plan-options">
+                <div class="plan-option">
+                  <h4>Plan A - Anual</h4>
+                  <div class="plan-price">RD$118,188</div>
+                  <p class="plan-price-detail">Un solo pago anual</p>
+                  <a href="#contact-form" class="btn btn-sm btn-blue">Solicitar inscripción</a>
+                </div>
+                <div class="plan-option">
+                  <h4>Plan B - Semestral</h4>
+                  <div class="plan-price">2  RD$60,017</div>
+                  <p class="plan-price-detail">Total: RD$120,034</p>
+                  <a href="#contact-form" class="btn btn-sm btn-blue">Solicitar inscripción</a>
+                </div>
+                <div class="plan-option">
+                  <h4>Plan C - Mensual</h4>
+                  <div class="plan-price">RD$9,850</div>
+                  <p class="plan-price-detail">inscripción: RD$24,623 + 10 cuotas</p>
+                  <a href="#contact-form" class="btn btn-sm btn-green">Solicitar inscripción</a>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="tariff-schedule" data-aos="fade-up" data-aos-delay="100">
+            <button type="button" class="tariff-schedule-btn">
+              <span>🌤️ Jornada Extendida (8:00 AM - 3:00 PM)</span>
+              <i class="bi bi-chevron-down"></i>
+            </button>
+            <div class="tariff-schedule-content">
+              <div class="plan-options">
+                <div class="plan-option">
+                  <h4>Plan A - Anual</h4>
+                  <div class="plan-price">RD$139,356</div>
+                  <p class="plan-price-detail">Un solo pago anual</p>
+                  <a href="#contact-form" class="btn btn-sm btn-blue">Solicitar inscripción</a>
+                </div>
+                <div class="plan-option">
+                  <h4>Plan B - Semestral</h4>
+                  <div class="plan-price">2  RD$70,767</div>
+                  <p class="plan-price-detail">Total: RD$141,534</p>
+                  <a href="#contact-form" class="btn btn-sm btn-blue">Solicitar inscripción</a>
+                </div>
+                <div class="plan-option">
+                  <h4>Plan C - Mensual</h4>
+                  <div class="plan-price">RD$11,613</div>
+                  <p class="plan-price-detail">inscripción: RD$29,033 + 10 cuotas</p>
+                  <a href="#contact-form" class="btn btn-sm btn-green">Solicitar inscripción</a>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="tariff-schedule" data-aos="fade-up" data-aos-delay="200">
+            <button type="button" class="tariff-schedule-btn">
+              <span>🌙 Jornada Completa (8:00 AM - 5:00 PM)</span>
+              <i class="bi bi-chevron-down"></i>
+            </button>
+            <div class="tariff-schedule-content">
+              <div class="plan-options">
+                <div class="plan-option">
+                  <h4>Plan A - Anual</h4>
+                  <div class="plan-price">RD$160,585</div>
+                  <p class="plan-price-detail">Un solo pago anual</p>
+                  <a href="#contact-form" class="btn btn-sm btn-blue">Solicitar inscripción</a>
+                </div>
+                <div class="plan-option">
+                  <h4>Plan B - Semestral</h4>
+                  <div class="plan-price">2  RD$82,293</div>
+                  <p class="plan-price-detail">Total: RD$164,586</p>
+                  <a href="#contact-form" class="btn btn-sm btn-blue">Solicitar inscripción</a>
+                </div>
+                <div class="plan-option">
+                  <h4>Plan C - Mensual</h4>
+                  <div class="plan-price">RD$15,015</div>
+                  <p class="plan-price-detail">inscripción: RD$26,498 + 10 cuotas</p>
+                  <a href="#contact-form" class="btn btn-sm btn-green">Solicitar inscripción</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- PRIMARIA -->
+        <div class="tariff-level" id="level-primaria">
+          <div class="tariff-schedule" data-aos="fade-up">
+            <button type="button" class="tariff-schedule-btn">
+              <span>☀️ Jornada Regular (8:00 AM - 1:30 PM)</span>
+              <i class="bi bi-chevron-down"></i>
+            </button>
+            <div class="tariff-schedule-content">
+              <div class="plan-options">
+                <div class="plan-option">
+                  <h4>Plan A - Anual</h4>
+                  <div class="plan-price">RD$133,095</div>
+                  <p class="plan-price-detail">Un solo pago anual</p>
+                  <a href="#contact-form" class="btn btn-sm btn-blue">Solicitar inscripción</a>
+                </div>
+                <div class="plan-option">
+                  <h4>Plan B - Semestral</h4>
+                  <div class="plan-price">2  RD$67,181</div>
+                  <p class="plan-price-detail">Total: RD$134,362</p>
+                  <a href="#contact-form" class="btn btn-sm btn-blue">Solicitar inscripción</a>
+                </div>
+                <div class="plan-option">
+                  <h4>Plan C - Mensual</h4>
+                  <div class="plan-price">RD$11,025</div>
+                  <p class="plan-price-detail">inscripción: RD$27,562 + 10 cuotas</p>
+                  <a href="#contact-form" class="btn btn-sm btn-green">Solicitar inscripción</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- BENEFITS -->
+  <div class="wave-bot" style="background:#F8FAFC;margin-bottom:-2px">
+    <svg viewBox="0 0 1440 60" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M0,20 C480,60 960,0 1440,20 L1440,60 L0,60 Z" fill="white"></path>
+    </svg>
+  </div>
+  <section class="section benefits" id="benefits">
+    <div class="container">
+      <div class="text-center" data-aos="fade-up">
+        <div class="section-tag"><i class="bi bi-gift-fill"></i> Beneficios especiales</div>
+        <h2 class="section-title">Ventajas exclusivas para <span class="orange">nuestras familias</span></h2>
+        <p class="section-sub">Descubre todos los beneficios de ser parte de nuestra comunidad.</p>
+      </div>
+      <div class="benefits-grid">
+        <div class="benefit-card" data-aos="fade-up" data-aos-delay="0">
+          <div class="benefit-icon">✅</div>
+          <div>
+            <h4>Descuento anual</h4>
+            <p>5% de descuento al pagar la colegiatura anual en un solo pago (Plan A).</p>
+          </div>
+        </div>
+        <div class="benefit-card" data-aos="fade-up" data-aos-delay="100">
+          <div class="benefit-icon">🎓</div>
+          <div>
+            <h4>Descuento hermano</h4>
+            <p>5% de descuento para el primer hermano inscrito en la institucion.</p>
+          </div>
+        </div>
+        <div class="benefit-card" data-aos="fade-up" data-aos-delay="200">
+          <div class="benefit-icon">✅</div>
+          <div>
+            <h4>Descuento referido</h4>
+            <p>5% de descuento por cada estudiante referido que complete su inscripción.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TIMELINE -->
+  <div class="wave-top" style="background:white;margin-bottom:-2px">
+    <svg viewBox="0 0 1440 60" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M0,30 C360,0 720,60 1080,30 C1260,15 1380,40 1440,30 L1440,60 L0,60 Z" fill="#F8FAFC"></path>
+    </svg>
+  </div>
+  <section class="section timeline" id="timeline">
+    <div class="container">
+      <div class="text-center" data-aos="fade-up">
+        <div class="section-tag"><i class="bi bi-list-check"></i> Proceso de inscripción</div>
+        <h2 class="section-title">Tu camino hacia la <span class="blue">familia Sonrisas</span></h2>
+        <p class="section-sub">Sigue estos pasos simples para asegurar el lugar de tu hijo.</p>
+      </div>
+      <div class="timeline-container">
+        <div class="timeline-line"></div>
+        <div class="timeline-item" data-aos="fade-right" data-aos-delay="0" data-aos-duration="700">
+          <div class="timeline-number">1</div>
+          <div class="timeline-content">
+            <h4>Solicita Información</h4>
+            <p>Completa nuestro formulario o contctanos directamente.</p>
+          </div>
+        </div>
+        <div class="timeline-item" data-aos="fade-left" data-aos-delay="100" data-aos-duration="700">
+          <div class="timeline-number">2</div>
+          <div class="timeline-content">
+            <h4>Agenda una visita</h4>
+            <p>Conoce nuestras Instalaciones y a nuestro equipo.</p>
+          </div>
+        </div>
+        <div class="timeline-item" data-aos="fade-right" data-aos-delay="200" data-aos-duration="700">
+          <div class="timeline-number">3</div>
+          <div class="timeline-content">
+            <h4>Conoce nuestras Instalaciones</h4>
+            <p>Un recorrido completo para que te sientas seguro.</p>
+          </div>
+        </div>
+        <div class="timeline-item" data-aos="fade-left" data-aos-delay="300" data-aos-duration="700">
+          <div class="timeline-number">4</div>
+          <div class="timeline-content">
+            <h4>Entrega de documentos</h4>
+            <p>Acta de nacimiento, foto y datos de los padres/tutores.</p>
+          </div>
+        </div>
+        <div class="timeline-item" data-aos="fade-right" data-aos-delay="400" data-aos-duration="700">
+          <div class="timeline-number">5</div>
+          <div class="timeline-content">
+            <h4>Selecciona tu plan</h4>
+            <p>Elige el plan de pago y horario que mejor se adapte.</p>
+          </div>
+        </div>
+        <div class="timeline-item" data-aos="fade-left" data-aos-delay="500" data-aos-duration="700">
+          <div class="timeline-number">6</div>
+          <div class="timeline-content">
+            <h4>Realiza la inscripción</h4>
+            <p>Paga la inscripción y completa los papeles finales.</p>
+          </div>
+        </div>
+        <div class="timeline-item" data-aos="fade-up" data-aos-delay="600">
+          <div class="timeline-number" style="background: linear-gradient(135deg, var(--green), var(--green-dark)); box-shadow: 0 4px 16px rgba(40,181,77,0.3);">5</div>
+          <div class="timeline-content" style="border-color: var(--green-light);">
+            <h4>Bienvenido a la familia!</h4>
+            <p>Tu hijo ya es parte de Sonrisas Creativas.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <div class="wave-bot" style="background:#F8FAFC;margin-bottom:-2px">
+    <svg viewBox="0 0 1440 60" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M0,20 C480,60 960,0 1440,20 L1440,60 L0,60 Z" fill="white"></path>
+    </svg>
+  </div>
+  <section class="section faq" id="faq">
+    <div class="container">
+      <div class="text-center" data-aos="fade-up">
+        <div class="section-tag"><i class="bi bi-question-circle-fill"></i> Preguntas frecuentes</div>
+        <h2 class="section-title">Todas las <span class="green">respuestas</span> que necesitas</h2>
+        <p class="section-sub">Aqué resolvemos las dudas Más comunes de las familias.</p>
+      </div>
+      <div class="faq-container">
+        <div class="faq-item" data-aos="fade-up" data-aos-delay="0">
+          <button type="button" class="faq-toggle">
+            <h4>Cules son los horarios disponibles?</h4>
+            <i class="bi bi-chevron-down"></i>
+          </button>
+          <div class="faq-content">
+            <p>Tenemos 3 opciones: Jornada Regular (8:00 AM - 12:00 PM), Jornada Extendida (8:00 AM - 3:00 PM) y Jornada Completa (8:00 AM - 5:00 PM).</p>
+          </div>
+        </div>
+        <div class="faq-item" data-aos="fade-up" data-aos-delay="100">
+          <button type="button" class="faq-toggle">
+            <h4>Aceptan niños desde qué edad?</h4>
+            <i class="bi bi-chevron-down"></i>
+          </button>
+          <div class="faq-content">
+            <p>Recibimos niños desde los primeros meses de vida hasta los 12 años.</p>
+          </div>
+        </div>
+        <div class="faq-item" data-aos="fade-up" data-aos-delay="200">
+          <button type="button" class="faq-toggle">
+            <h4>Hay servicio de transporte?</h4>
+            <i class="bi bi-chevron-down"></i>
+          </button>
+          <div class="faq-content">
+            <p>Actualmente no contamos con servicio de transporte propio, pero podemos compartir opciones recomendadas por otras familias.</p>
+          </div>
+        </div>
+        <div class="faq-item" data-aos="fade-up" data-aos-delay="300">
+          <button type="button" class="faq-toggle">
+            <h4>Cmo funciona el pago?</h4>
+            <i class="bi bi-chevron-down"></i>
+          </button>
+          <div class="faq-content">
+            <p>Ofrecemos 3 planes: anual, semestral y mensual. Puedes pagar por transferencia bancaria o depsito.</p>
+          </div>
+        </div>
+        <div class="faq-item" data-aos="fade-up" data-aos-delay="400">
+          <button type="button" class="faq-toggle">
+            <h4>Puedo pagar mensualmente?</h4>
+            <i class="bi bi-chevron-down"></i>
+          </button>
+          <div class="faq-content">
+            <p>S! El Plan C es nuestro plan mensual con 10 cuotas despus de la inscripción inicial.</p>
+          </div>
+        </div>
+        <div class="faq-item" data-aos="fade-up" data-aos-delay="500">
+          <button type="button" class="faq-toggle">
+            <h4>Cuando inicia el ano escolar?</h4>
+            <i class="bi bi-chevron-down"></i>
+          </button>
+          <div class="faq-content">
+            <p>Nuestro ano escolar inicia en agosto, pero aceptamos inscripciones durante todo el ano segun disponibilidad.</p>
+          </div>
+        </div>
+        <div class="faq-item" data-aos="fade-up" data-aos-delay="600">
+          <button type="button" class="faq-toggle">
+            <h4>qué documentos necesito?</h4>
+            <i class="bi bi-chevron-down"></i>
+          </button>
+          <div class="faq-content">
+            <p>Acta de nacimiento del niño, fotos, datos de los padres/tutores, y en algunos casos certificados mdicos bsicos.</p>
+          </div>
+        </div>
+        <div class="faq-item" data-aos="fade-up" data-aos-delay="700">
+          <button type="button" class="faq-toggle">
+            <h4>Cul es el proceso de inscripción?</h4>
+            <i class="bi bi-chevron-down"></i>
+          </button>
+          <div class="faq-content">
+            <p>1. Solicita Informaciónido!</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONTACT FORM -->
+  <div class="wave-top" style="background:white;margin-bottom:-2px">
+    <svg viewBox="0 0 1440 60" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M0,30 C360,0 720,60 1080,30 C1260,15 1380,40 1440,30 L1440,60 L0,60 Z" fill="#F8FAFC"></path>
+    </svg>
+  </div>
+  <section class="section contact-form-section" id="contact-form">
+    <div class="container">
+      <div class="text-center" data-aos="fade-up">
+        <div class="section-tag"><i class="bi bi-envelope-fill"></i> Contactanos</div>
+        <h2 class="section-title">Estamos aqui para <span class="blue">ayudarte</span></h2>
+        <p class="section-sub">Completa el formulario o visitanos. Te esperamos con los brazos abiertos.</p>
+      </div>
+
+      <!-- Grid: formulario + info + mapa -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:56px;align-items:start" data-aos="fade-up" data-aos-delay="150">
+
+        <!-- Formulario -->
+        <div style="background:white;border-radius:28px;padding:36px;border:1px solid #E3EBF5;box-shadow:0 8px 32px rgba(11,99,199,.08)">
+          <h3 style="font-size:1.2rem;font-weight:900;color:#1A2340;margin-bottom:24px">Solicitar Informacion</h3>
+          <form id="enrollmentForm" style="display:flex;flex-direction:column;gap:16px">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+              <div class="form-group"><label>Nombre completo *</label><input type="text" required placeholder="Tu nombre"></div>
+              <div class="form-group"><label>Telefono *</label><input type="tel" required placeholder="809-XXX-XXXX"></div>
+            </div>
+            <div class="form-group"><label>Correo electronico *</label><input type="email" required placeholder="correo@ejemplo.com"></div>
+            <div class="form-group">
+              <label>Nivel de interes *</label>
+              <select required>
+                <option value="">Selecciona un nivel</option>
+                <option value="estancia">Estancia Infantil (0-2 años)</option>
+                <option value="maternal">Maternal (2-3 años)</option>
+                <option value="inicial">Inicial (3-5 años)</option>
+                <option value="primaria">Primaria (6-12 años)</option>
+              </select>
+            </div>
+            <div class="form-group"><label>Mensaje (opcional)</label><textarea rows="3" placeholder="Alguna duda o informacion adicional?"></textarea></div>
+            <button type="submit" class="btn btn-orange" style="width:100%;justify-content:center;padding:14px;font-size:.95rem;border-radius:14px">
+              <i class="bi bi-send-fill"></i> Enviar solicitud
+            </button>
+          </form>
+        </div>
+
+        <!-- Info + Mapa -->
+        <div style="display:flex;flex-direction:column;gap:20px">
+          <!-- Info de contacto -->
+          <div style="background:white;border-radius:28px;padding:28px;border:1px solid #E3EBF5;box-shadow:0 4px 16px rgba(11,99,199,.06)">
+            <h3 style="font-size:1.1rem;font-weight:900;color:#1A2340;margin-bottom:18px">Informacióntacto</h3>
+            <div style="display:flex;flex-direction:column;gap:12px">
+              <a href="https://wa.me/18095324903" style="display:flex;align-items:center;gap:12px;text-decoration:none;color:#1A2340;padding:10px 14px;background:#E6F7EB;border-radius:14px;font-weight:700;font-size:.9rem;transition:all .2s" onmouseover="this.style.background='#28B54D';this.style.color='white'" onmouseout="this.style.background='#E6F7EB';this.style.color='#1A2340'">
+                <i class="bi bi-whatsapp" style="font-size:1.3rem;color:#28B54D"></i>
+                <span>(809) 532-4903</span>
+              </a>
+              <a href="https://www.instagram.com/montessorisonrisascreativas/" target="_blank" style="display:flex;align-items:center;gap:12px;text-decoration:none;color:#1A2340;padding:10px 14px;background:#FFF0E0;border-radius:14px;font-weight:700;font-size:.9rem;transition:all .2s" onmouseover="this.style.background='#FF7A00';this.style.color='white'" onmouseout="this.style.background='#FFF0E0';this.style.color='#1A2340'">
+                <i class="bi bi-instagram" style="font-size:1.3rem;color:#FF7A00"></i>
+                <span>@montessorisonrisascreativas</span>
+              </a>
+              <div style="display:flex;align-items:flex-start;gap:12px;padding:10px 14px;background:#E8F2FF;border-radius:14px;font-weight:700;font-size:.9rem;color:#1A2340">
+                <i class="bi bi-geo-alt-fill" style="font-size:1.3rem;color:#0B63C7;flex-shrink:0;margin-top:2px"></i>
+                <span>Santo Domingo, Republica Dominicana</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:#FFFBE6;border-radius:14px;font-weight:700;font-size:.9rem;color:#1A2340">
+                <i class="bi bi-clock-fill" style="font-size:1.3rem;color:#FFD43B;flex-shrink:0"></i>
+                <span>Lun  Vie: 7:00 AM  6:00 PM</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Mapa -->
+          <div style="border-radius:24px;overflow:hidden;box-shadow:0 8px 32px rgba(11,99,199,.12);border:2px solid #E3EBF5">
+            <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d1590.8768848511384!2d-69.97965879342881!3d18.494336151981436!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8eaf8b0d97074f4d%3A0x67cd278ee42fc42f!2sColegio%20MSC!5e0!3m2!1ses-419!2sdo!4v1784295885404!5m2!1ses-419!2sdo"
+              width="100%" height="280" style="border:0;display:block" allowfullscreen="" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" title="Ubicación Colegio Montessori Sonrisas Creativas"></iframe>
+          </div>
+        </div>
+      </div>
+
+      <style>
+        @media(max-width:768px){
+          #contact-form [style*="grid-template-columns:1fr 1fr"]{grid-template-columns:1fr!important}
+          #contact-form [style*="grid:grid-template-columns:1fr 1fr"]{grid-template-columns:1fr!important}
         }
-        
-        function closeMobileMenu() {
-            mobileMenu.classList.remove('active');
-            mobileOverlay.classList.remove('active');
-            document.body.style.overflow = '';
+      </style>
+    </div>
+  </section>
+
+  <!-- FINAL CTA -->
+  <div class="wave-bot" style="background:#F8FAFC;margin-bottom:-2px">
+    <svg viewBox="0 0 1440 60" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M0,20 C480,60 960,0 1440,20 L1440,60 L0,60 Z" fill="#0850A0"></path>
+    </svg>
+  </div>
+  <section class="section final-cta">
+    <div class="container">
+      <div class="text-center" data-aos="fade-up" style="position:relative">
+        <!-- Mascotas decorativas -->
+        <div style="display:flex;justify-content:center;gap:24px;margin-bottom:24px;pointer-events:none" aria-hidden="true">
+          <svg width="70" height="85" viewBox="0 0 220 270" style="animation:mascotBounce 2.8s ease-in-out infinite;filter:drop-shadow(0 4px 12px rgba(255,122,0,.35))">
+            <polygon points="110,18 200,205 20,205" fill="#FF7A00" stroke="#D96500" stroke-width="5"/>
+            <circle cx="84" cy="125" r="19" fill="white"/><circle cx="136" cy="125" r="19" fill="white"/>
+            <circle cx="85" cy="126" r="10" fill="#fff"/><circle cx="137" cy="126" r="10" fill="#fff"/>
+            <circle cx="85" cy="126" r="8"  fill="#333"/><circle cx="137" cy="126" r="8"  fill="#333"/>
+            <path d="M 74 158 Q 110 180 146 158" stroke="#333" stroke-width="7" fill="none" stroke-linecap="round"/>
+          </svg>
+          <svg width="65" height="80" viewBox="0 0 200 200" style="animation:sunSpin 20s linear infinite,mascotFloat 4s ease-in-out infinite">
+            <circle cx="100" cy="100" r="55" fill="#FFD43B" stroke="#F0C000" stroke-width="4"/>
+            <circle cx="83"  cy="92"  r="9" fill="white"/><circle cx="117" cy="92"  r="9" fill="white"/>
+            <circle cx="84"  cy="93"  r="5" fill="#333"/><circle cx="118" cy="93"  r="5" fill="#333"/>
+            <path d="M 80 116 Q 100 130 120 116" stroke="#333" stroke-width="5" fill="none" stroke-linecap="round"/>
+          </svg>
+          <svg width="65" height="78" viewBox="0 0 220 270" style="animation:mascotWave 3.2s ease-in-out infinite 0.5s;filter:drop-shadow(0 4px 12px rgba(40,181,77,.35))">
+            <polygon points="110,64 192,120 162,208 58,208 28,120" fill="#28B54D" stroke="#1A8035" stroke-width="5"/>
+            <circle cx="87" cy="138" r="17" fill="white"/><circle cx="133" cy="138" r="17" fill="white"/>
+            <circle cx="88" cy="139" r="8"  fill="#333"/><circle cx="134" cy="139" r="8"  fill="#333"/>
+            <path d="M 77 168 Q 110 186 143 168" stroke="#333" stroke-width="6" fill="none" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <h2 class="section-title">Dale a tu hijo el <span class="hl-orange" style="color:#FFD43B">mejor comienzo</span> para construir su futuro</h2>
+        <p class="section-sub">En Montessori Sonrisas Creativas cada niño aprende a pensar, descubrir y crecer en un ambiente lleno de amor, respeto y aprendizaje.</p>
+        <div class="final-cta-btns">
+          <a href="https://wa.me/18095324903" class="btn btn-orange" style="padding:14px 32px;font-size:1rem;border-radius:16px">
+            <i class="bi bi-calendar-check-fill"></i> Agendar visita
+          </a>
+          <a href="login.html" class="btn btn-green" style="padding:14px 32px;font-size:1rem;border-radius:16px">
+            <i class="bi bi-box-arrow-in-right"></i> Portal familiar
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  </main><!-- /main-content -->
+
+  <!-- FOOTER -->
+  <footer class="footer" role="contentinfo">
+    <div class="container">
+      <div class="footer-inner">
+        <div class="footer-brand">
+          <a href="#hero" class="logo" style="display:flex;align-items:center;gap:10px;" aria-label="Sonrisas Creativas  Inicio">
+            <img src="logo/favicon-32x32.png" alt="Logo Sonrisas Creativas" width="36" height="36" style="height:36px;width:36px;object-fit:contain;border-radius:8px;filter:brightness(0) invert(1)" loading="lazy">
+            <span class="logo-text display-font" style="color:white">Sonrisas Creativas</span>
+          </a>
+          <p class="footer-desc">Colegio Montessori donde cada niño descubre su potencial a travs del amor, la creatividad y el respeto. Educando con corazn desde hace Más de 10 años.</p>
+          <div class="footer-socials">
+            <a href="https://wa.me/18095324903" class="footer-social-btn" title="WhatsApp"><i class="bi bi-whatsapp"></i></a>
+            <a href="https://www.instagram.com/montessorisonrisascreativas/" class="footer-social-btn" title="Instagram"><i class="bi bi-instagram"></i></a>
+          </div>
+        </div>
+        <div class="footer-col">
+          <h4>Enlaces rpidos</h4>
+          <ul>
+            <li><a href="#hero">Inicio</a></li>
+            <li><a href="#why-us">Nuestro colegio</a></li>
+            <li><a href="#programs">Programas</a></li>
+            <li><a href="#schedules">Horarios</a></li>
+            <li><a href="#tariffs">Tarifas</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4>Portales</h4>
+          <ul>
+            <li><a href="login.html">👨‍👩‍👧 Portal Padres</a></li>
+            <li><a href="login.html">👩‍🏫 Portal Maestras</a></li>
+            <li><a href="politica-privacidad.html">Poltica de privacidad</a></li>
+            <li><a href="terminos-uso.html">Trminos de uso</a></li>
+          </ul>
+        </div>
+      </div>
+      <hr class="footer-divider">
+      <div class="footer-bottom">
+        <p>&copy; 2025 Colegio Montessori Sonrisas Creativas. Todos los derechos reservados.</p>
+        <p class="footer-motto" style="color: rgba(255,255,255,0.8); font-style: italic;">Hecho con ❤️ en Santo Domingo</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- SCRIPTS -->
+  <script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
+  <script>
+    // Init AOS
+    AOS.init({ duration: 700, easing: 'ease-out-cubic', once: true, offset: 60 });
+
+    // Navbar scroll
+    const navbar = document.getElementById('navbar');
+    window.addEventListener('scroll', () => {
+      navbar.classList.toggle('scrolled', window.scrollY > 60);
+    });
+
+    // Mobile menu
+    const mobileBtn = document.getElementById('mobileBtn');
+    const mobileMenu = document.getElementById('mobileMenu');
+    const mobileOverlay = document.getElementById('mobileOverlay');
+    const mobileClose = document.getElementById('mobileClose');
+
+    function openMenu() {
+      mobileMenu.classList.add('active');
+      mobileOverlay.classList.add('active');
+      document.body.style.overflow = 'hidden';
+      mobileMenu.setAttribute('aria-hidden', 'false');
+      mobileBtn.setAttribute('aria-expanded', 'true');
+    }
+    function closeMenu() {
+      mobileMenu.classList.remove('active');
+      mobileOverlay.classList.remove('active');
+      document.body.style.overflow = '';
+      mobileMenu.setAttribute('aria-hidden', 'true');
+      mobileBtn.setAttribute('aria-expanded', 'false');
+    }
+    mobileBtn.addEventListener('click', openMenu);
+    mobileClose.addEventListener('click', closeMenu);
+    mobileOverlay.addEventListener('click', closeMenu);
+    document.querySelectorAll('.mobile-nav-link').forEach(l => l.addEventListener('click', closeMenu));
+
+    // FAQ Accordion
+    document.querySelectorAll('.faq-item .faq-toggle').forEach(toggle => {
+      toggle.addEventListener('click', () => {
+        const faqItem = toggle.parentElement;
+        const isOpen = faqItem.classList.contains('open');
+
+        // Close all others
+        document.querySelectorAll('.faq-item').forEach(item => {
+          item.classList.remove('open');
+        });
+
+        // Toggle current
+        if (!isOpen) {
+          faqItem.classList.add('open');
         }
-        
-        mobileBtn.addEventListener('click', openMobileMenu);
-        mobileClose.addEventListener('click', closeMobileMenu);
-        mobileOverlay.addEventListener('click', closeMobileMenu);
-        
-        document.querySelectorAll('.mobile-nav-link').forEach(link => {
-            link.addEventListener('click', closeMobileMenu);
-        });
-        
-        const contactForm = document.getElementById('contactForm');
-        contactForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            alert('¡Gracias por tu solicitud! Te contactaremos muy pronto.');
-            contactForm.reset();
-        });
-    </script>
+      });
+    });
+
+    // Tariff Levels and Schedules
+    document.querySelectorAll('.tariff-level-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const level = btn.dataset.level;
+
+        // Remove active from all
+        document.querySelectorAll('.tariff-level-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tariff-level').forEach(l => l.classList.remove('active'));
+
+        // Add active to selected
+        btn.classList.add('active');
+        document.getElementById('level-' + level).classList.add('active');
+      });
+    });
+
+    document.querySelectorAll('.tariff-schedule-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const schedule = btn.parentElement;
+        schedule.classList.toggle('open');
+      });
+    });
+
+    // Enrollment form
+    document.getElementById('enrollmentForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      alert('Gracias por tu solicitud! Nos pondremos en contacto contigo muy pronto.');
+      e.target.reset();
+    });
+
+    // Smooth scroll for anchor links
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+      anchor.addEventListener('click', function(e) {
+        const href = this.getAttribute('href');
+        if (href === '#') return;
+        const target = document.querySelector(href);
+        if (target) {
+          e.preventDefault();
+          window.scrollTo({
+            top: target.offsetTop - 80,
+            behavior: 'smooth'
+          });
+        }
+      });
+    });
+  </script>
+  <noscript>
+    <style>.años-init{opacity:1!important;transform:none!important}</style>
+    <p style="text-align:center;padding:20px;background:#fff3cd;color:#856404">Este sitio funciona mejor con JavaScript habilitado.</p>
+  </noscript>
 </body>
 </html>
+
+

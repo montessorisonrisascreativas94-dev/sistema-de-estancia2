@@ -108,6 +108,7 @@ export const Helpers = {
    */
   vibrate(style = 'light') {
     if (!('vibrate' in navigator)) return;
+    if (navigator.userActivation && !navigator.userActivation.hasBeenActive) return;
     
     try {
       const patterns = {
