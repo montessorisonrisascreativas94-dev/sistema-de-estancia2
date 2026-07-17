@@ -559,6 +559,8 @@ export const CajaCobro = {
     _state.selectedStudent = student;
     _state.cart = [];
     _state.totalMora = _state.totalDiscount = 0;
+    _state.selectedPaymentMethod = null;
+
     const { data: enrollments } = await supabase.from('student_enrollments')
       .select('id').eq('student_id', studentId).order('created_at', {ascending: false}).limit(1);
     let charges = [];
@@ -571,6 +573,19 @@ export const CajaCobro = {
       charges = sc || [];
     }
     _state.charges = charges;
+
+    // Cargar pagos del año para mostrar el estado mensual real
+    const yearStart = new Date().getFullYear() + '-01-01';
+    const { data: paidPayments } = await supabase.from('payments')
+      .select('month_paid, paid_date, status')
+      .eq('student_id', studentId)
+      .eq('status', 'paid')
+      .gte('paid_date', yearStart + 'T00:00:00')
+      .not('month_paid', 'is', null);
+    _state.paidMonths = new Set((paidPayments || []).map(p => p.month_paid));
+
+    // Limpiar modal anterior si existe
+    document.getElementById('cajaModalOverlay')?.parentElement?.remove();
     openCobroModal();
   },
 
@@ -622,9 +637,12 @@ export const CajaCobro = {
   },
 
   async confirmPayment() {
-    if (!_state.selectedStudent || !_state.cart.length) return;
+    if (!_state.selectedStudent || !_state.cart.length) {
+      Helpers.toast('Selecciona un estudiante y agrega conceptos al carrito', 'warning');
+      return;
+    }
     const btn = document.getElementById('btnConfirmarPago');
-    if (btn) btn.disabled = true; btn.textContent = 'Procesando...';
+    if (btn) { btn.disabled = true; btn.textContent = 'Procesando...'; }
     try {
       const paymentIds = [];
       for (const item of _state.cart) {
@@ -680,11 +698,19 @@ export const CajaCobro = {
         status: 'paid'
       });
       Helpers.toast('Pago registrado! Factura generada.', 'success');
+      // Limpiar estado después de cobro exitoso
+      _state.selectedStudent = null;
+      _state.cart = [];
+      _state.charges = [];
+      _state.paidMonths = new Set();
+      _state.totalMora = 0;
+      _state.totalDiscount = 0;
+      _state.selectedPaymentMethod = null;
       await _loadStudents();
     } catch (e) {
       console.error(e);
       Helpers.toast('Error al procesar pago', 'error');
-      if (btn) btn.disabled = false; btn.textContent = 'COBRAR Y EMITIR FACTURA';
+      if (btn) { btn.disabled = false; btn.textContent = 'COBRAR Y EMITIR FACTURA'; }
     }
   },
 
@@ -802,12 +828,14 @@ function openCobroModal() {
           <h4 class="text-xs font-black text-slate-600 uppercase tracking-wider mb-3">Estado Mensual ${new Date().getFullYear()}</h4>
           <div class="grid grid-cols-6 gap-1.5">
             ${months.map((m, i) => {
-              const isPaid = false;
-              const isOverdue = i < new Date().getMonth();
-              const isCurrent = i === new Date().getMonth();
-              const bg = isPaid ? 'bg-[#E6F7EB] text-[#28B54D]' : isOverdue ? 'bg-red-50 text-red-600' : isCurrent ? 'bg-[#E8F2FF] text-[#0B63C7]' : 'bg-white text-slate-400';
-              const icon = isPaid ? '✓' : isOverdue ? '·' : isCurrent ? '→' : '○';
-              return `<div class="rounded-xl p-1.5 text-center border border-slate-100 ${bg}">
+              const monthKey = new Date().getFullYear() + '-' + String(i+1).padStart(2,'0');
+              const isPaid = (_state.paidMonths || new Set()).has(monthKey);
+              const curMonth = new Date().getMonth();
+              const isOverdue = !isPaid && i < curMonth;
+              const isCurrent = !isPaid && i === curMonth;
+              const bg = isPaid ? 'bg-[#E6F7EB] text-[#28B54D] border-[#28B54D]/20' : isOverdue ? 'bg-red-50 text-red-600 border-red-200' : isCurrent ? 'bg-[#E8F2FF] text-[#0B63C7] border-[#0B63C7]/20' : 'bg-white text-slate-400 border-slate-100';
+              const icon = isPaid ? '✓' : isOverdue ? '!' : isCurrent ? '→' : '○';
+              return `<div class="rounded-xl p-1.5 text-center border ${bg}">
                 <div class="text-[9px] font-black uppercase">${m.slice(0,3)}</div>
                 <div class="text-sm font-black leading-none mt-0.5">${icon}</div>
               </div>`;
@@ -1041,7 +1069,14 @@ async function _deleteConcept(id) {
 
 function closeCobroModal() {
   const el = document.getElementById('cajaModalOverlay');
-  if (el) el.remove();
+  if (el) el.parentElement?.remove();
+  // Limpiar estado para evitar datos del cobro anterior
+  _state.selectedStudent = null;
+  _state.cart = [];
+  _state.charges = [];
+  _state.totalMora = 0;
+  _state.totalDiscount = 0;
+  _state.selectedPaymentMethod = null;
 }
 
 // Add to CajaCobro object
