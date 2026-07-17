@@ -128,7 +128,7 @@ async function loadDashboard() {
       { data: classrooms },
       { data: students }
     ] = await Promise.all([
-      supabase.from('profiles').select('*').eq('role', 'teacher'),
+      supabase.from('profiles').select('*').eq('role', 'maestra'),
       supabase.from('classrooms').select('*'),
       supabase.from('students').select('*')
     ]);
@@ -688,7 +688,7 @@ async function loadQRAccess() {
     // Load teachers and students
     const [teachersRes, studentsRes] = await Promise.all([
       supabase.from('profiles').select('*').eq('role', 'maestra'),
-      supabase.from('students').select('*, classrooms(name)')
+      supabase.from('students').select('*, classrooms:classroom_id(name)')
     ]);
     
     const teachers = teachersRes.data || [];
@@ -1002,8 +1002,7 @@ async function loadChatMessages() {
       const { data: conv } = await supabase
         .from('messages')
         .select('*')
-        .or(`sender_id.eq.${_chatState.currentUserId},receiver_id.eq.${_chatState.currentUserId}`)
-        .or(`sender_id.eq.${_chatState.activeContactId},receiver_id.eq.${_chatState.activeContactId}`)
+        .or(`and(sender_id.eq.${_chatState.currentUserId},receiver_id.eq.${_chatState.activeContactId}),and(sender_id.eq.${_chatState.activeContactId},receiver_id.eq.${_chatState.currentUserId})`)
         .order('created_at', { ascending: true });
       
       messages = conv || [];
@@ -1491,7 +1490,7 @@ window.addEventListener('unhandledrejection', (e) => {
 
 document.addEventListener('DOMContentLoaded', async () => {
   try {
-    const auth = await ensureRole('education_coordinator');
+    const auth = await ensureRole(['encargada', 'education_coordinator']);
     if (!auth) return;
 
     AppState.set('user', auth.user);

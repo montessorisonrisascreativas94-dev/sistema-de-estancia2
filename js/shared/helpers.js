@@ -136,7 +136,7 @@ export const Helpers = {
   },
 
   /**
-   * Plantilla profesional de carnet doble cara para impresion
+   * Plantilla profesional de carnet de una sola cara (split 50/50) para impresion
    * @param {string} qrImg - data URL del QR
    * @param {string} name - nombre del estudiante
    * @param {string} matricula - matricula (se muestra con prefijo MSC-)
@@ -145,21 +145,12 @@ export const Helpers = {
   getQRPrintTemplate(qrImg, name, matricula, opts = {}) {
     const mat = (matricula || '').startsWith('MSC-') ? matricula : 'MSC-' + (matricula || '');
     const classroom = opts.classroom || '';
-    const schedule  = opts.schedule  || '';
-    const year      = opts.year      || new Date().getFullYear() + '-' + (new Date().getFullYear() + 1);
+    const schedule  = opts.schedule  || '08:00 AM - 12:30 PM';
+    const year      = opts.year      || new Date().getFullYear();
     const school    = 'Colegio Montessori Sonrisas Creativas';
 
-    // SVG Triangle mascot (orange)
-    const triangle = `<svg width="38" height="44" viewBox="0 0 180 200" style="display:block">
-      <polygon points="90,12 168,175 12,175" fill="#FF7A00" stroke="#D96500" stroke-width="4"/>
-      <circle cx="72" cy="110" r="14" fill="white"/><circle cx="108" cy="110" r="14" fill="white"/>
-      <circle cx="73" cy="111" r="7" fill="#1A2340"/><circle cx="109" cy="111" r="7" fill="#1A2340"/>
-      <circle cx="76" cy="108" r="3" fill="white"/><circle cx="112" cy="108" r="3" fill="white"/>
-      <path d="M 65 138 Q 90 155 115 138" stroke="#1A2340" stroke-width="5" fill="none" stroke-linecap="round"/>
-    </svg>`;
-
     // SVG Pentagon mascot (green)
-    const pentagon = `<svg width="38" height="44" viewBox="0 0 180 210" style="display:block">
+    const pentagon = `<svg width="28" height="32" viewBox="0 0 180 210" style="display:block">
       <ellipse cx="90" cy="22" rx="46" ry="16" fill="#0B63C7"/>
       <path d="M 52 28 Q 40 42 48 56 L 132 56 Q 140 42 128 28 Z" fill="#0B63C7"/>
       <polygon points="90,56 168,112 140,198 40,198 12,112" fill="#28B54D" stroke="#1A8035" stroke-width="4"/>
@@ -181,37 +172,41 @@ export const Helpers = {
     .page{width:210mm;min-height:297mm;margin:0 auto;padding:10mm;background:#f1f5f9}
     .card-wrap{display:inline-flex;gap:0;margin:4mm;vertical-align:top}
     /* Card dimensions: 85.6mm x 54mm (credit card size) */
-    .card{width:85.6mm;height:54mm;border-radius:5mm;overflow:hidden;position:relative;border:2.5pt solid #0B63C7;background:white;box-shadow:0 2px 8px rgba(11,99,199,.15)}
-    /* FRONT FACE - QR */
-    .card-front{display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(180deg,#E8F2FF 0%,white 100%)}
-    .card-front-header{background:linear-gradient(135deg,#0B63C7 0%,#0850A0 100%);width:100%;height:10mm;display:flex;align-items:center;justify-content:space-between;padding:0 3mm;flex-shrink:0}
-    .card-front-header .school-name{color:white;font-size:5.5pt;font-weight:900;letter-spacing:.3pt;text-transform:uppercase}
-    .card-front-header .mascots{display:flex;align-items:center;gap:1.5mm;flex-shrink:0}
-    .card-front-body{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2mm;padding:2mm}
-    .qr-box-front{width:26mm;height:26mm;background:white;border-radius:2mm;border:1.5pt solid #0B63C7;display:flex;align-items:center;justify-content:center;padding:1mm}
-    .qr-box-front img{width:100%;height:100%;display:block}
-    .qr-label-front{font-size:6pt;font-weight:900;color:#0B63C7;letter-spacing:.5pt;font-family:monospace;text-align:center}
-    /* BACK FACE - Info */
-    .card-back{display:flex;flex-direction:column}
-    .card-back-header{background:linear-gradient(135deg,#0B63C7,#0850A0);height:10mm;display:flex;align-items:center;justify-content:space-between;padding:0 3mm;flex-shrink:0}
-    .card-back-header .title{color:white;font-size:6pt;font-weight:900;text-transform:uppercase;letter-spacing:.5pt}
-    .card-back-body{flex:1;display:flex;align-items:center;padding:2.5mm 3mm;gap:2mm}
-    .card-photo{width:16mm;height:16mm;border-radius:2.5mm;border:1.5pt solid #0B63C7;background:#E8F2FF;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;align-self:center}
-    .card-photo img{width:100%;height:100%;object-fit:cover}
-    .card-photo-placeholder{font-size:14pt;color:#0B63C7}
-    .card-info{flex:1;display:flex;flex-direction:column;justify-content:center;gap:1mm}
-    .card-name{font-size:7.5pt;font-weight:900;color:#1A2340;line-height:1.2}
-    .card-label{font-size:4.5pt;font-weight:900;color:#94a3b8;text-transform:uppercase;letter-spacing:.4pt;margin-bottom:.5mm}
-    .card-value{font-size:6pt;font-weight:700;color:#1A2340}
-    .card-mat{font-size:7pt;font-weight:900;color:#0B63C7;letter-spacing:.5pt;font-family:monospace}
+    .card-single{width:85.6mm;height:54mm;border-radius:4mm;overflow:hidden;position:relative;border:1.5pt solid #28B54D;background:white;box-shadow:0 4px 12px rgba(40,181,77,.15);display:flex;flex-direction:column}
+    /* Cabecera del carnet */
+    .card-header{background:linear-gradient(135deg,#28B54D 0%,#1A8035 100%);width:100%;height:9mm;display:flex;align-items:center;justify-content:space-between;padding:0 3mm;flex-shrink:0}
+    .school-title{color:white;font-size:5pt;font-weight:900;letter-spacing:.2pt;text-transform:uppercase}
+    /* Cuerpo dividido en 2 mitades (50 / 50) */
+    .card-body-split{flex:1;display:flex;width:100%;height:calc(100% - 15mm)}
+    /* Mitad Izquierda - QR */
+    .split-left-qr{width:50%;border-right:1px dashed #e2e8f0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#fafafb;padding:1.5mm}
+    .qr-container{width:28mm;height:28mm;background:white;border:1pt solid #28B54D;border-radius:1.5mm;padding:1mm;display:flex;align-items:center;justify-content:center}
+    .qr-container img{width:100%;height:100%;display:block}
+    .qr-helper-text{font-size:4.5pt;font-weight:900;color:#718096;margin-top:1mm;text-transform:uppercase;letter-spacing:.3pt}
+    /* Mitad Derecha - Información y Foto del Estudiante */
+    .split-right-info{width:50%;display:flex;flex-direction:column;justify-content:space-between;padding:2mm 3mm}
+    .student-badge-row{display:flex;align-items:center;gap:2mm}
+    /* Foto del estudiante redondeada */
+    .student-avatar{width:11mm;height:11mm;border-radius:2mm;border:1pt solid #FF8A00;background:#fff8f0;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0}
+    .student-avatar img{width:100%;height:100%;object-fit:cover}
+    .student-avatar-placeholder{font-size:12pt;color:#FF8A00}
+    /* Bloque de datos */
+    .student-data{display:flex;flex-direction:column}
+    .student-name{font-size:6.5pt;font-weight:900;color:#1A2340;line-height:1.1;margin-bottom:.5mm}
+    .student-id{font-size:5.5pt;font-weight:900;color:#FF8A00;font-family:monospace}
+    .academic-details{display:flex;flex-direction:column;gap:.5mm;margin-top:1mm}
+    .detail-item{display:flex;flex-direction:column}
+    .detail-label{font-size:4pt;font-weight:900;color:#a0aec0;text-transform:uppercase;letter-spacing:.2pt}
+    .detail-value{font-size:5.2pt;font-weight:700;color:#2d3748}
+    /* Pie de carnet */
     .card-footer{background:#1A2340;height:6mm;display:flex;align-items:center;justify-content:space-between;padding:0 3mm;flex-shrink:0}
-    .card-footer p{color:rgba(255,255,255,.7);font-size:4.5pt;font-weight:800;letter-spacing:.8pt;text-transform:uppercase}
+    .footer-text{color:rgba(255,255,255,.8);font-size:4.5pt;font-weight:800;letter-spacing:.5pt;text-transform:uppercase}
     /* Print layout: 2 cols x 5 rows = 10 per page */
     .cards-grid{display:flex;flex-wrap:wrap;gap:4mm}
     @media print{
       body{background:white}
       .page{padding:8mm;background:white}
-      .card{box-shadow:none}
+      .card-single{box-shadow:none}
       @page{size:A4;margin:0}
     }
   </style>
@@ -220,35 +215,57 @@ export const Helpers = {
 <div class="page">
   <div class="cards-grid">
 
-    <!-- FRONT (QR) -->
-    <div class="card card-front">
-      <div class="card-front-header">
-        <div class="school-name">${school}</div>
-        <div class="mascots">${triangle}${pentagon}</div>
+    <!-- Tarjeta Single Split -->
+    <div class="card-single">
+      <!-- Cabecera -->
+      <div class="card-header">
+        <span class="school-title">${school}</span>
+        ${pentagon}
       </div>
-      <div class="card-front-body">
-        <div class="qr-box-front"><img src="${qrImg}" alt="QR Code"></div>
-        <div class="qr-label-front">${mat}</div>
-      </div>
-    </div>
 
-    <!-- BACK (Info) -->
-    <div class="card card-back">
-      <div class="card-back-header">
-        <div class="title">Credencial de Acceso</div>
-        <div class="mascots">${triangle}${pentagon}</div>
-      </div>
-      <div class="card-back-body">
-        <div class="card-photo"><span class="card-photo-placeholder">&#128100;</span></div>
-        <div class="card-info">
-          <div class="card-name">${name || 'Estudiante'}</div>
-          <div class="card-label">Matricula</div>
-          <div class="card-mat">${mat}</div>
-          ${classroom ? `<div><div class="card-label">Aula</div><div class="card-value">${classroom}</div></div>` : ''}
-          ${schedule  ? `<div><div class="card-label">Horario</div><div class="card-value">${schedule}</div></div>` : ''}
+      <!-- Cuerpo Dividido en Dos (Left QR / Right Info) -->
+      <div class="card-body-split">
+        <!-- Izquierda: Código QR -->
+        <div class="split-left-qr">
+          <div class="qr-container">
+            <img src="${qrImg}" alt="QR Acceso">
+          </div>
+          <span class="qr-helper-text">Escanear para entrada/salida</span>
+        </div>
+
+        <!-- Derecha: Datos y Foto -->
+        <div class="split-right-info">
+          <div class="student-badge-row">
+            <!-- Avatar del Estudiante -->
+            <div class="student-avatar">
+              <span class="student-avatar-placeholder">👶</span>
+            </div>
+            <!-- Nombre e ID -->
+            <div class="student-data">
+              <h4 class="student-name">${Helpers.escapeHTML(name || 'Estudiante')}</h4>
+              <span class="student-id">${mat}</span>
+            </div>
+          </div>
+
+          <!-- Detalles Académicos -->
+          <div class="academic-details">
+            ${classroom ? `<div class="detail-item">
+              <span class="detail-label">Aula</span>
+              <span class="detail-value">${Helpers.escapeHTML(classroom)}</span>
+            </div>` : ''}
+            <div class="detail-item">
+              <span class="detail-label">Horario escolar</span>
+              <span class="detail-value">${Helpers.escapeHTML(schedule)}</span>
+            </div>
+          </div>
         </div>
       </div>
-      <div class="card-footer"><p>Colegio Montessori Sonrisas Creativas</p></div>
+
+      <!-- Pie de Tarjeta -->
+      <div class="card-footer">
+        <span class="footer-text">Seguridad & Control de Acceso</span>
+        <span class="footer-text" style="color:#FF8A00">Curso ${year}</span>
+      </div>
     </div>
 
   </div>
@@ -259,8 +276,7 @@ export const Helpers = {
   },
 
   /**
-   * Imprime todos los carnets de una lista de estudiantes en un solo PDF
-   * 2 columnas (frente+reverso) x N filas, en hojas A4
+   * Imprime todos los carnets de una lista de estudiantes en un solo PDF (single-sided split design)
    * @param {Array} students - [{name, matricula, classroom, schedule, avatarUrl}]
    */
   async printAllCarnets(students = []) {
@@ -291,72 +307,110 @@ export const Helpers = {
       } catch (_) { document.body.removeChild(tmp); res({ ...st, qrImg: '', mat }); }
     })));
 
-    // Triangle and Pentagon SVGs
-    const triangle = `<svg width="30" height="36" viewBox="0 0 180 200"><polygon points="90,12 168,175 12,175" fill="#FF7A00" stroke="#D96500" stroke-width="4"/><circle cx="72" cy="110" r="14" fill="white"/><circle cx="108" cy="110" r="14" fill="white"/><circle cx="73" cy="111" r="7" fill="#1A2340"/><circle cx="109" cy="111" r="7" fill="#1A2340"/><path d="M 65 138 Q 90 155 115 138" stroke="#1A2340" stroke-width="5" fill="none" stroke-linecap="round"/></svg>`;
-    const pentagon = `<svg width="30" height="36" viewBox="0 0 180 210"><ellipse cx="90" cy="22" rx="46" ry="16" fill="#0B63C7"/><path d="M 52 28 Q 40 42 48 56 L 132 56 Q 140 42 128 28 Z" fill="#0B63C7"/><polygon points="90,56 168,112 140,198 40,198 12,112" fill="#28B54D" stroke="#1A8035" stroke-width="4"/><circle cx="75" cy="128" r="13" fill="white"/><circle cx="105" cy="128" r="13" fill="white"/><circle cx="76" cy="129" r="6" fill="#1A2340"/><circle cx="106" cy="129" r="6" fill="#1A2340"/><path d="M 66 155 Q 90 170 114 155" stroke="#1A2340" stroke-width="5" fill="none" stroke-linecap="round"/></svg>`;
+    // Pentagon SVG mascot
+    const pentagon = `<svg width="26" height="30" viewBox="0 0 180 210" style="display:block">
+      <ellipse cx="90" cy="22" rx="46" ry="16" fill="#0B63C7"/>
+      <path d="M 52 28 Q 40 42 48 56 L 132 56 Q 140 42 128 28 Z" fill="#0B63C7"/>
+      <polygon points="90,56 168,112 140,198 40,198 12,112" fill="#28B54D" stroke="#1A8035" stroke-width="4"/>
+      <circle cx="75" cy="128" r="13" fill="white"/><circle cx="105" cy="128" r="13" fill="white"/>
+      <circle cx="76" cy="129" r="6" fill="#1A2340"/><circle cx="106" cy="129" r="6" fill="#1A2340"/>
+      <circle cx="79" cy="126" r="2.5" fill="white"/><circle cx="109" cy="126" r="2.5" fill="white"/>
+      <path d="M 66 155 Q 90 170 114 155" stroke="#1A2340" stroke-width="5" fill="none" stroke-linecap="round"/>
+    </svg>`;
 
-    const year = new Date().getFullYear() + '-' + (new Date().getFullYear() + 1);
+    const year = new Date().getFullYear();
     const school = 'Colegio Montessori Sonrisas Creativas';
+    const defaultSchedule = '08:00 AM - 12:30 PM';
 
     const cardsHTML = qrImages.map(st => `
-      <!-- FRONT (QR) -->
-      <div class="card card-front">
-        <div class="card-front-header">
-          <div class="school-name">${school}</div>
-          <div class="mascots">${triangle}${pentagon}</div>
+      <!-- Tarjeta Single Split -->
+      <div class="card-single">
+        <!-- Cabecera -->
+        <div class="card-header">
+          <span class="school-title">${school}</span>
+          ${pentagon}
         </div>
-        <div class="card-front-body">
-          <div class="qr-box-front">${st.qrImg ? `<img src="${st.qrImg}">` : '<span style="font-size:8pt;color:#94a3b8">QR</span>'}</div>
-          <div class="qr-label-front">${st.mat}</div>
-        </div>
-      </div>
-      <!-- BACK (Info) -->
-      <div class="card card-back">
-        <div class="card-back-header">
-          <div class="title">Credencial de Acceso</div>
-          <div class="mascots">${triangle}${pentagon}</div>
-        </div>
-        <div class="card-back-body">
-          <div class="card-photo"><span class="card-photo-placeholder">&#128100;</span></div>
-          <div class="card-info">
-            <div class="card-name">${(st.name||'—').substring(0,28)}</div>
-            <div class="card-label">Matricula</div>
-            <div class="card-mat">${st.mat}</div>
-            ${st.classroom ? `<div><div class="card-label">Aula</div><div class="card-value">${st.classroom}</div></div>` : ''}
+
+        <!-- Cuerpo Dividido en Dos (Left QR / Right Info) -->
+        <div class="card-body-split">
+          <!-- Izquierda: Código QR -->
+          <div class="split-left-qr">
+            <div class="qr-container">
+              ${st.qrImg ? `<img src="${st.qrImg}" alt="QR Acceso">` : '<span style="font-size:8pt;color:#94a3b8">QR</span>'}
+            </div>
+            <span class="qr-helper-text">Escanear para entrada/salida</span>
+          </div>
+
+          <!-- Derecha: Datos y Foto -->
+          <div class="split-right-info">
+            <div class="student-badge-row">
+              <!-- Avatar del Estudiante -->
+              <div class="student-avatar">
+                <span class="student-avatar-placeholder">👶</span>
+              </div>
+              <!-- Nombre e ID -->
+              <div class="student-data">
+                <h4 class="student-name">${Helpers.escapeHTML((st.name||'—').substring(0,26))}</h4>
+                <span class="student-id">${st.mat}</span>
+              </div>
+            </div>
+
+            <!-- Detalles Académicos -->
+            <div class="academic-details">
+              ${st.classroom ? `<div class="detail-item">
+                <span class="detail-label">Aula</span>
+                <span class="detail-value">${Helpers.escapeHTML(st.classroom)}</span>
+              </div>` : ''}
+              <div class="detail-item">
+                <span class="detail-label">Horario escolar</span>
+                <span class="detail-value">${Helpers.escapeHTML(st.schedule || defaultSchedule)}</span>
+              </div>
+            </div>
           </div>
         </div>
-        <div class="card-footer"><p>Colegio Montessori Sonrisas Creativas</p></div>
+
+        <!-- Pie de Tarjeta -->
+        <div class="card-footer">
+          <span class="footer-text">Seguridad & Control de Acceso</span>
+          <span class="footer-text" style="color:#FF8A00">Curso ${year}</span>
+        </div>
       </div>`).join('\n');
 
     const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Carnets Estudiantes</title>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Nunito',sans-serif;background:white;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .page{width:210mm;margin:0 auto;padding:8mm}
-.cards-grid{display:flex;flex-wrap:wrap;gap:3mm;justify-content:flex-start}
-.card{width:85.6mm;height:54mm;border-radius:4.5mm;overflow:hidden;position:relative;border:2pt solid #0B63C7;background:white;flex-shrink:0}
-.card-front{display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(180deg,#E8F2FF 0%,white 100%)}
-.card-front-header{background:linear-gradient(135deg,#0B63C7,#0850A0);width:100%;height:10mm;display:flex;align-items:center;justify-content:space-between;padding:0 3mm;flex-shrink:0}
-.school-name{color:white;font-size:5pt;font-weight:900;letter-spacing:.3pt;text-transform:uppercase}
-.mascots{display:flex;align-items:center;gap:1mm;flex-shrink:0}
-.card-front-body{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2mm;padding:2mm}
-.qr-box-front{width:26mm;height:26mm;background:white;border-radius:2mm;border:1.5pt solid #0B63C7;display:flex;align-items:center;justify-content:center;padding:.8mm}
-.qr-box-front img{width:100%;height:100%}
-.qr-label-front{font-size:6pt;font-weight:900;color:#0B63C7;letter-spacing:.5pt;font-family:monospace;text-align:center}
-.card-back{display:flex;flex-direction:column}
-.card-back-header{background:linear-gradient(135deg,#0B63C7,#0850A0);height:10mm;display:flex;align-items:center;justify-content:space-between;padding:0 3mm;flex-shrink:0}
-.title{color:white;font-size:5.5pt;font-weight:900;text-transform:uppercase;letter-spacing:.5pt}
-.card-back-body{flex:1;display:flex;align-items:center;padding:2mm 2.5mm;gap:2mm}
-.card-photo{width:15mm;height:15mm;border-radius:2mm;border:1.5pt solid #0B63C7;background:#E8F2FF;display:flex;align-items:center;justify-content:center;flex-shrink:0;align-self:center}
-.card-photo-placeholder{font-size:13pt;color:#0B63C7}
-.card-info{flex:1;display:flex;flex-direction:column;justify-content:center;gap:.8mm}
-.card-name{font-size:7pt;font-weight:900;color:#1A2340;line-height:1.2}
-.card-label{font-size:4pt;font-weight:900;color:#94a3b8;text-transform:uppercase;letter-spacing:.4pt}
-.card-value{font-size:5.5pt;font-weight:700;color:#1A2340}
-.card-mat{font-size:6.5pt;font-weight:900;color:#0B63C7;letter-spacing:.5pt;font-family:monospace}
+.cards-grid{display:flex;flex-wrap:wrap;gap:4mm;justify-content:flex-start}
+.card-single{width:85.6mm;height:54mm;border-radius:4mm;overflow:hidden;position:relative;border:1.5pt solid #28B54D;background:white;flex-shrink:0;display:flex;flex-direction:column}
+/* Cabecera del carnet */
+.card-header{background:linear-gradient(135deg,#28B54D 0%,#1A8035 100%);width:100%;height:9mm;display:flex;align-items:center;justify-content:space-between;padding:0 3mm;flex-shrink:0}
+.school-title{color:white;font-size:5pt;font-weight:900;letter-spacing:.2pt;text-transform:uppercase}
+/* Cuerpo dividido en 2 mitades (50 / 50) */
+.card-body-split{flex:1;display:flex;width:100%;height:calc(100% - 15mm)}
+/* Mitad Izquierda - QR */
+.split-left-qr{width:50%;border-right:1px dashed #e2e8f0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#fafafb;padding:1.5mm}
+.qr-container{width:28mm;height:28mm;background:white;border:1pt solid #28B54D;border-radius:1.5mm;padding:1mm;display:flex;align-items:center;justify-content:center}
+.qr-container img{width:100%;height:100%}
+.qr-helper-text{font-size:4.5pt;font-weight:900;color:#718096;margin-top:1mm;text-transform:uppercase;letter-spacing:.3pt}
+/* Mitad Derecha - Información y Foto del Estudiante */
+.split-right-info{width:50%;display:flex;flex-direction:column;justify-content:space-between;padding:2mm 3mm}
+.student-badge-row{display:flex;align-items:center;gap:2mm}
+/* Foto del estudiante redondeada */
+.student-avatar{width:11mm;height:11mm;border-radius:2mm;border:1pt solid #FF8A00;background:#fff8f0;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.student-avatar-placeholder{font-size:12pt;color:#FF8A00}
+/* Bloque de datos */
+.student-data{display:flex;flex-direction:column}
+.student-name{font-size:6.5pt;font-weight:900;color:#1A2340;line-height:1.1;margin-bottom:.5mm}
+.student-id{font-size:5.5pt;font-weight:900;color:#FF8A00;font-family:monospace}
+.academic-details{display:flex;flex-direction:column;gap:.5mm;margin-top:1mm}
+.detail-item{display:flex;flex-direction:column}
+.detail-label{font-size:4pt;font-weight:900;color:#a0aec0;text-transform:uppercase;letter-spacing:.2pt}
+.detail-value{font-size:5.2pt;font-weight:700;color:#2d3748}
+/* Pie de carnet */
 .card-footer{background:#1A2340;height:6mm;display:flex;align-items:center;justify-content:space-between;padding:0 3mm;flex-shrink:0}
-.card-footer p{color:rgba(255,255,255,.7);font-size:4pt;font-weight:800;letter-spacing:.8pt;text-transform:uppercase}
+.footer-text{color:rgba(255,255,255,.8);font-size:4.5pt;font-weight:800;letter-spacing:.5pt;text-transform:uppercase}
 @media print{@page{size:A4;margin:0}.page{padding:6mm}}
 </style></head><body>
 <div class="page"><div class="cards-grid">${cardsHTML}</div></div>

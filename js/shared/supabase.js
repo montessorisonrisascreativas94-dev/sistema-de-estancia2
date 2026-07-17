@@ -326,14 +326,16 @@ export async function ensureRole(requiredRoles) {
       window.location.href = 'panel_control.html';
       return null;
     }
-    // Encargada behaves like asistente — redirect to asistente panel
+    // Encargada can access either panel_encargada.html or panel_asistente.html
     if (resolvedProfile.role?.toLowerCase() === 'encargada') {
       const isAsistePanel = window.location.pathname.includes('panel_asistente');
-      if (!isAsistePanel) {
-        window.location.href = 'panel_asistente.html';
+      const isEncargadaPanel = window.location.pathname.includes('panel_encargada');
+      if (!isAsistePanel && !isEncargadaPanel) {
+        // Default to panel_encargada if not on either
+        window.location.href = 'panel_encargada.html';
         return null;
       }
-      // Allow encargada to use asistente panel
+      // Allow encargada to use either panel
     } else {
       await supabase.auth.signOut();
       window.location.href = 'login.html?error=role';
