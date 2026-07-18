@@ -168,19 +168,25 @@ Deno.serve(async (req) => {
           if (!resolvedParentId) resolvedParentId = st?.parent_id;
         }
 
-        const tasks: Promise<unknown>[] = [];
-
         // Delegate to generate-invoice for professional email + invoice
         if (payment_id) {
+          const funcUrl = `${SUPABASE_URL}/functions/v1/generate-invoice`;
+          const funcBody = { payment_id, send_email: true };
+          console.log('[process-event] Calling generate-invoice at:', funcUrl, 'with body:', funcBody);
           tasks.push(
-            fetch(`${SUPABASE_URL}/functions/v1/generate-invoice`, {
+            fetch(funcUrl, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${SERVICE_KEY}`,
                 'apikey': SERVICE_KEY
               },
-              body: JSON.stringify({ payment_id, send_email: true })
+              body: JSON.stringify(funcBody)
+            }).then(async res => {
+              console.log('[process-event] generate-invoice response status:', res.status);
+              const text = await res.text();
+              console.log('[process-event] generate-invoice response body:', text);
+              return { ok: res.ok, status: res.status, text };
             }).catch(e => console.warn('[process-event] generate-invoice failed:', e))
           );
         }

@@ -200,6 +200,7 @@ function generateProfessionalReceipt(
 }
 
 Deno.serve(async (req) => {
+  console.log('[generate-invoice] Received request:', req.method, req.url);
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
 
   try {
@@ -214,6 +215,7 @@ Deno.serve(async (req) => {
     const resend = RESEND_KEY ? new Resend(RESEND_KEY) : null;
 
     const body = await req.json();
+    console.log('[generate-invoice] Request body:', body);
     const { payment_id, send_email = true } = body;
     if (!payment_id) return json({ error: 'Missing payment_id' }, 400);
 
@@ -231,7 +233,9 @@ Deno.serve(async (req) => {
       .eq('id', payment_id)
       .single();
 
+    console.log('[generate-invoice] Payment fetch result:', { data: !!payment, error: errPayment });
     if (errPayment || !payment) {
+      console.error('[generate-invoice] Payment not found or error:', errPayment);
       return json({ error: 'Payment not found: ' + (errPayment?.message || 'Unknown') }, 404);
     }
 
@@ -308,7 +312,8 @@ Deno.serve(async (req) => {
     const finalInvoice = { ...invoice, ascii_receipt: professionalReceipt };
 
     // 7. Enviar email si solicitado
-    if (send_email && resend && student.p1_email) {
+    const recipientEmails = [student.p1_email, student.p2_email].filter(Boolean) as string[];
+    if (send_email && resend && recipientEmails.length) {
       // Datos del colegio para el email
       const schoolName = school?.school_name || 'COLEGIO MONTESSORI SONRISAS CREATIVAS';
       const schoolEmailAddress = school?.email || 'contacto@montessorisonrisascreativas.com';
@@ -493,11 +498,11 @@ Deno.serve(async (req) => {
       try {
         await resend.emails.send({
           from: FROM_EMAIL,
-          to: student.p1_email,
+          to: recipientEmails,
           subject: `Recibo de Pago ${receiptNo} - ${student.name} · ${periodText || payment.concept}`,
           html
         });
-        console.log('[generate-invoice] Email sent to', student.p1_email);
+        console.log('[generate-invoice] Email sent to', recipientEmails.join(','));
       } catch (emailErr) {
         console.warn('[generate-invoice] Email failed:', emailErr);
       }
