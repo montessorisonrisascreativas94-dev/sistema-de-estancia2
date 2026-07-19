@@ -1,5 +1,4 @@
 import { supabase, sendPush, emitEvent } from '../../shared/supabase.js';
-import { TABLES } from '../../shared/constants.js';
 import { AppState } from '../state.js';
 import { MaestraApi } from '../api.js';
 import { UI } from './ui.js';
@@ -107,7 +106,8 @@ export async function openEditTaskModal(taskId) {
 }
 
 export async function deleteTask(taskId) {
-  if (!confirm('¿Eliminar esta tarea? Los datos se perderán permanentemente.')) return;
+  const confirmed = await Helpers.confirm('¿Eliminar esta tarea? Los datos se perderán permanentemente.');
+  if (!confirmed) return;
   try {
     await MaestraApi.deleteTask(taskId);
     safeToast('Tarea eliminada correctamente');

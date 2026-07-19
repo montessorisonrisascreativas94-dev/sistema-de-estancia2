@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Validar Factura — Colegio Montessori Sonrisas Creativas</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:linear-gradient(135deg,#f0f4f8 0%,#e2e8f0 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;color:#1a2340}
+    .card{background:white;border-radius:20px;max-width:480px;width:100%;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.1)}
+    .card-header{background:linear-gradient(135deg,#0B63C7,#0850A0);padding:32px 28px;text-align:center;position:relative;overflow:hidden}
+    .card-header::before{content:'';position:absolute;top:-40px;right:-40px;width:150px;height:150px;background:radial-gradient(circle,rgba(255,255,255,.1),transparent);border-radius:50%}
+    .card-header .logo{width:60px;height:60px;border-radius:14px;background:white;margin:0 auto 14px;overflow:hidden;border:2px solid rgba(255,255,255,.3);box-shadow:0 4px 12px rgba(0,0,0,.2)}
+    .card-header .logo img{width:100%;height:100%;object-fit:cover}
+    .card-header h1{color:white;font-size:18px;font-weight:900;margin-bottom:4px}
+    .card-header p{color:rgba(255,255,255,.75);font-size:12px;font-weight:600}
+    .card-body{padding:28px}
+    .loading{text-align:center;padding:40px 0}
+    .loading .spinner{width:40px;height:40px;border:4px solid #e2e8f0;border-top-color:#0B63C7;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 16px}
+    .loading p{color:#94a3b8;font-size:14px;font-weight:600}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .valid-badge{display:flex;align-items:center;gap:12px;padding:14px 18px;background:#f0fdf4;border:2px solid #bbf7d0;border-radius:14px;margin-bottom:20px}
+    .valid-badge .icon{width:44px;height:44px;background:#28B54D;border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-size:20px;flex-shrink:0}
+    .valid-badge .text h3{font-size:15px;font-weight:900;color:#166534}
+    .valid-badge .text p{font-size:12px;color:#15803d;font-weight:600}
+    .invalid-badge{display:flex;align-items:center;gap:12px;padding:14px 18px;background:#fef2f2;border:2px solid #fecdd3;border-radius:14px;margin-bottom:20px}
+    .invalid-badge .icon{width:44px;height:44px;background:#EF4444;border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-size:20px;flex-shrink:0}
+    .invalid-badge .text h3{font-size:15px;font-weight:900;color:#991b1b}
+    .invalid-badge .text p{font-size:12px;color:#b91c1c;font-weight:600}
+    .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px}
+    .info-item{padding:12px;background:#f8fafc;border-radius:10px;border:1px solid #e9ecef}
+    .info-item label{display:block;font-size:9px;font-weight:900;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+    .info-item span{display:block;font-size:13px;font-weight:800;color:#1a2340}
+    .info-item.full{grid-column:1/-1}
+    .total-box{text-align:center;padding:20px;background:linear-gradient(135deg,#f0fdf4,#ecfdf5);border:2px solid #bbf7d0;border-radius:14px;margin-bottom:20px}
+    .total-box .label{font-size:11px;font-weight:800;color:#15803d;text-transform:uppercase;letter-spacing:.5px}
+    .total-box .amount{font-size:32px;font-weight:900;color:#28B54D;margin-top:4px}
+    .hash-section{padding:12px;background:#f8fafc;border-radius:10px;border:1px solid #e9ecef;margin-bottom:16px}
+    .hash-section label{display:block;font-size:9px;font-weight:900;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+    .hash-section code{font-size:10px;color:#64748b;word-break:break-all;font-family:monospace;line-height:1.5}
+    .footer{text-align:center;padding:16px 28px;background:#f8fafc;border-top:1px solid #e9ecef}
+    .footer p{font-size:11px;color:#94a3b8;font-weight:600}
+    .error-state{padding:40px 0;text-align:center}
+    .error-state .icon{font-size:3rem;margin-bottom:12px}
+    .error-state h3{font-size:18px;font-weight:900;color:#1a2340;margin-bottom:8px}
+    .error-state p{font-size:13px;color:#94a3b8;line-height:1.6}
+    .btn{display:inline-block;padding:12px 24px;border-radius:12px;font-size:14px;font-weight:800;text-decoration:none;cursor:pointer;border:none;transition:transform .15s}
+    .btn:hover{transform:scale(1.02)}
+    .btn-primary{background:#0B63C7;color:white}
+    .btn-outline{background:white;border:2px solid #e2e8f0;color:#64748b}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="card-header">
+      <div class="logo">
+        <img src="https://montessorisonrisascreativas.com/img/monte.jpg" alt="Logo" onerror="this.style.display='none'">
+      </div>
+      <h1>Validación de Factura</h1>
+      <p>Colegio Montessori Sonrisas Creativas</p>
+    </div>
+    <div class="card-body" id="content">
+      <div class="loading">
+        <div class="spinner"></div>
+        <p>Validando factura...</p>
+      </div>
+    </div>
+    <div class="footer">
+      <p>Documento generado electrónicamente con valor fiscal</p>
+    </div>
+  </div>
+
+  <script type="module">
+    const params = new URLSearchParams(window.location.search);
+    const uuid = params.get('uuid');
+    const content = document.getElementById('content');
+
+    if (!uuid) {
+      content.innerHTML = `
+        <div class="error-state">
+          <div class="icon">❓</div>
+          <h3>Sin código de validación</h3>
+          <p>Escanea el código QR de una factura válida o accede desde el enlace proporcionado en el correo electrónico.</p>
+        </div>`;
+    } else {
+      try {
+        // Conectar a Supabase
+        const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
+        const supabase = createClient(
+          'https://yswizaskeftxpcphixiy.supabase.co',
+          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlzd2l6YXNrZWZ0eHBjaGl4aXkiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTczOTYwOTQzMCwiZXhwIjoyMDU1MTg1NDMwfQ.FJfLQx4cR7OzgPwG5CJxH3VJr8sJ5XnK2vM9bT4wY1k'
+        );
+
+        const { data: invoice, error } = await supabase
+          .from('invoices')
+          .select('*')
+          .eq('uuid_folio', uuid)
+          .single();
+
+        if (error || !invoice) {
+          content.innerHTML = `
+            <div class="error-state">
+              <div class="icon">❌</div>
+              <h3>Factura no encontrada</h3>
+              <p>El código de validación proporcionado no corresponde a ninguna factura registrada en nuestro sistema.</p>
+            </div>`;
+          return;
+        }
+
+        const STATUS_MAP = { paid:'PAGADO', pending:'PENDIENTE', review:'EN REVISIÓN', overdue:'VENCIDO', cancelled:'ANULADA' };
+        const STATUS_COLOR = { paid:'#28B54D', pending:'#F59E0B', review:'#3B82F6', overdue:'#EF4444', cancelled:'#EF4444' };
+        const status = invoice.status || 'paid';
+        const stLabel = STATUS_MAP[status] || status.toUpperCase();
+        const stColor = STATUS_COLOR[status] || '#64748b';
+        const isValid = ['paid', 'issued'].includes(status);
+        const fmtCurrency = (n) => `RD$ ${Number(n||0).toLocaleString('es-DO', {minimumFractionDigits:2})}`;
+        const fmtDate = (d) => d ? new Date(d).toLocaleDateString('es-DO', {day:'numeric',month:'long',year:'numeric'}) : '—';
+        const fmtTime = (d) => d ? new Date(d).toLocaleTimeString('es-DO', {hour:'2-digit',minute:'2-digit'}) : '';
+
+        content.innerHTML = `
+          ${isValid
+            ? `<div class="valid-badge"><div class="icon">✓</div><div class="text"><h3>Factura Válida</h3><p>Documento verificado electrónicamente</p></div></div>`
+            : `<div class="invalid-badge"><div class="icon">!</div><div class="text"><h3>Factura ${stLabel}</h3><p>Este documento tiene estado: ${stLabel}</p></div></div>`
+          }
+
+          <div class="total-box">
+            <div class="label">Total de la Factura</div>
+            <div class="amount">${fmtCurrency(invoice.total || invoice.amount)}</div>
+          </div>
+
+          <div class="info-grid">
+            <div class="info-item"><label>N° Factura</label><span>${invoice.invoice_number || '—'}</span></div>
+            <div class="info-item"><label>Estado</label><span style="color:${stColor}">${stLabel}</span></div>
+            <div class="info-item"><label>Estudiante</label><span>${invoice.student_name || '—'}</span></div>
+            <div class="info-item"><label>Matrícula</label><span>${invoice.student_matricula || '—'}</span></div>
+            <div class="info-item"><label>Concepto</label><span>${invoice.concept || '—'}</span></div>
+            <div class="info-item"><label>Período</label><span>${invoice.period || '—'}</span></div>
+            <div class="info-item"><label>Fecha Emisión</label><span>${fmtDate(invoice.issued_date)}</span></div>
+            <div class="info-item"><label>Fecha Pago</label><span>${fmtDate(invoice.payment_date)} ${fmtTime(invoice.payment_date)}</span></div>
+            <div class="info-item"><label>Método de Pago</label><span style="text-transform:capitalize">${invoice.payment_method || '—'}</span></div>
+            <div class="info-item"><label>Atendido por</label><span>${invoice.attended_by || 'Sistema'}</span></div>
+            <div class="info-item full"><label>Folio Digital (UUID)</label><code>${invoice.uuid_folio || '—'}</code></div>
+          </div>
+
+          ${invoice.sha256_hash ? `
+          <div class="hash-section">
+            <label>Hash SHA-256 de Integridad</label>
+            <code>${invoice.sha256_hash}</code>
+          </div>` : ''}
+
+          ${invoice.pdf_url ? `<div style="text-align:center;margin-top:8px"><a href="${invoice.pdf_url}" target="_blank" class="btn btn-primary">📥 Descargar Factura PDF</a></div>` : ''}
+        `;
+      } catch (e) {
+        content.innerHTML = `
+          <div class="error-state">
+            <div class="icon">⚠️</div>
+            <h3>Error de Conexión</h3>
+            <p>No se pudo conectar con el servidor. Por favor intente nuevamente.</p>
+          </div>`;
+      }
+    }
+  </script>
+</body>
+</html>

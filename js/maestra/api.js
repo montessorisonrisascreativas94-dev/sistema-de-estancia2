@@ -1,49 +1,34 @@
 import { supabase } from '../shared/supabase.js';
 import { TABLES } from '../shared/constants.js';
 
-/**
- * Helper interno para manejar errores
- */
-function handleError(error, context) {
+function handleError(error) {
   if (error) throw error;
 }
 
-/**
- * Normaliza nombre de usuario (evita "Usuario")
- */
-function getDisplayName(profile) {
-  return profile?.full_name || profile?.name || 'Usuario';
+const _cache = new Map();
+function _cacheKey(method, ...args) { return `${method}:${args.join(':')}`; }
+function _getCache(method, ...args) {
+  const entry = _cache.get(_cacheKey(method, ...args));
+  if (entry && Date.now() - entry.ts < entry.ttl) return entry.data;
+  _cache.delete(_cacheKey(method, ...args));
+  return undefined;
+}
+function _setCache(method, data, ttl = 30000, ...args) {
+  _cache.set(_cacheKey(method, ...args), { data, ts: Date.now(), ttl });
+}
+export function invalidateCache(pattern) {
+  if (!pattern) { _cache.clear(); return; }
+  for (const key of _cache.keys()) {
+    if (key.includes(pattern)) _cache.delete(key);
+  }
 }
 
-/**
- * API Maestra (nivel producción)
- */
 export const MaestraApi = {
 
-  /**
-   * Perfil de maestra + aula
-   */
-  async getTeacherProfile(userId) {
-    const { data, error } = await supabase
-      .from(TABLES.PROFILES)
-      .select('id, name, email, phone, avatar_url, role, bio, classrooms:classrooms(id, name)')
-      .eq('id', userId)
-      .maybeSingle(); // ðŸ”¥ FIX
-
-    handleError(error, 'getTeacherProfile');
-
-    if (!data) return null;
-
-    return {
-      ...data,
-      display_name: getDisplayName(data)
-    };
-  },
-
-  /**
-   * Estudiantes por aula
-   */
   async getStudentsByClassroom(classroomId) {
+    const cached = _getCache('getStudents', classroomId);
+    if (cached) return cached;
+
     const { data, error } = await supabase
       .from(TABLES.STUDENTS)
       .select('id, name, avatar_url, matricula, allergies, blood_type, p1_name, p1_phone, p1_email, parent_id, age, age_type')
@@ -51,31 +36,29 @@ export const MaestraApi = {
       .eq('is_active', true)
       .order('name');
 
-    handleError(error, 'getStudentsByClassroom');
-    return data || [];
+    handleError(error);
+    const result = data || [];
+    _setCache('getStudents', result, 60000, classroomId);
+    return result;
   },
 
-  /**
-   * Asistencia del d\u00eda
-   */
   async getAttendance(classroomId, date) {
+    const cached = _getCache('getAttendance', classroomId, date);
+    if (cached) return cached;
+
     const { data, error } = await supabase
       .from(TABLES.ATTENDANCE)
       .select('id, student_id, status, check_in, check_out, date')
       .eq('classroom_id', classroomId)
       .eq('date', date);
 
-    handleError(error, 'getAttendance');
-    return data || [];
+    handleError(error);
+    const result = data || [];
+    _setCache('getAttendance', result, 30000, classroomId, date);
+    return result;
   },
 
-  /**
-   * Upsert asistencia (optimizado con periodo)
-   * academic_periods es OPCIONAL — si la tabla no existe, se ignora silenciosamente
-   */
   async upsertAttendance(record) {
-    // No usar academic_periods (tabla no existe)
-
     const { data: existing, error: findError } = await supabase
       .from(TABLES.ATTENDANCE)
       .select('id')
@@ -83,7 +66,7 @@ export const MaestraApi = {
       .eq('date', record.date)
       .maybeSingle();
 
-    handleError(findError, 'findAttendance');
+    handleError(findError);
 
     const query = existing
       ? supabase
@@ -96,15 +79,12 @@ export const MaestraApi = {
 
     const { data, error } = await query.select().maybeSingle();
 
-    handleError(error, 'upsertAttendance');
+    handleError(error);
+    invalidateCache('getAttendance');
     return data;
   },
 
-  /**
-   * Tareas â€” filtradas por período activo del aula
-   */
-  async getTasksByClassroom(classroomId, periodId = null) {
-    // Fallback directo para evitar 404 de RPC si no existe en BD
+  async getTasksByClassroom(classroomId) {
     const { data, error } = await supabase
       .from('tasks')
       .select('id, title, description, due_date, grading_system, file_url, created_at, period_id')
@@ -112,14 +92,14 @@ export const MaestraApi = {
       .order('created_at', { ascending: false })
       .limit(50);
 
-    handleError(error, 'getTasksByClassroom');
+    handleError(error);
     return data || [];
   },
 
-  /**
-   * Rutina diaria
-   */
   async getDailyRoutine(classroomId) {
+    const cached = _getCache('getDailyRoutine', classroomId);
+    if (cached) return cached;
+
     const { data, error } = await supabase
       .from('daily_logs')
       .select('id, student_id, date, mood, food, nap, eating, sleeping, activities, notes')
@@ -127,18 +107,16 @@ export const MaestraApi = {
       .order('created_at', { ascending: false })
       .limit(50);
 
-    handleError(error, 'getDailyRoutine');
-    return data || [];
+    handleError(error);
+    const result = data || [];
+    _setCache('getDailyRoutine', result, 15000, classroomId);
+    return result;
   },
 
-  /**
-   * Upsert rutina mejorado para bebés
-   */
   async upsertDailyLog(payload) {
     const cleanPayload = { ...payload };
-    if (!cleanPayload.status) cleanPayload.status = 'published'; // Por defecto es publicado
+    if (!cleanPayload.status) cleanPayload.status = 'published';
 
-    // 1. Buscar log existente
     const { data: existing, error: findError } = await supabase
       .from('daily_logs')
       .select('id, infant_data')
@@ -146,24 +124,22 @@ export const MaestraApi = {
       .eq('date', cleanPayload.date)
       .maybeSingle();
 
-    handleError(findError, 'findDailyLog');
+    handleError(findError);
 
-    // 2. Manejo especial de infant_data (JSONB append)
     if (cleanPayload.infant_event) {
       const newEvent = cleanPayload.infant_event;
       delete cleanPayload.infant_event;
-      
+
       const currentInfantData = existing?.infant_data || [];
       const updatedInfantData = [...currentInfantData, {
         ...newEvent,
         id: crypto.randomUUID?.() || Math.random().toString(36).substr(2, 9),
         created_at: new Date().toISOString()
       }];
-      
+
       cleanPayload.infant_data = updatedInfantData;
     }
 
-    // 3. Ejecutar query
     const query = existing
       ? supabase
           .from('daily_logs')
@@ -175,51 +151,23 @@ export const MaestraApi = {
 
     const { data, error } = await query.select().maybeSingle();
 
-    handleError(error, 'upsertDailyLog');
+    handleError(error);
+    invalidateCache('getDailyRoutine');
     return data;
   },
 
-  /**
-   * Publicar reporte(s) diario(s)
-   */
   async publishDailyLogs(logIds) {
     if (!logIds || !logIds.length) return;
     const { data, error } = await supabase
       .from('daily_logs')
       .update({ status: 'published' })
       .in('id', logIds);
-    
-    handleError(error, 'publishDailyLogs');
+
+    handleError(error);
+    invalidateCache('getDailyRoutine');
     return data;
   },
 
-  /**
-   * 📤 Upload con Cola Secuencial
-   * Evita saturar la red celular subiendo una imagen a la vez
-   */
-  async uploadMedia(file, bucket = 'posts') {
-    if (!this._uploadQueue) this._uploadQueue = Promise.resolve();
-
-    return this._uploadQueue = this._uploadQueue.then(async () => {
-      const { ImageLoader } = await import('/js/shared/image-loader.js');
-      const compressed = await ImageLoader.compress(file);
-      
-      const fileName = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}.webp`;
-      const path = `${fileName}`;
-
-      const { data, error } = await supabase.storage
-        .from(bucket)
-        .upload(path, compressed);
-
-      if (error) throw error;
-      const { data: { publicUrl } } = supabase.storage.from(bucket).getPublicUrl(path);
-      return publicUrl;
-    });
-  },
-
-  /**
-   * Crear tarea â€” vinculada al período activo del aula
-   */
   async createTask(payload) {
     const cleanPayload = {
       ...payload,
@@ -227,22 +175,16 @@ export const MaestraApi = {
     };
     delete cleanPayload.points;
 
-    // No usar academic_periods (tabla no existe)
-    
-
     const { data, error } = await supabase
       .from('tasks')
       .insert([cleanPayload])
       .select()
       .maybeSingle();
 
-    handleError(error, 'createTask');
+    handleError(error);
     return data;
   },
 
-  /**
-   * Actualizar una tarea existente
-   */
   async updateTask(taskId, payload) {
     const { data, error } = await supabase
       .from('tasks')
@@ -251,27 +193,20 @@ export const MaestraApi = {
       .select()
       .single();
 
-    handleError(error, 'updateTask');
+    handleError(error);
     return data;
   },
 
-  /**
-   * Eliminar una tarea
-   */
   async deleteTask(taskId) {
     const { error } = await supabase
       .from('tasks')
       .delete()
       .eq('id', taskId);
 
-    handleError(error, 'deleteTask');
-    // Devolvemos un objeto para consistencia, aunque la operación de borrado no devuelve datos.
+    handleError(error);
     return { success: !error };
   },
 
-  /**
-   * Calificar tarea
-   */
   async gradeTask(taskId, studentId, gradeLetter, stars, feedback, numericScore = null) {
     if (!taskId || !studentId) throw new Error('Task ID and Student ID are required');
 
@@ -287,7 +222,6 @@ export const MaestraApi = {
       status:       'graded'
     };
 
-    // Check if evidence already exists for this task+student
     const { data: existing } = await supabase
       .from('task_evidences')
       .select('id')
@@ -297,7 +231,6 @@ export const MaestraApi = {
 
     let result;
     if (existing?.id) {
-      // Update existing record
       result = await supabase
         .from('task_evidences')
         .update(updates)
@@ -305,7 +238,6 @@ export const MaestraApi = {
         .select('id, grade_letter, stars, numeric_score, status')
         .maybeSingle();
     } else {
-      // Insert new record
       result = await supabase
         .from('task_evidences')
         .insert({ task_id: taskId, student_id: studentId, ...updates })
@@ -313,13 +245,10 @@ export const MaestraApi = {
         .maybeSingle();
     }
 
-    handleError(result.error, 'gradeTask');
+    handleError(result.error);
     return result.data;
   },
 
-  /**
-   * Registrar incidente
-   */
   async registerIncident(payload) {
     const { data, error } = await supabase
       .from('incidents')
@@ -333,7 +262,7 @@ export const MaestraApi = {
       .select()
       .maybeSingle();
 
-    handleError(error, 'registerIncident');
+    handleError(error);
     return data;
   }
 };

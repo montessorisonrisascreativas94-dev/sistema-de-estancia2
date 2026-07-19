@@ -1,7 +1,7 @@
 import { ChatModule } from '../../shared/chat.js';
 import { ScrollModule } from '../../shared/scroll.module.js';
 import { AppState } from '../state.js';
-import { safeToast, safeEscapeHTML } from './ui.js';
+import { safeToast, safeEscapeHTML, safeUrl, safeJS } from './ui.js';
 
 let activeChatUserId = null;
 let activeConversationId = null;
@@ -147,14 +147,14 @@ export async function initChat() {
       
       const onClickAction = c.unlinked 
         ? `safeToast('Este padre aún no ha creado su cuenta de acceso', 'warning')`
-        : `App.selectChatContact('${c.id}', '${safeEscapeHTML(displayName)}', '${safeEscapeHTML(label)}')`;
+        : `App.selectChatContact('${c.id}', '${safeJS(displayName)}', '${safeJS(label)}')`;
 
       return `
       <div onclick="${onClickAction}"
            class="p-3 hover:bg-slate-50 rounded-xl cursor-pointer transition-colors flex items-center gap-3 border-b border-slate-50 last:border-0 relative ${c.unlinked ? 'opacity-60' : ''}">
         <div class="relative">
           <div class="w-10 h-10 rounded-full ${bgColor} flex items-center justify-center font-bold overflow-hidden">
-            ${c.avatar ? `<img src="${c.avatar}" class="w-full h-full object-cover" loading="lazy">` : displayName.charAt(0)}
+            ${c.avatar ? `<img src="${safeUrl(c.avatar)}" class="w-full h-full object-cover" loading="lazy">` : displayName.charAt(0)}
           </div>
           ${unread > 0 ? `<div class="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-sm animate-pulse">${unread}</div>` : ''}
         </div>
@@ -391,14 +391,17 @@ function subscribeToChat(conversationId) {
     }
   );
 
-  // Escuchar input para broadcast
+  // Escuchar input para broadcast (with guard to prevent stacking)
   const input = document.getElementById('chatMessageInput');
-  let typingTimeout;
-  input?.addEventListener('input', () => {
-    ChatModule.broadcastTyping(conversationId, user.name, true);
-    clearTimeout(typingTimeout);
-    typingTimeout = setTimeout(() => {
-      ChatModule.broadcastTyping(conversationId, user.name, false);
-    }, 3000);
-  });
+  if (input && !input._typingBound) {
+    input._typingBound = true;
+    let typingTimeout;
+    input.addEventListener('input', () => {
+      ChatModule.broadcastTyping(conversationId, user.name, true);
+      clearTimeout(typingTimeout);
+      typingTimeout = setTimeout(() => {
+        ChatModule.broadcastTyping(conversationId, user.name, false);
+      }, 3000);
+    });
+  }
 }

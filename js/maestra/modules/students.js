@@ -1,11 +1,10 @@
-import { supabase, sendPush } from '../../shared/supabase.js';
-import { TABLES } from '../../shared/constants.js';
+import { sendPush } from '../../shared/supabase.js';
 import { AppState } from '../state.js';
 import { MaestraApi } from '../api.js';
 import { UI } from './ui.js';
 import { Helpers } from '../../shared/helpers.js';
 
-const { safeToast, safeEscapeHTML, Modal } = UI;
+const { safeToast, safeEscapeHTML, safeUrl, Modal } = UI;
 
 export function openStudentProfile(studentId) {
   const student = AppState.get('students').find(s => s.id == studentId);
@@ -19,7 +18,7 @@ export function openStudentProfile(studentId) {
         <div class="flex items-center gap-6">
           <div class="w-20 h-20 rounded-3xl bg-green-100 flex items-center justify-center shadow-lg">
             <div class="w-16 h-16 rounded-2xl bg-green-50 flex items-center justify-center text-3xl font-black text-green-600 overflow-hidden border-2 border-white">
-              ${student.avatar_url ? `<img src="${student.avatar_url}" class="w-full h-full object-cover">` : student.name.charAt(0)}
+              ${student.avatar_url ? `<img src="${safeUrl(student.avatar_url)}" class="w-full h-full object-cover">` : student.name.charAt(0)}
             </div>
           </div>
           <div>

@@ -10,6 +10,7 @@
  */
 import { supabase } from './supabase.js';
 import { Helpers } from './helpers.js';
+import { InvoiceModule } from './invoice.js';
 import {
   fmt, fmtN, today, MONTHS_SHORT, MONTHS_FULL,
   DEFAULT_CATALOG, calcMora, calcDiscount, calcTotal,
@@ -877,9 +878,27 @@ export const CajaCobroV2 = {
       if (newPays?.[0]?.id) {
         try {
           const { data, error: invErr } = await supabase.functions.invoke('generate-invoice', {
-            body: { payment_id: newPays[0].id, send_email: true }
+            body: { payment_id: newPays[0].id, send_email: false }
           });
-          if (!invErr && data) invoiceResult = data;
+          if (!invErr && data) {
+            invoiceResult = data;
+
+            // Generar PDF profesional
+            try {
+              if (typeof InvoiceModule !== 'undefined') {
+                const pdfBlob = await InvoiceModule.generatePDF(data);
+                if (pdfBlob && data.invoice?.id) {
+                  // Subir PDF a Storage
+                  const pdfUrl = await InvoiceModule.uploadPDF(pdfBlob, data.invoice.id);
+                  if (pdfUrl) data.invoice.pdf_url = pdfUrl;
+                  // Enviar email con PDF adjunto
+                  await InvoiceModule.sendInvoiceEmail(data, pdfBlob);
+                }
+              }
+            } catch (pdfErr) {
+              console.warn('[CajaCobroV2] PDF/Email pipeline error:', pdfErr);
+            }
+          }
         } catch (_) {}
 
         try {
@@ -904,11 +923,14 @@ export const CajaCobroV2 = {
   },
 
   _showSuccess(total, invoiceResult, paymentId) {
+    // Usar el módulo de facturación profesional
+    if (typeof InvoiceModule !== 'undefined' && InvoiceModule.openSuccessModal) {
+      InvoiceModule.openSuccessModal(total, invoiceResult, paymentId);
+      return;
+    }
+    // Fallback básico si InvoiceModule no está disponible
     const receiptNo = invoiceResult?.receipt_number || 'N/A';
-    const asciiReceipt = invoiceResult?.ascii_receipt || '';
     const hasInvoice = !!invoiceResult?.invoice?.id;
-    const hasWarning = !!invoiceResult?.warning;
-
     const el = document.createElement('div');
     el.id = 'cajaSuccessModal';
     el.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(6px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
@@ -918,62 +940,26 @@ export const CajaCobroV2 = {
       <div style="font-size:1.1rem;font-weight:900;color:#1a2340;margin-bottom:4px">¡Pago registrado!</div>
       <div style="font-size:.75rem;color:#64748b;margin-bottom:6px">Recibo: <strong style="color:#0B63C7;font-family:monospace">${receiptNo}</strong></div>
       <div style="font-size:1.6rem;font-weight:900;color:#0B63C7;margin-bottom:16px">${fmt(total)}</div>
-      <div style="display:flex;flex-direction:column;gap:5px;text-align:left;margin-bottom:18px">
-        <div style="font-size:.8rem;font-weight:700;color:#16A34A">✓ Pago registrado en caja</div>
-        <div style="font-size:.8rem;font-weight:700;color:${hasInvoice ? '#16A34A' : '#EAB308'}">${hasInvoice ? '✓ Factura generada' : '⚠ Factura pendiente de sincronizar'}</div>
-        <div style="font-size:.8rem;font-weight:700;color:${hasInvoice ? '#16A34A' : '#94a3b8'}">${hasInvoice ? '✓ Correo electrónico enviado' : '○ Correo se enviará al sincronizar'}</div>
-      </div>
-      <div style="display:flex;gap:8px;margin-bottom:10px">
-        <button id="btnPrintInvoice" style="flex:1;padding:12px;border-radius:12px;border:2px solid #0B63C7;background:#eff6ff;color:#0B63C7;font-size:.8rem;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">🖨️ Imprimir</button>
-        <button id="btnEmailInvoice" style="flex:1;padding:12px;border-radius:12px;border:2px solid #16A34A;background:#f0fdf4;color:#16A34A;font-size:.8rem;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">📧 Reenviar</button>
-      </div>
       <button onclick="document.getElementById('cajaSuccessModal').remove()" style="width:100%;padding:13px;border-radius:12px;border:none;background:#0B63C7;color:white;font-size:.9rem;font-weight:900;cursor:pointer">Cerrar</button>
     </div>`;
     document.body.appendChild(el);
-
-    document.getElementById('btnPrintInvoice')?.addEventListener('click', () => {
-      this._printReceipt(asciiReceipt, receiptNo);
-    });
-    document.getElementById('btnEmailInvoice')?.addEventListener('click', async () => {
-      if (!paymentId) { Helpers.toast('No hay pago para reenviar','warning'); return; }
-      try {
-        const { error } = await supabase.functions.invoke('generate-invoice', {
-          body: { payment_id: paymentId, send_email: true }
-        });
-        if (error) throw error;
-        Helpers.toast('Correo reenviado exitosamente','success');
-      } catch (e) {
-        Helpers.toast('Error al reenviar correo','error');
-      }
-    });
-
     setTimeout(() => { if (document.getElementById('cajaSuccessModal')) el.remove(); }, 30000);
   },
 
   _printReceipt(asciiReceipt, receiptNo) {
+    // Usar el módulo profesional si está disponible
+    if (typeof InvoiceModule !== 'undefined' && InvoiceModule._printInvoice) {
+      InvoiceModule._printInvoice();
+      return;
+    }
+    // Fallback: imprimir ASCII
     if (!asciiReceipt) {
-      asciiReceipt = [
-        '┌──────────────────────────────────────────────┐',
-        '│           RECIBO DE PAGO                     │',
-        '│           No. ' + (receiptNo || 'N/A') + '              │',
-        '├──────────────────────────────────────────────┤',
-        '│                                              │',
-        '│  El recibo se generará al sincronizar con    │',
-        '│  el servidor. Consulte con administración.   │',
-        '│                                              │',
-        '│  No. Recibo: ' + (receiptNo || 'Pendiente') + '            │',
-        '│                                              │',
-        '└──────────────────────────────────────────────┘'
-      ].join('\n');
+      asciiReceipt = `Recibo ${receiptNo || 'N/A'}\nSin datos disponibles`;
     }
     const printWin = window.open('', '_blank', 'width=420,height=700');
     if (!printWin) { Helpers.toast('Permitir ventanas emergentes para imprimir','warning'); return; }
     printWin.document.write(`<!DOCTYPE html><html><head><title>${receiptNo}</title>
-      <style>
-        @page{margin:8mm}
-        body{font-family:'Courier New',monospace;font-size:11px;margin:0;padding:10px;white-space:pre;line-height:1.35;background:white}
-        @media print{body{padding:0}}
-      </style></head><body>${asciiReceipt}</body></html>`);
+      <style>@page{margin:8mm}body{font-family:'Courier New',monospace;font-size:11px;margin:0;padding:10px;white-space:pre;line-height:1.35;background:white}@media print{body{padding:0}}</style></head><body>${asciiReceipt}</body></html>`);
     printWin.document.close();
     printWin.focus();
     setTimeout(() => { printWin.print(); }, 400);

@@ -3,20 +3,17 @@
  * Separación radical: Grupales vs Individuales
  * Registro por excepción, cronograma inteligente, prevención de duplicados
  */
-import { supabase } from '../../shared/supabase.js';
 import { AppState } from '../state.js';
-import { UI, safeToast, safeEscapeHTML } from './ui.js';
+import { UI, safeToast, safeEscapeHTML, safeUrl } from './ui.js';
 import { MaestraApi } from '../api.js';
 
 // ── Estado del módulo ────────────────────────────────────────────────────────
-let _undoTimer   = null;
-let _pendingUndo = null;
 let _logsMap     = {};
 let _sleepMap    = {};
 let _lastEvent   = {};
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
-function _today() { return new Date().toISOString().split('T')[0]; }
+function _today() { return AppState.today(); }
 function _fmtTime(d) {
   return new Date(d).toLocaleTimeString('es-DO', { hour:'2-digit', minute:'2-digit', hour12:true });
 }
@@ -114,7 +111,7 @@ function _studentCard(s, log) {
       ${sleeping?'<span style="position:absolute;top:4px;left:4px;font-size:.65rem;background:#c4b5fd;color:#7c3aed;border-radius:6px;padding:1px 5px;font-weight:900">💤</span>':''}
       ${hasMed?'<span style="position:absolute;top:4px;right:4px;font-size:.65rem;background:#fecdd3;color:#ef4444;border-radius:6px;padding:1px 5px;font-weight:900">💊</span>':''}
       <div class="w-12 h-12 rounded-2xl bg-orange-50 overflow-hidden flex items-center justify-center font-black text-lg text-orange-300 border-2 border-white shadow-sm flex-shrink-0">
-        ${s.avatar_url?`<img src="${s.avatar_url}" class="w-full h-full object-cover">`:`<span>${safeEscapeHTML((s.name||'?').charAt(0))}</span>`}
+        ${s.avatar_url?`<img src="${safeUrl(s.avatar_url)}" class="w-full h-full object-cover">`:`<span>${safeEscapeHTML((s.name||'?').charAt(0))}</span>`}
       </div>
       <h4 class="text-[10px] font-black text-slate-800 leading-tight line-clamp-2">${safeEscapeHTML((s.name||'').split(' ')[0])}</h4>
       <div class="flex gap-1 text-sm">${moodEmoji}${foodEmoji}${napEmoji}</div>
@@ -389,7 +386,6 @@ export async function routineQuickGroup(eventId) {
     safeToast(`${ev.label} registrado para todos!`, 'success');
     await initRoutine();
   } catch (err) {
-    console.error('Error en registro grupal:', err);
     safeToast('Error al registrar evento grupal', 'error');
   }
 }
@@ -409,7 +405,7 @@ export function openStudentRoutine(studentId) {
       <div class="p-6" style="background:linear-gradient(135deg,#28B54D,#239943)">
         <div class="flex items-center gap-4">
           <div class="w-16 h-16 rounded-2xl bg-white/20 flex items-center justify-center overflow-hidden">
-            ${student.avatar_url?`<img src="${student.avatar_url}" class="w-full h-full object-cover">`:`<span class="text-2xl font-black text-white">${safeEscapeHTML((student.name||'?').charAt(0))}</span>`}
+            ${student.avatar_url?`<img src="${safeUrl(student.avatar_url)}" class="w-full h-full object-cover">`:`<span class="text-2xl font-black text-white">${safeEscapeHTML((student.name||'?').charAt(0))}</span>`}
           </div>
           <div class="flex-1">
             <h3 class="text-xl font-black text-white">${safeEscapeHTML(student.name)}</h3>
@@ -488,7 +484,7 @@ export function openStudentRoutine(studentId) {
         <div>
           <h4 class="text-sm font-black text-slate-800 mb-3">📝 Nota Individual</h4>
           <textarea id="studentNote-${studentId}" placeholder="Escribe una nota sobre el día de hoy..."
-            class="w-full p-4 border-2 border-slate-100 rounded-xl text-sm focus:border-blue-400 outline-none" rows="3">${log?.notes || ''}</textarea>
+            class="w-full p-4 border-2 border-slate-100 rounded-xl text-sm focus:border-blue-400 outline-none" rows="3">${safeEscapeHTML(log?.notes || '')}</textarea>
           <button onclick="App.saveStudentNote('${studentId}')"
             class="mt-2 w-full p-3 rounded-xl text-white font-black text-xs uppercase" style="background:#28B54D">
             Guardar Nota
@@ -505,7 +501,7 @@ export function openStudentRoutine(studentId) {
                   ${evt.type==='sleep'?'😴':evt.type==='milk'?'🍼':evt.type==='diaper'?'🧻':evt.type==='bath'?'🚽':evt.type==='temp'?'🌡️':evt.type==='med'?'💊':'📝'}
                 </span>
                 <div class="flex-1">
-                  <div class="text-sm font-black text-slate-800">${evt.type}</div>
+                  <div class="text-sm font-black text-slate-800">${safeEscapeHTML(evt.type)}</div>
                   <div class="text-xs text-slate-400">${_fmtTime(evt.created_at)}</div>
                 </div>
               </div>
@@ -537,7 +533,6 @@ export async function setStudentMood(studentId, mood) {
     safeToast('Estado emocional guardado', 'success');
     await initRoutine();
   } catch (err) {
-    console.error(err);
     safeToast('Error al guardar', 'error');
   }
 }
@@ -556,7 +551,6 @@ export async function setStudentFood(studentId, food) {
     safeToast('Alimentación guardada', 'success');
     await initRoutine();
   } catch (err) {
-    console.error(err);
     safeToast('Error al guardar', 'error');
   }
 }
@@ -575,7 +569,6 @@ export async function setStudentNap(studentId, nap) {
     safeToast('Siesta guardada', 'success');
     await initRoutine();
   } catch (err) {
-    console.error(err);
     safeToast('Error al guardar', 'error');
   }
 }
@@ -602,7 +595,6 @@ export async function addStudentEvent(studentId, eventId) {
     safeToast(`${ev.label} registrado`, 'success');
     await initRoutine();
   } catch (err) {
-    console.error(err);
     safeToast('Error al guardar', 'error');
   }
 }
@@ -624,7 +616,6 @@ export async function saveStudentNote(studentId) {
     await initRoutine();
     UI.Modal.close('studentRoutineModal');
   } catch (err) {
-    console.error(err);
     safeToast('Error al guardar', 'error');
   }
 }
@@ -645,7 +636,7 @@ export async function routineSelectIndivStudent(eventId) {
           <button onclick="App.addStudentEvent('${s.id}','${eventId}'); UI.Modal.close('selectStudentModal')"
             class="p-4 rounded-2xl border border-slate-100 bg-white hover:border-blue-300 flex flex-col items-center gap-2">
             <div class="w-12 h-12 rounded-2xl bg-orange-50 flex items-center justify-center text-lg font-black text-orange-300 overflow-hidden">
-              ${s.avatar_url?`<img src="${s.avatar_url}" class="w-full h-full object-cover">`:safeEscapeHTML((s.name||'?').charAt(0))}
+              ${s.avatar_url?`<img src="${safeUrl(s.avatar_url)}" class="w-full h-full object-cover">`:safeEscapeHTML((s.name||'?').charAt(0))}
             </div>
             <span class="text-xs font-black text-slate-800">${safeEscapeHTML((s.name||'').split(' ')[0])}</span>
           </button>
@@ -676,7 +667,6 @@ export async function routineWakeAll() {
     safeToast('Todas las siestas terminadas!', 'success');
     await initRoutine();
   } catch (err) {
-    console.error(err);
     safeToast('Error al actualizar siestas', 'error');
   }
 }
@@ -736,7 +726,6 @@ export async function publishDailyLogs() {
     safeToast('Reportes publicados!', 'success');
     UI.Modal.close('bulkRoutineModal');
   } catch (err) {
-    console.error(err);
     safeToast('Error al publicar', 'error');
   }
 }

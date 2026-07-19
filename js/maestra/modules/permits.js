@@ -1,7 +1,7 @@
 import { supabase } from '../../shared/supabase.js';
 import { TABLES } from '../../shared/constants.js';
 import { Helpers } from '../../shared/helpers.js';
-import { UI } from './ui.js';
+import { safeEscapeHTML } from './ui.js';
 
 export const PermitsModule = {
   async init() {
@@ -73,17 +73,16 @@ export const PermitsModule = {
 
         return `
           <tr class="hover:bg-slate-50/50 transition-colors">
-            <td class="px-4 py-4 font-bold text-slate-700">${typeLabels[p.type] || p.type}</td>
+            <td class="px-4 py-4 font-bold text-slate-700">${safeEscapeHTML(typeLabels[p.type] || p.type)}</td>
             <td class="px-4 py-4 text-xs font-medium text-slate-500">${new Date(p.start_date).toLocaleDateString()}</td>
             <td class="px-4 py-4 text-center">
-              <span class="px-2 py-1 rounded-lg text-[9px] font-black uppercase ${statusCls[p.status] || ''}">${statusLabels[p.status] || p.status}</span>
+              <span class="px-2 py-1 rounded-lg text-[9px] font-black uppercase ${statusCls[p.status] || ''}">${safeEscapeHTML(statusLabels[p.status] || p.status)}</span>
             </td>
           </tr>
         `;
       }).join('');
 
     } catch (err) {
-      console.error(err);
       tbody.innerHTML = '<tr><td colspan="3" class="text-center py-8 text-rose-500 font-bold">Error al cargar historial.</td></tr>';
     }
   }

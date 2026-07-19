@@ -1,11 +1,11 @@
-import { ensureRole, supabase, initOneSignal, RealtimeUtils, emitEvent, sendPush } from '../shared/supabase.js';
+import { ensureRole, supabase, initOneSignal, emitEvent, sendPush } from '../shared/supabase.js';
 import { RealtimeManager } from '../shared/realtime-manager.js';
 import { AppState } from './state.js';
-import { SCHOOL_SETTINGS_ID } from '../shared/constants.js';
+
 import { MaestraApi } from './api.js';
 import { Helpers } from '../shared/helpers.js';
 import { WallModule } from '../shared/wall.js';
-import { ChatModule } from '../shared/chat.js';
+
 import { VideoCallModule } from '../shared/videocall.js';
 import { BadgeSystem } from '../shared/badges.js';
 import { ImageLoader } from '../shared/image-loader.js';
@@ -22,7 +22,7 @@ import { UIPremium } from '../shared/ui-premium.js';
 
 window.safeToast = UI.safeToast;
 window.UI = UI;
-const { safeToast, safeEscapeHTML, Modal } = UI;
+const { safeToast, safeEscapeHTML, safeUrl, safeJS, Modal } = UI;
 
 // Cache de marcas de tiempo para evitar recargas constantes
 const _lastLoad = {};
@@ -31,7 +31,7 @@ const _lastLoad = {};
 // Los onclick inline en HTML dinámico necesitan window.Modal disponible de inmediato
 window.Modal = Modal;
 const { initAttendance, markAllPresent, registerAttendance } = Attendance;
-const { initRoutine, updateRoutineField, saveRoutineLog, openNewRoutineModal, openStudentRoutine, openBulkRoutineModal, updateRoutineFieldInModal, saveRoutineInModal, applyBulkRoutine } = Routine;
+const { initRoutine, openStudentRoutine, openBulkRoutineModal } = Routine;
 const { initTasks, openEditTaskModal, deleteTask, openNewTaskModal, viewTaskSubmissions, submitGrade } = Tasks;
 const { openStudentProfile, registerIncidentModal } = Students;
 const { initChat, selectChatContact } = ChatApp;
@@ -119,10 +119,35 @@ window.App = {
  * Inicialización principal
  */
 
-// Global error handler
+/**
+ * Error reporter — estructurado para debugging en producción.
+ * Reemplaza console.log/debug. Para conectar a Sentry, descomentar la línea con Sentry.
+ */
+window.MaestraErrors = [];
+function _reportError(type, err, extra = {}) {
+  const entry = {
+    t: new Date().toISOString(),
+    type,
+    msg: err?.message || String(err),
+    stack: err?.stack?.substring(0, 500),
+    ...extra
+  };
+  window.MaestraErrors.push(entry);
+  if (window.MaestraErrors.length > 50) window.MaestraErrors.shift();
+  // Sentry: Sentry.captureException(err, { extra });
+}
+
+// Global error handlers
 window.addEventListener('unhandledrejection', (e) => {
   const msg = e.reason?.message?.toLowerCase() ?? '';
   if (msg.includes('indexeddb') || msg.includes('network') || msg.includes('fetch')) return;
+  _reportError('unhandledrejection', e.reason);
+});
+
+window.addEventListener('error', (e) => {
+  if (e.filename?.includes('maestra/')) {
+    _reportError('error', e.error || new Error(e.message), { file: e.filename, line: e.lineno });
+  }
 });
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -159,7 +184,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (sidebarAvatar) {
     const avatarUrl = auth.profile?.avatar_url;
     sidebarAvatar.innerHTML = avatarUrl 
-      ? `<img src="${avatarUrl}" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='${teacherName.charAt(0)}'">`
+      ? `<img src="${safeUrl(avatarUrl)}" class="w-full h-full object-cover">`
       : `<div class="w-full h-full flex items-center justify-center text-xl font-black text-[#FF7A00] bg-[#FF7A00]">${teacherName.charAt(0)}</div>`;
   }
 
@@ -260,7 +285,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         // Actualizar avatar en UI
         setProfileAvatar(publicUrl, teacherName);
-        document.getElementById('sidebarAvatar').innerHTML = `<img src="${publicUrl}" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='${teacherName.charAt(0)}'">`;
+        document.getElementById('sidebarAvatar').innerHTML = `<img src="${safeUrl(publicUrl)}" class="w-full h-full object-cover">`;
         
         // Actualizar estado
         AppState.set('profile', { ...auth.profile, avatar_url: publicUrl });
@@ -278,7 +303,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!avatarEl) return;
     const initial = (name || 'M').charAt(0).toUpperCase();
     if (avatarUrl) {
-      avatarEl.innerHTML = `<img src="${avatarUrl}" class="w-full h-full object-cover rounded-full">`;
+      avatarEl.innerHTML = `<img src="${safeUrl(avatarUrl)}" class="w-full h-full object-cover rounded-full">`;
     } else {
       avatarEl.innerHTML = initial;
     }
@@ -526,17 +551,6 @@ function _applyContactBadge(senderId) {
   }
 }
 
-async function notify({ message, pushTo = null }) {
-  safeToast(message, 'info');
-  if (pushTo) {
-    sendPush({
-      user_id: pushTo,
-      title: 'Notificación Karpus',
-      message: message,
-      link: '/panel_padres.html'
-    }).catch(() => {});
-  }
-}
 
 /**
  * 📊 Dashboard
@@ -545,10 +559,8 @@ async function initDashboard() {
   const classroom = AppState.get('classroom');
   if (!classroom) return;
 
-  console.log('[MaestraDashboard] Iniciando para aula:', classroom.id);
-
   try {
-    const today = new Date().toISOString().split('T')[0];
+    const today = AppState.today();
     const startOfDay = `${today}T00:00:00Z`;
     const endOfDay   = `${today}T23:59:59Z`;
 
@@ -648,7 +660,7 @@ async function initDashboard() {
           <div class="p-6 bg-white rounded-[2rem] border-2 border-[#FF8A00] shadow-sm hover:shadow-xl hover:border-[#28B54D] transition-all group">
             <div class="flex items-center gap-4 mb-6">
               <div class="w-16 h-16 rounded-2xl bg-[#E6F7EB] text-[#28B54D] flex items-center justify-center font-bold text-2xl overflow-hidden border-2 border-[#28B54D]">
-                ${s.avatar_url ? `<img src="${s.avatar_url}" class="w-full h-full object-cover">` : s.name.charAt(0)}
+                ${s.avatar_url ? `<img src="${safeUrl(s.avatar_url)}" class="w-full h-full object-cover">` : s.name.charAt(0)}
               </div>
               <div class="min-w-0">
                 <div class="font-black text-slate-800 text-lg truncate">${safeEscapeHTML(s.name)}</div>
@@ -671,7 +683,6 @@ async function initDashboard() {
     }
     if (window.lucide) window.lucide.createIcons();
   } catch (err) {
-    console.error('[MaestraDashboard] Error crítico:', err);
     safeToast('Error cargando dashboard', 'error');
   }
 }
@@ -775,7 +786,7 @@ async function _updateTasksToGradeWidget(classroomId) {
       widget.classList.add('hidden');
     }
   } catch (e) {
-    console.error('Error updating tasks widget:', e);
+    // silent
   }
 }
 
@@ -966,7 +977,6 @@ function initNavigation() {
       initClassTabs(options.activeTab);
 
     } catch (error) {
-      console.error('Error en showClassroomDetail:', error);
       safeToast('Error al cargar datos del aula', 'error');
     }
 }
@@ -1043,12 +1053,13 @@ function initClassTabs(defaultTab = null) {
 }
 
 window.App.scheduleClassMeeting = async () => {
-    const title = prompt("Título de la clase/reunión:");
-    if(!title) return;
+    const confirmed = await Helpers.confirm("¿Deseas programar una nueva clase/reunión?");
+    if(!confirmed) return;
+    const title = "Clase programada";
     
     try {
         await VideoCallModule.scheduleMeeting({
-            title,
+            title: safeJS(title),
             startTime: new Date().toISOString(), // O pedir fecha real
             type: 'classroom',
             targetId: AppState.get('classroom').id,

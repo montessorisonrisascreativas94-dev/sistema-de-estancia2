@@ -22,6 +22,24 @@ export const safeEscapeHTML = (str = '') => {
   return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 };
 
+/** Escapa URLs para uso seguro en atributos src= — previene javascript: y attribute breakout */
+export const safeUrl = (url = '') => {
+  if (!url) return '';
+  const s = String(url).trim();
+  if (/^javascript:/i.test(s) || /^data:/i.test(s) || /^vbscript:/i.test(s)) return '';
+  return s.replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+};
+
+/** Escapa strings para interpolación en contexto JavaScript (onclick, etc.) */
+export const safeJS = (str = '') => {
+  return String(str)
+    .replace(/\\/g, '\\\\')
+    .replace(/'/g, "\\'")
+    .replace(/"/g, '\\"')
+    .replace(/\n/g, '\\n')
+    .replace(/\r/g, '\\r');
+};
+
 export const Modal = {
   open(id, content) {
     document.getElementById(id)?.remove();
@@ -135,6 +153,8 @@ export const updateDashboardStats = (stats = {}) => {
 export const UI = {
   safeToast,
   safeEscapeHTML,
+  safeUrl,
+  safeJS,
   Modal,
   Skeleton,
   updateDashboardStats

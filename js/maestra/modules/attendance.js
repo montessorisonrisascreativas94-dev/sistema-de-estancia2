@@ -1,11 +1,11 @@
 import { supabase, sendPush } from '../../shared/supabase.js';
 import { AppState } from '../state.js';
-import { MaestraApi } from '../api.js';
+import { MaestraApi, invalidateCache } from '../api.js';
 import { UI } from './ui.js';
 import { notifyParents, showNotifyFeedback } from '../../shared/notify-feedback.js';
 import { OfflineQueue } from '../../shared/offline-queue.js';
 
-const { safeToast, safeEscapeHTML, Modal } = UI;
+const { safeToast, safeEscapeHTML, safeUrl, Modal } = UI;
 
 // Start auto-sync when online
 OfflineQueue.startAutoSync(({ synced }) => {
@@ -18,7 +18,7 @@ OfflineQueue.startAutoSync(({ synced }) => {
 export async function initAttendance() {
   const classroom = AppState.get('classroom');
   const students = AppState.get('students') || []; // Usamos estudiantes ya cargados
-  const today = new Date().toISOString().split('T')[0];
+  const today = AppState.today();
 
   const container = document.getElementById('tab-attendance'); // Ajuste de contenedor si es necesario
   const listContainer = document.getElementById('attendanceList');
@@ -86,7 +86,7 @@ export async function initAttendance() {
                     <td class="px-6 py-4">
                       <div class="flex items-center gap-3">
                         <div class="w-10 h-10 rounded-xl bg-green-50 text-green-600 flex items-center justify-center font-black text-sm border-2 border-white shadow-sm overflow-hidden">
-                          ${s.avatar_url ? `<img src="${s.avatar_url}" class="w-full h-full object-cover">` : s.name.charAt(0)}
+                          ${s.avatar_url ? `<img src="${safeUrl(s.avatar_url)}" class="w-full h-full object-cover">` : s.name.charAt(0)}
                         </div>
                         <div class="font-bold text-slate-700 text-sm">${safeEscapeHTML(s.name)}</div>
                       </div>
@@ -125,7 +125,7 @@ export async function initAttendance() {
             return `
               <div class="bg-white p-4 rounded-[2rem] shadow-[0_8px_30px_rgba(0,0,0,0.04)] flex flex-col items-center text-center gap-3 transition-all active:scale-95" onclick="App.registerAttendance('${s.id}', '${currentStatus === 'present' ? 'late' : currentStatus === 'late' ? 'absent' : 'present'}')">
                 <div class="relative w-20 h-20 rounded-[1.5rem] overflow-hidden ${statusColor} transition-all duration-300">
-                  ${s.avatar_url ? `<img src="${s.avatar_url}" class="w-full h-full object-cover">` : `<div class="w-full h-full flex items-center justify-center bg-green-50 text-green-500 font-black text-2xl">${s.name.charAt(0)}</div>`}
+                  ${s.avatar_url ? `<img src="${safeUrl(s.avatar_url)}" class="w-full h-full object-cover">` : `<div class="w-full h-full flex items-center justify-center bg-green-50 text-green-500 font-black text-2xl">${s.name.charAt(0)}</div>`}
                   ${currentStatus === 'present' ? '<div class="absolute inset-0 bg-[#28B54D]/20 flex items-center justify-center"><i data-lucide="check" class="text-white w-8 h-8 drop-shadow-md"></i></div>' : ''}
                   ${currentStatus === 'late' ? '<div class="absolute inset-0 bg-[#FF8A00]/20 flex items-center justify-center"><i data-lucide="clock" class="text-white w-8 h-8 drop-shadow-md"></i></div>' : ''}
                 </div>
@@ -140,7 +140,6 @@ export async function initAttendance() {
       `;
       if (window.lucide) window.lucide.createIcons();
   } catch (err) {
-    console.error('Error en initAttendance:', err);
     listContainer.innerHTML = Helpers.errorState('Error al cargar asistencia');
   }
 }
@@ -148,7 +147,7 @@ export async function initAttendance() {
 export async function markAllPresent() {
   const students = AppState.get('students') || [];
   const classroom = AppState.get('classroom');
-  const today = new Date().toISOString().split('T')[0];
+  const today = AppState.today();
   
   if (!students.length) return safeToast('No hay estudiantes', 'warning');
 
@@ -272,7 +271,7 @@ export function handleAttendancePointerUp(e, studentId) {
 
 export async function registerAttendance(studentId, status) {
   const classroom = AppState.get('classroom');
-  const today = new Date().toISOString().split('T')[0];
+  const today = AppState.today();
   if (!studentId || !status) return;
 
   // ✅ OPTIMISTIC UI: Feedback visual inmediato

@@ -1,7 +1,7 @@
 import { SafeAppState } from '../shared/state.js';
 
 /**
- * Estado espec�fico para el panel de Maestra
+ * Estado específico para el panel de Maestra
  */
 export const AppState = new SafeAppState({
   user: null,
@@ -13,3 +13,18 @@ export const AppState = new SafeAppState({
   posts: [],
   tasks: []
 });
+
+/** Hoy en formato YYYY-MM-DD (DRY: reemplaza `new Date().toISOString().split('T')[0]`) */
+AppState.today = function () {
+  return new Date().toISOString().split('T')[0];
+};
+
+/** Alias rápido para obtener estudiantes del aula */
+AppState.getStudents = function () {
+  return AppState.get('students') || [];
+};
+
+/** Alias rápido para obtener el aula actual */
+AppState.getClassroom = function () {
+  return AppState.get('classroom');
+};
