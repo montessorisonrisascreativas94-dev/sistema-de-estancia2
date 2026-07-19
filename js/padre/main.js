@@ -15,13 +15,10 @@ import { DailyReportModule } from './daily-report.js';
 import { initLiveClassListener } from './attendance_live.js';
 import { NotifyPermission } from '../shared/notify-permission.js';
 import { BadgeSystem } from '../shared/badges.js';
-import { ImageLoader } from '../shared/image-loader.js';
 import { OnboardingGuide } from '../shared/onboarding.js';
 import { Prefetch } from '../shared/prefetch.js';
 import { VideoCallUI } from '../shared/videocall-ui.js';
 import { ParentRatingModule } from './parent_rating.js';
-
-import { UIPremium } from '../shared/ui-premium.js';
 
 window.App = {
   feed: FeedModule, payments: PaymentsModule, tasks: TasksModule,
@@ -68,11 +65,20 @@ window.App = {
 };
 window.BadgeSystem = BadgeSystem;
 
-// Global error handler
+window.PadreErrors = [];
+window._padreReportError = (source, err) => {
+  window.PadreErrors.push({ t: Date.now(), source, msg: err?.message || String(err), stack: err?.stack?.slice(0, 200) });
+  if (window.PadreErrors.length > 50) window.PadreErrors.shift();
+};
+
 window.addEventListener('unhandledrejection', (e) => {
   const msg = e.reason?.message?.toLowerCase() ?? '';
   if (msg.includes('indexeddb') || msg.includes('network') || msg.includes('fetch')) return;
+  window._padreReportError('unhandledrejection', e.reason);
+});
 
+window.addEventListener('error', (e) => {
+  window._padreReportError('error', { message: `${e.filename}:${e.lineno} ${e.message}`, stack: '' });
 });
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -1058,7 +1064,7 @@ async function switchStudent(studentId) {
     channels.forEach(ch => {
       if (window[ch]) {
         try { supabase.removeChannel(window[ch]); } catch(err) {
-          console.warn('[Realtime] removeChannel failed for', ch, ':', err?.message);
+          // Channel removal failed — non-critical
         }
         window[ch] = null;
       }
@@ -1087,7 +1093,7 @@ async function switchStudent(studentId) {
     Helpers.toast(`Perfil de ${selected.name.split(' ')[0]} cargado`, 'success');
 
   } catch (e) {
-    console.error('Error al cambiar de perfil:', e);
+    // Profile switch failed — toast already shown
     Helpers.hideLoader();
     Helpers.toast('Error al cambiar de perfil: ' + (e.message || e), 'error');
   }
@@ -1131,7 +1137,7 @@ function _initDailyLogRealtime(studentId) {
     try {
       supabase.removeChannel(window._dailyLogChannel);
     } catch (err) {
-      console.warn('[Realtime] Could not remove _dailyLogChannel:', err?.message);
+      // Channel cleanup failed — non-critical
     }
     window._dailyLogChannel = null;
   }
@@ -1154,7 +1160,7 @@ function _initDailyLogRealtime(studentId) {
         const log = await Api.getDailyLog(studentId, today);
         renderDailySummary(log);
       } catch (err) {
-        console.warn('[Realtime] dailyLog callback error:', err?.message);
+        // Realtime daily log callback failed
       }
     })
     .subscribe();

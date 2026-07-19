@@ -64,6 +64,27 @@ export function goToSection(sectionId) {
       case 'configuracion':
         loadConfig();
         break;
+      case 'padres-opinion':
+        loadPadresOpinion();
+        break;
+      case 'accesos-qr':
+        loadAccesosQR();
+        break;
+      case 'reportes-cumplimiento':
+        loadReportesCumplimiento();
+        break;
+      case 'control-rutinas':
+        loadControlRutinas();
+        break;
+      case 'reportes-tareas':
+        loadReportesTareas();
+        break;
+      case 'comparativo-aulas':
+        loadComparativoAulas();
+        break;
+      case 'centro-estadisticas':
+        loadCentroEstadisticas();
+        break;
     }
   }
   const _parentSection = {
@@ -245,7 +266,7 @@ async function loadRanking() {
   if (!el) return;
   el.innerHTML = '<div class="text-slate-400">Cargando...</div>';
   try {
-    const { data: teachers } = await supabase.from('profiles').select('*').eq('role', 'teacher');
+    const { data: teachers } = await supabase.from('profiles').select('*').eq('role', 'maestra');
     el.innerHTML = `
       <div class="bg-white rounded-2xl border border-slate-100 overflow-hidden">
         <table class="w-full text-left">
@@ -839,6 +860,97 @@ async function loadAlerts() {
   } catch (e) {
     el.innerHTML = `<p class="text-rose-500">Error al cargar: ${e.message}</p>`;
   }
+}
+
+async function loadPadresOpinion() {
+  const el = document.getElementById('opinionesContent');
+  if (!el) return;
+  el.innerHTML = `
+    <div class="text-center py-12">
+      <i data-lucide="message-square-heart" class="w-16 h-16 text-slate-300 mx-auto mb-4"></i>
+      <h3 class="text-xl font-bold text-slate-700 mb-2">Próximamente</h3>
+      <p class="text-slate-500">Esta sección estará disponible muy pronto.</p>
+    </div>
+  `;
+  if (window.lucide) lucide.createIcons();
+}
+
+async function loadAccesosQR() {
+  const el = document.getElementById('qrContent');
+  if (!el) return;
+  el.innerHTML = `
+    <div class="text-center py-12">
+      <i data-lucide="qrcode" class="w-16 h-16 text-slate-300 mx-auto mb-4"></i>
+      <h3 class="text-xl font-bold text-slate-700 mb-2">Próximamente</h3>
+      <p class="text-slate-500">Esta sección estará disponible muy pronto.</p>
+    </div>
+  `;
+  if (window.lucide) lucide.createIcons();
+}
+
+async function loadReportesCumplimiento() {
+  const el = document.getElementById('cumplimientoContent');
+  if (!el) return;
+  el.innerHTML = `
+    <div class="text-center py-12">
+      <i data-lucide="clipboard-check" class="w-16 h-16 text-slate-300 mx-auto mb-4"></i>
+      <h3 class="text-xl font-bold text-slate-700 mb-2">Próximamente</h3>
+      <p class="text-slate-500">Esta sección estará disponible muy pronto.</p>
+    </div>
+  `;
+  if (window.lucide) lucide.createIcons();
+}
+
+async function loadControlRutinas() {
+  const el = document.getElementById('rutinasContent');
+  if (!el) return;
+  el.innerHTML = `
+    <div class="text-center py-12">
+      <i data-lucide="clock" class="w-16 h-16 text-slate-300 mx-auto mb-4"></i>
+      <h3 class="text-xl font-bold text-slate-700 mb-2">Próximamente</h3>
+      <p class="text-slate-500">Esta sección estará disponible muy pronto.</p>
+    </div>
+  `;
+  if (window.lucide) lucide.createIcons();
+}
+
+async function loadReportesTareas() {
+  const el = document.getElementById('tareasContent');
+  if (!el) return;
+  el.innerHTML = `
+    <div class="text-center py-12">
+      <i data-lucide="check-square" class="w-16 h-16 text-slate-300 mx-auto mb-4"></i>
+      <h3 class="text-xl font-bold text-slate-700 mb-2">Próximamente</h3>
+      <p class="text-slate-500">Esta sección estará disponible muy pronto.</p>
+    </div>
+  `;
+  if (window.lucide) lucide.createIcons();
+}
+
+async function loadComparativoAulas() {
+  const el = document.getElementById('comparativoContent');
+  if (!el) return;
+  el.innerHTML = `
+    <div class="text-center py-12">
+      <i data-lucide="bar-chart-3" class="w-16 h-16 text-slate-300 mx-auto mb-4"></i>
+      <h3 class="text-xl font-bold text-slate-700 mb-2">Próximamente</h3>
+      <p class="text-slate-500">Esta sección estará disponible muy pronto.</p>
+    </div>
+  `;
+  if (window.lucide) lucide.createIcons();
+}
+
+async function loadCentroEstadisticas() {
+  const el = document.getElementById('estadisticasContent');
+  if (!el) return;
+  el.innerHTML = `
+    <div class="text-center py-12">
+      <i data-lucide="bar-chart-2" class="w-16 h-16 text-slate-300 mx-auto mb-4"></i>
+      <h3 class="text-xl font-bold text-slate-700 mb-2">Próximamente</h3>
+      <p class="text-slate-500">Esta sección estará disponible muy pronto.</p>
+    </div>
+  `;
+  if (window.lucide) lucide.createIcons();
 }
 
 async function loadConfig() {

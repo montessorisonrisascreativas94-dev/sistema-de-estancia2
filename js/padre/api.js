@@ -1,6 +1,18 @@
 import { supabase } from '../shared/supabase.js';
 import { TABLES } from './appState.js';
 
+const _cache = new Map();
+function cached(key, ttlMs, fn) {
+  const now = Date.now();
+  const hit = _cache.get(key);
+  if (hit && now - hit.ts < ttlMs) return Promise.resolve(hit.val);
+  return fn().then(val => { _cache.set(key, { val, ts: now }); return val; });
+}
+export function invalidateCache(pattern) {
+  if (!pattern) { _cache.clear(); return; }
+  for (const k of _cache.keys()) { if (k.startsWith(pattern)) _cache.delete(k); }
+}
+
 /**
  * 🔥 Helper de manejo de errores centralizado
  */
@@ -20,13 +32,15 @@ export const Api = {
    * 👶 Obtener datos detallados del estudiante
    */
   async getStudent(studentId) {
-    return await handle(
-      supabase
-        .from(TABLES.STUDENTS)
-        .select(`*, classrooms(id, name, teacher_id, level)`)
-        .eq('id', studentId)
-        .single(),
-      'getStudent'
+    return cached(`student:${studentId}`, 60000, () =>
+      handle(
+        supabase
+          .from(TABLES.STUDENTS)
+          .select(`*, classrooms(id, name, teacher_id, level)`)
+          .eq('id', studentId)
+          .single(),
+        'getStudent'
+      )
     );
   },
 
@@ -82,24 +96,25 @@ export const Api = {
    * 🎓 Notas y Evidencias
    */
   async getStudentGrades(studentId) {
-    const [evidences, reports] = await Promise.all([
-      handle(
-        supabase.from(TABLES.TASK_EVIDENCES)
-          .select('id, status, grade_letter, stars, comment, created_at, task:task_id(title, due_date)')
+    return cached(`grades:${studentId}`, 30000, async () => {
+      const [evidences, reports] = await Promise.all([
+        handle(
+          supabase.from(TABLES.TASK_EVIDENCES)
+            .select('id, status, grade_letter, stars, comment, created_at, task:task_id(title, due_date)')
+            .eq('student_id', studentId)
+            .not('grade_letter', 'is', null)
+            .order('created_at', { ascending: false })
+            .limit(50),
+          'getTaskGrades'
+        ),
+        handle(supabase.from(TABLES.GRADES)
+          .select('id, subject, score, period, created_at')
           .eq('student_id', studentId)
-          .not('grade_letter', 'is', null)
           .order('created_at', { ascending: false })
-          .limit(50),
-        'getTaskGrades'
-      ),
-      handle(supabase.from(TABLES.GRADES)
-        .select('id, subject, score, period, created_at')
-        .eq('student_id', studentId)
-        .order('created_at', { ascending: false })
-        .limit(20), 'getReportGrades')
-    ]);
-
-    return { evidences: evidences || [], reports: reports || [] };
+          .limit(20), 'getReportGrades')
+      ]);
+      return { evidences: evidences || [], reports: reports || [] };
+    });
   },
 
   /**

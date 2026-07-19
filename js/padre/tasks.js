@@ -1,7 +1,8 @@
 import { supabase } from '../shared/supabase.js';
-import { AppState, TABLES, CacheKeys } from './appState.js';
+import { AppState, TABLES } from './appState.js';
 import { Helpers, escapeHtml } from '../shared/helpers.js';
-import { OfflineCache } from '../shared/offline-cache.js';
+import { Security } from '../shared/security.js';
+
 
 /**
  * 🎒 MÓDULO DE TAREAS (PADRES)
@@ -34,7 +35,7 @@ export const TasksModule = {
       filtersContainer._initialized = true;
     }
 
-    // Delegación para acciones de tareas (Enviar/Ver)
+    // Delegación para acciones de tareas (Enviar/Ver) + lightbox
     const list = document.getElementById('tasksList');
     if (list && !list._initialized) {
       Helpers.delegate(list, '[data-action="submit"]', 'click', (e, btn) => {
@@ -42,6 +43,12 @@ export const TasksModule = {
       });
       Helpers.delegate(list, '[data-action="view"]', 'click', (e, btn) => {
         this.viewEvidence(btn.dataset.id);
+      });
+      list.addEventListener('click', (e) => {
+        const lb = e.target.closest('[data-lightbox-url]');
+        if (lb && window.openLightbox) {
+          window.openLightbox(lb.dataset.lightboxUrl, lb.dataset.lightboxType || 'image');
+        }
       });
       list._initialized = true;
     }
@@ -357,7 +364,7 @@ export const TasksModule = {
           ${statusBadge}
         </div>
         
-        ${t.file_url ? `<div class="mb-3 rounded-xl overflow-hidden border border-slate-100 cursor-zoom-in bg-black" onclick="window.openLightbox('${t.file_url}','image')"><img src="${t.file_url}" class="w-full max-h-64 object-cover" loading="lazy" alt="Imagen de tarea" onerror="this.parentElement.style.display='none'"></div>` : ''}
+        ${t.file_url ? `<div class="mb-3 rounded-xl overflow-hidden border border-slate-100 cursor-zoom-in bg-black" data-lightbox-url="${escapeHtml(t.file_url)}" data-lightbox-type="image"><img src="${escapeHtml(t.file_url)}" class="w-full max-h-64 object-cover" loading="lazy" alt="Imagen de tarea" onerror="this.parentElement.style.display='none'"></div>` : ''}
         
         <p class="text-xs text-slate-500 leading-relaxed line-clamp-2 mb-4">${escapeHtml(t.description || 'Sin descripción detallada.')}</p>
         

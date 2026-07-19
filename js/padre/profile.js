@@ -1,6 +1,7 @@
 import { supabase } from '../shared/supabase.js';
 import { AppState, TABLES } from './appState.js';
-import { Helpers, escapeHtml } from '../shared/helpers.js';
+import { Helpers } from '../shared/helpers.js';
+import { Security } from '../shared/security.js';
 
 /**
  * 👤 MÓDULO DE PERFIL (PADRES)
@@ -42,7 +43,7 @@ export const ProfileModule = {
     const profileAvatarDisplay = document.getElementById('profileAvatarDisplay');
     if (profileAvatarDisplay) {
       if (student.avatar_url) {
-        profileAvatarDisplay.innerHTML = `<img src="${student.avatar_url}" class="w-full h-full object-cover">`;
+        profileAvatarDisplay.innerHTML = `<img src="${Security.safeUrl(student.avatar_url)}" class="w-full h-full object-cover">`;
       } else {
         const studentName = student.name || 'Estudiante';
         profileAvatarDisplay.innerHTML = `<span class="text-4xl font-black text-emerald-700">${studentName.charAt(0)}</span>`;
@@ -260,7 +261,7 @@ export const ProfileModule = {
     const el = document.getElementById('profileAvatarDisplay');
     if (!el) return;
     if (url) {
-      el.innerHTML = `<img src="${url}" class="w-full h-full object-cover" alt="Avatar">`;
+      el.innerHTML = `<img src="${Security.safeUrl(url)}" class="w-full h-full object-cover" alt="Avatar">`;
     } else {
       const initial = (name || 'E').charAt(0).toUpperCase();
       el.innerHTML = `<span class="text-4xl font-black text-emerald-700">${initial}</span>`;

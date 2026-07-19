@@ -36,6 +36,22 @@ export const Security = {
   },
 
   /**
+   * Escapa un string para uso seguro en contextos JavaScript (onclick, template literals).
+   * Previene inyección de código vía atributos de eventos inline.
+   */
+  safeJS(str = '') {
+    if (typeof str !== 'string') return String(str ?? '');
+    return str
+      .replace(/\\/g, '\\\\')
+      .replace(/'/g, "\\'")
+      .replace(/"/g, '\\"')
+      .replace(/</g, '\\x3c')
+      .replace(/>/g, '\\x3e')
+      .replace(/\n/g, '\\n')
+      .replace(/\r/g, '\\r');
+  },
+
+  /**
    * Valida email básico.
    */
   isValidEmail(email = '') {

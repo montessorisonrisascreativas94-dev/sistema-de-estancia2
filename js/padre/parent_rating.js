@@ -3,7 +3,6 @@ import { Helpers } from '../shared/helpers.js';
 
 export const ParentRatingModule = {
   async init() {
-    console.log('ParentRatingModule inicializado');
     await this.checkPendingRating();
     this.initializeEventListeners();
   },
@@ -74,14 +73,14 @@ export const ParentRatingModule = {
         .maybeSingle();
 
       if (error) {
-        console.warn('[ParentRating] parent_ratings table not found:', error.message);
+        // Table may not exist yet — fail silently
         if (banner) banner.classList.add('hidden');
         return;
       }
 
       if (banner) banner.classList.toggle('hidden', !!data);
     } catch (err) {
-      console.warn('[ParentRating] checkPendingRating:', err.message);
+      // Rating check failed — non-critical
     }
   },
 
@@ -140,7 +139,7 @@ export const ParentRatingModule = {
       await this.checkPendingRating();
 
     } catch (err) {
-      console.error('[ParentRating] handleRatingSubmit:', err.message);
+      // Rating submit failed — toast already shown
       Helpers.toast('Error al enviar la valoración', 'error');
     } finally {
       submitBtn.disabled = false;

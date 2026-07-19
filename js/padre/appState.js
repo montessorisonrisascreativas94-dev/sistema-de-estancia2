@@ -21,6 +21,8 @@ export const AppState = new SafeAppState({
   error: null
 });
 
+AppState.today = () => new Date().toISOString().split('T')[0];
+
 /**
  * 🔒 Claves de Caché Seguras
  * Genera claves que dependen del usuario/estudiante para evitar leaks de datos.

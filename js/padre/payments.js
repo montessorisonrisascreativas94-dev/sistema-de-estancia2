@@ -7,6 +7,7 @@ import { Helpers, escapeHtml } from '../shared/helpers.js';
 import { calcMora, getMoraBreakdown, normalizeStatus, daysUntilDue } from '../shared/payment-service.js';
 import { emitEvent } from '../shared/supabase.js';
 import { SCHOOL_SETTINGS_ID } from '../shared/constants.js';
+import { Security } from '../shared/security.js';
 
 
 export const PaymentsModule = {
@@ -331,7 +332,7 @@ export const PaymentsModule = {
           ${p.fiscal_receipt_url ? `
           <div class="mt-3 pt-3 border-t border-slate-50 flex items-center justify-between">
             <p class="text-[9px] font-bold text-slate-400 italic">Comprobante fiscal adjunto</p>
-            <a href="${p.fiscal_receipt_url}" target="_blank" class="text-[9px] font-black text-indigo-600 hover:underline flex items-center gap-1">Ver <i data-lucide="external-link" class="w-3 h-3"></i></a>
+            <a href="${Security.safeUrl(p.fiscal_receipt_url)}" target="_blank" rel="noopener noreferrer" class="text-[9px] font-black text-indigo-600 hover:underline flex items-center gap-1">Ver <i data-lucide="external-link" class="w-3 h-3"></i></a>
           </div>` : ''}
 
           ${moraInfo ? `
@@ -349,7 +350,7 @@ export const PaymentsModule = {
           ${p.evidence_url && !isPaid ? `
           <div class="mt-3 pt-3 border-t border-slate-50 flex justify-between items-center">
             <p class="text-[10px] font-bold text-slate-400 italic">Comprobante enviado. Esperando validación.</p>
-            <a href="${p.evidence_url}" target="_blank" class="text-[10px] font-black text-blue-600 hover:underline flex items-center gap-1">Ver <i data-lucide="external-link" class="w-3 h-3"></i></a>
+            <a href="${Security.safeUrl(p.evidence_url)}" target="_blank" rel="noopener noreferrer" class="text-[10px] font-black text-blue-600 hover:underline flex items-center gap-1">Ver <i data-lucide="external-link" class="w-3 h-3"></i></a>
           </div>` : ''}
         </div>
       </div>`;
@@ -686,7 +687,7 @@ export const PaymentsModule = {
       doc.save(`Recibo-${data.receiptNo}.pdf`);
       Helpers.toast('Recibo descargado', 'success');
     } catch (err) {
-      console.error('Error generando PDF:', err);
+      // PDF generation failed
       Helpers.toast('Error al generar PDF', 'error');
     } finally {
       if (btn) { btn.textContent = '📥 Descargar PDF'; btn.disabled = false; }
@@ -749,7 +750,7 @@ export const PaymentsModule = {
           const { ImageLoader } = await import('../shared/image-loader.js');
           uploadFile = await ImageLoader.compress(file, { maxWidth: 1000, maxHeight: 1000, quality: 0.8, maxSizeKB: 400 });
         } catch (err) {
-          console.warn('Fallo compresión, subiendo original:', err);
+            // Compression failed — upload original
         }
       }
 
@@ -777,13 +778,13 @@ export const PaymentsModule = {
             const { ImageLoader } = await import('../shared/image-loader.js');
             uploadFiscal = await ImageLoader.compress(fiscalFile, { maxWidth: 1000, maxHeight: 1000, quality: 0.8, maxSizeKB: 400 });
           } catch (err) {
-            console.warn('Fallo compresión fiscal, subiendo original:', err);
+            // Fiscal compression failed — upload original
           }
         }
         
         const { error: fiscalUpErr } = await supabase.storage.from('classroom_media').upload(fiscalPath, uploadFiscal);
         if (fiscalUpErr) {
-          console.warn('Error subiendo comprobante fiscal:', fiscalUpErr);
+          // Fiscal receipt upload failed — non-critical
         } else {
           const { data: { publicUrl: puFiscal } } = supabase.storage.from('classroom_media').getPublicUrl(fiscalPath);
           fiscalUrl = puFiscal;
@@ -842,7 +843,7 @@ export const PaymentsModule = {
       }).catch(() => {});
 
     } catch (err) {
-      console.error('Error en submitPaymentProof:', err);
+      // Payment proof submit failed
       document.getElementById('payment-upload-progress')?.remove();
       Helpers.toast('Error al enviar: ' + (err.message || 'Error desconocido'), 'error');
     } finally {

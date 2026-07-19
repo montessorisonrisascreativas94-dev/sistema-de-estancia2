@@ -1,8 +1,8 @@
 import { supabase, RealtimeUtils } from '../shared/supabase.js';
-import { AppState, TABLES } from './appState.js';
+import { AppState } from './appState.js';
 import { Helpers, escapeHtml } from '../shared/helpers.js';
 import { ImageLoader } from '../shared/image-loader.js';
-import { WallModule } from '../shared/wall.js';
+import { Security } from '../shared/security.js';
 
 /**
  * 📱 MÓDULO DE MURO (FEED)
@@ -36,7 +36,6 @@ export const FeedModule = {
     container._feedBound = true;
 
     container.addEventListener('click', async (e) => {
-      // ── LIKE ──────────────────────────────────────────────
       const likeBtn = e.target.closest('[data-action="like"]');
       if (likeBtn) {
         const postId = likeBtn.dataset.postId;
@@ -44,12 +43,40 @@ export const FeedModule = {
         return;
       }
 
-      // ── TOGGLE COMMENT SECTION ────────────────────────────
       const commentToggle = e.target.closest('[data-action="comment"]');
       if (commentToggle) {
         const postId = commentToggle.dataset.postId;
         if (postId) this.showComments(postId);
         return;
+      }
+
+      const sendCommentBtn = e.target.closest('[data-action="send-comment"]');
+      if (sendCommentBtn) {
+        const postId = sendCommentBtn.dataset.postId;
+        if (postId) await this.sendComment(postId);
+        return;
+      }
+
+      const downloadBtn = e.target.closest('[data-action="download-media"]');
+      if (downloadBtn) {
+        const url = downloadBtn.dataset.url;
+        const type = downloadBtn.dataset.type || 'image';
+        if (url) await this.downloadMedia(url, type);
+        return;
+      }
+
+      const lightbox = e.target.closest('[data-lightbox-url]');
+      if (lightbox && window.openLightbox) {
+        window.openLightbox(lightbox.dataset.lightboxUrl, lightbox.dataset.lightboxType || 'image');
+        return;
+      }
+    });
+
+    container.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey && e.target.id?.startsWith('comment-input-')) {
+        e.preventDefault();
+        const postId = e.target.id.replace('comment-input-', '');
+        if (postId) this.sendComment(postId);
       }
     });
   },
@@ -160,7 +187,7 @@ export const FeedModule = {
         mediaHTML = `
           <div class="relative group/media rounded-2xl overflow-hidden mb-4 bg-black">
             ${ImageLoader.video(p.media_url, '', { cls: 'w-full max-h-80 object-cover' })}
-            <button onclick="App.feed.downloadMedia('${optimizedUrl}', 'video')"
+            <button data-action="download-media" data-url="${escapeHtml(optimizedUrl)}" data-type="video"
                class="absolute top-2 right-2 p-2 bg-black/60 hover:bg-black/80 text-white rounded-xl opacity-0 group-hover/media:opacity-100 transition-opacity flex items-center gap-1.5 text-[10px] font-black uppercase backdrop-blur-sm">
               <i data-lucide="download" class="w-3.5 h-3.5"></i> Descargar
             </button>
@@ -168,9 +195,9 @@ export const FeedModule = {
       } else {
         mediaHTML = `
           <div class="relative group/media cursor-zoom-in rounded-2xl overflow-hidden mb-4 bg-black"
-               onclick="window.openLightbox && window.openLightbox('${optimizedUrl}','image')">
+               data-lightbox-url="${escapeHtml(optimizedUrl)}" data-lightbox-type="image">
             ${ImageLoader.img(optimizedUrl, { cls: 'w-full max-h-[500px] object-cover', fallback: 'img/mundo.jpg' })}
-            <button onclick="event.stopPropagation(); App.feed.downloadMedia('${optimizedUrl}', 'image')"
+            <button data-action="download-media" data-url="${escapeHtml(optimizedUrl)}" data-type="image"
                class="absolute top-2 right-2 p-2 bg-black/60 hover:bg-black/80 text-white rounded-xl opacity-0 group-hover/media:opacity-100 transition-opacity flex items-center gap-1.5 text-[10px] font-black uppercase backdrop-blur-sm">
               <i data-lucide="download" class="w-3.5 h-3.5"></i> Descargar
             </button>
@@ -210,7 +237,7 @@ export const FeedModule = {
             ${comments.length} Comentarios
           </button>
           ${p.media_url ? `
-          <button onclick="App.feed.downloadMedia('${p.media_url}', '${p.media_url.match(/\.(mp4|webm|ogg|mov)$/i) ? 'video' : 'image'}')"
+          <button data-action="download-media" data-url="${escapeHtml(p.media_url)}" data-type="${p.media_url.match(/\.(mp4|webm|ogg|mov)$/i) ? 'video' : 'image'}"
              class="ml-auto flex items-center gap-1.5 text-xs font-black uppercase tracking-tighter text-slate-400 hover:text-emerald-600 transition-all">
             <i data-lucide="download" class="w-4 h-4"></i>
             Descargar
@@ -228,8 +255,8 @@ export const FeedModule = {
             }
           </div>
           <div class="flex gap-2">
-            <input type="text" id="comment-input-${p.id}" class="flex-1 px-3 py-2 text-xs border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-400 outline-none" placeholder="Escribe un comentario..." onkeypress="if(event.key==='Enter') App.feed.sendComment('${p.id}')">
-            <button onclick="App.feed.sendComment('${p.id}')" class="p-2 bg-[#0B63C7] text-white rounded-xl hover:bg-[#094a91] transition-colors"><i data-lucide="send" class="w-4 h-4"></i></button>
+            <input type="text" id="comment-input-${p.id}" class="flex-1 px-3 py-2 text-xs border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-400 outline-none" placeholder="Escribe un comentario...">
+            <button data-action="send-comment" data-post-id="${p.id}" class="p-2 bg-[#0B63C7] text-white rounded-xl hover:bg-[#094a91] transition-colors"><i data-lucide="send" class="w-4 h-4"></i></button>
           </div>
         </div>
       </div>
@@ -461,7 +488,7 @@ export const FeedModule = {
       }
     } catch (err) {
       // Revert optimistic on error
-      console.error('Error toggling like:', err);
+      // Like toggle failed — revert optimistic
       if (btn) {
         btn.innerHTML = `<i data-lucide="heart" class="w-4 h-4 ${isLiked ? 'fill-current' : ''}"></i> ${curCount} Me gusta`;
         btn.className = btn.className.replace(/text-\w+-\d+/g,'').trim() + (isLiked ? ' text-[#0B63C7]' : ' text-slate-400');

@@ -3,6 +3,7 @@ import { AppState } from './appState.js';
 import { Helpers, escapeHtml } from '../shared/helpers.js';
 import { ChatModule as SharedChatModule } from '../shared/chat.js';
 import { ScrollModule } from '../shared/scroll.module.js';
+import { Security } from '../shared/security.js';
 
 export const ChatModule = {
   _contacts: [],
@@ -61,7 +62,7 @@ export const ChatModule = {
       list.innerHTML = this._contacts.map(c =>
         '<div data-contact-id="' + c.id + '" class="flex items-center gap-3 p-3 rounded-2xl hover:bg-white hover:shadow-sm cursor-pointer transition-all border border-transparent hover:border-slate-100 group mb-1">' +
           '<div class="w-12 h-12 rounded-full bg-[#E8F2FF] text-[#0B63C7] flex items-center justify-center font-bold overflow-hidden border-2 border-blue-50 shrink-0 aspect-square shadow-sm">' +
-            (c.avatar_url ? '<img src="' + c.avatar_url + '" class="w-full h-full object-cover">' : c.name.charAt(0)) +
+            (c.avatar_url ? '<img src="' + Security.safeUrl(c.avatar_url) + '" class="w-full h-full object-cover">' : c.name.charAt(0)) +
           '</div>' +
           '<div class="min-w-0 flex-1">' +
             '<div class="font-bold text-slate-700 text-sm truncate group-hover:text-green-700">' + escapeHtml(c.name) + '</div>' +
@@ -100,7 +101,7 @@ export const ChatModule = {
     if (headerName)   headerName.textContent   = contact.name;
     if (headerMeta)   headerMeta.textContent   = contact.roleLabel || contact.role || '';
     if (headerAvatar) headerAvatar.innerHTML   = contact.avatar_url
-      ? '<img src="' + contact.avatar_url + '" class="w-full h-full object-cover">'
+      ? '<img src="' + Security.safeUrl(contact.avatar_url) + '" class="w-full h-full object-cover">'
       : contact.name.charAt(0);
     if (headerArea) { headerArea.classList.remove('hidden'); headerArea.classList.add('flex'); }
 
@@ -190,7 +191,7 @@ export const ChatModule = {
     
     // Build avatar HTML
     const avatarHtml = avatarUrl 
-      ? `<img src="${avatarUrl}" class="w-full h-full object-cover">` 
+      ? `<img src="${Security.safeUrl(avatarUrl)}" class="w-full h-full object-cover">` 
       : `<span class="text-sm font-bold">${name.charAt(0) || ''}</span>`;
 
     // Read receipt: show "Visto" for my sent messages that have been read

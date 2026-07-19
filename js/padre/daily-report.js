@@ -271,7 +271,7 @@ export const DailyReportModule = {
       if (window.lucide) lucide.createIcons();
 
     } catch (err) {
-      console.error('[DailyReportModule] Error loading weekly summary:', err);
+      // Weekly summary load failed
       weeklyContainer.innerHTML = `<div class="text-center text-[#EF4444] py-4 font-bold">Error al cargar resumen</div>`;
     }
   },
@@ -354,7 +354,7 @@ export const DailyReportModule = {
       if (window.lucide) lucide.createIcons();
 
     } catch (e) {
-      console.error('[DailyReport]', e);
+      // Daily report load failed
       container.innerHTML = `<p class="text-center text-rose-500 py-8 font-bold">Error al cargar el reporte.</p>`;
     }
   },

@@ -34,7 +34,7 @@ export const ReportsModule = {
 
       if (window.lucide) lucide.createIcons();
     } catch (error) {
-      console.error('Error loading reports:', error);
+      // Reports load failed
       container.innerHTML = `
         <div class="p-8 text-center text-slate-400">
           <p class="font-bold">Error al cargar reportes</p>
@@ -106,7 +106,9 @@ export const ReportsModule = {
   },
 
   setupEventListeners() {
-    // New report button
+    if (this._listenersBound) return;
+    this._listenersBound = true;
+
     const newReportBtn = document.getElementById('btnNewReport');
     if (newReportBtn) {
       newReportBtn.addEventListener('click', () => {
@@ -114,7 +116,6 @@ export const ReportsModule = {
       });
     }
 
-    // Report type change
     const reportTypeSelect = document.getElementById('reportType');
     if (reportTypeSelect) {
       reportTypeSelect.addEventListener('change', (e) => {
@@ -122,7 +123,6 @@ export const ReportsModule = {
       });
     }
 
-    // Evidence file input
     const evidenceInput = document.getElementById('reportEvidence');
     if (evidenceInput) {
       evidenceInput.addEventListener('change', (e) => {
@@ -134,7 +134,6 @@ export const ReportsModule = {
       });
     }
 
-    // New report form submission
     const newReportForm = document.getElementById('newReportForm');
     if (newReportForm) {
       newReportForm.addEventListener('submit', async (e) => {
@@ -170,7 +169,7 @@ export const ReportsModule = {
           teachers.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
       }
     } catch (error) {
-      console.error('Error loading teachers:', error);
+      // Teachers load failed
     }
   },
 
@@ -193,7 +192,7 @@ export const ReportsModule = {
           students.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
       }
     } catch (error) {
-      console.error('Error loading students:', error);
+      // Students load failed
     }
   },
 
@@ -252,7 +251,7 @@ export const ReportsModule = {
 
       if (rpcError) {
         // Log for debugging
-        console.warn('[Reports] RPC create_report failed:', rpcError?.message, rpcError?.code);
+        // RPC failed — will try direct insert fallback
 
         // FIX 400: Fallback to direct insert if RPC is missing or has param mismatch
         if (
@@ -297,7 +296,7 @@ export const ReportsModule = {
       // Reload reports
       await this.loadReports();
     } catch (error) {
-      console.error('Error submitting report:', error?.message || error);
+      // Report submit failed
       Helpers.toast(`Error al enviar el reporte: ${error?.message || 'intenta de nuevo'}`, 'error');
     }
   },
@@ -320,7 +319,7 @@ export const ReportsModule = {
 
       return publicUrl;
     } catch (error) {
-      console.error('Error uploading evidence:', error);
+      // Evidence upload failed
       throw error;
     }
   }
