@@ -94,3 +94,22 @@ export function initSidebar() {
     }
   }, { passive: true });
 }
+
+/**
+ * Inicializar toggles de dropdowns del sidebar (acordeón)
+ */
+export function initSidebarDropdowns() {
+  document.querySelectorAll('.kk-nav-group-toggle').forEach(btn => {
+    if (btn._dropdownBound) return;
+    btn._dropdownBound = true;
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const group   = btn.closest('.kk-nav-group');
+      const submenu = group?.querySelector('.kk-nav-sub');
+      if (!group || !submenu) return;
+      btn.classList.toggle('open');
+      group.classList.toggle('open');
+      submenu.style.display = (submenu.style.display === 'none' || submenu.style.display === '') ? 'block' : 'none';
+    });
+  });
+}

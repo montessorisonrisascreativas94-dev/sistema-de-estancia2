@@ -1022,9 +1022,38 @@ body{font-family:'Nunito',sans-serif;background:white;-webkit-print-color-adjust
       monthsLate,
       formattedText: text.trim()
     };
+  },
+
+  /**
+   * Delegación de eventos segura
+   */
+  delegate(el, selector, event, handler) {
+    el.addEventListener(event, (e) => {
+      const target = e.target.closest(selector);
+      if (target && el.contains(target)) {
+        handler.call(target, e, target);
+      }
+    });
+  },
+
+  /**
+   * Sanitize value for use in HTML attributes (src, href, onerror, etc.)
+   * Only allows safe protocols (http, https, data for images).
+   */
+  sanitizeAttr(str = '') {
+    if (typeof str !== 'string') return '';
+    const s = str.trim();
+    if (/^https?:\/\//i.test(s) || /^data:image\//i.test(s)) return s;
+    if (/^blob:/i.test(s)) return s;
+    return '';
   }
 
 };
+
+// ── Compat exports (used by padre/ modules) ──────────────────────────────────
+export const DATE_FORMAT = { locale: 'es-ES', options: { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' } };
+export const TOAST_DURATION = 2800;
+export const escapeHtml = (str) => Helpers.escapeHTML(str);
 
 // Exponer globalmente para que el listener karpus:db-error pueda usar toast
 if (typeof window !== 'undefined') window.Helpers = Helpers;

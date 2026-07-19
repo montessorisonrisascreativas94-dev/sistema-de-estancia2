@@ -1,9 +1,7 @@
 import { supabase, sendEmail } from '../shared/supabase.js';
 import { QueryCache } from '../shared/query-cache.js';
 import { safeHandle } from '../shared/db-utils.js';
-
-// Tenant config row
-const SCHOOL_SETTINGS_ID = 1;
+import { SCHOOL_SETTINGS_ID } from '../shared/constants.js';
 
 
 const TABLES = {

@@ -66,9 +66,9 @@ export const TeachersModule = {
     container.innerHTML = staff.map(t => `
         <tr class="hover:bg-slate-50 transition-colors cursor-pointer" ondblclick="App.teachers.openModal('${t.id}')">
           <td class="p-4 font-bold text-slate-700">${Helpers.escapeHTML(t.name)}</td>
-          <td class="p-4 text-slate-500">${t.email}</td>
-          <td class="p-4"><span class="px-3 py-1 bg-slate-100 rounded-full text-[10px] font-black uppercase text-slate-500">${t.classrooms?.name || 'Sin Aula'}</span></td>
-          <td class="p-4"><span class="px-3 py-1 bg-[#E8F2FF] text-[#0B63C7] rounded-full text-[10px] font-black uppercase tracking-wider">${t.role}</span></td>
+          <td class="p-4 text-slate-500">${Helpers.escapeHTML(t.email)}</td>
+          <td class="p-4"><span class="px-3 py-1 bg-slate-100 rounded-full text-[10px] font-black uppercase text-slate-500">${Helpers.escapeHTML(t.classrooms?.name || 'Sin Aula')}</span></td>
+          <td class="p-4"><span class="px-3 py-1 bg-[#E8F2FF] text-[#0B63C7] rounded-full text-[10px] font-black uppercase tracking-wider">${Helpers.escapeHTML(t.role)}</span></td>
           <td class="p-4"><span class="px-3 py-1 ${t.is_active !== false ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-500'} rounded-full text-[10px] font-black uppercase tracking-wider">${t.is_active !== false ? 'Activo' : 'Inactivo'}</span></td>
           <td class="p-4 text-right">
             <div class="flex justify-end gap-2">
@@ -432,7 +432,7 @@ export const TeachersModule = {
       const { data: rooms } = await DirectorApi.getClassrooms();
       const select = document.getElementById('tClassroom');
       if (select && rooms?.length) {
-        select.innerHTML += rooms.map(r => `<option value="${r.id}">${(r.name || 'Sin nombre').trim()}</option>`).join('');
+        select.innerHTML += rooms.map(r => `<option value="${r.id}">${Helpers.escapeHTML((r.name || 'Sin nombre').trim())}</option>`).join('');
       }
     } catch (_) { /* silencioso */ }
 

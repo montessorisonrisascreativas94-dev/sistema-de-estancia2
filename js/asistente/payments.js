@@ -4,20 +4,10 @@ import { AppState } from './state.js';
 import { sendEmail } from '../shared/supabase.js';
 import { calcMora } from '../shared/payment-service.js';
 import { InvoiceModule } from '../shared/invoice.js';
-
-// ── Tenant config row — single source of truth ────────────────────────────────
-const SCHOOL_SETTINGS_ID = 1;
+import { SCHOOL_SETTINGS_ID, MONTH_LABELS } from '../shared/constants.js';
+import { openGlobalModal } from '../shared/modal.js';
 
 const MONTH_NAMES_ES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
-const MONTH_LABELS   = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-
-function openGlobalModal(html) {
-  const c = document.getElementById('globalModalContainer');
-  if (!c) return;
-  c.innerHTML = '<div class="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">' + html + '</div>';
-  c.style.cssText = 'display:flex;align-items:center;justify-content:center;position:fixed;inset:0;background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);z-index:9999;';
-  if (window.lucide) lucide.createIcons();
-}
 
 function calcStatus(p) {
   if (!p || !p.status) return 'pending';

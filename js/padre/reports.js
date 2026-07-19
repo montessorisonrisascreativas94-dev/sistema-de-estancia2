@@ -1,6 +1,6 @@
 
 import { supabase } from '../shared/supabase.js';
-import { Helpers } from './helpers.js';
+import { Helpers } from '../shared/helpers.js';
 
 export const ReportsModule = {
   async init() {

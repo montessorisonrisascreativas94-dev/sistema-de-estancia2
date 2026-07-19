@@ -220,7 +220,7 @@ export const StudentsModule = {
           </td>
           <td class="p-4 text-sm font-medium text-slate-600">
             <span class="px-3 py-1 bg-slate-100 rounded-full text-[10px] font-black uppercase text-slate-500">
-              ${s.classrooms?.name || 'No asignada'}
+              ${Helpers.escapeHTML(s.classrooms?.name || 'No asignada')}
             </span>
           </td>
           <td class="p-4">

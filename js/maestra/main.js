@@ -1,10 +1,7 @@
 import { ensureRole, supabase, initOneSignal, RealtimeUtils, emitEvent, sendPush } from '../shared/supabase.js';
 import { RealtimeManager } from '../shared/realtime-manager.js';
 import { AppState } from './state.js';
-
-// ── SCHOOL_SETTINGS ROW ID — única fila de configuración del tenant ───────────
-// Si en el futuro hay multi-tenant, reemplazar por el ID del tenant activo.
-const SCHOOL_SETTINGS_ID = 1;
+import { SCHOOL_SETTINGS_ID } from '../shared/constants.js';
 import { MaestraApi } from './api.js';
 import { Helpers } from '../shared/helpers.js';
 import { WallModule } from '../shared/wall.js';
@@ -51,8 +48,6 @@ window.App = {
 
   // Wall
   WallModule: WallModule,
-  openNewPostModal: () => window.App._openNewPostModal(),
-  submitNewPost: () => window.App._submitNewPost(),
 
   // Attendance
   registerAttendance: Attendance.registerAttendance,
@@ -171,7 +166,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.querySelectorAll('.user-name-display').forEach(el => el.textContent = teacherName);
   document.querySelectorAll('.user-email-display').forEach(el => el.textContent = auth.user.email);
   const welcomeText = document.querySelector('#t-home header h1');
-  if (welcomeText) welcomeText.innerHTML = `<span>Hola, <span class="user-name-display text-[#FF7A00]">${teacherName}</span>!</span>`;
+  if (welcomeText) welcomeText.innerHTML = `<span>Hola, <span class="user-name-display text-[#FF7A00]">${UI.safeEscapeHTML(teacherName)}</span>!</span>`;
 
   // Cargar Perfil en sección perfil
   const pName = document.getElementById('teacherName');
@@ -1045,32 +1040,6 @@ function initClassTabs(defaultTab = null) {
   // Activar tab inicial
   const tabToActivate = defaultTab || localStorage.getItem('maestra_last_tab') || 'feed';
   activateTab(tabToActivate);
-}
-
-function initVideocall() {
-  const container = document.getElementById('meet');
-  if (!container) return;
-  const classroom = AppState.get('classroom');
-
-  // 1. Mostrar Panel de Gestión
-  container.innerHTML = `
-    <div class="flex flex-col items-center justify-center p-12 text-center">
-      <div class="w-20 h-20 bg-[#FF7A00] rounded-full flex items-center justify-center mb-6">
-        <i data-lucide="video" class="w-10 h-10 text-[#FF7A00]"></i>
-      </div>
-      <h4 class="text-xl font-black text-slate-800 mb-2">Aula Virtual: ${classroom?.name}</h4>
-      
-      <div class="flex gap-4 mt-6">
-            <button onclick="App.startJitsi()" class="px-8 py-4 bg-[#FF7A00] text-white rounded-2xl font-black shadow-xl shadow-orange-100 hover:scale-105 transition-all flex items-center gap-3">
-              <i data-lucide="radio"></i> Iniciar Clase Ahora
-            </button>
-            <button onclick="App.scheduleClassMeeting()" class="px-8 py-4 bg-[#28B54D] text-white rounded-2xl font-black shadow-xl shadow-green-100 hover:bg-[#239943] transition-all flex items-center gap-3">
-              <i data-lucide="calendar-plus"></i> Programar Futura
-            </button>
-          </div>
-    </div>
-  `;
-  if (window.lucide) window.lucide.createIcons();
 }
 
 window.App.scheduleClassMeeting = async () => {

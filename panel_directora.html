@@ -2484,7 +2484,7 @@
 
       <!-- CAJA -->
       <section id="caja" class="section">
-        <!-- CajaModule will render here -->
+        <!-- CajaCobroV2 renders here -->
       </section>
 
       <!-- CICLO ACADEMICO -->
@@ -2701,66 +2701,19 @@
   <script src="js/shared/confirm-dialog.js" defer></script>
   <!-- Safe Event Handlers (XSS Protection) -->
   <script type="module" src="js/directora/event-handlers.js"></script>
-  <script defer src="js/common_ui.js"></script>
   <script src="js/pwa-install.js" defer></script>
-  <!-- Manejador de dropdowns del sidebar (SUPER ROBUSTO) -->
+  <!-- Fix Lucide icon fallbacks -->
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      // Función principal para togglear dropdowns
-      function setupSidebarDropdowns() {
-        // Encontrar todos los botones de toggle
-        const toggleButtons = document.querySelectorAll('.kk-nav-group-toggle');
-        
-        toggleButtons.forEach(btn => {
-          // Asegurar que no haya duplicados
-          btn._dropdownHandled = true;
-          
-          btn.addEventListener('click', (e) => {
-            console.log('Toggle button clicked!'); // Debug
-            e.preventDefault();
-            e.stopPropagation(); // Detener la propagación
-            
-            const group = btn.closest('.kk-nav-group');
-            const submenu = group ? group.querySelector('.kk-nav-sub') : null;
-            
-            if (group && submenu) {
-              const isOpen = !group.classList.contains('open');
-              
-              // Togglear clase 'open'
-              btn.classList.toggle('open', !isOpen);
-              group.classList.toggle('open', !isOpen);
-              
-              // Mostrar/ocultar submenú
-              submenu.style.display = isOpen ? 'none' : 'block';
-              
-              console.log('Dropdown toggled:', !isOpen, group.dataset.group); // Debug
-            }
-          });
-        });
-        console.log('Sidebar dropdowns initialized! Found:', toggleButtons.length, 'buttons.'); // Debug
-      }
-
-      // Ejecutar inmediatamente
-      setupSidebarDropdowns();
-      
-      // También ejecutar después de un pequeño delay por si acaso
-      setTimeout(setupSidebarDropdowns, 500);
-      setTimeout(setupSidebarDropdowns, 2000);
-      
-      // Solucionar íconos de Lucide que no existen
       function fixMissingLucideIcons() {
-        // user-search -> user
         document.querySelectorAll('[data-lucide="user-search"]').forEach(el => {
           el.setAttribute('data-lucide', 'user');
         });
-        // file-user -> file-text
         document.querySelectorAll('[data-lucide="file-user"]').forEach(el => {
           el.setAttribute('data-lucide', 'file-text');
         });
-        // Re-inicializar íconos
         if(window.lucide) lucide.createIcons();
       }
-      
       fixMissingLucideIcons();
       setTimeout(fixMissingLucideIcons, 1000);
     });

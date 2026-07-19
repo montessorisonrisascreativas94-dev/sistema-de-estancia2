@@ -1,6 +1,6 @@
 import { supabase, ensureRole, initOneSignal } from '../shared/supabase.js';
 import { Api } from './api.js';
-import { Helpers } from './helpers.js';
+import { Helpers } from '../shared/helpers.js';
 import { AppState } from './appState.js';
 import { VideoCallModule } from '../shared/videocall.js';
 import { PaymentsModule }  from './payments.js';
@@ -541,8 +541,8 @@ function renderDailySummary(log) {
     <div class="flex items-center gap-3 px-3 py-2.5 rounded-2xl bg-slate-50 border border-slate-100 hover:bg-[#E8F2FF] hover:border-[#0B63C7]/20 transition-all">
       <span class="text-2xl leading-none w-9 text-center shrink-0">${item.icon}</span>
       <div class="flex-1 min-w-0">
-        <p class="font-black text-sm text-[#1A2340] leading-tight">${item.label}</p>
-        ${item.detail ? `<p class="text-xs text-slate-500 font-medium truncate">${item.detail}</p>` : ''}
+        <p class="font-black text-sm text-[#1A2340] leading-tight">${Helpers.escapeHTML(item.label)}</p>
+        ${item.detail ? `<p class="text-xs text-slate-500 font-medium truncate">${Helpers.escapeHTML(item.detail)}</p>` : ''}
       </div>
       ${item.timeStr ? `<span class="text-[10px] font-black text-[#0B63C7] bg-[#E8F2FF] px-2 py-1 rounded-lg shrink-0">${item.timeStr}</span>` : ''}
     </div>`).join('');
@@ -574,8 +574,8 @@ function renderLatestPosts(posts) {
           ${name.charAt(0).toUpperCase()}
         </div>
         <div class="min-w-0 flex-1">
-          <p class="text-xs font-black text-slate-700 truncate">${name}</p>
-          <p class="text-xs text-slate-500 leading-snug mt-0.5">${content}</p>
+          <p class="text-xs font-black text-slate-700 truncate">${Helpers.escapeHTML(name)}</p>
+          <p class="text-xs text-slate-500 leading-snug mt-0.5">${Helpers.escapeHTML(content)}</p>
           <p class="text-[10px] text-slate-400 mt-1">${date}</p>
         </div>
       </div>`;
@@ -878,7 +878,7 @@ async function openDigitalID() {
         </div>
         <div class="text-center">
           <h4 class="text-lg font-black text-slate-800">${Helpers.escapeHTML(student.name)}</h4>
-          <p class="text-xs font-bold text-slate-400 uppercase tracking-widest">${student.classrooms?.name || 'Sin aula'}</p>
+          <p class="text-xs font-bold text-slate-400 uppercase tracking-widest">${Helpers.escapeHTML(student.classrooms?.name || 'Sin aula')}</p>
         </div>
         <div id="digitalIDQR" class="p-4 bg-slate-50 rounded-3xl border-2 border-slate-100"></div>
         <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Muestra este código en la puerta para marcar asistencia rápida</p>
@@ -1108,8 +1108,8 @@ function _showStudentSwitcher(students) {
               ${s.avatar_url ? `<img src="${s.avatar_url}" class="w-full h-full object-cover">` : `<span class="font-black text-slate-400">${s.name.charAt(0)}</span>`}
             </div>
             <div class="text-left flex-1 min-w-0">
-              <p class="font-black text-slate-800 text-sm truncate">${s.name}</p>
-              <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">${s.classrooms?.name || 'Sin aula'}</p>
+              <p class="font-black text-slate-800 text-sm truncate">${Helpers.escapeHTML(s.name)}</p>
+              <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">${Helpers.escapeHTML(s.classrooms?.name || 'Sin aula')}</p>
             </div>
             ${String(s.id) === String(current?.id) ? '<i data-lucide="check" class="w-4 h-4 text-indigo-600"></i>' : ''}
           </button>

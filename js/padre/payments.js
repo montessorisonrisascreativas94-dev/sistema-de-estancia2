@@ -3,12 +3,10 @@
  */
 import { supabase } from '../shared/supabase.js';
 import { AppState, TABLES } from './appState.js';
-import { Helpers, escapeHtml } from './helpers.js';
+import { Helpers, escapeHtml } from '../shared/helpers.js';
 import { calcMora, getMoraBreakdown, normalizeStatus, daysUntilDue } from '../shared/payment-service.js';
 import { emitEvent } from '../shared/supabase.js';
-
-// Tenant config row
-const SCHOOL_SETTINGS_ID = 1;
+import { SCHOOL_SETTINGS_ID } from '../shared/constants.js';
 
 
 export const PaymentsModule = {

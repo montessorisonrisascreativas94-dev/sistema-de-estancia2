@@ -1,6 +1,6 @@
 import { supabase } from '../shared/supabase.js';
 import { AppState } from './appState.js';
-import { Helpers } from './helpers.js';
+import { Helpers } from '../shared/helpers.js';
 
 /**
  * Listener en tiempo real para estado de clase en vivo

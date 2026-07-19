@@ -13,9 +13,9 @@ import { NewPaymentsModule } from './payments-new.module.js';
 import { InvoicingModule } from './invoicing.module.js';
 import { AccountingModule } from './accounting.module.js';
 import { BadgeSystem } from '../shared/badges.js';
+import { SCHOOL_SETTINGS_ID } from '../shared/constants.js';
+import { openGlobalModal, closeGlobalModal } from '../shared/modal.js';
 
-// ── Tenant config row — única fila de configuración del tenant ─────────────────
-const SCHOOL_SETTINGS_ID = 1;
 import { GradesModule } from './grades.module.js';
 import { PermitsModule } from './permits.module.js';
 import { InquiriesModule } from './inquiries.module.js';
@@ -24,18 +24,14 @@ import { RoomsModule } from './rooms.module.js';
 import { AcademicCycleModule } from './academic-cycle.module.js';
 import { InscripcionesModule } from './inscripciones.module.js';
 import { CatalogoModule } from '../shared/catalogo-conceptos.module.js';
-import { CajaModule } from './caja.module.js';
 import { initCajaCobro, CajaCobroV2 } from '../shared/caja-cobro-v2.js';
 import { AccessModule } from './access.module.js';
 import { SchoolYearModule } from './school-year.module.js';
 
-window.CajaModule = CajaModule;
 window.CajaCobroV2 = CajaCobroV2;
 import { AttendanceModule } from './attendance.module.js';
 import { RealtimeManager } from '../shared/realtime-manager.js';
 import { QueryCache } from '../shared/query-cache.js';
-import { ImageLoader } from '../shared/image-loader.js';
-import { auditLog } from '../shared/db-utils.js';
 const debounce = (fn, delay) => {
   let timeout;
   return (...args) => {
@@ -62,9 +58,8 @@ window.App = {
   inquiries: InquiriesModule,
   permits: PermitsModule,
   chat: ChatModule,
-  automation: { renderSmartWidgets: () => {} }, // stub — módulo no disponible
   academic:   AcademicCycleModule,
-  caja:       CajaModule,
+  caja:       CajaCobroV2,
   cuentasCobrar: { init: () => import('./cuentas-cobrar.module.js').then(m => m.CuentasCobrarModule.init()), remindStudent: (id) => import('./cuentas-cobrar.module.js').then(m=>m.CuentasCobrarModule.remindStudent(id)), applyFilter: (v) => import('./cuentas-cobrar.module.js').then(m=>m.CuentasCobrarModule.applyFilter(v)) },
   wall: {
     toggleCommentSection: (pid) => WallModule.toggleCommentSection(pid),
@@ -78,28 +73,9 @@ window.App = {
 
 window.WallModule = WallModule;
 
-window.openGlobalModal = function(html, wide = false) {
-  const container = document.getElementById('globalModalContainer');
-  if (!container) return;
-  const maxW = wide ? 'max-w-4xl' : 'max-w-2xl';
-  container.innerHTML = `
-    <div id="globalModalInner" class="bg-white rounded-3xl shadow-2xl w-full ${maxW} max-h-[92vh] overflow-y-auto mx-3 my-4 relative animate-scaleIn">
-      <button onclick="App.ui.closeModal()" class="absolute top-4 right-4 w-10 h-10 flex items-center justify-center rounded-full bg-slate-100 text-slate-400 hover:bg-rose-50 hover:text-rose-500 transition-all z-[110]">
-        <i data-lucide="x" class="w-6 h-6"></i>
-      </button>
-      ${html}
-    </div>`;
-  container.style.cssText = 'display:flex;align-items:flex-start;justify-content:center;padding-top:4vh;position:fixed;inset:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(8px);z-index:var(--z-modal,100);overflow-y:auto;';
-  
-  // Cerrar al hacer clic fuera del contenido (en el overlay)
-  container.onmousedown = (e) => {
-    if (e.target === container) {
-      App.ui.closeModal();
-    }
-  };
-
-  if (window.lucide) lucide.createIcons();
-};
+window.openGlobalModal = openGlobalModal;
+window.closeGlobalModal = closeGlobalModal;
+if (window.App?.ui) window.App.ui.closeModal = closeGlobalModal;
 
 /**
  * ?? Navegaci�n Global
@@ -508,13 +484,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         .subscribe();
     } catch(e){}
 
-    // ?? Sistema de badges por secci�n
-    BadgeSystem.init(auth.user.id);
-
-    // ?? Realtime: alertar cuando un padre sube un comprobante
-    // Se elimin� la importaci�n de payment-service.js (404)
-    // El monitoreo de pagos se maneja ahora dentro del PaymentsModule o v�a Supabase directamente si es necesario.
-
     // 6. Configurar Logout
     document.getElementById('btnLogout')?.addEventListener('click', async () => {
       RealtimeManager.unsubscribeAll();
@@ -526,9 +495,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 7. Sidebar — delegado al módulo unificado sidebar-manager.js
     import('../shared/sidebar-manager.js')
-      .then(({ initSidebar }) => {
+      .then(({ initSidebar, initSidebarDropdowns }) => {
         initSidebar();
-        // Inicializar toggles de dropdowns del sidebar
         initSidebarDropdowns();
       })
       .catch((err) => {
@@ -545,8 +513,6 @@ document.addEventListener('DOMContentLoaded', async () => {
           const ov = document.getElementById('sidebarOverlay');
           if (ov) ov.style.display = 'none';
         });
-        // Inicializar toggles de dropdowns también en fallback
-        initSidebarDropdowns();
       });
 
     // 7b. Configurar guardado de perfil
@@ -931,110 +897,7 @@ async function loadNewPostsBadge() {
   } catch (_) {}
 }
 
-// -- Secci�n de Accesos (QR + Asistencia en vivo) -----------------------------
-function _initAccesosSection() {
-  const container = document.getElementById('accesos-content');
-  if (!container) return;
-
-  // Cargar librer�a QR si no est�
-  const loadQR = () => new Promise(resolve => {
-    if (window.QRCode) { resolve(); return; }
-    const s = document.createElement('script');
-    s.src = 'js/shared/qrcode.min.js';
-    s.onload = resolve;
-    document.head.appendChild(s);
-  });
-
-  // Cargar estudiantes y generar QRs
-  const loadStudentsQR = async () => {
-    container.innerHTML = '<div class="flex justify-center py-12"><div class="animate-spin w-8 h-8 border-2 border-orange-500 rounded-full border-t-transparent"></div></div>';
-    await loadQR();
-
-    const { data: students } = await supabase
-      .from('students')
-      .select('id, name, matricula, classrooms:classroom_id(name)')
-      .eq('is_active', true)
-      .not('matricula', 'is', null)
-      .order('name');
-
-    if (!students?.length) {
-      container.innerHTML = '<div class="text-center py-12 text-slate-400"><p class="font-bold">No hay estudiantes con matr�cula asignada.</p><p class="text-xs mt-1">Asigna matr�culas desde la secci�n Estudiantes.</p></div>';
-      return;
-    }
-
-    container.innerHTML = students.map(s => `
-      <div class="bg-white rounded-3xl border border-slate-100 shadow-sm p-5 flex flex-col items-center gap-3 hover:shadow-md transition-all">
-        <div id="qr-${s.id}" class="bg-slate-50 w-[140px] h-[140px] rounded-xl border-2 border-dashed border-slate-200 flex items-center justify-center cursor-pointer group hover:bg-orange-50 hover:border-orange-200 transition-all"
-             onclick="window._generateLazyStudentQR('${s.id}', '${s.matricula}')">
-          <div class="text-center">
-            <i data-lucide="qr-code" class="w-6 h-6 text-slate-300 group-hover:text-orange-400 mx-auto mb-1"></i>
-            <span class="text-[9px] font-bold text-slate-400 group-hover:text-orange-500 uppercase">Generar QR</span>
-          </div>
-        </div>
-        <div class="text-center">
-          <p class="font-black text-slate-800 text-sm">${s.name}</p>
-          <p class="text-[10px] font-bold text-orange-600 uppercase tracking-widest">${s.matricula}</p>
-          <p class="text-[10px] text-slate-400">${s.classrooms?.name || 'Sin aula'}</p>
-        </div>
-        <button onclick="window._printStudentQR('${s.id}','${s.name}','${s.matricula}')"
-          class="w-full py-2 bg-slate-800 text-white rounded-xl font-black text-[9px] uppercase tracking-widest hover:bg-slate-900 transition-all flex items-center justify-center gap-1.5">
-          <i data-lucide="printer" class="w-3 h-3"></i> Imprimir
-        </button>
-      </div>`).join('');
-
-    if (window.lucide) lucide.createIcons();
-  };
-
-  // Función global para generar QR solo cuando sea necesario (Lazy)
-  window._generateLazyStudentQR = (id, matricula) => {
-    const el = document.getElementById(`qr-${id}`);
-    if (!el || el.querySelector('img')) return;
-
-    el.innerHTML = '<div class="animate-spin w-5 h-5 border-2 border-orange-500 rounded-full border-t-transparent"></div>';
-    
-    setTimeout(() => {
-      const qrData = JSON.stringify({ id, matricula, role: 'student' });
-      el.innerHTML = '';
-      new QRCode(el, {
-        text: qrData,
-        width: 120,
-        height: 120,
-        colorDark: "#000000",
-        colorLight: "#ffffff",
-        correctLevel: QRCode.CorrectLevel.H
-      });
-      el.classList.remove('bg-slate-50', 'border-dashed', 'cursor-pointer');
-      el.classList.add('p-2', 'bg-white', 'border-slate-100');
-      el.onclick = null;
-    }, 200);
-  };
-
-  // Funci�n global para imprimir QR individual
-  window._printStudentQR = (id, name, matricula) => {
-    const el = document.getElementById(`qr-${id}`);
-    const img = el?.querySelector('img')?.src || el?.querySelector('canvas')?.toDataURL();
-    if (!img) return;
-    const win = window.open('', '_blank');
-    win.document.write(`<!DOCTYPE html><html><head><title>QR ${matricula}</title>
-      <style>body{font-family:Arial,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;}
-      .card{border:2px solid #e2e8f0;border-radius:16px;padding:20px;text-align:center;max-width:240px;}
-      .logo{font-size:11px;font-weight:900;color:#f97316;text-transform:uppercase;letter-spacing:2px;margin-bottom:10px;}
-      img{width:160px;height:160px;}.name{font-size:14px;font-weight:900;color:#1e293b;margin-top:10px;}
-      .mat{font-size:10px;color:#64748b;font-weight:700;margin-top:3px;}.hint{font-size:8px;color:#94a3b8;margin-top:6px;}</style>
-    </head><body><div class="card">
-      <div class="logo">🎓 Colegio Montessori Sonrisas Creativas</div>
-      <img src="${img}">
-      <div class="name">${name}</div>
-      <div class="mat">${matricula}</div>
-      <div class="hint">Escanea para registrar entrada/salida</div>
-    </div><script>window.onload=()=>window.print()<\/script></body></html>`);
-    win.document.close();
-  };
-
-  loadStudentsQR();
-}
-
-// -- Preview din�mico del horario ----------------------------------------------
+// -- Preview dinámico del horario ----------------------------------------------
 function _updateSchedulePreview() {
   const preview = document.getElementById('schedulePreview');
   if (!preview) return;
@@ -1115,34 +978,6 @@ async function _initDirectorAccessId(profile) {
   input.addEventListener('input', (e) => {
     clearTimeout(window._dirQrDebounce);
     window._dirQrDebounce = setTimeout(() => _renderQR(e.target.value.trim()), 600);
-  });
-}
-
-/**
- * Inicializar toggles de dropdowns del sidebar
- */
-function initSidebarDropdowns() {
-  document.querySelectorAll('.kk-nav-group-toggle').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      // Prevenir que el click navegue a una sección si es un toggle
-      e.stopPropagation();
-      
-      const group = btn.closest('.kk-nav-group');
-      const submenu = group?.querySelector('.kk-nav-sub');
-      
-      if (group && submenu) {
-        // Toggle la clase 'open' en el botón y el grupo
-        btn.classList.toggle('open');
-        group.classList.toggle('open');
-        
-        // Mostrar/ocultar el submenú
-        if (submenu.style.display === 'none' || submenu.style.display === '') {
-          submenu.style.display = 'block';
-        } else {
-          submenu.style.display = 'none';
-        }
-      }
-    });
   });
 }
 

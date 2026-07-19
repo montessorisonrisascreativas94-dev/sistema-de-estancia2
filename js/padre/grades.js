@@ -1,6 +1,6 @@
 import { supabase } from '../shared/supabase.js';
 import { AppState, TABLES } from './appState.js';
-import { Helpers, escapeHtml } from './helpers.js';
+import { Helpers, escapeHtml } from '../shared/helpers.js';
 
 /**
  * 🎓 MÓDULO DE CALIFICACIONES (PADRES)

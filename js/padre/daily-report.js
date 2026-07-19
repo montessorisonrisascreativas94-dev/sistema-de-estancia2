@@ -3,6 +3,7 @@
  * Muestra el reporte de rutina diaria del hijo con timeline de eventos y horas, plus weekly summary!
  */
 import { supabase } from '../shared/supabase.js';
+import { Helpers } from '../shared/helpers.js';
 
 const ICONS = {
   food: { todo: '🍽️', poco: '🍲', nada: '🙅' },
@@ -264,7 +265,7 @@ export const DailyReportModule = {
             </div>
             <h4 class="font-black text-lg text-[#1A2340]">Notas de la Maestra</h4>
           </div>
-          <p class="text-sm text-[#334155] font-medium italic">"${todayNote}"</p>
+          <p class="text-sm text-[#334155] font-medium italic">"${Helpers.escapeHTML(todayNote)}"</p>
         </div>` : ''}
       `;
       if (window.lucide) lucide.createIcons();
@@ -460,7 +461,7 @@ export const DailyReportModule = {
           <span class="text-xl mt-0.5">📝</span>
           <div>
             <div class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">Observación de la maestra</div>
-            <p class="text-sm font-medium text-slate-700 leading-relaxed">${log.notes}</p>
+            <p class="text-sm font-medium text-slate-700 leading-relaxed">${Helpers.escapeHTML(log.notes)}</p>
           </div>
         </div>` : ''}
 
@@ -514,10 +515,10 @@ export const DailyReportModule = {
       <div class="dr-dot">${icon}</div>
       <div class="flex-1 min-w-0">
         <div class="flex items-center justify-between gap-2">
-          <span class="text-sm font-black text-slate-700">${label}</span>
+          <span class="text-sm font-black text-slate-700">${Helpers.escapeHTML(label)}</span>
           <span class="text-[10px] font-bold text-slate-400 shrink-0">${time}</span>
         </div>
-        ${detail ? `<p class="text-xs text-slate-500 mt-0.5">${detail}</p>` : ''}
+        ${detail ? `<p class="text-xs text-slate-500 mt-0.5">${Helpers.escapeHTML(detail)}</p>` : ''}
       </div>
     </div>`;
   },

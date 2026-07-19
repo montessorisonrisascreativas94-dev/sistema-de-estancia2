@@ -8,6 +8,7 @@
  */
 import { supabase } from '../shared/supabase.js';
 import { Helpers } from '../shared/helpers.js';
+import { SCHOOL_SETTINGS_ID } from '../shared/constants.js';
 
 // AppState: works for both directora and asistente panels
 // Uses a lazy import so the module can be shared across panels
@@ -29,7 +30,6 @@ async function _getAppState() {
 }
 
 // ── Constantes ──────────────────────────────────────────────
-const SCHOOL_SETTINGS_ID = 1;
 const MONTHS_IN_YEAR     = 12;
 
 // ── Helpers locales ──────────────────────────────────────────

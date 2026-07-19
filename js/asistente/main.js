@@ -8,33 +8,25 @@ import { Helpers } from '../shared/helpers.js';
 import { WallModule } from '../shared/wall.js';
 import { ChatModule } from '../shared/chat.js';
 import { StudentsModule } from './modules/students.js';
-import { renderCajaCobro, CajaCobro } from './caja-cobro.js';
 import { initCajaCobro, CajaCobroV2 } from '../shared/caja-cobro-v2.js';
-import { auditLog } from '../shared/db-utils.js';
 import { RoomsModule } from './modules/rooms.js';
 import { DashboardModule } from './modules/dashboard.js';
 import { BadgeSystem } from '../shared/badges.js';
 import { ImageLoader } from '../shared/image-loader.js';
-import { QueryCache } from '../shared/query-cache.js';
 import { RealtimeManager } from '../shared/realtime-manager.js';
-import { Security } from '../shared/security.js';
 import { UIPremium } from '../shared/ui-premium.js';
 import { AssistantAccountingModule } from './accounting.module.js';
 import { InscripcionesModule } from '../directora/inscripciones.module.js';
 import { CatalogoModule } from '../shared/catalogo-conceptos.module.js';
+import { openGlobalModal, closeGlobalModal } from '../shared/modal.js';
 
 // Exponer globalmente para onclick en HTML
 window.InscripcionesModule = InscripcionesModule;
 window.CatalogoModule = CatalogoModule;
-window.CajaCobro = CajaCobro;
 window.CajaCobroV2 = CajaCobroV2;
 
-// ?? Definir objeto App globalmente para evitar ReferenceError en onclicks del HTML
-// Global close modal fallback — always available even before openNewPostModal is called
-window._closeAsistenteModal = () => {
-  const gc = document.getElementById('globalModalContainer');
-  if (gc) { gc.style.display = 'none'; gc.innerHTML = ''; }
-};
+// Close modal global — alias para compatibilidad con código existente
+window._closeAsistenteModal = closeGlobalModal;
 
 // Cierre de modales estáticos al hacer clic fuera del contenido
 document.addEventListener('click', (e) => {
@@ -49,25 +41,8 @@ document.addEventListener('click', (e) => {
   }
 });
 
-window.openGlobalModal = (html, wide = false) => {
-  const gc = document.getElementById('globalModalContainer');
-  if (!gc) return;
-  const maxW = wide ? 'max-w-4xl' : 'max-w-2xl';
-  gc.innerHTML = `
-    <div id="globalModalInner" class="bg-white rounded-3xl shadow-2xl w-full ${maxW} max-h-[92vh] overflow-y-auto mx-3 my-4 relative animate-scaleIn">
-      <button onclick="window._closeAsistenteModal()" class="absolute top-4 right-4 w-10 h-10 flex items-center justify-center rounded-full bg-slate-100 text-slate-400 hover:bg-rose-50 hover:text-rose-500 transition-all z-[110]">
-        <i data-lucide="x" class="w-6 h-6"></i>
-      </button>
-      ${html}
-    </div>`;
-  gc.style.cssText = 'display:flex;align-items:flex-start;justify-content:center;padding-top:4vh;position:fixed;inset:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(8px);z-index:9999;overflow-y:auto;';
-  
-  gc.onmousedown = (e) => {
-    if (e.target === gc) window._closeAsistenteModal();
-  };
-
-  if (window.lucide) lucide.createIcons();
-};
+window.openGlobalModal = openGlobalModal;
+window.closeGlobalModal = closeGlobalModal;
 
 window.App = {
   payments: {
@@ -507,7 +482,10 @@ function initNavigation() {
 
   // -- Sidebar (mobile + desktop collapse) delegado al módulo unificado ------
   import('../shared/sidebar-manager.js')
-    .then(({ initSidebar }) => initSidebar())
+    .then(({ initSidebar, initSidebarDropdowns }) => {
+      initSidebar();
+      initSidebarDropdowns();
+    })
     .catch(() => {
       // Fallback mínimo
       document.getElementById('menuBtn')?.addEventListener('click', () => {
@@ -523,37 +501,6 @@ function initNavigation() {
         if (ov) ov.style.display = 'none';
       });
     });
-
-  // -- Inicializar toggles de dropdowns del sidebar ---------------------------
-  initSidebarDropdowns();
-}
-
-/**
- * Inicializar toggles de dropdowns del sidebar
- */
-function initSidebarDropdowns() {
-  document.querySelectorAll('.kk-nav-group-toggle').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      // Prevenir que el click navegue a una sección si es un toggle
-      e.stopPropagation();
-      
-      const group = btn.closest('.kk-nav-group');
-      const submenu = group?.querySelector('.kk-nav-sub');
-      
-      if (group && submenu) {
-        // Toggle la clase 'open' en el botón y el grupo
-        btn.classList.toggle('open');
-        group.classList.toggle('open');
-        
-        // Mostrar/ocultar el submenú
-        if (submenu.style.display === 'none' || submenu.style.display === '') {
-          submenu.style.display = 'block';
-        } else {
-          submenu.style.display = 'none';
-        }
-      }
-    });
-  });
 }
 
 

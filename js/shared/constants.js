@@ -93,6 +93,13 @@ export const MONTHS = Object.freeze([
   "Septiembre", "Octubre", "Noviembre", "Diciembre"
 ]);
 
+export const MONTH_LABELS = MONTHS;
+
+// ============================
+// 🏫 CONFIGURACIÓN DEL COLEGIO
+// ============================
+export const SCHOOL_SETTINGS_ID = 1;
+
 // ============================
 // 🔑 CLAVES Y CONFIGURACIÓN
 // ============================

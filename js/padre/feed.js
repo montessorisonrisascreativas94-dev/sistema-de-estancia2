@@ -1,6 +1,6 @@
 import { supabase, RealtimeUtils } from '../shared/supabase.js';
 import { AppState, TABLES } from './appState.js';
-import { Helpers, escapeHtml } from './helpers.js';
+import { Helpers, escapeHtml } from '../shared/helpers.js';
 import { ImageLoader } from '../shared/image-loader.js';
 import { WallModule } from '../shared/wall.js';
 

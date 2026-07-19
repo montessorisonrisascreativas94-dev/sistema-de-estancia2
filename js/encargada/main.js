@@ -6,6 +6,7 @@ import { BadgeSystem } from '../shared/badges.js';
 import { RealtimeManager } from '../shared/realtime-manager.js';
 import { QueryCache } from '../shared/query-cache.js';
 import { TeacherEfficiencyModule } from './modules/teacher_efficiency.module.js';
+import { openGlobalModal, closeGlobalModal } from '../shared/modal.js';
 
 const debounce = (fn, delay) => {
   let timeout;
@@ -22,27 +23,11 @@ window.App = {
 // Expose goToSection globally so HTML onclick= and common_ui can call it
 window.goToSection = goToSection;
 
-window.openGlobalModal = function(html, wide = false) {
-  const container = document.getElementById('globalModalContainer');
-  if (!container) return;
-  const maxW = wide ? 'max-w-4xl' : 'max-w-2xl';
-  container.innerHTML = `
-    <div id="globalModalInner" class="bg-white rounded-3xl shadow-2xl w-full ${maxW} max-h-[92vh] overflow-y-auto mx-3 my-4 relative animate-scaleIn">
-      <button onclick="App.ui.closeModal()" class="absolute top-4 right-4 w-10 h-10 flex items-center justify-center rounded-full bg-slate-100 text-slate-400 hover:bg-rose-50 hover:text-rose-500 transition-all z-[110]">
-        <i data-lucide="x" class="w-6 h-6"></i>
-      </button>
-      ${html}
-    </div>`;
-  container.style.cssText = 'display:flex;align-items:flex-start;justify-content:center;padding-top:4vh;position:fixed;inset:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(8px);z-index:var(--z-modal,100);overflow-y:auto;';
-  if (window.lucide) lucide.createIcons();
-};
+window.openGlobalModal = openGlobalModal;
+window.closeGlobalModal = closeGlobalModal;
 
 window.App.ui = {
-  closeModal: () => {
-    const container = document.getElementById('globalModalContainer');
-    if (container) container.innerHTML = '';
-    container.style.display = 'none';
-  }
+  closeModal: closeGlobalModal
 };
 
 export function goToSection(sectionId) {
@@ -1425,23 +1410,6 @@ async function loadProfile() {
   } catch (_) {}
 }
 
-// ── Sidebar accordion toggle ─────────────────────────────────────────────
-function initSidebarDropdowns() {
-  document.querySelectorAll('.kk-nav-group-toggle').forEach(btn => {
-    if (btn._dropdownBound) return;
-    btn._dropdownBound = true;
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const group   = btn.closest('.kk-nav-group');
-      const submenu = group?.querySelector('.kk-nav-sub');
-      if (!group || !submenu) return;
-      btn.classList.toggle('open');
-      group.classList.toggle('open');
-      submenu.style.display = (submenu.style.display === 'none' || submenu.style.display === '') ? 'block' : 'none';
-    });
-  });
-}
-
 window.addEventListener('unhandledrejection', (e) => {
   const msg = e.reason?.message?.toLowerCase() ?? '';
   if (msg.includes('indexeddb') || msg.includes('network') || msg.includes('fetch')) return;
@@ -1501,7 +1469,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       window.location.href = 'login.html';
     });
 
-    import('../shared/sidebar-manager.js').then(({ initSidebar }) => {
+    import('../shared/sidebar-manager.js').then(({ initSidebar, initSidebarDropdowns }) => {
       initSidebar();
       initSidebarDropdowns();
     }).catch(() => {
@@ -1516,7 +1484,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('sidebar')?.classList.remove('mobile-visible');
         document.getElementById('sidebarOverlay').style.display = 'none';
       });
-      initSidebarDropdowns();
     });
 
     const loader = document.getElementById('initial-loading');

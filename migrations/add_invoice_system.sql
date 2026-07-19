@@ -97,8 +97,8 @@ BEGIN
     v_receipt := v_receipt || '│  ┌────────────────────────────────────────────────────┐  │' || E'\n';
     v_receipt := v_receipt || '│  │  INFORMACIÓN DEL RECIBO                            │  │' || E'\n';
     v_receipt := v_receipt || '│  ├────────────────────────────────────────────────────┤  │' || E'\n';
-    v_receipt := v_receipt || '│  │  Fecha de Emisión:    ' || RPAD(TO_CHAR(v_inv.issued_at, 'DD "de" FMMonth "de" YYYY'), 30) || '│  │' || E'\n';
-    v_receipt := v_receipt || '│  │  Hora:                ' || RPAD(TO_CHAR(v_inv.issued_at, 'HH24:MI "hrs"'), 30) || '│  │' || E'\n';
+    v_receipt := v_receipt || '│  │  Fecha de Emisión:    ' || RPAD(TO_CHAR(v_inv.issued_date, 'DD "de" FMMonth "de" YYYY'), 30) || '│  │' || E'\n';
+    v_receipt := v_receipt || '│  │  Hora:                ' || RPAD(TO_CHAR(v_inv.issued_date, 'HH24:MI "hrs"'), 30) || '│  │' || E'\n';
     v_receipt := v_receipt || '│  │  Método de Pago:      ' || RPAD(COALESCE(v_inv.payment_method, 'N/A'), 30) || '│  │' || E'\n';
     v_receipt := v_receipt || '│  │  Referencia:          ' || RPAD(COALESCE(v_inv.payment_reference, 'N/A'), 30) || '│  │' || E'\n';
     v_receipt := v_receipt || '│  │  Atendió:             ' || RPAD(COALESCE(v_inv.attended_by, 'Sistema'), 30) || '│  │' || E'\n';

@@ -51,7 +51,7 @@ function generateProfessionalReceipt(
   classroom: any,
   invoice: any
 ): string {
-  const issuedDate = new Date(invoice.issued_at);
+  const issuedDate = new Date(invoice.issued_date);
   const paymentDate = new Date(payment.paid_date || payment.created_at);
   
   // Datos del colegio (usar school_settings si están disponibles)
@@ -224,7 +224,7 @@ Deno.serve(async (req) => {
       .from('payments')
       .select(`
         id, student_id, amount, concept, method, bank, evidence_url, 
-        fiscal_receipt_url, month_paid, notes, created_at, paid_date,
+        month_paid, notes, created_at, paid_date,
         students!student_id (
           id, name, matricula, classroom_id, p1_name, p1_email, p1_phone,
           classrooms!classroom_id ( name )
@@ -277,8 +277,7 @@ Deno.serve(async (req) => {
       attended_by: 'Sistema',
       period: payment.month_paid,
       payment_date: payment.paid_date || payment.created_at,
-      issued_at: new Date().toISOString(),
-      fiscal_receipt_url: payment.fiscal_receipt_url
+      issued_date: new Date().toISOString()
     };
     
     const { data: invoice, error: errInvoice } = await supabase

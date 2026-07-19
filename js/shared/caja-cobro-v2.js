@@ -1,29 +1,23 @@
 /**
- * Caja Cobro v2 — Panel Directora y Asistente
- * Flujo: Lista pendientes → Cobrar → Modal compacto responsive → Carrito → Pago → Factura
+ * Caja Cobro v2 — Módulo único de caja para Directora y Asistente
+ * Flujo: Lista pendientes → Cobrar → Modal por tabs → Carrito → Pago → Factura
+ *
+ * Correcciones vs. versión anterior:
+ *  - Mora incluida en el total y en el cálculo de cambio
+ *  - Descuento por porcentaje (opcional)
+ *  - Catálogo unificado desde caja-utils.js
+ *  - payment_concepts se carga de Supabase con fallback al catálogo estático
  */
 import { supabase } from './supabase.js';
 import { Helpers } from './helpers.js';
+import {
+  fmt, fmtN, today, MONTHS_SHORT, MONTHS_FULL,
+  DEFAULT_CATALOG, calcMora, calcDiscount, calcTotal,
+  INP, LBL, bankSelectOpts, uploadBtn, rncSection
+} from './caja-utils.js';
 
-const fmt   = n => 'RD$' + Number(n||0).toLocaleString('es-DO',{minimumFractionDigits:2});
-const today = () => new Date().toISOString().split('T')[0];
-const MONTHS_SHORT = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-const MONTHS_FULL  = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-
-// ── CATÁLOGO (LocalStorage) ───────────────────────────────────────────────────
+// ── CATÁLOGO (localStorage como caché del catálogo del servidor) ────────────
 const CATALOG_KEY = 'caja_extra_concepts_v2';
-const DEFAULT_CATALOG = [
-  {id:'uniforme',    label:'Uniforme',     amount:3200, icon:'👕'},
-  {id:'transporte',  label:'Transporte',   amount:2500, icon:'🚌'},
-  {id:'libros',      label:'Libros',       amount:1500, icon:'📚'},
-  {id:'materiales',  label:'Materiales',   amount:800,  icon:'🎨'},
-  {id:'actividades', label:'Actividades',  amount:500,  icon:'🎉'},
-  {id:'excursiones', label:'Excursiones',  amount:1000, icon:'🏕️'},
-  {id:'comedor',     label:'Comedor',      amount:1800, icon:'🍽️'},
-  {id:'tutorias',    label:'Tutorías',     amount:1200, icon:'📝'},
-  {id:'certificados',label:'Certificados', amount:300,  icon:'🏆'},
-  {id:'otro',        label:'Otro',         amount:0,    icon:'➕'},
-];
 
 function getCatalog() {
   try { return JSON.parse(localStorage.getItem(CATALOG_KEY)) || DEFAULT_CATALOG; }
@@ -31,12 +25,14 @@ function getCatalog() {
 }
 function saveCatalog(list) { localStorage.setItem(CATALOG_KEY, JSON.stringify(list)); }
 
-// ── Estado del módulo ─────────────────────────────────────────────────────────
-let _cart      = [];
-let _student   = null;
-let _charges   = [];
-let _method    = null;
+// ── Estado del módulo ──────────────────────────────────────────────────────
+let _cart       = [];
+let _student    = null;
+let _charges    = [];
+let _method     = null;
 let _containerId = 'cajaContainer';
+let _discountPct = 0;
+let _dbConcepts  = []; // Concepts from payment_concepts table
 
 export function initCajaCobro(containerId = 'cajaContainer') {
   _containerId = containerId;
@@ -107,6 +103,7 @@ export const CajaCobroV2 = {
   _all: [],
   _filter: 'all',
 
+  // ── CARGAR ESTUDIANTES + KPIs ─────────────────────────────────────────────
   async loadStudents() {
     const todayStr = today();
     const [{ data: pays }, { data: students }, { data: pending }] = await Promise.all([
@@ -178,9 +175,9 @@ export const CajaCobroV2 = {
 
   // ── MODAL DE COBRO ───────────────────────────────────────────────────────
   async openCobrarModal(studentId) {
-    _cart = []; _method = null; _student = null; _charges = [];
+    _cart = []; _method = null; _student = null; _charges = []; _discountPct = 0;
 
-    // Cargar datos
+    // Cargar datos del estudiante, charges, historial y enrollment
     const [{ data: stu }, { data: charges }, { data: history }, { data: enrollment }] = await Promise.all([
       supabase.from('students').select('id,name,matricula,p1_name,p1_phone,classrooms:classroom_id(name,level),monthly_fee').eq('id',studentId).single(),
       supabase.from('payments').select('id,concept,amount,status,due_date,month_paid').eq('student_id',studentId).in('status',['pending','overdue']).order('due_date').limit(50),
@@ -191,54 +188,48 @@ export const CajaCobroV2 = {
     _student = stu;
     _charges = charges || [];
 
+    // Cargar conceptos de payment_concepts (DB) para mostrar en el tab
+    await _loadDbConcepts();
+
     // Mapa de meses pagados — month_paid es YYYY-MM
     const { data: paidMonths } = await supabase.from('payments').select('month_paid').eq('student_id',studentId).eq('status','paid').not('month_paid','is',null).limit(100);
     const paidSet = new Set();
     (paidMonths||[]).forEach(p => {
       if (!p.month_paid) return;
-      // Store both YYYY-MM and month number (1-12) for flexible lookup
       paidSet.add(p.month_paid); // "2026-07"
       const parts = String(p.month_paid).split('-');
-      if (parts.length >= 2) paidSet.add(parseInt(parts[1], 10)); // 7
-      paidSet.add(String(parseInt(parts[1], 10))); // "7"
+      if (parts.length >= 2) {
+        paidSet.add(parseInt(parts[1], 10)); // 7
+        paidSet.add(String(parseInt(parts[1], 10))); // "7"
+      }
     });
 
     // Cuotas del plan — buscar por mes calendario
     const installments = enrollment?.payment_plans?.plan_installments || [];
-    // Build installment amount map by month_number
     const instMap = {};
     installments.forEach((x) => { if (x.month_number) instMap[x.month_number] = Number(x.amount||0); });
-    // Fallback: use student's monthly fee, or max installment, or 0
-    const studentMonthlyFee = Number(stu?.monthly_fee || 0);
-    const defaultFee = studentMonthlyFee > 0 
-      ? studentMonthlyFee 
-      : (installments.length > 0 
-        ? Math.max(...installments.map(x => Number(x.amount||0))) 
-        : 0);
 
-    // Calcular mora total
-    let totalMora = 0;
-    function calcMora() {
-      let mora = 0;
-      _charges.filter(c=>c.status==='overdue').forEach(c=>{
-        if (c.due_date) {
-          const days = Math.floor((Date.now()-new Date(c.due_date+'T00:00:00').getTime())/86400000);
-          if (days>0) mora += (Math.floor(days/7)*500)+((days%7)*50);
-        }
-      });
-      return mora;
-    }
+    const studentMonthlyFee = Number(stu?.monthly_fee || 0);
+    const defaultFee = studentMonthlyFee > 0
+      ? studentMonthlyFee
+      : (installments.length > 0
+        ? Math.max(...installments.map(x => Number(x.amount||0)))
+        : 0);
 
     const modalId = 'cajaModal_' + Date.now();
     const overlay = document.createElement('div');
     overlay.id = modalId;
-    // Sidebar-aware: offset left on desktop if sidebar is visible
     const sbWidth = document.getElementById('sidebar')?.offsetWidth || 0;
     overlay.style.cssText = `position:fixed;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(6px);z-index:9998;display:flex;align-items:flex-start;justify-content:center;padding:12px;overflow-y:auto;padding-left:${sbWidth > 0 ? sbWidth + 12 : 12}px`;
     overlay.onclick = e => { if(e.target===overlay) overlay.remove(); };
 
-    const nowMonth = new Date().getMonth(); // 0-indexed
+    const nowMonth = new Date().getMonth();
     const catalog = getCatalog();
+
+    // Conceptos de DB (si hay) se muestran primero; fallback al catálogo local
+    const displayConcepts = _dbConcepts.length > 0
+      ? _dbConcepts.map(c => ({ id: 'db_'+c.id, label: c.name, amount: c.amount, icon: '🏷️' }))
+      : catalog;
 
     overlay.innerHTML = `
     <div id="cajaModalInner" style="background:#f8fafc;border-radius:16px;width:100%;max-width:560px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.25);margin:auto;position:relative;display:flex;flex-direction:column">
@@ -265,9 +256,9 @@ export const CajaCobroV2 = {
 
       <!-- Tabs -->
       <div style="display:flex;background:white;border-bottom:2px solid #f1f5f9;flex-shrink:0" id="cajaTabs">
-        ${[['meses','📅 Mensualidades'],['conceptos','🏷️ Conceptos'],['pago','💳 Método'],['resumen','🧾 Resumen']].map(([t,l],i)=>`
+        ${[['meses','📅 Mensualidades'],['conceptos','🏷️ Conceptos'],['descuento','💰 Descuento'],['pago','💳 Método'],['resumen','🧾 Resumen']].map(([t,l],i)=>`
           <button onclick="CajaCobroV2._showTab('${t}')" id="cajaTab_${t}"
-            style="flex:1;padding:8px 4px;border:none;font-size:.62rem;font-weight:900;cursor:pointer;transition:all .12s;border-bottom:2px solid transparent;margin-bottom:-2px;${i===0?'color:#0B63C7;border-bottom-color:#0B63C7;background:white':'color:#94a3b8;background:white'}">
+            style="flex:1;padding:8px 4px;border:none;font-size:.6rem;font-weight:900;cursor:pointer;transition:all .12s;border-bottom:2px solid transparent;margin-bottom:-2px;${i===0?'color:#0B63C7;border-bottom-color:#0B63C7;background:white':'color:#94a3b8;background:white'}">
             ${l}
           </button>`).join('')}
       </div>
@@ -281,11 +272,9 @@ export const CajaCobroV2 = {
             <span style="font-size:.62rem;font-weight:900;color:#94a3b8;text-transform:uppercase">Año ${new Date().getFullYear()} — clic para seleccionar</span>
             <button onclick="CajaCobroV2._selectAllPending()" style="font-size:.65rem;font-weight:900;color:#0B63C7;border:1px solid #0B63C7;background:transparent;border-radius:6px;padding:4px 10px;cursor:pointer">Todos pendientes</button>
           </div>
-          <!-- Grid compacto 4 cols x 3 filas -->
           <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
             ${MONTHS_FULL.map((m,i)=>{
-              const monthNum = i + 1; // 1-12
-              // Get amount: try instMap by month_number first, then default
+              const monthNum = i + 1;
               const amt = instMap[monthNum] !== undefined ? instMap[monthNum] : defaultFee;
               const yearKey = new Date().getFullYear() + '-' + String(monthNum).padStart(2,'0');
               const isPaid    = paidSet.has(yearKey) || paidSet.has(monthNum) || paidSet.has(String(monthNum));
@@ -314,7 +303,7 @@ export const CajaCobroV2 = {
         <div id="cajaPane_conceptos" style="padding:14px;display:none">
           <div style="font-size:.62rem;font-weight:900;color:#94a3b8;text-transform:uppercase;margin-bottom:10px">Conceptos adicionales</div>
           <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px">
-            ${catalog.slice(0,6).map(c=>`
+            ${displayConcepts.slice(0,6).map(c=>`
               <button onclick="CajaCobroV2.addExtraConcept('${c.id}','${Helpers.escapeHTML(c.label)}',${c.amount})"
                 id="concept_${c.id}"
                 style="padding:12px 8px;border-radius:12px;border:2px solid #e2e8f0;background:white;cursor:pointer;transition:all .12s;text-align:center;display:flex;flex-direction:column;align-items:center;gap:4px">
@@ -333,6 +322,30 @@ export const CajaCobroV2 = {
           </div>
           <div style="margin-top:14px;display:flex;justify-content:space-between">
             <button onclick="CajaCobroV2._showTab('meses')" style="padding:8px 18px;background:#f1f5f9;color:#64748b;border:none;border-radius:10px;font-size:.75rem;font-weight:900;cursor:pointer">← Atrás</button>
+            <button onclick="CajaCobroV2._showTab('descuento')" style="padding:8px 18px;background:#0B63C7;color:white;border:none;border-radius:10px;font-size:.75rem;font-weight:900;cursor:pointer">Siguiente →</button>
+          </div>
+        </div>
+
+        <!-- TAB: Descuento -->
+        <div id="cajaPane_descuento" style="padding:14px;display:none">
+          <div style="font-size:.62rem;font-weight:900;color:#94a3b8;text-transform:uppercase;margin-bottom:10px">Descuento (opcional)</div>
+          <div style="background:white;border-radius:12px;padding:16px;border:1px solid #e2e8f0">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+              <div>
+                <div style="font-size:.85rem;font-weight:900;color:#1a2340">Porcentaje de descuento</div>
+                <div style="font-size:.7rem;color:#94a3b8;margin-top:2px">Se aplica sobre subtotal + mora</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:6px">
+                <input id="discountInput" type="number" min="0" max="100" step="0.5" value="${_discountPct}"
+                  oninput="CajaCobroV2._applyDiscount(this.value)"
+                  style="width:80px;padding:10px;border:2px solid #e2e8f0;border-radius:10px;font-size:1rem;font-weight:900;text-align:center;outline:none;color:#0B63C7">
+                <span style="font-size:1rem;font-weight:900;color:#64748b">%</span>
+              </div>
+            </div>
+            <div id="discountPreview" style="margin-top:12px;font-size:.8rem;font-weight:800;color:#16a34a;display:${_discountPct > 0 ? 'block' : 'none'}"></div>
+          </div>
+          <div style="margin-top:14px;display:flex;justify-content:space-between">
+            <button onclick="CajaCobroV2._showTab('conceptos')" style="padding:8px 18px;background:#f1f5f9;color:#64748b;border:none;border-radius:10px;font-size:.75rem;font-weight:900;cursor:pointer">← Atrás</button>
             <button onclick="CajaCobroV2._showTab('pago')" style="padding:8px 18px;background:#0B63C7;color:white;border:none;border-radius:10px;font-size:.75rem;font-weight:900;cursor:pointer">Siguiente →</button>
           </div>
         </div>
@@ -349,7 +362,7 @@ export const CajaCobroV2 = {
           </div>
           <div id="methodDetail" style="margin-top:6px"></div>
           <div style="margin-top:14px;display:flex;justify-content:space-between">
-            <button onclick="CajaCobroV2._showTab('conceptos')" style="padding:8px 18px;background:#f1f5f9;color:#64748b;border:none;border-radius:10px;font-size:.75rem;font-weight:900;cursor:pointer">← Atrás</button>
+            <button onclick="CajaCobroV2._showTab('descuento')" style="padding:8px 18px;background:#f1f5f9;color:#64748b;border:none;border-radius:10px;font-size:.75rem;font-weight:900;cursor:pointer">← Atrás</button>
             <button onclick="CajaCobroV2._showTab('resumen')" style="padding:8px 18px;background:#0B63C7;color:white;border:none;border-radius:10px;font-size:.75rem;font-weight:900;cursor:pointer">Ver Resumen →</button>
           </div>
         </div>
@@ -358,23 +371,9 @@ export const CajaCobroV2 = {
         <div id="cajaPane_resumen" style="padding:14px;display:none">
           <div style="font-size:.62rem;font-weight:900;color:#94a3b8;text-transform:uppercase;margin-bottom:10px">Resumen del cobro</div>
 
-          <!-- Carrito -->
-          <div id="cartItems" style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;min-height:40px">
-            <div style="color:#94a3b8;font-size:.8rem;text-align:center;padding:16px 0">Selecciona meses o conceptos</div>
-          </div>
-
-          <!-- Totales -->
-          <div style="background:white;border-radius:12px;padding:14px;border:1px solid #e2e8f0;margin-bottom:14px">
-            <div style="display:flex;justify-content:space-between;font-size:.8rem;color:#64748b;margin-bottom:4px">
-              <span>Subtotal</span><span id="cartSub" style="font-weight:700">RD$0.00</span>
-            </div>
-            <div id="cartMoraRow" style="display:none;justify-content:space-between;font-size:.8rem;color:#ef4444;margin-bottom:4px">
-              <span>⚠ Mora</span><span id="cartMora" style="font-weight:900">+RD$0.00</span>
-            </div>
-            <div style="border-top:2px solid #f1f5f9;margin:8px 0"></div>
-            <div style="display:flex;justify-content:space-between;font-size:1rem;font-weight:900;color:#0B63C7">
-              <span>TOTAL</span><span id="cartTotal">RD$0.00</span>
-            </div>
+          <!-- Contenido dinámico del resumen -->
+          <div class="caja-resumen-content">
+            <!-- Se llena dinámicamente con _updateCart() -->
           </div>
 
           <!-- Historial reciente -->
@@ -411,7 +410,7 @@ export const CajaCobroV2 = {
   },
 
   _showTab(tab) {
-    ['meses','conceptos','pago','resumen'].forEach(t => {
+    ['meses','conceptos','descuento','pago','resumen'].forEach(t => {
       const pane = document.getElementById('cajaPane_'+t);
       const tabBtn = document.getElementById('cajaTab_'+t);
       if (pane) pane.style.display = t===tab ? 'block' : 'none';
@@ -432,7 +431,7 @@ export const CajaCobroV2 = {
       const isOverdue = i < nowMonth;
       const isCurrent = i === nowMonth;
       if ((isOverdue || isCurrent) && !_cart.find(c=>c._monthIdx===i)) {
-        _cart.push({ _monthIdx: i, concept: 'Colegiatura '+m, amount: Number(btn.dataset.amount||0), type: 'colegiatura' });
+        _cart.push({ _monthIdx: i, concept: 'Colegiatura '+m, description: 'Mensualidad escolar', amount: Number(btn.dataset.amount||0), type: 'colegiatura' });
         btn.style.borderColor = '#0B63C7';
         btn.style.background  = '#eff6ff';
       }
@@ -450,7 +449,7 @@ export const CajaCobroV2 = {
       : '';
   },
 
-  // ── TOGGLE MES (libre — cualquier mes va al carrito) ───────────────────────
+  // ── TOGGLE MES ────────────────────────────────────────────────────────────
   toggleMonth(idx, label, amount) {
     const btn = document.getElementById('month_' + idx);
     if (!btn || btn.dataset.paid === 'true') return;
@@ -465,7 +464,7 @@ export const CajaCobroV2 = {
       btn.style.borderColor = bc;
       btn.style.background  = bg;
     } else {
-      _cart.push({ _monthIdx: idx, concept: 'Colegiatura ' + label, amount: Number(amount), type: 'colegiatura' });
+      _cart.push({ _monthIdx: idx, concept: 'Colegiatura ' + label, description: 'Mensualidad escolar', amount: Number(amount), type: 'colegiatura' });
       btn.style.borderColor = '#0B63C7';
       btn.style.background  = '#eff6ff';
     }
@@ -480,15 +479,14 @@ export const CajaCobroV2 = {
     const btn = document.getElementById('concept_' + id);
     if (inCart >= 0) {
       _cart.splice(inCart, 1);
-      if (btn) { btn.style.borderColor='#e2e8f0'; btn.style.background='#white'; }
+      if (btn) { btn.style.borderColor='#e2e8f0'; btn.style.background='white'; }
     } else {
       if (id === 'otro' || amt === 0) {
-        // Pedir monto libre
         const a = prompt('Monto para ' + label + ' (RD$):');
         if (!a || isNaN(Number(a))) return;
-        _cart.push({ _conceptId: id, concept: label, amount: Number(a), type: 'extra' });
+        _cart.push({ _conceptId: id, concept: label, description: 'Concepto adicional', amount: Number(a), type: 'extra' });
       } else {
-        _cart.push({ _conceptId: id, concept: label, amount: amt, type: 'extra' });
+        _cart.push({ _conceptId: id, concept: label, description: 'Concepto adicional', amount: amt, type: 'extra' });
       }
       if (btn) { btn.style.borderColor='#FF8A00'; btn.style.background='#fff7ed'; }
     }
@@ -501,56 +499,199 @@ export const CajaCobroV2 = {
     const amt = Number(document.getElementById('freeConceptAmt')?.value || 0);
     if (!lbl) { Helpers.toast('Escribe una descripción','warning'); return; }
     if (!amt)  { Helpers.toast('Ingresa un monto','warning'); return; }
-    _cart.push({ _conceptId: 'free_'+Date.now(), concept: lbl, amount: amt, type: 'extra' });
+    _cart.push({ _conceptId: 'free_'+Date.now(), concept: lbl, description: 'Concepto libre', amount: amt, type: 'extra' });
     document.getElementById('freeConceptLabel').value = '';
     document.getElementById('freeConceptAmt').value   = '';
     this._updateCart();
   },
 
+  // ── DESCUENTO ──────────────────────────────────────────────────────────────
+  _applyDiscount(value) {
+    let pct = Number(value || 0);
+    if (Number.isNaN(pct)) pct = 0;
+    pct = Math.max(0, Math.min(100, pct));
+    _discountPct = pct;
+    this._updateCart();
+    // Update preview
+    const preview = document.getElementById('discountPreview');
+    if (preview) {
+      if (pct > 0) {
+        const sub = _cart.reduce((s,c) => s + c.amount, 0);
+        const mora = calcMora(_charges);
+        const disc = calcDiscount(sub, mora, pct);
+        preview.textContent = `Ahorras ${fmt(disc)} (${pct}%)`;
+        preview.style.display = 'block';
+      } else {
+        preview.style.display = 'none';
+      }
+    }
+  },
+
   // ── ACTUALIZAR CARRITO ────────────────────────────────────────────────────
   _updateCart() {
-    const cartEl   = document.getElementById('cartItems');
-    const subEl    = document.getElementById('cartSub');
-    const totalEl  = document.getElementById('cartTotal');
-    const moraRow  = document.getElementById('cartMoraRow');
-    const moraEl   = document.getElementById('cartMora');
-    const btn      = document.getElementById('btnConfirmarCobro');
-    if (!cartEl) return;
+    const resumenPane = document.getElementById('cajaPane_resumen');
+    const btn = document.getElementById('btnConfirmarCobro');
+    if (!resumenPane) return;
 
-    // Recalcular mora
-    function calcMora() {
-      let mora = 0;
-      _charges.filter(c=>c.status==='overdue').forEach(c=>{
-        if (c.due_date) {
-          const days = Math.floor((Date.now()-new Date(c.due_date+'T00:00:00').getTime())/86400000);
-          if (days>0) mora += (Math.floor(days/7)*500)+((days%7)*50);
-        }
-      });
-      return mora;
-    }
+    const sub = _cart.reduce((s, c) => s + c.amount, 0);
+    const hasColegiatura = _cart.some(c => c.type === 'colegiatura');
+    const mora = hasColegiatura ? calcMora(_charges) : 0;
+    const discount = calcDiscount(sub, mora, _discountPct);
+    const total = calcTotal(_cart, mora, discount);
 
-    const sub = _cart.reduce((s,c)=>s+c.amount,0);
-    // Mora solo si hay items de colegiatura vencida
-    const hasColegiatura = _cart.some(c=>c.type==='colegiatura');
-    const mora = hasColegiatura ? calcMora() : 0;
-    const total = sub + mora;
+    // Obtener valores de pago
+    const cashReceivedEl = document.getElementById('cashReceived');
+    const received = Number(cashReceivedEl?.value || 0);
+    const change = Math.max(0, received - total);
+    const remaining = Math.max(0, total - received);
 
+    // Construir tabla de conceptos
+    let tableHTML = '';
     if (_cart.length === 0) {
-      cartEl.innerHTML = '<div style="color:#94a3b8;font-size:.8rem;text-align:center;padding:16px 0">Selecciona meses o conceptos</div>';
+      tableHTML = `
+        <div style="text-align:center;padding:24px;color:#94a3b8;font-size:.85rem">
+          <div style="font-size:2rem;margin-bottom:8px">📋</div>
+          Seleccione meses o conceptos
+        </div>`;
     } else {
-      cartEl.innerHTML = _cart.map((c,i)=>`
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-radius:10px;background:white;border:1px solid #f1f5f9;font-size:.8rem">
-          <span style="font-weight:700;color:#1a2340;flex:1;margin-right:8px">${Helpers.escapeHTML(c.concept)}</span>
-          <span style="font-weight:900;color:#0B63C7;white-space:nowrap">${fmt(c.amount)}</span>
-          <button onclick="CajaCobroV2.removeCartItem(${i})" style="margin-left:8px;border:none;background:transparent;color:#EF4444;cursor:pointer;font-size:1rem;padding:0 4px">✕</button>
-        </div>`).join('');
+      tableHTML = `
+        <div style="background:white;border-radius:12px;border:1px solid #e2e8f0;overflow:hidden;margin-bottom:16px">
+          <table style="width:100%;border-collapse:collapse">
+            <thead>
+              <tr style="background:#f8fafc;border-bottom:2px solid #e2e8f0">
+                <th style="padding:10px 14px;text-align:left;font-size:.65rem;font-weight:900;color:#64748b;text-transform:uppercase;letter-spacing:.05em">Concepto</th>
+                <th style="padding:10px 14px;text-align:left;font-size:.65rem;font-weight:900;color:#64748b;text-transform:uppercase;letter-spacing:.05em">Descripción</th>
+                <th style="padding:10px 14px;text-align:right;font-size:.65rem;font-weight:900;color:#64748b;text-transform:uppercase;letter-spacing:.05em">Monto</th>
+                <th style="width:40px"></th>
+              </tr>
+            </thead>
+            <tbody>
+              ${_cart.map((c, i) => {
+                const isMora = c.type === 'mora';
+                const isDiscount = c.type === 'discount';
+                const rowBg = i % 2 === 0 ? 'white' : '#fafbfc';
+                const amountColor = isMora ? '#EF4444' : isDiscount ? '#16A34A' : '#0B63C7';
+                const desc = c.type === 'colegiatura' ? 'Mensualidad escolar' : (c.description || 'Concepto adicional');
+                return `
+                  <tr style="background:${rowBg};border-bottom:1px solid #f1f5f9">
+                    <td style="padding:10px 14px">
+                      <div style="font-weight:800;color:#1a2340;font-size:.8rem">${Helpers.escapeHTML(c.concept)}</div>
+                    </td>
+                    <td style="padding:10px 14px;font-size:.75rem;color:#64748b">${Helpers.escapeHTML(desc)}</td>
+                    <td style="padding:10px 14px;text-align:right;font-weight:900;color:${amountColor};font-size:.85rem">${isDiscount ? '-' : ''}${fmt(c.amount)}</td>
+                    <td style="padding:10px 8px;text-align:center">
+                      <button onclick="CajaCobroV2.removeCartItem(${i})" style="border:none;background:transparent;color:#EF4444;cursor:pointer;font-size:1rem;padding:2px 6px;border-radius:6px;transition:background .15s" onmouseover="this.style.background='#FEE2E2'" onmouseout="this.style.background='transparent'">✕</button>
+                    </td>
+                  </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>`;
     }
 
-    if (subEl) subEl.textContent = fmt(sub);
-    if (moraRow) moraRow.style.display = mora > 0 ? 'flex' : 'none';
-    if (moraEl)  moraEl.textContent = '+' + fmt(mora);
-    if (totalEl) totalEl.textContent = fmt(total);
+    // Construir sección de totales
+    let totalsHTML = `
+      <div style="background:white;border-radius:12px;border:1px solid #e2e8f0;padding:16px;margin-bottom:16px">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f1f5f9">
+          <span style="font-size:.85rem;color:#64748b;font-weight:600">Subtotal</span>
+          <span style="font-size:.9rem;font-weight:800;color:#1a2340">${fmt(sub)}</span>
+        </div>`;
 
+    if (mora > 0) {
+      totalsHTML += `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f1f5f9">
+          <span style="font-size:.85rem;color:#EF4444;font-weight:600;display:flex;align-items:center;gap:6px">
+            <span style="background:#FEE2E2;padding:2px 6px;border-radius:4px;font-size:.7rem">⚠</span>
+            Mora
+          </span>
+          <span style="font-size:.9rem;font-weight:900;color:#EF4444">+${fmt(mora)}</span>
+        </div>`;
+    }
+
+    if (discount > 0) {
+      totalsHTML += `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f1f5f9">
+          <span style="font-size:.85rem;color:#16A34A;font-weight:600;display:flex;align-items:center;gap:6px">
+            <span style="background:#DCFCE7;padding:2px 6px;border-radius:4px;font-size:.7rem">%</span>
+            Descuento (${_discountPct}%)
+          </span>
+          <span style="font-size:.9rem;font-weight:900;color:#16A34A">-${fmt(discount)}</span>
+        </div>`;
+    }
+
+    totalsHTML += `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;margin-top:8px;background:linear-gradient(135deg,#eff6ff,#f0f9ff);margin:-16px -16px -16px -16px;padding:16px;border-radius:0 0 12px 12px;border-top:3px solid #0B63C7">
+          <span style="font-size:1.1rem;font-weight:900;color:#0B63C7;text-transform:uppercase">Total</span>
+          <span style="font-size:1.4rem;font-weight:900;color:#0B63C7">${fmt(total)}</span>
+        </div>
+      </div>`;
+
+    // Construir sección de pago (si hay método efectivo)
+    let paymentHTML = '';
+    if (_method === 'efectivo' && total > 0) {
+      paymentHTML = `
+        <div style="background:white;border-radius:12px;border:1px solid #e2e8f0;padding:16px;margin-bottom:16px">
+          <div style="font-size:.65rem;font-weight:900;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px">Detalle del Pago</div>
+          
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f1f5f9">
+            <span style="font-size:.85rem;color:#64748b;font-weight:600">Monto a pagar</span>
+            <span style="font-size:1rem;font-weight:900;color:#0B63C7">${fmt(total)}</span>
+          </div>
+          
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f1f5f9">
+            <span style="font-size:.85rem;color:#64748b;font-weight:600">Monto recibido</span>
+            <span style="font-size:1rem;font-weight:900;color:#1a2340">${fmt(received)}</span>
+          </div>
+          
+          ${change > 0 ? `
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f1f5f9;background:#f0fdf4;margin:0 -16px;padding:10px 16px">
+            <span style="font-size:.85rem;color:#16A34A;font-weight:700;display:flex;align-items:center;gap:6px">
+              <span style="background:#DCFCE7;padding:2px 6px;border-radius:4px;font-size:.7rem">✓</span>
+              Cambio
+            </span>
+            <span style="font-size:1.1rem;font-weight:900;color:#16A34A">${fmt(change)}</span>
+          </div>` : ''}
+          
+          ${remaining > 0 ? `
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;background:#FEF2F2;margin:0 -16px;padding:10px 16px;border-radius:0 0 12px 12px">
+            <span style="font-size:.85rem;color:#EF4444;font-weight:700;display:flex;align-items:center;gap:6px">
+              <span style="background:#FEE2E2;padding:2px 6px;border-radius:4px;font-size:.7rem">!</span>
+              Saldo restante
+            </span>
+            <span style="font-size:1.1rem;font-weight:900;color:#EF4444">${fmt(remaining)}</span>
+          </div>` : ''}
+        </div>`;
+    } else if (_method && _method !== 'efectivo' && total > 0) {
+      paymentHTML = `
+        <div style="background:white;border-radius:12px;border:1px solid #e2e8f0;padding:16px;margin-bottom:16px">
+          <div style="font-size:.65rem;font-weight:900;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px">Método de Pago</div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <div style="width:40px;height:40px;border-radius:10px;background:#eff6ff;display:flex;align-items:center;justify-content:center;font-size:1.2rem">
+              ${_method === 'tarjeta' ? '💳' : _method === 'transferencia' ? '🏦' : _method === 'cheque' ? '📝' : '🔀'}
+            </div>
+            <div>
+              <div style="font-weight:800;color:#1a2340;font-size:.9rem;text-transform:capitalize">${_method}</div>
+              <div style="font-size:.75rem;color:#64748b">Pago registrado</div>
+            </div>
+            <div style="margin-left:auto;font-size:1.1rem;font-weight:900;color:#0B63C7">${fmt(total)}</div>
+          </div>
+        </div>`;
+    }
+
+    // Actualizar el contenido del pane
+    const existingContent = resumenPane.querySelector('.caja-resumen-content');
+    if (existingContent) {
+      existingContent.innerHTML = tableHTML + totalsHTML + paymentHTML;
+    } else {
+      // Primera vez - crear estructura
+      const header = resumenPane.querySelector('div:first-child');
+      const contentDiv = document.createElement('div');
+      contentDiv.className = 'caja-resumen-content';
+      contentDiv.innerHTML = tableHTML + totalsHTML + paymentHTML;
+      resumenPane.insertBefore(contentDiv, resumenPane.firstChild?.nextSibling);
+    }
+
+    // Actualizar estado del botón
     const canPay = _cart.length > 0 && _method;
     if (btn) {
       btn.disabled = !canPay;
@@ -576,7 +717,7 @@ export const CajaCobroV2 = {
     }
     if (item._conceptId) {
       const btn = document.getElementById('concept_' + item._conceptId);
-      if (btn) { btn.style.borderColor='#e2e8f0'; btn.style.background='#white'; }
+      if (btn) { btn.style.borderColor='#e2e8f0'; btn.style.background='white'; }
     }
     _cart.splice(idx, 1);
     this._updateCart();
@@ -594,62 +735,36 @@ export const CajaCobroV2 = {
     const detail = document.getElementById('methodDetail');
     if (!detail) { this._updateCart(); return; }
 
-    const inp = 'width:100%;padding:10px 12px;border:1px solid #e2e8f0;border-radius:10px;font-size:.8rem;font-weight:600;outline:none;box-sizing:border-box;margin-bottom:6px';
-    const lbl = (t) => `<div style="font-size:.62rem;font-weight:900;color:#94a3b8;text-transform:uppercase;margin-bottom:4px;margin-top:8px">${t}</div>`;
-    const uploadBtn = (id, label) => `
-      <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:2px dashed #e2e8f0;border-radius:10px;cursor:pointer;background:#f8fafc;transition:all .12s" onmouseover="this.style.borderColor='#0B63C7'" onmouseout="this.style.borderColor='#e2e8f0'">
-        <span style="font-size:.8rem;font-weight:800;color:#64748b">📎 ${label}</span>
-        <input type="file" id="${id}" accept="image/*,application/pdf" style="display:none" onchange="CajaCobroV2._previewUpload('${id}','prev_${id}')">
-        <span id="prev_${id}" style="font-size:.7rem;color:#0B63C7;font-weight:700;margin-left:auto"></span>
-      </label>`;
-
-    const bankOpts = ['Banreservas','Banco Popular Dominicano','Banco BHD','Banco Santa Cruz','Banco Caribe','Banco Vimenca','Bancamérica','Banesco','Scotiabank','Otro']
-      .map(b=>`<option value="${b}">${b}</option>`).join('');
-
-    // Common RNC/Empresa section
-    const rncSection = `
-      ${lbl('¿Requiere factura con RNC?')}
-      <button type="button" onclick="document.getElementById('ncfBlock').style.display=document.getElementById('ncfBlock').style.display==='none'?'block':'none'"
-        style="font-size:.7rem;font-weight:900;color:#0B63C7;border:1px solid #0B63C7;background:transparent;border-radius:8px;padding:6px 14px;cursor:pointer;margin-bottom:6px">
-        + RNC / Factura Fiscal
-      </button>
-      <div id="ncfBlock" style="display:none">
-        ${lbl('RNC de la empresa')}
-        <input id="rncEmpresa" placeholder="Ej: 1-31-12345-6" style="${inp}">
-        ${lbl('Nombre / Razón Social')}
-        <input id="nombreEmpresa" placeholder="Empresa S.R.L." style="${inp}">
-      </div>`;
-
     if (method === 'efectivo') {
       detail.innerHTML = `
-        ${lbl('Monto recibido')}
-        <input id="cashReceived" type="number" placeholder="RD$" oninput="CajaCobroV2.calcChange()" style="${inp}">
+        ${LBL('Monto recibido')}
+        <input id="cashReceived" type="number" placeholder="RD$" oninput="CajaCobroV2.calcChange()" style="${INP}">
         <div style="font-size:.85rem;font-weight:900;color:#0B63C7;margin-top:4px">Cambio: <span id="cashChange">RD$0.00</span></div>
-        ${rncSection}`;
+        ${rncSection()}`;
 
     } else if (method === 'transferencia') {
       detail.innerHTML = `
-        ${lbl('Banco de origen')}
-        <select id="tfBanco" style="${inp}"><option value="">Seleccionar banco...</option>${bankOpts}</select>
-        ${lbl('No. de referencia / confirmación')}
-        <input id="tfRef" placeholder="Ej: 00123456789" style="${inp}">
-        ${lbl('Comprobante de transferencia *')}
-        ${uploadBtn('tfComprobante','Subir comprobante (foto/PDF)')}
-        ${rncSection}`;
+        ${LBL('Banco de origen')}
+        <select id="tfBanco" style="${INP}"><option value="">Seleccionar banco...</option>${bankSelectOpts()}</select>
+        ${LBL('No. de referencia / confirmación')}
+        <input id="tfRef" placeholder="Ej: 00123456789" style="${INP}">
+        ${LBL('Comprobante de transferencia *')}
+        ${uploadBtn('tfComprobante','Subir comprobante (foto/PDF)',"CajaCobroV2._previewUpload('tfComprobante','prev_tfComprobante')")}
+        ${rncSection()}`;
 
     } else if (method === 'cheque') {
       detail.innerHTML = `
-        ${lbl('Banco emisor')}
-        <select id="chqBanco" style="${inp}"><option value="">Seleccionar banco...</option>${bankOpts}</select>
-        ${lbl('Número de cheque')}
-        <input id="chqNum" placeholder="Ej: 0001234" style="${inp}">
-        ${lbl('Fecha de emisión')}
-        <input id="chqFecha" type="date" style="${inp}" value="${new Date().toISOString().split('T')[0]}">
-        ${lbl('Foto frente del cheque *')}
-        ${uploadBtn('chqFrente','Frente del cheque')}
-        ${lbl('Foto reverso del cheque *')}
-        ${uploadBtn('chqReverso','Reverso del cheque')}
-        ${rncSection}`;
+        ${LBL('Banco emisor')}
+        <select id="chqBanco" style="${INP}"><option value="">Seleccionar banco...</option>${bankSelectOpts()}</select>
+        ${LBL('Número de cheque')}
+        <input id="chqNum" placeholder="Ej: 0001234" style="${INP}">
+        ${LBL('Fecha de emisión')}
+        <input id="chqFecha" type="date" style="${INP}" value="${today()}">
+        ${LBL('Foto frente del cheque *')}
+        ${uploadBtn('chqFrente','Frente del cheque',"CajaCobroV2._previewUpload('chqFrente','prev_chqFrente')")}
+        ${LBL('Foto reverso del cheque *')}
+        ${uploadBtn('chqReverso','Reverso del cheque',"CajaCobroV2._previewUpload('chqReverso','prev_chqReverso')")}
+        ${rncSection()}`;
 
     } else if (method === 'tarjeta') {
       detail.innerHTML = `
@@ -658,28 +773,28 @@ export const CajaCobroV2 = {
             <input type="radio" name="cardType" value="${t.toLowerCase()}" style="accent-color:#0B63C7"> ${t}
           </label>`).join('')}
         </div>
-        ${lbl('Tipo de tarjeta')}
-        <select id="cardBrand" style="${inp}">
+        ${LBL('Tipo de tarjeta')}
+        <select id="cardBrand" style="${INP}">
           <option value="">Seleccionar...</option>
           <option>Visa</option><option>Mastercard</option><option>Amex</option><option>Otra</option>
         </select>
-        ${lbl('Últimos 4 dígitos')}
-        <input id="cardLast4" type="number" maxlength="4" placeholder="1234" style="${inp}" oninput="if(this.value.length>4)this.value=this.value.slice(0,4)">
-        ${lbl('No. de autorización')}
-        <input id="cardAuth" placeholder="Ej: A123456" style="${inp}">
-        ${rncSection}`;
+        ${LBL('Últimos 4 dígitos')}
+        <input id="cardLast4" type="number" maxlength="4" placeholder="1234" style="${INP}" oninput="if(this.value.length>4)this.value=this.value.slice(0,4)">
+        ${LBL('No. de autorización')}
+        <input id="cardAuth" placeholder="Ej: A123456" style="${INP}">
+        ${rncSection()}`;
 
     } else if (method === 'mixto') {
       detail.innerHTML = `
-        ${lbl('Monto efectivo')}
-        <input id="mixEfectivo" type="number" placeholder="RD$" style="${inp}">
-        ${lbl('Monto transferencia')}
-        <input id="mixTransfer" type="number" placeholder="RD$" style="${inp}">
-        ${lbl('Referencia transferencia')}
-        <input id="mixRef" placeholder="Referencia" style="${inp}">
-        ${rncSection}`;
+        ${LBL('Monto efectivo')}
+        <input id="mixEfectivo" type="number" placeholder="RD$" style="${INP}">
+        ${LBL('Monto transferencia')}
+        <input id="mixTransfer" type="number" placeholder="RD$" style="${INP}">
+        ${LBL('Referencia transferencia')}
+        <input id="mixRef" placeholder="Referencia" style="${INP}">
+        ${rncSection()}`;
     } else {
-      detail.innerHTML = rncSection;
+      detail.innerHTML = rncSection();
     }
     this._updateCart();
   },
@@ -691,10 +806,18 @@ export const CajaCobroV2 = {
   },
 
   calcChange() {
-    const total = _cart.reduce((s,c)=>s+c.amount,0);
+    const mora = calcMora(_charges);
+    const discount = calcDiscount(_cart.reduce((s,c)=>s+c.amount,0), mora, _discountPct);
+    const total = calcTotal(_cart, mora, discount);
     const received = Number(document.getElementById('cashReceived')?.value || 0);
     const changeEl = document.getElementById('cashChange');
     if (changeEl) changeEl.textContent = fmt(Math.max(0, received - total));
+    
+    // Actualizar el resumen si está visible
+    const resumenPane = document.getElementById('cajaPane_resumen');
+    if (resumenPane && resumenPane.style.display !== 'none') {
+      this._updateCart();
+    }
   },
 
   // ── CONFIRMAR COBRO ───────────────────────────────────────────────────────
@@ -704,18 +827,20 @@ export const CajaCobroV2 = {
     if (btn) { btn.disabled=true; btn.textContent='Procesando...'; }
 
     try {
-      const total = _cart.reduce((s,c)=>s+c.amount,0);
+      const sub = _cart.reduce((s,c)=>s+c.amount,0);
+      const mora = calcMora(_charges);
+      const discount = calcDiscount(sub, mora, _discountPct);
+      const total = calcTotal(_cart, mora, discount);
       const now   = new Date().toISOString();
       const todayStr = today();
 
-      // Get RNC and Empresa
       const rnc = document.getElementById('rncEmpresa')?.value?.trim();
       const empresa = document.getElementById('nombreEmpresa')?.value?.trim();
       let notes = '';
       if (rnc) notes += `RNC:${rnc}|`;
       if (empresa) notes += `Empresa:${empresa}|`;
+      if (_discountPct > 0) notes += `Descuento:${_discountPct}% (-${fmt(discount)})|`;
 
-      // Insertar pagos — month_paid en formato YYYY-MM para consistencia
       const currentYear = new Date().getFullYear();
       const inserts = _cart.map(c => ({
         student_id:  _student.id,
@@ -734,43 +859,42 @@ export const CajaCobroV2 = {
       const { error } = await supabase.from('payments').insert(inserts);
       if (error) throw error;
 
-      // Notificar pago al padre + generar factura
-      try {
-        const { emitEvent: emit } = await import('./supabase.js');
-        const colegiaturas = _cart.filter(c => c.type === 'colegiatura');
-        const monthPaid = colegiaturas.length > 0
-          ? colegiaturas.map(c => c._monthIdx + 1).join(',')
-          : null;
+      const colegiaturas = _cart.filter(c => c.type === 'colegiatura');
+      const monthPaid = colegiaturas.length > 0
+        ? colegiaturas.map(c => c._monthIdx + 1).join(',')
+        : null;
 
-        // Fetch first inserted payment id for invoice
-        const { data: newPays } = await supabase
-          .from('payments')
-          .select('id, amount, month_paid')
-          .eq('student_id', _student.id)
-          .eq('status', 'paid')
-          .gte('paid_date', todayStr + 'T00:00:00')
-          .order('created_at', { ascending: false })
-          .limit(1);
+      const { data: newPays } = await supabase
+        .from('payments')
+        .select('id, amount, month_paid')
+        .eq('student_id', _student.id)
+        .eq('status', 'paid')
+        .gte('paid_date', todayStr + 'T00:00:00')
+        .order('created_at', { ascending: false })
+        .limit(1);
 
-        if (newPays?.[0]?.id) {
-          // Generate invoice and send email
-          supabase.functions.invoke('generate-invoice', {
+      let invoiceResult = null;
+      if (newPays?.[0]?.id) {
+        try {
+          const { data, error: invErr } = await supabase.functions.invoke('generate-invoice', {
             body: { payment_id: newPays[0].id, send_email: true }
+          });
+          if (!invErr && data) invoiceResult = data;
+        } catch (_) {}
+
+        try {
+          const { emitEvent: emit } = await import('./supabase.js');
+          emit('payment.approved', {
+            payment_id:   newPays[0].id,
+            student_name: _student.name,
+            amount:       fmt(total),
+            month:        monthPaid || 'Colegiatura'
           }).catch(() => {});
-        }
+        } catch (_) {}
+      }
 
-        // Notify payment approved to parent
-        emit('payment.approved', {
-          payment_id:   newPays?.[0]?.id || null,
-          student_name: _student.name,
-          amount:       'RD$' + total.toLocaleString('es-DO', { minimumFractionDigits: 2 }),
-          month:        monthPaid || 'Colegiatura'
-        }).catch(() => {});
-      } catch (_) {}
-
-      // Cerrar modal y mostrar éxito
       document.querySelectorAll('[id^="cajaModal_"]').forEach(e=>e.remove());
-      this._showSuccess(total);
+      this._showSuccess(total, invoiceResult, newPays?.[0]?.id);
       this.loadStudents();
 
     } catch (err) {
@@ -779,20 +903,62 @@ export const CajaCobroV2 = {
     }
   },
 
-  _showSuccess(total) {
+  _showSuccess(total, invoiceResult, paymentId) {
+    const receiptNo = invoiceResult?.receipt_number || 'N/A';
+    const asciiReceipt = invoiceResult?.ascii_receipt || '';
+
     const el = document.createElement('div');
-    el.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
-    el.innerHTML = `<div style="background:white;border-radius:20px;padding:32px;max-width:360px;width:100%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.25)">
-      <div style="width:72px;height:72px;background:#f0fdf4;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:2.5rem">✅</div>
-      <div style="font-size:1.2rem;font-weight:900;color:#1a2340;margin-bottom:8px">¡Pago registrado!</div>
-      <div style="font-size:1.7rem;font-weight:900;color:#0B63C7;margin-bottom:20px">${fmt(total)}</div>
-      <div style="display:flex;flex-direction:column;gap:6px;text-align:left;margin-bottom:20px">
-        ${['✓ Pago registrado','✓ Caja actualizada','✓ Estado financiero actualizado'].map(t=>`<div style="font-size:.85rem;font-weight:700;color:#16A34A">${t}</div>`).join('')}
+    el.id = 'cajaSuccessModal';
+    el.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(6px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+    el.onclick = e => { if(e.target===el) el.remove(); };
+    el.innerHTML = `<div style="background:white;border-radius:20px;padding:28px;max-width:400px;width:100%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.25)">
+      <div style="width:72px;height:72px;background:#f0fdf4;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;font-size:2.5rem">✅</div>
+      <div style="font-size:1.1rem;font-weight:900;color:#1a2340;margin-bottom:4px">¡Pago registrado!</div>
+      <div style="font-size:.75rem;color:#64748b;margin-bottom:6px">Recibo: <strong style="color:#0B63C7;font-family:monospace">${receiptNo}</strong></div>
+      <div style="font-size:1.6rem;font-weight:900;color:#0B63C7;margin-bottom:16px">${fmt(total)}</div>
+      <div style="display:flex;flex-direction:column;gap:5px;text-align:left;margin-bottom:18px">
+        ${['✓ Pago registrado en caja','✓ Factura generada','✓ Correo electrónico enviado'].map(t=>`<div style="font-size:.8rem;font-weight:700;color:#16A34A">${t}</div>`).join('')}
       </div>
-      <button onclick="this.closest('div[style]').remove()" style="width:100%;padding:14px;border-radius:14px;border:none;background:#0B63C7;color:white;font-size:.95rem;font-weight:900;cursor:pointer">Cerrar</button>
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <button id="btnPrintInvoice" style="flex:1;padding:12px;border-radius:12px;border:2px solid #0B63C7;background:#eff6ff;color:#0B63C7;font-size:.8rem;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">🖨️ Imprimir</button>
+        <button id="btnEmailInvoice" style="flex:1;padding:12px;border-radius:12px;border:2px solid #16A34A;background:#f0fdf4;color:#16A34A;font-size:.8rem;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">📧 Reenviar</button>
+      </div>
+      <button onclick="document.getElementById('cajaSuccessModal').remove()" style="width:100%;padding:13px;border-radius:12px;border:none;background:#0B63C7;color:white;font-size:.9rem;font-weight:900;cursor:pointer">Cerrar</button>
     </div>`;
     document.body.appendChild(el);
-    setTimeout(() => el.remove(), 6000);
+
+    document.getElementById('btnPrintInvoice')?.addEventListener('click', () => {
+      this._printReceipt(asciiReceipt, receiptNo);
+    });
+    document.getElementById('btnEmailInvoice')?.addEventListener('click', async () => {
+      if (!paymentId) { Helpers.toast('No hay pago para reenviar','warning'); return; }
+      try {
+        const { error } = await supabase.functions.invoke('generate-invoice', {
+          body: { payment_id: paymentId, send_email: true }
+        });
+        if (error) throw error;
+        Helpers.toast('Correo reenviado exitosamente','success');
+      } catch (e) {
+        Helpers.toast('Error al reenviar correo','error');
+      }
+    });
+
+    setTimeout(() => { if (document.getElementById('cajaSuccessModal')) el.remove(); }, 30000);
+  },
+
+  _printReceipt(asciiReceipt, receiptNo) {
+    if (!asciiReceipt) { Helpers.toast('No hay recibo para imprimir','warning'); return; }
+    const printWin = window.open('', '_blank', 'width=420,height=700');
+    if (!printWin) { Helpers.toast('Permitir ventanas emergentes para imprimir','warning'); return; }
+    printWin.document.write(`<!DOCTYPE html><html><head><title>${receiptNo}</title>
+      <style>
+        @page{margin:8mm}
+        body{font-family:'Courier New',monospace;font-size:11px;margin:0;padding:10px;white-space:pre;line-height:1.35;background:white}
+        @media print{body{padding:0}}
+      </style></head><body>${asciiReceipt}</body></html>`);
+    printWin.document.close();
+    printWin.focus();
+    setTimeout(() => { printWin.print(); }, 400);
   },
 
   // ── TRANSFERENCIAS PENDIENTES ─────────────────────────────────────────────
@@ -848,3 +1014,26 @@ export const CajaCobroV2 = {
     } catch(e) { Helpers.toast('Error al rechazar','error'); }
   }
 };
+
+// ── CARGAR CONCEPTOS DE LA BASE DE DATOS ────────────────────────────────────
+async function _loadDbConcepts() {
+  try {
+    const { data, error } = await supabase
+      .from('payment_concepts')
+      .select('*')
+      .order('name');
+    if (error) throw error;
+    _dbConcepts = data || [];
+    // Save to localStorage as cache
+    if (_dbConcepts.length > 0) {
+      saveCatalog(_dbConcepts.map(c => ({
+        id: 'db_' + c.id,
+        label: c.name,
+        amount: c.amount,
+        icon: '🏷️'
+      })));
+    }
+  } catch (e) {
+    _dbConcepts = [];
+  }
+}

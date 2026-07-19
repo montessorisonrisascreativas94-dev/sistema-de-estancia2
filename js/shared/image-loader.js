@@ -117,23 +117,6 @@ export const ImageLoader = {
     return `<div class="skeleton ${cls} rounded-xl"></div>`;
   },
 
-  prefetch(urls = []) {
-    if (!urls.length) return;
-    const load = () => {
-      urls.forEach(url => {
-        if (!url || _urlCache.has(url)) return;
-        const img = new Image();
-        img.onload = () => _urlCache.set(url, url);
-        img.src = url;
-      });
-    };
-    if ('requestIdleCallback' in window) {
-      requestIdleCallback(load, { timeout: 2000 });
-    } else {
-      setTimeout(load, 500);
-    }
-  },
-
   /**
    * 🚀 Prefetch — pre-carga URLs en background para que estén listas antes de mostrarse.
    * Llamar con las URLs del siguiente lote de posts.
