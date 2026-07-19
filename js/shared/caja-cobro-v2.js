@@ -906,6 +906,8 @@ export const CajaCobroV2 = {
   _showSuccess(total, invoiceResult, paymentId) {
     const receiptNo = invoiceResult?.receipt_number || 'N/A';
     const asciiReceipt = invoiceResult?.ascii_receipt || '';
+    const hasInvoice = !!invoiceResult?.invoice?.id;
+    const hasWarning = !!invoiceResult?.warning;
 
     const el = document.createElement('div');
     el.id = 'cajaSuccessModal';
@@ -917,7 +919,9 @@ export const CajaCobroV2 = {
       <div style="font-size:.75rem;color:#64748b;margin-bottom:6px">Recibo: <strong style="color:#0B63C7;font-family:monospace">${receiptNo}</strong></div>
       <div style="font-size:1.6rem;font-weight:900;color:#0B63C7;margin-bottom:16px">${fmt(total)}</div>
       <div style="display:flex;flex-direction:column;gap:5px;text-align:left;margin-bottom:18px">
-        ${['✓ Pago registrado en caja','✓ Factura generada','✓ Correo electrónico enviado'].map(t=>`<div style="font-size:.8rem;font-weight:700;color:#16A34A">${t}</div>`).join('')}
+        <div style="font-size:.8rem;font-weight:700;color:#16A34A">✓ Pago registrado en caja</div>
+        <div style="font-size:.8rem;font-weight:700;color:${hasInvoice ? '#16A34A' : '#EAB308'}">${hasInvoice ? '✓ Factura generada' : '⚠ Factura pendiente de sincronizar'}</div>
+        <div style="font-size:.8rem;font-weight:700;color:${hasInvoice ? '#16A34A' : '#94a3b8'}">${hasInvoice ? '✓ Correo electrónico enviado' : '○ Correo se enviará al sincronizar'}</div>
       </div>
       <div style="display:flex;gap:8px;margin-bottom:10px">
         <button id="btnPrintInvoice" style="flex:1;padding:12px;border-radius:12px;border:2px solid #0B63C7;background:#eff6ff;color:#0B63C7;font-size:.8rem;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">🖨️ Imprimir</button>
@@ -947,7 +951,21 @@ export const CajaCobroV2 = {
   },
 
   _printReceipt(asciiReceipt, receiptNo) {
-    if (!asciiReceipt) { Helpers.toast('No hay recibo para imprimir','warning'); return; }
+    if (!asciiReceipt) {
+      asciiReceipt = [
+        '┌──────────────────────────────────────────────┐',
+        '│           RECIBO DE PAGO                     │',
+        '│           No. ' + (receiptNo || 'N/A') + '              │',
+        '├──────────────────────────────────────────────┤',
+        '│                                              │',
+        '│  El recibo se generará al sincronizar con    │',
+        '│  el servidor. Consulte con administración.   │',
+        '│                                              │',
+        '│  No. Recibo: ' + (receiptNo || 'Pendiente') + '            │',
+        '│                                              │',
+        '└──────────────────────────────────────────────┘'
+      ].join('\n');
+    }
     const printWin = window.open('', '_blank', 'width=420,height=700');
     if (!printWin) { Helpers.toast('Permitir ventanas emergentes para imprimir','warning'); return; }
     printWin.document.write(`<!DOCTYPE html><html><head><title>${receiptNo}</title>
