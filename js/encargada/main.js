@@ -52,35 +52,14 @@ export function goToSection(sectionId) {
       case 'ranking':
         loadRanking();
         break;
-      case 'padres-opinion':
-        loadParentReviews();
-        break;
       case 'permisos':
         loadPermits();
-        break;
-      case 'accesos-qr':
-        loadQRAccess();
         break;
       case 'chat':
         loadChat();
         break;
-      case 'reportes-cumplimiento':
-        loadComplianceReports();
-        break;
-      case 'control-rutinas':
-        loadRoutineControl();
-        break;
-      case 'reportes-tareas':
-        loadTaskReports();
-        break;
-      case 'comparativo-aulas':
-        loadClassroomComparison();
-        break;
       case 'alertas':
         loadAlerts();
-        break;
-      case 'centro-estadisticas':
-        loadStatisticsCenter();
         break;
       case 'configuracion':
         loadConfig();
@@ -89,11 +68,7 @@ export function goToSection(sectionId) {
   }
   const _parentSection = {
     'eficiencia': 'maestras',
-    'ranking': 'maestras',
-    'reportes-cumplimiento': 'reportes',
-    'control-rutinas': 'reportes',
-    'reportes-tareas': 'reportes',
-    'comparativo-aulas': 'reportes'
+    'ranking': 'maestras'
   };
   const activeSidebarId = _parentSection[sectionId] || sectionId;
   document.querySelectorAll('[data-section]').forEach(btn => {
@@ -312,102 +287,6 @@ async function loadRanking() {
   }
 }
 
-async function loadParentReviews() {
-  const el = document.getElementById('opinionesContent');
-  if (!el) return;
-  el.innerHTML = '<div class="text-slate-400">Cargando...</div>';
-  try {
-    const { data: ratings, error } = await supabase
-      .from('parent_ratings')
-      .select('*, profiles!parent_ratings_parent_id_fkey(name), profiles!parent_ratings_teacher_id_fkey(name)');
-    
-    if (error) throw error;
-
-    const totalRatings = ratings?.length || 0;
-    const avgStars = totalRatings > 0 ? ratings.reduce((acc, r) => acc + (r.stars || 0), 0) / totalRatings : 0;
-    
-    el.innerHTML = `
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-        <div class="bg-white rounded-2xl border border-slate-100 p-6">
-          <div class="flex items-center gap-3 mb-3">
-            <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-pink-100 to-pink-50 flex items-center justify-center">
-              <i data-lucide="star" class="text-pink-500"></i>
-            </div>
-            <div>
-              <p class="text-xs font-black uppercase text-slate-400 mb-1">Total Valoraciones</p>
-              <p class="text-2xl font-black text-slate-800">${totalRatings}</p>
-            </div>
-          </div>
-        </div>
-        <div class="bg-white rounded-2xl border border-slate-100 p-6">
-          <div class="flex items-center gap-3 mb-3">
-            <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-yellow-100 to-yellow-50 flex items-center justify-center">
-              <i data-lucide="award" class="text-yellow-500"></i>
-            </div>
-            <div>
-              <p class="text-xs font-black uppercase text-slate-400 mb-1">Promedio</p>
-              <p class="text-2xl font-black text-slate-800">${avgStars.toFixed(1)}★</p>
-            </div>
-          </div>
-        </div>
-        <div class="bg-white rounded-2xl border border-slate-100 p-6">
-          <div class="flex items-center gap-3 mb-3">
-            <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-green-100 to-green-50 flex items-center justify-center">
-              <i data-lucide="smile" class="text-green-500"></i>
-            </div>
-            <div>
-              <p class="text-xs font-black uppercase text-slate-400 mb-1">Satisfacción</p>
-              <p class="text-2xl font-black text-slate-800">${totalRatings > 0 ? Math.round(avgStars / 5 * 100) : 0}%</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="bg-white rounded-2xl border border-slate-100 p-6 mb-6">
-        <h3 class="text-lg font-bold text-slate-800 mb-4">Valoraciones Recientes</h3>
-        ${totalRatings > 0 ? `
-          <div class="space-y-4">
-            ${ratings.slice(0, 10).map(r => `
-              <div class="p-4 bg-slate-50 rounded-xl border border-slate-100">
-                <div class="flex items-center justify-between mb-2">
-                  <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center font-bold text-blue-600">
-                      ${(r['profiles!parent_ratings_parent_id_fkey']?.name || 'P')[0].toUpperCase()}
-                    </div>
-                    <div>
-                      <p class="font-bold text-slate-800">
-                        ${r['profiles!parent_ratings_parent_id_fkey']?.name || 'Padre'}
-                      </p>
-                      <p class="text-xs text-slate-400">
-                        Para: ${r['profiles!parent_ratings_teacher_id_fkey']?.name || 'Maestra'}
-                      </p>
-                    </div>
-                  </div>
-                  <div class="text-yellow-500 font-black">
-                    ${'★'.repeat(r.stars || 0)}${'☆'.repeat(5 - (r.stars || 0))}
-                  </div>
-                </div>
-                ${r.comment ? `<p class="text-sm text-slate-600 mt-2">${Helpers.escapeHTML(r.comment)}</p>` : ''}
-                ${r.recommendations ? `<p class="text-xs text-slate-400 mt-1"><i data-lucide="lightbulb" class="w-3 h-3 inline mr-1"></i>${Helpers.escapeHTML(r.recommendations)}</p>` : ''}
-              </div>
-            `).join('')}
-          </div>
-        ` : `
-          <div class="text-center py-10">
-            <div class="w-16 h-16 rounded-full bg-slate-100 mx-auto mb-4 flex items-center justify-center">
-              <i data-lucide="heart" class="w-8 h-8 text-slate-300"></i>
-            </div>
-            <p class="text-slate-400">No hay valoraciones aún</p>
-          </div>
-        `}
-      </div>
-    `;
-    if (window.lucide) lucide.createIcons();
-  } catch (e) {
-    console.error('[ParentReviews] Error:', e);
-    el.innerHTML = `<p class="text-rose-500">Error al cargar: ${e.message}</p>`;
-  }
-}
 
 async function loadPermits() {
   const el = document.getElementById('permisosContent');
@@ -620,122 +499,6 @@ window.viewPermitDetails = async function(id) {
     Helpers.toast('Error al cargar detalles', 'error');
   }
 };
-
-async function loadQRAccess() {
-  const el = document.getElementById('qrContent');
-  if (!el) return;
-  el.innerHTML = '<div class="text-slate-400">Cargando...</div>';
-  
-  try {
-    // Load teachers and students
-    const [teachersRes, studentsRes] = await Promise.all([
-      supabase.from('profiles').select('*').eq('role', 'maestra'),
-      supabase.from('students').select('*, classrooms:classroom_id(name)')
-    ]);
-    
-    const teachers = teachersRes.data || [];
-    const students = studentsRes.data || [];
-    
-    el.innerHTML = `
-      <div class="space-y-6">
-        <div class="flex gap-4 mb-6">
-          <button id="qrTabTeachers" class="px-6 py-3 rounded-xl font-black text-sm bg-blue-600 text-white shadow-lg">
-            <i data-lucide="users" class="w-4 h-4 inline mr-2"></i>Maestras
-          </button>
-          <button id="qrTabStudents" class="px-6 py-3 rounded-xl font-black text-sm bg-slate-100 text-slate-600">
-            <i data-lucide="users" class="w-4 h-4 inline mr-2"></i>Niños
-          </button>
-        </div>
-        
-        <div id="qrTeachersSection">
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            ${teachers.map(t => `
-              <div class="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm hover:shadow-md transition-all">
-                <div class="flex items-center gap-4 mb-4">
-                  <div class="w-16 h-16 rounded-full bg-gradient-to-br from-blue-100 to-blue-50 flex items-center justify-center text-2xl font-bold text-blue-600">
-                    ${(t.name || 'M').charAt(0).toUpperCase()}
-                  </div>
-                  <div class="flex-1 min-w-0">
-                    <h4 class="font-bold text-slate-800 truncate">${Helpers.escapeHTML(t.name || 'Maestra')}</h4>
-                    <p class="text-sm text-slate-400">${t.role || 'maestra'}</p>
-                  </div>
-                </div>
-                <div class="flex justify-center mb-4 bg-slate-50 rounded-xl p-4">
-                  <div class="w-40 h-40 bg-white border border-slate-200 rounded-xl flex items-center justify-center">
-                    <span class="text-slate-400 text-sm">QR Code</span>
-                  </div>
-                </div>
-                <div class="flex gap-2">
-                  <button class="flex-1 px-4 py-2 bg-blue-50 text-blue-600 rounded-xl font-bold text-sm hover:bg-blue-100 transition-all">
-                    <i data-lucide="download" class="w-4 h-4 inline mr-1"></i>Descargar
-                  </button>
-                  <button class="flex-1 px-4 py-2 bg-slate-50 text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-100 transition-all">
-                    <i data-lucide="printer" class="w-4 h-4 inline mr-1"></i>Imprimir
-                  </button>
-                </div>
-              </div>
-            `).join('')}
-          </div>
-        </div>
-        
-        <div id="qrStudentsSection" class="hidden">
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            ${students.map(s => `
-              <div class="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm hover:shadow-md transition-all">
-                <div class="flex items-center gap-4 mb-4">
-                  <div class="w-16 h-16 rounded-full bg-gradient-to-br from-green-100 to-green-50 flex items-center justify-center text-2xl font-bold text-green-600">
-                    ${(s.name || 'N').charAt(0).toUpperCase()}
-                  </div>
-                  <div class="flex-1 min-w-0">
-                    <h4 class="font-bold text-slate-800 truncate">${Helpers.escapeHTML(s.name || 'Niño')}</h4>
-                    <p class="text-sm text-slate-400">${s.classrooms?.name || 'Sin aula'}</p>
-                  </div>
-                </div>
-                <div class="flex justify-center mb-4 bg-slate-50 rounded-xl p-4">
-                  <div class="w-40 h-40 bg-white border border-slate-200 rounded-xl flex items-center justify-center">
-                    <span class="text-slate-400 text-sm">QR Code</span>
-                  </div>
-                </div>
-                <div class="flex gap-2">
-                  <button class="flex-1 px-4 py-2 bg-green-50 text-green-600 rounded-xl font-bold text-sm hover:bg-green-100 transition-all">
-                    <i data-lucide="download" class="w-4 h-4 inline mr-1"></i>Descargar
-                  </button>
-                  <button class="flex-1 px-4 py-2 bg-slate-50 text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-100 transition-all">
-                    <i data-lucide="printer" class="w-4 h-4 inline mr-1"></i>Imprimir
-                  </button>
-                </div>
-              </div>
-            `).join('')}
-          </div>
-        </div>
-      </div>
-    `;
-    
-    if (window.lucide) lucide.createIcons();
-    
-    // Tab switching
-    document.getElementById('qrTabTeachers')?.addEventListener('click', () => {
-      document.getElementById('qrTeachersSection')?.classList.remove('hidden');
-      document.getElementById('qrStudentsSection')?.classList.add('hidden');
-      document.getElementById('qrTabTeachers')?.classList.add('bg-blue-600', 'text-white', 'shadow-lg');
-      document.getElementById('qrTabTeachers')?.classList.remove('bg-slate-100', 'text-slate-600');
-      document.getElementById('qrTabStudents')?.classList.remove('bg-blue-600', 'text-white', 'shadow-lg');
-      document.getElementById('qrTabStudents')?.classList.add('bg-slate-100', 'text-slate-600');
-    });
-    
-    document.getElementById('qrTabStudents')?.addEventListener('click', () => {
-      document.getElementById('qrStudentsSection')?.classList.remove('hidden');
-      document.getElementById('qrTeachersSection')?.classList.add('hidden');
-      document.getElementById('qrTabStudents')?.classList.add('bg-blue-600', 'text-white', 'shadow-lg');
-      document.getElementById('qrTabStudents')?.classList.remove('bg-slate-100', 'text-slate-600');
-      document.getElementById('qrTabTeachers')?.classList.remove('bg-blue-600', 'text-white', 'shadow-lg');
-      document.getElementById('qrTabTeachers')?.classList.add('bg-slate-100', 'text-slate-600');
-    });
-  } catch (e) {
-    console.error('[QR] Error:', e);
-    el.innerHTML = `<p class="text-rose-500">Error al cargar: ${e.message}</p>`;
-  }
-}
 
 async function loadChat() {
   const el = document.getElementById('chatContent');
@@ -1037,235 +800,6 @@ function scrollChatToBottom() {
   }
 }
 
-async function loadComplianceReports() {
-  const el = document.getElementById('cumplimientoContent');
-  if (!el) return;
-  el.innerHTML = '<div class="text-slate-400">Cargando...</div>';
-  
-  try {
-    el.innerHTML = `
-      <div class="space-y-6">
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div class="bg-white rounded-2xl border border-slate-100 p-6">
-            <div class="flex items-center gap-3 mb-3">
-              <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-100 to-blue-50 flex items-center justify-center">
-                <i data-lucide="calendar-check" class="w-6 h-6 text-blue-600"></i>
-              </div>
-              <div>
-                <p class="text-xs font-black uppercase text-slate-400 mb-1">Diario</p>
-                <p class="text-2xl font-black text-slate-800">95%</p>
-              </div>
-            </div>
-          </div>
-          <div class="bg-white rounded-2xl border border-slate-100 p-6">
-            <div class="flex items-center gap-3 mb-3">
-              <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-green-100 to-green-50 flex items-center justify-center">
-                <i data-lucide="calendar" class="w-6 h-6 text-green-600"></i>
-              </div>
-              <div>
-                <p class="text-xs font-black uppercase text-slate-400 mb-1">Semanal</p>
-                <p class="text-2xl font-black text-slate-800">92%</p>
-              </div>
-            </div>
-          </div>
-          <div class="bg-white rounded-2xl border border-slate-100 p-6">
-            <div class="flex items-center gap-3 mb-3">
-              <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-100 to-amber-50 flex items-center justify-center">
-                <i data-lucide="calendar-days" class="w-6 h-6 text-amber-600"></i>
-              </div>
-              <div>
-                <p class="text-xs font-black uppercase text-slate-400 mb-1">Mensual</p>
-                <p class="text-2xl font-black text-slate-800">88%</p>
-              </div>
-            </div>
-          </div>
-          <div class="bg-white rounded-2xl border border-slate-100 p-6">
-            <div class="flex items-center gap-3 mb-3">
-              <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-100 to-purple-50 flex items-center justify-center">
-                <i data-lucide="trending-up" class="w-6 h-6 text-purple-600"></i>
-              </div>
-              <div>
-                <p class="text-xs font-black uppercase text-slate-400 mb-1">Anual</p>
-                <p class="text-2xl font-black text-slate-800">90%</p>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div class="bg-white rounded-2xl border border-slate-100 p-6">
-            <h3 class="text-lg font-bold text-slate-800 mb-4">Gráfico de Cumplimiento</h3>
-            <div class="h-64 bg-slate-50 rounded-xl flex items-center justify-center">
-              <span class="text-slate-400">Gráfico (Chart.js)</span>
-            </div>
-          </div>
-          <div class="bg-white rounded-2xl border border-slate-100 p-6">
-            <h3 class="text-lg font-bold text-slate-800 mb-4">Detalle por Maestra</h3>
-            <div class="space-y-3">
-              ${[1,2,3,4].map(i => `
-                <div class="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
-                  <div class="flex items-center gap-3">
-                    <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center font-bold text-blue-600 text-sm">M${i}</div>
-                    <span class="font-bold text-slate-800">Maestra ${i}</span>
-                  </div>
-                  <span class="font-black text-blue-600">${90 + i}%</span>
-                </div>
-              `).join('')}
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
-    if (window.lucide) lucide.createIcons();
-  } catch (e) {
-    el.innerHTML = `<p class="text-rose-500">Error al cargar: ${e.message}</p>`;
-  }
-}
-
-async function loadRoutineControl() {
-  const el = document.getElementById('rutinasContent');
-  if (!el) return;
-  el.innerHTML = '<div class="text-slate-400">Cargando...</div>';
-  
-  try {
-    el.innerHTML = `
-      <div class="space-y-6">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div class="bg-white rounded-2xl border border-slate-100 p-6">
-            <p class="text-xs font-black uppercase text-slate-400 mb-2">Primer Reporte</p>
-            <p class="text-2xl font-black text-slate-800">08:00 AM</p>
-          </div>
-          <div class="bg-white rounded-2xl border border-slate-100 p-6">
-            <p class="text-xs font-black uppercase text-slate-400 mb-2">Último Reporte</p>
-            <p class="text-2xl font-black text-slate-800">04:30 PM</p>
-          </div>
-          <div class="bg-white rounded-2xl border border-slate-100 p-6">
-            <p class="text-xs font-black uppercase text-slate-400 mb-2">Rutinas Completas</p>
-            <p class="text-2xl font-black text-slate-800">24/24</p>
-          </div>
-        </div>
-        
-        <div class="bg-white rounded-2xl border border-slate-100 p-6">
-          <h3 class="text-lg font-bold text-slate-800 mb-4">Control de Rutinas</h3>
-          <div class="space-y-4">
-            ${['Llegada', 'Desayuno', 'Actividad 1', 'Almuerzo', 'Siesta', 'Actividad 2', 'Merienda', 'Salida'].map((r, i) => `
-              <div class="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
-                <div class="flex items-center gap-3">
-                  <div class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
-                    <i data-lucide="check" class="w-5 h-5 text-green-600"></i>
-                  </div>
-                  <div>
-                    <p class="font-bold text-slate-800">${r}</p>
-                    <p class="text-sm text-slate-400">${8 + i}:${i % 2 === 0 ? '00' : '30'} AM</p>
-                  </div>
-                </div>
-                <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-black">Completada</span>
-              </div>
-            `).join('')}
-          </div>
-        </div>
-      </div>
-    `;
-    if (window.lucide) lucide.createIcons();
-  } catch (e) {
-    el.innerHTML = `<p class="text-rose-500">Error al cargar: ${e.message}</p>`;
-  }
-}
-
-async function loadTaskReports() {
-  const el = document.getElementById('tareasContent');
-  if (!el) return;
-  el.innerHTML = '<div class="text-slate-400">Cargando...</div>';
-  
-  try {
-    el.innerHTML = `
-      <div class="space-y-6">
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div class="bg-white rounded-2xl border border-slate-100 p-6">
-            <p class="text-xs font-black uppercase text-slate-400 mb-2">Asignadas</p>
-            <p class="text-2xl font-black text-slate-800">124</p>
-          </div>
-          <div class="bg-white rounded-2xl border border-slate-100 p-6">
-            <p class="text-xs font-black uppercase text-slate-400 mb-2">Entregadas</p>
-            <p class="text-2xl font-black text-green-600">118</p>
-          </div>
-          <div class="bg-white rounded-2xl border border-slate-100 p-6">
-            <p class="text-xs font-black uppercase text-slate-400 mb-2">Retrasadas</p>
-            <p class="text-2xl font-black text-amber-600">4</p>
-          </div>
-          <div class="bg-white rounded-2xl border border-slate-100 p-6">
-            <p class="text-xs font-black uppercase text-slate-400 mb-2">% Completado</p>
-            <p class="text-2xl font-black text-blue-600">95%</p>
-          </div>
-        </div>
-        
-        <div class="bg-white rounded-2xl border border-slate-100 p-6">
-          <h3 class="text-lg font-bold text-slate-800 mb-4">Tareas Recientes</h3>
-          <div class="overflow-x-auto">
-            <table class="w-full">
-              <thead class="bg-slate-50">
-                <tr>
-                  <th class="px-6 py-4 text-left text-xs font-black uppercase text-slate-400">Tarea</th>
-                  <th class="px-6 py-4 text-left text-xs font-black uppercase text-slate-400">Maestra</th>
-                  <th class="px-6 py-4 text-left text-xs font-black uppercase text-slate-400">Aula</th>
-                  <th class="px-6 py-4 text-left text-xs font-black uppercase text-slate-400">Estado</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-slate-100">
-                ${['Actividad Manualidades', 'Informe Semanal', 'Plan de Clase', 'Registro de Asistencia'].map((t, i) => `
-                  <tr class="hover:bg-slate-50">
-                    <td class="px-6 py-4 font-bold text-slate-800">${t}</td>
-                    <td class="px-6 py-4 text-slate-600">Maestra ${i + 1}</td>
-                    <td class="px-6 py-4 text-slate-600">Aula ${i + 1}</td>
-                    <td class="px-6 py-4">
-                      <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-black">Entregada</span>
-                    </td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    `;
-    if (window.lucide) lucide.createIcons();
-  } catch (e) {
-    el.innerHTML = `<p class="text-rose-500">Error al cargar: ${e.message}</p>`;
-  }
-}
-
-async function loadClassroomComparison() {
-  const el = document.getElementById('comparativoContent');
-  if (!el) return;
-  el.innerHTML = '<div class="text-slate-400">Cargando...</div>';
-  
-  try {
-    el.innerHTML = `
-      <div class="space-y-6">
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          ${['Rendimiento', 'Cumplimiento', 'Asistencia', 'Participación'].map((cat, i) => `
-            <div class="bg-white rounded-2xl border border-slate-100 p-6">
-              <p class="text-xs font-black uppercase text-slate-400 mb-2">Mejor Aula - ${cat}</p>
-              <p class="text-xl font-black text-slate-800">Aula ${i + 1}</p>
-              <p class="text-sm text-blue-600 font-bold mt-1">9${5 - i}%</p>
-            </div>
-          `).join('')}
-        </div>
-        
-        <div class="bg-white rounded-2xl border border-slate-100 p-6">
-          <h3 class="text-lg font-bold text-slate-800 mb-4">Comparativo por Aulas</h3>
-          <div class="h-80 bg-slate-50 rounded-xl flex items-center justify-center">
-            <span class="text-slate-400">Gráfico Comparativo (Chart.js)</span>
-          </div>
-        </div>
-      </div>
-    `;
-    if (window.lucide) lucide.createIcons();
-  } catch (e) {
-    el.innerHTML = `<p class="text-rose-500">Error al cargar: ${e.message}</p>`;
-  }
-}
-
 async function loadAlerts() {
   const el = document.getElementById('alertasContent');
   if (!el) return;
@@ -1299,48 +833,6 @@ async function loadAlerts() {
             </div>
           </div>
         `).join('')}
-      </div>
-    `;
-    if (window.lucide) lucide.createIcons();
-  } catch (e) {
-    el.innerHTML = `<p class="text-rose-500">Error al cargar: ${e.message}</p>`;
-  }
-}
-
-async function loadStatisticsCenter() {
-  const el = document.getElementById('estadisticasContent');
-  if (!el) return;
-  el.innerHTML = '<div class="text-slate-400">Cargando...</div>';
-  
-  try {
-    el.innerHTML = `
-      <div class="space-y-6">
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div class="bg-white rounded-2xl border border-slate-100 p-6">
-            <h3 class="text-lg font-bold text-slate-800 mb-4">Eficiencia Institucional</h3>
-            <div class="h-64 bg-slate-50 rounded-xl flex items-center justify-center">
-              <span class="text-slate-400">Gráfico de Líneas</span>
-            </div>
-          </div>
-          <div class="bg-white rounded-2xl border border-slate-100 p-6">
-            <h3 class="text-lg font-bold text-slate-800 mb-4">Valoraciones de Padres</h3>
-            <div class="h-64 bg-slate-50 rounded-xl flex items-center justify-center">
-              <span class="text-slate-400">Gráfico de Barras</span>
-            </div>
-          </div>
-          <div class="bg-white rounded-2xl border border-slate-100 p-6">
-            <h3 class="text-lg font-bold text-slate-800 mb-4">Asistencia Docente</h3>
-            <div class="h-64 bg-slate-50 rounded-xl flex items-center justify-center">
-              <span class="text-slate-400">Gráfico de Pastel</span>
-            </div>
-          </div>
-          <div class="bg-white rounded-2xl border border-slate-100 p-6">
-            <h3 class="text-lg font-bold text-slate-800 mb-4">Puntualidad</h3>
-            <div class="h-64 bg-slate-50 rounded-xl flex items-center justify-center">
-              <span class="text-slate-400">Heatmap</span>
-            </div>
-          </div>
-        </div>
       </div>
     `;
     if (window.lucide) lucide.createIcons();
@@ -1457,8 +949,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
     });
 
-    // ── Sidebar accordion dropdowns ──────────────────────────────────
-    initSidebarDropdowns();
+    // ── Sidebar accordion dropdowns handled by sidebar-manager import below ──
 
     BadgeSystem.init(auth.user.id);
 

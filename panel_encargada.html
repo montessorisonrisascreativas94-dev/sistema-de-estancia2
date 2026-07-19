@@ -94,7 +94,6 @@
       border-radius: 28px;
       box-shadow: var(--shadow);
       padding: 1.4rem;
-      backdrop-filter: blur(8px);
     }
 
     .section-header {
@@ -785,7 +784,7 @@
   </div>
 
   <div class="app">
-    <div id="sidebarOverlay" class="fixed inset-0 bg-black/50 z-40 backdrop-blur-sm transition-opacity" style="display:none;"></div>
+    <div id="sidebarOverlay" class="fixed inset-0 bg-black/50 z-40 transition-opacity" style="display:none;"></div>
     
     <aside id="sidebar" class="kk-sidebar shadow-2xl flex flex-col flex-shrink-0" style="background:linear-gradient(160deg,#FF7A00 0%,#E07000 50%,#B85900 100%);border-right:none;">
       <button id="toggleSidebar" class="absolute -right-3 top-8 bg-white rounded-full p-1.5 shadow-lg border border-slate-100 text-slate-500 hover:text-[#0B63C7] hidden md:flex items-center justify-center z-10 transition-all hover:scale-110">
@@ -865,51 +864,21 @@
           </div>
         </div>
 
-        <button data-section="padres-opinion" class="kk-nav-item" data-tooltip="Opinión de Padres">
-          <i data-lucide="heart" class="text-pink-300"></i>
-          <span class="label">Opinión de Padres</span>
-        </button>
+        <!-- padres-opinion: hidden, no HTML section yet -->
 
         <button data-section="permisos" class="kk-nav-item" data-tooltip="Permisos">
           <i data-lucide="calendar-check" class="text-amber-300"></i>
           <span class="label">Permisos</span>
         </button>
 
-        <button data-section="accesos-qr" class="kk-nav-item" data-tooltip="Accesos QR">
-          <i data-lucide="scan-line" class="text-lime-300"></i>
-          <span class="label">Accesos QR</span>
-        </button>
+        <!-- accesos-qr: hidden, no HTML section yet -->
 
         <button data-section="chat" class="kk-nav-item" data-tooltip="Chat Institucional">
           <i data-lucide="messages-square" class="text-sky-300"></i>
           <span class="label">Chat Institucional</span>
         </button>
 
-        <div class="kk-nav-group">
-          <button class="kk-nav-item kk-nav-group-toggle w-full" data-group="reportes" data-tooltip="Reportes">
-            <i data-lucide="file-bar-chart-2" class="text-cyan-300 shrink-0"></i>
-            <span class="label flex-1 text-left">Reportes</span>
-            <i data-lucide="chevron-down" class="kk-nav-chevron w-3.5 h-3.5 label opacity-60 shrink-0"></i>
-          </button>
-          <div class="kk-nav-sub" id="group-reportes" style="display:none">
-            <button data-section="reportes-cumplimiento" class="kk-nav-sub-item">
-              <i data-lucide="clipboard-check" class="w-3.5 h-3.5 text-cyan-200 shrink-0"></i>
-              <span>Cumplimiento</span>
-            </button>
-            <button data-section="control-rutinas" class="kk-nav-sub-item">
-              <i data-lucide="clock" class="w-3.5 h-3.5 text-teal-200 shrink-0"></i>
-              <span>Control de Rutinas</span>
-            </button>
-            <button data-section="reportes-tareas" class="kk-nav-sub-item">
-              <i data-lucide="clipboard-list" class="w-3.5 h-3.5 text-blue-200 shrink-0"></i>
-              <span>Tareas</span>
-            </button>
-            <button data-section="comparativo-aulas" class="kk-nav-sub-item">
-              <i data-lucide="bar-chart-3" class="w-3.5 h-3.5 text-indigo-200 shrink-0"></i>
-              <span>Comparativo Aulas</span>
-            </button>
-          </div>
-        </div>
+        <!-- Reportes group: hidden, no HTML sections yet (cumplimiento, rutinas, tareas, comparativo) -->
 
         <button data-section="alertas" class="kk-nav-item" data-tooltip="Alertas Inteligentes">
           <i data-lucide="bell" class="text-rose-300"></i>
@@ -917,10 +886,7 @@
           <span id="badge-alertas" class="hidden kk-badge">0</span>
         </button>
 
-        <button data-section="centro-estadisticas" class="kk-nav-item" data-tooltip="Centro de Estadísticas">
-          <i data-lucide="bar-chart-horizontal" class="text-violet-300"></i>
-          <span class="label">Centro de Estadísticas</span>
-        </button>
+        <!-- centro-estadisticas: hidden, no HTML section yet -->
 
         <button data-section="configuracion" class="kk-nav-item" data-tooltip="Configuración">
           <i data-lucide="sliders-horizontal" class="text-slate-300 shrink-0"></i>

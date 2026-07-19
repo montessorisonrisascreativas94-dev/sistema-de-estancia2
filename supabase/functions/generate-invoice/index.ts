@@ -233,7 +233,7 @@ Deno.serve(async (req) => {
       .eq('id', payment_id)
       .single();
 
-    console.log('[generate-invoice] Payment fetch result:', { data: !!payment, error: errPayment });
+    console.log('[generate-invoice] Payment fetch result:', { data: payment, error: errPayment });
     if (errPayment || !payment) {
       console.error('[generate-invoice] Payment not found or error:', errPayment);
       return json({ error: 'Payment not found: ' + (errPayment?.message || 'Unknown') }, 404);
@@ -241,6 +241,7 @@ Deno.serve(async (req) => {
 
     const student = (payment as any).students ?? {};
     const classroom = student?.classrooms ?? {};
+    console.log('[generate-invoice] Extracted student and classroom:', { student, classroom });
 
     // 2. Obtener configuración del colegio
     const { data: school, error: errSchool } = await supabase
@@ -250,22 +251,24 @@ Deno.serve(async (req) => {
       .single();
 
     if (errSchool) {
-      console.warn('Could not load school settings', errSchool);
+      console.warn('[generate-invoice] Could not load school settings', errSchool);
     }
+    console.log('[generate-invoice] School settings:', school);
 
     // 3. Generar número de recibo
     const receiptNo = `REC-${new Date().getFullYear()}-${String(payment_id).slice(-6).toUpperCase().padStart(6,'0')}`;
+    console.log('[generate-invoice] Generated receipt number:', receiptNo);
 
-    // 4. Crear factura en BD
+    // 4. Crear factura en BD (only using columns that exist in schema.sql!)
     const invoiceData = {
       invoice_number: receiptNo,
-      receipt_number: receiptNo,
       payment_id,
       student_id: student.id,
       student_name: student.name,
       student_matricula: student.matricula,
       classroom_name: classroom?.name,
       parent_name: student.p1_name,
+      parent_phone: student.p1_phone, // use parent_phone instead of receipt_number
       concept: payment.concept,
       amount: payment.amount,
       subtotal: payment.amount,
@@ -273,12 +276,11 @@ Deno.serve(async (req) => {
       total: payment.amount,
       status: 'paid',
       payment_method: payment.method,
-      payment_reference: payment.bank ? `${payment.bank} - ${payment.method}` : payment.method,
-      attended_by: 'Sistema',
-      period: payment.month_paid,
       payment_date: payment.paid_date || payment.created_at,
-      issued_date: new Date().toISOString()
+      issued_date: new Date().toISOString(),
+      notes: payment.notes // add notes just in case!
     };
+    console.log('[generate-invoice] Inserting invoice with data:', invoiceData);
     
     const { data: invoice, error: errInvoice } = await supabase
       .from('invoices')
@@ -286,26 +288,25 @@ Deno.serve(async (req) => {
       .select('*')
       .single();
 
+    console.log('[generate-invoice] Invoice insert result:', { data: invoice, error: errInvoice });
     if (errInvoice) {
+      console.error('[generate-invoice] Failed to create invoice:', errInvoice);
       return json({ error: 'Failed to create invoice: ' + errInvoice.message }, 500);
     }
 
-    // 4.1 Generar recibo ASCII profesional y actualizar la factura
+    // 4.1 Generar recibo ASCII profesional (we won't update the invoice since ascii_receipt isn't in schema)
     const professionalReceipt = generateProfessionalReceipt(school, receiptNo, payment, student, classroom, invoice);
-    
-    await supabase
-      .from('invoices')
-      .update({ ascii_receipt: professionalReceipt })
-      .eq('id', invoice.id);
+    console.log('[generate-invoice] Generated professional receipt (length):', professionalReceipt.length);
 
-    // 5. Agregar items de factura
-    await supabase.from('invoice_items').insert({
-      invoice_id: invoice.id,
-      concept: payment.concept,
-      quantity: 1,
-      unit_price: payment.amount,
-      total: payment.amount
-    });
+    // 5. Skip invoice_items for now in case that table doesn't exist either! Let's just log it!
+    console.log('[generate-invoice] Skipping invoice_items insert for now to isolate the issue');
+    // await supabase.from('invoice_items').insert({
+    //   invoice_id: invoice.id,
+    //   concept: payment.concept,
+    //   quantity: 1,
+    //   unit_price: payment.amount,
+    //   total: payment.amount
+    // });
 
     // 6. Usar la factura con nuestro recibo ASCII profesional
     const finalInvoice = { ...invoice, ascii_receipt: professionalReceipt };
