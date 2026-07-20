@@ -8,6 +8,7 @@ import { calcMora, getMoraBreakdown, normalizeStatus, daysUntilDue } from '../sh
 import { emitEvent } from '../shared/supabase.js';
 import { SCHOOL_SETTINGS_ID } from '../shared/constants.js';
 import { Security } from '../shared/security.js';
+import { InvoiceModule } from '../shared/invoice.js';
 
 
 export const PaymentsModule = {
@@ -297,6 +298,8 @@ export const PaymentsModule = {
       uniforme: 'Uniforme',
       libros: 'Libros',
       materiales: 'Materiales',
+      inscripcion: 'Inscripción',
+      reinscripcion: 'Reinscripción',
       otro: 'Otro'
     };
     const conceptLabel = conceptLabels[p.concept] || p.concept || 'Mensualidad';
@@ -323,16 +326,16 @@ export const PaymentsModule = {
             <div class="text-right shrink-0">
               <p class="font-black text-slate-900 text-lg leading-none">${Helpers.formatCurrency(isPaid ? amount : total)}</p>
               <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-black uppercase mt-1 ${sc.cls}">
-                <i data-lucide="${sc.icon}" class="w-3 h-3"></i>${sc.label}
+                <i data-lucide="${sc.icon}" class="w-4 h-4"></i>${sc.label}
               </span>
-              ${isPaid ? `<p class="text-[9px] text-emerald-600 font-bold mt-1 flex items-center justify-end gap-0.5"><i data-lucide="download" class="w-3 h-3"></i> Ver recibo</p>` : ''}
+              ${isPaid ? `<p class="text-[9px] text-emerald-600 font-bold mt-1 flex items-center justify-end gap-0.5"><i data-lucide="download" class="w-4 h-4"></i> Ver recibo</p>` : ''}
             </div>
           </div>
           
           ${p.fiscal_receipt_url ? `
           <div class="mt-3 pt-3 border-t border-slate-50 flex items-center justify-between">
-            <p class="text-[9px] font-bold text-slate-400 italic">Comprobante fiscal adjunto</p>
-            <a href="${Security.safeUrl(p.fiscal_receipt_url)}" target="_blank" rel="noopener noreferrer" class="text-[9px] font-black text-indigo-600 hover:underline flex items-center gap-1">Ver <i data-lucide="external-link" class="w-3 h-3"></i></a>
+            <p class="text-[10px] font-bold text-slate-400 italic">Comprobante fiscal adjunto</p>
+            <a href="${Security.safeUrl(p.fiscal_receipt_url)}" target="_blank" rel="noopener noreferrer" class="text-[10px] font-black text-indigo-600 hover:underline flex items-center gap-1">Ver <i data-lucide="external-link" class="w-4 h-4"></i></a>
           </div>` : ''}
 
           ${moraInfo ? `
@@ -350,7 +353,7 @@ export const PaymentsModule = {
           ${p.evidence_url && !isPaid ? `
           <div class="mt-3 pt-3 border-t border-slate-50 flex justify-between items-center">
             <p class="text-[10px] font-bold text-slate-400 italic">Comprobante enviado. Esperando validación.</p>
-            <a href="${Security.safeUrl(p.evidence_url)}" target="_blank" rel="noopener noreferrer" class="text-[10px] font-black text-blue-600 hover:underline flex items-center gap-1">Ver <i data-lucide="external-link" class="w-3 h-3"></i></a>
+            <a href="${Security.safeUrl(p.evidence_url)}" target="_blank" rel="noopener noreferrer" class="text-[10px] font-black text-blue-600 hover:underline flex items-center gap-1">Ver <i data-lucide="external-link" class="w-4 h-4"></i></a>
           </div>` : ''}
         </div>
       </div>`;
@@ -358,7 +361,7 @@ export const PaymentsModule = {
 
   /**
    * 🧾 openReceipt — Modal de recibo PDF para pagos aprobados
-   * Genera descarga real con jsPDF
+   * Usa el InvoiceModule compartido para un diseño uniforme
    */
   async openReceipt(paymentId) {
     // Buscar en cache local primero
@@ -375,7 +378,7 @@ export const PaymentsModule = {
           method, bank, reference, notes,
           validated_by,
           students:student_id (
-            name, p1_name, p1_email, p2_name,
+            name, p1_name, p1_email, p2_name, photo_url,
             classrooms:classroom_id ( name )
           )
         `)
@@ -384,9 +387,9 @@ export const PaymentsModule = {
       if (data) payment = data;
     } catch (_) {}
 
-    // Obtener nombre de quien aprobó y RNC del colegio
+    // Obtener nombre de quien aprobó y datos del colegio
     let approvedBy = 'Administración';
-    let rnc = '';
+    let schoolSettings = {};
     if (payment.validated_by) {
       try {
         const { data: approver } = await supabase
@@ -400,149 +403,49 @@ export const PaymentsModule = {
     try {
       const { data: settings } = await supabase
         .from('school_settings')
-        .select('rnc')
+        .select('*')
         .eq('id', SCHOOL_SETTINGS_ID)
         .maybeSingle();
-      if (settings?.rnc) rnc = settings.rnc;
+      if (settings) schoolSettings = settings;
     } catch (_) {}
 
-    const student    = payment.students || {};
-    const studentName = student.name || 'Estudiante';
-    const parentName  = student.p1_name || 'Padre/Tutor';
-    const classroom   = student.classrooms?.name || 'Sin aula';
-    const amount      = Number(payment.amount || 0);
-    const amountFmt   = Helpers.formatCurrency(amount);
-    const monthPaid   = payment.month_paid || 'Mensualidad';
-    const paidDate    = payment.paid_date
-      ? new Date(payment.paid_date).toLocaleDateString('es-DO', { day: 'numeric', month: 'long', year: 'numeric' })
-      : new Date().toLocaleDateString('es-DO', { day: 'numeric', month: 'long', year: 'numeric' });
-    const method      = (payment.method || 'efectivo').charAt(0).toUpperCase() + (payment.method || 'efectivo').slice(1);
-    const receiptNo   = `KK-${String(payment.id).slice(-6).toUpperCase().padStart(6,'0')}`;
+    const student = payment.students || {};
+    
+    // Build data object for InvoiceModule
+    const invoiceData = {
+      invoice: {
+        id: payment.id,
+        invoice_number: `KK-${String(payment.id).slice(-6).toUpperCase().padStart(6,'0')}`,
+        amount: Number(payment.amount || 0),
+        concept: payment.concept || payment.month_paid || 'Mensualidad',
+        status: payment.status || 'paid',
+        payment_date: payment.paid_date,
+        period: payment.month_paid || '',
+        attended_by: approvedBy
+      },
+      student: {
+        name: student.name || 'Estudiante',
+        p1_name: student.p1_name || 'Padre/Tutor',
+        p1_email: student.p1_email || '',
+        classroom: student.classrooms?.name || 'Sin aula',
+        photo_url: student.photo_url || ''
+      },
+      payment: {
+        method: payment.method || 'efectivo',
+        bank: payment.bank || '',
+        reference: payment.reference || '',
+        paid_date: payment.paid_date
+      },
+      school: schoolSettings
+    };
 
-    // Construir modal
-    const modal = document.createElement('div');
-    modal.id = 'receiptModal';
-    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(8px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
-    modal.innerHTML = `
-      <div style="background:#fff;border-radius:28px;width:100%;max-width:520px;max-height:90dvh;overflow-y:auto;box-shadow:0 32px 80px rgba(0,0,0,0.25);">
-        <!-- Header corporativo -->
-        <div style="background:linear-gradient(135deg,#0B63C7,#1E40AF);padding:32px 28px 24px;border-radius:28px 28px 0 0;text-align:center;position:relative;">
-          <button onclick="document.getElementById('receiptModal').remove()"
-            style="position:absolute;top:16px;right:16px;background:rgba(255,255,255,0.25);border:none;color:white;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:20px;display:flex;align-items:center;justify-content:center;line-height:1;transition:all 0.2s;" onmouseover="this.style.transform='scale(1.1)';" onmouseout="this.style.transform='scale(1)';">×</button>
-          <div style="width:64px;height:64px;background:rgba(255,255,255,0.98);border-radius:20px;margin:0 auto 14px;display:flex;align-items:center;justify-content:center;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,0.2);animation:float 3s ease-in-out infinite;">
-            <img src="img/monte.jpg" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none';this.parentElement.innerHTML='🎓'">
-          </div>
-          <h2 style="margin:0;color:white;font-family:sans-serif;font-size:22px;font-weight:900;letter-spacing:-0.5px;">Colegio Montessori Sonrisas Creativas</h2>
-          <p style="margin:6px 0 0;color:rgba(255,255,255,0.85);font-family:sans-serif;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:2px;">Recibo de Pago Oficial</p>
-          <div style="margin-top:18px;background:rgba(255,255,255,0.2);border-radius:14px;padding:10px 20px;display:inline-block;border:1px solid rgba(255,255,255,0.3);">
-            <span style="color:white;font-family:monospace;font-size:14px;font-weight:900;letter-spacing:3px;">${receiptNo}</span>
-          </div>
-        </div>
+    // Make InvoiceModule available globally if not already (for modal actions)
+    if (!window.InvoiceModule) {
+      window.InvoiceModule = InvoiceModule;
+    }
 
-        <!-- Sello de aprobado -->
-        <div style="background:linear-gradient(135deg,#eff6ff,#dbeafe);border-bottom:1px solid #bfdbfe;padding:16px 28px;display:flex;align-items:center;gap:12px;">
-          <div style="width:42px;height:42px;background:linear-gradient(135deg,#0B63C7,#3B82F6);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 4px 12px rgba(11,99,199,0.3);">
-            <span style="color:white;font-size:20px;">✓</span>
-          </div>
-          <div>
-            <p style="margin:0;font-family:sans-serif;font-size:14px;font-weight:900;color:#1e3a8a;">Pago Confirmado y Aprobado</p>
-            <p style="margin:3px 0 0;font-family:sans-serif;font-size:12px;color:#1e40af;font-weight:600;">Aprobado por: ${approvedBy}</p>
-          </div>
-        </div>
-
-        <!-- Cuerpo del recibo -->
-        <div style="padding:28px;">
-          <!-- Info estudiante -->
-          <div style="background:linear-gradient(135deg,#f8fafc,#f1f5f9);border-radius:18px;padding:18px;margin-bottom:18px;border:1px solid #e2e8f0;">
-            <p style="margin:0 0 12px;font-family:sans-serif;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:1.5px;color:#64748b;">Datos del Estudiante</p>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
-              <div>
-                <p style="margin:0;font-family:sans-serif;font-size:11px;color:#64748b;font-weight:600;">Estudiante</p>
-                <p style="margin:4px 0 0;font-family:sans-serif;font-size:14px;font-weight:800;color:#1e293b;">${studentName}</p>
-              </div>
-              <div>
-                <p style="margin:0;font-family:sans-serif;font-size:11px;color:#64748b;font-weight:600;">Aula</p>
-                <p style="margin:4px 0 0;font-family:sans-serif;font-size:14px;font-weight:800;color:#1e293b;">${classroom}</p>
-              </div>
-              <div>
-                <p style="margin:0;font-family:sans-serif;font-size:11px;color:#64748b;font-weight:600;">Padre/Tutor</p>
-                <p style="margin:4px 0 0;font-family:sans-serif;font-size:14px;font-weight:800;color:#1e293b;">${parentName}</p>
-              </div>
-              <div>
-                <p style="margin:0;font-family:sans-serif;font-size:11px;color:#64748b;font-weight:600;">Fecha de Pago</p>
-                <p style="margin:4px 0 0;font-family:sans-serif;font-size:14px;font-weight:800;color:#1e293b;">${paidDate}</p>
-              </div>
-            </div>
-          </div>
-
-          <!-- Detalle del pago -->
-          <div style="border:1px solid #e2e8f0;border-radius:18px;overflow:hidden;margin-bottom:18px;">
-            <div style="background:linear-gradient(135deg,#0B63C7,#3B82F6);padding:12px 18px;border-bottom:1px solid #1d4ed8;">
-              <p style="margin:0;font-family:sans-serif;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:1.5px;color:white;">Detalle del Pago</p>
-            </div>
-            <table style="width:100%;border-collapse:collapse;font-family:sans-serif;font-size:14px;">
-              <tr style="border-bottom:1px solid #f1f5f9;background:#f8fafc;">
-                <td style="padding:12px 18px;color:#64748b;font-weight:700;">Concepto</td>
-                <td style="padding:12px 18px;text-align:right;font-weight:800;color:#1e293b;">${monthPaid}</td>
-              </tr>
-              <tr style="border-bottom:1px solid #f1f5f9;">
-                <td style="padding:12px 18px;color:#64748b;font-weight:700;">Método de Pago</td>
-                <td style="padding:12px 18px;text-align:right;font-weight:800;color:#1e293b;">${method}</td>
-              </tr>
-              ${payment.bank ? `<tr style="border-bottom:1px solid #f1f5f9;"><td style="padding:12px 18px;color:#64748b;font-weight:700;">Banco</td><td style="padding:12px 18px;text-align:right;font-weight:800;color:#1e293b;">${payment.bank}</td></tr>` : ''}
-              ${payment.reference ? `<tr style="border-bottom:1px solid #f1f5f9;"><td style="padding:12px 18px;color:#64748b;font-weight:700;">Referencia</td><td style="padding:12px 18px;text-align:right;font-weight:700;color:#475569;font-size:12px;">${payment.reference}</td></tr>` : ''}
-              ${payment.fiscal_receipt ? `<tr style="border-bottom:1px solid #f1f5f9;"><td style="padding:12px 18px;color:#64748b;font-weight:700;">Comprobante Fiscal</td><td style="padding:12px 18px;text-align:right;font-weight:700;color:#1e293b;font-size:12px;">${payment.fiscal_receipt}</td></tr>` : ''}
-              <tr style="background:linear-gradient(135deg,#eff6ff,#dbeafe);">
-                <td style="padding:14px 18px;color:#1e40af;font-weight:900;font-size:16px;">TOTAL PAGADO</td>
-                <td style="padding:14px 18px;text-align:right;font-weight:900;color:#0B63C7;font-size:20px;">${amountFmt}</td>
-              </tr>
-            </table>
-          </div>
-
-          <!-- Comprobante Fiscal -->
-          <div style="background:linear-gradient(135deg,#fffbeb,#fef3c7);border:1px solid #fcd34d;border-radius:18px;padding:16px;margin-bottom:18px;">
-            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
-              <span style="font-size:18px;">📄</span>
-              <p style="margin:0;font-family:sans-serif;font-size:12px;font-weight:900;color:#92400e;text-transform:uppercase;letter-spacing:1px;">Comprobante Fiscal</p>
-            </div>
-            ${rnc ? `<p style="margin:0 0 6px 0;font-family:sans-serif;font-size:14px;color:#78350f;text-align:center;font-weight:800;">RNC: ${rnc}</p>` : ''}
-            <p style="margin:0;font-family:sans-serif;font-size:12px;color:#78350f;text-align:center;font-weight:600;">Este documento es válido como comprobante fiscal para declaraciones tributarias</p>
-          </div>
-
-          <!-- Footer del recibo -->
-          <div style="text-align:center;padding:16px;background:linear-gradient(135deg,#f8fafc,#f1f5f9);border-radius:16px;border:1px dashed #cbd5e1;">
-            <p style="margin:0;font-family:sans-serif;font-size:11px;color:#64748b;font-weight:600;">San Cristóbal, República Dominicana</p>
-            <p style="margin:6px 0 0;font-family:sans-serif;font-size:11px;color:#64748b;">Este recibo es un comprobante oficial de pago de Colegio Montessori Sonrisas Creativas.</p>
-            <p style="margin:8px 0 0;font-family:monospace;font-size:10px;color:#94a3b8;">ID: ${receiptNo} · ${new Date().toLocaleDateString('es-DO')}</p>
-          </div>
-        </div>
-
-        <!-- Botones de acción -->
-        <div style="padding:20px 28px 28px;display:flex;gap:12px;">
-          <button id="btnDownloadPDF"
-            style="flex:1;padding:16px;background:linear-gradient(135deg,#0B63C7,#3B82F6);color:white;border:none;border-radius:16px;font-family:sans-serif;font-size:14px;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 8px 20px rgba(11,99,199,0.4);transition:all 0.2s;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 12px 28px rgba(11,99,199,0.45)';" onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 8px 20px rgba(11,99,199,0.4)';">
-            📥 Descargar PDF
-          </button>
-          <button onclick="document.getElementById('receiptModal').remove()"
-            style="padding:16px 24px;background:#f1f5f9;color:#475569;border:none;border-radius:16px;font-family:sans-serif;font-size:14px;font-weight:800;cursor:pointer;transition:all 0.2s;" onmouseover="this.style.background='#e2e8f0';">
-            Cerrar
-          </button>
-        </div>
-      </div>`;
-
-    // Cerrar al hacer click fuera
-    modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
-    document.body.appendChild(modal);
-
-    // Botón de descarga PDF con jsPDF
-    modal.querySelector('#btnDownloadPDF').addEventListener('click', () => {
-      this._downloadReceiptPDF({
-        receiptNo, studentName, parentName, classroom, paidDate,
-        method, bank: payment.bank, reference: payment.reference,
-        monthPaid, amountFmt, approvedBy, amount,
-        fiscal_receipt: payment.fiscal_receipt, rnc
-      });
-    });
+    // Open the professional invoice modal
+    InvoiceModule.openInvoiceModal(invoiceData);
   },
 
   /**

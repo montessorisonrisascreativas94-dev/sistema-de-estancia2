@@ -191,7 +191,7 @@ export const DailyReportModule = {
           <div class="cloud-card p-5">
             <div class="flex items-center gap-3 mb-4">
               <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center shadow-lg shadow-purple-200">
-                <i data-lucide="moon" class="w-5 h-5"></i>
+                <i data-lucide="moon" class="w-6 h-6"></i>
               </div>
               <h4 class="font-black text-lg text-[#1A2340]">Análisis de Sueño</h4>
             </div>
@@ -209,7 +209,7 @@ export const DailyReportModule = {
           <div class="cloud-card p-5">
             <div class="flex items-center gap-3 mb-4">
               <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-500 text-white flex items-center justify-center shadow-lg shadow-blue-200">
-                <i data-lucide="droplets" class="w-5 h-5"></i>
+                <i data-lucide="droplets" class="w-6 h-6"></i>
               </div>
               <h4 class="font-black text-lg text-[#1A2340]">Análisis de Alimentación</h4>
             </div>
@@ -227,7 +227,7 @@ export const DailyReportModule = {
           <div class="cloud-card p-5">
             <div class="flex items-center gap-3 mb-4">
               <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-orange-500 to-amber-500 text-white flex items-center justify-center shadow-lg shadow-orange-200">
-                <i data-lucide="utensils" class="w-5 h-5"></i>
+                <i data-lucide="utensils" class="w-6 h-6"></i>
               </div>
               <h4 class="font-black text-lg text-[#1A2340]">Análisis de Comidas</h4>
             </div>
@@ -245,7 +245,7 @@ export const DailyReportModule = {
           <div class="cloud-card p-5">
             <div class="flex items-center gap-3 mb-4">
               <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-green-500 to-emerald-500 text-white flex items-center justify-center shadow-lg shadow-green-200">
-                <i data-lucide="heart" class="w-5 h-5"></i>
+                <i data-lucide="heart" class="w-6 h-6"></i>
               </div>
               <h4 class="font-black text-lg text-[#1A2340]">Salud y Bienestar</h4>
             </div>
@@ -261,7 +261,7 @@ export const DailyReportModule = {
         <div class="cloud-card p-5 mt-6">
           <div class="flex items-center gap-3 mb-4">
             <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-pink-500 to-rose-500 text-white flex items-center justify-center shadow-lg shadow-pink-200">
-              <i data-lucide="message-circle" class="w-5 h-5"></i>
+              <i data-lucide="message-circle" class="w-6 h-6"></i>
             </div>
             <h4 class="font-black text-lg text-[#1A2340]">Notas de la Maestra</h4>
           </div>

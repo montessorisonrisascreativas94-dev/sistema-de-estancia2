@@ -54,9 +54,10 @@ self.addEventListener('fetch', e => {
     return;
   }
 
-  // No interceptar requests críticos de OneSignal ni Auth de Supabase
+  // No interceptar requests críticos de OneSignal ni Auth/Supabase ni Storage
   if (
     url.hostname.includes('onesignal.com') ||
+    url.hostname.includes('supabase.co') || // Exclude all Supabase requests
     url.pathname.includes('/auth/v1/') ||
     url.pathname.includes('OneSignal')
   ) {
