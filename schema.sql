@@ -1013,28 +1013,24 @@ GRANT EXECUTE ON FUNCTION public.assign_students_bulk(bigint[], bigint) TO authe
 -- 8. FUNCIONES DE MORA Y PAGOS
 -- ============================================================
 
--- Calcular mora (RD$50/d?a, cada 7 d?as = bloque de RD$500)
-CREATE OR REPLACE FUNCTION public.calc_mora(p_due_date date)
+-- Calcular mora: 5% del monto de la cuota despues del dia 6 de atraso
+CREATE OR REPLACE FUNCTION public.calc_mora(p_due_date date, p_amount numeric DEFAULT 0)
 RETURNS numeric LANGUAGE plpgsql IMMUTABLE AS $$
 DECLARE
   v_days_late int;
-  v_blocks    int;
-  v_remainder int;
 BEGIN
   v_days_late := (CURRENT_DATE - p_due_date)::int;
-  IF v_days_late <= 0 THEN RETURN 0; END IF;
-  v_blocks    := v_days_late / 7;
-  v_remainder := v_days_late % 7;
-  RETURN (v_blocks * 500) + (v_remainder * 50);
+  IF v_days_late <= 6 THEN RETURN 0; END IF;
+  RETURN ROUND(p_amount * 0.05, 2);
 END;
 $$;
 
--- Vista de pagos con mora calculada
+-- Vista de pagos con mora calculada (5% despues del dia 6)
 CREATE OR REPLACE VIEW public.v_payments_with_mora AS
 SELECT
   p.*,
-  public.calc_mora(p.due_date) AS mora_amount,
-  p.amount + public.calc_mora(p.due_date) AS total_due,
+  public.calc_mora(p.due_date, p.amount) AS mora_amount,
+  p.amount + public.calc_mora(p.due_date, p.amount) AS total_due,
   (CURRENT_DATE - p.due_date)::int AS days_late,
   s.name AS student_name,
   s.p1_name AS parent_name,

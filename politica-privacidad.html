@@ -30,9 +30,10 @@
     html { scroll-behavior: smooth; }
     body {
       font-family: 'Nunito', sans-serif;
-      background: linear-gradient(135deg, var(--gray-bg) 0%, var(--green-light) 100%);
+      background: linear-gradient(135deg, var(--blue-light) 0%, #FFFFFF 40%, var(--orange-light) 100%);
       color: var(--text-dark);
       line-height: 1.7;
+      min-height: 100vh;
     }
     .container { max-width: 1000px; margin: 0 auto; padding: 40px 20px; }
     
@@ -40,7 +41,7 @@
       display: inline-flex;
       align-items: center;
       gap: 10px;
-      color: var(--green);
+      color: var(--blue);
       font-weight: 800;
       text-decoration: none;
       font-size: 1rem;
@@ -48,7 +49,7 @@
       transition: all 0.3s;
     }
     .back-btn:hover {
-      color: var(--green);
+      color: var(--blue-dark);
       transform: translateX(-5px);
     }
     
@@ -57,7 +58,7 @@
       border-radius: var(--radius-2xl);
       padding: 50px;
       box-shadow: 0 8px 40px rgba(11,99,199,0.12);
-      border: 2px solid var(--green-light);
+      border: 2px solid var(--blue-light);
       position: relative;
       overflow: hidden;
     }
@@ -67,7 +68,7 @@
       position: absolute;
       top: -50px; right: -50px;
       width: 200px; height: 200px;
-      background: var(--green-light);
+      background: var(--blue-light);
       border-radius: 50%;
       opacity: 0.5;
       pointer-events: none;
@@ -94,14 +95,14 @@
     .header-icon {
       width: 70px;
       height: 70px;
-      background: linear-gradient(135deg, var(--green), #1A8035);
+      background: linear-gradient(135deg, var(--blue), var(--blue-dark));
       border-radius: 20px;
       display: flex;
       align-items: center;
       justify-content: center;
       font-size: 32px;
       color: white;
-      box-shadow: 0 8px 24px rgba(40,181,77,0.25);
+      box-shadow: 0 8px 24px rgba(11,99,199,0.25);
     }
     .header-title h1 {
       font-family: 'Baloo 2', cursive;
@@ -139,7 +140,8 @@
       font-weight: 900;
       font-size: 0.95rem;
     }
-    .section-number.green { background: var(--green-light); color: var(--green); }
+    .section-number.blue { background: var(--blue-light); color: var(--blue); }
+    .section-number.green { background: var(--blue-light); color: var(--blue); }
     .section-number.orange { background: var(--orange-light); color: var(--orange); }
     .section p {
       color: var(--text-mid);
@@ -158,7 +160,7 @@
       color: var(--text-mid);
     }
     .section li .check {
-      color: var(--green);
+      color: var(--blue);
       font-size: 1.1rem;
       flex-shrink: 0;
       margin-top: 2px;
@@ -190,14 +192,14 @@
       z-index: 1;
     }
     .footer-link a {
-      color: var(--green);
+      color: var(--blue);
       font-weight: 800;
       text-decoration: none;
       font-size: 1rem;
       transition: all 0.3s;
     }
     .footer-link a:hover {
-      color: var(--green);
+      color: var(--blue-dark);
       text-decoration: underline;
     }
     
@@ -275,11 +277,11 @@
           Finalidad del Tratamiento
         </div>
         <ul>
-          <li><span class="check">→</span><span>Gestión académica y administrativa de la estancia infantil.</span></li>
-          <li><span class="check">→</span><span>Comunicación entre padres, maestros y dirección.</span></li>
-          <li><span class="check">→</span><span>Control de asistencia y seguimiento del progreso del estudiante.</span></li>
-          <li><span class="check">→</span><span>Gestión de pagos de mensualidades.</span></li>
-          <li><span class="check">→</span><span>Envío de notificaciones relacionadas con la actividad escolar.</span></li>
+          <li><span class="check">&#8594;</span><span>Gestion academica y administrativa de la estancia infantil.</span></li>
+          <li><span class="check">&#8594;</span><span>Comunicacion entre padres, maestros y direccion.</span></li>
+          <li><span class="check">&#8594;</span><span>Control de asistencia y seguimiento del progreso del estudiante.</span></li>
+          <li><span class="check">&#8594;</span><span>Gestion de pagos de mensualidades.</span></li>
+          <li><span class="check">&#8594;</span><span>Envio de notificaciones relacionadas con la actividad escolar.</span></li>
         </ul>
       </div>
 
@@ -325,7 +327,7 @@
           <div class="section-number orange">8</div>
           Contacto
         </div>
-        <p>Para cualquier consulta sobre privacidad: <strong style="color: var(--green);">admin@montessorisonrisascreativas.com</strong></p>
+        <p>Para cualquier consulta sobre privacidad: <strong style="color: var(--orange);">admin@montessorisonrisascreativas.com</strong></p>
       </div>
 
       <div class="footer-link">

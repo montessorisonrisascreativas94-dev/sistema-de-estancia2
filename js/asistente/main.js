@@ -19,11 +19,13 @@ import { AssistantAccountingModule } from './accounting.module.js';
 import { InscripcionesModule } from '../directora/inscripciones.module.js';
 import { CatalogoModule } from '../shared/catalogo-conceptos.module.js';
 import { openGlobalModal, closeGlobalModal } from '../shared/modal.js';
+import { InvoiceModule } from '../shared/invoice.js';
 
 // Exponer globalmente para onclick en HTML
 window.InscripcionesModule = InscripcionesModule;
 window.CatalogoModule = CatalogoModule;
 window.CajaCobroV2 = CajaCobroV2;
+window.InvoiceModule = InvoiceModule;
 
 // Close modal global — alias para compatibilidad con código existente
 window._closeAsistenteModal = closeGlobalModal;

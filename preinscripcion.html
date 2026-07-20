@@ -3,398 +3,768 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Preinscripción | Colegio Montessori Sonrisas Creativas</title>
+    <title>Preinscripcion | Colegio Montessori Sonrisas Creativas</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link href="https://unpkg.com/aos@2.3.4/dist/aos.css" rel="stylesheet">
     <style>
         :root {
-            --blue: #0B63C7;
-            --blue-light: #E6F0FF;
-            --green: #28B54D;
-            --green-light: #E6F9EC;
             --orange: #FF7A00;
-            --orange-light: #FFF0E6;
-            --yellow: #FFD43B;
-            --dark: #2C3E50;
+            --orange-dark: #E56D00;
+            --orange-light: #FFF7ED;
+            --orange-glow: rgba(255,122,0,0.15);
+            --blue: #0B63C7;
+            --blue-dark: #0850A0;
+            --blue-light: #EFF6FF;
+            --dark: #1E293B;
             --gray: #64748B;
-            --radius-xl: 20px;
-            --radius-2xl: 28px;
+            --gray-soft: #94A3B8;
+            --gray-bg: #F8FAFC;
+            --border: #E2E8F0;
+            --white: #FFFFFF;
+            --green: #16A34A;
+            --green-light: #F0FDF4;
+            --red: #EF4444;
+            --radius: 16px;
+            --radius-sm: 12px;
+            --radius-xs: 10px;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+            --shadow: 0 4px 20px rgba(0,0,0,0.06);
+            --shadow-lg: 0 12px 40px rgba(0,0,0,0.08);
+            --transition: all .3s cubic-bezier(.4,0,.2,1);
         }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-            background: linear-gradient(180deg, #F8FAFC 0%, #FFFFFF 100%);
-            color: #1E293B;
-            line-height: 1.6;
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{
+            font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
+            background:var(--gray-bg);color:var(--dark);line-height:1.6;min-height:100vh;
         }
-        .container { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
-        .btn {
-            display: inline-flex; align-items: center; gap: 10px;
-            padding: 14px 28px; border-radius: 50px; font-weight: 700;
-            text-decoration: none; transition: all 0.3s ease; border: none; cursor: pointer;
-            font-size: 1rem;
+
+        /* ── Navbar ── */
+        .navbar{
+            position:fixed;top:0;left:0;right:0;z-index:1000;
+            background:rgba(255,255,255,0.88);backdrop-filter:blur(16px);
+            padding:12px 0;border-bottom:1px solid var(--border);
         }
-        .btn-orange { background: var(--orange); color: white; box-shadow: 0 6px 20px rgba(255,122,0,0.35); }
-        .btn-orange:hover { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(255,122,0,0.45); }
-        .btn-blue { background: var(--blue); color: white; box-shadow: 0 6px 20px rgba(11,99,199,0.35); }
-        .btn-blue:hover { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(11,99,199,0.45); }
-        .btn-pulse { animation: pulse 2s infinite; }
-        @keyframes pulse {
-            0%,100% { box-shadow: 0 0 0 0 rgba(255,122,0,0.4); }
-            50% { box-shadow: 0 0 0 12px rgba(255,122,0,0); }
+        .navbar-inner{display:flex;justify-content:space-between;align-items:center;max-width:1100px;margin:0 auto;padding:0 24px}
+        .logo{display:flex;align-items:center;gap:10px;text-decoration:none}
+        .logo-img{width:40px;height:40px;border-radius:50%;object-fit:cover}
+        .logo-text{font-weight:800;font-size:1.05rem;color:var(--dark)}
+
+        /* ── Header ── */
+        .header{
+            padding:110px 0 40px;text-align:center;
+            background:linear-gradient(160deg,var(--blue-light) 0%,var(--orange-light) 60%,var(--white) 100%);
+            border-bottom:1px solid var(--border);
         }
-        /* Navbar */
-        .navbar {
-            position: fixed; top:0; left:0; right:0; z-index:1000;
-            background: rgba(255,255,255,0.95); backdrop-filter: blur(10px);
-            padding: 16px 0; box-shadow: 0 2px 20px rgba(0,0,0,0.06);
+        .header h1{
+            font-size:2rem;font-weight:900;margin-bottom:6px;
+            background:linear-gradient(135deg,var(--orange),var(--blue));
+            -webkit-background-clip:text;-webkit-text-fill-color:transparent;
         }
-        .navbar-inner { display:flex; justify-content:space-between; align-items:center; }
-        .logo { display:flex; align-items:center; gap:12px; text-decoration:none; }
-        .logo-img { width:48px; height:48px; border-radius:50%; object-fit:cover; }
-        .logo-text { font-weight:800; font-size:1.25rem; color:var(--dark); }
-        .nav-links { display:flex; gap:28px; }
-        .nav-link { text-decoration:none; color:var(--dark); font-weight:600; transition:color 0.3s; }
-        .nav-link:hover { color:var(--blue); }
-        /* Header */
-        .header {
-            padding: 140px 0 80px; text-align:center;
-            background: linear-gradient(135deg, var(--blue-light) 0%, var(--green-light) 100%);
+        .header p{font-size:.95rem;color:var(--gray);max-width:480px;margin:0 auto}
+
+        /* ── Wizard ── */
+        .wizard-wrap{max-width:860px;margin:-24px auto 50px;padding:0 16px}
+        .wizard-card{background:var(--white);border-radius:20px;box-shadow:var(--shadow-lg);overflow:hidden}
+
+        /* ── Progress ── */
+        .progress-bar{
+            display:flex;padding:20px 16px 16px;background:linear-gradient(135deg,var(--blue-light),var(--orange-light));
+            gap:2px;overflow-x:auto;
         }
-        .header-title {
-            font-size: 3rem; font-weight: 900; margin-bottom:16px;
-            background: linear-gradient(135deg, var(--blue), var(--green));
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        .progress-step{flex:1;min-width:48px;text-align:center;position:relative}
+        .progress-step .step-dot{
+            width:34px;height:34px;border-radius:50%;margin:0 auto 5px;
+            display:flex;align-items:center;justify-content:center;
+            font-weight:800;font-size:.8rem;
+            background:var(--white);color:var(--gray-soft);border:2px solid var(--border);
+            transition:var(--transition);
         }
-        .header-sub { font-size:1.25rem; color:var(--gray); max-width:600px; margin:0 auto; }
-        /* Form Section */
-        .form-section { padding:60px 0; }
-        .form-card {
-            background:white; border-radius:28px; box-shadow:0 20px 60px rgba(0,0,0,0.1);
-            padding:48px; max-width:900px; margin:0 auto;
+        .progress-step.active .step-dot{
+            background:var(--orange);color:#fff;border-color:var(--orange);
+            box-shadow:0 4px 12px var(--orange-glow);transform:scale(1.1);
         }
-        .form-section-title {
-            font-size:1.75rem; font-weight:800; color:var(--blue); margin-bottom:24px;
-            display:flex; align-items:center; gap:12px;
+        .progress-step.done .step-dot{background:var(--green);color:#fff;border-color:var(--green)}
+        .progress-step .step-label{
+            font-size:.6rem;font-weight:700;color:var(--gray-soft);
+            text-transform:uppercase;letter-spacing:.5px;
         }
-        .form-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:20px; margin-bottom:32px; }
-        .form-group { display:flex; flex-direction:column; gap:8px; }
-        .form-label { font-weight:700; color:var(--dark); font-size:0.95rem; }
-        .form-input, .form-select, .form-textarea {
-            padding:14px 18px; border:2px solid #E2E8F0; border-radius:14px;
-            font-size:1rem; transition:all 0.3s; font-family:inherit;
+        .progress-step.active .step-label{color:var(--orange-dark);font-weight:800}
+        .progress-step.done .step-label{color:var(--green)}
+        .progress-step:not(:last-child)::after{
+            content:'';position:absolute;top:17px;left:calc(50% + 18px);
+            width:calc(100% - 36px);height:2px;background:var(--border);
         }
-        .form-input:focus, .form-select:focus, .form-textarea:focus {
-            outline:none; border-color:var(--blue); box-shadow:0 0 0 4px rgba(11,99,199,0.1);
+        .progress-step.done:not(:last-child)::after{background:var(--green)}
+
+        /* ── Step Content ── */
+        .step-content{padding:28px 32px;display:none;animation:slideUp .4s ease}
+        .step-content.active{display:block}
+        @keyframes slideUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+
+        .step-header{margin-bottom:24px}
+        .step-title{font-size:1.25rem;font-weight:800;color:var(--dark);display:flex;align-items:center;gap:8px}
+        .step-title i{font-size:1.2rem;color:var(--orange)}
+        .step-subtitle{font-size:.85rem;color:var(--gray);margin-top:4px}
+
+        /* ── Form Controls ── */
+        .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+        .form-grid.single{grid-template-columns:1fr}
+        .form-grid.three{grid-template-columns:1fr 1fr 1fr}
+        .form-group{display:flex;flex-direction:column;gap:5px}
+        .form-group.full{grid-column:1/-1}
+        .form-label{font-weight:700;font-size:.8rem;color:var(--dark);letter-spacing:.2px}
+        .form-label .req{color:var(--red)}
+        .form-input,.form-select,.form-textarea{
+            padding:11px 14px;border:1.5px solid var(--border);border-radius:var(--radius-xs);
+            font-size:.9rem;transition:var(--transition);font-family:inherit;
+            background:var(--white);color:var(--dark);
         }
-        .form-textarea { resize:vertical; min-height:100px; }
-        .checkbox-group { display:flex; flex-wrap:wrap; gap:16px; }
-        .checkbox-item { display:flex; align-items:center; gap:8px; padding:10px 16px; background:#f8fafc; border-radius:10px; cursor:pointer; }
-        .checkbox-item input { width:18px; height:18px; accent-color:var(--blue); }
-        .success-message {
-            display:none; background:var(--green-light); border:2px solid var(--green);
-            color:var(--dark); padding:24px; border-radius:16px; margin-top:24px; text-align:center;
+        .form-input:focus,.form-select:focus,.form-textarea:focus{
+            outline:none;border-color:var(--orange);box-shadow:0 0 0 3px var(--orange-glow);
         }
-        /* Footer */
-        .footer { background:var(--blue); color:white; padding:60px 0 30px; margin-top:60px; }
-        .footer-inner { display:flex; flex-wrap:wrap; gap:40px; justify-content:space-between; align-items:flex-start; }
-        .footer-brand .logo-text { color:white; }
-        .footer-desc { color:rgba(255,255,255,0.85); margin-top:12px; max-width:400px; }
-        .footer-bottom { margin-top:40px; padding-top:24px; border-top:1px solid rgba(255,255,255,0.2); text-align:center; }
-        /* Responsive */
-        @media (max-width:768px) {
-            .nav-links { display:none; }
-            .header-title { font-size:2rem; }
-            .form-card { padding:28px; }
+        .form-input.error,.form-select.error{border-color:var(--red);box-shadow:0 0 0 3px rgba(239,68,68,.1)}
+        .form-textarea{resize:vertical;min-height:72px}
+        .form-hint{font-size:.72rem;color:var(--gray-soft)}
+
+        /* ── Section Divider ── */
+        .divider{
+            margin:20px 0 16px;padding-bottom:6px;
+            border-bottom:1.5px solid var(--border);
+            font-size:.85rem;font-weight:800;color:var(--orange);
+            display:flex;align-items:center;gap:7px;
+        }
+
+        /* ── Parent Cards (compact horizontal) ── */
+        .parents-wrap{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+        .parent-card{
+            border-radius:var(--radius);padding:18px;border:1.5px solid var(--border);
+            background:var(--white);position:relative;overflow:hidden;
+        }
+        .parent-card::before{
+            content:'';position:absolute;top:0;left:0;right:0;height:3px;
+        }
+        .parent-card.p1::before{background:linear-gradient(90deg,var(--blue),var(--blue-dark))}
+        .parent-card.p2::before{background:linear-gradient(90deg,var(--orange),var(--orange-dark))}
+        .parent-card h3{
+            font-size:.85rem;font-weight:800;margin-bottom:12px;
+            display:flex;align-items:center;gap:6px;
+        }
+        .parent-card.p1 h3{color:var(--blue)}
+        .parent-card.p2 h3{color:var(--orange)}
+        .parent-card .form-grid{gap:12px}
+        .parent-card .form-label{font-size:.75rem}
+        .parent-card .form-input,.parent-card .form-select{padding:9px 12px;font-size:.85rem}
+
+        /* ── Auth Persons ── */
+        .auth-row{
+            display:grid;grid-template-columns:1fr 100px 100px auto;gap:8px;
+            align-items:end;margin-bottom:8px;
+            padding:10px 12px;background:var(--gray-bg);border-radius:var(--radius-xs);
+            border:1px solid var(--border);
+        }
+        .btn-remove{
+            width:32px;height:32px;border-radius:8px;border:1.5px solid #FECACA;
+            background:#FEF2F2;color:var(--red);cursor:pointer;display:flex;
+            align-items:center;justify-content:center;font-size:.95rem;transition:var(--transition);
+        }
+        .btn-remove:hover{background:var(--red);color:#fff}
+
+        /* ── File Upload ── */
+        .file-upload{
+            position:relative;border:2px dashed var(--border);border-radius:var(--radius);
+            padding:24px 16px;text-align:center;cursor:pointer;
+            transition:var(--transition);background:var(--gray-bg);
+        }
+        .file-upload:hover{border-color:var(--orange);background:var(--orange-light)}
+        .file-upload.has-file{border-color:var(--green);background:var(--green-light)}
+        .file-upload input[type="file"]{
+            position:absolute;inset:0;opacity:0;cursor:pointer;
+        }
+        .file-upload i{font-size:1.8rem;color:var(--orange);margin-bottom:6px;display:block}
+        .file-upload .fu-title{font-weight:700;font-size:.85rem;color:var(--dark)}
+        .file-upload .fu-hint{font-size:.72rem;color:var(--gray);margin-top:2px}
+        .file-upload .fu-name{font-size:.78rem;color:var(--green);font-weight:600;margin-top:6px;display:none}
+        .file-upload.has-file .fu-name{display:block}
+        .file-upload.has-file .fu-hint{display:none}
+
+        /* ── Checkboxes ── */
+        .checkbox-list{display:flex;flex-direction:column;gap:8px}
+        .checkbox-item{
+            display:flex;align-items:flex-start;gap:10px;padding:12px 14px;
+            background:var(--gray-bg);border-radius:var(--radius-xs);cursor:pointer;
+            border:1.5px solid transparent;transition:var(--transition);
+        }
+        .checkbox-item:hover{border-color:var(--orange);background:var(--orange-light)}
+        .checkbox-item input[type="checkbox"]{
+            width:18px;height:18px;accent-color:var(--orange);margin-top:2px;flex-shrink:0;
+        }
+        .checkbox-item label{font-size:.82rem;font-weight:600;cursor:pointer;color:var(--dark)}
+
+        /* ── Signature ── */
+        .sig-box{
+            border:2px dashed var(--border);border-radius:var(--radius);
+            padding:12px;text-align:center;background:var(--gray-bg);
+        }
+        .sig-box canvas{
+            border:1px solid var(--border);border-radius:var(--radius-xs);
+            cursor:crosshair;touch-action:none;max-width:100%;
+        }
+
+        /* ── Buttons ── */
+        .step-btns{
+            display:flex;justify-content:space-between;padding:16px 32px 24px;
+            border-top:1px solid var(--border);
+        }
+        .btn{
+            display:inline-flex;align-items:center;gap:7px;
+            padding:11px 24px;border-radius:50px;font-weight:700;
+            text-decoration:none;transition:var(--transition);border:none;cursor:pointer;
+            font-size:.88rem;
+        }
+        .btn-next{
+            background:linear-gradient(135deg,var(--orange),var(--orange-dark));color:#fff;
+            box-shadow:0 4px 14px var(--orange-glow);
+        }
+        .btn-next:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(255,122,0,0.3)}
+        .btn-submit{
+            background:linear-gradient(135deg,var(--green),#15803D);color:#fff;
+            box-shadow:0 4px 14px rgba(22,163,74,0.3);
+        }
+        .btn-submit:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(22,163,74,0.35)}
+        .btn-back{
+            background:var(--white);color:var(--gray);border:1.5px solid var(--border);
+        }
+        .btn-back:hover{border-color:var(--orange);color:var(--orange)}
+        .btn:disabled{opacity:.5;cursor:not-allowed;transform:none!important}
+
+        /* ── Review ── */
+        .review-section{
+            background:var(--gray-bg);border-radius:var(--radius);
+            padding:16px;margin-bottom:12px;border:1px solid var(--border);
+        }
+        .review-section h4{
+            font-size:.85rem;font-weight:800;color:var(--orange);
+            margin-bottom:10px;display:flex;align-items:center;gap:6px;
+        }
+        .review-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 20px}
+        .review-item{display:flex;flex-direction:column}
+        .review-item .rl{font-size:.68rem;font-weight:700;color:var(--gray-soft);text-transform:uppercase;letter-spacing:.3px}
+        .review-item .rv{font-size:.85rem;font-weight:600;color:var(--dark)}
+        .review-item .rv.empty{color:#CBD5E1;font-style:italic}
+
+        /* ── Success ── */
+        .success-screen{display:none;text-align:center;padding:56px 32px}
+        .success-screen.active{display:block}
+        .success-icon{
+            width:72px;height:72px;border-radius:50%;background:var(--green-light);
+            display:flex;align-items:center;justify-content:center;margin:0 auto 16px;
+            font-size:2rem;color:var(--green);animation:popIn .5s ease;
+        }
+        @keyframes popIn{from{transform:scale(0)}50%{transform:scale(1.15)}to{transform:scale(1)}}
+        .success-screen h2{font-size:1.4rem;font-weight:900;color:var(--green);margin-bottom:6px}
+        .success-screen p{color:var(--gray);max-width:380px;margin:0 auto;font-size:.9rem}
+
+        /* ── Footer ── */
+        .footer{background:var(--dark);color:#fff;padding:36px 0 20px;margin-top:40px}
+        .footer-inner{display:flex;flex-wrap:wrap;gap:32px;justify-content:space-between;max-width:1100px;margin:0 auto;padding:0 24px}
+        .footer-bottom{margin-top:20px;padding-top:14px;border-top:1px solid rgba(255,255,255,.1);text-align:center}
+        .footer-bottom p{font-size:.8rem;color:rgba(255,255,255,.5)}
+
+        /* ── Responsive ── */
+        @media(max-width:768px){
+            .header h1{font-size:1.5rem}
+            .step-content{padding:20px 16px}
+            .step-btns{padding:14px 16px 20px}
+            .form-grid{grid-template-columns:1fr}
+            .form-grid.three{grid-template-columns:1fr}
+            .parents-wrap{grid-template-columns:1fr}
+            .auth-row{grid-template-columns:1fr}
+            .review-grid{grid-template-columns:1fr}
+            .progress-step .step-label{display:none}
+            .progress-step .step-dot{width:30px;height:30px;font-size:.75rem}
         }
     </style>
 </head>
 <body>
-    <!-- Navbar -->
     <nav class="navbar">
-        <div class="container">
-            <div class="navbar-inner">
-                <a href="index.html" class="logo">
-                    <img src="img/monte.jpg" alt="Sonrisas Creativas" class="logo-img">
-                    <span class="logo-text">Sonrisas Creativas</span>
-                </a>
-                <div class="nav-links">
-                    <a href="index.html" class="nav-link">Inicio</a>
-                    <a href="index.html#programas" class="nav-link">Programas</a>
-                    <a href="index.html#tarifas" class="nav-link">Tarifas</a>
-                    <a href="index.html#contacto" class="nav-link">Contacto</a>
-                </div>
+        <div class="navbar-inner">
+            <a href="index.html" class="logo">
+                <img src="img/monte.jpg" alt="Sonrisas Creativas" class="logo-img">
+                <span class="logo-text">Sonrisas Creativas</span>
+            </a>
+            <div class="nav-links">
+                <a href="index.html" class="nav-link" style="text-decoration:none;color:var(--dark);font-weight:700;font-size:.9rem">Inicio</a>
             </div>
         </div>
     </nav>
 
-    <!-- Header -->
     <header class="header">
-        <div class="container" data-aos="fade-down">
-            <h1 class="header-title">Formulario de Preinscripción</h1>
-            <p class="header-sub">Completa los datos y nosotros te contactaremos para finalizar el proceso</p>
+        <div data-aos="fade-down">
+            <h1>Formulario de Preinscripcion</h1>
+            <p>Completa los datos y nos pondremos en contacto contigo para finalizar el proceso</p>
         </div>
     </header>
 
-    <!-- Form Section -->
-    <section class="form-section">
-        <div class="container">
-            <div class="form-card" data-aos="fade-up">
-                <form id="preinscripcionForm">
-                    <!-- Datos del Estudiante -->
-                    <h2 class="form-section-title">
-                        <i class="bi bi-person-badge"></i> Datos del Estudiante
-                    </h2>
+    <div class="wizard-wrap" data-aos="fade-up">
+        <div class="wizard-card" id="wizardCard">
+            <div class="progress-bar" id="progressBar">
+                <div class="progress-step active" data-step="1"><div class="step-dot">1</div><div class="step-label">Nino</div></div>
+                <div class="progress-step" data-step="2"><div class="step-dot">2</div><div class="step-label">Padres</div></div>
+                <div class="progress-step" data-step="3"><div class="step-dot">3</div><div class="step-label">Emergencia</div></div>
+                <div class="progress-step" data-step="4"><div class="step-dot">4</div><div class="step-label">Salud</div></div>
+                <div class="progress-step" data-step="5"><div class="step-dot">5</div><div class="step-label">Docs</div></div>
+                <div class="progress-step" data-step="6"><div class="step-dot">6</div><div class="step-label">Acepto</div></div>
+                <div class="progress-step" data-step="7"><div class="step-dot">7</div><div class="step-label">Revisar</div></div>
+            </div>
+
+            <form id="preinscripcionForm">
+                <!-- ══════ PASO 1: ESTUDIANTE ══════ -->
+                <div class="step-content active" data-step="1">
+                    <div class="step-header">
+                        <div class="step-title"><i class="bi bi-person-heart"></i> Datos del Nino(a)</div>
+                        <p class="step-subtitle">Informacion personal y academica</p>
+                    </div>
                     <div class="form-grid">
-                        <div class="form-group">
-                            <label class="form-label">Nombres Completos del Niño(a) *</label>
-                            <input type="text" class="form-input" name="nombre_estudiante" required placeholder="Ej: Juan Pérez García">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Fecha de Nacimiento *</label>
-                            <input type="date" class="form-input" name="fecha_nacimiento" required>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Nivel que Desea Inscribir *</label>
-                            <select class="form-select" name="nivel" required>
-                                <option value="">Seleccionar nivel</option>
-                                <option value="Infante">Infante</option>
-                                <option value="Parvulos">Parvulos</option>
-                                <option value="Pre-kinder">Pre-kinder</option>
-                                <option value="Kinder">Kinder</option>
-                                <option value="Preprimaria">Preprimaria</option>
-                                <option value="Primaria">Primaria</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Horario Preferido *</label>
-                            <select class="form-select" name="horario" required>
-                                <option value="">Seleccionar horario</option>
-                                <option value="8:00-12:00">8:00 AM – 12:00 PM</option>
-                                <option value="8:00-15:00">8:00 AM – 3:00 PM</option>
-                                <option value="8:00-17:00">8:00 AM – 5:00 PM</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Género</label>
-                            <select class="form-select" name="genero">
-                                <option value="Masculino">Masculino</option>
-                                <option value="Femenino">Femenino</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Alergias o Condiciones Médicas</label>
-                            <input type="text" class="form-input" name="alergias" placeholder="Especificar si aplica">
-                        </div>
+                        <div class="form-group"><label class="form-label">Nombres <span class="req">*</span></label><input type="text" class="form-input" name="student_name" required placeholder="Ej: Juan Perez"></div>
+                        <div class="form-group"><label class="form-label">Apellidos</label><input type="text" class="form-input" name="student_last_name" placeholder="Ej: Garcia Lopez"></div>
+                        <div class="form-group"><label class="form-label">Fecha de Nacimiento <span class="req">*</span></label><input type="date" class="form-input" name="birth_date" required></div>
+                        <div class="form-group"><label class="form-label">Edad</label><input type="text" class="form-input" id="calculatedAge" readonly placeholder="Se calcula solo" style="background:var(--gray-bg)"></div>
+                        <div class="form-group"><label class="form-label">Sexo <span class="req">*</span></label><select class="form-select" name="gender" required><option value="">Seleccionar</option><option value="Masculino">Masculino</option><option value="Femenino">Femenino</option></select></div>
+                        <div class="form-group"><label class="form-label">Nacionalidad</label><input type="text" class="form-input" name="nationality" placeholder="Ej: Dominicana"></div>
                     </div>
 
-                    <!-- Datos del Padre/Madre/Tutor -->
-                    <h2 class="form-section-title" style="margin-top:40px">
-                        <i class="bi bi-person-heart"></i> Datos del Padre/Madre/Tutor
-                    </h2>
+                    <div class="divider"><i class="bi bi-book"></i> Solicitud Academica</div>
                     <div class="form-grid">
-                        <div class="form-group">
-                            <label class="form-label">Nombres Completos del Tutor *</label>
-                            <input type="text" class="form-input" name="nombre_tutor" required placeholder="Ej: María García López">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Parentesco *</label>
-                            <select class="form-select" name="parentesco" required>
-                                <option value="">Seleccionar parentesco</option>
-                                <option value="Madre">Madre</option>
-                                <option value="Padre">Padre</option>
-                                <option value="Tutor Legal">Tutor Legal</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Teléfono Celular *</label>
-                            <input type="tel" class="form-input" name="telefono" required placeholder="Ej: 809-123-4567">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Teléfono Adicional</label>
-                            <input type="tel" class="form-input" name="telefono_adicional" placeholder="Opcional">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Correo Electrónico *</label>
-                            <input type="email" class="form-input" name="email" required placeholder="correo@ejemplo.com">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Dirección de Residencia *</label>
-                            <input type="text" class="form-input" name="direccion" required placeholder="Calle, Sector, Ciudad">
-                        </div>
+                        <div class="form-group"><label class="form-label">Ano Escolar <span class="req">*</span></label><select class="form-select" name="school_year_requested" required><option value="">Seleccionar</option></select></div>
+                        <div class="form-group"><label class="form-label">Nivel Solicitado <span class="req">*</span></label><select class="form-select" name="level_requested" required><option value="">Seleccionar</option><option value="Maternal">Maternal</option><option value="Infante">Infante</option><option value="Parvulos">Parvulos</option><option value="Pre-Kinder">Pre-Kinder</option><option value="Kinder">Kinder</option><option value="Preprimaria">Preprimaria</option></select></div>
+                        <div class="form-group"><label class="form-label">Horario Deseado <span class="req">*</span></label><select class="form-select" name="schedule" required><option value="">Seleccionar</option><option value="8:00-12:00">8:00 AM - 12:00 PM</option><option value="8:00-15:00">8:00 AM - 3:00 PM</option><option value="8:00-17:00">8:00 AM - 5:00 PM</option></select></div>
+                        <div class="form-group"><label class="form-label">Fecha Estimada de Ingreso</label><input type="date" class="form-input" name="estimated_entry_date"></div>
                     </div>
 
-                    <!-- Personas Autorizadas para Retirar -->
-                    <h2 class="form-section-title" style="margin-top:40px">
-                        <i class="bi bi-people"></i> Personas Autorizadas para Retirar al Estudiante
-                    </h2>
+                    <div class="divider"><i class="bi bi-people"></i> Hermanos</div>
                     <div class="form-grid">
-                        <div class="form-group">
-                            <label class="form-label">Nombre Persona 1</label>
-                            <input type="text" class="form-input" name="autorizado1" placeholder="Nombre completo">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Teléfono Persona 1</label>
-                            <input type="tel" class="form-input" name="telefono_autorizado1" placeholder="Teléfono">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Parentesco Persona 1</label>
-                            <input type="text" class="form-input" name="parentesco_autorizado1" placeholder="Ej: Tío, Abuela">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Nombre Persona 2</label>
-                            <input type="text" class="form-input" name="autorizado2" placeholder="Nombre completo">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Teléfono Persona 2</label>
-                            <input type="tel" class="form-input" name="telefono_autorizado2" placeholder="Teléfono">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Parentesco Persona 2</label>
-                            <input type="text" class="form-input" name="parentesco_autorizado2" placeholder="Ej: Tío, Abuela">
-                        </div>
+                        <div class="form-group"><label class="form-label">Tiene hermanos inscritos?</label><select class="form-select" name="has_siblings" id="hasSiblings"><option value="false">No</option><option value="true">Si</option></select></div>
+                        <div class="form-group" id="siblingNameGroup" style="display:none"><label class="form-label">Nombre del Hermano(a)</label><input type="text" class="form-input" name="sibling_name" placeholder="Nombre completo"></div>
                     </div>
 
-                    <!-- Información Adicional -->
-                    <h2 class="form-section-title" style="margin-top:40px">
-                        <i class="bi bi-chat-square-text"></i> Información Adicional
-                    </h2>
-                    <div class="form-group">
-                        <label class="form-label">¿Cómo se enteró de nosotros?</label>
-                        <select class="form-select" name="referencia">
-                            <option value="">Seleccionar opción</option>
-                            <option value="Redes Sociales">Redes Sociales</option>
-                            <option value="Recomendación de Amigo/Familia">Recomendación de Amigo/Familia</option>
-                            <option value="Publicidad">Publicidad</option>
-                            <option value="Otro">Otro</option>
-                        </select>
+                    <div class="step-btns">
+                        <span></span>
+                        <button type="button" class="btn btn-next" onclick="nextStep(1)">Siguiente <i class="bi bi-arrow-right"></i></button>
                     </div>
-                    <div class="form-group" style="margin-top:16px">
-                        <label class="form-label">Comentarios o Preguntas</label>
-                        <textarea class="form-textarea" name="comentarios" placeholder="Escribe aquí cualquier duda o comentario..."></textarea>
-                    </div>
-
-                    <!-- Botones -->
-                    <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:32px">
-                        <button type="submit" class="btn btn-orange btn-pulse" style="flex:1;justify-content:center">
-                            <i class="bi bi-send"></i> Enviar Preinscripción
-                        </button>
-                        <a href="index.html" class="btn btn-blue" style="justify-content:center">
-                            <i class="bi bi-arrow-left"></i> Volver al Inicio
-                        </a>
-                    </div>
-                </form>
-
-                <!-- Success Message -->
-                <div id="successMessage" class="success-message">
-                    <i class="bi bi-check-circle-fill" style="font-size:3rem;color:var(--green);display:block;margin-bottom:12px"></i>
-                    <h3 style="color:var(--green);margin-bottom:8px">¡Preinscripción Enviada con Éxito!</h3>
-                    <p>Nos pondremos en contacto contigo muy pronto para finalizar el proceso.</p>
                 </div>
+
+                <!-- ══════ PASO 2: PADRES ══════ -->
+                <div class="step-content" data-step="2">
+                    <div class="step-header">
+                        <div class="step-title"><i class="bi bi-people-fill"></i> Padres o Tutores</div>
+                        <p class="step-subtitle">Informacion de ambos padres o tutores legales</p>
+                    </div>
+
+                    <div class="parents-wrap">
+                        <div class="parent-card p1">
+                            <h3><i class="bi bi-person"></i> Padre / Tutor</h3>
+                            <div class="form-grid single">
+                                <div class="form-group"><label class="form-label">Nombre Completo <span class="req">*</span></label><input type="text" class="form-input" name="p1_name" required placeholder="Nombre completo"></div>
+                                <div class="form-group"><label class="form-label">Parentesco <span class="req">*</span></label><select class="form-select" name="p1_relationship" required><option value="">Seleccionar</option><option value="Padre">Padre</option><option value="Madre">Madre</option><option value="Tutor Legal">Tutor Legal</option></select></div>
+                                <div class="form-group"><label class="form-label">Cedula <span class="req">*</span></label><input type="text" class="form-input" name="p1_cedula" required placeholder="001-1234567-8"></div>
+                                <div class="form-group"><label class="form-label">Celular <span class="req">*</span></label><input type="tel" class="form-input" name="p1_phone" required placeholder="809-123-4567"></div>
+                                <div class="form-group"><label class="form-label">WhatsApp</label><input type="tel" class="form-input" name="p1_whatsapp" placeholder="Si es diferente"></div>
+                                <div class="form-group"><label class="form-label">Correo <span class="req">*</span></label><input type="email" class="form-input" name="p1_email" required placeholder="correo@ejemplo.com"></div>
+                                <div class="form-group"><label class="form-label">Direccion <span class="req">*</span></label><input type="text" class="form-input" name="p1_address" required placeholder="Calle, Sector, Ciudad"></div>
+                                <div class="form-group"><label class="form-label">Ocupacion</label><input type="text" class="form-input" name="p1_occupation" placeholder="Ej: Ingeniero"></div>
+                                <div class="form-group"><label class="form-label">Profesion</label><input type="text" class="form-input" name="p1_profession" placeholder="Ej: Ing. de Sistemas"></div>
+                                <div class="form-group"><label class="form-label">Lugar de Trabajo</label><input type="text" class="form-input" name="p1_workplace" placeholder="Empresa o institucion"></div>
+                            </div>
+                        </div>
+
+                        <div class="parent-card p2">
+                            <h3><i class="bi bi-person"></i> Madre / Tutora</h3>
+                            <div class="form-grid single">
+                                <div class="form-group"><label class="form-label">Nombre Completo <span class="req">*</span></label><input type="text" class="form-input" name="p2_name" required placeholder="Nombre completo"></div>
+                                <div class="form-group"><label class="form-label">Parentesco <span class="req">*</span></label><select class="form-select" name="p2_relationship" required><option value="">Seleccionar</option><option value="Madre">Madre</option><option value="Padre">Padre</option><option value="Tutor Legal">Tutor Legal</option></select></div>
+                                <div class="form-group"><label class="form-label">Cedula <span class="req">*</span></label><input type="text" class="form-input" name="p2_cedula" required placeholder="001-1234567-8"></div>
+                                <div class="form-group"><label class="form-label">Celular <span class="req">*</span></label><input type="tel" class="form-input" name="p2_phone" required placeholder="809-123-4567"></div>
+                                <div class="form-group"><label class="form-label">WhatsApp</label><input type="tel" class="form-input" name="p2_whatsapp" placeholder="Si es diferente"></div>
+                                <div class="form-group"><label class="form-label">Correo <span class="req">*</span></label><input type="email" class="form-input" name="p2_email" required placeholder="correo@ejemplo.com"></div>
+                                <div class="form-group"><label class="form-label">Direccion</label><input type="text" class="form-input" name="p2_address" placeholder="Calle, Sector, Ciudad"></div>
+                                <div class="form-group"><label class="form-label">Ocupacion</label><input type="text" class="form-input" name="p2_occupation" placeholder="Ej: Medica"></div>
+                                <div class="form-group"><label class="form-label">Profesion</label><input type="text" class="form-input" name="p2_profession" placeholder="Ej: Pediatra"></div>
+                                <div class="form-group"><label class="form-label">Lugar de Trabajo</label><input type="text" class="form-input" name="p2_workplace" placeholder="Empresa o institucion"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="step-btns">
+                        <button type="button" class="btn btn-back" onclick="prevStep(2)"><i class="bi bi-arrow-left"></i> Anterior</button>
+                        <button type="button" class="btn btn-next" onclick="nextStep(2)">Siguiente <i class="bi bi-arrow-right"></i></button>
+                    </div>
+                </div>
+
+                <!-- ══════ PASO 3: EMERGENCIA ══════ -->
+                <div class="step-content" data-step="3">
+                    <div class="step-header">
+                        <div class="step-title"><i class="bi bi-telephone-plus"></i> Emergencia y Personas Autorizadas</div>
+                        <p class="step-subtitle">Contacto de emergencia y personas autorizadas a recoger al estudiante</p>
+                    </div>
+
+                    <div class="divider"><i class="bi bi-exclamation-triangle"></i> Contacto de Emergencia</div>
+                    <div class="form-grid">
+                        <div class="form-group"><label class="form-label">Nombre Completo <span class="req">*</span></label><input type="text" class="form-input" name="emergency_name" required placeholder="Nombre completo"></div>
+                        <div class="form-group"><label class="form-label">Parentesco <span class="req">*</span></label><input type="text" class="form-input" name="emergency_relationship" required placeholder="Ej: Abuela, Tio"></div>
+                        <div class="form-group"><label class="form-label">Cedula <span class="req">*</span></label><input type="text" class="form-input" name="emergency_cedula" required placeholder="001-1234567-8"></div>
+                        <div class="form-group"><label class="form-label">Telefono <span class="req">*</span></label><input type="tel" class="form-input" name="emergency_phone" required placeholder="809-123-4567"></div>
+                        <div class="form-group full"><label class="form-label">Observaciones</label><textarea class="form-textarea" name="emergency_observations" placeholder="Nota relevante para emergencias..."></textarea></div>
+                    </div>
+
+                    <div class="divider"><i class="bi bi-people"></i> Personas Autorizadas a Recoger</div>
+                    <div id="authorizedPersons">
+                        <div class="auth-row" data-index="0">
+                            <div class="form-group"><label class="form-label">Nombre</label><input type="text" class="form-input" name="auth_name_0" placeholder="Nombre"></div>
+                            <div class="form-group"><label class="form-label">Parentesco</label><input type="text" class="form-input" name="auth_relationship_0" placeholder="Tio"></div>
+                            <div class="form-group"><label class="form-label">Telefono</label><input type="tel" class="form-input" name="auth_phone_0" placeholder="Tel"></div>
+                            <div><button type="button" class="btn-remove" onclick="this.closest('.auth-row').remove()"><i class="bi bi-trash3"></i></button></div>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-back" onclick="addAuthPerson()" style="margin-top:10px;font-size:.8rem;padding:8px 16px">
+                        <i class="bi bi-plus-circle"></i> Agregar
+                    </button>
+
+                    <div class="step-btns">
+                        <button type="button" class="btn btn-back" onclick="prevStep(3)"><i class="bi bi-arrow-left"></i> Anterior</button>
+                        <button type="button" class="btn btn-next" onclick="nextStep(3)">Siguiente <i class="bi bi-arrow-right"></i></button>
+                    </div>
+                </div>
+
+                <!-- ══════ PASO 4: SALUD ══════ -->
+                <div class="step-content" data-step="4">
+                    <div class="step-header">
+                        <div class="step-title"><i class="bi bi-heart-pulse"></i> Informacion Medica</div>
+                        <p class="step-subtitle">Datos de salud indispensables del estudiante</p>
+                    </div>
+                    <div class="form-grid">
+                        <div class="form-group"><label class="form-label">Tipo de Sangre</label><select class="form-select" name="blood_type"><option value="">Seleccionar</option><option value="No sabe">No sabe</option><option value="A+">A+</option><option value="A-">A-</option><option value="B+">B+</option><option value="B-">B-</option><option value="AB+">AB+</option><option value="AB-">AB-</option><option value="O+">O+</option><option value="O-">O-</option></select></div>
+                        <div class="form-group"><label class="form-label">Alergias</label><input type="text" class="form-input" name="allergies" placeholder="Ej: Polvo, lactosa"></div>
+                        <div class="form-group full"><label class="form-label">Condiciones Medicas</label><textarea class="form-textarea" name="medical_conditions" placeholder="Asma, diabetes, epilepsia..."></textarea></div>
+                        <div class="form-group full"><label class="form-label">Medicamentos Permanentes</label><input type="text" class="form-input" name="medications" placeholder="Nombre y dosis si aplica"></div>
+                        <div class="form-group full"><label class="form-label">Restricciones Alimenticias</label><input type="text" class="form-input" name="food_restrictions" placeholder="Ej: Sin gluten, sin lactosa"></div>
+                        <div class="form-group full"><label class="form-label">Observaciones Medicas</label><textarea class="form-textarea" name="medical_notes" placeholder="Informacion medica relevante..."></textarea></div>
+                    </div>
+                    <div class="step-btns">
+                        <button type="button" class="btn btn-back" onclick="prevStep(4)"><i class="bi bi-arrow-left"></i> Anterior</button>
+                        <button type="button" class="btn btn-next" onclick="nextStep(4)">Siguiente <i class="bi bi-arrow-right"></i></button>
+                    </div>
+                </div>
+
+                <!-- ══════ PASO 5: DOCUMENTOS ══════ -->
+                <div class="step-content" data-step="5">
+                    <div class="step-header">
+                        <div class="step-title"><i class="bi bi-cloud-arrow-up"></i> Documentos</div>
+                        <p class="step-subtitle">Sube los documentos basicos. Puedes tomar una foto o seleccionar desde tu galeria.</p>
+                    </div>
+                    <div class="form-grid" style="grid-template-columns:1fr 1fr">
+                        <div class="file-upload" id="fu-photo">
+                            <input type="file" accept="image/*" onchange="handleFile(this,'fu-photo','Foto del nino')">
+                            <i class="bi bi-camera"></i>
+                            <div class="fu-title">Foto del Estudiante</div>
+                            <div class="fu-hint">Toma foto o elige de galeria</div>
+                            <div class="fu-name"></div>
+                        </div>
+                        <div class="file-upload" id="fu-acta">
+                            <input type="file" accept="image/*" onchange="handleFile(this,'fu-acta','Acta de nacimiento')">
+                            <i class="bi bi-file-earmark-text"></i>
+                            <div class="fu-title">Acta de Nacimiento</div>
+                            <div class="fu-hint">Foto o escaneo del acta</div>
+                            <div class="fu-name"></div>
+                        </div>
+                        <div class="file-upload" id="fu-ced-front">
+                            <input type="file" accept="image/*" onchange="handleFile(this,'fu-ced-front','Cedula frontal')">
+                            <i class="bi bi-card-image"></i>
+                            <div class="fu-title">Cedula del Tutor (Frontal)</div>
+                            <div class="fu-hint">Foto de la cedula frontal</div>
+                            <div class="fu-name"></div>
+                        </div>
+                        <div class="file-upload" id="fu-ced-back">
+                            <input type="file" accept="image/*" onchange="handleFile(this,'fu-ced-back','Cedula trasera')">
+                            <i class="bi bi-card-image"></i>
+                            <div class="fu-title">Cedula del Tutor (Trasera)</div>
+                            <div class="fu-hint">Foto de la cedula trasera</div>
+                            <div class="fu-name"></div>
+                        </div>
+                    </div>
+                    <p class="form-hint" style="margin-top:12px;text-align:center"><i class="bi bi-info-circle"></i> Si no tienes los documentos ahora, puedes.skipar este paso y entregarlos despues.</p>
+                    <div class="step-btns">
+                        <button type="button" class="btn btn-back" onclick="prevStep(5)"><i class="bi bi-arrow-left"></i> Anterior</button>
+                        <button type="button" class="btn btn-next" onclick="nextStep(5)">Siguiente <i class="bi bi-arrow-right"></i></button>
+                    </div>
+                </div>
+
+                <!-- ══════ PASO 6: AUTORIZACIONES ══════ -->
+                <div class="step-content" data-step="6">
+                    <div class="step-header">
+                        <div class="step-title"><i class="bi bi-shield-check"></i> Autorizaciones</div>
+                        <p class="step-subtitle">Lee y acepta las autorizaciones requeridas</p>
+                    </div>
+                    <div class="checkbox-list">
+                        <div class="checkbox-item"><input type="checkbox" id="auth1" name="auth_data_treatment" required><label for="auth1">Acepto el tratamiento de mis datos personales y los de mi hijo(a) conforme a la politica de privacidad del colegio.</label></div>
+                        <div class="checkbox-item"><input type="checkbox" id="auth2" name="auth_correct_info" required><label for="auth2">Confirmo que toda la informacion proporcionada en este formulario es correcta y veraz.</label></div>
+                        <div class="checkbox-item"><input type="checkbox" id="auth3" name="auth_contact" required><label for="auth3">Acepto que el colegio me contacte por telefono, correo o WhatsApp para comunicaciones de la preinscripcion.</label></div>
+                        <div class="checkbox-item"><input type="checkbox" id="auth4" name="auth_regulations" required><label for="auth4">Acepto el reglamento de preinscripcion y normas internas del Colegio Montessori Sonrisas Creativas.</label></div>
+                    </div>
+
+                    <div class="divider" style="margin-top:24px"><i class="bi bi-pen"></i> Firma Digital</div>
+                    <div class="sig-box">
+                        <canvas id="signatureCanvas" width="500" height="160"></canvas>
+                        <div style="margin-top:8px"><button type="button" class="btn btn-back" onclick="clearSig()" style="font-size:.78rem;padding:7px 16px"><i class="bi bi-eraser"></i> Limpiar</button></div>
+                        <p class="form-hint" style="margin-top:6px">Firma con el dedo o mouse</p>
+                    </div>
+                    <p style="margin-top:10px;font-size:.82rem;color:var(--gray)"><i class="bi bi-calendar"></i> Fecha: <strong id="sigDate"></strong></p>
+
+                    <div class="step-btns">
+                        <button type="button" class="btn btn-back" onclick="prevStep(6)"><i class="bi bi-arrow-left"></i> Anterior</button>
+                        <button type="button" class="btn btn-next" onclick="nextStep(6)">Siguiente <i class="bi bi-arrow-right"></i></button>
+                    </div>
+                </div>
+
+                <!-- ══════ PASO 7: RESUMEN ══════ -->
+                <div class="step-content" data-step="7">
+                    <div class="step-header">
+                        <div class="step-title"><i class="bi bi-clipboard-check"></i> Revisar y Enviar</div>
+                        <p class="step-subtitle">Verifica que la informacion sea correcta antes de enviar</p>
+                    </div>
+                    <div id="reviewSummary"></div>
+                    <div class="step-btns" style="border-top:none;padding-top:8px">
+                        <button type="button" class="btn btn-back" onclick="prevStep(7)"><i class="bi bi-arrow-left"></i> Anterior</button>
+                        <button type="submit" class="btn btn-submit" id="submitBtn"><i class="bi bi-send-check"></i> Enviar Preinscripcion</button>
+                    </div>
+                </div>
+            </form>
+
+            <div class="success-screen" id="successScreen">
+                <div class="success-icon"><i class="bi bi-check-lg"></i></div>
+                <h2>Preinscripcion Enviada!</h2>
+                <p>Recibimos tus datos correctamente. Nos pondremos en contacto contigo muy pronto.</p>
+                <a href="index.html" class="btn btn-next" style="margin-top:20px"><i class="bi bi-house"></i> Volver al Inicio</a>
             </div>
         </div>
-    </section>
+    </div>
 
-    <!-- Footer -->
     <footer class="footer">
-        <div class="container">
-            <div class="footer-inner">
-                <div class="footer-brand">
-                    <a href="index.html" class="logo">
-                        <img src="img/monte.jpg" alt="Sonrisas Creativas" class="logo-img">
-                        <span class="logo-text">Sonrisas Creativas</span>
-                    </a>
-                    <p class="footer-desc">Colegio Montessori donde cada niño descubre su potencial a través del amor, la creatividad y el respeto.</p>
-                </div>
-                <div>
-                    <h4 style="font-weight:800;margin-bottom:16px">Contacto</h4>
-                    <p style="margin-bottom:8px"><i class="bi bi-telephone"></i> 809-532-4903</p>
-                    <p style="margin-bottom:8px"><i class="bi bi-instagram"></i> @montessorisonrisascreativas</p>
-                    <p><i class="bi bi-geo-alt"></i> Calle A esq. Calle Oval 2, Don Honorio, Santo Domingo</p>
-                </div>
+        <div class="footer-inner">
+            <div>
+                <a href="index.html" class="logo"><img src="img/monte.jpg" alt="Sonrisas" class="logo-img"><span class="logo-text" style="color:#fff">Sonrisas Creativas</span></a>
+                <p style="color:rgba(255,255,255,.6);margin-top:10px;max-width:340px;font-size:.85rem">Colegio Montessori donde cada nino descubre su potencial a traves del amor, la creatividad y el respeto.</p>
             </div>
-            <div class="footer-bottom">
-                <p>© 2025 Colegio Montessori Sonrisas Creativas. Todos los derechos reservados.</p>
+            <div>
+                <h4 style="font-weight:800;margin-bottom:10px;font-size:.9rem">Contacto</h4>
+                <p style="margin-bottom:5px;font-size:.85rem;color:rgba(255,255,255,.7)"><i class="bi bi-telephone"></i> 809-532-4903</p>
+                <p style="margin-bottom:5px;font-size:.85rem;color:rgba(255,255,255,.7)"><i class="bi bi-instagram"></i> @montessorisonrisascreativas</p>
+                <p style="font-size:.85rem;color:rgba(255,255,255,.7)"><i class="bi bi-geo-alt"></i> Don Honorio, Santo Domingo</p>
             </div>
         </div>
+        <div class="footer-bottom"><p>&copy; 2025 Colegio Montessori Sonrisas Creativas.</p></div>
     </footer>
 
-    <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
     <script>
-        // Initialize Supabase
-        const supabaseUrl = 'https://yswizaskeftxpcphixiy.supabase.co';
-        const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlzd2l6YXNrZWZ0eHBjcGhpeGl5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIzNDM4NTcsImV4cCI6MjA5NzkxOTg1N30.SQEZzGCCsADmbYTNrpjw6k1uBs8mXnhn8IhzTHH6rto';
-        const sbClient = window.supabase ? window.supabase.createClient(supabaseUrl, supabaseAnonKey) : null;
+        const supabaseUrl='https://yswizaskeftxpcphixiy.supabase.co';
+        const supabaseAnonKey='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlzd2l6YXNrZWZ0eHBjcGhpeGl5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIzNDM4NTcsImV4cCI6MjA5NzkxOTg1N30.SQEZzGCCsADmbYTNrpjw6k1uBs8mXnhn8IhzTHH6rto';
+        const sb=window.supabase?window.supabase.createClient(supabaseUrl,supabaseAnonKey):null;
+        let currentStep=1,totalSteps=7,authCount=1;
 
-        AOS.init({ duration:700, easing:'ease-out-cubic', once:true });
-        
-        document.getElementById('preinscripcionForm').addEventListener('submit', async function(e) {
+        AOS.init({duration:500,easing:'ease-out-cubic',once:true});
+
+        // ── AGE ──
+        document.querySelector('[name="birth_date"]').addEventListener('change',function(){
+            const b=new Date(this.value);if(isNaN(b)){document.getElementById('calculatedAge').value='';return}
+            const n=new Date();let y=n.getFullYear()-b.getFullYear(),m=n.getMonth()-b.getMonth();
+            if(m<0||(m===0&&n.getDate()<b.getDate())){y--;m+=12}if(m<0)m+=12;
+            document.getElementById('calculatedAge').value=y>0?y+' an'+(y===1?'o':'os'):m+' mes'+(m===1?'':'es');
+        });
+
+        // ── SIBLINGS ──
+        document.getElementById('hasSiblings').addEventListener('change',function(){
+            document.getElementById('siblingNameGroup').style.display=this.value==='true'?'flex':'none';
+        });
+
+        // ── SCHOOL YEARS ──
+        (async function(){
+            if(!sb)return;
+            try{
+                const{data}=await sb.from('school_years').select('id,name').eq('status','active').order('start_date',{ascending:false});
+                const sel=document.querySelector('[name="school_year_requested"]');
+                if(data&&data.length){data.forEach(y=>{const o=document.createElement('option');o.value=y.name;o.textContent=y.name;sel.appendChild(o)})}
+                else{const o=document.createElement('option');o.value='2025-2026';o.textContent='2025-2026';sel.appendChild(o)}
+            }catch(e){console.warn(e)}
+        })();
+
+        // ── NAVIGATION ──
+        function showStep(s){
+            document.querySelectorAll('.step-content').forEach(c=>c.classList.remove('active'));
+            document.querySelector('.step-content[data-step="'+s+'"]').classList.add('active');
+            document.querySelectorAll('.progress-step').forEach(p=>{
+                const n=parseInt(p.dataset.step);p.classList.remove('active','done');
+                if(n===s)p.classList.add('active');else if(n<s)p.classList.add('done');
+            });
+            if(s===7)buildReview();
+            window.scrollTo({top:180,behavior:'smooth'});
+        }
+        function validateStep(s){
+            const el=document.querySelector('.step-content[data-step="'+s+'"]');
+            let ok=true;el.querySelectorAll('[required]').forEach(i=>{i.classList.remove('error');if(!i.value.trim()){i.classList.add('error');ok=false}});
+            if(!ok){const f=el.querySelector('.error');if(f)f.focus()}return ok;
+        }
+        function nextStep(f){if(!validateStep(f))return;if(f<totalSteps){currentStep=f+1;showStep(currentStep)}}
+        function prevStep(f){if(f>1){currentStep=f-1;showStep(currentStep)}}
+
+        // ── AUTH PERSONS ──
+        function addAuthPerson(){
+            const i=authCount++;
+            document.getElementById('authorizedPersons').insertAdjacentHTML('beforeend',
+                '<div class="auth-row" data-index="'+i+'">'+
+                '<div class="form-group"><label class="form-label">Nombre</label><input type="text" class="form-input" name="auth_name_'+i+'" placeholder="Nombre"></div>'+
+                '<div class="form-group"><label class="form-label">Parentesco</label><input type="text" class="form-input" name="auth_relationship_'+i+'" placeholder="Tio"></div>'+
+                '<div class="form-group"><label class="form-label">Telefono</label><input type="tel" class="form-input" name="auth_phone_'+i+'" placeholder="Tel"></div>'+
+                '<div><button type="button" class="btn-remove" onclick="this.closest(\'.auth-row\').remove()"><i class="bi bi-trash3"></i></button></div></div>');
+        }
+
+        // ── FILE UPLOAD ──
+        document.querySelectorAll('.file-upload').forEach(fu=>{
+            fu.addEventListener('click',function(e){
+                if(e.target.tagName==='INPUT')return;
+                this.querySelector('input[type="file"]').click();
+            });
+        });
+        function handleFile(input,fuId,label){
+            const fu=document.getElementById(fuId);
+            if(input.files&&input.files[0]){
+                fu.classList.add('has-file');
+                fu.querySelector('.fu-name').textContent=input.files[0].name;
+                fu.querySelector('i').className='bi bi-check-circle-fill';
+                fu.querySelector('i').style.color='var(--green)';
+            }
+        }
+
+        // ── SIGNATURE ──
+        (function(){
+            const c=document.getElementById('signatureCanvas'),ctx=c.getContext('2d');let d=false;
+            function pos(e){const r=c.getBoundingClientRect();const t=e.touches?e.touches[0]:e;return{x:t.clientX-r.left,y:t.clientY-r.top}}
+            function start(e){d=true;const p=pos(e);ctx.beginPath();ctx.moveTo(p.x,p.y);e.preventDefault()}
+            function draw(e){if(!d)return;const p=pos(e);ctx.lineTo(p.x,p.y);ctx.strokeStyle='#1E293B';ctx.lineWidth=2.5;ctx.lineCap='round';ctx.stroke();e.preventDefault()}
+            function stop(){d=false}
+            c.addEventListener('mousedown',start);c.addEventListener('mousemove',draw);c.addEventListener('mouseup',stop);c.addEventListener('mouseleave',stop);
+            c.addEventListener('touchstart',start,{passive:false});c.addEventListener('touchmove',draw,{passive:false});c.addEventListener('touchend',stop);
+        })();
+        function clearSig(){const c=document.getElementById('signatureCanvas');c.getContext('2d').clearRect(0,0,c.width,c.height)}
+
+        // ── FILE TO BASE64 ──
+        function fileToBase64(file){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(file)})}
+
+        // ── REVIEW ──
+        function buildReview(){
+            const f=new FormData(document.getElementById('preinscripcionForm'));
+            const v=n=>f.get(n)||'';
+            const yes=n=>f.get(n)==='true'||f.get(n)==='on'?'Si':'No';
+            let auths=[];for(let i=0;i<authCount;i++){const n=v('auth_name_'+i);if(n)auths.push({n,r:v('auth_relationship_'+i),p:v('auth_phone_'+i)})}
+            const docs=['Foto','Acta Nac.','Cedula Front.','Cedula Tras.'].map((d,i)=>{
+                const el=document.getElementById(['fu-photo','fu-acta','fu-ced-front','fu-ced-back'][i]);
+                return d+': '+(el.classList.contains('has-file')?'<span style="color:var(--green)">Adjuntado</span>':'<span style="color:var(--gray-soft)">Pendiente</span>');
+            });
+            document.getElementById('reviewSummary').innerHTML=
+                '<div class="review-section"><h4><i class="bi bi-person-heart"></i> Estudiante</h4><div class="review-grid">'+
+                '<div class="review-item"><span class="rl">Nombre</span><span class="rv">'+v('student_name')+' '+v('student_last_name')+'</span></div>'+
+                '<div class="review-item"><span class="rl">Fecha Nac.</span><span class="rv">'+v('birth_date')+'</span></div>'+
+                '<div class="review-item"><span class="rl">Edad</span><span class="rv">'+(document.getElementById('calculatedAge').value||'—')+'</span></div>'+
+                '<div class="review-item"><span class="rl">Sexo</span><span class="rv">'+v('gender')+'</span></div>'+
+                '<div class="review-item"><span class="rl">Nivel</span><span class="rv">'+v('level_requested')+'</span></div>'+
+                '<div class="review-item"><span class="rl">Horario</span><span class="rv">'+v('schedule')+'</span></div></div></div>'+
+                '<div class="review-section"><h4><i class="bi bi-people"></i> Padres</h4><div class="review-grid">'+
+                '<div class="review-item"><span class="rl">Padre</span><span class="rv">'+v('p1_name')+'</span></div>'+
+                '<div class="review-item"><span class="rl">Cedula</span><span class="rv">'+v('p1_cedula')+'</span></div>'+
+                '<div class="review-item"><span class="rl">Tel</span><span class="rv">'+v('p1_phone')+'</span></div>'+
+                '<div class="review-item"><span class="rl">Email</span><span class="rv">'+v('p1_email')+'</span></div>'+
+                '<div class="review-item"><span class="rl">Madre</span><span class="rv">'+(v('p2_name')||'<span class="empty">-</span>')+'</span></div>'+
+                '<div class="review-item"><span class="rl">Cedula</span><span class="rv">'+(v('p2_cedula')||'—')+'</span></div>'+
+                '<div class="review-item"><span class="rl">Tel</span><span class="rv">'+(v('p2_phone')||'—')+'</span></div>'+
+                '<div class="review-item"><span class="rl">Email</span><span class="rv">'+(v('p2_email')||'—')+'</span></div></div></div>'+
+                '<div class="review-section"><h4><i class="bi bi-telephone-plus"></i> Emergencia</h4><div class="review-grid">'+
+                '<div class="review-item"><span class="rl">Contacto</span><span class="rv">'+v('emergency_name')+'</span></div>'+
+                '<div class="review-item"><span class="rl">Parentesco</span><span class="rv">'+v('emergency_relationship')+'</span></div>'+
+                '<div class="review-item"><span class="rl">Telefono</span><span class="rv">'+v('emergency_phone')+'</span></div>'+
+                '<div class="review-item"><span class="rl">Cedula</span><span class="rv">'+v('emergency_cedula')+'</span></div></div></div>'+
+                '<div class="review-section"><h4><i class="bi bi-heart-pulse"></i> Salud</h4><div class="review-grid">'+
+                '<div class="review-item"><span class="rl">Sangre</span><span class="rv">'+(v('blood_type')||'—')+'</span></div>'+
+                '<div class="review-item"><span class="rl">Alergias</span><span class="rv">'+(v('allergies')||'—')+'</span></div></div></div>'+
+                '<div class="review-section"><h4><i class="bi bi-shield-check"></i> Autorizaciones</h4>'+
+                '<div style="font-size:.82rem;color:var(--gray);line-height:2">'+
+                (v('auth_data_treatment')==='on'?'<span style="color:var(--green)">&#10003;</span> Datos personales<br>':'')+
+                (v('auth_correct_info')==='on'?'<span style="color:var(--green)">&#10003;</span> Informacion correcta<br>':'')+
+                (v('auth_contact')==='on'?'<span style="color:var(--green)">&#10003;</span> Contacto<br>':'')+
+                (v('auth_regulations')==='on'?'<span style="color:var(--green)">&#10003;</span> Reglamento<br>':'')+
+                '</div></div>'+
+                '<div class="review-section"><h4><i class="bi bi-file-earmark"></i> Documentos</h4><div style="font-size:.82rem;color:var(--gray);line-height:2">'+docs.join('<br>')+'</div></div>';
+        }
+
+        // ── SUBMIT ──
+        document.getElementById('preinscripcionForm').addEventListener('submit',async function(e){
             e.preventDefault();
-            
-            const formData = new FormData(this);
-            
-            // Map form fields to database fields
-            const data = {
-                student_name: formData.get('nombre_estudiante'),
-                birth_date: formData.get('fecha_nacimiento'),
-                section: formData.get('nivel'),
-                schedule: formData.get('horario'),
-                gender: formData.get('genero'),
-                allergies: formData.get('alergias') || null,
-                p1_name: formData.get('nombre_tutor'),
-                p1_relationship: formData.get('parentesco'),
-                p1_phone: formData.get('telefono'),
-                p1_email: formData.get('email'),
-                p1_address: formData.get('direccion'),
-                p2_name: formData.get('autorizado1') || null,
-                p2_phone: formData.get('telefono_autorizado1') || null,
-                p2_relationship: formData.get('parentesco_autorizado1') || null,
-                emergency_name: formData.get('autorizado2') || formData.get('autorizado1') || formData.get('nombre_tutor'),
-                emergency_phone: formData.get('telefono_autorizado2') || formData.get('telefono_autorizado1') || formData.get('telefono'),
-                reference: formData.get('referencia') || null,
-                comments: formData.get('comentarios') || null,
-                status: 'pending'
+            const btn=document.getElementById('submitBtn');btn.disabled=true;btn.innerHTML='<i class="bi bi-hourglass-split"></i> Enviando...';
+            const f=new FormData(this);const v=n=>f.get(n)||null;
+
+            let authPersons=[];for(let i=0;i<authCount;i++){const n=v('auth_name_'+i);if(n)authPersons.push({name:n,relationship:v('auth_relationship_'+i),phone:v('auth_phone_'+i)})}
+
+            const canvas=document.getElementById('signatureCanvas');let sig=null;
+            try{sig=canvas.toDataURL('image/png')}catch(ex){}
+
+            const data={
+                student_name:v('student_name')||'',
+                student_last_name:v('student_last_name'),
+                birth_date:v('birth_date'),
+                gender:v('gender'),
+                nationality:v('nationality'),
+                school_year_requested:v('school_year_requested'),
+                level_requested:v('level_requested'),
+                schedule:v('schedule'),
+                estimated_entry_date:v('estimated_entry_date'),
+                has_siblings:v('has_siblings')==='true',
+                sibling_name:v('sibling_name'),
+                p1_name:v('p1_name')||'',p1_relationship:v('p1_relationship'),p1_cedula:v('p1_cedula'),p1_phone:v('p1_phone')||'',p1_whatsapp:v('p1_whatsapp'),p1_email:v('p1_email')||'',p1_address:v('p1_address'),p1_occupation:v('p1_occupation'),p1_profession:v('p1_profession'),p1_workplace:v('p1_workplace'),
+                p2_name:v('p2_name'),p2_relationship:v('p2_relationship'),p2_cedula:v('p2_cedula'),p2_phone:v('p2_phone'),p2_whatsapp:v('p2_whatsapp'),p2_email:v('p2_email'),p2_address:v('p2_address'),p2_occupation:v('p2_occupation'),p2_profession:v('p2_profession'),p2_workplace:v('p2_workplace'),
+                emergency_name:v('emergency_name'),emergency_relationship:v('emergency_relationship'),emergency_cedula:v('emergency_cedula'),emergency_phone:v('emergency_phone'),emergency_observations:v('emergency_observations'),
+                authorized_persons:authPersons,
+                blood_type:v('blood_type'),allergies:v('allergies'),medical_conditions:v('medical_conditions'),medications:v('medications'),food_restrictions:v('food_restrictions'),medical_notes:v('medical_notes'),
+                auth_data_treatment:v('auth_data_treatment')==='on',auth_correct_info:v('auth_correct_info')==='on',auth_contact:v('auth_contact')==='on',auth_regulations:v('auth_regulations')==='on',
+                digital_signature:sig,signature_date:new Date().toISOString(),
+                status:'pending'
             };
 
-            try {
-                const submitBtn = this.querySelector('button[type="submit"]');
-                const originalText = submitBtn.innerHTML;
-                submitBtn.disabled = true;
-                submitBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Enviando...';
+            // Convert files to base64 and attach
+            const fileMap={photo_url:'fu-photo',birth_certificate_url:'fu-acta',cedula_front_url:'fu-ced-front',cedula_back_url:'fu-ced-back'};
+            for(const[col,fuId]of Object.entries(fileMap)){
+                const inp=document.getElementById(fuId).querySelector('input[type="file"]');
+                if(inp.files&&inp.files[0]){
+                    try{data[col]=await fileToBase64(inp.files[0])}catch(ex){data[col]=null}
+                }else{data[col]=null}
+            }
 
-                if (sbClient) {
-                    const { error } = await sbClient
-                        .from('student_preregistrations')
-                        .insert([data]);
-
-                    if (error) throw error;
-                } else {
-                    console.warn('Supabase no está disponible, modo de demostración');
-                    // Simular delay
-                    await new Promise(resolve => setTimeout(resolve, 1500));
+            try{
+                if(sb){
+                    const{error}=await sb.from('student_preregistrations').insert([data]);
+                    if(error)throw error;
+                }else{
+                    console.warn('Supabase no disponible',data);await new Promise(r=>setTimeout(r,1500));
                 }
-
-                document.getElementById('successMessage').style.display = 'block';
-                this.reset();
-                
-                submitBtn.innerHTML = originalText;
-                submitBtn.disabled = false;
-
-                setTimeout(() => {
-                    document.getElementById('successMessage').style.display = 'none';
-                }, 8000);
-
-            } catch (error) {
-                console.error('Error al enviar preinscripción:', error);
-                alert('Ocurrió un error al enviar la preinscripción. Por favor, intenta nuevamente.');
-                
-                const submitBtn = this.querySelector('button[type="submit"]');
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = '<i class="bi bi-send"></i> Enviar Preinscripción';
+                document.getElementById('wizardCard').querySelector('.progress-bar').style.display='none';
+                document.getElementById('wizardCard').querySelector('form').style.display='none';
+                document.getElementById('successScreen').classList.add('active');
+            }catch(err){
+                console.error('Error al enviar:',err);
+                alert('Ocurrio un error al enviar la preinscripcion.\n\nDetalle: '+(err.message||err));
+                btn.disabled=false;btn.innerHTML='<i class="bi bi-send-check"></i> Enviar Preinscripcion';
             }
         });
+
+        document.getElementById('sigDate').textContent=new Date().toLocaleDateString('es-DO',{year:'numeric',month:'long',day:'numeric'});
     </script>
 </body>
 </html>

@@ -27,8 +27,10 @@ import { CatalogoModule } from '../shared/catalogo-conceptos.module.js';
 import { initCajaCobro, CajaCobroV2 } from '../shared/caja-cobro-v2.js';
 import { AccessModule } from './access.module.js';
 import { SchoolYearModule } from './school-year.module.js';
+import { InvoiceModule } from '../shared/invoice.js';
 
 window.CajaCobroV2 = CajaCobroV2;
+window.InvoiceModule = InvoiceModule;
 import { AttendanceModule } from './attendance.module.js';
 import { RealtimeManager } from '../shared/realtime-manager.js';
 import { QueryCache } from '../shared/query-cache.js';
@@ -728,7 +730,7 @@ function _renderGestionAcademica() {
 function _renderCicloEscolar() {
   const secs = [
     { id:'ciclo-escolar-config', icon:'calendar-range', label:'Ciclo Escolar', desc:'Años escolares, calendarios y reinscripción', color:'#0B63C7' },
-    { id:'inscripciones',       icon:'clipboard-pen',   label:'Inscripciones', desc:'Pre-inscripciones y admisión', color:'#0D9488' },
+    { id:'inscripciones',       icon:'clipboard-list',   label:'Inscripciones', desc:'Pre-inscripciones y admisión', color:'#0D9488' },
     { id:'staff-permits',       icon:'calendar-off',    label:'Permisos Staff', desc:'Ausencias y permisos del personal', color:'#EC4899' },
     { id:'accesos',             icon:'qr-code',          label:'Accesos QR', desc:'Control de entradas y salidas', color:'#64748B' },
   ];

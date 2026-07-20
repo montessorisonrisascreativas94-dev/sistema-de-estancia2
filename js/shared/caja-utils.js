@@ -29,7 +29,7 @@ export const DEFAULT_CATALOG = [
 ];
 
 // ── CÁLCULO DE MORA ────────────────────────────────────────────────────────
-// Fórmula: RD$500 por semana vencida + RD$50 por día adicional
+// Fórmula: 5% del monto de la cuota despues del dia 6 de atraso
 // Solo aplica a charges con status 'overdue' y fecha de vencimiento pasada.
 export function calcMora(charges) {
   let mora = 0;
@@ -38,8 +38,8 @@ export function calcMora(charges) {
   charges.filter(c => c.status === 'overdue').forEach(c => {
     if (c.due_date) {
       const days = Math.floor((now - new Date(c.due_date + 'T00:00:00').getTime()) / 86400000);
-      if (days > 0) {
-        mora += (Math.floor(days / 7) * 500) + ((days % 7) * 50);
+      if (days > 6) {
+        mora += Math.round((c.amount || 0) * 0.05 * 100) / 100;
       }
     }
   });
