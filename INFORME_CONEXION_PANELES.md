@@ -14,6 +14,8 @@ Este informe describe exhaustivamente la infraestructura técnica, el flujo de d
 
 El sistema utiliza **Supabase** como backend en tiempo real para la base de datos, autenticación y almacenamiento. Todos los paneles interactúan con un esquema unificado de base de datos (`schema.sql`), lo que permite que las acciones tomadas en un panel repercutan de manera inmediata y precisa en los demás paneles de cara al usuario final.
 
+Además, este informe incorpora una **Auditoría Exhaustiva del Proceso de Preinscripción y Admisión** (`preinscripcion.html`), identificando los campos que se tienen actualmente, los campos críticos faltantes para alcanzar la categoría de escuela profesional y 15 propuestas lógicas para su optimización.
+
 ---
 
 ## 2. Mapa de Conexión de Información entre Secciones y Paneles
@@ -76,7 +78,7 @@ La vida escolar y administrativa de un alumno dentro de la institución está re
 ### Etapa 2: Admisión y Asignación de Cupo (Fase del Staff)
 - **Lugar**: Panel de Directora o Asistente.
 - **Acción**: La administración evalúa el expediente del estudiante preinscrito. Si cumple las condiciones y hay cupo disponible, se le asigna un aula (`classrooms`) y un plan de pago específico (`payment_plans` - por ejemplo: Plan de Pago Único Anual, Doble Pago, o Mensualidades de 10 cuotas).
-- **Base de Datos**: El estado del registro en `student_enrollments` cambia a `admitido`. Se enlazan las claves foráneas de `classroom_id` y `payment_plan_id`.
+- **Base de Datos**: El estado del registro en `student_enrollments` cambia a `admitido`. Se enlazan las claves foráneas de `classroom_id` and `payment_plan_id`.
 
 ### Etapa 3: Inscripción Oficial y Activación
 - **Lugar**: Procesado por la Directora al confirmar el pago inicial de la matrícula de inscripción.
@@ -155,27 +157,107 @@ Para conectar la información y corregir este desliz, el flujo lógico debe oper
 
 ---
 
-## 5. Tabla de Estado de Conexión de Información (Auditoría de Integridad)
+## 5. Auditoría del Flujo de Preinscripción y Admisión (`preinscripcion.html`)
 
-A continuación, se detalla un análisis del estado de la información entre los distintos paneles del sistema:
+A continuación, se detalla un inventario minucioso de la estructura actual del archivo público de preinscripción y los campos de la base de datos asociados.
 
-| Módulo / Sección | Panel Directora | Panel Maestra | Panel Padres | ¿Existe Sincronización Total? | Observaciones / Gaps Identificados |
-| :--- | :--- | :--- | :--- | :---: | :--- |
-| **Matrícula y Alumnos** | Alta, edición y asignación de aulas. | Visualización de listado y fichas de salud. | Gestión de datos del alumno y QR. | **Sí** | El código QR impreso por el padre se lee con la cámara del panel asistente/maestra de manera idéntica. |
-| **Tareas / Evidencias** | Visualización general y reportes académicos. | Creación de tareas y corrección de evidencias. | Descarga de misiones, subida de archivos de evidencia. | **Sí** | Funcionamiento impecable. Sistema unificado de estados de entrega. |
-| **Muro de Clase** | Publicación de anuncios a nivel escolar o aula. | Publicación de notas, fotos y eventos específicos de su aula. | Visualización interactiva y comentarios. | **Sí** | Conectado en tiempo real mediante canales de Supabase. |
-| **Calificaciones** | Configuración de trimestres y reportes PDF. | Ingreso de notas (base-100 o escala conceptual). | Tablero interactivo con GPA y Chart.js. | **Sí** | Flujo directo. Al guardar la maestra, se recalcula el promedio del padre de inmediato. |
-| **Asistencia** | Auditoría y control de retardos. | Pase de lista diario interactivo. | Visualización en calendario con justificaciones. | **Sí** | El padre puede reportar ausencias en tiempo real y son visibles para el staff de forma inmediata. |
-| **Finanzas (Pagos)** | Control de cobros, reportes fiscales, caja de cobros físicos. | No interviene (Acceso restringido por seguridad). | Registro de comprobantes bancarios y descarga de recibos oficiales en PDF. | **Parcial (Gap de Precios)** | **El gap detectado en los precios de los botones ya fue analizado.** Adicionalmente, el padre solo ve sus cobros a partir del día 25 de cada mes para evitar spam visual antes de fecha de facturación. |
-| **Rutina Diaria** | Auditoría de reportes y supervisión del aula. | Registro de comidas, esfínteres, siesta y temperatura. | Línea de tiempo cronológica con emojis del día del niño. | **Sí** | Estructuración ágil mediante datos JSONB optimizados. |
+### A. Campos Actuales en `preinscripcion.html`:
+Al analizar el código del formulario actual, identificamos que recolecta los siguientes datos:
+1. **Datos del Estudiante**:
+   - `nombre_estudiante` (Nombre completo)
+   - `fecha_nacimiento` (Fecha de nacimiento para cálculo de edad)
+   - `nivel` (Nivel que desea inscribir: Infante, Párvulos, Pre-kinder, etc.)
+   - `horario` (Rango horario preferido: Medio día, completo, extendido)
+   - `genero` (Masculino, Femenino)
+   - `alergias` (Condiciones médicas básicas o alergias)
+2. **Datos del Padre/Madre/Tutor**:
+   - `nombre_tutor` (Nombre completo)
+   - `parentesco` (Madre, Padre, Tutor Legal)
+   - `telefono` (Número telefónico principal)
+   - `telefono_adicional` (Opcional)
+   - `email` (Dirección de correo electrónico)
+   - `direccion` (Dirección física de residencia)
+3. **Personas Autorizadas para Retirar**:
+   - `autorizado1` / `telefono_autorizado1` / `parentesco_autorizado1` (Persona de confianza 1)
+   - `autorizado2` / `telefono_autorizado2` / `parentesco_autorizado2` (Persona de confianza 2)
+4. **Información de Marketing e Inteligencia de Negocio**:
+   - `referencia` (¿Cómo se enteró de nosotros?)
+   - `comentarios` (Comentarios o preguntas adicionales)
 
 ---
 
-## 6. Conclusiones y Recomendaciones
+## 6. Campos Críticos Faltantes para un Sistema Profesional de Admisión
 
-El sistema del **Colegio Montessori Sonrisas Creativas** cuenta con una conexión de base de datos sumamente coordinada. Cada módulo tiene un propósito claro que acompaña al estudiante durante todo su año escolar.
+Para elevar el nivel del sistema a los estándares más rigurosos de colegios de primera categoría, se identifican las siguientes omisiones de información que deben ser incorporadas:
 
-El desliz lógico en la sección de pagos para padres es el único elemento desconectado del catálogo dinámico de cobros. Al aplicar la solución sugerida (la cual es sumamente sencilla gracias a que ya existe la tabla `payment_concepts` y la API de Supabase en el frontend), el sistema alcanzará un flujo financiero intuitivo y libre de confusiones para las familias.
+### 1. Documentación Legal e Identificaciones (Soporte DGII y MEP)
+- **Acta de Nacimiento Digital (PDF/Imagen)**: Campo para subir el documento oficial que certifica la identidad y filiación legal del menor.
+- **Cédula/Pasaporte del Tutor Principal**: Requisito obligatorio para la emisión de comprobantes fiscales electrónicos (e-CF), contratos educativos y validaciones ante la DGII.
+- **RNC / Razón Social para Facturación**: Si el tutor requiere crédito fiscal, estos datos deben capturarse desde la preinscripción para realizar pre-análisis de facturación.
+
+### 2. Historial de Salud y Ficha Pediátrica Avanzada
+- **Tipo de Sangre**: Crítico para emergencias y accidentes dentro del plantel.
+- **Pediatra de Cabecera y Teléfono de Emergencias Médicas**: Persona a contactar de inmediato en caso de requerir traslado o consulta urgente.
+- **Seguro Médico Escolar o Privado**: Número de póliza y ARS contratada.
+- **Esquema de Vacunación Completado (Sí/No + Adjunto)**: Obligatorio para cumplir con regulaciones sanitarias.
+
+### 3. Historial de Procedencia e Información Psicopedagógica
+- **Colegio de Procedencia**: Saber si el niño viene de otro centro Montessori o tradicional ayuda a su proceso de adaptación.
+- **Carta de Conducta y No Deuda**: Documentos obligatorios para la admisión en colegios privados que evitan el ingreso de morosos o situaciones de disciplina complejas.
+- **Evaluaciones Psicopedagógicas Previas**: Si el estudiante ha recibido terapia del habla, psicología infantil, o requiere adaptaciones de aprendizaje específicas.
 
 ---
-*Fin del informe.*
+
+## 7. Lógica de Negocio Requerida después de que un Estudiante es Admitido
+
+Una vez que la administración hace clic en **"Admitir"**, la base de datos debe ejecutar un flujo de eventos orquestado para evitar procesos manuales:
+
+1. **Notificación de Bienvenida Automatizada**:
+   - Se despacha de inmediato un correo electrónico y notificación PWA al tutor informándole sobre la aceptación.
+   - Se le provee de sus credenciales temporales de acceso para el **Panel de Padres**.
+2. **Generación del Contrato de Servicios Educativos**:
+   - El sistema genera un PDF del contrato de matriculación personalizado con los datos capturados. El padre debe firmarlo digitalmente o cargarlo firmado para habilitar el siguiente paso.
+3. **Bloqueo de Cupo Temporal**:
+   - Se resta una vacante disponible del inventario de alumnos permitido por aula (`classrooms.capacity`). El cupo queda reservado con un estado temporal por un máximo de 72 horas en espera del pago.
+4. **Habilitación de Cargos Iniciales**:
+   - Se asocian los cobros de inscripción, mensualidad base, seguro escolar y kit de libros correspondientes al grado. Se genera la orden de cobro en estado `pending`.
+
+---
+
+## 8. 15 Mejoras Lógicas para Lograr un Sistema Profesional y Robusto
+
+Para convertir este flujo en una plataforma escolar de clase mundial, se proponen las siguientes 15 lógicas aplicadas de optimización y negocio:
+
+1. **Carga Inteligente de Catálogo de Precios**:
+   El formulario de preinscripción o pagos del padre debe conectarse directamente con `payment_concepts` para mostrar tarifas actualizadas en tiempo real en lugar de textos planos en el HTML.
+2. **Auto-completado de Monto en Formulario de Pagos**:
+   Al seleccionar un concepto, el valor del input `#paymentAmount` debe poblarse automáticamente con la tarifa registrada, evitando errores del usuario al digitalizar la cifra.
+3. **Gestión Dinámica de Tarifas por Nivel Escolar**:
+   La colegiatura de un bebé de 0 a 2 años (Infante) requiere mayor personal que un niño de primaria. El sistema debe asociar el monto de la colegiatura al nivel (`level`) seleccionado automáticamente.
+4. **Cálculo Automático de Descuento por Hermanos (Sibling Discount)**:
+   Si un padre registra un segundo o tercer hijo con el mismo ID de tutor, el sistema de facturación debe aplicar un descuento automatizado (ej. 10% en colegiaturas) al generar los cobros mensuales.
+5. **Validación en Tiempo Real de RNC/Cédula**:
+   Implementar un servicio que verifique la estructura de caracteres del RNC o Cédula dominicana antes de enviar la preinscripción para evitar rechazos en las facturas DGII.
+6. **Compresión Automática de Evidencias y Documentos**:
+   Antes de subir imágenes o PDFs a Supabase Storage, comprimir los archivos en el lado del cliente utilizando `canvas` para imágenes o librerías de compresión, ahorrando espacio de almacenamiento escolar.
+7. **Motor de Alertas y Notificaciones PUSH Automatizadas**:
+   Programar avisos automáticos a los padres 3 días antes de cada vencimiento de mensualidad y un aviso directo si la cuenta entra en estado de mora.
+8. **Asignación Automática de Aula por Edades**:
+   Al procesar la preinscripción, el sistema debe calcular la edad exacta en base a la `fecha_nacimiento` y pre-asignar el aula adecuada (ej. menor a 1 año -> Infantes; 3 años -> Kinder).
+9. **Firma Digital de Contratos Educativos**:
+   Integrar un sistema de consentimiento firmado (E-signature) para que los padres acepten los términos de la institución desde su panel antes de realizar cualquier transacción financiera.
+10. **Puntos de Control de Capacidad Máxima de Aulas**:
+    Evitar la sobrepoblación estudiantil. El sistema debe rechazar la admisión automática a un aula si la cantidad de alumnos inscritos ha alcanzado el límite permitido (`capacity`).
+11. **Detección Automática de Recargos de Mora Graduales**:
+    Aplicar de forma precisa el 5% de mora el día 6 de cada mes. El sistema de base de datos debe auditar diariamente los pagos pendientes y recalcular la mora en tiempo real de forma automática.
+12. **Buzón Digital de Calificaciones y Boletines**:
+    Visualización directa y firma de recibido digital por parte del padre del reporte de calificaciones del niño al cierre de cada ciclo o periodo.
+13. **Seguimiento del Estado del Tramite (Progress Pipeline)**:
+    Ofrecer al padre una barra visual de progreso de su trámite de admisión: `Enviado` -> `Evaluación Médica/Pedagógica` -> `Admitido` -> `Inscrito (Pago Completado)`.
+14. **Pasarela de Pago Segura Integrada**:
+    Permitir al padre no solo subir un comprobante manual de transferencia, sino pagar directamente a través de tarjeta de crédito (Stripe, Azul o Cardnet) para una acreditación de saldo automática e inmediata.
+15. **Sincronización Multihijo Simplificada (Selector Rápido)**:
+    Permitir que un padre con múltiples niños inscritos cambie de perfil de estudiante con un solo clic desde la barra lateral, cargando de inmediato las tareas, asistencias y finanzas del niño correspondiente sin cerrar sesión.
+
+---
+*Fin de la auditoría.*
