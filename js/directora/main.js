@@ -30,6 +30,7 @@ import { SchoolYearModule } from './school-year.module.js';
 import { InvoiceModule } from '../shared/invoice.js';
 
 window.CajaCobroV2 = CajaCobroV2;
+window.AccountingModule = AccountingModule;
 window.InvoiceModule = InvoiceModule;
 import { AttendanceModule } from './attendance.module.js';
 import { RealtimeManager } from '../shared/realtime-manager.js';

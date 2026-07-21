@@ -52,6 +52,35 @@ async function renderCajaMain() {
     .caja-filter-btn.on{border-color:#0B63C7;background:#eff6ff;color:#0B63C7}
     @media(max-width:640px){#cajaKPIs{grid-template-columns:1fr 1fr!important}}
   </style>
+  <!-- Caja Header Banner -->
+  <div style="background:linear-gradient(135deg,#0B63C7 0%,#0850A0 50%,#1D4ED8 100%);border-radius:16px;padding:18px 22px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 4px 20px rgba(11,99,199,0.25)">
+    <div style="display:flex;align-items:center;gap:14px">
+      <div style="width:44px;height:44px;border-radius:12px;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center">
+        <i data-lucide="landmark" style="width:22px;height:22px;color:white"></i>
+      </div>
+      <div>
+        <div style="font-size:1.1rem;font-weight:900;color:white;letter-spacing:-0.01em">Caja 1</div>
+        <div style="font-size:.68rem;color:rgba(255,255,255,.75);font-weight:700">Directora — ${new Date().toLocaleDateString('es-DO',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button onclick="CajaCobroV2._openCajaSession()" style="padding:8px 14px;border-radius:10px;border:1.5px solid rgba(255,255,255,.3);background:rgba(255,255,255,.15);color:white;font-size:.68rem;font-weight:800;cursor:pointer;backdrop-filter:blur(4px)">Abrir Caja</button>
+      <button onclick="CajaCobroV2._closeCajaSession()" style="padding:8px 14px;border-radius:10px;border:1.5px solid rgba(255,255,255,.3);background:rgba(255,255,255,.15);color:white;font-size:.68rem;font-weight:800;cursor:pointer;backdrop-filter:blur(4px)">Cerrar Caja</button>
+    </div>
+  </div>
+  <!-- Devolver Efectivo Button -->
+  <div style="background:white;border-radius:14px;border:1px solid #fee2e2;padding:10px 16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div style="width:32px;height:32px;border-radius:8px;background:#FEF2F2;display:flex;align-items:center;justify-content:center">
+        <i data-lucide="banknote" style="width:16px;height:16px;color:#EF4444"></i>
+      </div>
+      <div>
+        <div style="font-size:.75rem;font-weight:800;color:#1a2340">Devolución de Efectivo</div>
+        <div style="font-size:.62rem;color:#94a3b8">Registrar devoluciones pendientes</div>
+      </div>
+    </div>
+    <button onclick="CajaCobroV2._openCashReturn()" style="padding:6px 14px;border-radius:8px;border:1.5px solid #FECACA;background:#FEF2F2;color:#EF4444;font-size:.65rem;font-weight:900;cursor:pointer">Registrar</button>
+  </div>
   <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px" id="cajaKPIs">
     ${[['Cobrado Hoy','kpiCobrado','#28B54D'],['Pendientes','kpiPend','#FF8A00'],['Vencidos','kpiVenc','#EF4444'],['Transferencias','kpiTransf','#8B5CF6']]
       .map(([l,id,c])=>`<div style="background:white;border-radius:14px;padding:12px 14px;border:1px solid #f1f5f9">
@@ -71,6 +100,13 @@ async function renderCajaMain() {
     <button class="caja-filter-btn" onclick="CajaCobroV2.setFilter('pending',this)" style="border-color:#FEF3C7;color:#D97706">Pendientes</button>
     <button class="caja-filter-btn" onclick="CajaCobroV2.setFilter('review',this)" style="border-color:#DBEAFE;color:#2563EB">En Revisión</button>
     <button class="caja-filter-btn" onclick="CajaCobroV2.setFilter('paid',this)" style="border-color:#DCFCE7;color:#16A34A">Al Día</button>
+  </div>
+  <div style="background:white;border-radius:14px;border:1px solid #e2e8f0;overflow:hidden;margin-bottom:14px">
+    <div style="padding:10px 16px;border-bottom:1px solid #f8fafc;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <span style="font-size:.65rem;font-weight:900;color:#64748b;text-transform:uppercase">Últimos Cobros Hoy</span>
+      <span id="cajaHistoryCount" style="font-size:.6rem;font-weight:700;color:#94a3b8"></span>
+    </div>
+    <div id="cajaHistoryList" style="max-height:120px;overflow-y:auto"></div>
   </div>
   <div style="background:white;border-radius:14px;border:1px solid #e2e8f0;overflow:hidden">
     <div style="padding:10px 16px;border-bottom:1px solid #f8fafc;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
@@ -129,6 +165,39 @@ export const CajaCobroV2 = {
     set('kpiPend', String(this._all.filter(s=>['pending','review'].includes(s.status)).length));
     set('kpiVenc', String(this._all.filter(s=>s.status==='overdue').length));
     this.renderTable(this._all);
+
+    // Cargar historial de cobros de hoy
+    try {
+      const todayStr = today();
+      const { data: recentPays } = await supabase.from('payments')
+        .select('id,amount,concept,method,paid_date,students:student_id(name)')
+        .eq('status','paid').gte('paid_date',todayStr+'T00:00:00').lte('paid_date',todayStr+'T23:59:59')
+        .order('paid_date',{ascending:false}).limit(10);
+      const histEl = document.getElementById('cajaHistoryList');
+      const histCount = document.getElementById('cajaHistoryCount');
+      if (histEl) {
+        if (recentPays?.length) {
+          if (histCount) histCount.textContent = recentPays.length + ' cobros';
+          histEl.innerHTML = recentPays.map(p => `
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 16px;border-bottom:1px solid #f8fafc">
+              <div style="display:flex;align-items:center;gap:8px">
+                <div style="width:28px;height:28px;border-radius:7px;background:#eff6ff;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:900;color:#0B63C7">${(p.students?.name||'?').charAt(0)}</div>
+                <div>
+                  <div style="font-size:.75rem;font-weight:800;color:#1a2340">${Helpers.escapeHTML(p.students?.name||'—')}</div>
+                  <div style="font-size:.6rem;color:#94a3b8">${Helpers.escapeHTML(p.concept||'—')}</div>
+                </div>
+              </div>
+              <div style="text-align:right">
+                <div style="font-size:.8rem;font-weight:900;color:#0B63C7">${fmt(p.amount)}</div>
+                <div style="font-size:.55rem;color:#94a3b8">${p.paid_date ? new Date(p.paid_date).toLocaleTimeString('es-DO',{hour:'2-digit',minute:'2-digit'}) : ''}</div>
+              </div>
+            </div>`).join('');
+        } else {
+          if (histCount) histCount.textContent = '';
+          histEl.innerHTML = '<div style="text-align:center;padding:16px;color:#94a3b8;font-size:.75rem">Sin cobros hoy</div>';
+        }
+      }
+    } catch(_) {}
     if (window.lucide) lucide.createIcons();
   },
 
@@ -371,6 +440,14 @@ export const CajaCobroV2 = {
         <!-- TAB: Resumen -->
         <div id="cajaPane_resumen" style="padding:14px;display:none">
           <div style="font-size:.62rem;font-weight:900;color:#94a3b8;text-transform:uppercase;margin-bottom:10px">Resumen del cobro</div>
+          <!-- Opción DGII discreta -->
+          <div style="background:#f8fafc;border:1px dashed #e2e8f0;border-radius:10px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;gap:10px">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.7rem;color:#64748b;font-weight:700">
+              <input type="checkbox" id="excludeDGII" style="accent-color:#EF4444;width:14px;height:14px">
+              <span>No enviar a DGII</span>
+            </label>
+            <span style="font-size:.58rem;color:#94a3b8;font-style:italic">(factura interna)</span>
+          </div>
 
           <!-- Contenido dinámico del resumen -->
           <div class="caja-resumen-content">
@@ -837,10 +914,12 @@ export const CajaCobroV2 = {
 
       const rnc = document.getElementById('rncEmpresa')?.value?.trim();
       const empresa = document.getElementById('nombreEmpresa')?.value?.trim();
+      const excludeDGII = document.getElementById('excludeDGII')?.checked || false;
       let notes = '';
       if (rnc) notes += `RNC:${rnc}|`;
       if (empresa) notes += `Empresa:${empresa}|`;
       if (_discountPct > 0) notes += `Descuento:${_discountPct}% (-${fmt(discount)})|`;
+      if (excludeDGII) notes += `EXCLUDE_DGII:true|`;
 
       const currentYear = new Date().getFullYear();
       const inserts = _cart.map(c => ({
@@ -854,7 +933,8 @@ export const CajaCobroV2 = {
           ? currentYear + '-' + String(c._monthIdx+1).padStart(2,'0')
           : null,
         created_at:  now,
-        notes: notes || null
+        notes: notes || null,
+        exclude_dgii: excludeDGII
       }));
 
       const { error } = await supabase.from('payments').insert(inserts);
@@ -910,6 +990,30 @@ export const CajaCobroV2 = {
             month:        monthPaid || 'Colegiatura'
           }).catch(() => {});
         } catch (_) {}
+
+        // Integración contabilidad: registrar en libro diario
+        try {
+          const concepts = _cart.map(c => c.concept).join(', ');
+          this._logToAccounting({
+            id: newPays[0]?.id,
+            concept: concepts,
+            student_name: _student?.name,
+            amount: total,
+            method: _method
+          });
+        } catch (_) {}
+
+        // Auto-envío a DGII (si no está marcado como exclude)
+        if (!excludeDGII) {
+          try {
+            const { emitEvent: emit2 } = await import('./supabase.js');
+            emit2('invoice.dgii_queue', {
+              payment_id: newPays[0]?.id,
+              amount: total,
+              exclude: false
+            }).catch(() => {});
+          } catch (_) {}
+        }
       }
 
       document.querySelectorAll('[id^="cajaModal_"]').forEach(e=>e.remove());
@@ -1016,6 +1120,137 @@ export const CajaCobroV2 = {
       if (cardEl) cardEl.remove();
       this.loadStudents();
     } catch(e) { Helpers.toast('Error al rechazar','error'); }
+  },
+
+  // ── CAJA SESSIONS (Apertura / Cierre) ─────────────────────────────────────
+  async _openCajaSession() {
+    const profile = window.AppState?.get?.('profile') || {};
+    const directorName = profile.name || 'Directora';
+    const todayStr = today();
+
+    const { data: existing } = await supabase.from('caja_sessions')
+      .select('*').eq('date', todayStr).limit(1).maybeSingle();
+
+    if (existing?.status === 'open') {
+      Helpers.toast('La caja ya está abierta hoy', 'info');
+      return;
+    }
+
+    const bal = prompt(`Apertura de Caja 1 — ${directorName}\n\nEfectivo inicial en caja (RD$):`, '0');
+    if (bal === null) return;
+
+    const { error } = await supabase.from('caja_sessions').upsert({
+      date: todayStr,
+      opening_balance: Number(bal) || 0,
+      status: 'open',
+      opened_by: profile.id || null,
+      notes: `Caja 1 — ${directorName}`
+    }, { onConflict: 'date' });
+
+    if (error) return Helpers.toast('Error: ' + error.message, 'error');
+    Helpers.toast(`Caja abierta con ${fmt(Number(bal)||0)}`, 'success');
+    this.loadStudents();
+  },
+
+  async _closeCajaSession() {
+    const todayStr = today();
+    const { data: session } = await supabase.from('caja_sessions')
+      .select('*').eq('date', todayStr).limit(1).maybeSingle();
+
+    if (session?.status === 'closed') {
+      Helpers.toast('La caja ya está cerrada hoy', 'info');
+      return;
+    }
+
+    const { data: pays } = await supabase.from('payments')
+      .select('amount').eq('status','paid')
+      .gte('paid_date', todayStr+'T00:00:00').lte('paid_date', todayStr+'T23:59:59');
+
+    const totalHoy = (pays||[]).reduce((s,p) => s + Number(p.amount||0), 0);
+    if (!confirm(`¿Cerrar la caja del día?\n\nTotal cobrado: ${fmt(totalHoy)}\nBalance apertura: ${fmt(session?.opening_balance||0)}`)) return;
+
+    const { error } = await supabase.from('caja_sessions').upsert({
+      date: todayStr,
+      closing_balance: totalHoy,
+      status: 'closed'
+    }, { onConflict: 'date' });
+
+    if (error) return Helpers.toast('Error: ' + error.message, 'error');
+    Helpers.toast('Caja cerrada correctamente', 'success');
+    this.loadStudents();
+  },
+
+  // ── DEVOLUCIÓN DE EFECTIVO ────────────────────────────────────────────────
+  async _openCashReturn() {
+    const modalId = 'cashReturnModal_' + Date.now();
+    const overlay = document.createElement('div');
+    overlay.id = modalId;
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(6px);z-index:9998;display:flex;align-items:center;justify-content:center;padding:12px';
+    overlay.onclick = e => { if(e.target===overlay) overlay.remove(); };
+    overlay.innerHTML = `
+    <div style="background:white;border-radius:16px;width:100%;max-width:420px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.25)">
+      <div style="background:linear-gradient(135deg,#EF4444,#DC2626);padding:14px 18px;display:flex;align-items:center;justify-content:space-between">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="width:32px;height:32px;border-radius:8px;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center">
+            <i data-lucide="banknote" style="width:16px;height:16px;color:white"></i>
+          </div>
+          <span style="font-weight:900;font-size:.9rem;color:white">Devolución de Efectivo</span>
+        </div>
+        <button onclick="document.getElementById('${modalId}').remove()" style="width:28px;height:28px;border-radius:50%;border:none;background:rgba(255,255,255,.2);color:white;cursor:pointer;font-size:.9rem">✕</button>
+      </div>
+      <div style="padding:18px;display:flex;flex-direction:column;gap:12px">
+        <input id="crStudent" placeholder="Nombre del estudiante / responsable" style="padding:10px 14px;border:2px solid #e2e8f0;border-radius:10px;font-size:.8rem;font-weight:700;outline:none">
+        <input id="crAmount" type="number" placeholder="Monto a devolver (RD$)" style="padding:10px 14px;border:2px solid #e2e8f0;border-radius:10px;font-size:.8rem;font-weight:700;outline:none">
+        <input id="crConcept" placeholder="Motivo de la devolución" style="padding:10px 14px;border:2px solid #e2e8f0;border-radius:10px;font-size:.8rem;font-weight:700;outline:none">
+        <select id="crOriginalMethod" style="padding:10px 14px;border:2px solid #e2e8f0;border-radius:10px;font-size:.8rem;font-weight:700;outline:none">
+          <option value="efectivo">Efectivo original</option>
+          <option value="transferencia">Transferencia</option>
+          <option value="tarjeta">Tarjeta</option>
+        </select>
+        <button onclick="CajaCobroV2._confirmCashReturn('${modalId}')" style="padding:12px;border-radius:10px;border:none;background:#EF4444;color:white;font-size:.8rem;font-weight:900;cursor:pointer">Confirmar Devolución</button>
+      </div>
+    </div>`;
+    document.body.appendChild(overlay);
+    if (window.lucide) lucide.createIcons();
+  },
+
+  async _confirmCashReturn(modalId) {
+    const student = document.getElementById('crStudent')?.value?.trim();
+    const amount  = Number(document.getElementById('crAmount')?.value || 0);
+    const concept = document.getElementById('crConcept')?.value?.trim();
+    if (!student || !amount) return Helpers.toast('Completa todos los campos', 'warning');
+
+    const { error } = await supabase.from('payments').insert({
+      amount: -Math.abs(amount),
+      concept: `Devolución: ${concept || 'Efectivo'}`,
+      method: 'efectivo',
+      status: 'paid',
+      paid_date: new Date().toISOString(),
+      notes: `DEVOLUCION|Estudiante:${student}|Motivo:${concept||'N/A'}`,
+      exclude_dgii: true
+    });
+
+    if (error) return Helpers.toast('Error: ' + error.message, 'error');
+    document.getElementById(modalId)?.remove();
+    Helpers.toast(`Devolución de ${fmt(amount)} registrada`, 'success');
+    this.loadStudents();
+  },
+
+  // ── INTEGRACIÓN CONTABILIDAD: Registrar cobro en libro diario ─────────────
+  async _logToAccounting(paymentData) {
+    try {
+      await supabase.from('accounting_journal').insert({
+        fecha: today(),
+        ref: `PAY-${paymentData.id}`.slice(0,12),
+        descripcion: `Cobro ${paymentData.concept || 'Mensualidad'} — ${paymentData.student_name || ''}`,
+        cuenta_debe: paymentData.method === 'efectivo' ? '111 Caja' : '121 Banco Popular',
+        monto_debe: paymentData.amount,
+        cuenta_haber: '411 Ingresos por Mensualidades',
+        monto_haber: paymentData.amount,
+        tipo: 'ingreso',
+        payment_id: paymentData.id
+      }).catch(() => {});
+    } catch(_) {}
   }
 };
 

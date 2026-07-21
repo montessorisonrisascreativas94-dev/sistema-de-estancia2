@@ -1035,6 +1035,14 @@
               <i data-lucide="bar-chart-3" class="w-3.5 h-3.5 text-orange-200 shrink-0"></i>
               <span>Contabilidad</span>
             </button>
+            <button onclick="App.navigation.goTo('contabilidad');setTimeout(()=>AccountingModule.showTab('nomina'),400)" class="kk-nav-sub-item">
+              <i data-lucide="briefcase" class="w-3.5 h-3.5 text-emerald-200 shrink-0"></i>
+              <span>Nómina</span>
+            </button>
+            <button onclick="App.navigation.goTo('contabilidad');setTimeout(()=>AccountingModule.showTab('dgii'),400)" class="kk-nav-sub-item">
+              <i data-lucide="landmark" class="w-3.5 h-3.5 text-amber-200 shrink-0"></i>
+              <span>DGII</span>
+            </button>
           </div>
         </div>
 
@@ -1796,7 +1804,7 @@
               </div>
               <div id="studentSearchResults" class="max-h-[450px] overflow-y-auto">
                 <div class="p-10 text-center text-slate-400">
-                  <i data-lucide="user-search" class="w-12 h-12 mx-auto mb-3 opacity-50"></i>
+                  <i data-lucide="search" class="w-12 h-12 mx-auto mb-3 opacity-50"></i>
                   <p class="text-sm font-medium">Busca un estudiante para comenzar</p>
                 </div>
               </div>
@@ -2710,12 +2718,6 @@
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       function fixMissingLucideIcons() {
-        document.querySelectorAll('[data-lucide="user-search"]').forEach(el => {
-          el.setAttribute('data-lucide', 'user');
-        });
-        document.querySelectorAll('[data-lucide="file-user"]').forEach(el => {
-          el.setAttribute('data-lucide', 'file-text');
-        });
         if(window.lucide) lucide.createIcons();
       }
       fixMissingLucideIcons();
