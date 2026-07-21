@@ -6,9 +6,9 @@ import { supabase } from '../shared/supabase.js';
 import { Helpers } from '../shared/helpers.js';
 
 const ICONS = {
-  food: { todo: '🍽️', poco: '🍲', nada: '🙅' },
-  mood: { feliz: '😊', normal: '😐', triste: '😢', enojado: '😡' },
-  nap: { si: '💤', no: '☀️' },
+  food: { todo: '🍽️', poco: '🍲', nada: '🙅', ayuda: '🆘' },
+  mood: { feliz: '😊', normal: '😐', triste: '😢', enojado: '😡', muy_feliz: '😁', cansado: '😴', enfermo: '🤒' },
+  nap: { si: '💤', no: '☀️', poco: '⏰', excelente: '⭐' },
   milk: '🍼',
   sleep: '😴',
   wakeup: '😊',
@@ -17,12 +17,36 @@ const ICONS = {
   temp: '🌡️',
   med: '💊',
   note: '📝',
+  handwash: '🧼',
+  toothbrush: '🪥',
+  activity: '🏫',
+  playground: '🌳',
+  welcome_song: '👋',
+  prayer: '🙏',
+  behavior: '🤝',
 };
 
 const LABELS = {
-  food: { todo: 'Comió todo', poco: 'Comió poco', nada: 'No comió' },
-  mood: { feliz: 'Contento/a', normal: 'Normal', triste: 'Triste', enojado: 'Molesto/a' },
-  nap: { si: 'Durmió su siesta', no: 'No durmió siesta' },
+  food: { todo: 'Comió todo', poco: 'Comió poco', nada: 'No comió', ayuda: 'Necesitó ayuda' },
+  mood: { feliz: 'Contento/a', normal: 'Normal', triste: 'Triste', enojado: 'Molesto/a', muy_feliz: 'Muy contento/a', cansado: 'Cansado/a', enfermo: 'Enfermo/a' },
+  nap: { si: 'Durmió su siesta', no: 'No durmió siesta', poco: 'Durmió poco', excelente: 'Durmió excelente' },
+  meal: { breakfast: 'Desayuno', lunch: 'Almuerzo', snack: 'Merienda' },
+  event: {
+    handwash: 'Lavado de manos',
+    toothbrush: 'Cepillado dental',
+    activity: 'Actividad educativa',
+    playground: 'Salida al patio',
+    welcome_song: 'Canción de bienvenida',
+    prayer: 'Oración / reflexión',
+    sleep: 'Siesta',
+    milk: 'Biberón',
+    diaper: 'Pañal',
+    bath: 'Baño',
+    temp: 'Temperatura',
+    med: 'Medicamento',
+    note: 'Nota',
+    behavior: 'Comportamiento'
+  }
 };
 
 function fmtTime(isoStr) {
@@ -123,16 +147,19 @@ export const DailyReportModule = {
               totalMilkFeeds++;
             }
           });
+          // Parsear food - soportar JSON estructurado y string legacy
           if (log.food) {
+            let foodObj = {};
+            try { foodObj = JSON.parse(log.food); } catch { foodObj = { breakfast: log.food }; }
             let acceptance = 0;
-            if (log.food.breakfast === 'todo') acceptance += 100;
-            else if (log.food.breakfast === 'poco') acceptance += 40;
-            if (log.food.lunch === 'todo') acceptance += 100;
-            else if (log.food.lunch === 'poco') acceptance += 40;
-            if (log.food.snack === 'todo') acceptance += 100;
-            else if (log.food.snack === 'poco') acceptance += 40;
-            totalFoodAcceptance += Math.round(acceptance / 3);
-            foodDays++;
+            let mealCount = 0;
+            if (foodObj.breakfast) { mealCount++; if (foodObj.breakfast === 'todo') acceptance += 100; else if (foodObj.breakfast === 'poco') acceptance += 40; }
+            if (foodObj.lunch) { mealCount++; if (foodObj.lunch === 'todo') acceptance += 100; else if (foodObj.lunch === 'poco') acceptance += 40; }
+            if (foodObj.snack) { mealCount++; if (foodObj.snack === 'todo') acceptance += 100; else if (foodObj.snack === 'poco') acceptance += 40; }
+            if (mealCount > 0) {
+              totalFoodAcceptance += Math.round(acceptance / mealCount);
+              foodDays++;
+            }
           }
         });
         return { totalSleepMs, totalDiaperWet, totalDiaperSoiled, totalMilkOz, totalMilkFeeds, foodDays, avgFoodAcceptance: foodDays > 0 ? Math.round(totalFoodAcceptance / foodDays) : 0, sleepTimes };
@@ -166,9 +193,17 @@ export const DailyReportModule = {
           if (ev.type === 'temp') todayTemp = ev.value;
           if (ev.type === 'note' && !todayNote) todayNote = ev.text;
         });
-        todayBreakfast = todayLog.food?.breakfast;
-        todayLunch = todayLog.food?.lunch;
-        todaySnack = todayLog.food?.snack;
+        // Parsear food JSON estructurado
+        if (todayLog.food) {
+          try {
+            const foodObj = JSON.parse(todayLog.food);
+            todayBreakfast = foodObj.breakfast || null;
+            todayLunch = foodObj.lunch || null;
+            todaySnack = foodObj.snack || null;
+          } catch {
+            todayBreakfast = todayLog.food;
+          }
+        }
         todayMood = todayLog.mood;
         if (todayLog.notes && !todayNote) todayNote = todayLog.notes;
       }
@@ -178,6 +213,7 @@ export const DailyReportModule = {
         if (val === 'todo') return { icon: '✅', text: 'Comió todo', pct: '100%' };
         if (val === 'poco') return { icon: '⚠️', text: 'Comió poco', pct: '40%' };
         if (val === 'nada') return { icon: '❌', text: 'No comió', pct: '0%' };
+        if (val === 'ayuda') return { icon: '🆘', text: 'Necesitó ayuda', pct: '—' };
         return { icon: '—', text: 'Sin registro', pct: '—' };
       };
 
@@ -361,12 +397,43 @@ export const DailyReportModule = {
 
   _renderReport(log, todayLabel) {
     // ── Resumen rápido ──────────────────────────────────────────────
-    const moodIcon = log.mood ? ICONS.mood[log.mood] : '—';
-    const foodIcon = log.food ? ICONS.food[log.food] : '—';
-    const napIcon = log.nap ? ICONS.nap[log.nap] : '—';
-    const moodLbl = log.mood ? LABELS.mood[log.mood] : 'Sin registro';
-    const foodLbl = log.food ? LABELS.food[log.food] : 'Sin registro';
-    const napLbl = log.nap ? LABELS.nap[log.nap] : 'Sin registro';
+    const moodIcon = log.mood ? (ICONS.mood[log.mood] || '😊') : '—';
+    const napIcon = log.nap ? (ICONS.nap[log.nap] || '💤') : '—';
+    const moodLbl = log.mood ? (LABELS.mood[log.mood] || log.mood) : 'Sin registro';
+    const napLbl = log.nap ? (LABELS.nap[log.nap] || log.nap) : 'Sin registro';
+
+    // Parsear food - soportar JSON estructurado y string legacy
+    let foodBreakfast = null, foodLunch = null, foodSnack = null;
+    if (log.food) {
+      try {
+        const foodObj = JSON.parse(log.food);
+        foodBreakfast = foodObj.breakfast || null;
+        foodLunch = foodObj.lunch || null;
+        foodSnack = foodObj.snack || null;
+      } catch {
+        // Legacy: string simple
+        foodBreakfast = log.food;
+      }
+    }
+
+    const getFoodStatus = (val) => {
+      if (val === 'todo') return { icon: '✅', text: 'Comió todo', pct: '100%' };
+      if (val === 'poco') return { icon: '⚠️', text: 'Comió poco', pct: '40%' };
+      if (val === 'nada') return { icon: '❌', text: 'No comió', pct: '0%' };
+      if (val === 'ayuda') return { icon: '🆘', text: 'Necesitó ayuda', pct: '—' };
+      return { icon: '—', text: 'Sin registro', pct: '—' };
+    };
+
+    const bf = getFoodStatus(foodBreakfast);
+    const lu = getFoodStatus(foodLunch);
+    const sn = getFoodStatus(foodSnack);
+
+    // Resumen de comidas: mostrar la más relevante según hora
+    const hour = new Date().getHours();
+    let activeMealIcon, activeMealLbl;
+    if (hour < 10) { activeMealIcon = bf.icon; activeMealLbl = 'Desayuno: ' + bf.text; }
+    else if (hour < 14) { activeMealIcon = lu.icon; activeMealLbl = 'Almuerzo: ' + lu.text; }
+    else { activeMealIcon = sn.icon; activeMealLbl = 'Merienda: ' + sn.text; }
 
     const updTime = log.created_at ? fmtTime(log.created_at) : '';
 
@@ -400,6 +467,7 @@ export const DailyReportModule = {
         .dr-timeline-item:last-child{border:none}
         .dr-dot{width:36px;height:36px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;background:#f8fafc}
         .dr-summary-chip{display:flex;align-items:center;gap:8px;padding:12px 16px;border-radius:16px;background:#f8fafc;border:1px solid #f1f5f9}
+        .dr-meal-row{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:10px;background:#fafafa}
       </style>
 
       <div class="space-y-5">
@@ -424,9 +492,9 @@ export const DailyReportModule = {
               <span class="text-xs font-bold text-slate-600">${moodLbl}</span>
             </div>
             <div class="dr-summary-chip flex-col text-center rounded-none border-0 bg-transparent">
-              <span class="text-2xl">${foodIcon}</span>
-              <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider mt-1">Comida</span>
-              <span class="text-xs font-bold text-slate-600">${foodLbl}</span>
+              <span class="text-2xl">${activeMealIcon}</span>
+              <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider mt-1">Alimentación</span>
+              <span class="text-xs font-bold text-slate-600">${activeMealLbl}</span>
             </div>
             <div class="dr-summary-chip flex-col text-center rounded-none border-0 bg-transparent">
               <span class="text-2xl">${napIcon}</span>
@@ -454,6 +522,26 @@ export const DailyReportModule = {
               <div class="text-[9px] font-bold text-slate-400 uppercase">Pañales sucios</div>
             </div>
           </div>
+
+          <!-- Detalle de comidas -->
+          <div class="p-4 border-t border-slate-100 space-y-2">
+            <div class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-2">Detalle de comidas</div>
+            <div class="dr-meal-row">
+              <span class="text-lg">🍞</span>
+              <span class="text-xs font-bold text-slate-600 flex-1">Desayuno</span>
+              <span class="text-xs font-black ${bf.icon==='✅'?'text-green-600':bf.icon==='❌'?'text-red-600':'text-slate-500'}">${bf.icon} ${bf.text}</span>
+            </div>
+            <div class="dr-meal-row">
+              <span class="text-lg">🥗</span>
+              <span class="text-xs font-bold text-slate-600 flex-1">Almuerzo</span>
+              <span class="text-xs font-black ${lu.icon==='✅'?'text-green-600':lu.icon==='❌'?'text-red-600':'text-slate-500'}">${lu.icon} ${lu.text}</span>
+            </div>
+            <div class="dr-meal-row">
+              <span class="text-lg">🍎</span>
+              <span class="text-xs font-bold text-slate-600 flex-1">Merienda</span>
+              <span class="text-xs font-black ${sn.icon==='✅'?'text-green-600':sn.icon==='❌'?'text-red-600':'text-slate-500'}">${sn.icon} ${sn.text}</span>
+            </div>
+          </div>
         </div>
 
         ${log.notes ? `
@@ -477,13 +565,14 @@ export const DailyReportModule = {
 
   _renderEvent(e) {
     const time = e.created_at ? fmtTime(e.created_at) : (e.start_time ? fmtTime(e.start_time) : '');
-    let icon = '📌', label = e.type, detail = '';
+    const eventLabel = e.label || LABELS.event[e.type] || e.type;
+    let icon = '📌', label = eventLabel, detail = '';
 
     switch (e.type) {
       case 'milk':
         icon = '🍼'; label = 'Biberón'; detail = e.oz ? `${e.oz} oz` : ''; break;
       case 'sleep':
-        icon = '😴'; label = 'Durmió';
+        icon = '😴'; label = e.label || 'Durmió';
         if (e.end_time) {
           const dur = e.duration || '';
           detail = dur ? `Siesta de ${dur}` : `Despertó: ${fmtTime(e.end_time)}`;
@@ -497,25 +586,54 @@ export const DailyReportModule = {
       case 'bath':
         icon = '🚽'; label = 'Fue al baño'; break;
       case 'temp':
-        icon = '\uD83C\uDF21'; label = 'Temperatura';
-        detail = e.value ? `${e.value}\u00B0` : '';
+        icon = '🌡️'; label = 'Temperatura';
+        detail = e.value ? `${e.value}°` : '';
         if (e.value >= 38) detail += ' ⚠ Fiebre';
         break;
       case 'med':
-        icon = '\uD83D\uDC8A'; label = 'Medicamento';
+        icon = '💊'; label = 'Medicamento';
         detail = [e.name, e.dose].filter(Boolean).join(' — '); break;
       case 'note':
         icon = '📝'; label = 'Nota'; detail = e.text || ''; break;
+      case 'handwash':
+        icon = '🧼'; label = 'Lavado de manos'; break;
+      case 'toothbrush':
+        icon = '🪥'; label = 'Cepillado dental'; break;
+      case 'activity':
+        icon = '🏫'; label = 'Actividad educativa'; break;
+      case 'playground':
+        icon = '🌳'; label = 'Salida al patio'; break;
+      case 'welcome_song':
+        icon = '👋'; label = 'Canción de bienvenida'; break;
+      case 'prayer':
+        icon = '🙏'; label = 'Oración / reflexión'; break;
+      case 'behavior':
+        icon = '🤝'; label = e.label || 'Comportamiento';
+        if (e.category && e.data) {
+          const behaviorLabels = {
+            social: { shared: 'Compartió con compañeros', alone: 'Jugó solo', group: 'Participó en grupo', emotional_support: 'Necesitó apoyo emocional' },
+            classroom: { attention: 'Prestó atención', participation: 'Participó activamente', curiosity: 'Mostró curiosidad', completed: 'Terminó actividades', needed_help: 'Necesitó ayuda constante' },
+            emotional: { controlled: 'Controló emociones', frustrated: 'Se frustró fácilmente', crying: 'Lloró por separación', anxious: 'Mostró ansiedad', calmed: 'Se calmó rápidamente' },
+            montessori: { manipulation: 'Manipulación de materiales', fine_motor: 'Motricidad fina', gross_motor: 'Motricidad gruesa', language: 'Lenguaje', concentration: 'Concentración', autonomy: 'Autonomía' }
+          };
+          const catLabels = behaviorLabels[e.category];
+          if (catLabels && e.data[e.category]) {
+            detail = catLabels[e.data[e.category]] || e.data[e.category];
+          }
+        }
+        break;
       default:
-        label = e.type; break;
+        label = eventLabel; break;
     }
+
+    const autoTag = e.auto ? '<span class="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-600 ml-1">AUTO</span>' : '';
 
     return `
     <div class="dr-timeline-item">
       <div class="dr-dot">${icon}</div>
       <div class="flex-1 min-w-0">
         <div class="flex items-center justify-between gap-2">
-          <span class="text-sm font-black text-slate-700">${Helpers.escapeHTML(label)}</span>
+          <span class="text-sm font-black text-slate-700">${Helpers.escapeHTML(label)}${autoTag}</span>
           <span class="text-[10px] font-bold text-slate-400 shrink-0">${time}</span>
         </div>
         ${detail ? `<p class="text-xs text-slate-500 mt-0.5">${Helpers.escapeHTML(detail)}</p>` : ''}

@@ -513,29 +513,57 @@ function renderDailySummary(log) {
   if (rawEvents.length) {
     const typeMap = {
       milk:   (e) => ({ icon:'🍼', label:'Biberón',       detail: e.oz ? e.oz + ' oz' : '' }),
-      sleep:  (e) => ({ icon:'😴', label:'Durmió',        detail: e.end_time ? ('hasta ' + fmtTime(e.end_time)) : 'En siesta...' }),
+      sleep:  (e) => ({ icon:'😴', label: e.label || 'Durmió',        detail: e.end_time ? ('hasta ' + fmtTime(e.end_time)) : 'En siesta...' }),
       diaper: (e) => ({ icon: e.subtype==='wet'?'💧':'💩', label: e.subtype==='wet'?'Pañal mojado':'Pañal sucio', detail: '' }),
-      food:   (e) => ({ icon:'\uD83C\uDF7D', label: e.meal||'Comida', detail: e.amount||'' }),
-      temp:   (e) => ({ icon:'\uD83C\uDF21', label:'Temperatura',   detail: e.value ? e.value + '\u00B0C' : '' }),
-      med:    (e) => ({ icon:'\uD83D\uDC8A', label:'Medicamento',   detail: e.name||'' }),
+      food:   (e) => ({ icon:'🍽️', label: e.meal||'Comida', detail: e.amount||'' }),
+      temp:   (e) => ({ icon:'🌡️', label:'Temperatura',   detail: e.value ? e.value + '°C' : '' }),
+      med:    (e) => ({ icon:'💊', label:'Medicamento',   detail: e.name||'' }),
       note:   (e) => ({ icon:'📝', label:'Nota',          detail: e.text||'' }),
       bath:   (_) => ({ icon:'🛁', label:'Baño',          detail: '' }),
+      handwash: (e) => ({ icon:'🧼', label: e.label || 'Lavado de manos', detail: '' }),
+      toothbrush: (e) => ({ icon:'🪥', label: e.label || 'Cepillado dental', detail: '' }),
+      activity: (e) => ({ icon:'🏫', label: e.label || 'Actividad educativa', detail: '' }),
+      playground: (e) => ({ icon:'🌳', label: e.label || 'Salida al patio', detail: '' }),
+      welcome_song: (e) => ({ icon:'👋', label: e.label || 'Canción de bienvenida', detail: '' }),
+      prayer: (e) => ({ icon:'🙏', label: e.label || 'Oración / reflexión', detail: '' }),
+      behavior: (e) => {
+        const behaviorLabels = {
+          social: { shared:'Compartió con compañeros', alone:'Jugó solo', group:'Participó en grupo', emotional_support:'Necesitó apoyo emocional' },
+          classroom: { attention:'Prestó atención', participation:'Participó activamente', curiosity:'Mostró curiosidad', completed:'Terminó actividades', needed_help:'Necesitó ayuda constante' },
+          emotional: { controlled:'Controló emociones', frustrated:'Se frustró fácilmente', crying:'Lloró por separación', anxious:'Mostró ansiedad', calmed:'Se calmó rápidamente' },
+          montessori: { manipulation:'Manipulación materiales', fine_motor:'Motricidad fina', gross_motor:'Motricidad gruesa', language:'Lenguaje', concentration:'Concentración', autonomy:'Autonomía' }
+        };
+        let detail = '';
+        if (e.category && e.data) {
+          const catLabels = behaviorLabels[e.category];
+          if (catLabels && e.data[e.category]) detail = catLabels[e.data[e.category]] || '';
+        }
+        return { icon:'🤝', label: e.label || 'Comportamiento', detail };
+      },
     };
     rawEvents.forEach(e => {
       const fn = typeMap[e.type];
-      const base = fn ? fn(e) : { icon:'📌', label: e.type, detail: '' };
+      const base = fn ? fn(e) : { icon:'📌', label: e.label || e.type, detail: '' };
       items.push({ ...base, timeStr: fmtTime(e.created_at || e.start_time) });
     });
   } else {
-    const moodMap = { feliz:'😊', bien:'😊', normal:'😐', triste:'😢', inquieto:'😫', enojado:'😡' };
+    const moodMap = { feliz:'😊', bien:'😊', normal:'😐', triste:'😢', inquieto:'😫', enojado:'😡', muy_feliz:'😁', cansado:'😴', enfermo:'🤒' };
     if (log.mood) items.push({ icon: moodMap[log.mood.toLowerCase()]||'😊', label:'Ánimo', detail: log.mood, timeStr: fmtTime(log.created_at) });
-    const fl = { todo:'Comio todo ✅', poco:'Comio poco ⚠️', nada:'No comio ❌' };
-    if (log.food?.breakfast) items.push({ icon:'🍳', label:'Desayuno', detail: fl[log.food.breakfast]||log.food.breakfast, timeStr:'' });
-    if (log.food?.lunch)     items.push({ icon:'\uD83C\uDF7D', label:'Almuerzo', detail: fl[log.food.lunch]||log.food.lunch,         timeStr:'' });
-    if (log.food?.snack)     items.push({ icon:'🥪', label:'Merienda', detail: fl[log.food.snack]||log.food.snack,         timeStr:'' });
-    if (log.nap === 'si')    items.push({ icon:'💤', label:'Siesta', detail:'Durmi\u00f3 su siesta', timeStr:'' });
-    else if (log.nap === 'no') items.push({ icon:'☀️', label:'Sin siesta', detail:'No durmi\u00f3 siesta', timeStr:'' });
-    if (log.notes) items.push({ icon:'📝', label:'Observaci\u00f3n', detail: log.notes, timeStr: fmtTime(log.created_at) });
+
+    // Parsear food JSON estructurado
+    if (log.food) {
+      let foodObj = {};
+      try { foodObj = JSON.parse(log.food); } catch { foodObj = { breakfast: log.food }; }
+      const fl = { todo:'Comió todo ✅', poco:'Comió poco ⚠️', nada:'No comió ❌', ayuda:'Necesitó ayuda 🆘' };
+      if (foodObj.breakfast) items.push({ icon:'🍞', label:'Desayuno', detail: fl[foodObj.breakfast]||foodObj.breakfast, timeStr:'' });
+      if (foodObj.lunch)     items.push({ icon:'🥗', label:'Almuerzo', detail: fl[foodObj.lunch]||foodObj.lunch,         timeStr:'' });
+      if (foodObj.snack)     items.push({ icon:'🍎', label:'Merienda', detail: fl[foodObj.snack]||foodObj.snack,         timeStr:'' });
+    }
+    if (log.nap === 'si')    items.push({ icon:'💤', label:'Siesta', detail:'Durmió su siesta', timeStr:'' });
+    else if (log.nap === 'no') items.push({ icon:'☀️', label:'Sin siesta', detail:'No durmió siesta', timeStr:'' });
+    else if (log.nap === 'poco') items.push({ icon:'⏰', label:'Siesta', detail:'Durmió poco', timeStr:'' });
+    else if (log.nap === 'excelente') items.push({ icon:'⭐', label:'Siesta', detail:'Durmió excelente', timeStr:'' });
+    if (log.notes) items.push({ icon:'📝', label:'Observación', detail: log.notes, timeStr: fmtTime(log.created_at) });
   }
 
   if (!items.length) {

@@ -1600,11 +1600,56 @@
 
     /* WAVES */
     .wave-top, .wave-bot { line-height: 0; position: relative; overflow: hidden; }
+
+    /* Floating Social Buttons */
+    .floating-social {
+      position: fixed;
+      right: 20px;
+      bottom: 20px;
+      z-index: 9998;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .floating-btn {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      color: white;
+      text-decoration: none;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+      transition: all 0.3s cubic-bezier(.34,1.56,.64,1);
+      cursor: pointer;
+    }
+    .floating-btn:hover {
+      transform: translateY(-4px) scale(1.1);
+      box-shadow: 0 12px 32px rgba(0,0,0,0.35);
+    }
+    .floating-whatsapp {
+      background: linear-gradient(135deg, #25D366, #128C7E);
+    }
+    .floating-instagram {
+      background: linear-gradient(135deg, #F77737, #833AB4, #E1306C);
+    }
   </style>
 </head>
 <body>
   <!-- Skip to content (accessibility) -->
   <a href="#main-content" class="sr-only" style="position:absolute;left:-9999px;top:4px;z-index:9999;background:#28B54D;color:white;padding:8px 16px;border-radius:8px;font-weight:900;font-size:.85rem;text-decoration:none" onfocus="this.style.left='4px'" onblur="this.style.left='-9999px'">Saltar al contenido</a>
+
+  <!-- Floating Social Buttons -->
+  <div class="floating-social">
+    <a href="https://wa.me/1234567890" target="_blank" rel="noopener" class="floating-btn floating-whatsapp" aria-label="Contactar por WhatsApp">
+      <i class="bi bi-whatsapp"></i>
+    </a>
+    <a href="https://instagram.com/tucolegio" target="_blank" rel="noopener" class="floating-btn floating-instagram" aria-label="Seguir en Instagram">
+      <i class="bi bi-instagram"></i>
+    </a>
+  </div>
 
   <!-- NAVBAR -->
   <nav class="navbar" id="navbar" role="navigation" aria-label="Navegacin principal">
@@ -1854,7 +1899,9 @@
       </div>
       <div class="programs-grid">
         <div class="program-card" data-aos="flip-left" data-aos-delay="0">
-          <div class="program-top pt-1"><div class="program-icon"><i class="bi bi-baby"></i></div></div>
+          <div class="program-top pt-1" style="padding:0;min-height:160px;overflow:hidden;">
+            <img src="img/1.jpg" alt="Estancia Infantil" style="width:100%;height:160px;object-fit:cover;">
+          </div>
           <div class="program-body">
             <span class="program-age">0 - 2 años</span>
             <h3>Estancia Infantil</h3>
@@ -1867,7 +1914,9 @@
           </div>
         </div>
         <div class="program-card" data-aos="flip-left" data-aos-delay="100">
-          <div class="program-top pt-2"><div class="program-icon"><i class="bi bi-people-fill"></i></div></div>
+          <div class="program-top pt-2" style="padding:0;min-height:160px;overflow:hidden;">
+            <img src="img/7.jpg" alt="Maternal" style="width:100%;height:160px;object-fit:cover;">
+          </div>
           <div class="program-body">
             <span class="program-age">2 - 3 años</span>
             <h3>Maternal</h3>
@@ -1880,7 +1929,9 @@
           </div>
         </div>
         <div class="program-card" data-aos="flip-left" data-aos-delay="200">
-          <div class="program-top pt-3"><div class="program-icon"><i class="bi bi-book-half"></i></div></div>
+          <div class="program-top pt-3" style="padding:0;min-height:160px;overflow:hidden;">
+            <img src="img/6.jpg" alt="Inicial" style="width:100%;height:160px;object-fit:cover;">
+          </div>
           <div class="program-body">
             <span class="program-age">3 - 5 años</span>
             <h3>Inicial</h3>
@@ -1893,7 +1944,9 @@
           </div>
         </div>
         <div class="program-card" data-aos="flip-left" data-aos-delay="300">
-          <div class="program-top pt-4"><div class="program-icon"><i class="bi bi-star-fill"></i></div></div>
+          <div class="program-top pt-4" style="padding:0;min-height:160px;overflow:hidden;">
+            <img src="img/2.jpg" alt="Primaria" style="width:100%;height:160px;object-fit:cover;">
+          </div>
           <div class="program-body">
             <span class="program-age">6 - 12 años</span>
             <h3>Primaria</h3>
@@ -1975,30 +2028,30 @@
       </div>
       <div class="plans-grid">
         <div class="plan-card" data-aos="fade-up" data-aos-delay="0">
-          <div class="plan-badge">? Más popular</div>
-          <div class="plan-icon">💛</div>
+          <div class="plan-badge">⭐ Más popular</div>
+          <div class="plan-icon"><i class="bi bi-calendar-year-fill"></i></div>
           <h3>Plan A</h3>
           <p class="plan-type">Pago anual</p>
           <ul class="plan-benefits">
-            <li><i class="bi bi-check-circle-fill"></i> Un solo pago al iniciar el años</li>
+            <li><i class="bi bi-check-circle-fill"></i> Un solo pago al iniciar el año</li>
             <li><i class="bi bi-check-circle-fill"></i> 5% de descuento especial</li>
             <li><i class="bi bi-check-circle-fill"></i> Mayor comodidad para familias</li>
           </ul>
           <a href="#tariffs" class="btn btn-sm btn-orange">Ver tarifas</a>
         </div>
         <div class="plan-card" data-aos="fade-up" data-aos-delay="100">
-          <div class="plan-icon">💛</div>
+          <div class="plan-icon"><i class="bi bi-calendar-half"></i></div>
           <h3>Plan B</h3>
           <p class="plan-type">Pago semestral</p>
           <ul class="plan-benefits">
             <li><i class="bi bi-check-circle-fill"></i> Dos pagos anuales</li>
             <li><i class="bi bi-check-circle-fill"></i> Agosto y enero</li>
-            <li><i class="bi bi-check-circle-fill"></i> Balance entre comodidad y economa</li>
+            <li><i class="bi bi-check-circle-fill"></i> Balance entre comodidad y economía</li>
           </ul>
           <a href="#tariffs" class="btn btn-sm btn-blue">Ver tarifas</a>
         </div>
         <div class="plan-card" data-aos="fade-up" data-aos-delay="200">
-          <div class="plan-icon">🌟</div>
+          <div class="plan-icon"><i class="bi bi-calendar-month-fill"></i></div>
           <h3>Plan C</h3>
           <p class="plan-type">Pago mensual</p>
           <ul class="plan-benefits">

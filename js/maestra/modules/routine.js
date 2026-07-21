@@ -11,6 +11,107 @@ import { MaestraApi } from '../api.js';
 let _logsMap     = {};
 let _sleepMap    = {};
 let _lastEvent   = {};
+let _autoEventsProcessed = {}; // { 'breakfast:2026-07-20': true } — evita re-procesar
+
+// ── Configuración de eventos automáticos recurrentes (Punto 26) ──────────────
+const AUTO_EVENTS_CONFIG = [
+  { eventId:'breakfast',    hour:8,  minute:0,  label:'Desayuno automático',        enabled:true },
+  { eventId:'handwash',     hour:8,  minute:15, label:'Lavado de manos automático', enabled:true },
+  { eventId:'lunch',        hour:12, minute:0,  label:'Almuerzo automático',        enabled:true },
+  { eventId:'snack',        hour:15, minute:0,  label:'Merienda automática',        enabled:true },
+  { eventId:'toothbrush',   hour:15, minute:30, label:'Cepillado dental automático', enabled:true },
+  { eventId:'welcome_song', hour:8,  minute:0,  label:'Canción de bienvenida',      enabled:false },
+  { eventId:'prayer',       hour:12, minute:5,  label:'Oración automática',          enabled:false }
+];
+
+function _isWorkDay() {
+  const day = new Date().getDay();
+  return day >= 1 && day <= 5; // Lunes a Viernes
+}
+
+function _autoEventKey(eventId) {
+  return `${eventId}:${_today()}`;
+}
+
+function _shouldAutoRun(evConfig) {
+  if (!evConfig.enabled) return false;
+  if (!_isWorkDay()) return false;
+  if (_autoEventsProcessed[_autoEventKey(evConfig.eventId)]) return false;
+
+  const now = new Date();
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  const targetMinutes = evConfig.hour * 60 + evConfig.minute;
+  // Ejecutar si la hora actual está entre la hora programada y +30 min
+  return currentMinutes >= targetMinutes && currentMinutes < targetMinutes + 30;
+}
+
+async function _runAutoEvents(classroom, students) {
+  const today = _today();
+  const serverTime = await _serverNow();
+  let autoCount = 0;
+
+  for (const evConfig of AUTO_EVENTS_CONFIG) {
+    if (!_shouldAutoRun(evConfig)) continue;
+
+    const ev = GROUP_EVENTS.find(e => e.id === evConfig.eventId);
+    if (!ev) continue;
+
+    for (const s of students) {
+      // No auto-registrar si ya tiene el evento
+      const existingLog = _logsMap[s.id];
+      if (ev.field === 'food') {
+        if (existingLog?.food) {
+          try {
+            const foodObj = JSON.parse(existingLog.food);
+            if (foodObj[ev.foodKey]) continue;
+          } catch {}
+        }
+      } else if (ev.field === '_group') {
+        if ((existingLog?.infant_data || []).some(e => e.type === ev.value)) continue;
+      } else if (ev.field === '_sleep') {
+        if ((existingLog?.infant_data || []).some(e => e.type === 'sleep')) continue;
+      }
+
+      const payload = {
+        student_id: s.id,
+        classroom_id: classroom.id,
+        date: today,
+        created_at: serverTime.toISOString()
+      };
+
+      if (ev.field === 'food') {
+        let currentFood = {};
+        if (existingLog?.food) {
+          try { currentFood = JSON.parse(existingLog.food); } catch {}
+        }
+        currentFood[ev.foodKey] = ev.value;
+        payload.food = JSON.stringify(currentFood);
+      } else if (ev.field === '_group') {
+        payload.infant_event = { type: ev.value, label: ev.label, auto: true };
+      } else if (ev.field === '_sleep') {
+        payload.infant_event = {
+          type: 'sleep', label: ev.label, auto: true,
+          start_time: serverTime.toISOString(),
+          end_time: null
+        };
+      }
+
+      await MaestraApi.upsertDailyLog(payload);
+      autoCount++;
+    }
+
+    _autoEventsProcessed[_autoEventKey(evConfig.eventId)] = true;
+  }
+
+  return autoCount;
+}
+
+function _getAutoEventsStatus() {
+  return AUTO_EVENTS_CONFIG.map(ev => ({
+    ...ev,
+    processed: !!_autoEventsProcessed[_autoEventKey(ev.eventId)]
+  }));
+}
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 function _today() { return AppState.today(); }
@@ -45,9 +146,9 @@ function _calcProgress(log) {
 
 // ── Catálogo de eventos GRUPALES ─────────────────────────────────────────────
 const GROUP_EVENTS = [
-  { id:'breakfast',   icon:'🍞', label:'Desayuno',      color:'#FF8A00', schedule:'08:00', field:'food', value:'todo' },
-  { id:'lunch',       icon:'🥗', label:'Almuerzo',      color:'#28B54D', schedule:'12:00', field:'food', value:'todo' },
-  { id:'snack',       icon:'🍎', label:'Merienda',      color:'#28B54D', schedule:'15:00', field:'food', value:'todo' },
+  { id:'breakfast',   icon:'🍞', label:'Desayuno',      color:'#FF8A00', schedule:'08:00', field:'food', value:'todo', foodKey:'breakfast' },
+  { id:'lunch',       icon:'🥗', label:'Almuerzo',      color:'#28B54D', schedule:'12:00', field:'food', value:'todo', foodKey:'lunch' },
+  { id:'snack',       icon:'🍎', label:'Merienda',      color:'#28B54D', schedule:'15:00', field:'food', value:'todo', foodKey:'snack' },
   { id:'sleep_start', icon:'😴', label:'Iniciar Siesta', color:'#8B5CF6', schedule:'10:30', field:'_sleep', value:'start' },
   { id:'sleep_end',   icon:'😊', label:'Terminar Siesta', color:'#FFD43B', schedule:'12:00', field:'_sleep', value:'end' },
   { id:'handwash',    icon:'🧼', label:'Lavado de Manos', color:'#0B63C7', field:'_group', value:'handwash' },
@@ -57,6 +158,25 @@ const GROUP_EVENTS = [
   { id:'welcome_song',icon:'👋', label:'Canción de Bienvenida', color:'#F59E0B', field:'_group', value:'welcome_song' },
   { id:'prayer',      icon:'🙏', label:'Oración / Reflexión', color:'#6366F1', field:'_group', value:'prayer' }
 ];
+
+// ── Mapa de labels legibles para eventos en timeline ─────────────────────────
+const EVENT_LABELS = {
+  handwash: 'Lavado de manos',
+  toothbrush: 'Cepillado dental',
+  activity: 'Actividad educativa',
+  playground: 'Salida al patio',
+  welcome_song: 'Canción de bienvenida',
+  prayer: 'Oración / reflexión',
+  sleep: 'Siesta',
+  milk: 'Biberón',
+  diaper: 'Cambio de pañal',
+  bath: 'Baño',
+  temp: 'Temperatura',
+  med: 'Medicamento',
+  note: 'Nota',
+  incident: 'Incidente',
+  food: 'Alimentación'
+};
 
 // ── Catálogo de eventos INDIVIDUALES ─────────────────────────────────────────
 const INDIV_EVENTS = [
@@ -76,7 +196,14 @@ const INDIV_EVENTS = [
 // ── Función para ver si un evento grupal está hecho para un estudiante ───────
 function _groupEventDone(log, ev) {
   if (!log || !_isWithin12h(log.created_at)) return false;
-  if (ev.field === 'food')    return !!log.food;
+  if (ev.field === 'food') {
+    // Soportar tanto string legacy como JSON estructurado
+    if (!log.food) return false;
+    try {
+      const foodObj = JSON.parse(log.food);
+      return !!foodObj[ev.foodKey];
+    } catch { return !!log.food; }
+  }
   if (ev.field === 'mood')    return !!log.mood;
   if (ev.field === 'nap')     return !!log.nap;
   if (ev.field === '_sleep')  return (log.infant_data||[]).some(e=>e.type==='sleep');
@@ -103,7 +230,17 @@ function _studentCard(s, log) {
   else if (prog>=80) borderClass = 'border-green';
 
   const moodEmoji = {feliz:'😊',normal:'😐',triste:'😢',enojado:'😡',muy_feliz:'😁',cansado:'😴',enfermo:'🤒'}[log?.mood] || '';
-  const foodEmoji = {todo:'✅',poco:'⚠️',nada:'❌'}[log?.food] || '';
+  let foodEmoji = '';
+  if (log?.food) {
+    try {
+      const foodObj = JSON.parse(log.food);
+      const meals = [];
+      if (foodObj.breakfast) meals.push('🍞');
+      if (foodObj.lunch) meals.push('🥗');
+      if (foodObj.snack) meals.push('🍎');
+      foodEmoji = meals.join('') || '🍽️';
+    } catch { foodEmoji = log.food === 'todo' ? '✅' : log.food === 'poco' ? '⚠️' : '❌'; }
+  }
   const napEmoji  = {si:'💤',no:'—'}[log?.nap] || '';
 
   return `
@@ -123,7 +260,7 @@ function _studentCard(s, log) {
 }
 
 // ── Build the main UI ────────────────────────────────────────────────────────
-function _buildUI(students, suggested, openSleeps, complete, missingLunch, todayLabel, timeLabel) {
+function _buildUI(students, suggested, openSleeps, complete, missingLunch, todayLabel, timeLabel, autoEventsStatus) {
   const totalStu = students.length;
   const progressPct = totalStu > 0 ? Math.round((complete/totalStu)*100) : 0;
   
@@ -232,6 +369,24 @@ function _buildUI(students, suggested, openSleeps, complete, missingLunch, today
         </div>
       `:''}
 
+      <!-- EVENTOS AUTOMÁTICOS -->
+      ${autoEventsStatus && autoEventsStatus.filter(e=>e.enabled).length>0?`
+        <div class="rounded-2xl px-4 py-3" style="background:linear-gradient(135deg,#eff6ff,#f0f9ff);border:2px solid #bfdbfe">
+          <div class="flex items-center gap-2 mb-2">
+            <span class="text-lg">⚡</span>
+            <span class="text-[10px] font-black text-blue-600 uppercase tracking-widest">Eventos Automáticos</span>
+          </div>
+          <div class="flex flex-wrap gap-1.5">
+            ${autoEventsStatus.filter(e=>e.enabled).map(ev=>`
+              <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[9px] font-bold ${ev.processed?'bg-green-100 text-green-700':'bg-blue-100 text-blue-600'}">
+                ${GROUP_EVENTS.find(g=>g.id===ev.eventId)?.icon||'⚡'} ${ev.label.split(' ')[0]}
+                ${ev.processed?'✓':'⏰'}
+              </span>
+            `).join('')}
+          </div>
+        </div>
+      `:''}
+
       <!-- ACCIONES GRUPALES -->
       <div>
         <div class="flex items-center justify-between mb-3">
@@ -309,6 +464,19 @@ export async function initRoutine() {
     if (ev) _sleepMap[log.student_id] = ev;
   });
 
+  // Ejecutar eventos automáticos recurrentes
+  const autoCount = await _runAutoEvents(classroom, students);
+  if (autoCount > 0) {
+    // Recargar logs después de auto-eventos
+    const freshLogs = await MaestraApi.getDailyRoutine(classroom.id);
+    _logsMap = {};
+    (freshLogs||[]).forEach(log => _logsMap[log.student_id] = log);
+    (freshLogs||[]).forEach(log => {
+      const ev = (log.infant_data||[]).filter(e => e.type==='sleep' && !e.end_time).pop();
+      if (ev) _sleepMap[log.student_id] = ev;
+    });
+  }
+
   // Smart schedule: suggested event
   const SMART_SCHEDULE = [
     { hour:7,  label:'Desayuno',      id:'breakfast',     icon:'🍞' },
@@ -327,7 +495,8 @@ export async function initRoutine() {
   const missingLunch = hour >= 13 ? students.filter(s => !_logsMap[s.id]?.food).length : 0;
 
   // Build UI
-  container.innerHTML = _buildUI(students, suggested, openSleeps, complete, missingLunch, todayLabel, timeLabel);
+  const autoEventsStatus = _getAutoEventsStatus();
+  container.innerHTML = _buildUI(students, suggested, openSleeps, complete, missingLunch, todayLabel, timeLabel, autoEventsStatus);
 
   if (window.lucide) lucide.createIcons();
 
@@ -369,15 +538,23 @@ export async function routineQuickGroup(eventId) {
       };
 
       if (ev.field === 'food') {
-        payload.food = ev.value;
+        // Almacenar como JSON estructurado: { breakfast: 'todo' } / { lunch: 'poco' } / { snack: 'nada' }
+        const existingLog = _logsMap[s.id];
+        let currentFood = {};
+        if (existingLog?.food) {
+          try { currentFood = JSON.parse(existingLog.food); } catch { currentFood = {}; }
+        }
+        currentFood[ev.foodKey] = ev.value;
+        payload.food = JSON.stringify(currentFood);
       } else if (ev.field === '_sleep') {
         payload.infant_event = {
           type: 'sleep',
+          label: ev.value === 'end' ? 'Terminar siesta' : 'Iniciar siesta',
           start_time: serverTime.toISOString(),
           end_time: ev.value === 'end' ? serverTime.toISOString() : null
         };
       } else if (ev.field === '_group') {
-        payload.infant_event = { type: ev.value };
+        payload.infant_event = { type: ev.value, label: ev.label };
       }
 
       await MaestraApi.upsertDailyLog(payload);
@@ -398,6 +575,30 @@ export function openStudentRoutine(studentId) {
 
   const log = _logsMap[studentId];
   const sleeping = !!_sleepMap[studentId];
+
+  // Parsear food actual del estudiante
+  let currentFood = {};
+  if (log?.food) {
+    try { currentFood = JSON.parse(log.food); } catch { currentFood = {}; }
+  }
+  const hour = new Date().getHours();
+  const activeMeal = hour < 10 ? 'breakfast' : hour < 14 ? 'lunch' : 'snack';
+  const mealLabels = { breakfast: '🍞 Desayuno', lunch: '🥗 Almuerzo', snack: '🍎 Merienda' };
+  const foodOptions = [
+    { val: 'todo', icon: '✅', label: 'Comió Todo' },
+    { val: 'poco', icon: '⚠️', label: 'Comió Poco' },
+    { val: 'nada', icon: '❌', label: 'No Quiso' },
+    { val: 'ayuda', icon: '🆘', label: 'Necesitó Ayuda' }
+  ];
+
+  // Parsear comportamiento actual
+  let currentBehavior = {};
+  if (log?.infant_data) {
+    const behaviorEvts = log.infant_data.filter(e => e.type === 'behavior');
+    if (behaviorEvts.length > 0) {
+      currentBehavior = behaviorEvts[behaviorEvts.length - 1].data || {};
+    }
+  }
 
   const modalContent = `
     <div class="bg-white overflow-hidden">
@@ -423,21 +624,45 @@ export function openStudentRoutine(studentId) {
         <div>
           <h4 class="text-sm font-black text-slate-800 mb-3">😊 Estado Emocional</h4>
           <div class="grid grid-cols-7 gap-2">
-            ${['😊','😁','😐','😢','😡','😴','🤒'].map(emoji=>`
-              <button onclick="App.setStudentMood('${studentId}','${emoji}')"
-                class="p-3 rounded-xl border-2 border-slate-100 bg-white hover:border-blue-300 text-2xl">${emoji}</button>
+            ${[
+              {emoji:'😊',val:'feliz',lbl:'Feliz'},
+              {emoji:'😁',val:'muy_feliz',lbl:'Muy Feliz'},
+              {emoji:'😐',val:'normal',lbl:'Tranquilo'},
+              {emoji:'😢',val:'triste',lbl:'Triste'},
+              {emoji:'😡',val:'enojado',lbl:'Molesto'},
+              {emoji:'😴',val:'cansado',lbl:'Cansado'},
+              {emoji:'🤒',val:'enfermo',lbl:'Enfermo'}
+            ].map(m=>`
+              <button onclick="App.setStudentMood('${studentId}','${m.emoji}')"
+                class="p-3 rounded-xl border-2 ${log?.mood===m.val?'border-blue-400 bg-blue-50':'border-slate-100 bg-white'} hover:border-blue-300 text-2xl" title="${m.lbl}">${m.emoji}</button>
             `).join('')}
           </div>
         </div>
 
-        <!-- Alimentación -->
+        <!-- Alimentación por Comida -->
         <div>
-          <h4 class="text-sm font-black text-slate-800 mb-3">🍽️ Aceptación de Alimentos</h4>
-          <div class="grid grid-cols-4 gap-2">
-            ${['✅ Comió Todo','⚠️ Comió Poco','❌ No Quiso','🆘 Necesitó Ayuda'].map((label, idx)=>`
-              <button onclick="App.setStudentFood('${studentId}','${['todo','poco','nada','ayuda'][idx]}')"
-                class="p-3 rounded-xl border-2 border-slate-100 bg-white hover:border-blue-300 text-xs font-black text-center">${label}</button>
-            `).join('')}
+          <h4 class="text-sm font-black text-slate-800 mb-3">🍽️ Alimentación</h4>
+          <div class="space-y-3">
+            ${['breakfast','lunch','snack'].map(mealKey => {
+              const currentVal = currentFood[mealKey] || '';
+              return `
+                <div class="rounded-xl border border-slate-100 p-3">
+                  <div class="flex items-center justify-between mb-2">
+                    <span class="text-xs font-black text-slate-600">${mealLabels[mealKey]}</span>
+                    ${currentVal ? `<span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${currentVal==='todo'?'bg-green-100 text-green-700':currentVal==='poco'?'bg-yellow-100 text-yellow-700':'bg-red-100 text-red-700'}">${foodOptions.find(f=>f.val===currentVal)?.label||currentVal}</span>` : ''}
+                  </div>
+                  <div class="grid grid-cols-4 gap-1.5">
+                    ${foodOptions.map(fo=>`
+                      <button onclick="App.setStudentFood('${studentId}','${fo.val}','${mealKey}')"
+                        class="p-2 rounded-lg border-2 ${currentVal===fo.val?'border-blue-400 bg-blue-50':'border-slate-100 bg-white'} hover:border-blue-300 text-center">
+                        <span class="text-lg">${fo.icon}</span>
+                        <span class="text-[8px] font-black text-slate-500 block">${fo.label}</span>
+                      </button>
+                    `).join('')}
+                  </div>
+                </div>
+              `;
+            }).join('')}
           </div>
         </div>
 
@@ -445,9 +670,17 @@ export function openStudentRoutine(studentId) {
         <div>
           <h4 class="text-sm font-black text-slate-800 mb-3">😴 Ciclo de Sueño</h4>
           <div class="grid grid-cols-4 gap-2">
-            ${['Dormido','No dormido','Se despertó varias veces','Durmió excelente'].map((label, idx)=>`
-              <button onclick="App.setStudentNap('${studentId}','${['si','no','poco','excelente'][idx]}')"
-                class="p-3 rounded-xl border-2 border-slate-100 bg-white hover:border-blue-300 text-xs font-black text-center">${label}</button>
+            ${[
+              {val:'si',label:'Dormido',icon:'💤'},
+              {val:'no',label:'No durmió',icon:'☀️'},
+              {val:'poco',label:'Se despertó varias veces',icon:'⏰'},
+              {val:'excelente',label:'Durmió excelente',icon:'⭐'}
+            ].map(n=>`
+              <button onclick="App.setStudentNap('${studentId}','${n.val}')"
+                class="p-3 rounded-xl border-2 ${log?.nap===n.val?'border-blue-400 bg-blue-50':'border-slate-100 bg-white'} hover:border-blue-300 text-center">
+                <span class="text-lg">${n.icon}</span>
+                <span class="text-[9px] font-black text-slate-600 block">${n.label}</span>
+              </button>
             `).join('')}
           </div>
         </div>
@@ -456,13 +689,18 @@ export function openStudentRoutine(studentId) {
         <div>
           <h4 class="text-sm font-black text-slate-800 mb-3">🧼 Higiene y Esfínteres</h4>
           <div class="grid grid-cols-5 gap-2">
-            ${INDIV_EVENTS.filter(e=>['poop','pee','toilet','diaper','handwash'].includes(e.id)).map(ev=>`
+            ${INDIV_EVENTS.filter(e=>['poop','pee','toilet','diaper'].includes(e.id)).map(ev=>`
               <button onclick="App.addStudentEvent('${studentId}','${ev.id}')"
                 class="p-3 rounded-xl border-2 border-slate-100 bg-white hover:border-blue-300 flex flex-col items-center gap-1">
                 <span class="text-2xl">${ev.icon}</span>
                 <span class="text-[9px] font-black text-slate-600">${ev.label}</span>
               </button>
             `).join('')}
+            <button onclick="App.addStudentEvent('${studentId}','handwash')"
+              class="p-3 rounded-xl border-2 border-slate-100 bg-white hover:border-blue-300 flex flex-col items-center gap-1">
+              <span class="text-2xl">🧼</span>
+              <span class="text-[9px] font-black text-slate-600">Lavado Manos</span>
+            </button>
           </div>
         </div>
 
@@ -475,6 +713,86 @@ export function openStudentRoutine(studentId) {
                 class="p-3 rounded-xl border-2 border-slate-100 bg-white hover:border-blue-300 flex flex-col items-center gap-1">
                 <span class="text-2xl">${ev.icon}</span>
                 <span class="text-[9px] font-black text-slate-600">${ev.label}</span>
+              </button>
+            `).join('')}
+          </div>
+        </div>
+
+        <!-- Conducta Social -->
+        <div>
+          <h4 class="text-sm font-black text-slate-800 mb-3">🤝 Conducta Social</h4>
+          <div class="grid grid-cols-2 gap-2">
+            ${[
+              {val:'shared',icon:'🤝',label:'Compartió con compañeros'},
+              {val:'alone',icon:'🧍',label:'Jugó solo'},
+              {val:'group',icon:'👥',label:'Participó en grupo'},
+              {val:'emotional_support',icon:'💛',label:'Necesitó apoyo emocional'}
+            ].map(b=>`
+              <button onclick="App.setStudentBehavior('${studentId}','social','${b.val}')"
+                class="p-3 rounded-xl border-2 ${currentBehavior.social===b.val?'border-blue-400 bg-blue-50':'border-slate-100 bg-white'} hover:border-blue-300 flex items-center gap-2 text-left">
+                <span class="text-xl">${b.icon}</span>
+                <span class="text-[10px] font-black text-slate-600">${b.label}</span>
+              </button>
+            `).join('')}
+          </div>
+        </div>
+
+        <!-- Conducta en Clase -->
+        <div>
+          <h4 class="text-sm font-black text-slate-800 mb-3">📚 Conducta en Clase</h4>
+          <div class="grid grid-cols-2 gap-2">
+            ${[
+              {val:'attention',icon:'👂',label:'Prestó atención'},
+              {val:'participation',icon:'🙋',label:'Participó activamente'},
+              {val:'curiosity',icon:'🔍',label:'Mostró curiosidad'},
+              {val:'completed',icon:'✅',label:'Terminó actividades'},
+              {val:'needed_help',icon:'🙋‍♀️',label:'Necesitó ayuda constante'}
+            ].map(b=>`
+              <button onclick="App.setStudentBehavior('${studentId}','classroom','${b.val}')"
+                class="p-3 rounded-xl border-2 ${currentBehavior.classroom===b.val?'border-blue-400 bg-blue-50':'border-slate-100 bg-white'} hover:border-blue-300 flex items-center gap-2 text-left">
+                <span class="text-xl">${b.icon}</span>
+                <span class="text-[10px] font-black text-slate-600">${b.label}</span>
+              </button>
+            `).join('')}
+          </div>
+        </div>
+
+        <!-- Regulación Emocional -->
+        <div>
+          <h4 class="text-sm font-black text-slate-800 mb-3">🧠 Regulación Emocional</h4>
+          <div class="grid grid-cols-2 gap-2">
+            ${[
+              {val:'controlled',icon:'😌',label:'Controló emociones'},
+              {val:'frustrated',icon:'😤',label:'Se frustró fácilmente'},
+              {val:'crying',icon:'😭',label:'Lloró por separación'},
+              {val:'anxious',icon:'😰',label:'Mostró ansiedad'},
+              {val:'calmed',icon:'🧘',label:'Se calmó rápidamente'}
+            ].map(b=>`
+              <button onclick="App.setStudentBehavior('${studentId}','emotional','${b.val}')"
+                class="p-3 rounded-xl border-2 ${currentBehavior.emotional===b.val?'border-blue-400 bg-blue-50':'border-slate-100 bg-white'} hover:border-blue-300 flex items-center gap-2 text-left">
+                <span class="text-xl">${b.icon}</span>
+                <span class="text-[10px] font-black text-slate-600">${b.label}</span>
+              </button>
+            `).join('')}
+          </div>
+        </div>
+
+        <!-- Desarrollo Montessori -->
+        <div>
+          <h4 class="text-sm font-black text-slate-800 mb-3">🧩 Desarrollo Montessori</h4>
+          <div class="grid grid-cols-3 gap-2">
+            ${[
+              {val:'manipulation',icon:'🤲',label:'Manipulación materiales'},
+              {val:'fine_motor',icon:'✋',label:'Motricidad fina'},
+              {val:'gross_motor',icon:'🏃',label:'Motricidad gruesa'},
+              {val:'language',icon:'💬',label:'Lenguaje'},
+              {val:'concentration',icon:'🎯',label:'Concentración'},
+              {val:'autonomy',icon:'💪',label:'Autonomía'}
+            ].map(b=>`
+              <button onclick="App.setStudentBehavior('${studentId}','montessori','${b.val}')"
+                class="p-3 rounded-xl border-2 ${currentBehavior.montessori===b.val?'border-blue-400 bg-blue-50':'border-slate-100 bg-white'} hover:border-blue-300 flex flex-col items-center gap-1">
+                <span class="text-xl">${b.icon}</span>
+                <span class="text-[9px] font-black text-slate-600">${b.label}</span>
               </button>
             `).join('')}
           </div>
@@ -495,17 +813,22 @@ export function openStudentRoutine(studentId) {
         <div>
           <h4 class="text-sm font-black text-slate-800 mb-3">📅 Historial del Día</h4>
           <div class="space-y-2">
-            ${((log?.infant_data || [])).map(evt=>`
-              <div class="flex items-center gap-3 p-3 rounded-xl border border-slate-100 bg-slate-50">
-                <span class="text-xl">
-                  ${evt.type==='sleep'?'😴':evt.type==='milk'?'🍼':evt.type==='diaper'?'🧻':evt.type==='bath'?'🚽':evt.type==='temp'?'🌡️':evt.type==='med'?'💊':'📝'}
-                </span>
-                <div class="flex-1">
-                  <div class="text-sm font-black text-slate-800">${safeEscapeHTML(evt.type)}</div>
-                  <div class="text-xs text-slate-400">${_fmtTime(evt.created_at)}</div>
+            ${((log?.infant_data || [])).map(evt=>{
+              const label = evt.label || EVENT_LABELS[evt.type] || evt.type;
+              const icon = evt.type==='sleep'?'😴':evt.type==='milk'?'🍼':evt.type==='diaper'?(evt.subtype==='wet'?'💧':'💩'):evt.type==='bath'?'🚽':evt.type==='temp'?'🌡️':evt.type==='med'?'💊':evt.type==='behavior'?'🤝':evt.type==='handwash'?'🧼':evt.type==='toothbrush'?'🪥':'📝';
+              const detail = evt.type==='sleep'?(evt.end_time?'Durmió hasta '+_fmtTime(evt.end_time):'En siesta...'):evt.type==='milk'?(evt.oz?evt.oz+' oz':''):evt.type==='temp'?(evt.value?evt.value+'°C':''):'';
+              const autoTag = evt.auto ? '<span class="text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-600 ml-1">AUTO</span>' : '';
+              return `
+                <div class="flex items-center gap-3 p-3 rounded-xl border border-slate-100 bg-slate-50">
+                  <span class="text-xl">${icon}</span>
+                  <div class="flex-1">
+                    <div class="text-sm font-black text-slate-800">${safeEscapeHTML(label)}${autoTag}</div>
+                    ${detail?`<div class="text-xs text-slate-400">${safeEscapeHTML(detail)}</div>`:''}
+                  </div>
+                  <div class="text-[10px] font-bold text-slate-400">${_fmtTime(evt.created_at)}</div>
                 </div>
-              </div>
-            `).join('') || '<p class="text-center text-slate-400 py-4">No hay registros aún</p>'}
+              `;
+            }).join('') || '<p class="text-center text-slate-400 py-4">No hay registros aún</p>'}
           </div>
         </div>
       </div>
@@ -537,16 +860,31 @@ export async function setStudentMood(studentId, mood) {
   }
 }
 
-export async function setStudentFood(studentId, food) {
+export async function setStudentFood(studentId, food, mealKey) {
   const classroom = AppState.get('classroom');
   const today = _today();
 
   try {
+    const existingLog = _logsMap[studentId];
+    let currentFood = {};
+    if (existingLog?.food) {
+      try { currentFood = JSON.parse(existingLog.food); } catch { currentFood = {}; }
+    }
+    // Si no se especifica mealKey, usar el meal activo basado en la hora
+    if (mealKey) {
+      currentFood[mealKey] = food;
+    } else {
+      const hour = new Date().getHours();
+      if (hour < 10) currentFood.breakfast = food;
+      else if (hour < 14) currentFood.lunch = food;
+      else currentFood.snack = food;
+    }
+
     await MaestraApi.upsertDailyLog({
       student_id: studentId,
       classroom_id: classroom.id,
       date: today,
-      food: food
+      food: JSON.stringify(currentFood)
     });
     safeToast('Alimentación guardada', 'success');
     await initRoutine();
@@ -573,10 +911,34 @@ export async function setStudentNap(studentId, nap) {
   }
 }
 
+export async function setStudentBehavior(studentId, category, value) {
+  const classroom = AppState.get('classroom');
+  const today = _today();
+
+  try {
+    await MaestraApi.upsertDailyLog({
+      student_id: studentId,
+      classroom_id: classroom.id,
+      date: today,
+      infant_event: {
+        type: 'behavior',
+        label: `Comportamiento: ${category}`,
+        category: category,
+        data: { [category]: value }
+      }
+    });
+    safeToast('Comportamiento registrado', 'success');
+    await initRoutine();
+  } catch (err) {
+    safeToast('Error al guardar', 'error');
+  }
+}
+
 export async function addStudentEvent(studentId, eventId) {
   const classroom = AppState.get('classroom');
   const today = _today();
-  const ev = INDIV_EVENTS.find(e => e.id === eventId);
+  // Check individual events first, then group events for individual registration
+  const ev = INDIV_EVENTS.find(e => e.id === eventId) || GROUP_EVENTS.find(e => e.id === eventId);
   if (!ev) return;
 
   // Prevent duplicates
@@ -585,13 +947,51 @@ export async function addStudentEvent(studentId, eventId) {
     return;
   }
 
+  const serverTime = await _serverNow();
   try {
-    await MaestraApi.upsertDailyLog({
-      student_id: studentId,
-      classroom_id: classroom.id,
-      date: today,
-      infant_event: { type: ev.type, subtype: ev.subtype }
-    });
+    if (ev.field === '_group') {
+      // Group event registered individually
+      await MaestraApi.upsertDailyLog({
+        student_id: studentId,
+        classroom_id: classroom.id,
+        date: today,
+        infant_event: { type: ev.value, label: ev.label }
+      });
+    } else if (ev.field === '_sleep') {
+      await MaestraApi.upsertDailyLog({
+        student_id: studentId,
+        classroom_id: classroom.id,
+        date: today,
+        infant_event: {
+          type: 'sleep',
+          label: ev.label,
+          start_time: serverTime.toISOString(),
+          end_time: ev.value === 'end' ? serverTime.toISOString() : null
+        }
+      });
+    } else if (ev.field === 'food') {
+      // Food event registered individually
+      const existingLog = _logsMap[studentId];
+      let currentFood = {};
+      if (existingLog?.food) {
+        try { currentFood = JSON.parse(existingLog.food); } catch { currentFood = {}; }
+      }
+      currentFood[ev.foodKey] = ev.value;
+      await MaestraApi.upsertDailyLog({
+        student_id: studentId,
+        classroom_id: classroom.id,
+        date: today,
+        food: JSON.stringify(currentFood)
+      });
+    } else {
+      // Individual event
+      await MaestraApi.upsertDailyLog({
+        student_id: studentId,
+        classroom_id: classroom.id,
+        date: today,
+        infant_event: { type: ev.type, subtype: ev.subtype, label: ev.label }
+      });
+    }
     safeToast(`${ev.label} registrado`, 'success');
     await initRoutine();
   } catch (err) {
@@ -625,11 +1025,14 @@ export async function routineSelectIndivStudent(eventId) {
   const students = AppState.get('students') || [];
   if (students.length === 0) return;
 
+  const ev = INDIV_EVENTS.find(e=>e.id===eventId) || GROUP_EVENTS.find(e=>e.id===eventId);
+  if (!ev) return;
+
   const modalContent = `
     <div class="bg-white rounded-3xl overflow-hidden">
       <div class="p-6" style="background:linear-gradient(135deg,#28B54D,#239943)">
         <h3 class="text-xl font-black text-white">Selecciona un estudiante</h3>
-        <p class="text-sm font-bold text-white/80">Evento: ${INDIV_EVENTS.find(e=>e.id===eventId)?.label}</p>
+        <p class="text-sm font-bold text-white/80">Evento: ${ev.icon} ${ev.label}</p>
       </div>
       <div class="p-6 grid grid-cols-3 gap-3">
         ${students.map(s=>`
@@ -675,6 +1078,21 @@ export async function openBulkRoutineModal() {
   const classroom = AppState.get('classroom');
   const students = AppState.get('students') || [];
 
+  // Calcular estadísticas por comida
+  let missingBreakfast = 0, missingLunch = 0, missingSnack = 0;
+  students.forEach(s => {
+    const log = _logsMap[s.id];
+    if (!log?.food) { missingBreakfast++; missingLunch++; missingSnack++; return; }
+    try {
+      const foodObj = JSON.parse(log.food);
+      if (!foodObj.breakfast) missingBreakfast++;
+      if (!foodObj.lunch) missingLunch++;
+      if (!foodObj.snack) missingSnack++;
+    } catch {
+      missingBreakfast++; missingLunch++; missingSnack++;
+    }
+  });
+
   const modalContent = `
     <div class="bg-white rounded-3xl overflow-hidden">
       <div class="p-6" style="background:linear-gradient(135deg,#28B54D,#239943)">
@@ -688,12 +1106,26 @@ export async function openBulkRoutineModal() {
             <div class="text-xs font-bold text-green-700">Completos</div>
           </div>
           <div class="p-4 rounded-2xl text-center bg-orange-50">
-            <div class="text-3xl font-black text-orange-600">${students.filter(s=>!_logsMap[s.id]?.food).length}</div>
-            <div class="text-xs font-bold text-orange-700">Sin Almuerzo</div>
+            <div class="text-3xl font-black text-orange-600">${missingBreakfast + missingLunch + missingSnack}</div>
+            <div class="text-xs font-bold text-orange-700">Comidas Pendientes</div>
           </div>
           <div class="p-4 rounded-2xl text-center bg-purple-50">
             <div class="text-3xl font-black text-purple-600">${Object.keys(_sleepMap).length}</div>
             <div class="text-xs font-bold text-purple-700">Durmiendo</div>
+          </div>
+        </div>
+        <div class="grid grid-cols-3 gap-2">
+          <div class="p-3 rounded-xl text-center ${missingBreakfast===0?'bg-green-50':'bg-red-50'}">
+            <div class="text-lg">🍞</div>
+            <div class="text-[10px] font-black ${missingBreakfast===0?'text-green-600':'text-red-600'}">${missingBreakfast} sin desayuno</div>
+          </div>
+          <div class="p-3 rounded-xl text-center ${missingLunch===0?'bg-green-50':'bg-red-50'}">
+            <div class="text-lg">🥗</div>
+            <div class="text-[10px] font-black ${missingLunch===0?'text-green-600':'text-red-600'}">${missingLunch} sin almuerzo</div>
+          </div>
+          <div class="p-3 rounded-xl text-center ${missingSnack===0?'bg-green-50':'bg-red-50'}">
+            <div class="text-lg">🍎</div>
+            <div class="text-[10px] font-black ${missingSnack===0?'text-green-600':'text-red-600'}">${missingSnack} sin merienda</div>
           </div>
         </div>
         <div class="grid grid-cols-2 gap-3">
@@ -728,4 +1160,18 @@ export async function publishDailyLogs() {
   } catch (err) {
     safeToast('Error al publicar', 'error');
   }
+}
+
+// ── Toggle eventos automáticos ───────────────────────────────────────────────
+export function toggleAutoEvent(eventId) {
+  const ev = AUTO_EVENTS_CONFIG.find(e => e.eventId === eventId);
+  if (!ev) return;
+  ev.enabled = !ev.enabled;
+  safeToast(`${ev.label} ${ev.enabled ? 'activado' : 'desactivado'}`, 'success');
+  initRoutine();
+}
+
+// ── Obtener configuración de eventos automáticos ─────────────────────────────
+export function getAutoEventsConfig() {
+  return AUTO_EVENTS_CONFIG.map(ev => ({ ...ev }));
 }

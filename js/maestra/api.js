@@ -102,7 +102,7 @@ export const MaestraApi = {
 
     const { data, error } = await supabase
       .from('daily_logs')
-      .select('id, student_id, date, mood, food, nap, eating, sleeping, activities, notes')
+      .select('id, student_id, date, mood, food, nap, eating, sleeping, activities, notes, infant_data, status, created_at')
       .eq('classroom_id', classroomId)
       .order('created_at', { ascending: false })
       .limit(50);

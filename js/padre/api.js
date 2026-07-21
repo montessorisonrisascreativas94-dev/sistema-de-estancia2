@@ -123,7 +123,7 @@ export const Api = {
   async getDailyLog(studentId, date) {
     return await handle(
       supabase.from(TABLES.DAILY_LOGS)
-        .select('mood, food, nap, eating, sleeping, activities, notes, date, status')
+        .select('mood, food, nap, eating, sleeping, activities, notes, infant_data, date, status, created_at')
         .eq('student_id', studentId)
         .eq('date', date)
         .eq('status', 'published') // Solo ver publicados
