@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS accounting_journal (
   cuenta_haber TEXT,
   monto_haber NUMERIC DEFAULT 0,
   tipo TEXT CHECK (tipo IN ('ingreso', 'gasto', 'ajuste')),
-  payment_id UUID REFERENCES payments(id),
+  payment_id BIGINT REFERENCES payments(id),
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
