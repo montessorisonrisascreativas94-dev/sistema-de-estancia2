@@ -237,6 +237,64 @@ Deno.serve(async (req) => {
         break;
       }
 
+      case 'invoice.dgii_queue': {
+        const { payment_id, amount, exclude } = data || {};
+        if (exclude) {
+          result = { skipped: true, reason: 'exclude_dgii flag set' };
+          break;
+        }
+        if (!payment_id) {
+          result = { skipped: true, reason: 'missing payment_id' };
+          break;
+        }
+
+        // Fetch invoice linked to this payment
+        const { data: invoice, error: invErr } = await supabase
+          .from('invoices')
+          .select('*')
+          .eq('payment_id', payment_id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (invErr || !invoice) {
+          console.warn('[process-event] invoice.dgii_queue: no invoice for payment', payment_id);
+          result = { skipped: true, reason: 'no invoice found', payment_id };
+          break;
+        }
+
+        // Update invoice school fields if null (from client-side fallback inserts)
+        const updateFields: Record<string, unknown> = {};
+        const { data: school } = await supabase
+          .from('school_settings').select('school_name, rnc, address, city, state, phone, email, website, logo_url').eq('id', 1).maybeSingle();
+        if (school) {
+          if (!invoice.school_name) updateFields.school_name = school.school_name;
+          if (!invoice.school_rnc) updateFields.school_rnc = school.rnc;
+          if (!invoice.school_address) updateFields.school_address = school.address;
+          if (!invoice.school_city) updateFields.school_city = school.city;
+          if (!invoice.school_state) updateFields.school_state = school.state;
+          if (!invoice.school_phone) updateFields.school_phone = school.phone;
+          if (!invoice.school_email) updateFields.school_email = school.email;
+          if (!invoice.school_website) updateFields.school_website = school.website;
+          if (!invoice.school_logo_url) updateFields.school_logo_url = school.logo_url;
+        }
+        if (Object.keys(updateFields).length > 0) {
+          await supabase.from('invoices').update(updateFields).eq('id', invoice.id);
+        }
+
+        // Update status to 'queued' for DGII processing
+        await supabase.from('invoices').update({ status: 'queued', dgii_status: 'pending' }).eq('id', invoice.id);
+
+        // Send push notification to admin
+        const { data: admins } = await supabase.from('profiles').select('id').in('role', ['directora', 'asistente']);
+        for (const admin of admins ?? []) {
+          sendPushToUser(admin.id, 'Factura en cola DGII', `Factura ${invoice.invoice_number} por RD$${amount || invoice.amount} encolada para envío a DGII.`, 'invoice', 'panel_directora.html').catch(() => {});
+        }
+
+        result = { queued: true, invoice_id: invoice.id, invoice_number: invoice.invoice_number };
+        break;
+      }
+
       default:
         console.warn('[process-event] Unhandled type:', type);
         result = { skipped: true, type };

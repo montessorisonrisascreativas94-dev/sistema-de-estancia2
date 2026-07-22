@@ -57,6 +57,12 @@ function fmtDate(isoStr) {
   if (!isoStr) return '';
   return new Date(isoStr).toLocaleDateString('es-ES', { weekday:'long', day:'numeric', month:'long' });
 }
+function localToday() {
+  const now = new Date();
+  return now.getFullYear() + '-' +
+    String(now.getMonth() + 1).padStart(2, '0') + '-' +
+    String(now.getDate()).padStart(2, '0');
+}
 
 // Helper to calculate duration between two ISO times
 function calculateDuration(start, end) {
@@ -73,9 +79,8 @@ export const DailyReportModule = {
 
   setStudent(id) {
     this._studentId = id;
-    // Inicializar date picker a hoy
     const picker = document.getElementById('rutinaDatePicker');
-    if (picker) picker.value = new Date().toISOString().split('T')[0];
+    if (picker) picker.value = localToday();
     // Suscripción realtime — actualiza automáticamente cuando la maestra guarda
     this._subscribeRealtime();
     // Load weekly summary
@@ -85,7 +90,7 @@ export const DailyReportModule = {
   _subscribeRealtime() {
     if (this._channel) { this._channel.unsubscribe(); }
     if (!this._studentId) return;
-    const today = new Date().toISOString().split('T')[0];
+    const today = localToday();
     this._channel = supabase.channel(`daily_log_${this._studentId}`)
       .on('postgres_changes', {
         event: '*', schema: 'public', table: 'daily_logs',
@@ -106,12 +111,16 @@ export const DailyReportModule = {
 
     try {
       const today = new Date();
-      const todayStr = today.toISOString().split('T')[0];
+      const todayStr = localToday();
       const weekStart = new Date();
       weekStart.setDate(weekStart.getDate() - 6); // Last 7 days
-      const weekStartStr = weekStart.toISOString().split('T')[0];
+      const weekStartStr = weekStart.getFullYear() + '-' +
+        String(weekStart.getMonth() + 1).padStart(2, '0') + '-' +
+        String(weekStart.getDate()).padStart(2, '0');
       const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
-      const monthStartStr = monthStart.toISOString().split('T')[0];
+      const monthStartStr = monthStart.getFullYear() + '-' +
+        String(monthStart.getMonth() + 1).padStart(2, '0') + '-' +
+        String(monthStart.getDate()).padStart(2, '0');
 
       // Load weekly, monthly, and today's data
       const [weeklyRes, monthlyRes, todayRes] = await Promise.all([
@@ -226,9 +235,7 @@ export const DailyReportModule = {
           <!-- 🌙 ANÁLISIS DE SUEÑO -->
           <div class="cloud-card p-5">
             <div class="flex items-center gap-3 mb-4">
-              <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center shadow-lg shadow-purple-200">
-                <i data-lucide="moon" class="w-6 h-6"></i>
-              </div>
+              <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center shadow-lg shadow-purple-200 text-xl">🌙</div>
               <h4 class="font-black text-lg text-[#1A2340]">Análisis de Sueño</h4>
             </div>
             <div class="space-y-3 text-sm">
@@ -236,7 +243,7 @@ export const DailyReportModule = {
               <div class="flex justify-between"><span class="font-bold text-[#64748B]">Promedio Semanal:</span><span class="font-black text-[#1A2340]">${weeklySleepAvg} horas/día</span></div>
               <div class="flex justify-between"><span class="font-bold text-[#64748B]">Promedio Mensual:</span><span class="font-black text-[#1A2340]">${monthlySleepAvg} horas/día</span></div>
               <div class="pt-2 border-t border-slate-100">
-                <p class="text-[#28B54D] font-bold flex items-center gap-2"><i data-lucide="trending-up" class="w-4 h-4"></i> Tendencia: Mejorando</p>
+                <p class="text-[#28B54D] font-bold flex items-center gap-2">📈 Tendencia: Mejorando</p>
               </div>
             </div>
           </div>
@@ -244,9 +251,7 @@ export const DailyReportModule = {
           <!-- 🍼 ANÁLISIS DE BIBERÓN -->
           <div class="cloud-card p-5">
             <div class="flex items-center gap-3 mb-4">
-              <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-500 text-white flex items-center justify-center shadow-lg shadow-blue-200">
-                <i data-lucide="droplets" class="w-6 h-6"></i>
-              </div>
+              <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-500 text-white flex items-center justify-center shadow-lg shadow-blue-200 text-xl">🍼</div>
               <h4 class="font-black text-lg text-[#1A2340]">Análisis de Alimentación</h4>
             </div>
             <div class="space-y-3 text-sm">
@@ -254,7 +259,7 @@ export const DailyReportModule = {
               <div class="flex justify-between"><span class="font-bold text-[#64748B]">Promedio Semanal:</span><span class="font-black text-[#1A2340]">${weeklyMilkAvg} oz/día</span></div>
               <div class="flex justify-between"><span class="font-bold text-[#64748B]">Promedio Mensual:</span><span class="font-black text-[#1A2340]">${monthlyMilkAvg} oz/día</span></div>
               <div class="pt-2 border-t border-slate-100">
-                <p class="text-[#0B63C7] font-bold flex items-center gap-2"><i data-lucide="lightbulb" class="w-4 h-4"></i> Insight: Buen consumo</p>
+                <p class="text-[#0B63C7] font-bold flex items-center gap-2">💡 Insight: Buen consumo</p>
               </div>
             </div>
           </div>
@@ -262,9 +267,7 @@ export const DailyReportModule = {
           <!-- 🍽️ ANÁLISIS DE COMIDAS SÓLIDAS -->
           <div class="cloud-card p-5">
             <div class="flex items-center gap-3 mb-4">
-              <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-orange-500 to-amber-500 text-white flex items-center justify-center shadow-lg shadow-orange-200">
-                <i data-lucide="utensils" class="w-6 h-6"></i>
-              </div>
+              <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-orange-500 to-amber-500 text-white flex items-center justify-center shadow-lg shadow-orange-200 text-xl">🍽️</div>
               <h4 class="font-black text-lg text-[#1A2340]">Análisis de Comidas</h4>
             </div>
             <div class="space-y-2 text-sm">
@@ -280,9 +283,7 @@ export const DailyReportModule = {
           <!-- 🩺 SALUD Y BIENESTAR -->
           <div class="cloud-card p-5">
             <div class="flex items-center gap-3 mb-4">
-              <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-green-500 to-emerald-500 text-white flex items-center justify-center shadow-lg shadow-green-200">
-                <i data-lucide="heart" class="w-6 h-6"></i>
-              </div>
+              <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-green-500 to-emerald-500 text-white flex items-center justify-center shadow-lg shadow-green-200 text-xl">🩺</div>
               <h4 class="font-black text-lg text-[#1A2340]">Salud y Bienestar</h4>
             </div>
             <div class="space-y-3 text-sm">
@@ -296,9 +297,7 @@ export const DailyReportModule = {
         <!-- 📝 NOTAS DE LA MAESTRA -->
         <div class="cloud-card p-5 mt-6">
           <div class="flex items-center gap-3 mb-4">
-            <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-pink-500 to-rose-500 text-white flex items-center justify-center shadow-lg shadow-pink-200">
-              <i data-lucide="message-circle" class="w-6 h-6"></i>
-            </div>
+            <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-pink-500 to-rose-500 text-white flex items-center justify-center shadow-lg shadow-pink-200 text-xl">💬</div>
             <h4 class="font-black text-lg text-[#1A2340]">Notas de la Maestra</h4>
           </div>
           <p class="text-sm text-[#334155] font-medium italic">"${Helpers.escapeHTML(todayNote)}"</p>
@@ -361,7 +360,7 @@ export const DailyReportModule = {
       const sid = this._studentId;
       if (!sid) { container.innerHTML = `<p class="text-center text-slate-400 py-8">No se encontró el estudiante.</p>`; return; }
 
-      const today = new Date().toISOString().split('T')[0];
+      const today = localToday();
 
       const { data: log, error } = await supabase
         .from('daily_logs')
@@ -373,7 +372,7 @@ export const DailyReportModule = {
 
       if (error) throw error;
 
-      const todayLabel = fmtDate(new Date().toISOString());
+      const todayLabel = fmtDate(new Date().toLocaleString());
 
       if (!log) {
         container.innerHTML = `
@@ -556,7 +555,7 @@ export const DailyReportModule = {
         ${events.length > 0 ? `
         <div class="dr-card p-4">
           <div class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-            <i data-lucide="clock" class="w-3.5 h-3.5"></i> Timeline de eventos
+            🕐 Timeline de eventos
           </div>
           <div class="space-y-0">${timeline}</div>
         </div>` : ''}

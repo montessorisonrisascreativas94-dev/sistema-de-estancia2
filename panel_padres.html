@@ -81,6 +81,12 @@
       overflow-x: hidden;
       min-height: 100vh;
     }
+    @media (max-width: 767px) {
+      html { overflow-y: auto !important; -webkit-overflow-scrolling: touch !important; }
+      body { overflow-y: auto !important; -webkit-overflow-scrolling: touch !important; height: auto !important; }
+      body #layoutShell { overflow: visible !important; height: auto !important; min-height: auto !important; }
+      .app-panel-padre { min-height: auto !important; height: auto !important; }
+    }
     
     /* ============================================
        ANIMATIONS
@@ -1014,19 +1020,19 @@
                     <!-- CONCEPTO PILLS -->
                     <div>
                       <label class="block text-xs font-black text-[#64748B] uppercase tracking-[0.2em] mb-2">Concepto *</label>
-                      <div class="grid grid-cols-2 gap-2">
-                        <button type="button" data-concept="mensualidad" onclick="window._selConcepto(this)"
-                          class="concept-btn active-concept py-2.5 px-2 rounded-xl border-2 border-[#0B63C7] bg-[#E8F2FF] text-[#0B63C7] text-xs font-black text-center transition-all">📅 Colegiatura</button>
-                        <button type="button" data-concept="inscripcion" onclick="window._selConcepto(this)"
-                          class="concept-btn py-2.5 px-2 rounded-xl border-2 border-slate-200 bg-white text-slate-500 text-xs font-black text-center transition-all hover:border-[#0B63C7]">📝 Inscripción</button>
-                        <button type="button" data-concept="reinscripcion" onclick="window._selConcepto(this)"
-                          class="concept-btn py-2.5 px-2 rounded-xl border-2 border-slate-200 bg-white text-slate-500 text-xs font-black text-center transition-all hover:border-[#0B63C7]">🔄 Reinscripción</button>
-                        <button type="button" data-concept="uniforme" onclick="window._selConcepto(this)"
-                          class="concept-btn py-2.5 px-2 rounded-xl border-2 border-slate-200 bg-white text-slate-500 text-xs font-black text-center transition-all hover:border-[#0B63C7]">👕 Uniforme</button>
-                        <button type="button" data-concept="libros" onclick="window._selConcepto(this)"
-                          class="concept-btn py-2.5 px-2 rounded-xl border-2 border-slate-200 bg-white text-slate-500 text-xs font-black text-center transition-all hover:border-[#0B63C7]">📚 Libros</button>
-                        <button type="button" data-concept="otro" onclick="window._selConcepto(this)"
-                          class="concept-btn py-2.5 px-2 rounded-xl border-2 border-slate-200 bg-white text-slate-500 text-xs font-black text-center transition-all hover:border-[#0B63C7]">🏷️ Otro</button>
+                      <div class="grid grid-cols-2 gap-2" id="conceptPillsGrid">
+                        <button type="button" data-concept="mensualidad" data-price="0" onclick="window._selConcepto(this)"
+                          class="concept-btn active-concept py-2.5 px-2 rounded-xl border-2 border-[#0B63C7] bg-[#E8F2FF] text-[#0B63C7] text-xs font-black text-center transition-all"><span class="block">📅 Colegiatura</span><span class="block text-[9px] font-bold opacity-70 concept-price"></span></button>
+                        <button type="button" data-concept="inscripcion" data-price="0" onclick="window._selConcepto(this)"
+                          class="concept-btn py-2.5 px-2 rounded-xl border-2 border-slate-200 bg-white text-slate-500 text-xs font-black text-center transition-all hover:border-[#0B63C7]"><span class="block">📝 Inscripción</span><span class="block text-[9px] font-bold opacity-70 concept-price"></span></button>
+                        <button type="button" data-concept="reinscripcion" data-price="0" onclick="window._selConcepto(this)"
+                          class="concept-btn py-2.5 px-2 rounded-xl border-2 border-slate-200 bg-white text-slate-500 text-xs font-black text-center transition-all hover:border-[#0B63C7]"><span class="block">🔄 Reinscripción</span><span class="block text-[9px] font-bold opacity-70 concept-price"></span></button>
+                        <button type="button" data-concept="uniforme" data-price="0" onclick="window._selConcepto(this)"
+                          class="concept-btn py-2.5 px-2 rounded-xl border-2 border-slate-200 bg-white text-slate-500 text-xs font-black text-center transition-all hover:border-[#0B63C7]"><span class="block">👕 Uniforme</span><span class="block text-[9px] font-bold opacity-70 concept-price"></span></button>
+                        <button type="button" data-concept="libros" data-price="0" onclick="window._selConcepto(this)"
+                          class="concept-btn py-2.5 px-2 rounded-xl border-2 border-slate-200 bg-white text-slate-500 text-xs font-black text-center transition-all hover:border-[#0B63C7]"><span class="block">📚 Libros</span><span class="block text-[9px] font-bold opacity-70 concept-price"></span></button>
+                        <button type="button" data-concept="otro" data-price="0" onclick="window._selConcepto(this)"
+                          class="concept-btn py-2.5 px-2 rounded-xl border-2 border-slate-200 bg-white text-slate-500 text-xs font-black text-center transition-all hover:border-[#0B63C7]"><span class="block">🏷️ Otro</span><span class="block text-[9px] font-bold opacity-70 concept-price"></span></button>
                       </div>
                       <input type="hidden" id="paymentConcept" value="mensualidad">
                     </div>
@@ -1101,6 +1107,50 @@
                   <!-- Month grid + concept JS init -->
                   <script>
                   (function() {
+                    const DEFAULT_PRICES = {
+                      mensualidad: 0, inscripcion: 5000, reinscripcion: 3500,
+                      uniforme: 3200, libros: 2500, otro: 0
+                    };
+                    let _conceptPrices = {};
+
+                    async function _loadConceptPrices() {
+                      try {
+                        const { supabase } = await import('./js/shared/supabase.js');
+                        const { data } = await supabase.from('payment_concepts')
+                          .select('category, amount').eq('active', true);
+                        if (data && data.length) {
+                          data.forEach(c => {
+                            if (c.category && c.amount > 0 && !_conceptPrices[c.category]) {
+                              _conceptPrices[c.category] = c.amount;
+                            }
+                          });
+                        }
+                      } catch (_) {}
+                      // Apply prices to pill buttons
+                      document.querySelectorAll('#conceptPillsGrid .concept-btn').forEach(btn => {
+                        const cat = btn.dataset.concept;
+                        const price = _conceptPrices[cat] || DEFAULT_PRICES[cat] || 0;
+                        btn.dataset.price = price;
+                        const priceEl = btn.querySelector('.concept-price');
+                        if (priceEl && price > 0) {
+                          priceEl.textContent = 'RD$ ' + price.toLocaleString('es-DO');
+                        }
+                      });
+                      // Auto-fill colegiatura amount from financeConfig
+                      const amountInput = document.getElementById('paymentAmount');
+                      const activeConcept = document.getElementById('paymentConcept')?.value;
+                      if (activeConcept === 'mensualidad' && amountInput && !amountInput.value) {
+                        try {
+                          const mod = await import('./js/padre/appState.js');
+                          const fin = mod.AppState?.get?.('financeConfig') || {};
+                          if (fin.monthly_fee > 0) {
+                            amountInput.value = fin.monthly_fee;
+                            amountInput.dataset.autoFilled = '1';
+                          }
+                        } catch (_) {}
+                      }
+                    }
+
                     // Month grid
                     const grid = document.getElementById('monthButtonGrid');
                     const sel  = document.getElementById('paymentMonth');
@@ -1130,16 +1180,38 @@
                         grid.appendChild(btn);
                       });
                     }
-                    // Concept pill toggle
+
+                    // Concept pill toggle with auto-fill
                     window._selConcepto = function(btn) {
                       document.querySelectorAll('.concept-btn').forEach(p => {
                         p.className = 'concept-btn py-2.5 px-2 rounded-xl border-2 border-slate-200 bg-white text-slate-500 text-xs font-black text-center transition-all hover:border-[#0B63C7]';
                       });
-                      btn.className = 'concept-btn py-2.5 px-2 rounded-xl border-2 border-[#0B63C7] bg-[#E8F2FF] text-[#0B63C7] text-xs font-black text-center transition-all';
+                      btn.className = 'concept-btn active-concept py-2.5 px-2 rounded-xl border-2 border-[#0B63C7] bg-[#E8F2FF] text-[#0B63C7] text-xs font-black text-center transition-all';
                       document.getElementById('paymentConcept').value = btn.dataset.concept;
                       const showMonths = btn.dataset.concept === 'mensualidad';
                       document.getElementById('monthGridSection').classList.toggle('hidden', !showMonths);
+                      // Auto-fill amount from concept price
+                      const amountInput = document.getElementById('paymentAmount');
+                      const price = parseFloat(btn.dataset.price) || 0;
+                      if (price > 0) {
+                        amountInput.value = price.toFixed(2);
+                        amountInput.dataset.autoFilled = '1';
+                      } else if (btn.dataset.concept === 'mensualidad') {
+                        // For colegiatura, try financeConfig
+                        import('./js/padre/appState.js').then(mod => {
+                          const fin = mod.AppState?.get?.('financeConfig') || {};
+                          if (fin.monthly_fee > 0) {
+                            amountInput.value = fin.monthly_fee;
+                            amountInput.dataset.autoFilled = '1';
+                          }
+                        }).catch(() => {});
+                      } else {
+                        amountInput.value = '';
+                        amountInput.dataset.autoFilled = '';
+                      }
                     };
+
+                    _loadConceptPrices();
                   })();
                   </script>
                 </div>

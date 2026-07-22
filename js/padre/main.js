@@ -718,6 +718,14 @@ export async function navigateTo(targetId) {
         setEl('paymentsMonthlyFee', Helpers.formatCurrency(fin.monthly_fee || 0));
         setEl('paymentsDueDay', fin.due_day || '-');
         PaymentsModule.init(student?.id);
+        // Auto-fill amount for colegiatura if empty
+        setTimeout(() => {
+          const amountInput = document.getElementById('paymentAmount');
+          const concept = document.getElementById('paymentConcept')?.value;
+          if (amountInput && !amountInput.value && concept === 'mensualidad' && fin.monthly_fee > 0) {
+            amountInput.value = fin.monthly_fee;
+          }
+        }, 300);
         break;
       }
       case 'tasks':           TasksModule.init(student?.id); break;
@@ -730,7 +738,9 @@ export async function navigateTo(targetId) {
       case 'rutina-diaria': {
         const sid = AppState.get('currentStudent')?.id;
         DailyReportModule.setStudent(sid);
-        DailyReportModule.load();
+        DailyReportModule.load().then(() => {
+          requestAnimationFrame(() => { if (window.lucide) lucide.createIcons(); });
+        });
         break;
       }
       case 'qr-access':       _initPadreQR(student); break;

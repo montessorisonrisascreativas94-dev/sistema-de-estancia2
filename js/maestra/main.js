@@ -598,7 +598,10 @@ async function initDashboard() {
     const grid = document.getElementById('classesGrid');
     if (grid) {
       const attendanceToday = (attendance || []).filter(a => {
-        const today = new Date().toISOString().slice(0,10);
+        const now = new Date();
+        const today = now.getFullYear() + '-' +
+          String(now.getMonth() + 1).padStart(2, '0') + '-' +
+          String(now.getDate()).padStart(2, '0');
         return a.date === today && a.status === 'present';
       }).length;
       const totalSt = (students || []).length;
@@ -792,7 +795,10 @@ async function _updateTasksToGradeWidget(classroomId) {
 
 window.App.sendAbsenceAlerts = async () => {
   const students = AppState.get('students') || [];
-  const today = new Date().toISOString().split('T')[0];
+  const now = new Date();
+  const today = now.getFullYear() + '-' +
+    String(now.getMonth() + 1).padStart(2, '0') + '-' +
+    String(now.getDate()).padStart(2, '0');
   const attendance = await MaestraApi.getAttendance(AppState.get('classroom').id, today);
   const presentIds = new Set((attendance || []).map(a => a.student_id));
 

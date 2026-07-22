@@ -189,7 +189,10 @@ export async function openNewTaskModal(taskToEdit = null) {
   if (isEditing) {
     document.getElementById('taskTitle').value = taskToEdit.title;
     document.getElementById('taskDesc').value = taskToEdit.description;
-    const dateVal = new Date(taskToEdit.due_date).toISOString().split('T')[0];
+    const dueDate = new Date(taskToEdit.due_date);
+    const dateVal = dueDate.getFullYear() + '-' +
+      String(dueDate.getMonth() + 1).padStart(2, '0') + '-' +
+      String(dueDate.getDate()).padStart(2, '0');
     document.getElementById('taskDueDate').value = dateVal;
     if (taskToEdit.file_url) {
       const fileName = taskToEdit.file_url.split('/').pop().split('?')[0];

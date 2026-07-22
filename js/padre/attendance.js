@@ -59,7 +59,10 @@ export const AttendanceModule = {
     // Fecha por defecto: hoy
     const dateInput = document.getElementById('absenceDate');
     if (dateInput && !dateInput.value) {
-      dateInput.value = new Date().toISOString().split('T')[0];
+      const now = new Date();
+      dateInput.value = now.getFullYear() + '-' +
+        String(now.getMonth() + 1).padStart(2, '0') + '-' +
+        String(now.getDate()).padStart(2, '0');
     }
 
     // Selector visual de motivos

@@ -302,7 +302,7 @@ export const CajaCobroV2 = {
       : catalog;
 
     overlay.innerHTML = `
-    <div id="cajaModalInner" style="background:#f8fafc;border-radius:16px;width:100%;max-width:560px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.25);margin:auto;position:relative;display:flex;flex-direction:column">
+    <div id="cajaModalInner" style="background:#f8fafc;border-radius:16px;width:100%;max-width:720px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.25);margin:auto;position:relative;display:flex;flex-direction:column">
 
       <!-- Header compacto -->
       <div style="background:linear-gradient(135deg,#0B63C7,#0850A0);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-shrink:0">
@@ -334,7 +334,7 @@ export const CajaCobroV2 = {
       </div>
 
       <!-- Tab content — scrollable -->
-      <div id="cajaTabContent" style="overflow-y:auto;max-height:calc(85vh - 170px);min-height:300px;flex:1">
+      <div id="cajaTabContent" style="overflow-y:auto;max-height:calc(90vh - 170px);min-height:350px;flex:1">
 
         <!-- TAB: Mensualidades -->
         <div id="cajaPane_meses" style="padding:14px">
@@ -956,30 +956,100 @@ export const CajaCobroV2 = {
 
       let invoiceResult = null;
       if (newPays?.[0]?.id) {
+        // 1) Try edge function first
         try {
           const { data, error: invErr } = await supabase.functions.invoke('generate-invoice', {
             body: { payment_id: newPays[0].id, send_email: false }
           });
-          if (!invErr && data) {
+          if (!invErr && data?.invoice?.id) {
             invoiceResult = data;
-
-            // Generar PDF profesional
-            try {
-              if (typeof InvoiceModule !== 'undefined') {
-                const pdfBlob = await InvoiceModule.generatePDF(data);
-                if (pdfBlob && data.invoice?.id) {
-                  // Subir PDF a Storage
-                  const pdfUrl = await InvoiceModule.uploadPDF(pdfBlob, data.invoice.id);
-                  if (pdfUrl) data.invoice.pdf_url = pdfUrl;
-                  // Enviar email con PDF adjunto
-                  await InvoiceModule.sendInvoiceEmail(data, pdfBlob);
-                }
-              }
-            } catch (pdfErr) {
-              console.warn('[CajaCobroV2] PDF/Email pipeline error:', pdfErr);
-            }
           }
         } catch (_) {}
+
+        // 2) Fallback: create invoice client-side if edge function failed
+        if (!invoiceResult?.invoice?.id) {
+          try {
+            const pay = newPays[0];
+            const stu = _student || {};
+            const now = new Date().toISOString();
+            const receiptNo = `KPK-${new Date().getFullYear()}${String(new Date().getMonth()+1).padStart(2,'0')}-${String(pay.id).slice(-6).toUpperCase()}`;
+            const hashInput = `INV-${pay.id}-${Date.now()}-KPK`;
+            const hashBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(hashInput));
+            const sha256Hash = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2,'0')).join('');
+            const uuidFolio = crypto.randomUUID();
+
+            const rnc = document.getElementById('rncEmpresa')?.value?.trim() || '';
+            const empresa = document.getElementById('nombreEmpresa')?.value?.trim() || '';
+
+            const invData = {
+              invoice_number: receiptNo,
+              receipt_number: receiptNo,
+              payment_id: pay.id,
+              student_id: stu.id,
+              student_name: stu.name,
+              student_matricula: stu.matricula,
+              classroom_name: stu.classrooms?.name || null,
+              parent_name: stu.p1_name,
+              parent_phone: stu.p1_phone,
+              concept: _cart.map(c => c.concept).join(', '),
+              amount: total,
+              subtotal: total,
+              tax_amount: 0,
+              total: total,
+              status: 'paid',
+              payment_method: _method,
+              payment_date: now,
+              issued_date: now,
+              notes: notes || null,
+              sha256_hash: sha256Hash,
+              uuid_folio: uuidFolio,
+              validation_url: `https://montessorisonrisascreativas.com/validate-invoice.html?uuid=${uuidFolio}`,
+              qr_data: `https://montessorisonrisascreativas.com/validate-invoice.html?uuid=${uuidFolio}`,
+              fiscal_parent_rnc: rnc || null,
+              fiscal_parent_company_name: empresa || null,
+              school_name: null,
+              pdf_url: null,
+            };
+
+            const { data: newInv, error: invErr } = await supabase
+              .from('invoices').insert(invData).select('*').single();
+
+            if (!invErr && newInv?.id) {
+              // Fetch school settings to enrich response
+              const { data: school } = await supabase
+                .from('school_settings').select('*').eq('id', 1).single();
+
+              invoiceResult = {
+                success: true,
+                invoice: newInv,
+                receipt_number: receiptNo,
+                student: { name: stu.name, matricula: stu.matricula, p1_name: stu.p1_name, p1_email: stu.p1_email, p1_phone: stu.p1_phone, classroom: stu.classrooms?.name, level: stu.classrooms?.level },
+                school: { school_name: school?.school_name || 'Colegio Montessori Sonrisas Creativas', rnc: school?.rnc, phone: school?.phone, email: school?.email, website: school?.website || 'https://montessorisonrisascreativas.com', logo_url: school?.logo_url, address: school?.address, city: school?.city, state: school?.state },
+                payment: { concept: _cart.map(c=>c.concept).join(', '), amount: total, method: _method, paid_date: now, month_paid: _cart.find(c=>c.type==='colegiatura') ? currentYear + '-' + String(_cart.find(c=>c.type==='colegiatura')._monthIdx+1).padStart(2,'0') : null },
+              };
+            } else {
+              console.warn('[CajaCobroV2] Client-side invoice insert failed:', invErr);
+            }
+          } catch (fallbackErr) {
+            console.warn('[CajaCobroV2] Invoice fallback error:', fallbackErr);
+          }
+        }
+
+        // 3) Generate PDF and email if we have an invoice
+        if (invoiceResult?.invoice?.id) {
+          try {
+            if (typeof InvoiceModule !== 'undefined') {
+              const pdfBlob = await InvoiceModule.generatePDF(invoiceResult);
+              if (pdfBlob) {
+                const pdfUrl = await InvoiceModule.uploadPDF(pdfBlob, invoiceResult.invoice.id);
+                if (pdfUrl) invoiceResult.invoice.pdf_url = pdfUrl;
+                await InvoiceModule.sendInvoiceEmail(invoiceResult, pdfBlob);
+              }
+            }
+          } catch (pdfErr) {
+            console.warn('[CajaCobroV2] PDF/Email pipeline error:', pdfErr);
+          }
+        }
 
         try {
           const { emitEvent: emit } = await import('./supabase.js');

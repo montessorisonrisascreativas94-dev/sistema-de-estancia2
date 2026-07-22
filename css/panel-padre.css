@@ -771,3 +771,28 @@ body.panel-padre-body .cloud-card:hover {
   body.panel-padre-body #toggleSidebar { right: -14px; top: 24px; z-index: 10; }
   body.panel-padre-body.sidebar-collapsed #toggleSidebarIcon { transform: rotate(180deg); }
 }
+
+/* ── CONCEPT PRICE PILLS ─────────────────────────────────── */
+.concept-btn .concept-price {
+  display: block;
+  min-height: 14px;
+}
+.concept-btn.active-concept .concept-price {
+  color: var(--p-blue);
+  opacity: 0.8;
+}
+
+/* ── PRODUCTION: Smooth transitions for section visibility ── */
+.section.active {
+  animation: fadeInSection 0.25s ease-out;
+}
+@keyframes fadeInSection {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── PRODUCTION: Touch-friendly tap targets on mobile ─────── */
+@media (max-width: 767px) {
+  .concept-btn, .month-btn { min-height: 44px; }
+  body.panel-padre-body .sidebar-node { min-height: 44px; }
+}

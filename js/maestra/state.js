@@ -16,7 +16,10 @@ export const AppState = new SafeAppState({
 
 /** Hoy en formato YYYY-MM-DD (DRY: reemplaza `new Date().toISOString().split('T')[0]`) */
 AppState.today = function () {
-  return new Date().toISOString().split('T')[0];
+  const now = new Date();
+  return now.getFullYear() + '-' +
+    String(now.getMonth() + 1).padStart(2, '0') + '-' +
+    String(now.getDate()).padStart(2, '0');
 };
 
 /** Alias rápido para obtener estudiantes del aula */
