@@ -888,7 +888,7 @@ function initNavigation() {
     if (cleanId === 'attendance') initAttendance();
     if (cleanId === 'daily-routine') initRoutine();
     if (cleanId === 'tasks') initTasks();
-    if (cleanId === 'grades') initGrades();
+    if (cleanId === 'grades') import('./modules/grades.js').then(m => m.MaestraGrades.init());
     if (cleanId === 'permits') PermitsModule.init();
     if (cleanId === 'chat') initChat();
     if (cleanId === 'profile') {
@@ -1277,23 +1277,4 @@ function _initMaestraQR(profile, user) {
   container.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrData)}" class="mx-auto border-4 border-white shadow-lg rounded-2xl" alt="QR Maestra">`;
 }
 
-function initGrades() {
-  const container = document.getElementById('t-grades-inner');
-  if (!container) return;
-  
-  container.innerHTML = `
-    <header class="mb-6">
-      <h1 class="text-2xl md:text-3xl font-black text-slate-800 flex items-center gap-3">
-        <span class="p-2 bg-indigo-100 text-indigo-600 rounded-2xl"><i data-lucide="graduation-cap" class="w-6 h-6"></i></span>
-        Centro de Calificaciones
-      </h1>
-      <p class="text-slate-500 font-medium">Gestiona las notas y el progreso académico de tus alumnos</p>
-    </header>
-    <div class="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm text-center">
-      <div class="w-20 h-20 bg-indigo-50 text-indigo-500 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">📝</div>
-      <h3 class="text-xl font-black text-slate-800 mb-2">Próximamente</h3>
-      <p class="text-slate-500 max-w-sm mx-auto">Estamos trabajando en una nueva interfaz para que calificar sea más rápido y divertido.</p>
-    </div>
-  `;
-  if (window.lucide) window.lucide.createIcons();
-}
+// Grades now handled by modules/grades.js (MaestraGrades)

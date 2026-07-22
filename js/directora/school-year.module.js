@@ -211,7 +211,7 @@ export const SchoolYearModule = {
           <div class="p-6 space-y-4">
             <div>
               <label class="block text-sm font-bold text-slate-700 mb-2">Nombre del Año</label>
-              <input id="year-name" type="text" value="${year?.name || ''}" placeholder="Ej: 2024-2025" class="w-full border-2 border-slate-100 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-[#0B63C7]">
+              <input id="year-name" type="text" value="${year?.name || ''}" placeholder="Ej: 2026-2027" class="w-full border-2 border-slate-100 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-[#0B63C7]">
             </div>
             <div class="grid grid-cols-2 gap-4">
               <div>
@@ -223,6 +223,17 @@ export const SchoolYearModule = {
                 <input id="year-end" type="date" value="${year?.end_date || ''}" class="w-full border-2 border-slate-100 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-[#0B63C7]">
               </div>
             </div>
+            ${!isEdit ? `
+            <div class="bg-blue-50 border border-blue-200 rounded-xl p-4">
+              <div class="flex items-start gap-3">
+                <input type="checkbox" id="year-auto-periods" class="w-4 h-4 text-[#0B63C7] rounded border-slate-300 mt-0.5" checked>
+                <div>
+                  <label for="year-auto-periods" class="text-sm font-bold text-slate-700">Crear trimestres automáticamente</label>
+                  <p class="text-xs text-slate-500 mt-1">Se crearán 3 periodos (trimestres) divididos equitativamente en el año escolar para cada aula activa.</p>
+                </div>
+              </div>
+            </div>
+            ` : ''}
             <div>
               <label class="block text-sm font-bold text-slate-700 mb-2">Estado</label>
               <select id="year-status" class="w-full border-2 border-slate-100 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-[#0B63C7]">
@@ -273,12 +284,26 @@ export const SchoolYearModule = {
         if (error) throw error;
         Helpers.toast('Año escolar actualizado', 'success');
       } else {
-        // Create new
-        const { error } = await supabase
-          .from('school_years')
-          .insert({ name, start_date, end_date, status, is_current: false });
-        if (error) throw error;
-        Helpers.toast('Año escolar creado', 'success');
+        // Create new — use RPC to auto-create periods
+        const autoPeriods = document.getElementById('year-auto-periods')?.checked;
+        if (autoPeriods) {
+          const { data: rpcResult, error: rpcErr } = await supabase.rpc('create_school_year_with_periods', {
+            p_name: name,
+            p_start_date: start_date,
+            p_end_date: end_date,
+            p_num_periods: 3
+          });
+          if (rpcErr) throw rpcErr;
+          if (rpcResult?.error) throw new Error(rpcResult.error);
+          const periodsCount = rpcResult?.periods_created || 0;
+          Helpers.toast(`Año escolar creado con ${periodsCount} periodos`, 'success');
+        } else {
+          const { error } = await supabase
+            .from('school_years')
+            .insert({ name, start_date, end_date, status, is_current: false });
+          if (error) throw error;
+          Helpers.toast('Año escolar creado', 'success');
+        }
       }
 
       this.closeModal();
@@ -288,7 +313,7 @@ export const SchoolYearModule = {
       if (window._loadCycleSelectors) await window._loadCycleSelectors();
     } catch (err) {
       console.error('Error saving school year:', err);
-      Helpers.toast('Error al guardar año escolar', 'error');
+      Helpers.toast('Error al guardar año escolar: ' + (err.message || ''), 'error');
     }
   },
 

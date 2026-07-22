@@ -6,12 +6,28 @@ import { Helpers, escapeHtml } from '../shared/helpers.js';
  * 🎓 MÓDULO DE CALIFICACIONES (PADRES)
  */
 export const GradesModule = {
+  _channel: null,
+
   /**
    * Inicializa el módulo
    */
   async init(studentId) {
     if (!studentId) return;
     await this.loadGrades(studentId);
+    this._subscribeRealtime(studentId);
+  },
+
+  /**
+   * Realtime: reload grades when report_cards change
+   */
+  _subscribeRealtime(studentId) {
+    if (this._channel) { try { supabase.removeChannel(this._channel); } catch (_) {} }
+    this._channel = supabase
+      .channel('padre_grades_' + studentId)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'report_cards', filter: `student_id=eq.${studentId}` }, () => {
+        this.loadGrades(studentId);
+      })
+      .subscribe();
   },
 
   /**
@@ -27,14 +43,14 @@ export const GradesModule = {
       const [gradesRes, taskRes, historyRes] = await Promise.all([
         supabase
           .from(TABLES.GRADES)
-          .select('id, subject, score, period, notes, created_at')
+          .select('id, subject, numeric_score, score, notes, created_at, period_id')
           .eq('student_id', studentId)
           .order('created_at', { ascending: false }),
         supabase
           .from(TABLES.TASK_EVIDENCES)
           .select(`*, tasks:task_id (title, description)`)
           .eq('student_id', studentId)
-          .not('grade_letter', 'is', null)
+          .not('numeric_score', 'is', null)
           .order('created_at', { ascending: false }),
         supabase.rpc('get_student_history', { p_student_id: studentId })
       ]);
@@ -55,17 +71,20 @@ export const GradesModule = {
       const { label: gpaLabel, color: gpaLabelColor } = this.getGPALabel(gpa);
 
       const historyRows = history.length > 0 ? history.map(h => {
-        const score = h.final_score != null ? Number(h.final_score).toFixed(2) : '-';
+        const score = h.final_score != null ? Number(h.final_score).toFixed(1) : '-';
         const levelCls = {
           'Excelente':      'bg-emerald-100 text-emerald-700',
+          'Muy Bueno':      'bg-green-100 text-green-700',
           'Bueno':          'bg-blue-100 text-blue-700',
-          'En proceso':     'bg-amber-100 text-amber-700',
-          'Requiere apoyo': 'bg-rose-100 text-rose-700',
+          'Aceptable':      'bg-amber-100 text-amber-700',
+          'Requiere Mejoras': 'bg-orange-100 text-orange-700',
+          'Bajo Desempeño': 'bg-rose-100 text-rose-700',
           'Sin calificar':  'bg-slate-100 text-slate-500'
         }[h.level] || 'bg-slate-100 text-slate-500';
 
         return `
           <tr class="border-b border-slate-50 hover:bg-slate-50 transition-colors">
+            <td class="px-4 py-3 text-xs font-bold text-slate-500">${escapeHtml(h.school_year_name || '')}</td>
             <td class="px-4 py-3 text-sm font-bold text-slate-800">${escapeHtml(h.period_name)}</td>
             <td class="px-4 py-3 text-xs text-slate-500">${escapeHtml(h.classroom_name || '-')}</td>
             <td class="px-4 py-3 text-center text-sm font-bold">${h.task_avg != null ? Number(h.task_avg).toFixed(1) : '-'}</td>
@@ -117,6 +136,7 @@ export const GradesModule = {
                   <table class="w-full text-sm min-w-[600px]">
                     <thead class="bg-slate-50 border-b border-slate-100">
                       <tr>
+                        <th class="px-4 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider">Año</th>
                         <th class="px-4 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider">Período</th>
                         <th class="px-4 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider">Aula</th>
                         <th class="px-4 py-3 text-center text-[10px] font-black text-slate-400 uppercase tracking-wider">Tareas</th>
@@ -159,9 +179,8 @@ export const GradesModule = {
   },
 
   calculateGPA(grades, taskEvidences) {
-    // Calcular promedio combinando grades + task_evidences con nuevo sistema 0-100
     const scores = [];
-    // Process grades with numeric score first
+    // Process grades: prefer numeric_score, fallback to legacy score
     grades.forEach(g => {
       if (g.numeric_score != null) {
         const score = parseFloat(g.numeric_score);
@@ -170,12 +189,11 @@ export const GradesModule = {
           return;
         }
       }
-      // Fallback to legacy score field
       if (parseFloat(g.score)) {
         scores.push(parseFloat(g.score));
       }
     });
-    // Process task evidences
+    // Process task evidences: prefer numeric_score
     taskEvidences.forEach(t => {
       if (t.numeric_score != null) {
         const score = parseFloat(t.numeric_score);
@@ -184,7 +202,7 @@ export const GradesModule = {
           return;
         }
       }
-      // Fallback to legacy systems
+      // Fallback to legacy
       const letterToScore = { 'A': 95, 'B': 85, 'C': 75, 'D': 60, 'E': 40 };
       if (t.grade_letter && letterToScore[t.grade_letter]) {
         scores.push(letterToScore[t.grade_letter]);
@@ -233,22 +251,47 @@ export const GradesModule = {
   },
 
   renderTaskEvidenceCard(t) {
-    const gradeColors = {
-      'A': { bg: 'bg-emerald-500', text: 'text-white', ring: 'ring-emerald-200', icon: 'bg-emerald-50 text-emerald-600', label: 'Excelente' },
-      'B': { bg: 'bg-blue-500',    text: 'text-white', ring: 'ring-blue-200',    icon: 'bg-blue-50 text-blue-600',    label: 'Bien' },
-      'C': { bg: 'bg-amber-500',   text: 'text-white', ring: 'ring-amber-200',   icon: 'bg-amber-50 text-amber-600',  label: 'Suficiente' },
-      'D': { bg: 'bg-rose-500',    text: 'text-white', ring: 'ring-rose-200',    icon: 'bg-rose-50 text-rose-600',    label: 'Mejorable' },
-    };
-    const grade = t.grade_letter || 'A';
-    const c = gradeColors[grade] || gradeColors['A'];
-    const starsHtml = t.stars
-      ? `<div class="flex items-center gap-0.5 mt-1 justify-end">${Array(t.stars).fill('<span class="text-amber-400 text-xs">\u2605</span>').join('')}</div>`
+    // Prefer numeric score display
+    const numScore = t.numeric_score != null ? parseFloat(t.numeric_score) : null;
+    const gradeLetter = t.grade_letter;
+    const stars = t.stars;
+
+    let displayGrade, displayLabel, displayBg, displayText;
+    if (numScore !== null && !isNaN(numScore)) {
+      displayGrade = Math.round(numScore);
+      if (numScore >= 95) { displayLabel = 'Excelente'; displayBg = 'bg-emerald-500'; displayText = 'text-white'; }
+      else if (numScore >= 85) { displayLabel = 'Muy Bueno'; displayBg = 'bg-blue-500'; displayText = 'text-white'; }
+      else if (numScore >= 75) { displayLabel = 'Bueno'; displayBg = 'bg-sky-500'; displayText = 'text-white'; }
+      else if (numScore >= 60) { displayLabel = 'Aceptable'; displayBg = 'bg-amber-500'; displayText = 'text-white'; }
+      else { displayLabel = 'Requiere Mejoras'; displayBg = 'bg-rose-500'; displayText = 'text-white'; }
+    } else if (gradeLetter) {
+      const gradeColors = {
+        'A': { bg: 'bg-emerald-500', label: 'Excelente' },
+        'B': { bg: 'bg-blue-500', label: 'Bien' },
+        'C': { bg: 'bg-amber-500', label: 'Suficiente' },
+        'D': { bg: 'bg-rose-500', label: 'Mejorable' },
+      };
+      const gc = gradeColors[gradeLetter] || gradeColors['A'];
+      displayGrade = gradeLetter;
+      displayLabel = gc.label;
+      displayBg = gc.bg;
+      displayText = 'text-white';
+    } else {
+      displayGrade = '—';
+      displayLabel = 'Sin calificar';
+      displayBg = 'bg-slate-200';
+      displayText = 'text-slate-500';
+    }
+
+    const starsHtml = stars
+      ? `<div class="flex items-center gap-0.5 mt-1 justify-end">${Array(stars).fill('<span class="text-amber-400 text-xs">★</span>').join('')}</div>`
       : '';
+
     return `
-      <div class="bg-white p-4 rounded-3xl border-2 border-slate-50 shadow-sm hover:shadow-lg transition-all flex items-center justify-between group ring-2 ${c.ring}">
+      <div class="bg-white p-4 rounded-3xl border-2 border-slate-50 shadow-sm hover:shadow-lg transition-all flex items-center justify-between group ring-2 ring-slate-100">
         <div class="flex items-center gap-3">
-          <div class="w-11 h-11 rounded-2xl ${c.icon} flex items-center justify-center group-hover:scale-110 transition-transform shrink-0">
-            <i data-lucide="file-check" class="w-5 h-5"></i>
+          <div class="w-11 h-11 rounded-2xl ${displayBg}/10 flex items-center justify-center group-hover:scale-110 transition-transform shrink-0">
+            <i data-lucide="file-check" class="w-5 h-5 ${displayBg.replace('bg-', 'text-')}"></i>
           </div>
           <div class="min-w-0">
             <h5 class="font-bold text-slate-700 text-sm truncate">${escapeHtml(t.tasks?.title || 'Tarea')}</h5>
@@ -257,10 +300,10 @@ export const GradesModule = {
           </div>
         </div>
         <div class="text-right shrink-0 ml-3">
-          <span class="px-3 py-1.5 rounded-xl ${c.bg} ${c.text} text-xs font-black uppercase tracking-tight shadow-sm">
-            ${grade}
+          <span class="px-3 py-1.5 rounded-xl ${displayBg} ${displayText} text-xs font-black uppercase tracking-tight shadow-sm">
+            ${displayGrade}
           </span>
-          <p class="text-[8px] font-bold text-slate-400 mt-1 uppercase">${c.label}</p>
+          <p class="text-[8px] font-bold text-slate-400 mt-1 uppercase">${displayLabel}</p>
           ${starsHtml}
         </div>
       </div>

@@ -38,11 +38,18 @@ function getLevel(score) {
 export const GradesModule = {
   _currentPeriodId: null,
   _periods: [],
+  _schoolYears: [],
   _allData: [], // Store processed data for modals
 
   async init() {
     const container = document.getElementById('gradesTableBody');
     if (!container) return;
+
+    // Load school years for period creation
+    try {
+      const { data: years } = await supabase.from('school_years').select('*').order('start_date', { ascending: false });
+      this._schoolYears = years || [];
+    } catch (_) {}
 
     await this._loadPeriods();
     await this.loadGrades();
@@ -254,7 +261,7 @@ export const GradesModule = {
     tableBody.innerHTML = filtered.map(s => {
       const level = getLevel(s.avg);
       const taskCount = s.evidences.length;
-      const rateBar = (taskCount > 0 && s.avg != null) ? Math.min(100, Math.round((s.avg / 5) * 100)) : 0;
+      const rateBar = (taskCount > 0 && s.avg != null) ? Math.min(100, Math.round(s.avg)) : 0;
       const barColor = rateBar >= 80 ? 'bg-emerald-500' : rateBar >= 60 ? 'bg-amber-500' : 'bg-rose-500';
 
       return `
@@ -310,14 +317,14 @@ export const GradesModule = {
   _updateKPIs(list) {
     const valid = list.filter(s => s.avg !== null && s.avg > 0);
     const globalAvg = valid.length ? valid.reduce((a, b) => a + b.avg, 0) / valid.length : null;
-    const approvalRate = valid.length ? Math.round((valid.filter(s => s.avg >= 2.5).length / valid.length) * 100) : 0;
+    const approvalRate = valid.length ? Math.round((valid.filter(s => s.avg >= 60).length / valid.length) * 100) : 0;
     
     const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
     
     set('kpiAvgGrade', globalAvg != null ? globalAvg.toFixed(1) : 'N/A');
     set('kpiApprovalRate', valid.length ? approvalRate + '%' : 'N/A');
-    set('kpiNeedsSupport', valid.filter(s => s.avg < 2.5).length);
-    set('kpiLowGrades', valid.filter(s => s.avg < 2).length);
+    set('kpiNeedsSupport', valid.filter(s => s.avg < 60).length);
+    set('kpiLowGrades', valid.filter(s => s.avg < 50).length);
   },
 
   openStudentDetail(studentId) {
@@ -446,8 +453,32 @@ export const GradesModule = {
       if (data?.error) throw new Error(data.error);
 
       const cards = data?.cards_generated || 0;
-      Helpers.toast(`Periodo cerrado ? � ${cards} boleta${cards !== 1 ? 's' : ''} generada${cards !== 1 ? 's' : ''}`, 'success');
+      Helpers.toast(`Periodo cerrado ✅ — ${cards} boleta${cards !== 1 ? 's' : ''} generada${cards !== 1 ? 's' : ''}`, 'success');
       auditLog('period.closed', { period_id: periodId, period_name: period.name });
+
+      // Emit low-score alerts for students below 60
+      try {
+        const { emitEvent: emit } = await import('../shared/supabase.js');
+        const { data: reportCards } = await supabase
+          .from('report_cards')
+          .select('student_id, final_score, students:student_id(name, parent_id, p1_email)')
+          .eq('period_id', parseInt(periodId))
+          .lt('final_score', 60)
+          .not('final_score', 'is', null);
+
+        for (const rc of reportCards || []) {
+          const stu = rc.students || {};
+          emit('grade.low_score', {
+            student_id: rc.student_id,
+            student_name: stu.name,
+            score: Number(rc.final_score).toFixed(1),
+            period_name: period.name,
+            parent_id: stu.parent_id,
+            parent_email: stu.p1_email
+          }).catch(() => {});
+        }
+      } catch (_) {}
+
       await this._loadPeriods();
       await this.loadGrades();
     } catch (e) {
@@ -473,12 +504,18 @@ export const GradesModule = {
     const lc = 'block text-[11px] font-black text-slate-400 uppercase tracking-wider mb-1.5 ml-1';
     const y = new Date().getFullYear();
     
+    // Build school year options
+    const yearOptions = (this._schoolYears || []).map(yr =>
+      `<option value="${yr.id}" ${yr.is_current ? 'selected' : ''}>${Helpers.escapeHTML(yr.name)} ${yr.is_current ? '(Actual)' : ''}</option>`
+    ).join('');
+
     const modalHtml = `
       <div class="w-full max-w-md overflow-hidden">
         <div class="bg-[#0B63C7] p-6 text-white flex justify-between items-center">
-          <h3 class="text-xl font-black">Nuevo Trimestre</h3>
+          <h3 class="text-xl font-black">Nuevo Periodo</h3>
         </div>
         <div class="p-6 space-y-4">
+          <div><label class="${lc}">Año Escolar</label><select id="periodSchoolYear" class="${ic}">${yearOptions || '<option>Sin años escolares</option>'}</select></div>
           <div><label class="${lc}">Nombre del Periodo</label><input id="periodName" class="${ic}" placeholder="Ej: 1er Trimestre ${y}"></div>
           <div class="grid grid-cols-2 gap-4">
             <div><label class="${lc}">Fecha Inicio</label><input id="periodStart" type="date" class="${ic}"></div>
@@ -491,7 +528,7 @@ export const GradesModule = {
         </div>
         <div class="p-6 bg-slate-50 flex justify-end gap-3">
           <button onclick="App.ui.closeModal()" class="px-6 py-2.5 text-xs font-black uppercase text-slate-400">Cancelar</button>
-          <button id="btnSavePeriod" class="px-6 py-2.5 bg-[#0B63C7] text-white rounded-xl font-black text-xs uppercase shadow-lg shadow-blue-200">Crear Trimestre</button>
+          <button id="btnSavePeriod" class="px-6 py-2.5 bg-[#0B63C7] text-white rounded-xl font-black text-xs uppercase shadow-lg shadow-blue-200">Crear Periodo</button>
         </div>
       </div>
     `;
@@ -506,11 +543,12 @@ export const GradesModule = {
     const start = document.getElementById('periodStart')?.value;
     const end = document.getElementById('periodEnd')?.value;
     const isActive = document.getElementById('periodIsActive')?.checked;
+    const schoolYearId = document.getElementById('periodSchoolYear')?.value || null;
 
     if (!name || !start || !end) return Helpers.toast('Completa todos los campos', 'warning');
 
     try {
-      // Si el nuevo periodo es activo, desactivamos los dem�s
+      // Si el nuevo periodo es activo, desactivamos los demás
       if (isActive) {
         await supabase.from('periods').update({ is_active: false }).eq('is_active', true);
       }
@@ -520,7 +558,8 @@ export const GradesModule = {
         start_date: start,
         end_date: end,
         status: 'open',
-        is_active: isActive
+        is_active: isActive,
+        school_year_id: schoolYearId ? parseInt(schoolYearId) : null
       });
 
       if (error) throw error;
@@ -623,17 +662,20 @@ export const GradesModule = {
       const history = Array.isArray(data) ? data : [];
 
       const rows = history.length > 0 ? history.map(h => {
-        const score = h.final_score != null ? Number(h.final_score).toFixed(2) : '-';
+        const score = h.final_score != null ? Number(h.final_score).toFixed(1) : '-';
         const levelCls = {
           'Excelente':      'bg-emerald-100 text-emerald-700',
+          'Muy Bueno':      'bg-green-100 text-green-700',
           'Bueno':          'bg-blue-100 text-blue-700',
-          'En proceso':     'bg-amber-100 text-amber-700',
-          'Requiere apoyo': 'bg-rose-100 text-rose-700',
+          'Aceptable':      'bg-amber-100 text-amber-700',
+          'Requiere Mejoras': 'bg-orange-100 text-orange-700',
+          'Bajo Desempeño': 'bg-rose-100 text-rose-700',
           'Sin calificar':  'bg-slate-100 text-slate-500'
         }[h.level] || 'bg-slate-100 text-slate-500';
 
         return `
           <tr class="border-b border-slate-50 hover:bg-slate-50 transition-colors">
+            <td class="px-4 py-3 text-xs font-bold text-slate-500">${Helpers.escapeHTML(h.school_year_name || '')}</td>
             <td class="px-4 py-3 text-sm font-bold text-slate-800">${Helpers.escapeHTML(h.period_name)}</td>
             <td class="px-4 py-3 text-xs text-slate-500">${Helpers.escapeHTML(h.classroom_name || '-')}</td>
             <td class="px-4 py-3 text-center text-sm font-bold">${h.task_avg != null ? Number(h.task_avg).toFixed(1) : '-'}</td>
@@ -666,7 +708,8 @@ export const GradesModule = {
             <table class="w-full text-sm min-w-[600px]">
               <thead class="bg-slate-50 border-b border-slate-100">
                 <tr>
-                  <th class="px-4 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider">Per�odo</th>
+                  <th class="px-4 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider">Año</th>
+                  <th class="px-4 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider">Período</th>
                   <th class="px-4 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider">Aula</th>
                   <th class="px-4 py-3 text-center text-[10px] font-black text-slate-400 uppercase tracking-wider">Tareas</th>
                   <th class="px-4 py-3 text-center text-[10px] font-black text-slate-400 uppercase tracking-wider">Formal</th>

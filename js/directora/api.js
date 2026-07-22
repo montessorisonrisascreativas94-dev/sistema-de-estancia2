@@ -56,10 +56,12 @@ export const DirectorApi = {
   },
 
   getDescriptor(score) {
-    if (score >= 4.5) return 'ðŸŒŸ Excelente';
-    if (score >= 3.5) return 'ðŸ‘ Bueno';
-    if (score >= 2.5) return 'âš ï¸ En proceso';
-    return 'â— Requiere apoyo';
+    if (score >= 95) return '🌟 Excelente';
+    if (score >= 85) return '👍 Muy Bueno';
+    if (score >= 75) return '✅ Bueno';
+    if (score >= 60) return '⚠️ Aceptable';
+    if (score >= 50) return '🔶 Requiere Mejoras';
+    return '❌ Bajo Desempeño';
   },
 
   // --- TASKS & GRADES ---

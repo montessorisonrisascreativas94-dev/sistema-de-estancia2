@@ -295,6 +295,59 @@ Deno.serve(async (req) => {
         break;
       }
 
+      case 'grade.low_score': {
+        const { student_name, student_id, score, period_name, parent_id, parent_email } = data || {};
+        const tasks: Promise<unknown>[] = [];
+
+        // Push to parent
+        if (parent_id) {
+          tasks.push(sendPushToUser(
+            parent_id,
+            'Atención académica - ' + (student_name || 'Su hijo'),
+            `El promedio de ${student_name || 'su hijo'} es ${score}/100 en ${period_name || 'el periodo actual'}. Se recomienda seguimiento.`,
+            'grade',
+            'panel_padres.html'
+          ));
+        }
+
+        // Email to parents
+        if (resend && parent_email) {
+          tasks.push(resend.emails.send({
+            from: FROM_EMAIL,
+            to: parent_email,
+            subject: 'Aviso Académico - ' + (student_name || 'Estudiante'),
+            html: emailWrap(
+              '<h2 style="color:#f59e0b;margin:0 0 12px">⚠️ Aviso Académico</h2>' +
+              '<p style="color:#374151">Estimado padre/madre,</p>' +
+              '<p style="color:#374151">Le informamos que el promedio académico de <b>' + (student_name || 'su hijo') + '</b> se encuentra por debajo del nivel esperado.</p>' +
+              '<div style="background:#fef3c7;border-radius:8px;padding:16px;margin:16px 0;border-left:4px solid #f59e0b">' +
+              '<p style="margin:0 0 8px;color:#92400e;font-weight:700">Promedio actual: ' + (score || 'N/A') + '/100</p>' +
+              '<p style="margin:0;color:#92400e">Periodo: ' + (period_name || 'Actual') + '</p></div>' +
+              '<p style="color:#374151">Le recomendamos conversar con la maestra para establecer un plan de apoyo.</p>' +
+              '<a href="https://montessorisonrisascreativas.com/panel_padres.html" style="display:inline-block;padding:12px 24px;background:#f59e0b;color:white;text-decoration:none;border-radius:8px;font-weight:bold;margin-top:8px">Ver Calificaciones</a>'
+          }));
+        }
+
+        // Email to directora
+        const { data: admins } = await supabase.from('profiles').select('email').in('role', ['directora']);
+        if (resend && admins?.length) {
+          tasks.push(resend.emails.send({
+            from: FROM_EMAIL,
+            to: admins.map((a: { email: string }) => a.email),
+            subject: 'Alerta de Bajo Rendimiento - ' + (student_name || 'Estudiante'),
+            html: emailWrap(
+              '<h2 style="color:#dc2626;margin:0 0 12px">📊 Alerta de Bajo Rendimiento</h2>' +
+              '<p style="color:#374151">El estudiante <b>' + (student_name || '-') + '</b> tiene un promedio de <b>' + (score || 'N/A') + '/100</b> en el periodo <b>' + (period_name || '-') + '</b>.</p>' +
+              '<p style="color:#6b7280;font-size:13px">Se recomienda revisar el caso y establecer un plan de mejora.</p>'
+            )
+          }));
+        }
+
+        await Promise.allSettled(tasks);
+        result = { notified: true, student_name, score };
+        break;
+      }
+
       default:
         console.warn('[process-event] Unhandled type:', type);
         result = { skipped: true, type };

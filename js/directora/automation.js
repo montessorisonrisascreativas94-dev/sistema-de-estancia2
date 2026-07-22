@@ -131,7 +131,7 @@ export const AutomationModule = {
           scores.reduce((a, b) => a + b, 0) / scores.length
         );
 
-        const belowMin = avgs.filter(avg => avg < 2.5).length;
+        const belowMin = avgs.filter(avg => avg < 50).length;
         const pct = Math.round((belowMin / avgs.length) * 100);
 
         if (pct >= 30) {

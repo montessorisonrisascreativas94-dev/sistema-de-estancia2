@@ -596,7 +596,8 @@ CREATE TABLE IF NOT EXISTS public.grades (
   student_id   bigint REFERENCES public.students(id) ON DELETE CASCADE,
   classroom_id bigint REFERENCES public.classrooms(id),
   period_id    bigint REFERENCES public.periods(id),
-  subject      text, score numeric(4,2), period text,
+  school_year_id bigint REFERENCES public.school_years(id),
+  subject      text, score numeric(4,2),
   numeric_score numeric(5,2) CHECK (numeric_score >= 0 AND numeric_score <= 100),
   teacher_id   uuid REFERENCES public.profiles(id),
   notes        text,
@@ -627,7 +628,8 @@ CREATE TABLE IF NOT EXISTS public.report_cards (
   student_id      bigint REFERENCES public.students(id) ON DELETE CASCADE,
   classroom_id    bigint REFERENCES public.classrooms(id),
   period_id       bigint REFERENCES public.periods(id),
-  task_avg        numeric(4,2), formal_avg numeric(4,2), final_score numeric(4,2),
+  school_year_id  bigint REFERENCES public.school_years(id),
+  task_avg        numeric(5,2), formal_avg numeric(5,2), final_score numeric(5,2),
   level           text, teacher_comment text,
   generated_at    timestamp with time zone DEFAULT now(),
   UNIQUE(student_id, period_id)
@@ -875,6 +877,7 @@ CREATE INDEX IF NOT EXISTS idx_tasks_period               ON public.tasks (perio
 
 -- ?ndices para grades
 CREATE INDEX IF NOT EXISTS idx_grades_period              ON public.grades (period_id, student_id);
+CREATE INDEX IF NOT EXISTS idx_grades_school_year          ON public.grades (school_year_id);
 
 -- ?ndices para login_attempts
 CREATE INDEX IF NOT EXISTS idx_login_attempts_email_time  ON public.login_attempts (email, created_at DESC, success);
@@ -1845,14 +1848,16 @@ BEGIN
     FROM public.students s
     WHERE s.classroom_id = v_period.classroom_id AND s.is_active = true
   LOOP
+    -- Task average: map stars/letters to 0-100, then average
     SELECT ROUND(AVG(
       CASE
-        WHEN te.stars IS NOT NULL AND te.stars > 0 THEN te.stars::numeric
-        WHEN te.grade_letter = 'A' THEN 5
-        WHEN te.grade_letter = 'B' THEN 4
-        WHEN te.grade_letter = 'C' THEN 3
-        WHEN te.grade_letter = 'D' THEN 2
-        WHEN te.grade_letter = 'E' THEN 1
+        WHEN te.numeric_score IS NOT NULL AND te.numeric_score >= 0 THEN te.numeric_score
+        WHEN te.stars IS NOT NULL AND te.stars > 0 THEN te.stars * 20
+        WHEN te.grade_letter = 'A' THEN 95
+        WHEN te.grade_letter = 'B' THEN 85
+        WHEN te.grade_letter = 'C' THEN 75
+        WHEN te.grade_letter = 'D' THEN 60
+        WHEN te.grade_letter = 'E' THEN 40
         ELSE NULL
       END
     ), 2) INTO v_task_avg
@@ -1863,10 +1868,18 @@ BEGIN
       AND te.status = 'graded'
       AND t.created_at BETWEEN v_period.start_date AND v_period.end_date + INTERVAL '1 day';
 
-    SELECT ROUND(AVG(g.score), 2) INTO v_formal_avg
+    -- Formal average: prefer numeric_score (0-100), fall back to score field
+    SELECT ROUND(AVG(
+      CASE
+        WHEN g.numeric_score IS NOT NULL AND g.numeric_score >= 0 THEN g.numeric_score
+        WHEN g.score IS NOT NULL AND g.score > 0 THEN g.score * 20
+        ELSE NULL
+      END
+    ), 2) INTO v_formal_avg
     FROM public.grades g
     WHERE g.student_id = v_student.student_id AND g.period_id = p_period_id;
 
+    -- Weighted final: tasks 60% + formal 40% (all on 0-100 scale)
     IF v_task_avg IS NOT NULL AND v_formal_avg IS NOT NULL THEN
       v_avg := ROUND((v_task_avg * 0.6) + (v_formal_avg * 0.4), 2);
     ELSIF v_task_avg IS NOT NULL THEN
@@ -1877,12 +1890,15 @@ BEGIN
       v_avg := NULL;
     END IF;
 
+    -- Level on 0-100 scale
     v_level := CASE
       WHEN v_avg IS NULL THEN 'Sin calificar'
-      WHEN v_avg >= 4.5 THEN 'Excelente'
-      WHEN v_avg >= 3.5 THEN 'Bueno'
-      WHEN v_avg >= 2.5 THEN 'En proceso'
-      ELSE 'Requiere apoyo'
+      WHEN v_avg >= 95 THEN 'Excelente'
+      WHEN v_avg >= 85 THEN 'Muy Bueno'
+      WHEN v_avg >= 75 THEN 'Bueno'
+      WHEN v_avg >= 60 THEN 'Aceptable'
+      WHEN v_avg >= 50 THEN 'Requiere Mejoras'
+      ELSE 'Bajo Desempeño'
     END;
 
     INSERT INTO public.report_cards (
