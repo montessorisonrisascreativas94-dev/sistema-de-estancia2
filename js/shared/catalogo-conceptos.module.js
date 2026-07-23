@@ -62,7 +62,6 @@ export const CatalogoModule = {
       const { data, error } = await supabase
         .from('payment_concepts')
         .select('*')
-        .order('category')
         .order('name');
 
       if (error) throw error;

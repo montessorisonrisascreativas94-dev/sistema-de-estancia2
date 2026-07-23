@@ -336,7 +336,7 @@
                     <div class="divider"><i class="bi bi-book"></i> Solicitud Academica</div>
                     <div class="form-grid">
                         <div class="form-group"><label class="form-label">Ano Escolar <span class="req">*</span></label><select class="form-select" name="school_year_requested" required><option value="">Seleccionar</option></select></div>
-                        <div class="form-group"><label class="form-label">Nivel Solicitado <span class="req">*</span></label><select class="form-select" name="level_requested" required><option value="">Seleccionar</option><option value="Maternal">Maternal</option><option value="Infante">Infante</option><option value="Parvulos">Parvulos</option><option value="Pre-Kinder">Pre-Kinder</option><option value="Kinder">Kinder</option><option value="Preprimaria">Preprimaria</option></select></div>
+                        <div class="form-group"><label class="form-label">Nivel Solicitado <span class="req">*</span></label><select class="form-select" name="level_requested" required><option value="">Seleccionar</option><option value="Maternal">Maternal (0-2 años)</option><option value="Infante">Infante (2-3 años)</option><option value="Parvulos">Parvulos (3-4 años)</option><option value="Pre-Kinder">Pre-Kinder (4-5 años)</option><option value="Kinder">Kinder (5-6 años)</option><option value="Preprimaria">Preprimaria (6-7 años)</option><option value="1ro Primaria">1ro Primaria (7-8 años)</option><option value="2do Primaria">2do Primaria (8-9 años)</option><option value="3ro Primaria">3ro Primaria (9-10 años)</option><option value="4to Primaria">4to Primaria (10-11 años)</option><option value="5to Primaria">5to Primaria (11-12 años)</option><option value="6to Primaria">6to Primaria (12-13 años)</option></select></div>
                         <div class="form-group"><label class="form-label">Horario Deseado <span class="req">*</span></label><select class="form-select" name="schedule" required><option value="">Seleccionar</option><option value="8:00-12:00">8:00 AM - 12:00 PM</option><option value="8:00-15:00">8:00 AM - 3:00 PM</option><option value="8:00-17:00">8:00 AM - 5:00 PM</option></select></div>
                         <div class="form-group"><label class="form-label">Fecha Estimada de Ingreso</label><input type="date" class="form-input" name="estimated_entry_date"></div>
                     </div>
@@ -477,17 +477,45 @@
                             <div class="fu-name"></div>
                         </div>
                         <div class="file-upload" id="fu-ced-front">
-                            <input type="file" accept="image/*" onchange="handleFile(this,'fu-ced-front','Cedula frontal')">
+                            <input type="file" accept="image/*" onchange="handleFile(this,'fu-ced-front','Cedula del tutor frontal')">
                             <i class="bi bi-card-image"></i>
                             <div class="fu-title">Cedula del Tutor (Frontal)</div>
                             <div class="fu-hint">Foto de la cedula frontal</div>
                             <div class="fu-name"></div>
                         </div>
                         <div class="file-upload" id="fu-ced-back">
-                            <input type="file" accept="image/*" onchange="handleFile(this,'fu-ced-back','Cedula trasera')">
+                            <input type="file" accept="image/*" onchange="handleFile(this,'fu-ced-back','Cedula del tutor trasera')">
                             <i class="bi bi-card-image"></i>
                             <div class="fu-title">Cedula del Tutor (Trasera)</div>
                             <div class="fu-hint">Foto de la cedula trasera</div>
+                            <div class="fu-name"></div>
+                        </div>
+                        <div class="file-upload" id="fu-p1-ced-front">
+                            <input type="file" accept="image/*" onchange="handleFile(this,'fu-p1-ced-front','Cedula padre/madre frontal')">
+                            <i class="bi bi-person-badge"></i>
+                            <div class="fu-title">Cedula Padre/Madre (Frontal)</div>
+                            <div class="fu-hint">Cedula del representante 1</div>
+                            <div class="fu-name"></div>
+                        </div>
+                        <div class="file-upload" id="fu-p1-ced-back">
+                            <input type="file" accept="image/*" onchange="handleFile(this,'fu-p1-ced-back','Cedula padre/madre trasera')">
+                            <i class="bi bi-person-badge"></i>
+                            <div class="fu-title">Cedula Padre/Madre (Trasera)</div>
+                            <div class="fu-hint">Cedula del representante 1</div>
+                            <div class="fu-name"></div>
+                        </div>
+                        <div class="file-upload" id="fu-p2-ced-front">
+                            <input type="file" accept="image/*" onchange="handleFile(this,'fu-p2-ced-front','Cedula segundo tutor frontal')">
+                            <i class="bi bi-person-badge"></i>
+                            <div class="fu-title">Cedula Segundo Tutor (Frontal)</div>
+                            <div class="fu-hint">Cedula del representante 2 (opcional)</div>
+                            <div class="fu-name"></div>
+                        </div>
+                        <div class="file-upload" id="fu-p2-ced-back">
+                            <input type="file" accept="image/*" onchange="handleFile(this,'fu-p2-ced-back','Cedula segundo tutor trasera')">
+                            <i class="bi bi-person-badge"></i>
+                            <div class="fu-title">Cedula Segundo Tutor (Trasera)</div>
+                            <div class="fu-hint">Cedula del representante 2 (opcional)</div>
                             <div class="fu-name"></div>
                         </div>
                     </div>
@@ -739,7 +767,7 @@
             };
 
             // Convert files to base64 and attach
-            const fileMap={photo_url:'fu-photo',birth_certificate_url:'fu-acta',cedula_front_url:'fu-ced-front',cedula_back_url:'fu-ced-back'};
+            const fileMap={photo_url:'fu-photo',birth_certificate_url:'fu-acta',cedula_front_url:'fu-ced-front',cedula_back_url:'fu-ced-back',p1_cedula_front_url:'fu-p1-ced-front',p1_cedula_back_url:'fu-p1-ced-back',p2_cedula_front_url:'fu-p2-ced-front',p2_cedula_back_url:'fu-p2-ced-back'};
             for(const[col,fuId]of Object.entries(fileMap)){
                 const inp=document.getElementById(fuId).querySelector('input[type="file"]');
                 if(inp.files&&inp.files[0]){

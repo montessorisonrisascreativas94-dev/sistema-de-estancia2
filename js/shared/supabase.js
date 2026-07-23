@@ -63,6 +63,7 @@ const _OPTIONAL_ENDPOINTS = [
   '/rpc/get_tasks_for_period',
   '/rpc/get_active_period',
   '/rpc/get_direct_message',
+  '/rpc/get_student_history',
 ];
 
 window.fetch = async function(...args) {

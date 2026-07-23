@@ -1422,7 +1422,7 @@ CREATE INDEX IF NOT EXISTS idx_payroll_period ON public.payroll_records(period);
 CREATE INDEX IF NOT EXISTS idx_payroll_employee ON public.payroll_records(employee_id);
 
 -- payment_concepts
-CREATE INDEX IF NOT EXISTS idx_payment_concepts_active ON public.payment_concepts(is_active) WHERE is_active = true AND deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_payment_concepts_active ON public.payment_concepts(is_active) WHERE is_active = true;
 
 -- ============================================================
 -- 6. HABILITAR ROW LEVEL SECURITY (RLS)
@@ -1936,7 +1936,6 @@ BEGIN
 END;
 $$;
 GRANT EXECUTE ON FUNCTION public.get_active_period(bigint) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.get_active_period() TO authenticated;
 
 -- Obtener tareas por periodo
 CREATE OR REPLACE FUNCTION public.get_tasks_for_period(p_classroom_id bigint, p_period_id bigint DEFAULT NULL)
@@ -2366,6 +2365,7 @@ BEGIN
   INSERT INTO public.notifications (user_id, title, message, type, link, is_read, created_at)
   VALUES (p_user_id, p_type, p_message, p_type, p_link, false, now()) ON CONFLICT DO NOTHING;
 EXCEPTION WHEN OTHERS THEN NULL;
+END;
 $$;
 
 GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO authenticated;

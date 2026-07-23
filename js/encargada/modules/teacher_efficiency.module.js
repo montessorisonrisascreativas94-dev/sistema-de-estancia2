@@ -17,28 +17,28 @@ export const TeacherEfficiencyModule = {
   async load() {
     const container = document.getElementById('eficienciaContent');
     if (!container) return;
-    container.innerHTML = '<div class="p-6 text-center"><div class="animate-spin w-6 h-6 border-2 border-[#FF7A00] border-t-transparent rounded-full mx-auto"></div></div>';
+    container.innerHTML = '<div class="p-6 text-center"><div class="animate-spin w-6 h-6 border-2 border-[#6366F1] border-t-transparent rounded-full mx-auto"></div></div>';
 
     try {
       // Cargar maestras reales desde Supabase
       const { data: teachers, error } = await supabase
         .from('profiles')
         .select('id, name, role, is_active, avatar_url')
-        .in('role', ['maestra', 'asistente'])
+        .in('role', ['maestra'])
         .eq('is_active', true)
         .order('name');
 
       if (error) throw error;
 
-      const list = (teachers || []).map((t, i) => ({
+      const list = (teachers || []).map((t) => ({
         id:           t.id,
         name:         t.name || 'Sin nombre',
         role:         t.role,
-        efficiency:   Math.max(70, 98 - i * 4),   // placeholder hasta tener tabla de métricas
-        punctuality:  Math.max(72, 99 - i * 3),
-        attendance:   Math.max(75, 100 - i * 2),
-        reports:      Math.max(68, 96 - i * 5),
-        parentRating: Math.max(70, 97 - i * 4)
+        efficiency:   0,
+        punctuality:  0,
+        attendance:   0,
+        reports:      0,
+        parentRating: 0
       }));
 
       // Guardar en estado usando la clave correcta (teachers.all)
@@ -78,7 +78,7 @@ export const TeacherEfficiencyModule = {
         <div class="h-2 rounded-full transition-all" style="width:${pct}%;background:${color}"></div>
       </div>`;
     const row = (label, pct) => {
-      const color = pct >= 90 ? '#28B54D' : pct >= 70 ? '#FF7A00' : '#ef4444';
+      const color = pct >= 90 ? '#28B54D' : pct >= 70 ? '#6366F1' : '#ef4444';
       return `<div>
         <div class="flex justify-between text-xs mb-1">
           <span class="text-slate-500">${label}</span>
@@ -89,13 +89,13 @@ export const TeacherEfficiencyModule = {
     return `
       <div class="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm hover:shadow-md transition-all">
         <div class="flex items-center gap-3 mb-4">
-          <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-[#FF7A00]/20 to-[#FF7A00]/10 flex items-center justify-center text-xl font-black text-[#FF7A00]">${initial}</div>
+          <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-[#6366F1]/20 to-[#6366F1]/10 flex items-center justify-center text-xl font-black text-[#6366F1]">${initial}</div>
           <div class="flex-1 min-w-0">
             <h4 class="font-bold text-slate-800 truncate">${Helpers.escapeHTML(t.name)}</h4>
             <span class="text-[10px] font-black uppercase tracking-wider text-slate-400">${t.role}</span>
           </div>
           <div class="flex flex-col items-end gap-1">
-            <span class="text-2xl font-black text-[#FF7A00]">${t.efficiency}</span>
+            <span class="text-2xl font-black text-[#6366F1]">${t.efficiency}</span>
             <span class="px-2 py-0.5 rounded-full text-[10px] font-black ${badge[0]}">${badge[1]}</span>
           </div>
         </div>

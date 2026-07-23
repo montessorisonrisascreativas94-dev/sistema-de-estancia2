@@ -160,6 +160,16 @@ export const PaymentsModule = {
       const el = document.getElementById('paymentsBalance');
       if (el) el.textContent = Helpers.formatCurrency(paidTotal);
 
+      // ── Update Summary Cards ─────────────────────────────────
+      this._updateSummaryCards(allPayments);
+
+      // ── Color month grid with payment status ─────────────────
+      this._colorMonthGrid(allPayments);
+
+      // ── Expose all payments for wizard filter ─────────────────
+      this._allPayments = allPayments;
+      this._renderFilteredCards();
+
       if (window.lucide) lucide.createIcons();
     } catch (err) {
       container.innerHTML = Helpers.emptyState('Error al cargar pagos', 'alert-triangle');
@@ -332,10 +342,10 @@ export const PaymentsModule = {
             </div>
           </div>
           
-          ${p.fiscal_receipt_url ? `
+          ${p.proof_url ? `
           <div class="mt-3 pt-3 border-t border-slate-50 flex items-center justify-between">
             <p class="text-[10px] font-bold text-slate-400 italic">Comprobante fiscal adjunto</p>
-            <a href="${Security.safeUrl(p.fiscal_receipt_url)}" target="_blank" rel="noopener noreferrer" class="text-[10px] font-black text-indigo-600 hover:underline flex items-center gap-1">Ver <i data-lucide="external-link" class="w-4 h-4"></i></a>
+            <a href="${Security.safeUrl(p.proof_url)}" target="_blank" rel="noopener noreferrer" class="text-[10px] font-black text-indigo-600 hover:underline flex items-center gap-1">Ver <i data-lucide="external-link" class="w-4 h-4"></i></a>
           </div>` : ''}
 
           ${moraInfo ? `
@@ -706,7 +716,7 @@ export const PaymentsModule = {
           method, 
           bank, 
           evidence_url: publicUrl, 
-          fiscal_receipt_url: fiscalUrl,
+          proof_url: fiscalUrl,
           status: 'review',
           created_at: new Date().toISOString()
         });
@@ -787,6 +797,95 @@ export const PaymentsModule = {
       img.onerror = reject;
       img.src = url;
     });
+  },
+
+  // ── Summary Cards Update ───────────────────────────────────
+  _updateSummaryCards(allPayments) {
+    const paid = allPayments.filter(p => ['paid'].includes((p.status||'').toLowerCase()));
+    const review = allPayments.filter(p => ['review'].includes((p.status||'').toLowerCase()));
+    const pending = allPayments.filter(p => !['paid','review'].includes((p.status||'').toLowerCase()));
+
+    const paidTotal = paid.reduce((s, p) => s + Number(p.amount || 0), 0);
+    const reviewTotal = review.reduce((s, p) => s + Number(p.amount || 0), 0);
+
+    const paidEl = document.getElementById('paymentSummaryPaid');
+    const reviewEl = document.getElementById('paymentSummaryReview');
+    const pendingEl = document.getElementById('paymentSummaryPending');
+    const nextEl = document.getElementById('paymentSummaryNext');
+
+    if (paidEl) paidEl.textContent = Helpers.formatCurrency(paidTotal);
+    if (reviewEl) reviewEl.textContent = Helpers.formatCurrency(reviewTotal);
+    if (pendingEl) pendingEl.textContent = pending.length;
+
+    // Find next upcoming payment
+    if (nextEl) {
+      const upcoming = pending
+        .filter(p => p.due_date)
+        .sort((a, b) => new Date(a.due_date) - new Date(b.due_date))[0];
+      if (upcoming) {
+        const d = new Date(upcoming.due_date + 'T00:00:00');
+        nextEl.textContent = d.toLocaleDateString('es-DO', { day: 'numeric', month: 'short' });
+      } else {
+        nextEl.textContent = '—';
+      }
+    }
+  },
+
+  // ── Color Month Grid by Payment Status ─────────────────────
+  _colorMonthGrid(allPayments) {
+    const grid = document.getElementById('monthButtonGrid');
+    if (!grid) return;
+
+    const statusMap = {};
+    for (const p of allPayments) {
+      const mp = p.month_paid;
+      if (!mp) continue;
+      const key = mp.length === 7 ? mp : mp;
+      const status = (p.status || '').toLowerCase();
+      const existing = statusMap[key];
+      const priority = { paid: 3, review: 2, overdue: 1, pending: 0 };
+      if (!existing || (priority[status] || 0) > (priority[existing] || 0)) {
+        statusMap[key] = status;
+      }
+    }
+
+    grid.querySelectorAll('.month-btn').forEach(btn => {
+      const val = btn.dataset.val;
+      const status = statusMap[val];
+      if (status === 'paid') {
+        btn.className = 'month-btn py-2 text-[11px] font-black rounded-xl border-2 border-[#28B54D] bg-[#E8FFF0] text-[#28B54D] transition-all active:scale-95';
+      } else if (status === 'review') {
+        btn.className = 'month-btn py-2 text-[11px] font-black rounded-xl border-2 border-[#FF7A00] bg-[#FFF0E0] text-[#FF7A00] transition-all active:scale-95';
+      } else if (status === 'overdue') {
+        btn.className = 'month-btn py-2 text-[11px] font-black rounded-xl border-2 border-[#EF4444] bg-[#FFE8E8] text-[#EF4444] transition-all active:scale-95';
+      }
+    });
+  },
+
+  // ── Render filtered payment cards ──────────────────────────
+  _renderFilteredCards() {
+    const container = document.getElementById('paymentsHistory');
+    if (!container || !this._allPayments) return;
+
+    const showPendingOnly = window.WizardPayment?._filterPending;
+    let filtered = this._allPayments;
+
+    if (showPendingOnly) {
+      filtered = this._allPayments.filter(p => !['paid'].includes((p.status||'').toLowerCase()));
+    }
+
+    if (!filtered.length) {
+      container.innerHTML = Helpers.emptyState(
+        showPendingOnly ? 'No tienes pagos pendientes' : 'No hay registros de pagos',
+        showPendingOnly ? 'check-circle' : 'credit-card'
+      );
+      return;
+    }
+
+    // Render with timeline for recent ones
+    const now = Date.now();
+    container.innerHTML = filtered.map(p => this._renderCard(p)).join('');
+    if (window.lucide) lucide.createIcons();
   }
 };
 

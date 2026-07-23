@@ -83,9 +83,12 @@
     }
     @media (max-width: 767px) {
       html { overflow-y: auto !important; -webkit-overflow-scrolling: touch !important; }
-      body { overflow-y: auto !important; -webkit-overflow-scrolling: touch !important; height: auto !important; }
-      body #layoutShell { overflow: visible !important; height: auto !important; min-height: auto !important; }
-      .app-panel-padre { min-height: auto !important; height: auto !important; }
+      body { overflow-y: auto !important; -webkit-overflow-scrolling: touch !important; height: auto !important; position: static !important; }
+      body #layoutShell { overflow: visible !important; height: auto !important; min-height: auto !important; position: static !important; }
+      .app-panel-padre { min-height: auto !important; height: auto !important; overflow: visible !important; }
+      #layoutShell, #layoutShell > * { overflow: visible !important; max-height: none !important; }
+      .section { overflow: visible !important; }
+      * { -webkit-overflow-scrolling: touch !important; }
     }
     
     /* ============================================
@@ -739,20 +742,22 @@
             </div>
           </div>
 
-          <!-- Últimas Publicaciones del Muro -->
+          <!-- 🔔 ACTIVIDAD RECIENTE -->
           <div class="cloud-card mb-8">
             <div class="flex items-center justify-between mb-5">
               <h3 class="font-black text-xl text-[#1A2340] flex items-center gap-2">
-                <span class="w-9 h-9 rounded-xl bg-[#E8F2FF] text-[#0B63C7] flex items-center justify-center text-lg">📢</span>
-                Muro del Aula
+                <span class="w-9 h-9 rounded-xl bg-gradient-to-br from-[#0B63C7] to-[#28B54D] text-white flex items-center justify-center text-lg shadow-md">
+                  <i data-lucide="bell" class="w-5 h-5"></i>
+                </span>
+                Actividad Reciente
               </h3>
               <button onclick="App.navigateTo('class')" class="px-4 py-2 bg-[#E8F2FF] text-[#0B63C7] rounded-xl text-xs font-black uppercase tracking-widest hover:bg-[#0B63C7] hover:text-white transition-all flex items-center gap-1.5">
-                Ver Todas <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+                Ver Todo <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
               </button>
             </div>
-            <div id="latestPostsContainer" class="space-y-3">
+            <div id="recentActivityFeed" class="space-y-2">
               <div class="p-4 rounded-2xl bg-slate-50 border border-slate-100 text-center text-slate-500 text-sm">
-                <p>Cargando publicaciones...</p>
+                <p>Cargando actividad reciente...</p>
               </div>
             </div>
           </div>
@@ -947,81 +952,157 @@
                   </div>
                   Oficina de Pagos
                 </h3>
-                <div class="flex items-center gap-2 flex-wrap">
-                  <div class="text-sm bg-[#E8FFF0] px-4 py-2 rounded-full text-[#28B54D] font-black border border-[#28B54D]/20 shadow-sm">
-                    Pagado: <span id="paymentsBalance">$0.00</span>
-                  </div>
-                  <div class="text-sm bg-[#FFF0E0] px-4 py-2 rounded-full text-[#FF7A00] font-black border border-[#FF7A00]/20 shadow-sm">
-                    Monto mensual: <span id="paymentsMonthlyFee">$0.00</span>
-                  </div>
-                  <div class="text-xs text-[#64748B] font-bold">
-                    Vence día <span id="paymentsDueDay">—</span>
-                  </div>
-                </div>
+                <div></div>
               </div>
 
               <!-- 🚨 Banner de alerta de vencimiento — controlado por JS -->
               <div id="paymentAlertBanner" class="hidden"></div>
 
-              <!-- Info Box: Payments by Transfer -->
-              <div class="bg-gradient-to-r from-[#E8FFF0] to-[#E8F2FF] border border-[#28B54D]/20 rounded-2xl p-6 shadow-sm">
-                <div class="flex items-start gap-4">
-                  <div class="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shrink-0 text-[#28B54D]">
-                    <i data-lucide="banknote" class="w-6 h-6"></i>
+              <!-- Summary Cards -->
+              <div class="grid grid-cols-2 md:grid-cols-4 gap-3" id="paymentSummaryCards">
+                <div class="p-4 rounded-2xl bg-gradient-to-br from-[#E8FFF0] to-white border border-[#28B54D]/15 text-center hover:scale-[1.02] transition-transform">
+                  <div class="w-10 h-10 rounded-xl bg-[#28B54D]/10 text-[#28B54D] flex items-center justify-center mx-auto mb-2">
+                    <i data-lucide="wallet" class="w-5 h-5"></i>
                   </div>
-                  <div class="flex-1">
-                    <h4 class="font-black text-lg text-[#1A2340] mb-1">Pagos por Transferencia Bancaria</h4>
-                    <p class="text-sm text-[#64748B] font-medium">
-                      Realiza la transferencia a la cuenta de la escuela y sube el comprobante aquí para que la directora lo revise.
-                    </p>
+                  <p id="paymentSummaryPaid" class="text-xl font-black text-[#28B54D]">RD$0</p>
+                  <p class="text-[10px] font-black text-[#64748B] uppercase tracking-wide mt-0.5">Total Pagado</p>
+                </div>
+                <div class="p-4 rounded-2xl bg-gradient-to-br from-[#E8F2FF] to-white border border-[#0B63C7]/15 text-center hover:scale-[1.02] transition-transform">
+                  <div class="w-10 h-10 rounded-xl bg-[#0B63C7]/10 text-[#0B63C7] flex items-center justify-center mx-auto mb-2">
+                    <i data-lucide="calendar" class="w-5 h-5"></i>
                   </div>
+                  <p id="paymentSummaryNext" class="text-xl font-black text-[#0B63C7]">—</p>
+                  <p class="text-[10px] font-black text-[#64748B] uppercase tracking-wide mt-0.5">Próximo Pago</p>
+                </div>
+                <div class="p-4 rounded-2xl bg-gradient-to-br from-[#FFF0E0] to-white border border-[#FF7A00]/15 text-center hover:scale-[1.02] transition-transform">
+                  <div class="w-10 h-10 rounded-xl bg-[#FF7A00]/10 text-[#FF7A00] flex items-center justify-center mx-auto mb-2">
+                    <i data-lucide="clock" class="w-5 h-5"></i>
+                  </div>
+                  <p id="paymentSummaryReview" class="text-xl font-black text-[#FF7A00]">RD$0</p>
+                  <p class="text-[10px] font-black text-[#64748B] uppercase tracking-wide mt-0.5">En Revisión</p>
+                </div>
+                <div class="p-4 rounded-2xl bg-gradient-to-br from-[#FFE8E8] to-white border border-[#EF4444]/15 text-center hover:scale-[1.02] transition-transform">
+                  <div class="w-10 h-10 rounded-xl bg-[#EF4444]/10 text-[#EF4444] flex items-center justify-center mx-auto mb-2">
+                    <i data-lucide="alert-circle" class="w-5 h-5"></i>
+                  </div>
+                  <p id="paymentSummaryPending" class="text-xl font-black text-[#EF4444]">0</p>
+                  <p class="text-[10px] font-black text-[#64748B] uppercase tracking-wide mt-0.5">Pendientes</p>
                 </div>
               </div>
 
               <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 
-                <!-- Formulario Mejorado -->
+                <!-- WIZARD DE PAGO PASO A PASO -->
                 <div class="cloud-card lg:col-span-1 h-fit">
-                  <div class="flex items-center gap-2 mb-5 pb-4 border-b border-[#E2E8F0]">
+                  <div class="flex items-center gap-2 mb-4 pb-4 border-b border-[#E2E8F0]">
                     <div class="w-8 h-8 rounded-xl bg-[#E8FFF0] text-[#28B54D] flex items-center justify-center">
                       <i data-lucide="wallet" class="w-4 h-4"></i>
                     </div>
                     <h4 class="font-black text-lg text-[#1A2340]">Registrar Pago</h4>
                   </div>
-                  <form id="paymentForm" class="space-y-5">
-                    <!-- CONCEPTO PILLS -->
-                    <div>
-                      <label class="block text-xs font-black text-[#64748B] uppercase tracking-[0.2em] mb-2">Concepto *</label>
-                      <div class="grid grid-cols-2 gap-2" id="conceptPillsGrid">
-                        <button type="button" data-concept="mensualidad" data-price="0" onclick="window._selConcepto(this)"
-                          class="concept-btn active-concept py-2.5 px-2 rounded-xl border-2 border-[#0B63C7] bg-[#E8F2FF] text-[#0B63C7] text-xs font-black text-center transition-all"><span class="block">📅 Colegiatura</span><span class="block text-[9px] font-bold opacity-70 concept-price"></span></button>
-                        <button type="button" data-concept="inscripcion" data-price="0" onclick="window._selConcepto(this)"
-                          class="concept-btn py-2.5 px-2 rounded-xl border-2 border-slate-200 bg-white text-slate-500 text-xs font-black text-center transition-all hover:border-[#0B63C7]"><span class="block">📝 Inscripción</span><span class="block text-[9px] font-bold opacity-70 concept-price"></span></button>
-                        <button type="button" data-concept="reinscripcion" data-price="0" onclick="window._selConcepto(this)"
-                          class="concept-btn py-2.5 px-2 rounded-xl border-2 border-slate-200 bg-white text-slate-500 text-xs font-black text-center transition-all hover:border-[#0B63C7]"><span class="block">🔄 Reinscripción</span><span class="block text-[9px] font-bold opacity-70 concept-price"></span></button>
-                        <button type="button" data-concept="uniforme" data-price="0" onclick="window._selConcepto(this)"
-                          class="concept-btn py-2.5 px-2 rounded-xl border-2 border-slate-200 bg-white text-slate-500 text-xs font-black text-center transition-all hover:border-[#0B63C7]"><span class="block">👕 Uniforme</span><span class="block text-[9px] font-bold opacity-70 concept-price"></span></button>
-                        <button type="button" data-concept="libros" data-price="0" onclick="window._selConcepto(this)"
-                          class="concept-btn py-2.5 px-2 rounded-xl border-2 border-slate-200 bg-white text-slate-500 text-xs font-black text-center transition-all hover:border-[#0B63C7]"><span class="block">📚 Libros</span><span class="block text-[9px] font-bold opacity-70 concept-price"></span></button>
-                        <button type="button" data-concept="otro" data-price="0" onclick="window._selConcepto(this)"
-                          class="concept-btn py-2.5 px-2 rounded-xl border-2 border-slate-200 bg-white text-slate-500 text-xs font-black text-center transition-all hover:border-[#0B63C7]"><span class="block">🏷️ Otro</span><span class="block text-[9px] font-bold opacity-70 concept-price"></span></button>
+
+                  <!-- Step Progress Indicator -->
+                  <div id="wizardProgress" class="flex items-center justify-between mb-6 px-2">
+                    <div class="flex items-center gap-1">
+                      <div id="wizDot1" class="w-7 h-7 rounded-full bg-[#0B63C7] text-white text-[10px] font-black flex items-center justify-center shadow-md shadow-[#0B63C7]/30 transition-all">1</div>
+                      <span class="text-[10px] font-black text-[#0B63C7] ml-1 hidden sm:inline">Concepto</span>
+                    </div>
+                    <div class="flex-1 h-0.5 bg-[#E2E8F0] mx-2 rounded-full"><div id="wizBar1" class="h-full bg-[#0B63C7] rounded-full transition-all" style="width:0%"></div></div>
+                    <div class="flex items-center gap-1">
+                      <div id="wizDot2" class="w-7 h-7 rounded-full bg-[#E2E8F0] text-[#64748B] text-[10px] font-black flex items-center justify-center transition-all">2</div>
+                      <span class="text-[10px] font-black text-[#64748B] ml-1 hidden sm:inline">Datos</span>
+                    </div>
+                    <div class="flex-1 h-0.5 bg-[#E2E8F0] mx-2 rounded-full"><div id="wizBar2" class="h-full bg-[#0B63C7] rounded-full transition-all" style="width:0%"></div></div>
+                    <div class="flex items-center gap-1">
+                      <div id="wizDot3" class="w-7 h-7 rounded-full bg-[#E2E8F0] text-[#64748B] text-[10px] font-black flex items-center justify-center transition-all">3</div>
+                      <span class="text-[10px] font-black text-[#64748B] ml-1 hidden sm:inline">Comprobante</span>
+                    </div>
+                  </div>
+
+                  <!-- ═══════ PASO 1: ¿Qué desea pagar? ═══════ -->
+                  <div id="wizStep1" class="space-y-3">
+                    <p class="text-xs font-black text-[#64748B] uppercase tracking-[0.15em] mb-3">¿Qué desea pagar?</p>
+                    <div class="grid grid-cols-2 gap-2" id="conceptPillsGrid">
+                      <button type="button" data-concept="mensualidad" data-price="0" onclick="window.WizardPayment.selectConcept(this)"
+                        class="concept-btn wizard-concept-btn py-3 px-2 rounded-xl border-2 border-[#0B63C7] bg-[#E8F2FF] text-[#0B63C7] text-xs font-black text-center transition-all active:scale-95">
+                        <span class="block text-lg mb-1">📚</span><span class="block">Colegiatura</span><span class="block text-[9px] font-bold opacity-70 concept-price"></span>
+                      </button>
+                      <button type="button" data-concept="uniforme" data-price="0" onclick="window.WizardPayment.selectConcept(this)"
+                        class="concept-btn wizard-concept-btn py-3 px-2 rounded-xl border-2 border-slate-200 bg-white text-slate-500 text-xs font-black text-center transition-all hover:border-[#0B63C7] active:scale-95">
+                        <span class="block text-lg mb-1">👕</span><span class="block">Uniforme</span><span class="block text-[9px] font-bold opacity-70 concept-price"></span>
+                      </button>
+                      <button type="button" data-concept="libros" data-price="0" onclick="window.WizardPayment.selectConcept(this)"
+                        class="concept-btn wizard-concept-btn py-3 px-2 rounded-xl border-2 border-slate-200 bg-white text-slate-500 text-xs font-black text-center transition-all hover:border-[#0B63C7] active:scale-95">
+                        <span class="block text-lg mb-1">📖</span><span class="block">Libros</span><span class="block text-[9px] font-bold opacity-70 concept-price"></span>
+                      </button>
+                      <button type="button" data-concept="inscripcion" data-price="0" onclick="window.WizardPayment.selectConcept(this)"
+                        class="concept-btn wizard-concept-btn py-3 px-2 rounded-xl border-2 border-slate-200 bg-white text-slate-500 text-xs font-black text-center transition-all hover:border-[#0B63C7] active:scale-95">
+                        <span class="block text-lg mb-1">🎓</span><span class="block">Inscripción</span><span class="block text-[9px] font-bold opacity-70 concept-price"></span>
+                      </button>
+                      <button type="button" data-concept="reinscripcion" data-price="0" onclick="window.WizardPayment.selectConcept(this)"
+                        class="concept-btn wizard-concept-btn py-3 px-2 rounded-xl border-2 border-slate-200 bg-white text-slate-500 text-xs font-black text-center transition-all hover:border-[#0B63C7] active:scale-95">
+                        <span class="block text-lg mb-1">🔄</span><span class="block">Reinscripción</span><span class="block text-[9px] font-bold opacity-70 concept-price"></span>
+                      </button>
+                      <button type="button" data-concept="otro" data-price="0" onclick="window.WizardPayment.selectConcept(this)"
+                        class="concept-btn wizard-concept-btn py-3 px-2 rounded-xl border-2 border-slate-200 bg-white text-slate-500 text-xs font-black text-center transition-all hover:border-[#0B63C7] active:scale-95">
+                        <span class="block text-lg mb-1">🏷️</span><span class="block">Otro</span><span class="block text-[9px] font-bold opacity-70 concept-price"></span>
+                      </button>
+                    </div>
+                    <input type="hidden" id="paymentConcept" value="mensualidad">
+
+                    <!-- Modal: Todos los conceptos -->
+                    <button type="button" onclick="document.getElementById('allConceptsModal').classList.remove('hidden');document.getElementById('allConceptsModal').classList.add('flex')"
+                      class="w-full py-2 text-[11px] font-black text-[#0B63C7] bg-[#E8F2FF] rounded-xl hover:bg-[#0B63C7] hover:text-white transition-all active:scale-95 flex items-center justify-center gap-1">
+                      ➕ Ver todos los conceptos
+                    </button>
+                  </div>
+
+                  <!-- ═══════ PASO 1b: Meses (solo colegiatura) ═══════ -->
+                  <div id="wizStep1b" class="space-y-3 hidden">
+                    <div class="flex items-center gap-2">
+                      <button type="button" onclick="window.WizardPayment.goStep(1)" class="w-7 h-7 rounded-lg bg-[#E2E8F0] text-[#64748B] flex items-center justify-center hover:bg-[#0B63C7] hover:text-white transition-all">
+                        <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
+                      </button>
+                      <p class="text-xs font-black text-[#64748B] uppercase tracking-[0.15em]">Seleccione los meses</p>
+                    </div>
+                    <div class="grid grid-cols-4 gap-1.5" id="monthButtonGrid"></div>
+                    <select id="paymentMonth" class="hidden" multiple></select>
+                    <!-- Leyenda -->
+                    <div class="flex flex-wrap gap-2 mt-2 pt-2 border-t border-[#E2E8F0]">
+                      <span class="flex items-center gap-1 text-[9px] font-black text-[#28B54D]"><span class="w-2.5 h-2.5 rounded-full bg-[#28B54D]"></span>Pagado</span>
+                      <span class="flex items-center gap-1 text-[9px] font-black text-[#FF7A00]"><span class="w-2.5 h-2.5 rounded-full bg-[#FF7A00]"></span>En revisión</span>
+                      <span class="flex items-center gap-1 text-[9px] font-black text-[#EF4444]"><span class="w-2.5 h-2.5 rounded-full bg-[#EF4444]"></span>Vencido</span>
+                      <span class="flex items-center gap-1 text-[9px] font-black text-[#94A3B8]"><span class="w-2.5 h-2.5 rounded-full bg-[#E2E8F0]"></span>Disponible</span>
+                    </div>
+                    <button type="button" onclick="window.WizardPayment.goStep(2)" id="wizBtnToStep2FromMonths"
+                      class="w-full py-3 rounded-xl font-black text-sm bg-[#0B63C7] text-white hover:bg-[#0850A0] active:scale-95 transition-all flex items-center justify-center gap-2 shadow-lg shadow-[#0B63C7]/20 mt-2">
+                      Continuar <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                    </button>
+                  </div>
+
+                  <!-- ═══════ PASO 2: Datos del pago ═══════ -->
+                  <div id="wizStep2" class="space-y-4 hidden">
+                    <div class="flex items-center gap-2 mb-1">
+                      <button type="button" onclick="window.WizardPayment.goBackFromStep2()" class="w-7 h-7 rounded-lg bg-[#E2E8F0] text-[#64748B] flex items-center justify-center hover:bg-[#0B63C7] hover:text-white transition-all">
+                        <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
+                      </button>
+                      <p class="text-xs font-black text-[#64748B] uppercase tracking-[0.15em]">Datos del pago</p>
+                    </div>
+
+                    <!-- Resumen del concepto seleccionado -->
+                    <div id="wizConceptSummary" class="p-3 bg-[#E8F2FF] rounded-xl border border-[#0B63C7]/20 flex items-center gap-3">
+                      <span class="text-xl" id="wizConceptIcon">📚</span>
+                      <div class="flex-1 min-w-0">
+                        <p class="font-black text-sm text-[#1A2340] truncate" id="wizConceptName">Colegiatura</p>
+                        <p class="text-[10px] font-bold text-[#64748B]" id="wizConceptMonths"></p>
                       </div>
-                      <input type="hidden" id="paymentConcept" value="mensualidad">
+                      <p class="font-black text-[#0B63C7] text-sm" id="wizConceptTotal">RD$0</p>
                     </div>
-                    <!-- MES GRID (solo colegiatura) -->
-                    <div id="monthGridSection">
-                      <label class="block text-xs font-black text-[#64748B] uppercase tracking-[0.2em] mb-2">Mes(es) a pagar *</label>
-                      <div class="grid grid-cols-4 gap-1.5" id="monthButtonGrid"></div>
-                      <select id="paymentMonth" class="hidden" multiple></select>
-                      <p class="text-[10px] text-[#64748B] mt-1.5 ml-1">Toca para seleccionar. Puede ser múltiple.</p>
-                    </div>
+
                     <!-- MONTO -->
                     <div>
-                      <label class="block text-xs font-black text-[#64748B] uppercase tracking-[0.2em] mb-1.5">Monto *</label>
-                      <div class="relative">
-                        <span class="absolute left-4 top-3.5 text-[#64748B] font-bold text-xs">RD$</span>
-                        <input type="number" step="0.01" id="paymentAmount" class="w-full pl-12 pr-4 py-3 border-2 border-[#E2E8F0] rounded-xl bg-[#F8FAFC] focus:bg-white focus:ring-2 focus:ring-[#28B54D] focus:border-[#28B54D] outline-none transition-all font-bold text-[#1A2340]" placeholder="0.00" required>
-                      </div>
+                      <label class="block text-[10px] font-black text-[#64748B] uppercase tracking-[0.2em] mb-1.5">Monto *</label>
+                      <input type="number" step="0.01" id="paymentAmount" class="w-full px-4 py-2.5 border-2 border-[#E2E8F0] rounded-xl bg-[#F8FAFC] focus:bg-white focus:ring-2 focus:ring-[#28B54D] focus:border-[#28B54D] outline-none transition-all font-bold text-[#1A2340] text-sm" placeholder="0.00" required>
                       <div id="moraCalculatorHint" class="hidden mt-2 p-3 bg-[#FFE8E8] border border-[#EF4444]/20 rounded-xl text-xs">
                         <div class="flex items-center justify-between mb-1">
                           <span class="font-black text-[#EF4444]">⚠️ Mora</span>
@@ -1034,10 +1115,11 @@
                         </div>
                       </div>
                     </div>
+
                     <!-- BANCO -->
                     <div>
-                      <label class="block text-xs font-black text-[#64748B] uppercase tracking-[0.2em] mb-1.5">Banco de Origen *</label>
-                      <select id="paymentBank" class="w-full p-3 border-2 border-[#E2E8F0] rounded-xl bg-[#F8FAFC] focus:bg-white focus:ring-2 focus:ring-[#28B54D] focus:border-[#28B54D] outline-none transition-all font-medium text-[#1A2340]" required>
+                      <label class="block text-[10px] font-black text-[#64748B] uppercase tracking-[0.2em] mb-1.5">Banco de Origen *</label>
+                      <select id="paymentBank" class="w-full p-2.5 border-2 border-[#E2E8F0] rounded-xl bg-[#F8FAFC] focus:bg-white focus:ring-2 focus:ring-[#28B54D] focus:border-[#28B54D] outline-none transition-all font-medium text-[#1A2340] text-sm" required>
                         <option value="">Seleccionar banco...</option>
                         <option value="Banreservas">🏛️ Banreservas</option>
                         <option value="Banco Popular Dominicano">🏦 Banco Popular</option>
@@ -1049,154 +1131,179 @@
                         <option value="Otro">💳 Otro</option>
                       </select>
                     </div>
+
                     <!-- MÉTODO FIJO -->
-                    <div class="flex items-center gap-2 p-3 border border-[#28B54D]/20 rounded-xl bg-[#E8FFF0] text-[#28B54D] font-bold text-sm">
+                    <div class="flex items-center gap-2 p-2.5 border border-[#28B54D]/20 rounded-xl bg-[#E8FFF0] text-[#28B54D] font-bold text-xs">
                       <i data-lucide="arrow-right-left" class="w-4 h-4 shrink-0"></i>
                       <span>Transferencia Bancaria</span>
                     </div>
                     <input type="hidden" id="paymentMethod" value="transferencia">
+
                     <!-- RNC FACTURA -->
-                    <div class="p-4 bg-[#F8FAFC] rounded-2xl border border-[#E2E8F0] space-y-3">
+                    <div class="p-3 bg-[#F8FAFC] rounded-xl border border-[#E2E8F0] space-y-2">
                       <label class="flex items-center gap-2 cursor-pointer select-none">
                         <input type="checkbox" id="needsRNC" class="w-4 h-4 rounded accent-[#0B63C7]" onchange="document.getElementById('rncFields').classList.toggle('hidden',!this.checked)">
-                        <span class="text-sm font-black text-[#1A2340]">📄 Requiero Factura con RNC</span>
+                        <span class="text-xs font-black text-[#1A2340]">📄 Requiero Factura con RNC</span>
                       </label>
-                      <div id="rncFields" class="hidden space-y-3 pt-1">
-                        <div>
-                          <label class="block text-[10px] font-black text-[#64748B] uppercase tracking-[0.2em] mb-1">RNC / Cédula</label>
-                          <input type="text" id="paymentRNC" placeholder="000-00000-0" class="w-full px-3 py-2.5 border-2 border-[#E2E8F0] rounded-xl text-sm font-bold text-[#1A2340] outline-none focus:ring-2 focus:ring-[#0B63C7] focus:border-[#0B63C7] bg-white transition-all">
+                      <div id="rncFields" class="hidden space-y-2 pt-1">
+                        <input type="text" id="paymentRNC" placeholder="RNC / Cédula" class="w-full px-3 py-2 border-2 border-[#E2E8F0] rounded-xl text-xs font-bold text-[#1A2340] outline-none focus:ring-2 focus:ring-[#0B63C7] focus:border-[#0B63C7] bg-white transition-all">
+                        <input type="text" id="paymentBusinessName" placeholder="Nombre / Razón Social" class="w-full px-3 py-2 border-2 border-[#E2E8F0] rounded-xl text-xs font-bold text-[#1A2340] outline-none focus:ring-2 focus:ring-[#0B63C7] focus:border-[#0B63C7] bg-white transition-all">
+                      </div>
+                    </div>
+
+                    <button type="button" onclick="window.WizardPayment.goStep(3)"
+                      class="w-full py-3 rounded-xl font-black text-sm bg-[#0B63C7] text-white hover:bg-[#0850A0] active:scale-95 transition-all flex items-center justify-center gap-2 shadow-lg shadow-[#0B63C7]/20">
+                      Adjuntar Comprobante <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                    </button>
+                  </div>
+
+                  <!-- ═══════ PASO 3: Subir comprobante ═══════ -->
+                  <div id="wizStep3" class="space-y-4 hidden">
+                    <div class="flex items-center gap-2 mb-1">
+                      <button type="button" onclick="window.WizardPayment.goStep(2)" class="w-7 h-7 rounded-lg bg-[#E2E8F0] text-[#64748B] flex items-center justify-center hover:bg-[#0B63C7] hover:text-white transition-all">
+                        <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
+                      </button>
+                      <p class="text-xs font-black text-[#64748B] uppercase tracking-[0.15em]">Comprobante de transferencia</p>
+                    </div>
+
+                    <!-- Cuenta bancaria destino -->
+                    <div class="p-4 bg-gradient-to-r from-[#E8F2FF] to-[#E8FFF0] rounded-xl border border-[#0B63C7]/15">
+                      <p class="text-[10px] font-black text-[#64748B] uppercase tracking-[0.15em] mb-2">Datos de transferencia</p>
+                      <div class="space-y-1.5">
+                        <div class="flex justify-between items-center">
+                          <span class="text-[10px] font-bold text-[#64748B]">Banco:</span>
+                          <span class="text-xs font-black text-[#1A2340]">Banreservas</span>
                         </div>
-                        <div>
-                          <label class="block text-[10px] font-black text-[#64748B] uppercase tracking-[0.2em] mb-1">Nombre / Razón Social</label>
-                          <input type="text" id="paymentBusinessName" placeholder="Nombre o empresa" class="w-full px-3 py-2.5 border-2 border-[#E2E8F0] rounded-xl text-sm font-bold text-[#1A2340] outline-none focus:ring-2 focus:ring-[#0B63C7] focus:border-[#0B63C7] bg-white transition-all">
+                        <div class="flex justify-between items-center">
+                          <span class="text-[10px] font-bold text-[#64748B]">Cuenta:</span>
+                          <div class="flex items-center gap-1.5">
+                            <span class="text-xs font-black text-[#1A2340] font-mono" id="wizBankAccount">960123456</span>
+                            <button type="button" onclick="navigator.clipboard.writeText('960123456').then(()=>{this.textContent='✓';setTimeout(()=>this.textContent='📋',1500)})" class="text-[10px] text-[#0B63C7] hover:bg-[#0B63C7]/10 rounded px-1 py-0.5 transition-all" title="Copiar">📋</button>
+                          </div>
+                        </div>
+                        <div class="flex justify-between items-center">
+                          <span class="text-[10px] font-bold text-[#64748B]">Titular:</span>
+                          <span class="text-xs font-black text-[#1A2340]">Colegio Montessori</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                          <span class="text-[10px] font-bold text-[#64748B]">Tipo:</span>
+                          <span class="text-xs font-black text-[#1A2340]">Corriente</span>
                         </div>
                       </div>
                     </div>
-                    <button id="btnSubmitPayment" type="submit" class="w-full py-3.5 rounded-xl font-black text-sm bg-[#28B54D] text-white hover:bg-[#1A8035] active:scale-95 transition-all flex items-center justify-center gap-2 shadow-lg shadow-[#28B54D]/20">
+
+                    <!-- Dropzone para comprobante -->
+                    <div>
+                      <label class="block text-[10px] font-black text-[#64748B] uppercase tracking-[0.2em] mb-2">📎 Comprobante de transferencia *</label>
+                      <div id="wizFileDropzone" class="relative border-2 border-dashed border-[#E2E8F0] rounded-2xl p-6 text-center hover:border-[#0B63C7] hover:bg-[#E8F2FF]/50 transition-all cursor-pointer group"
+                        onclick="document.getElementById('paymentFileInput').click()"
+                        ondragover="event.preventDefault();this.classList.add('border-[#0B63C7]','bg-[#E8F2FF]/50')"
+                        ondragleave="this.classList.remove('border-[#0B63C7]','bg-[#E8F2FF]/50')"
+                        ondrop="event.preventDefault();this.classList.remove('border-[#0B63C7]','bg-[#E8F2FF]/50');if(event.dataTransfer.files.length)document.getElementById('paymentFileInput').files=event.dataTransfer.files;window.WizardPayment.handleFileSelect(event.dataTransfer.files[0])">
+                        <div id="wizFilePlaceholder">
+                          <div class="w-14 h-14 rounded-2xl bg-[#E8F2FF] text-[#0B63C7] flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
+                            <i data-lucide="upload-cloud" class="w-7 h-7"></i>
+                          </div>
+                          <p class="text-sm font-black text-[#1A2340] mb-1">Arrastre la imagen aquí</p>
+                          <p class="text-[10px] text-[#64748B] font-bold">o toque para seleccionar</p>
+                          <div class="flex items-center justify-center gap-3 mt-3">
+                            <span class="text-[9px] font-black text-[#64748B] bg-[#F1F5F9] px-2 py-1 rounded-lg">📷 Tomar foto</span>
+                            <span class="text-[9px] font-black text-[#64748B] bg-[#F1F5F9] px-2 py-1 rounded-lg">📁 Elegir archivo</span>
+                          </div>
+                        </div>
+                        <div id="wizFilePreview" class="hidden">
+                          <div class="w-16 h-16 rounded-2xl bg-[#E8FFF0] text-[#28B54D] flex items-center justify-center mx-auto mb-2">
+                            <i data-lucide="check-circle" class="w-8 h-8"></i>
+                          </div>
+                          <p id="wizFileName" class="text-sm font-black text-[#1A2340] truncate max-w-[200px] mx-auto"></p>
+                          <p id="wizFileSize" class="text-[10px] text-[#64748B] font-bold"></p>
+                          <button type="button" onclick="event.stopPropagation();window.WizardPayment.clearFile()" class="mt-2 text-[10px] font-black text-[#EF4444] hover:underline">Cambiar archivo</button>
+                        </div>
+                        <input type="file" id="paymentFileInput" class="hidden" accept="image/jpeg,image/png,image/webp,application/pdf" onchange="window.WizardPayment.handleFileSelect(this.files[0])">
+                      </div>
+                    </div>
+
+                    <!-- Comprobante fiscal (opcional) -->
+                    <div>
+                      <label class="block text-[10px] font-black text-[#64748B] uppercase tracking-[0.2em] mb-2">Comprobante fiscal (opcional)</label>
+                      <div class="relative border border-[#E2E8F0] rounded-xl p-3 text-center hover:border-[#FF7A00] hover:bg-[#FFF0E0]/30 transition-all cursor-pointer" onclick="document.getElementById('paymentFiscalInput').click()">
+                        <p class="text-[10px] font-bold text-[#64748B]">📄 Subir factura / comprobante fiscal</p>
+                        <input type="file" id="paymentFiscalInput" class="hidden" accept="image/jpeg,image/png,image/webp,application/pdf">
+                      </div>
+                    </div>
+
+                    <button id="btnSubmitPayment" type="button" onclick="window.WizardPayment.submit()"
+                      class="w-full py-3.5 rounded-xl font-black text-sm bg-[#28B54D] text-white hover:bg-[#1A8035] active:scale-95 transition-all flex items-center justify-center gap-2 shadow-lg shadow-[#28B54D]/20">
                       <i data-lucide="send" class="w-4 h-4"></i> Enviar Comprobante
                     </button>
-                  </form>
-                  <!-- Month grid + concept JS init -->
-                  <script>
-                  (function() {
-                    const DEFAULT_PRICES = {
-                      mensualidad: 0, inscripcion: 5000, reinscripcion: 3500,
-                      uniforme: 3200, libros: 2500, otro: 0
-                    };
-                    let _conceptPrices = {};
+                  </div>
 
-                    async function _loadConceptPrices() {
-                      try {
-                        const { supabase } = await import('./js/shared/supabase.js');
-                        const { data } = await supabase.from('payment_concepts')
-                          .select('category, amount').eq('active', true);
-                        if (data && data.length) {
-                          data.forEach(c => {
-                            if (c.category && c.amount > 0 && !_conceptPrices[c.category]) {
-                              _conceptPrices[c.category] = c.amount;
-                            }
-                          });
-                        }
-                      } catch (_) {}
-                      // Apply prices to pill buttons
-                      document.querySelectorAll('#conceptPillsGrid .concept-btn').forEach(btn => {
-                        const cat = btn.dataset.concept;
-                        const price = _conceptPrices[cat] || DEFAULT_PRICES[cat] || 0;
-                        btn.dataset.price = price;
-                        const priceEl = btn.querySelector('.concept-price');
-                        if (priceEl && price > 0) {
-                          priceEl.textContent = 'RD$ ' + price.toLocaleString('es-DO');
-                        }
-                      });
-                      // Auto-fill colegiatura amount from financeConfig
-                      const amountInput = document.getElementById('paymentAmount');
-                      const activeConcept = document.getElementById('paymentConcept')?.value;
-                      if (activeConcept === 'mensualidad' && amountInput && !amountInput.value) {
-                        try {
-                          const mod = await import('./js/padre/appState.js');
-                          const fin = mod.AppState?.get?.('financeConfig') || {};
-                          if (fin.monthly_fee > 0) {
-                            amountInput.value = fin.monthly_fee;
-                            amountInput.dataset.autoFilled = '1';
-                          }
-                        } catch (_) {}
-                      }
-                    }
+                  <!-- ═══════ PASO 4: Confirmación ═══════ -->
+                  <div id="wizStep4" class="hidden text-center py-6">
+                    <div class="w-20 h-20 rounded-3xl bg-[#E8FFF0] text-[#28B54D] flex items-center justify-center mx-auto mb-4 animate-breathe">
+                      <i data-lucide="check-circle" class="w-10 h-10"></i>
+                    </div>
+                    <h4 class="font-black text-lg text-[#1A2340] mb-1">¡Comprobante Recibido!</h4>
+                    <p class="text-sm text-[#64748B] font-medium mb-2">Ahora será revisado por Administración.</p>
+                    <div class="inline-flex items-center gap-1.5 bg-[#FFF0E0] text-[#FF7A00] px-3 py-1.5 rounded-full text-[10px] font-black">
+                      <i data-lucide="clock" class="w-3 h-3"></i> Tiempo estimado: 10-30 minutos
+                    </div>
+                    <button type="button" onclick="window.WizardPayment.reset()"
+                      class="mt-6 w-full py-3 rounded-xl font-black text-sm bg-[#0B63C7] text-white hover:bg-[#0850A0] active:scale-95 transition-all">
+                      Nuevo pago
+                    </button>
+                  </div>
 
-                    // Month grid
-                    const grid = document.getElementById('monthButtonGrid');
-                    const sel  = document.getElementById('paymentMonth');
-                    if (grid && sel) {
-                      const now = new Date();
-                      const short = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-                      const full  = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-                      short.forEach((name, i) => {
-                        const yr = now.getFullYear();
-                        const val = yr + '-' + String(i+1).padStart(2,'0');
-                        const opt = document.createElement('option');
-                        opt.value = val; opt.textContent = full[i] + ' ' + yr;
-                        if (i === now.getMonth()) opt.selected = true;
-                        sel.appendChild(opt);
-                        const btn = document.createElement('button');
-                        btn.type = 'button'; btn.dataset.val = val;
-                        const isActive = i === now.getMonth();
-                        btn.className = 'month-btn py-1.5 text-[11px] font-black rounded-xl border-2 transition-all ' +
-                          (isActive ? 'border-[#0B63C7] bg-[#E8F2FF] text-[#0B63C7]' : 'border-slate-200 bg-white text-slate-500');
-                        btn.textContent = name;
-                        btn.onclick = function() {
-                          const on = this.classList.contains('border-[#0B63C7]');
-                          this.className = 'month-btn py-1.5 text-[11px] font-black rounded-xl border-2 transition-all ' +
-                            (on ? 'border-slate-200 bg-white text-slate-500' : 'border-[#0B63C7] bg-[#E8F2FF] text-[#0B63C7]');
-                          opt.selected = !on;
-                        };
-                        grid.appendChild(btn);
-                      });
-                    }
-
-                    // Concept pill toggle with auto-fill
-                    window._selConcepto = function(btn) {
-                      document.querySelectorAll('.concept-btn').forEach(p => {
-                        p.className = 'concept-btn py-2.5 px-2 rounded-xl border-2 border-slate-200 bg-white text-slate-500 text-xs font-black text-center transition-all hover:border-[#0B63C7]';
-                      });
-                      btn.className = 'concept-btn active-concept py-2.5 px-2 rounded-xl border-2 border-[#0B63C7] bg-[#E8F2FF] text-[#0B63C7] text-xs font-black text-center transition-all';
-                      document.getElementById('paymentConcept').value = btn.dataset.concept;
-                      const showMonths = btn.dataset.concept === 'mensualidad';
-                      document.getElementById('monthGridSection').classList.toggle('hidden', !showMonths);
-                      // Auto-fill amount from concept price
-                      const amountInput = document.getElementById('paymentAmount');
-                      const price = parseFloat(btn.dataset.price) || 0;
-                      if (price > 0) {
-                        amountInput.value = price.toFixed(2);
-                        amountInput.dataset.autoFilled = '1';
-                      } else if (btn.dataset.concept === 'mensualidad') {
-                        // For colegiatura, try financeConfig
-                        import('./js/padre/appState.js').then(mod => {
-                          const fin = mod.AppState?.get?.('financeConfig') || {};
-                          if (fin.monthly_fee > 0) {
-                            amountInput.value = fin.monthly_fee;
-                            amountInput.dataset.autoFilled = '1';
-                          }
-                        }).catch(() => {});
-                      } else {
-                        amountInput.value = '';
-                        amountInput.dataset.autoFilled = '';
-                      }
-                    };
-
-                    _loadConceptPrices();
-                  })();
-                  </script>
+                  <!-- Hidden form for backward compatibility -->
+                  <form id="paymentForm" class="hidden"></form>
                 </div>
 
-                <!-- Historial -->
-                <div class="cloud-card lg:col-span-2 flex flex-col">
-                  <div class="flex items-center gap-2 mb-5 pb-4 border-b border-[#E2E8F0]">
-                    <div class="w-8 h-8 rounded-xl bg-[#E8F2FF] text-[#0B63C7] flex items-center justify-center">
-                      <i data-lucide="history" class="w-4 h-4"></i>
+                <!-- Modal: Todos los conceptos -->
+                <div id="allConceptsModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4">
+                  <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="document.getElementById('allConceptsModal').classList.add('hidden');document.getElementById('allConceptsModal').classList.remove('flex')"></div>
+                  <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-5 z-10">
+                    <div class="flex items-center justify-between mb-4">
+                      <h4 class="font-black text-[#1A2340]">Todos los conceptos</h4>
+                      <button onclick="document.getElementById('allConceptsModal').classList.add('hidden');document.getElementById('allConceptsModal').classList.remove('flex')" class="w-8 h-8 rounded-lg bg-[#F1F5F9] flex items-center justify-center text-[#64748B] hover:bg-[#E2E8F0] transition-all">
+                        <i data-lucide="x" class="w-4 h-4"></i>
+                      </button>
                     </div>
-                    <h4 class="font-black text-lg text-[#1A2340]">Historial de Pagos</h4>
+                    <div class="relative mb-3">
+                      <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#64748B]"></i>
+                      <input type="text" id="allConceptsSearch" placeholder="Buscar concepto..." class="w-full pl-9 pr-4 py-2.5 border-2 border-[#E2E8F0] rounded-xl text-sm font-bold focus:ring-2 focus:ring-[#0B63C7] focus:border-[#0B63C7] outline-none transition-all" oninput="window.WizardPayment.filterConcepts(this.value)">
+                    </div>
+                    <div id="allConceptsList" class="space-y-1.5 max-h-60 overflow-y-auto">
+                      <button type="button" data-concept="mensualidad" onclick="window.WizardPayment.selectConceptFromModal('mensualidad')" class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-[#E8F2FF] transition-all text-left"><span class="text-xl">📚</span><span class="font-black text-sm text-[#1A2340]">Colegiatura</span></button>
+                      <button type="button" data-concept="inscripcion" onclick="window.WizardPayment.selectConceptFromModal('inscripcion')" class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-[#E8F2FF] transition-all text-left"><span class="text-xl">🎓</span><span class="font-black text-sm text-[#1A2340]">Inscripción</span></button>
+                      <button type="button" data-concept="reinscripcion" onclick="window.WizardPayment.selectConceptFromModal('reinscripcion')" class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-[#E8F2FF] transition-all text-left"><span class="text-xl">🔄</span><span class="font-black text-sm text-[#1A2340]">Reinscripción</span></button>
+                      <button type="button" data-concept="uniforme" onclick="window.WizardPayment.selectConceptFromModal('uniforme')" class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-[#E8F2FF] transition-all text-left"><span class="text-xl">👕</span><span class="font-black text-sm text-[#1A2340]">Uniforme</span></button>
+                      <button type="button" data-concept="libros" onclick="window.WizardPayment.selectConceptFromModal('libros')" class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-[#E8F2FF] transition-all text-left"><span class="text-xl">📖</span><span class="font-black text-sm text-[#1A2340]">Libros</span></button>
+                      <button type="button" data-concept="materiales" onclick="window.WizardPayment.selectConceptFromModal('materiales')" class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-[#E8F2FF] transition-all text-left"><span class="text-xl">🧸</span><span class="font-black text-sm text-[#1A2340]">Materiales</span></button>
+                      <button type="button" data-concept="excursiones" onclick="window.WizardPayment.selectConceptFromModal('excursiones')" class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-[#E8F2FF] transition-all text-left"><span class="text-xl">🚌</span><span class="font-black text-sm text-[#1A2340]">Excursiones</span></button>
+                      <button type="button" data-concept="eventos" onclick="window.WizardPayment.selectConceptFromModal('eventos')" class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-[#E8F2FF] transition-all text-left"><span class="text-xl">🎉</span><span class="font-black text-sm text-[#1A2340]">Eventos</span></button>
+                      <button type="button" data-concept="graduacion" onclick="window.WizardPayment.selectConceptFromModal('graduacion')" class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-[#E8F2FF] transition-all text-left"><span class="text-xl">🎓</span><span class="font-black text-sm text-[#1A2340]">Graduación</span></button>
+                      <button type="button" data-concept="transporte" onclick="window.WizardPayment.selectConceptFromModal('transporte')" class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-[#E8F2FF] transition-all text-left"><span class="text-xl">🚌</span><span class="font-black text-sm text-[#1A2340]">Transporte</span></button>
+                      <button type="button" data-concept="alimentacion" onclick="window.WizardPayment.selectConceptFromModal('alimentacion')" class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-[#E8F2FF] transition-all text-left"><span class="text-xl">🍽</span><span class="font-black text-sm text-[#1A2340]">Alimentación</span></button>
+                      <button type="button" data-concept="otro" onclick="window.WizardPayment.selectConceptFromModal('otro')" class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-[#E8F2FF] transition-all text-left"><span class="text-xl">🏷️</span><span class="font-black text-sm text-[#1A2340]">Otros</span></button>
+                    </div>
                   </div>
-                  <div class="space-y-3 flex-1 overflow-y-auto pr-1 max-h-[600px]" id="paymentsHistory" aria-live="polite">
+                </div>
+
+                <!-- Historial Mejorado -->
+                <div class="cloud-card lg:col-span-2 flex flex-col">
+                  <div class="flex items-center justify-between mb-5 pb-4 border-b border-[#E2E8F0]">
+                    <div class="flex items-center gap-2">
+                      <div class="w-8 h-8 rounded-xl bg-[#E8F2FF] text-[#0B63C7] flex items-center justify-center">
+                        <i data-lucide="history" class="w-4 h-4"></i>
+                      </div>
+                      <h4 class="font-black text-lg text-[#1A2340]">Historial de Pagos</h4>
+                    </div>
+                    <button type="button" onclick="window.WizardPayment.toggleFilter()" id="wizFilterBtn"
+                      class="text-[10px] font-black text-[#64748B] bg-[#F1F5F9] px-3 py-1.5 rounded-full hover:bg-[#E2E8F0] transition-all flex items-center gap-1">
+                      <i data-lucide="filter" class="w-3 h-3"></i> Solo pendientes
+                    </button>
+                  </div>
+                  <div class="space-y-3 flex-1 overflow-y-auto pr-1 max-h-[700px]" id="paymentsHistory" aria-live="polite">
                     <div class="p-4 text-center text-[#64748B] text-sm">Cargando historial...</div>
                   </div>
                 </div>
@@ -1301,7 +1408,7 @@
               <div class="cloud-card">
                 <div class="flex items-center gap-3 mb-5">
                   <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-[#0B63C7] to-[#28B54D] text-white flex items-center justify-center shadow-md">
-                    <i data-lucide="trending-up" class="w-6 h-6"></i>
+                    <span class="text-lg">📊</span>
                   </div>
                   <div>
                     <h3 class="font-black text-xl text-[#1A2340]">Resumen Semanal</h3>

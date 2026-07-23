@@ -138,7 +138,7 @@ export const Api = {
   async getStudentTasks(classroomId, studentId) {
     const [tasks, evidences] = await Promise.all([
       handle(supabase.from(TABLES.TASKS)
-        .select('id, title, description, due_date, grading_system, file_url')
+        .select('id, title, description, due_date, file_url')
         .eq('classroom_id', classroomId)
         .order('due_date', { ascending: true })
         .limit(30), 'getTasks'),

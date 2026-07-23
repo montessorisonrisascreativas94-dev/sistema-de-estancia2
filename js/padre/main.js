@@ -19,6 +19,8 @@ import { OnboardingGuide } from '../shared/onboarding.js';
 import { Prefetch } from '../shared/prefetch.js';
 import { VideoCallUI } from '../shared/videocall-ui.js';
 import { ParentRatingModule } from './parent_rating.js';
+import { WizardPayment } from './payment-wizard.js';
+import { RecentActivityModule } from './recent-activity.js';
 
 window.App = {
   feed: FeedModule, payments: PaymentsModule, tasks: TasksModule,
@@ -339,6 +341,10 @@ async function refreshDashboard() {
   renderDailySummary(logs);
   renderLatestPosts(latestPosts);
 
+  // ── Initialize Recent Activity Feed ──
+  RecentActivityModule.destroy();
+  RecentActivityModule.init();
+
   // ── Update quick stats row in the Resumen Diario card ──
   const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
   // Attendance
@@ -623,6 +629,11 @@ export async function navigateTo(targetId) {
 
   // ✅ LIMPIEZA DE REALTIME: Eliminar canales al cambiar de sección
   if (window.RealtimeManager) RealtimeManager.unsubscribeAll(['notifications', 'live_status']);
+  // Cleanup feed channel
+  if (FeedModule._channel) {
+    supabase.removeChannel(FeedModule._channel);
+    FeedModule._channel = null;
+  }
 
   document.querySelectorAll('.section').forEach(sec => {
     sec.classList.add('hidden');
@@ -666,6 +677,7 @@ export async function navigateTo(targetId) {
         setEl('paymentsMonthlyFee', Helpers.formatCurrency(fin.monthly_fee || 0));
         setEl('paymentsDueDay', fin.due_day || '-');
         PaymentsModule.init(student?.id);
+        WizardPayment.init();
         // Auto-fill amount for colegiatura if empty
         setTimeout(() => {
           const amountInput = document.getElementById('paymentAmount');
@@ -1291,7 +1303,6 @@ async function _checkNewAcademicPeriod(classroomId) {
   try {
     const STORAGE_KEY = `karpus_last_period_${classroomId}`;
 
-    // Obtener período activo actual
     const { data: periodData, error } = await supabase.rpc('get_active_period', {
       p_classroom_id: classroomId
     });

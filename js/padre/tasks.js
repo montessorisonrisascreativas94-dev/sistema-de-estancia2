@@ -9,6 +9,7 @@ import { Security } from '../shared/security.js';
  */
 export const TasksModule = {
   _studentId: null,
+  _cachedTasks: [],
 
   /**
    * Inicializa el módulo
@@ -61,8 +62,20 @@ export const TasksModule = {
    */
   async openSubmitModal(taskId) {
     try {
-      const { data: task, error } = await supabase.from(TABLES.TASKS).select('id, title, description, due_date, grading_system, file_url, classroom_id, created_at').eq('id', taskId).single();
-      if (error) throw error;
+      // Use cached tasks from loadTasks to avoid RLS 406 error (parents can't query tasks directly)
+      let task = this._cachedTasks.find(t => String(t.id) === String(taskId));
+      if (!task) {
+        // Fallback: try RPC if cache is empty
+        try {
+          const student = AppState.get('currentStudent');
+          const { data: rpcData } = await supabase.rpc('get_tasks_for_period', {
+            p_classroom_id: student?.classroom_id,
+            p_period_id: null
+          });
+          task = (rpcData?.tasks || []).find(t => String(t.id) === String(taskId));
+        } catch (_) {}
+      }
+      if (!task) throw new Error('Tarea no encontrada');
 
       const modal = document.getElementById('modalTaskDetail');
       if (!modal) return;
@@ -193,7 +206,7 @@ export const TasksModule = {
       `);
 
       modal.classList.add('hidden');
-      await this.loadTasks('pending');
+      try { await this.loadTasks('pending'); } catch (_) {}
 
     } catch (e) {
       Helpers.toast('Error al enviar tarea', 'error');
@@ -208,21 +221,27 @@ export const TasksModule = {
   async viewEvidence(taskId) {
     try {
       const student = AppState.get('currentStudent');
+      // Query WITHOUT joining tasks table (RLS blocks parents from tasks)
       const { data: evidence, error } = await supabase
         .from(TABLES.TASK_EVIDENCES)
-        .select('*, task:task_id(*)')
+        .select('id, task_id, file_url, comment, created_at, status')
         .eq('task_id', taskId)
         .eq('student_id', student.id)
         .single();
 
       if (error) throw error;
 
+      // Look up task details from cached data
+      const task = this._cachedTasks.find(t => String(t.id) === String(taskId));
+      const taskTitle = task?.title || 'Tarea';
+      const taskDesc = task?.description || '';
+
       const modal = document.getElementById('modalTaskDetail');
       if (!modal) return;
 
-      document.getElementById('taskDetailTitle').textContent = evidence.task.title;
+      document.getElementById('taskDetailTitle').textContent = taskTitle;
       document.getElementById('taskDetailDate').innerHTML = `<i data-lucide="calendar" class="w-3 h-3"></i> Entregada: ${Helpers.formatDate(evidence.created_at)}`;
-      document.getElementById('taskDetailDesc').textContent = evidence.task.description || 'Sin descripción.';
+      document.getElementById('taskDetailDesc').textContent = taskDesc || 'Sin descripción.';
 
       // Show evidence section
       document.getElementById('uploadSection').classList.add('hidden');
@@ -283,7 +302,7 @@ export const TasksModule = {
       if (!tasks.length) {
         const { data, error } = await supabase
           .from(TABLES.TASKS)
-          .select('id, title, description, due_date, grading_system, file_url, created_at, period_id')
+          .select('id, title, description, due_date, file_url, created_at, period_id')
           .eq('classroom_id', student.classroom_id)
           .order('due_date', { ascending: false });
         if (error) throw error;
@@ -298,6 +317,7 @@ export const TasksModule = {
       if (evErr) throw evErr;
 
       const evidenceMap = new Map((evidences || []).map(e => [e.task_id, e]));
+      this._cachedTasks = tasks;
       const filtered = this.filterTasks(tasks, evidenceMap, filter);
 
       if (!filtered.length) {

@@ -6,7 +6,7 @@
   <meta name="robots" content="noindex,nofollow">
   <meta http-equiv="X-Content-Type-Options" content="nosniff">
   <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://*.supabase.co wss://*.supabase.co; script-src 'self' 'unsafe-inline' https://cdn.onesignal.com https://onesignal.com https://api.onesignal.com https://meet.jit.si https://8x8.vc https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://cdn.onesignal.com https://onesignal.com https://api.onesignal.com https://meet.jit.si https://8x8.vc https://fonts.googleapis.com https://fonts.gstatic.com https://cdn.jsdelivr.net; frame-src https://meet.jit.si https://8x8.vc; worker-src 'self' blob:; object-src 'none'; base-uri 'self';">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://*.supabase.co wss://*.supabase.co; script-src 'self' 'unsafe-inline' https://cdn.onesignal.com https://onesignal.com https://api.onesignal.com https://meet.jit.si https://8x8.vc https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.onesignal.com https://*.onesignal.com https://onesignal.com; style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.onesignal.com https://*.onesignal.com https://onesignal.com; font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://cdn.onesignal.com https://*.onesignal.com https://onesignal.com https://api.onesignal.com https://meet.jit.si https://8x8.vc https://fonts.googleapis.com https://fonts.gstatic.com https://cdn.jsdelivr.net; frame-src https://meet.jit.si https://8x8.vc; worker-src 'self' blob:; object-src 'none'; base-uri 'self';">
   <style>html{display:none;}</style>
   <style>
     /* Inline fallback: ensure hidden class works even if Tailwind fails to load */
@@ -22,18 +22,6 @@
     }
   </script>
   <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
-  <script>
-    if (location.hostname === 'montessorisonrisascreativas.com') {
-      window.OneSignalDeferred = window.OneSignalDeferred || [];
-      window.OneSignalDeferred.push(async function(OneSignal) {
-        await OneSignal.init({
-          appId: "dd57c85f-852f-418e-bc8b-09a119f6c2eb",
-          safari_web_id: "web.onesignal.auto.0d8cfe1b-addf-4fe0-8094-42e4bf6360cd",
-          notifyButton: { enable: true }
-        });
-      });
-    }
-  </script>
   <title>Panel Encargada — Colegio Montessori Sonrisas Creativas</title>
   <link rel="icon" href="logo/favicon.ico" type="image/x-icon">
   <link rel="manifest" href="manifest.json">
@@ -58,19 +46,19 @@
   
   <style>
     :root {
-        --primary: #FF7A00;
-        --primary-dark: #D96500;
-        --primary-light: #FFA500;
-        --secondary: #F59E0B;
-        --accent: #FFD700;
+        --primary: #28B54D;
+        --primary-dark: #1A8035;
+        --primary-light: #B7EFC5;
+        --secondary: #6366F1;
+        --accent: #4F46E5;
         --yellow-accent: #FFD43B;
-        --surface: #fff8f0;
+        --surface: #F0F0FF;
         --panel: #ffffff;
-        --panel-soft: #fff5e6;
-        --text: #8B4513;
+        --panel-soft: #EEF2FF;
+        --text: #1A2340;
         --muted: #64748b;
-        --border: #ffd9b3;
-        --shadow: 0 20px 45px rgba(139, 69, 19, 0.08);
+        --border: #E0E7FF;
+        --shadow: 0 20px 45px rgba(67, 56, 202, 0.08);
     }
 
     body {
@@ -114,10 +102,10 @@
       gap: 0.3rem;
       margin-bottom: 1.25rem;
       padding: 1rem 1.1rem;
-      background: linear-gradient(135deg, #E8F2FF 0%, #F0F9FF 100%);
-      border: 1px solid #DBEAFE;
+      background: linear-gradient(135deg, #EEF2FF 0%, #F0F0FF 100%);
+      border: 1px solid #E0E7FF;
       border-radius: 22px;
-      box-shadow: 0 4px 14px rgba(11,99,199,0.06);
+      box-shadow: 0 4px 14px rgba(67,56,202,0.06);
     }
 
     .section-title {
@@ -141,7 +129,7 @@
       background: var(--panel);
       border: 1px solid var(--border);
       border-radius: 22px;
-      box-shadow: 0 14px 35px rgba(15, 23, 42, 0.06);
+      box-shadow: 0 14px 35px rgba(67, 56, 202, 0.06);
     }
 
     .metric-card {
@@ -257,8 +245,8 @@
     }
 
     .table-panel .data-table thead th {
-      background: #eff6ff;
-      color: #1e3a8a;
+      background: #EEF2FF;
+      color: #3730A3;
       font-size: 0.72rem;
       font-weight: 900;
       letter-spacing: 0.12em;
@@ -290,7 +278,7 @@
 
     aside#sidebar {
         width: 288px;
-        background: linear-gradient(160deg, #FF7A00 0%, #D96500 60%, #8B4513 100%);
+        background: linear-gradient(160deg, #4338CA 0%, #6366F1 50%, #818CF8 100%);
         color: white;
         position: fixed;
         height: 100dvh;
@@ -301,7 +289,7 @@
         scrollbar-width: none;
         transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
                     transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        box-shadow: 4px 0 24px rgba(139, 69, 19, 0.15);
+        box-shadow: 4px 0 24px rgba(67, 56, 202, 0.15);
     }
     aside#sidebar::-webkit-scrollbar { display: none; }
 
@@ -397,7 +385,7 @@
     }
     .nav-btn [data-lucide], .kk-nav-item [data-lucide] { transition: color 0.2s ease; }
     .nav-btn:hover, .nav-btn.active, .kk-nav-item:hover, .kk-nav-item.active { background: rgba(255,255,255,0.15); color: white; }
-    .nav-btn .badge, .kk-nav-item .kk-badge { display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 5px;border-radius:50px;background:#FF7A00;color:white;font-size:9px;font-weight:900;line-height:1; }
+    .nav-btn .badge, .kk-nav-item .kk-badge { display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 5px;border-radius:50px;background:#6366F1;color:white;font-size:9px;font-weight:900;line-height:1; }
 
     .data-table {
       width: 100%; border-collapse: collapse; background: white;
@@ -463,9 +451,9 @@
       max-width: 600px !important;
       max-height: 85dvh !important;
       overflow-y: auto !important;
-      box-shadow: 0 25px 80px rgba(11,99,199,0.18);
+      box-shadow: 0 25px 80px rgba(67,56,202,0.18);
       animation: scaleIn 0.28s cubic-bezier(0.34,1.56,0.64,1);
-      border: 1px solid rgba(11,99,199,0.08);
+      border: 1px solid rgba(67,56,202,0.08);
     }
 
     .modal-header {
@@ -488,7 +476,7 @@
       pointer-events: none;
     }
 
-    .modal-header--orange { background: linear-gradient(135deg, #FF7A00 0%, #D96500 100%); }
+    .modal-header--orange { background: linear-gradient(135deg, #6366F1 0%, #4F46E5 100%); }
     .modal-header--primary  { background: linear-gradient(135deg, #0B63C7 0%, #0850A0 100%); }
     .modal-header--success { background: linear-gradient(135deg, #28B54D 0%, #22c55e 100%); }
     .modal-header--rose   { background: linear-gradient(135deg, #e11d48 0%, #be123c 100%); }
@@ -528,7 +516,7 @@
     .modal-body textarea:focus {
       border-color: var(--primary);
       background: white;
-      box-shadow: 0 0 0 4px rgba(6, 120, 87, 0.1);
+      box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
     }
     .modal-footer {
       padding: 1rem 1.5rem;
@@ -551,14 +539,14 @@
       padding: 10px 24px; border-radius: 14px;
       background: var(--primary); color: white;
       border: none; font-weight: 900; cursor: pointer;
-      box-shadow: 0 4px 14px rgba(6, 120, 87, 0.3);
+      box-shadow: 0 4px 14px rgba(99, 102, 241, 0.3);
       transition: all 0.25s cubic-bezier(0.34,1.56,0.64,1);
     }
     .modal-footer .btn-save:hover,
     .modal-footer button[type="submit"]:hover {
       background: var(--primary-dark);
       transform: translateY(-2px);
-      box-shadow: 0 8px 20px rgba(6, 120, 87, 0.35);
+      box-shadow: 0 8px 20px rgba(99, 102, 241, 0.35);
     }
     .modal-container.hidden { display: none !important; }
 
@@ -570,33 +558,33 @@
 
     .badge-paid,    .status-paid    { background:#E6F7EB; color:#1A8035; border:1px solid #B7EFC5; }
     .badge-pending, .status-pending { background:#FFFBE6; color:#B8860B; border:1px solid #FFE89A; }
-    .badge-review,  .status-review  { background:#FFF0E0; color:#D96500; border:1px solid #FFD4A3; }
+    .badge-review,  .status-review  { background:#EEF2FF; color:#4338CA; border:1px solid #C7D2FE; }
     .badge-overdue, .status-overdue { background:#FFE4E8; color:#B91C1C; border:1px solid #FECDD3; }
     .badge-absent                      { background:#FFE4E8; color:#B91C1C; }
     .badge-present                     { background:#E6F7EB; color:#1A8035; }
     .badge-late                        { background:#FFFBE6; color:#B8860B; }
 
-    .kpi-card-blue   { background:#E8F2FF; border:1px solid #DBEAFE; color:#0850A0; }
-    .kpi-card-orange { background:#FFF0E0; border:1px solid #FFD4A3; color:#D96500; }
+    .kpi-card-blue   { background:#E8F2FF; border:1px solid #DBEAFE;       color:#4338CA; }
+    .kpi-card-orange { background:#EEF2FF; border:1px solid #C7D2FE; color:#4338CA; }
     .kpi-card-green  { background:#E6F7EB; border:1px solid #B7EFC5; color:#1A8035; }
     .kpi-card-yellow { background:#FFFBE6; border:1px solid #FFE89A; color:#B8860B; }
 
     .staff-card {
       background:white; border-radius:20px; padding:20px;
-      border:2px solid #E8F2FF; box-shadow:0 4px 16px rgba(11,99,199,0.07);
+      border:2px solid #EEF2FF; box-shadow:0 4px 16px rgba(67,56,202,0.07);
       transition:all 0.25s cubic-bezier(.34,1.56,.64,1);
     }
-    .staff-card:hover { transform:translateY(-4px); box-shadow:0 12px 32px rgba(11,99,199,0.13); border-color:#0B63C7; }
+    .staff-card:hover { transform:translateY(-4px); box-shadow:0 12px 32px rgba(67,56,202,0.13); border-color:#6366F1; }
 
     .student-card {
       background:white; border-radius:20px; padding:18px;
       border:2px solid transparent; box-shadow:0 4px 14px rgba(0,0,0,0.06);
       transition:all 0.25s ease; position:relative; overflow:hidden;
     }
-    .student-card:hover { transform:translateY(-3px); box-shadow:0 10px 28px rgba(11,99,199,0.12); border-color:#0B63C7; }
+    .student-card:hover { transform:translateY(-3px); box-shadow:0 10px 28px rgba(67,56,202,0.12); border-color:#6366F1; }
     .student-card::before {
       content:''; position:absolute; top:0; left:0; right:0; height:4px;
-      background:linear-gradient(90deg,#0B63C7,#FF7A00,#28B54D,#FFD43B);
+      background:linear-gradient(90deg,#0B63C7,#6366F1,#28B54D,#FFD43B);
     }
 
     .page-header {
@@ -608,7 +596,7 @@
     }
     .page-header .page-icon {
       width:36px; height:36px; border-radius:12px;
-      background:#E8F2FF; color:#0B63C7;
+      background:#EEF2FF; color:#6366F1;
       display:flex; align-items:center; justify-content:center;
       flex-shrink:0;
     }
@@ -616,8 +604,8 @@
 
     .action-bar {
       background:white; border-radius:16px; padding:14px 18px;
-      box-shadow:0 2px 12px rgba(11,99,199,0.07);
-      border:1px solid #E8F2FF;
+      box-shadow:0 2px 12px rgba(67,56,202,0.07);
+      border:1px solid #EEF2FF;
       display:flex; flex-wrap:wrap; align-items:center; gap:12px;
       margin-bottom:1.5rem;
     }
@@ -628,7 +616,7 @@
 
     .row-paid    td:first-child { border-left:3px solid #28B54D; }
     .row-pending td:first-child { border-left:3px solid #FFD43B; }
-    .row-review  td:first-child { border-left:3px solid #FF7A00; }
+    .row-review  td:first-child { border-left:3px solid #6366F1; }
     .row-overdue td:first-child { border-left:3px solid #EF4444; }
 
     .kk-nav-group-toggle { position: relative; }
@@ -672,20 +660,20 @@
     .kk-nav-sub-item:hover {
       background: rgba(255,255,255,0.1);
       color: white;
-      border-left-color: rgba(255,212,59,0.6);
+      border-left-color: rgba(129,140,248,0.6);
       padding-left: 14px;
     }
     .kk-nav-sub-item.active {
       background: rgba(255,255,255,0.16);
       color: white;
-      border-left-color: #FFD43B;
+      border-left-color: #A5B4FC;
       font-weight: 900;
     }
 
     .kk-nav-item.active,
     .kk-nav-item[aria-current="page"] {
       background:rgba(255,255,255,0.22) !important;
-      border-left:4px solid #FFD43B !important;
+      border-left:4px solid #A5B4FC !important;
       color:white !important;
       transform:translateX(5px);
       box-shadow:0 4px 14px rgba(0,0,0,0.1);
@@ -745,8 +733,8 @@
       transition:all 0.2s;
     }
     .tab-pill.active {
-      background:#0B63C7; color:white;
-      box-shadow:0 4px 14px rgba(11,99,199,0.3);
+      background:#6366F1; color:white;
+      box-shadow:0 4px 14px rgba(99,102,241,0.3);
     }
     .tab-pill:hover:not(.active) { background:#F1F5F9; color:#1A2340; }
 
@@ -765,7 +753,7 @@
     .kk-nav-item:focus-visible,
     .btn-action:focus-visible,
     .tab-pill:focus-visible {
-      outline: 3px solid #FFD43B;
+      outline: 3px solid #818CF8;
       outline-offset: 2px;
     }
 
@@ -798,7 +786,7 @@
   <div class="app">
     <div id="sidebarOverlay" class="fixed inset-0 bg-black/50 z-40 transition-opacity" style="display:none;"></div>
     
-    <aside id="sidebar" class="kk-sidebar shadow-2xl flex flex-col flex-shrink-0" style="background:linear-gradient(160deg,#FF7A00 0%,#E07000 50%,#B85900 100%);border-right:none;">
+    <aside id="sidebar" class="kk-sidebar shadow-2xl flex flex-col flex-shrink-0" style="background:linear-gradient(160deg,#4338CA 0%,#6366F1 50%,#818CF8 100%);border-right:none;">
       <button id="toggleSidebar" class="absolute -right-3 top-8 bg-white rounded-full p-1.5 shadow-lg border border-slate-100 text-slate-500 hover:text-[#0B63C7] hidden md:flex items-center justify-center z-10 transition-all hover:scale-110">
         <i data-lucide="chevron-left" id="toggleSidebarIcon" class="w-3.5 h-3.5"></i>
       </button>
@@ -814,7 +802,7 @@
         <!-- Triangular and Pentagonal Mascots -->
         <div class="flex gap-2 mt-2 ml-auto">
           <svg width="32" height="32" viewBox="0 0 180 200">
-            <polygon points="90,12 168,175 12,175" fill="#FF7A00" stroke="#D96500" stroke-width="4"/>
+            <polygon points="90,12 168,175 12,175" fill="#6366F1" stroke="#4F46E5" stroke-width="4"/>
             <circle cx="72" cy="110" r="14" fill="white"/>
             <circle cx="108" cy="110" r="14" fill="white"/>
             <circle cx="73" cy="111" r="7" fill="#1e293b"/>
@@ -876,21 +864,60 @@
           </div>
         </div>
 
-        <!-- padres-opinion: hidden, no HTML section yet -->
+        <button data-section="padres-opinion" class="kk-nav-item" data-tooltip="Opinión de Padres">
+          <i data-lucide="message-square-heart" class="text-pink-300"></i>
+          <span class="label">Opinión Padres</span>
+        </button>
 
         <button data-section="permisos" class="kk-nav-item" data-tooltip="Permisos">
           <i data-lucide="calendar-check" class="text-amber-300"></i>
           <span class="label">Permisos</span>
         </button>
 
-        <!-- accesos-qr: hidden, no HTML section yet -->
+        <button data-section="accesos-qr" class="kk-nav-item" data-tooltip="Accesos QR">
+          <i data-lucide="qr-code" class="text-cyan-300"></i>
+          <span class="label">Accesos QR</span>
+        </button>
 
         <button data-section="chat" class="kk-nav-item" data-tooltip="Chat Institucional">
           <i data-lucide="messages-square" class="text-sky-300"></i>
           <span class="label">Chat Institucional</span>
         </button>
 
-        <!-- Reportes group: hidden, no HTML sections yet (cumplimiento, rutinas, tareas, comparativo) -->
+        <button data-section="muro" class="kk-nav-item" data-tooltip="Muro Escolar">
+          <i data-lucide="megaphone" class="text-indigo-300"></i>
+          <span class="label">Muro Escolar</span>
+        </button>
+
+        <button data-section="inscripciones" class="kk-nav-item" data-tooltip="Preinscripciones">
+          <i data-lucide="file-text" class="text-emerald-300"></i>
+          <span class="label">Preinscripciones</span>
+        </button>
+
+        <button data-section="control-rutinas" class="kk-nav-item" data-tooltip="Control de Rutinas">
+          <i data-lucide="clipboard-list" class="text-amber-300"></i>
+          <span class="label">Control de Rutinas</span>
+        </button>
+
+        <button data-section="reportes-cumplimiento" class="kk-nav-item" data-tooltip="Reportes de Cumplimiento">
+          <i data-lucide="bar-chart-3" class="text-cyan-300"></i>
+          <span class="label">Cumplimiento</span>
+        </button>
+
+        <button data-section="reportes-tareas" class="kk-nav-item" data-tooltip="Reportes de Tareas">
+          <i data-lucide="check-square" class="text-emerald-300"></i>
+          <span class="label">Reportes Tareas</span>
+        </button>
+
+        <button data-section="comparativo-aulas" class="kk-nav-item" data-tooltip="Comparativo por Aulas">
+          <i data-lucide="layout-grid" class="text-violet-300"></i>
+          <span class="label">Comparativo Aulas</span>
+        </button>
+
+        <button data-section="centro-estadisticas" class="kk-nav-item" data-tooltip="Centro de Estadísticas">
+          <i data-lucide="bar-chart-2" class="text-teal-300"></i>
+          <span class="label">Estadísticas</span>
+        </button>
 
         <button data-section="alertas" class="kk-nav-item" data-tooltip="Alertas Inteligentes">
           <i data-lucide="bell" class="text-rose-300"></i>
@@ -898,11 +925,9 @@
           <span id="badge-alertas" class="hidden kk-badge">0</span>
         </button>
 
-        <!-- centro-estadisticas: hidden, no HTML section yet -->
-
-        <button data-section="configuracion" class="kk-nav-item" data-tooltip="Configuración">
-          <i data-lucide="sliders-horizontal" class="text-slate-300 shrink-0"></i>
-          <span class="label">Configuración</span>
+        <button data-section="perfil" class="kk-nav-item" data-tooltip="Mi Perfil">
+          <i data-lucide="user-circle" class="text-purple-300 shrink-0"></i>
+          <span class="label">Mi Perfil</span>
         </button>
       </nav>
 
@@ -1087,6 +1112,26 @@
           </div>
         </section>
 
+        <section id="muro" class="section">
+          <div class="section-shell">
+            <div class="section-header">
+              <h1 class="section-title">Muro Escolar</h1>
+              <p class="section-subtitle">Publica avisos, fotos y novedades para todas las aulas.</p>
+            </div>
+            <div id="muroContent" class="text-slate-400">Cargando...</div>
+          </div>
+        </section>
+
+        <section id="inscripciones" class="section">
+          <div class="section-shell">
+            <div class="section-header">
+              <h1 class="section-title">Preinscripciones</h1>
+              <p class="section-subtitle">Gestiona las solicitudes de admisión de nuevos estudiantes.</p>
+            </div>
+            <div id="inscripcionesContent" class="text-slate-400">Cargando...</div>
+          </div>
+        </section>
+
         <section id="reportes-tareas" class="section">
           <div class="section-shell">
             <div class="section-header">
@@ -1127,13 +1172,13 @@
           </div>
         </section>
 
-        <section id="configuracion" class="section">
+        <section id="perfil" class="section">
           <div class="section-shell">
             <div class="section-header">
-              <h1 class="section-title">Configuración</h1>
-              <p class="section-subtitle">Ajustes del panel de Encargada de Educación.</p>
+              <h1 class="section-title">Mi Perfil</h1>
+              <p class="section-subtitle">Gestiona tu foto, datos personales y código QR.</p>
             </div>
-            <div id="configuracionContent" class="text-slate-400">Cargando...</div>
+            <div id="perfilContent" class="text-slate-400">Cargando...</div>
           </div>
         </section>
 
