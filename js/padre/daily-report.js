@@ -13,6 +13,7 @@ const ICONS = {
   sleep: '😴',
   wakeup: '😊',
   diaper: { wet: '💧', soiled: '💩' },
+  diaper_change: '🧻',
   bath: '🚽',
   temp: '🌡️',
   med: '💊',
@@ -24,6 +25,8 @@ const ICONS = {
   welcome_song: '👋',
   prayer: '🙏',
   behavior: '🤝',
+  health: '😷',
+  incident: '🤕',
 };
 
 const LABELS = {
@@ -41,11 +44,14 @@ const LABELS = {
     sleep: 'Siesta',
     milk: 'Biberón',
     diaper: 'Pañal',
+    diaper_change: 'Cambio de pañal',
     bath: 'Baño',
     temp: 'Temperatura',
     med: 'Medicamento',
     note: 'Nota',
-    behavior: 'Comportamiento'
+    behavior: 'Comportamiento',
+    health: 'Salud',
+    incident: 'Incidente'
   }
 };
 
@@ -559,7 +565,93 @@ export const DailyReportModule = {
           </div>
           <div class="space-y-0">${timeline}</div>
         </div>` : ''}
+
+        <!-- VISUAL TIMELINE — Línea de tiempo visual del día -->
+        ${this._renderVisualTimeline(log)}
       </div>`;
+  },
+
+  _renderVisualTimeline(log) {
+    const events = log.infant_data || [];
+    if (events.length === 0) return '';
+
+    // Build a visual horizontal timeline like the teacher's
+    const sortedEvents = [...events].sort((a, b) => {
+      const ta = a.created_at ? new Date(a.created_at).getTime() : (a.start_time ? new Date(a.start_time).getTime() : 0);
+      const tb = b.created_at ? new Date(b.created_at).getTime() : (b.start_time ? new Date(b.start_time).getTime() : 0);
+      return ta - tb;
+    });
+
+    // Add food events to timeline
+    const foodEvents = [];
+    if (log.food) {
+      try {
+        const foodObj = JSON.parse(log.food);
+        if (foodObj.breakfast) foodEvents.push({ type: 'food_meal', meal: 'breakfast', value: foodObj.breakfast, time: log.created_at });
+        if (foodObj.lunch) foodEvents.push({ type: 'food_meal', meal: 'lunch', value: foodObj.lunch, time: log.created_at });
+        if (foodObj.snack) foodEvents.push({ type: 'food_meal', meal: 'snack', value: foodObj.snack, time: log.created_at });
+      } catch {}
+    }
+
+    // Add mood event
+    if (log.mood) {
+      foodEvents.push({ type: 'mood', value: log.mood, time: log.created_at });
+    }
+
+    // Combine all into visual timeline
+    const allEvents = [
+      ...foodEvents.map(e => ({
+        icon: e.type === 'mood' ? (ICONS.mood[e.value] || '😊') : e.meal === 'breakfast' ? '🍞' : e.meal === 'lunch' ? '🥗' : '🍎',
+        label: e.type === 'mood' ? `Llegó ${LABELS.mood[e.value] || ''}` : `${LABELS.meal[e.meal]}: ${LABELS.food[e.value] || e.value}`,
+        time: e.time
+      })),
+      ...sortedEvents.map(e => ({
+        icon: this._getEventIcon(e),
+        label: e.label || LABELS.event[e.type] || e.type,
+        time: e.created_at || e.start_time
+      }))
+    ].sort((a, b) => {
+      const ta = a.time ? new Date(a.time).getTime() : 0;
+      const tb = b.time ? new Date(b.time).getTime() : 0;
+      return ta - tb;
+    });
+
+    if (allEvents.length === 0) return '';
+
+    return `
+      <div class="dr-card p-4 mt-2">
+        <div class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+          📊 Resumen visual del día
+        </div>
+        <div style="overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding:8px 0">
+          <div style="display:flex;align-items:flex-start;gap:0;min-width:max-content;position:relative;padding:0 8px">
+            <div style="position:absolute;top:18px;left:20px;right:20px;height:3px;background:#e2e8f0;border-radius:2px;z-index:0"></div>
+            ${allEvents.map((ev, i) => `
+              ${i > 0 ? '<div style="width:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0;padding-top:14px"><div style="width:100%;height:2px;border-radius:2px;background:#28B54D40"></div></div>' : ''}
+              <div style="display:flex;flex-direction:column;align-items:center;min-width:60px;max-width:68px;position:relative;z-index:1;padding:0 2px">
+                <div style="width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.1rem;border:2px solid #28B54D;background:white;flex-shrink:0">${ev.icon}</div>
+                <span style="font-size:.5rem;font-weight:900;text-transform:uppercase;color:#64748b;text-align:center;line-height:1.2;margin-top:4px;max-width:64px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${Helpers.escapeHTML(ev.label)}</span>
+                <span style="font-size:.45rem;font-weight:700;color:#94a3b8;margin-top:1px">${fmtTime(ev.time)}</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+    `;
+  },
+
+  _getEventIcon(e) {
+    const iconMap = {
+      sleep: '😴', milk: '🍼',
+      diaper: e.subtype === 'wet' ? '💧' : '💩',
+      diaper_change: '🧻',
+      bath: '🚽', temp: '🌡️', med: '💊', note: '📝',
+      handwash: '🧼', toothbrush: '🪥', activity: '🏫', playground: '🌳',
+      welcome_song: '👋', prayer: '🙏', behavior: '🤝',
+      health: e.subtype === 'vomit' ? '🤮' : '😷',
+      incident: '🤕'
+    };
+    return iconMap[e.type] || '📌';
   },
 
   _renderEvent(e) {
@@ -582,6 +674,8 @@ export const DailyReportModule = {
       case 'diaper':
         icon = e.subtype === 'wet' ? '💧' : '💩';
         label = e.subtype === 'wet' ? 'Pañal mojado' : 'Pañal sucio'; break;
+      case 'diaper_change':
+        icon = '🧻'; label = 'Cambio de pañal'; break;
       case 'bath':
         icon = '🚽'; label = 'Fue al baño'; break;
       case 'temp':

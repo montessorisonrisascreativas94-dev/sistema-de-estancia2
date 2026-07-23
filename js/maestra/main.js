@@ -31,7 +31,7 @@ const _lastLoad = {};
 // Los onclick inline en HTML dinámico necesitan window.Modal disponible de inmediato
 window.Modal = Modal;
 const { initAttendance, markAllPresent, registerAttendance } = Attendance;
-const { initRoutine, openStudentRoutine, openBulkRoutineModal } = Routine;
+const { initRoutine, openStudentRoutine, openBulkRoutineModal, _toggleViewModeFn } = Routine;
 const { initTasks, openEditTaskModal, deleteTask, openNewTaskModal, viewTaskSubmissions, submitGrade } = Tasks;
 const { openStudentProfile, registerIncidentModal } = Students;
 const { initChat, selectChatContact } = ChatApp;
@@ -56,19 +56,26 @@ window.App = {
   handleAttendancePointerDown: Attendance.handleAttendancePointerDown,
   handleAttendancePointerUp: Attendance.handleAttendancePointerUp,
 
-  // Routine Express v3
+  // Routine Express v5 — Timeline inteligente horizontal/vertical
     initRoutine:              Routine.initRoutine,
     openStudentRoutine:       Routine.openStudentRoutine,
     openBulkRoutineModal:     Routine.openBulkRoutineModal,
     routineQuickGroup:        Routine.routineQuickGroup,
-    routineSelectIndivStudent:Routine.routineSelectIndivStudent,
     routineWakeAll:           Routine.routineWakeAll,
     setStudentMood:           Routine.setStudentMood,
     setStudentFood:           Routine.setStudentFood,
     setStudentNap:            Routine.setStudentNap,
+    setStudentBehavior:       Routine.setStudentBehavior,
     addStudentEvent:          Routine.addStudentEvent,
     saveStudentNote:          Routine.saveStudentNote,
     publishDailyLogs:         Routine.publishDailyLogs,
+    expandTimelineEvent:      Routine.expandTimelineEvent,
+    collapseTimelineEvent:    Routine.collapseTimelineEvent,
+    openEventConfig:          Routine.openEventConfig,
+    saveEventConfig:          Routine.saveEventConfig,
+    openScheduleConfig:       Routine.openScheduleConfig,
+    resetScheduleConfig:      Routine.resetScheduleConfig,
+    _toggleViewMode:          Routine._toggleViewModeFn,
 
   // Tasks
   initTasks: Tasks.initTasks,

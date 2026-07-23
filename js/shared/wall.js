@@ -82,6 +82,23 @@ export const WallModule = {
     }
   },
 
+  // Indicador visual de frescura del post (<24h = nuevo)
+  _freshnessBadge(timeString) {
+    try {
+      const date = new Date(timeString);
+      const diffMs = Date.now() - date.getTime();
+      const hours = Math.floor(diffMs / 3600000);
+      if (hours < 1) {
+        return '<span class="wall-freshness wall-freshness--live"><span class="wall-freshness-dot"></span>En vivo</span>';
+      } else if (hours < 24) {
+        return '<span class="wall-freshness wall-freshness--new"><span class="wall-freshness-dot"></span>Nuevo</span>';
+      }
+      return '';
+    } catch (e) {
+      return '';
+    }
+  },
+
   async _getPublicImageUrl(imagePath, opts = {}) {
     // Legacy — use _resolveUrlSync instead
     return this._resolveUrlSync(imagePath, opts);
@@ -422,7 +439,7 @@ export const WallModule = {
               <div>
                 <div class="font-bold text-slate-800 text-sm">${Helpers.escapeHTML(p.teacher_name)}</div>
                 <div class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-                  ${date} • ${Helpers.escapeHTML(p.classroom?.name || 'General')}
+                  ${date} • ${Helpers.escapeHTML(p.classroom?.name || 'General')} ${this._freshnessBadge(p.created_at)}
                 </div>
               </div>
             </div>

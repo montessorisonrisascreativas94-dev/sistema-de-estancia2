@@ -338,7 +338,6 @@ async function refreshDashboard() {
 
   renderDailySummary(logs);
   renderLatestPosts(latestPosts);
-  renderGradesChart(academic?.evidences || []);
 
   // ── Update quick stats row in the Resumen Diario card ──
   const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
@@ -616,57 +615,6 @@ function renderLatestPosts(posts) {
   }).join('');
 }
 
-// ── Gráfico de calificaciones en home ─────────────────────────────────────────
-function renderGradesChart(evidences) {
-  const canvas = document.getElementById('gradesChart');
-  if (!canvas || !evidences?.length) return;
-
-  // Destruir instancia previa si existe
-  if (canvas._chartInstance) {
-    canvas._chartInstance.destroy();
-    canvas._chartInstance = null;
-  }
-
-  if (!window.Chart) return; // Chart.js no cargado aún
-
-  const last6 = evidences.slice(-6);
-  const labels = last6.map(e => e.subject || e.title || 'Materia');
-  const values = last6.map(e => Number(e.score ?? e.grade ?? e.value ?? 0));
-  const colors = values.map(v =>
-    v >= 9  ? 'rgba(46,187,87,0.7)'  :
-    v >= 7  ? 'rgba(255,138,0,0.7)'  :
-              'rgba(239,68,68,0.7)'
-  );
-
-  canvas._chartInstance = new Chart(canvas, {
-    type: 'bar',
-    data: {
-      labels,
-      datasets: [{
-        data: values,
-        backgroundColor: colors,
-        borderRadius: 8,
-        borderSkipped: false
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      scales: {
-        y: {
-          min: 0, max: 10,
-          ticks: { stepSize: 2, font: { size: 10 } },
-          grid: { color: 'rgba(0,0,0,0.04)' }
-        },
-        x: {
-          ticks: { font: { size: 10 }, maxRotation: 30 },
-          grid: { display: false }
-        }
-      }
-    }
-  });
-}
 
 // ── Navegación ────────────────────────────────────────────────────────────────
 export async function navigateTo(targetId) {

@@ -14,7 +14,21 @@ export function openGlobalModal(html, wide = false) {
       </button>
       ${html}
     </div>`;
-  container.style.cssText = 'display:flex;align-items:flex-start;justify-content:center;padding-top:4vh;position:fixed;inset:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(8px);z-index:var(--z-modal,100);overflow-y:auto;';
+
+  // Use individual style properties instead of cssText to preserve existing inline styles
+  container.style.display = 'flex';
+  container.style.alignItems = 'flex-start';
+  container.style.justifyContent = 'center';
+  container.style.paddingTop = '4vh';
+  container.style.position = 'fixed';
+  container.style.inset = '0';
+  container.style.background = 'rgba(0,0,0,0.6)';
+  container.style.backdropFilter = 'blur(8px)';
+  container.style.webkitBackdropFilter = 'blur(8px)';
+  container.style.zIndex = '9999';
+  container.style.overflowY = 'auto';
+
+  container.classList.remove('hidden');
 
   container.onmousedown = (e) => {
     if (e.target === container) closeGlobalModal();
@@ -28,6 +42,9 @@ export function closeGlobalModal() {
   if (!container) return;
   container.innerHTML = '';
   container.style.display = 'none';
+  container.style.backdropFilter = 'none';
+  container.style.webkitBackdropFilter = 'none';
+  container.classList.add('hidden');
   container.onmousedown = null;
 }
 

@@ -367,14 +367,10 @@ export async function viewTaskSubmissions(taskId) {
             const hasSubmission = sub && sub.file_url;
             const isGraded = sub && sub.status === 'graded';
             const safeUrl = hasSubmission ? encodeURI(sub.file_url) : '#';
-            // Deshabilitar inputs si período cerrado
-            const disabled = !periodOpen ? 'disabled class="opacity-50 cursor-not-allowed"' : '';
-            const disabledSelect = !periodOpen ? 'disabled' : '';
-            const btnDisabled = !periodOpen ? 'disabled title="período cerrado" class="p-2 bg-slate-300 text-slate-500 rounded-lg cursor-not-allowed"' : 'class="p-2 bg-[#28B54D] text-white rounded-lg hover:bg-[#239943] transition-all" title="Guardar Calificación"';
 
             return `
-              <div class="relative p-5 bg-white rounded-[2rem] shadow-[0_8px_30px_rgba(0,0,0,0.04)] overflow-hidden ${isGraded ? '' : ''}">
-                <div class="absolute top-0 left-0 bottom-0 w-1 bg-green-500"></div>
+              <div class="relative p-5 bg-white rounded-[2rem] shadow-[0_8px_30px_rgba(0,0,0,0.04)] overflow-hidden">
+                <div class="absolute top-0 left-0 bottom-0 w-1 ${isGraded ? 'bg-green-500' : hasSubmission ? 'bg-amber-400' : 'bg-slate-200'}"></div>
                 <div class="ml-2">
                   <div class="flex items-center justify-between mb-4">
                     <div class="font-bold text-slate-800">${safeEscapeHTML(s.name)}</div>
@@ -385,25 +381,42 @@ export async function viewTaskSubmissions(taskId) {
                       : `<span class="px-4 py-2 bg-slate-100 text-slate-400 rounded-lg text-xs font-bold">Sin entregar</span>`
                     }
                   </div>
-                  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-                    <div class="md:col-span-2">
-                      <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Retroalimentación</label>
-                      <textarea id="feedback-${s.id}" ${disabled} rows="2"
-                        class="w-full px-4 py-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 focus:border-green-500 outline-none transition-all ${!periodOpen ? 'opacity-50 cursor-not-allowed' : ''}"
-                        placeholder="Escribe un comentario...">${safeEscapeHTML(sub?.comment || '')}</textarea>
-                    </div>
-                    <div class="flex items-center gap-2">
-                      <div class="flex-1">
-                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Calificación (0-100)</label>
-                        <input type="number" id="numeric-${s.id}" min="0" max="100" ${disabledSelect}
-                          class="w-full px-4 py-3 rounded-xl text-sm font-bold bg-slate-50 border-2 border-slate-100 focus:border-green-500 outline-none transition-all ${!periodOpen ? 'opacity-50 cursor-not-allowed' : ''}"
-                          value="${sub?.numeric_score !== null && sub?.numeric_score !== undefined ? sub.numeric_score : ''}" placeholder="0-100">
+                  ${hasSubmission ? (periodOpen ? `
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                      <div class="md:col-span-2">
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Retroalimentación</label>
+                        <textarea id="feedback-${s.id}" rows="2"
+                          class="w-full px-4 py-3 bg-slate-50 rounded-xl text-sm border-2 border-slate-100 focus:border-green-500 outline-none transition-all"
+                          placeholder="Escribe un comentario...">${safeEscapeHTML(sub?.comment || '')}</textarea>
                       </div>
-                      <button onclick="${periodOpen ? `App.submitGrade('${taskId}', '${s.id}')` : 'void(0)'}" ${btnDisabled}>
-                        <i data-lucide="save" class="w-4 h-4"></i>
-                      </button>
+                      <div class="flex items-center gap-2">
+                        <div class="flex-1">
+                          <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Calificación (0-100)</label>
+                          <input type="number" id="numeric-${s.id}" min="0" max="100"
+                            class="w-full px-4 py-3 rounded-xl text-sm font-bold bg-slate-50 border-2 border-slate-100 focus:border-green-500 outline-none transition-all"
+                            value="${sub?.numeric_score != null ? sub.numeric_score : ''}" placeholder="0-100">
+                        </div>
+                        <button onclick="App.submitGrade('${taskId}', '${s.id}')" class="p-2 bg-[#28B54D] text-white rounded-lg hover:bg-[#239943] transition-all" title="Guardar Calificación">
+                          <i data-lucide="save" class="w-4 h-4"></i>
+                        </button>
+                      </div>
                     </div>
-                  </div>
+                  ` : `
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+                      <div class="md:col-span-2">
+                        <p class="text-[10px] font-bold text-slate-400 uppercase mb-1">Retroalimentación</p>
+                        <p class="text-sm text-slate-600 italic">${sub?.comment ? safeEscapeHTML(sub.comment) : '<span class="text-slate-300">Sin comentario</span>'}</p>
+                      </div>
+                      <div class="flex items-center gap-2">
+                        <div class="flex-1">
+                          <p class="text-[10px] font-bold text-slate-400 uppercase mb-1">Calificación</p>
+                          <p class="text-sm font-black text-slate-800">${sub?.numeric_score != null ? sub.numeric_score + '/100' : '<span class="text-slate-300">—</span>'}</p>
+                        </div>
+                      </div>
+                    </div>
+                  `) : `
+                    <p class="text-xs text-slate-400 italic">Este alumno aún no ha subido su entrega.</p>
+                  `}
                   ${isGraded ? `<div class="text-xs text-green-600 font-bold mt-2 flex items-center gap-1"><i data-lucide="check-circle" class="w-3 h-3"></i> Calificado</div>` : ''}
                 </div>
               </div>

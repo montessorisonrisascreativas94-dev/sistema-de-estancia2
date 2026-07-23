@@ -34,6 +34,10 @@ export function goToSection(sectionId) {
   if (!sectionId) return;
   Helpers.vibrate?.('light');
   RealtimeManager.unsubscribeAll(['notifications']);
+
+  // Dismiss any open modal overlay
+  closeGlobalModal();
+
   document.querySelectorAll('.section').forEach(sec => {
     sec.classList.remove('active');
   });
@@ -1020,6 +1024,12 @@ window.addEventListener('unhandledrejection', (e) => {
 });
 
 document.addEventListener('DOMContentLoaded', async () => {
+  // ── Failsafe: clean up any stale overlays from previous session ──
+  const staleModal = document.getElementById('globalModalContainer');
+  if (staleModal) { staleModal.style.display = 'none'; staleModal.style.backdropFilter = 'none'; staleModal.classList.add('hidden'); staleModal.innerHTML = ''; }
+  const staleOverlay = document.getElementById('sidebarOverlay');
+  if (staleOverlay) staleOverlay.style.display = 'none';
+
   const initialLoadTimeout = setTimeout(() => {
     const loader = document.getElementById('initial-loading');
     if (loader) {

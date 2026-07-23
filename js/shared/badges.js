@@ -139,7 +139,7 @@ export const BadgeSystem = {
       const prev = self._getBadgeCount(section);
       self._renderBadge(section, prev + 1);
       self._renderCardBadge(section, prev + 1);
-      self._applyGlow(section);
+      self._applyGlow(section, type);
       self._showMiniToast(self._toastMsg(type));
     });
 
@@ -166,9 +166,9 @@ export const BadgeSystem = {
       self._renderBadge('chat', prevC + 1);
       self._renderBadge('comunicacion', prevC + 1);
       self._renderCardBadge('comunicacion', prevC + 1);
-      self._applyGlow('notifications');
-      self._applyGlow('comunicacion');
-      self._showMiniToast('Nuevo mensaje');
+      self._applyGlow('notifications', 'message');
+      self._applyGlow('comunicacion', 'message');
+      self._showMiniToast(self._toastMsg('message'));
     });
 
     // 3. Nuevos posts en el muro
@@ -185,8 +185,8 @@ export const BadgeSystem = {
       const prev = self._getBadgeCount(section);
       self._renderBadge(section, prev + 1);
       self._renderCardBadge(section, prev + 1);
-      self._applyGlow(section);
-      self._showMiniToast('Nueva publicacion en el muro');
+      self._applyGlow(section, 'post');
+      self._showMiniToast(self._toastMsg('post'));
     });
 
     // 4. Nuevas tareas (panel padre y maestra)
@@ -200,8 +200,8 @@ export const BadgeSystem = {
       const prev = self._getBadgeCount('tasks');
       self._renderBadge('tasks', prev + 1);
       self._renderCardBadge('tasks', prev + 1);
-      self._applyGlow('tasks');
-      self._showMiniToast('Nueva tarea asignada');
+      self._applyGlow('tasks', 'task');
+      self._showMiniToast(self._toastMsg('task'));
     });
 
     // 5. Entregas de tareas (panel maestra)
@@ -214,8 +214,8 @@ export const BadgeSystem = {
       if (active === 't-home') return;
       const prev = self._getBadgeCount('t-home');
       self._renderBadge('t-home', prev + 1);
-      self._applyGlow('t-home');
-      self._showMiniToast('Nueva entrega de tarea');
+      self._applyGlow('t-home', 'submission');
+      self._showMiniToast(self._toastMsg('submission'));
     });
 
     // 6. Comprobantes de pago subidos (panel directora/asistente)
@@ -231,8 +231,8 @@ export const BadgeSystem = {
       if (ns === 'paid' || ns === 'pagado' || ns === 'approved') {
         const active = self._getActiveSection();
         if (active !== 'payments') {
-          self._applyGlow('payments');
-          self._showMiniToast('Pago confirmado');
+          self._applyGlow('payments', 'payment');
+          self._showMiniToast(self._toastMsg('payment'));
         }
       }
       // Staff: nuevo comprobante para revisar
@@ -241,8 +241,8 @@ export const BadgeSystem = {
         if (active !== 'pagos') {
           const prev = self._getBadgeCount('pagos');
           self._renderBadge('pagos', prev + 1);
-          self._applyGlow('pagos');
-          self._showMiniToast('Nuevo comprobante de pago');
+          self._applyGlow('pagos', 'receipt');
+          self._showMiniToast(self._toastMsg('receipt'));
         }
       }
     });
@@ -257,8 +257,8 @@ export const BadgeSystem = {
       if (active === 'reportes') return;
       const prev = self._getBadgeCount('reportes');
       self._renderBadge('reportes', prev + 1);
-      self._applyGlow('reportes');
-      self._showMiniToast('Nueva consulta recibida');
+      self._applyGlow('reportes', 'inquiry');
+      self._showMiniToast(self._toastMsg('inquiry'));
     });
 
     // 8. Solicitudes de permisos (personal)
@@ -461,47 +461,63 @@ export const BadgeSystem = {
 
   _toastMsg(type) {
     const msgs = {
-      task:       'Nueva tarea asignada',
-      post:       'Nueva publicacion en el muro',
-      muro:       'Nueva publicacion en el muro',
-      chat:       'Nuevo mensaje',
-      message:    'Nuevo mensaje',
-      attendance: 'Asistencia registrada',
-      payment:    'Actualizacion de pago',
-      grade:      'Nueva calificacion',
-      inquiry:    'Nueva consulta recibida',
-      receipt:    'Nuevo comprobante de pago',
-      submission: 'Nueva entrega de tarea',
+      task:              'Nueva tarea asignada',
+      post:              'Nueva publicacion en el muro',
+      muro:              'Nueva publicacion en el muro',
+      comment:           'Nuevo comentario en una publicacion',
+      like:              'Alguien reacciono a tu publicacion',
+      chat:              'Nuevo mensaje directo',
+      message:           'Nuevo mensaje directo',
+      attendance:        'Asistencia registrada',
+      payment:           'Actualizacion de pago',
+      grade:             'Nueva calificacion publicada',
+      inquiry:           'Nueva consulta recibida',
+      receipt:           'Nuevo comprobante de pago',
+      submission:        'Nueva entrega de tarea',
+      'task-submission':  'Un alumno entrego una tarea',
+      'post-feedback':   'Comentario en el muro del aula',
+      'new-student':     'Nuevo estudiante inscrito',
+      'new-teacher':     'Nuevo docente registrado',
+      alert:             'Alerta de sistema',
+      info:              'Notificacion del sistema',
     };
     return msgs[type] || 'Nueva notificacion';
   },
 
   // Glow en boton del sidebar Y en tarjeta del dashboard
   // Compatible con data-target (padre) y data-section (directora/asistente/maestra)
-  _applyGlow(section) {
+  _applyGlow(section, eventType) {
+    // Color contextual segun el tipo de evento
+    var glowColor = 'orange';
+    if (eventType === 'message' || eventType === 'chat') glowColor = 'blue';
+    else if (eventType === 'grade') glowColor = 'green';
+    else if (eventType === 'attendance') glowColor = 'blue';
+    else if (eventType === 'payment' || eventType === 'receipt') glowColor = 'red';
+    else if (eventType === 'task' || eventType === 'submission') glowColor = 'orange';
+
     // Sidebar: buscar por data-target O data-section
-    const sidebarBtn = document.querySelector(
+    var sidebarBtn = document.querySelector(
       '[data-target="' + section + '"], [data-section="' + section + '"], .node-' + section
     );
     if (sidebarBtn) {
       sidebarBtn.classList.add('animate-glow');
-      const btn = sidebarBtn;
+      var btn = sidebarBtn;
       setTimeout(function() { btn.classList.remove('animate-glow'); }, 4000);
     }
 
     // Tarjeta del dashboard: buscar por data-target O data-section O data-action
-    const card = document.querySelector(
+    var card = document.querySelector(
       '[data-target="' + section + '"], [data-section="' + section + '"]'
     );
     if (card && card !== sidebarBtn) {
       card.classList.remove('card-glow-orange', 'card-glow-blue', 'card-glow-green', 'card-glow-red');
       void card.offsetWidth;
-      card.classList.add('card-glow-orange');
-      const c = card;
-      setTimeout(function() { c.classList.remove('card-glow-orange'); }, 2000);
+      card.classList.add('card-glow-' + glowColor);
+      var c = card;
+      setTimeout(function() { c.classList.remove('card-glow-' + glowColor); }, 2000);
     }
 
-    this._playSound('orange');
+    this._playSound(glowColor);
   },
 
   _audioCtx: null,

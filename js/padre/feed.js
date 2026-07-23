@@ -4,6 +4,17 @@ import { Helpers, escapeHtml } from '../shared/helpers.js';
 import { ImageLoader } from '../shared/image-loader.js';
 import { Security } from '../shared/security.js';
 
+function freshnessBadge(timeString) {
+  try {
+    const date = new Date(timeString);
+    const diffMs = Date.now() - date.getTime();
+    const hours = Math.floor(diffMs / 3600000);
+    if (hours < 1) return '<span class="wall-freshness wall-freshness--live"><span class="wall-freshness-dot"></span>En vivo</span>';
+    if (hours < 24) return '<span class="wall-freshness wall-freshness--new"><span class="wall-freshness-dot"></span>Nuevo</span>';
+    return '';
+  } catch (_) { return ''; }
+}
+
 /**
  * 📱 MÓDULO DE MURO (FEED)
  */
@@ -217,7 +228,7 @@ export const FeedModule = {
             </div>
             <div>
               <p class="font-black text-slate-800 text-sm leading-tight">${escapeHtml(teacherName)}</p>
-              <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">${date}</p>
+              <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">${date} ${freshnessBadge(p.created_at)}</p>
             </div>
           </div>
           <span class="px-3 py-1 bg-slate-50 text-slate-400 text-[9px] font-black uppercase rounded-full border border-slate-100">Comunicado</span>
