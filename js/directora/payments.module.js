@@ -1,5 +1,6 @@
 import { DirectorApi } from './api.js';
 import { Helpers } from '../shared/helpers.js';
+import { Security } from '../shared/security.js';
 import { UIHelpers } from './ui.module.js';
 import { supabase } from '../shared/supabase.js';
 import { auditLog } from '../shared/db-utils.js';
@@ -36,6 +37,7 @@ export const PaymentsModule = {
       on('btnSendPaymentReminders','click',  () => this.sendReminders());
       on('btnExportInvoices',      'click',  () => this._openExportModal());
       on('btnExportMorosidad',     'click',  () => this.exportMorosidad());
+      on('btnPendingTransfers',    'click',  () => this._filterPendingTransfers());
     }
     
     // ✅ Suscribirse a cambios en tiempo real
@@ -242,8 +244,10 @@ export const PaymentsModule = {
     const waiveBtn   = moraTot > 0 ? '<button onclick="App.payments.waiveMora(\'' + p.id + '\')" class="p-1.5 bg-[#E8F2FF] text-[#0B63C7] rounded-lg hover:bg-blue-100 transition-colors" title="Quitar Mora"><i data-lucide="shield-off" class="w-4 h-4"></i></button>' : '';
     const delBtn     = '<button onclick="App.payments.delete(\'' + p.id + '\')" class="p-1.5 bg-rose-50 text-rose-500 rounded-lg hover:bg-rose-100 transition-colors" title="Eliminar"><i data-lucide="trash-2" class="w-4 h-4"></i></button>';
     const invoiceBtn = '<button onclick="App.payments.downloadInvoice(\'' + p.id + '\')" class="p-1.5 bg-violet-50 text-violet-600 rounded-lg hover:bg-violet-100 transition-colors" title="Descargar Factura"><i data-lucide="file-down" class="w-4 h-4"></i></button>';
-    const voucher    = hasV
-      ? '<a href="' + (p.evidence_url || p.proof_url) + '" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 text-sky-600 text-xs font-bold"><i data-lucide="external-link" class="w-3 h-3"></i>Ver</a>'
+    const voucher = hasV
+      ? (sk === 'review'
+        ? '<button onclick="App.payments.markPaid(\'' + p.id + '\')" class="inline-flex items-center gap-1 text-[#0B63C7] text-xs font-black hover:underline" title="Abrir comprobante"><i data-lucide="eye" class="w-3.5 h-3.5"></i>Ver</button>'
+        : '<a href="' + Security.safeUrl(p.evidence_url || p.proof_url) + '" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 text-sky-600 text-xs font-bold"><i data-lucide="external-link" class="w-3 h-3"></i>Ver</a>')
       : '<span class="text-slate-300 text-xs">-</span>';
 
     return '<tr class="hover:bg-slate-50 border-b border-slate-100 transition-colors' + (sk === 'overdue' ? ' bg-rose-50/20' : '') + '">' +
@@ -439,34 +443,150 @@ export const PaymentsModule = {
   },
 
   async markPaid(id) {
+    const p = this._lastList?.find(x => x.id === id);
+    const isTransfer = p?.method === 'transferencia' && (p?.evidence_url || p?.proof_url);
+
+    if (isTransfer) {
+      this._openTransferReviewModal(p);
+      return;
+    }
+
+    if (!confirm('Aprobar este pago?')) return;
     try {
       await supabase.from('payments').update({ status: 'paid', paid_date: new Date().toISOString() }).eq('id', id);
       Helpers.toast('Pago aprobado', 'success');
       this.loadPayments(); this.loadStats();
-      
-      // Generar factura automáticamente
-      try {
-        const { data: authData } = await supabase.auth.getUser();
-        const userId = authData?.user?.id;
-        
-        const result = await InvoicingModule.generateInvoice(id, userId);
-        if (result && result.success) {
-          Helpers.toast(`Factura ${result.invoice_number} generada!`, 'success');
-        }
-      } catch (invoiceErr) {
-        console.error('Error generando factura:', invoiceErr);
-      }
-      
-      try {
-        const { data: p } = await DirectorApi.getPaymentById(id);
-        if (p) {
-          const { notifyPaymentApproved } = await import('../shared/supabase.js');
-          const emails = [p.students?.p1_email, p.students?.p2_email].filter(e => e?.includes('@'));
-          const amtStr = Number(p.amount || 0).toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-          await notifyPaymentApproved(id, emails[0] || null, p.students?.name || 'Estudiante', amtStr, p.month_paid || 'Colegiatura');
-        }
-      } catch (_) {}
+      this._generateInvoiceAfterApproval(id);
+      this._sendApprovalNotification(id);
     } catch (_) { Helpers.toast('Error al aprobar pago', 'error'); }
+  },
+
+  _openTransferReviewModal(payment) {
+    const p = payment;
+    const stu = p.students || { name: 'Desconocido', classrooms: { name: '-' } };
+    const amt = Number(p.amount || 0).toLocaleString('es-DO', { minimumFractionDigits: 2 });
+    const voucherUrl = p.evidence_url || p.proof_url || '';
+    const proofUrl  = p.proof_url && p.proof_url !== voucherUrl ? p.proof_url : '';
+
+    window.openGlobalModal(
+      '<div class="bg-gradient-to-r from-blue-700 to-blue-500 text-white p-6 rounded-t-3xl flex items-center gap-3">' +
+        '<div class="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center text-2xl">&#128179;</div>' +
+        '<div><h3 class="text-xl font-black">Revisar Transferencia</h3><p class="text-xs text-white/70 font-bold uppercase tracking-widest">Comprobante de pago</p></div>' +
+      '</div>' +
+      '<div class="p-6 bg-slate-50/30">' +
+        '<div class="bg-white border border-slate-100 rounded-2xl p-5 mb-4">' +
+          '<div class="flex items-center gap-3 mb-4">' +
+            '<div class="w-10 h-10 rounded-xl bg-[#E8F2FF] text-[#0B63C7] flex items-center justify-center font-black text-sm">' +
+              Helpers.escapeHTML((stu.name || '?').charAt(0).toUpperCase()) +
+            '</div>' +
+            '<div>' +
+              '<div class="font-bold text-slate-800">' + Helpers.escapeHTML(stu.name) + '</div>' +
+              '<div class="text-[10px] text-slate-400">' + (stu.classrooms?.name || '-') + '</div>' +
+            '</div>' +
+          '</div>' +
+          '<div class="grid grid-cols-2 gap-3 text-sm">' +
+            '<div><span class="text-xs text-slate-400 uppercase">Monto</span><div class="font-black text-slate-800">RD$ ' + amt + '</div></div>' +
+            '<div><span class="text-xs text-slate-400 uppercase">Mes</span><div class="font-bold text-slate-700">' + (p.month_paid || '-') + '</div></div>' +
+            '<div><span class="text-xs text-slate-400 uppercase">Banco</span><div class="font-bold text-slate-700">' + (p.bank || '-') + '</div></div>' +
+            '<div><span class="text-xs text-slate-400 uppercase">Referencia</span><div class="font-bold text-slate-700">' + (p.reference || '-') + '</div></div>' +
+            '<div class="col-span-2"><span class="text-xs text-slate-400 uppercase">Concepto</span><div class="font-bold text-slate-700">' + (p.concept || '-') + '</div></div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="mb-4">' +
+          '<label class="block text-[11px] font-black text-slate-400 uppercase tracking-wider mb-2">Comprobante de Transferencia</label>' +
+          (voucherUrl
+            ? '<div class="border border-slate-200 rounded-2xl overflow-hidden bg-white">' +
+                (voucherUrl.match(/\.(jpg|jpeg|png|gif|webp)/i)
+                  ? '<img src="' + Security.safeUrl(voucherUrl) + '" class="w-full max-h-72 object-contain cursor-pointer" onclick="window.open(\'' + Security.safeUrl(voucherUrl) + '\', \'_blank\')" title="Click para ver en tamaño completo">'
+                  : '<a href="' + Security.safeUrl(voucherUrl) + '" target="_blank" rel="noopener noreferrer" class="flex items-center gap-3 p-4 text-[#0B63C7] hover:bg-blue-50 transition-colors">' +
+                      '<i data-lucide="file-text" class="w-8 h-8"></i>' +
+                      '<div><div class="font-bold text-sm">Ver comprobante</div><div class="text-[10px] text-slate-400">Abrir en nueva pesta&ntilde;a</div></div>' +
+                    '</a>') +
+              '</div>'
+            : '<div class="border border-dashed border-slate-200 rounded-2xl p-8 text-center text-slate-400 text-sm">Sin comprobante adjunto</div>') +
+        '</div>' +
+        (proofUrl && proofUrl !== voucherUrl
+          ? '<div class="mb-4">' +
+              '<label class="block text-[11px] font-black text-slate-400 uppercase tracking-wider mb-2">Factura Fiscal</label>' +
+              '<a href="' + Security.safeUrl(proofUrl) + '" target="_blank" rel="noopener noreferrer" class="flex items-center gap-3 p-4 border border-slate-200 rounded-2xl bg-white hover:bg-blue-50 transition-colors text-[#0B63C7]">' +
+                '<i data-lucide="file-check" class="w-5 h-5"></i>' +
+                '<span class="text-sm font-bold">Ver factura fiscal</span>' +
+              '</a>' +
+            '</div>'
+          : '') +
+        '<div>' +
+          '<label class="block text-[11px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Notas (opcional)</label>' +
+          '<textarea id="reviewNotes" rows="2" class="w-full px-4 py-2.5 border-2 border-slate-100 rounded-2xl outline-none focus:ring-4 focus:ring-blue-100 focus:border-[#0B63C7] bg-slate-50/50 transition-all text-sm" placeholder="Agregar una nota sobre esta revisi&oacute;n..."></textarea>' +
+        '</div>' +
+      '</div>' +
+      '<div class="bg-white p-5 rounded-b-3xl border-t border-slate-100 flex justify-end gap-3">' +
+        '<button onclick="App.ui.closeModal()" class="px-5 py-2.5 text-slate-500 font-black text-xs uppercase hover:bg-slate-50 rounded-2xl transition-all">Cerrar</button>' +
+        '<button id="btnRejectTransfer" class="px-6 py-2.5 bg-rose-500 text-white rounded-2xl font-black text-xs uppercase shadow-lg hover:-translate-y-0.5 active:scale-95 transition-all">Rechazar</button>' +
+        '<button id="btnApproveTransfer" class="px-8 py-2.5 bg-gradient-to-r from-emerald-600 to-emerald-500 text-white rounded-2xl font-black text-xs uppercase shadow-lg hover:-translate-y-0.5 active:scale-95 transition-all">Aprobar Pago</button>' +
+      '</div>'
+    );
+    if (window.lucide) lucide.createIcons();
+
+    document.getElementById('btnApproveTransfer')?.addEventListener('click', async () => {
+      const btn = document.getElementById('btnApproveTransfer');
+      btn.disabled = true; btn.textContent = 'Aprobando...';
+      try {
+        const notes = document.getElementById('reviewNotes')?.value?.trim();
+        await supabase.from('payments').update({
+          status: 'paid',
+          paid_date: new Date().toISOString(),
+          notes: notes || null
+        }).eq('id', p.id);
+        UIHelpers.closeModal();
+        Helpers.toast('Transferencia aprobada', 'success');
+        this.loadPayments(); this.loadStats();
+        this._generateInvoiceAfterApproval(p.id);
+        this._sendApprovalNotification(p.id);
+      } catch (_) {
+        Helpers.toast('Error al aprobar', 'error');
+        btn.disabled = false; btn.textContent = 'Aprobar Pago';
+      }
+    });
+
+    document.getElementById('btnRejectTransfer')?.addEventListener('click', async () => {
+      const notes = document.getElementById('reviewNotes')?.value?.trim();
+      if (!notes) { Helpers.toast('Agrega un motivo de rechazo', 'warning'); return; }
+      const btn = document.getElementById('btnRejectTransfer');
+      btn.disabled = true; btn.textContent = 'Rechazando...';
+      try {
+        await supabase.from('payments').update({
+          status: 'pending',
+          notes: 'RECHAZADO: ' + notes
+        }).eq('id', p.id);
+        UIHelpers.closeModal();
+        Helpers.toast('Transferencia rechazada', 'info');
+        this.loadPayments(); this.loadStats();
+      } catch (_) {
+        Helpers.toast('Error al rechazar', 'error');
+        btn.disabled = false; btn.textContent = 'Rechazar';
+      }
+    });
+  },
+
+  async _generateInvoiceAfterApproval(paymentId) {
+    try {
+      const { data: authData } = await supabase.auth.getUser();
+      const userId = authData?.user?.id;
+      const result = await InvoicingModule.generateInvoice(paymentId, userId);
+      if (result?.success) Helpers.toast(`Factura ${result.invoice_number} generada!`, 'success');
+    } catch (e) { console.error('Error generando factura:', e); }
+  },
+
+  async _sendApprovalNotification(paymentId) {
+    try {
+      const { data: p } = await DirectorApi.getPaymentById(paymentId);
+      if (p) {
+        const { notifyPaymentApproved } = await import('../shared/supabase.js');
+        const emails = [p.students?.p1_email, p.students?.p2_email].filter(e => e?.includes('@'));
+        const amtStr = Number(p.amount || 0).toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        await notifyPaymentApproved(paymentId, emails[0] || null, p.students?.name || 'Estudiante', amtStr, p.month_paid || 'Colegiatura');
+      }
+    } catch (_) {}
   },
 
   async delete(id) {
@@ -663,6 +783,12 @@ export const PaymentsModule = {
       '</div>'
     );
     if (window.lucide) lucide.createIcons();
+  },
+
+  _filterPendingTransfers() {
+    const sel = document.getElementById('filterPaymentStatus');
+    if (sel) { sel.value = 'review'; this.loadPayments(); }
+    Helpers.toast('Mostrando transferencias pendientes de revisión', 'info');
   },
 
   _doExport(statusFilter) {

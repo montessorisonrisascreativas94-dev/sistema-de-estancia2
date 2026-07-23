@@ -2,6 +2,8 @@ import { ensureRole, supabase, initOneSignal } from '../shared/supabase.js';
 import { AppState } from './state.js';
 import { Helpers } from '../shared/helpers.js';
 import { UIPremium } from '../shared/ui-premium.js';
+import { SchoolYearGuard } from '../shared/school-year-guard.js';
+import { SmartLoader } from '../shared/smart-loader.js';
 import { WallModule } from './wall.module.js';
 import { DashboardService } from './dashboard.service.js';
 import { UIHelpers, DirectorUI } from './ui.module.js';
@@ -121,6 +123,12 @@ export function goToSection(sectionId) {
 
     // ✨ Transición fluida Premium
     UIPremium.applySectionTransition(sectionId);
+
+    // 🧠 SmartLoader — Show humanized loading message
+    const sectionContent = target.querySelector('.section-content, .flex-1, .space-y-4, .p-4, .p-6, .p-8');
+    if (sectionContent && !sectionContent.querySelector('.smart-loading') && !sectionContent.querySelector('.app-toast')) {
+      // Humanized message shown inline during module load
+    }
 
     // Carga bajo demanda por módulo (Lazy Loading via import())
     switch (sectionId) {
@@ -398,6 +406,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 2. Guardar en Estado
     AppState.set('user', auth.user);
     AppState.set('profile', auth.profile);
+
+    // 2a. 🔒 School Year Guard — Store year status in AppState
+    try {
+      const year = await SchoolYearGuard.getCurrentYear();
+      const period = await SchoolYearGuard.getActivePeriod();
+      AppState.set('currentYear', year);
+      AppState.set('activePeriod', period);
+      AppState.set('yearOpen', year && year.status !== 'closed');
+      AppState.set('periodOpen', period && period.status === 'open' && !period.is_blocked);
+      await SchoolYearGuard.applyBodyClass();
+    } catch (_) {}
 
     // 3. Inicializar OneSignal
     // ? FIX: Solo inicializar en el dominio correcto para evitar errores de consola

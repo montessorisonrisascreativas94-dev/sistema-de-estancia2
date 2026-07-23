@@ -21,69 +21,36 @@ export const Helpers = {
 
 
   /**
-   * 🔔 Toast moderno
+   * 🔔 Toast moderno con microinteracciones
    */
   toast(msg, type = 'success', duration = 4000) {
-
     if (!msg) return;
 
-    document
-      .querySelectorAll('.app-toast')
-      .forEach(t => t.remove());
+    document.querySelectorAll('.app-toast').forEach(t => t.remove());
 
-    const el =
-      document.createElement('div');
+    const el = document.createElement('div');
 
-    el.className = `
-      app-toast
-      fixed bottom-6 left-1/2 -translate-x-1/2
-      z-[999]
-      flex items-center gap-3
-      px-6 py-3
-      rounded-2xl
-      shadow-2xl
-      border
-      text-sm
-      font-bold
-      transition-all
-      duration-300
-      ${
+    const _icons = { success: '✅', error: '⚠️', warning: '⚡', info: '💬', created: '🎉', deleted: '🗑', saved: '✓', published: '📢' };
+    const _colors = {
+      success: 'bg-emerald-500 text-white border-emerald-400',
+      error: 'bg-rose-500 text-white border-rose-400',
+      warning: 'bg-amber-500 text-white border-amber-400',
+      info: 'bg-indigo-500 text-white border-indigo-400',
+      created: 'bg-emerald-500 text-white border-emerald-400',
+      deleted: 'bg-slate-700 text-white border-slate-600',
+      saved: 'bg-emerald-500 text-white border-emerald-400',
+      published: 'bg-indigo-500 text-white border-indigo-400'
+    };
 
-        type === 'error'
-        ? 'bg-rose-500 text-white border-rose-400'
-
-        : type === 'warning'
-        ? 'bg-amber-500 text-white border-amber-400'
-
-        : 'bg-slate-900 text-white border-slate-800'
-
-      }
-    `;
-
-    el.innerHTML = `
-
-      <div class="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-
-      ${Helpers.escapeHTML(msg)}
-
-    `;
+    el.className = `app-toast fixed bottom-6 left-1/2 -translate-x-1/2 z-[999] flex items-center gap-3 px-6 py-3.5 rounded-2xl shadow-2xl border text-sm font-bold transition-all duration-300 ${_colors[type] || _colors.success}`;
+    el.innerHTML = `<span class="text-base">${_icons[type] || '✅'}</span> ${Helpers.escapeHTML(msg)}`;
 
     document.body.appendChild(el);
 
     setTimeout(() => {
-
-      el.classList.add(
-        'opacity-0',
-        'translate-y-2'
-      );
-
-      setTimeout(
-        () => el.remove(),
-        300
-      );
-
+      el.classList.add('opacity-0', 'translate-y-2');
+      setTimeout(() => el.remove(), 300);
     }, duration);
-
   },
 
 

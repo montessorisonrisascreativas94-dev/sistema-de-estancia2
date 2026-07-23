@@ -1577,75 +1577,129 @@
 
       </section>
 
-      <!-- CALIFICACIONES -->
+      <!-- CENTRO DE EVALUACIÓN ACADÉMICA -->
       <section id="calificaciones" class="section">
-        <!-- Header -->
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div>
-            <h1 class="text-2xl font-black text-[#1A2340] tracking-tight">Centro de Calificaciones</h1>
-            <p class="text-slate-500 font-medium">Seguimiento del progreso acadmico por periodo.</p>
+            <h1 class="text-2xl font-black text-[#1A2340] tracking-tight flex items-center gap-3">
+              <span class="p-2 bg-indigo-100 text-indigo-600 rounded-2xl"><i data-lucide="graduation-cap" class="w-5 h-5"></i></span>
+              Centro de Evaluación Académica
+            </h1>
+            <p class="text-slate-500 font-medium mt-1">Evaluación por competencias y áreas del desarrollo infantil</p>
           </div>
           <div class="flex gap-2 flex-wrap">
-            <button id="btnNewPeriod" class="px-5 py-2.5 text-white rounded-xl font-black text-xs uppercase tracking-wider shadow-lg transition-all flex items-center gap-2 active:scale-95 hover:opacity-90" style="background:#0B63C7;box-shadow:0 4px 14px rgba(11,99,199,0.3);">
+            <select id="gradesFilterPeriod" class="px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 bg-white shadow-sm outline-none focus:ring-2 focus:ring-indigo-400">
+              <option value="">Todos los períodos</option>
+            </select>
+            <button id="btnNewPeriod" class="px-5 py-2.5 text-white rounded-xl font-black text-xs uppercase tracking-wider shadow-lg transition-all flex items-center gap-2 active:scale-95 hover:opacity-90" style="background:#6366F1;box-shadow:0 4px 14px rgba(99,102,241,0.3);">
               <i data-lucide="calendar-plus" class="w-4 h-4"></i> Nuevo Periodo
+            </button>
+            <button id="btnExportGrades" class="px-5 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl font-black text-xs uppercase tracking-wider shadow-sm flex items-center gap-2 hover:bg-slate-50 transition-all">
+              <i data-lucide="download" class="w-4 h-4"></i> Exportar
+            </button>
+            <button id="btnClosePeriod" class="px-5 py-2.5 bg-rose-500 text-white rounded-xl font-black text-xs uppercase tracking-wider shadow-lg shadow-rose-200 flex items-center gap-2 hover:bg-rose-600 transition-all" style="display:none;">
+              <i data-lucide="lock" class="w-4 h-4"></i> Cerrar Periodo
             </button>
           </div>
         </div>
 
         <!-- KPIs -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <div class="bg-[#E8F2FF] p-4 rounded-2xl border border-blue-100 shadow-sm">
-            <div class="flex items-center gap-3 mb-2"><div class="p-2 bg-blue-100 rounded-lg text-blue-600"><i data-lucide="award" class="w-5 h-5"></i></div><span class="text-xs font-bold text-blue-600 uppercase tracking-wider">Promedio General</span></div>
-            <p class="text-2xl font-black text-slate-800" id="kpiAvgGrade">N/A</p>
-          </div>
-          <div class="bg-green-50 p-4 rounded-2xl border border-green-100 shadow-sm">
-            <div class="flex items-center gap-3 mb-2"><div class="p-2 bg-green-100 rounded-lg text-green-600"><i data-lucide="trending-up" class="w-5 h-5"></i></div><span class="text-xs font-bold text-green-600 uppercase tracking-wider">Tasa Aprobacion</span></div>
-            <p class="text-2xl font-black text-slate-800" id="kpiApprovalRate">N/A</p>
+          <div class="bg-[#EEF2FF] p-4 rounded-2xl border border-indigo-100 shadow-sm">
+            <div class="flex items-center gap-3 mb-2"><div class="p-2 bg-indigo-100 rounded-lg text-indigo-600"><i data-lucide="users" class="w-5 h-5"></i></div><span class="text-xs font-bold text-indigo-600 uppercase tracking-wider">Estudiantes Evaluados</span></div>
+            <p class="text-2xl font-black text-slate-800" id="kpiTotalEvaluated">0</p>
           </div>
           <div class="bg-yellow-50 p-4 rounded-2xl border border-yellow-100 shadow-sm">
-            <div class="flex items-center gap-3 mb-2"><div class="p-2 bg-yellow-100 rounded-lg text-yellow-600"><i data-lucide="flag" class="w-5 h-5"></i></div><span class="text-xs font-bold text-yellow-600 uppercase tracking-wider">Necesitan Apoyo</span></div>
+            <div class="flex items-center gap-3 mb-2"><div class="p-2 bg-yellow-100 rounded-lg text-yellow-600"><i data-lucide="star" class="w-5 h-5"></i></div><span class="text-xs font-bold text-yellow-600 uppercase tracking-wider">Promedio Estrellas Global</span></div>
+            <p class="text-2xl font-black text-slate-800" id="kpiAvgStars">N/A</p>
+          </div>
+          <div class="bg-orange-50 p-4 rounded-2xl border border-orange-100 shadow-sm">
+            <div class="flex items-center gap-3 mb-2"><div class="p-2 bg-orange-100 rounded-lg text-orange-600"><i data-lucide="flag" class="w-5 h-5"></i></div><span class="text-xs font-bold text-orange-600 uppercase tracking-wider">Necesitan Apoyo (≤2★)</span></div>
             <p class="text-2xl font-black text-slate-800" id="kpiNeedsSupport">0</p>
           </div>
-          <div class="bg-red-50 p-4 rounded-2xl border border-red-100 shadow-sm">
-            <div class="flex items-center gap-3 mb-2"><div class="p-2 bg-red-100 rounded-lg text-red-600"><i data-lucide="alert-triangle" class="w-5 h-5"></i></div><span class="text-xs font-bold text-red-600 uppercase tracking-wider">Calificaciones Bajas</span></div>
-            <p class="text-2xl font-black text-slate-800" id="kpiLowGrades">0</p>
+          <div class="bg-emerald-50 p-4 rounded-2xl border border-emerald-100 shadow-sm">
+            <div class="flex items-center gap-3 mb-2"><div class="p-2 bg-emerald-100 rounded-lg text-emerald-600"><i data-lucide="book-open" class="w-5 h-5"></i></div><span class="text-xs font-bold text-emerald-600 uppercase tracking-wider">Áreas Evaluadas</span></div>
+            <p class="text-2xl font-black text-slate-800" id="kpiAreasEvaluated">0</p>
           </div>
         </div>
 
-        <!-- Tabla Principal -->
-        <div class="bg-white rounded-2xl shadow-md border border-slate-100 p-6">
-          <div class="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
-            <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2 w-full md:w-auto">
-              <span class="w-2 h-6 bg-[#0B63C7] rounded-full"></span>
-              Registros de Calificaciones
-            </h3>
-            <div class="flex flex-wrap gap-3 w-full md:w-auto">
-              <div class="relative flex-1 md:w-56">
-                <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"></i>
-                <input id="searchGradeStudent" placeholder="Buscar estudiante..." class="pl-10 pr-4 py-2 border rounded-xl text-sm w-full bg-slate-50 focus:bg-white transition-all outline-none focus:ring-2 focus:ring-[#0B63C7]">
+        <!-- Tabs -->
+        <div class="flex gap-1 bg-slate-100 p-1 rounded-xl mb-6 w-fit" id="gradesTabs">
+          <button data-tab="students" class="grades-tab px-5 py-2 rounded-lg text-xs font-black uppercase tracking-wider bg-white text-indigo-600 shadow-sm transition-all">Estudiantes</button>
+          <button data-tab="areas" class="grades-tab px-5 py-2 rounded-lg text-xs font-black uppercase tracking-wider text-slate-500 hover:text-slate-700 transition-all">Áreas</button>
+          <button data-tab="institutional" class="grades-tab px-5 py-2 rounded-lg text-xs font-black uppercase tracking-wider text-slate-500 hover:text-slate-700 transition-all">Institucional</button>
+        </div>
+
+        <!-- Tab: Estudiantes -->
+        <div id="gradesTabStudents" class="grades-tab-content">
+          <div class="bg-white rounded-2xl shadow-md border border-slate-100 p-6">
+            <div class="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
+              <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2 w-full md:w-auto">
+                <span class="w-2 h-6 bg-indigo-500 rounded-full"></span>
+                Evaluación por Estudiante
+              </h3>
+              <div class="flex flex-wrap gap-3 w-full md:w-auto">
+                <div class="relative flex-1 md:w-56">
+                  <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"></i>
+                  <input id="searchGradeStudent" placeholder="Buscar estudiante..." class="pl-10 pr-4 py-2 border rounded-xl text-sm w-full bg-slate-50 focus:bg-white transition-all outline-none focus:ring-2 focus:ring-indigo-400">
+                </div>
+                <select id="gradesFilterClassroom" class="px-3 py-2 border rounded-xl text-sm bg-slate-50 font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-400">
+                  <option value="all">Todas las aulas</option>
+                </select>
               </div>
-              <select id="gradesFilterClassroom" class="px-3 py-2 border rounded-xl text-sm bg-slate-50 font-bold text-slate-700 outline-none focus:ring-2 focus:ring-[#0B63C7]">
-                <option value="all">Todas las aulas</option>
-              </select>
+            </div>
+            <div class="table-scroll-wrap rounded-2xl border border-slate-200">
+              <table class="w-full text-sm text-left border-separate border-spacing-0" style="min-width:800px;">
+                <thead class="bg-[#EEF2FF] text-indigo-700 font-black uppercase text-[10px] tracking-wider sticky top-0 z-10">
+                  <tr>
+                    <th class="px-6 py-4 border-b border-indigo-100">Estudiante</th>
+                    <th class="px-4 py-4 text-center border-b border-indigo-100">★ Global</th>
+                    <th class="px-4 py-4 text-center border-b border-indigo-100">Lenguaje</th>
+                    <th class="px-4 py-4 text-center border-b border-indigo-100">Matemática</th>
+                    <th class="px-4 py-4 text-center border-b border-indigo-100">Desarrollo</th>
+                    <th class="px-4 py-4 text-center border-b border-indigo-100">Psicomotricidad</th>
+                    <th class="px-4 py-4 text-center border-b border-indigo-100">Árt</th>
+                    <th class="px-4 py-4 text-center border-b border-indigo-100">Nivel</th>
+                    <th class="px-4 py-4 text-center border-b border-indigo-100">Acción</th>
+                  </tr>
+                </thead>
+                <tbody id="gradesTableBody" class="divide-y divide-slate-100 bg-white">
+                  <tr><td colspan="9" class="text-center py-10 text-slate-400">Cargando evaluaciones...</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="text-[10px] text-slate-400 mt-4 italic">Doble clic en un estudiante para ver su expediente académico completo.</p>
+          </div>
+        </div>
+
+        <!-- Tab: Áreas -->
+        <div id="gradesTabAreas" class="grades-tab-content" style="display:none;">
+          <div class="bg-white rounded-2xl shadow-md border border-slate-100 p-6">
+            <div class="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
+              <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2 w-full md:w-auto">
+                <span class="w-2 h-6 bg-purple-500 rounded-full"></span>
+                Rendimiento por Área
+              </h3>
+            </div>
+            <div id="areasGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div class="text-center py-10 text-slate-400 col-span-full">Cargando áreas...</div>
             </div>
           </div>
+        </div>
 
-          <div class="table-scroll-wrap rounded-2xl border border-slate-200">
-            <table class="w-full text-sm text-left border-separate border-spacing-0" style="min-width:600px;">
-              <thead class="bg-[#E8F2FF] text-[#0850A0] font-black uppercase text-[10px] tracking-wider sticky top-0 z-10">
-                <tr>
-                  <th class="px-6 py-4 border-b border-slate-200">Estudiante</th>
-                  <th class="px-6 py-4 text-center border-b border-slate-200">Promedio</th>
-                  <th class="px-6 py-4 text-center border-b border-slate-200">Nivel</th>
-                  <th class="px-6 py-4 border-b border-slate-200">ltima Tarea Calificada</th>
-                </tr>
-              </thead>
-              <tbody id="gradesTableBody" class="divide-y divide-slate-100 bg-white">
-                <tr><td colspan="4" class="text-center py-10 text-slate-400">Cargando calificaciones...</td></tr>
-              </tbody>
-            </table>
+        <!-- Tab: Institucional -->
+        <div id="gradesTabInstitutional" class="grades-tab-content" style="display:none;">
+          <div class="bg-white rounded-2xl shadow-md border border-slate-100 p-6">
+            <div class="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
+              <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2 w-full md:w-auto">
+                <span class="w-2 h-6 bg-emerald-500 rounded-full"></span>
+                Resumen Institucional del Período
+              </h3>
+            </div>
+            <div id="institutionalSummary" class="space-y-6">
+              <div class="text-center py-10 text-slate-400">Selecciona un período para ver el resumen institucional.</div>
+            </div>
           </div>
-          <p class="text-[10px] text-slate-400 mt-4 italic">?? Tip: Haz doble clic en un estudiante para ver el detalle de todas sus tareas del trimestre.</p>
         </div>
       </section>
 

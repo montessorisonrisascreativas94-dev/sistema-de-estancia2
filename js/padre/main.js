@@ -1,6 +1,7 @@
 import { supabase, ensureRole, initOneSignal } from '../shared/supabase.js';
 import { Api } from './api.js';
 import { Helpers } from '../shared/helpers.js';
+import { SmartLoader } from '../shared/smart-loader.js';
 import { AppState } from './appState.js';
 import { VideoCallModule } from '../shared/videocall.js';
 import { PaymentsModule }  from './payments.js';

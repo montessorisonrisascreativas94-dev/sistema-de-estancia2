@@ -5,6 +5,8 @@ import { AppState } from './state.js';
 import { MaestraApi } from './api.js';
 import { Helpers } from '../shared/helpers.js';
 import { WallModule } from '../shared/wall.js';
+import { SchoolYearGuard } from '../shared/school-year-guard.js';
+import { SmartLoader } from '../shared/smart-loader.js';
 
 import { VideoCallModule } from '../shared/videocall.js';
 import { BadgeSystem } from '../shared/badges.js';
@@ -75,6 +77,7 @@ window.App = {
     saveEventConfig:          Routine.saveEventConfig,
     openScheduleConfig:       Routine.openScheduleConfig,
     resetScheduleConfig:      Routine.resetScheduleConfig,
+    toggleTimeline:           Routine.toggleTimeline,
     _toggleViewMode:          Routine._toggleViewModeFn,
 
   // Tasks
@@ -178,6 +181,24 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (isProd) {
     try { initOneSignal(auth.user); } catch(_) {}
   }
+
+  // 🔒 School Year Guard — Read-only banner
+  try {
+    const banner = await SchoolYearGuard.getReadOnlyBanner();
+    if (banner) {
+      const bannerContainer = document.getElementById('readOnlyBanner') || document.querySelector('.section.active .flex.flex-col');
+      if (bannerContainer) {
+        bannerContainer.insertAdjacentHTML('afterbegin', banner);
+        if (window.lucide) lucide.createIcons();
+      }
+      document.querySelectorAll('.section').forEach(sec => {
+        if (!sec.querySelector('.bg-rose-50, .bg-amber-50')) {
+          sec.insertAdjacentHTML('afterbegin', banner);
+        }
+      });
+    }
+    await SchoolYearGuard.applyBodyClass();
+  } catch (_) {}
 
   // Identidad
   const teacherName = auth.profile?.full_name || auth.profile?.name || 'Maestra';
@@ -890,6 +911,15 @@ function initNavigation() {
     const isFresh = _lastLoad[cleanId] && (now - _lastLoad[cleanId] < 120000);
     if (isFresh) return;
     _lastLoad[cleanId] = now;
+
+    // 🧠 SmartLoader — Show humanized loading for fresh sections
+    const sectionEl = document.getElementById(fullId);
+    if (sectionEl) {
+      const loadingContainer = sectionEl.querySelector('.section-content, .flex-1, .space-y-4, .p-4, .p-6');
+      if (loadingContainer && !loadingContainer.querySelector('.smart-loading')) {
+        SmartLoader.showIn(null, cleanId, { skeleton: 'feed', rows: 3 });
+      }
+    }
 
     if (cleanId === 'home') initDashboard();
     if (cleanId === 'attendance') initAttendance();

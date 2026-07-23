@@ -1,5 +1,6 @@
 import { supabase } from '../shared/supabase.js';
 import { Helpers } from '../shared/helpers.js';
+import { Security } from '../shared/security.js';
 import { InvoicingModule } from './invoicing.module.js';
 
 const CURRENCY = 'RD$';
@@ -154,7 +155,8 @@ export const NewPaymentsModule = {
             amount:  Number(p.amount || 0),
             dueDate: p.due_date,
             status:  this._calcStatus(p),
-            type:    'payment'
+            type:    'payment',
+            _raw:    p
           }))
         : this._exampleItems(student);
 
@@ -162,25 +164,39 @@ export const NewPaymentsModule = {
         container.innerHTML = `<div class="p-8 text-center text-slate-400"><i data-lucide="inbox" class="w-12 h-12 mx-auto mb-3 opacity-50"></i><p class="text-sm font-medium">No hay pagos pendientes</p></div>`;
         if (window.lucide) lucide.createIcons(); return;
       }
-      container.innerHTML = items.map(item => `
-        <div class="p-4 bg-white border border-slate-100 rounded-2xl mb-3 hover:border-[#0B63C7] transition-colors ${this._inCart(item.id) ? 'ring-2 ring-[#0B63C7] bg-blue-50' : ''}">
+      container.innerHTML = items.map(item => {
+        const isReview = item.status === 'review';
+        const raw = item._raw || {};
+        const hasVoucher = !!(raw.evidence_url || raw.proof_url);
+        return `
+        <div class="p-4 bg-white border border-slate-100 rounded-2xl mb-3 hover:border-[#0B63C7] transition-colors ${this._inCart(item.id) ? 'ring-2 ring-[#0B63C7] bg-blue-50' : ''} ${isReview ? 'border-l-4 border-l-orange-400' : ''}">
           <div class="flex items-center justify-between gap-4">
             <div class="flex-1 min-w-0">
               <h4 class="font-bold text-slate-800 truncate">${Helpers.escapeHTML(item.concept)}</h4>
-              <div class="flex items-center gap-2 mt-1">
+              <div class="flex items-center gap-2 mt-1 flex-wrap">
                 ${item.dueDate ? `<span class="text-xs text-slate-500"><i data-lucide="calendar" class="w-3 h-3 inline mr-1"></i>Vence: ${new Date(item.dueDate+'T00:00:00').toLocaleDateString('es-ES')}</span>` : ''}
                 ${item.status === 'overdue' ? `<span class="text-xs font-black text-rose-600 bg-rose-100 px-2 py-0.5 rounded-full">Vencido</span>` : ''}
-                ${item.status === 'review'  ? `<span class="text-xs font-black text-orange-600 bg-orange-100 px-2 py-0.5 rounded-full">En revisión</span>` : ''}
+                ${isReview  ? `<span class="text-xs font-black text-orange-600 bg-orange-100 px-2 py-0.5 rounded-full">En revisión</span>` : ''}
+                ${isReview && raw.bank ? `<span class="text-[9px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded-full">🏦 ${Helpers.escapeHTML(raw.bank)}</span>` : ''}
+                ${isReview && raw.reference ? `<span class="text-[9px] text-slate-400">#${Helpers.escapeHTML(raw.reference)}</span>` : ''}
               </div>
             </div>
             <div class="text-right">
               <p class="text-lg font-black text-slate-800">${fmt(item.amount)}</p>
-              <button class="mt-2 px-4 py-1.5 ${this._inCart(item.id) ? 'bg-slate-200 text-slate-600' : 'bg-gradient-to-r from-[#0B63C7] to-blue-600 text-white'} rounded-xl text-xs font-black uppercase tracking-wide transition-all hover:shadow-md active:scale-95" data-item-id="${item.id}">
-                ${this._inCart(item.id) ? 'Quitar' : 'Agregar'}
-              </button>
+              ${isReview
+                ? `<div class="flex items-center gap-1.5 mt-2">
+                     ${hasVoucher ? `<button class="px-2.5 py-1 bg-[#E8F2FF] text-[#0B63C7] rounded-lg text-[10px] font-black uppercase tracking-wide hover:bg-blue-100 transition-colors" data-review-voucher="${item.id}"><i data-lucide="eye" class="w-3 h-3 inline mr-0.5"></i>Ver</button>` : ''}
+                     <button class="px-2.5 py-1 bg-emerald-500 text-white rounded-lg text-[10px] font-black uppercase tracking-wide hover:bg-emerald-600 transition-all active:scale-95" data-review-approve="${item.id}"><i data-lucide="check" class="w-3 h-3 inline mr-0.5"></i>Aprobar</button>
+                     <button class="px-2.5 py-1 bg-rose-100 text-rose-600 rounded-lg text-[10px] font-black uppercase tracking-wide hover:bg-rose-200 transition-colors" data-review-reject="${item.id}"><i data-lucide="x" class="w-3 h-3 inline mr-0.5"></i>Rechazar</button>
+                   </div>`
+                : `<button class="mt-2 px-4 py-1.5 ${this._inCart(item.id) ? 'bg-slate-200 text-slate-600' : 'bg-gradient-to-r from-[#0B63C7] to-blue-600 text-white'} rounded-xl text-xs font-black uppercase tracking-wide transition-all hover:shadow-md active:scale-95" data-item-id="${item.id}">
+                    ${this._inCart(item.id) ? 'Quitar' : 'Agregar'}
+                  </button>`
+              }
             </div>
           </div>
-        </div>`).join('');
+        </div>`;
+      }).join('');
 
       container.querySelectorAll('[data-item-id]').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -188,6 +204,24 @@ export const NewPaymentsModule = {
           if (!item) return;
           if (this._inCart(item.id)) this._removeFromCart(item.id);
           else this._addToCart(item);
+        });
+      });
+      container.querySelectorAll('[data-review-approve]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const item = items.find(i => String(i.id) === String(btn.dataset.reviewApprove));
+          if (item?._raw) this._reviewApprove(item._raw);
+        });
+      });
+      container.querySelectorAll('[data-review-reject]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const item = items.find(i => String(i.id) === String(btn.dataset.reviewReject));
+          if (item?._raw) this._reviewReject(item._raw);
+        });
+      });
+      container.querySelectorAll('[data-review-voucher]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const item = items.find(i => String(i.id) === String(btn.dataset.reviewVoucher));
+          if (item?._raw) this._reviewShowVoucher(item._raw);
         });
       });
       if (window.lucide) lucide.createIcons();
@@ -367,6 +401,101 @@ export const NewPaymentsModule = {
     const historyC = document.getElementById('historyContainer');
     if (pendingC) pendingC.classList.toggle('hidden', !setPending);
     if (historyC) historyC.classList.toggle('hidden',  setPending);
+  },
+
+  // ── Transfer Review Methods ────────────────────────────────────────────────
+  async _reviewApprove(payment) {
+    if (!confirm(`Aprobar pago de ${fmt(payment.amount)} por transferencia?`)) return;
+    try {
+      await supabase.from('payments').update({
+        status: 'paid',
+        paid_date: new Date().toISOString()
+      }).eq('id', payment.id);
+      Helpers.toast('Transferencia aprobada', 'success');
+      if (this.state.selectedStudent) {
+        await this._loadPendingItems(this.state.selectedStudent);
+        await this._loadPaymentHistory(this.state.selectedStudent);
+      }
+      try {
+        const { data: authData } = await supabase.auth.getUser();
+        const result = await InvoicingModule.generateInvoice(payment.id, authData?.user?.id);
+        if (result?.success) Helpers.toast(`Factura ${result.invoice_number} generada`, 'success');
+      } catch (_) {}
+    } catch (_) { Helpers.toast('Error al aprobar', 'error'); }
+  },
+
+  _reviewReject(payment) {
+    window.openGlobalModal(
+      '<div class="bg-gradient-to-r from-rose-600 to-rose-500 text-white p-6 rounded-t-3xl flex items-center gap-3">' +
+        '<div class="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center text-2xl">&#128683;</div>' +
+        '<div><h3 class="text-xl font-black">Rechazar Transferencia</h3><p class="text-xs text-white/70 font-bold uppercase tracking-widest">Motivo del rechazo</p></div>' +
+      '</div>' +
+      '<div class="p-6">' +
+        '<div class="bg-slate-50 rounded-2xl p-4 mb-4">' +
+          '<p class="text-sm text-slate-600">Pago: <span class="font-bold text-slate-800">' + fmt(payment.amount) + '</span></p>' +
+          '<p class="text-sm text-slate-600">Mes: <span class="font-bold text-slate-800">' + (payment.month_paid || '-') + '</span></p>' +
+        '</div>' +
+        '<div>' +
+          '<label class="block text-[11px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Motivo *</label>' +
+          '<textarea id="rejectReason" rows="3" class="w-full px-4 py-2.5 border-2 border-slate-100 rounded-2xl outline-none focus:ring-4 focus:ring-rose-100 focus:border-rose-400 bg-slate-50/50 transition-all text-sm" placeholder="Describe el motivo del rechazo..."></textarea>' +
+        '</div>' +
+      '</div>' +
+      '<div class="bg-white p-5 rounded-b-3xl border-t border-slate-100 flex justify-end gap-3">' +
+        '<button onclick="App.ui.closeModal()" class="px-6 py-2.5 text-slate-500 font-black text-xs uppercase hover:bg-slate-50 rounded-2xl">Cancelar</button>' +
+        '<button id="btnConfirmReject" class="px-8 py-2.5 bg-rose-500 text-white rounded-2xl font-black text-xs uppercase shadow-lg hover:-translate-y-0.5 active:scale-95 transition-all">Rechazar</button>' +
+      '</div>'
+    );
+    document.getElementById('btnConfirmReject')?.addEventListener('click', async () => {
+      const reason = document.getElementById('rejectReason')?.value?.trim();
+      if (!reason) { Helpers.toast('Agrega un motivo', 'warning'); return; }
+      const btn = document.getElementById('btnConfirmReject');
+      btn.disabled = true; btn.textContent = 'Rechazando...';
+      try {
+        await supabase.from('payments').update({
+          status: 'pending',
+          notes: 'RECHAZADO: ' + reason
+        }).eq('id', payment.id);
+        App.ui.closeModal();
+        Helpers.toast('Transferencia rechazada', 'info');
+        if (this.state.selectedStudent) await this._loadPendingItems(this.state.selectedStudent);
+      } catch (_) {
+        Helpers.toast('Error al rechazar', 'error');
+        btn.disabled = false; btn.textContent = 'Rechazar';
+      }
+    });
+  },
+
+  _reviewShowVoucher(payment) {
+    const voucherUrl = payment.evidence_url || payment.proof_url || '';
+    const proofUrl  = payment.proof_url && payment.proof_url !== voucherUrl ? payment.proof_url : '';
+    const isImage = voucherUrl && /\.(jpg|jpeg|png|gif|webp)/i.test(voucherUrl);
+
+    window.openGlobalModal(
+      '<div class="bg-gradient-to-r from-[#0B63C7] to-blue-500 text-white p-6 rounded-t-3xl flex items-center gap-3">' +
+        '<div class="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center text-2xl">&#128179;</div>' +
+        '<div><h3 class="text-xl font-black">Comprobante de Transferencia</h3><p class="text-xs text-white/70 font-bold uppercase tracking-widest">' + (payment.bank || '') + (payment.reference ? ' #' + payment.reference : '') + '</p></div>' +
+      '</div>' +
+      '<div class="p-6">' +
+        '<div class="bg-slate-50 rounded-2xl p-4 mb-4 grid grid-cols-2 gap-3 text-sm">' +
+          '<div><span class="text-xs text-slate-400 uppercase">Monto</span><div class="font-black text-slate-800">' + fmt(payment.amount) + '</div></div>' +
+          '<div><span class="text-xs text-slate-400 uppercase">Mes</span><div class="font-bold text-slate-700">' + (payment.month_paid || '-') + '</div></div>' +
+          '<div><span class="text-xs text-slate-400 uppercase">Banco</span><div class="font-bold text-slate-700">' + (payment.bank || '-') + '</div></div>' +
+          '<div><span class="text-xs text-slate-400 uppercase">Referencia</span><div class="font-bold text-slate-700">' + (payment.reference || '-') + '</div></div>' +
+        '</div>' +
+        (isImage
+          ? '<div class="border border-slate-200 rounded-2xl overflow-hidden bg-white mb-4"><img src="' + Security.safeUrl(voucherUrl) + '" class="w-full max-h-80 object-contain cursor-pointer" onclick="window.open(\'' + Security.safeUrl(voucherUrl) + '\', \'_blank\')" title="Click para ver en tamaño completo"></div>'
+          : '<a href="' + Security.safeUrl(voucherUrl) + '" target="_blank" rel="noopener noreferrer" class="flex items-center gap-3 p-4 border border-slate-200 rounded-2xl bg-white hover:bg-blue-50 transition-colors text-[#0B63C7] mb-4"><i data-lucide="file-text" class="w-6 h-6"></i><div><div class="font-bold text-sm">Ver comprobante</div><div class="text-[10px] text-slate-400">Abrir en nueva pesta&ntilde;a</div></div></a>') +
+        (proofUrl
+          ? '<a href="' + Security.safeUrl(proofUrl) + '" target="_blank" rel="noopener noreferrer" class="flex items-center gap-3 p-3 border border-slate-200 rounded-2xl bg-white hover:bg-blue-50 transition-colors text-[#0B63C7]"><i data-lucide="file-check" class="w-4 h-4"></i><span class="text-sm font-bold">Ver factura fiscal</span></a>'
+          : '') +
+      '</div>' +
+      '<div class="bg-white p-5 rounded-b-3xl border-t border-slate-100 flex justify-end gap-3">' +
+        '<button onclick="App.ui.closeModal()" class="px-6 py-2.5 text-slate-500 font-black text-xs uppercase hover:bg-slate-50 rounded-2xl">Cerrar</button>' +
+        '<button onclick="App.ui.closeModal(); window.__pendingVoucherPayment && window.NewPaymentsModule._reviewApprove(window.__pendingVoucherPayment)" class="px-8 py-2.5 bg-gradient-to-r from-emerald-600 to-emerald-500 text-white rounded-2xl font-black text-xs uppercase shadow-lg hover:-translate-y-0.5 active:scale-95 transition-all">Aprobar</button>' +
+      '</div>'
+    );
+    if (window.lucide) lucide.createIcons();
+    window.__pendingVoucherPayment = payment;
   },
 
   // ── Modal de cobro ────────────────────────────────────────────────────────

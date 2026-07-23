@@ -792,3 +792,49 @@ body:not(.panel-padre-body) .app {
   50%      { opacity: 0.5; transform: scale(0.7); }
 }
 
+/* ── Read-only mode for closed years/periods ───────────────────── */
+.year-closed .btn-write,
+.year-closed [onclick*="insert"],
+.year-closed [onclick*="create"],
+.year-closed [onclick*="save"],
+.year-closed [onclick*="submit"],
+.year-closed [onclick*="add"],
+.year-closed [onclick*="new"],
+.year-closed [onclick*="delete"],
+.year-closed button[type="submit"] {
+  pointer-events: none;
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.year-closed input:not([type="hidden"]):not(.year-closed-exempt),
+.year-closed select,
+.year-closed textarea {
+  pointer-events: none;
+  opacity: 0.6;
+  background-color: #f8fafc;
+}
+
+.period-closed input:not([type="hidden"]):not(.period-closed-exempt),
+.period-closed select,
+.period-closed textarea {
+  pointer-events: none;
+  opacity: 0.6;
+  background-color: #f8fafc;
+}
+
+.readonly-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+

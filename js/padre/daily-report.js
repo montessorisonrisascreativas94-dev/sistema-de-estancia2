@@ -72,9 +72,11 @@ function localToday() {
 
 // Helper to calculate duration between two ISO times
 function calculateDuration(start, end) {
+  if (!start) return { hours: 0, minutes: 0, totalMs: 0 };
   const startDate = new Date(start);
+  if (isNaN(startDate.getTime())) return { hours: 0, minutes: 0, totalMs: 0 };
   const endDate = end ? new Date(end) : new Date();
-  const diffMs = endDate - startDate;
+  const diffMs = Math.max(0, endDate - startDate);
   const hours = Math.floor(diffMs / (1000 * 60 * 60));
   const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
   return { hours, minutes, totalMs: diffMs };
@@ -237,74 +239,73 @@ export const DailyReportModule = {
       const sn = getFoodStatus(todaySnack);
 
       weeklyContainer.innerHTML = `
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <!-- 🌙 ANÁLISIS DE SUEÑO -->
-          <div class="cloud-card p-5">
-            <div class="flex items-center gap-3 mb-4">
-              <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center shadow-lg shadow-purple-200 text-xl">🌙</div>
-              <h4 class="font-black text-lg text-[#1A2340]">Análisis de Sueño</h4>
-            </div>
-            <div class="space-y-3 text-sm">
-              <div class="flex justify-between"><span class="font-bold text-[#64748B]">Hoy:</span><span class="font-black text-[#8B5CF6]">${todaySleepHours} horas</span></div>
-              <div class="flex justify-between"><span class="font-bold text-[#64748B]">Promedio Semanal:</span><span class="font-black text-[#1A2340]">${weeklySleepAvg} horas/día</span></div>
-              <div class="flex justify-between"><span class="font-bold text-[#64748B]">Promedio Mensual:</span><span class="font-black text-[#1A2340]">${monthlySleepAvg} horas/día</span></div>
-              <div class="pt-2 border-t border-slate-100">
-                <p class="text-[#28B54D] font-bold flex items-center gap-2">📈 Tendencia: Mejorando</p>
-              </div>
-            </div>
-          </div>
-
-          <!-- 🍼 ANÁLISIS DE BIBERÓN -->
-          <div class="cloud-card p-5">
-            <div class="flex items-center gap-3 mb-4">
-              <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-500 text-white flex items-center justify-center shadow-lg shadow-blue-200 text-xl">🍼</div>
-              <h4 class="font-black text-lg text-[#1A2340]">Análisis de Alimentación</h4>
-            </div>
-            <div class="space-y-3 text-sm">
-              <div class="flex justify-between"><span class="font-bold text-[#64748B]">Hoy:</span><span class="font-black text-[#0B63C7]">${todayMilk} oz (${todayMilkFeeds} tomas)</span></div>
-              <div class="flex justify-between"><span class="font-bold text-[#64748B]">Promedio Semanal:</span><span class="font-black text-[#1A2340]">${weeklyMilkAvg} oz/día</span></div>
-              <div class="flex justify-between"><span class="font-bold text-[#64748B]">Promedio Mensual:</span><span class="font-black text-[#1A2340]">${monthlyMilkAvg} oz/día</span></div>
-              <div class="pt-2 border-t border-slate-100">
-                <p class="text-[#0B63C7] font-bold flex items-center gap-2">💡 Insight: Buen consumo</p>
-              </div>
-            </div>
-          </div>
-
-          <!-- 🍽️ ANÁLISIS DE COMIDAS SÓLIDAS -->
-          <div class="cloud-card p-5">
-            <div class="flex items-center gap-3 mb-4">
-              <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-orange-500 to-amber-500 text-white flex items-center justify-center shadow-lg shadow-orange-200 text-xl">🍽️</div>
-              <h4 class="font-black text-lg text-[#1A2340]">Análisis de Comidas</h4>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Sueño -->
+          <div class="p-4 rounded-xl border border-[#E2E8F0] bg-[#F5F3FF]">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="text-lg">🌙</span>
+              <span class="text-xs font-black text-[#64748B] uppercase tracking-widest">Sueño</span>
             </div>
             <div class="space-y-2 text-sm">
-              <div class="flex justify-between"><span class="font-bold text-[#64748B]">Desayuno:</span><span class="font-black">${bf.icon} ${bf.text} (${bf.pct})</span></div>
-              <div class="flex justify-between"><span class="font-bold text-[#64748B]">Almuerzo:</span><span class="font-black">${lu.icon} ${lu.text} (${lu.pct})</span></div>
-              <div class="flex justify-between"><span class="font-bold text-[#64748B]">Merienda:</span><span class="font-black">${sn.icon} ${sn.text} (${sn.pct})</span></div>
-              <div class="pt-2 border-t border-slate-100">
-                <p class="text-[#FF7A00] font-bold">Promedio Semanal: ${weeklyStats.avgFoodAcceptance}% de consumo</p>
+              <div class="flex justify-between"><span class="font-bold text-[#64748B]">Hoy:</span><span class="font-black text-[#8B5CF6]">${todaySleepHours} horas</span></div>
+              <div class="flex justify-between"><span class="font-bold text-[#64748B]">Prom. Semanal:</span><span class="font-black text-[#1A2340]">${weeklySleepAvg} h/día</span></div>
+              <div class="flex justify-between"><span class="font-bold text-[#64748B]">Prom. Mensual:</span><span class="font-black text-[#1A2340]">${monthlySleepAvg} h/día</span></div>
+              <div class="pt-2 border-t border-[#E2E8F0]/50">
+                <p class="text-[#28B54D] font-bold text-[11px]">📈 Tendencia: Mejorando</p>
               </div>
             </div>
           </div>
 
-          <!-- 🩺 SALUD Y BIENESTAR -->
-          <div class="cloud-card p-5">
-            <div class="flex items-center gap-3 mb-4">
-              <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-green-500 to-emerald-500 text-white flex items-center justify-center shadow-lg shadow-green-200 text-xl">🩺</div>
-              <h4 class="font-black text-lg text-[#1A2340]">Salud y Bienestar</h4>
+          <!-- Leche -->
+          <div class="p-4 rounded-xl border border-[#E2E8F0] bg-[#EFF6FF]">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="text-lg">🍼</span>
+              <span class="text-xs font-black text-[#64748B] uppercase tracking-widest">Alimentación</span>
             </div>
-            <div class="space-y-3 text-sm">
-              <div class="flex justify-between"><span class="font-bold text-[#64748B]">Temperatura:</span><span class="font-black text-[#28B54D]">${todayTemp ? todayTemp + '°C (Normal)' : '—'}</span></div>
+            <div class="space-y-2 text-sm">
+              <div class="flex justify-between"><span class="font-bold text-[#64748B]">Hoy:</span><span class="font-black text-[#0B63C7]">${todayMilk} oz (${todayMilkFeeds} tomas)</span></div>
+              <div class="flex justify-between"><span class="font-bold text-[#64748B]">Prom. Semanal:</span><span class="font-black text-[#1A2340]">${weeklyMilkAvg} oz/día</span></div>
+              <div class="flex justify-between"><span class="font-bold text-[#64748B]">Prom. Mensual:</span><span class="font-black text-[#1A2340]">${monthlyMilkAvg} oz/día</span></div>
+              <div class="pt-2 border-t border-[#E2E8F0]/50">
+                <p class="text-[#0B63C7] font-bold text-[11px]">💡 Insight: Buen consumo</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Comidas -->
+          <div class="p-4 rounded-xl border border-[#E2E8F0] bg-[#FFF7ED]">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="text-lg">🍽️</span>
+              <span class="text-xs font-black text-[#64748B] uppercase tracking-widest">Comidas sólidas</span>
+            </div>
+            <div class="space-y-2 text-sm">
+              <div class="flex justify-between"><span class="font-bold text-[#64748B]">Desayuno:</span><span class="font-black">${bf.icon} ${bf.text}</span></div>
+              <div class="flex justify-between"><span class="font-bold text-[#64748B]">Almuerzo:</span><span class="font-black">${lu.icon} ${lu.text}</span></div>
+              <div class="flex justify-between"><span class="font-bold text-[#64748B]">Merienda:</span><span class="font-black">${sn.icon} ${sn.text}</span></div>
+              <div class="pt-2 border-t border-[#E2E8F0]/50">
+                <p class="text-[#FF7A00] font-bold text-[11px]">Prom. Semanal: ${weeklyStats.avgFoodAcceptance}% de consumo</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Salud -->
+          <div class="p-4 rounded-xl border border-[#E2E8F0] bg-[#ECFDF5]">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="text-lg">🩺</span>
+              <span class="text-xs font-black text-[#64748B] uppercase tracking-widest">Salud</span>
+            </div>
+            <div class="space-y-2 text-sm">
+              <div class="flex justify-between"><span class="font-bold text-[#64748B]">Temperatura:</span><span class="font-black text-[#28B54D]">${todayTemp ? todayTemp + '°C' : '—'}</span></div>
               <div class="flex justify-between"><span class="font-bold text-[#64748B]">Pañales hoy:</span><span class="font-black text-[#1A2340]">${todayDiapers} veces</span></div>
-              <div class="flex justify-between"><span class="font-bold text-[#64748B]">Estado:</span><span class="font-black text-[#FFD43B]">${todayMood ? ICONS.mood[todayMood] || '😊' : '—'} ${todayMood ? LABELS.mood[todayMood] : ''}</span></div>
+              <div class="flex justify-between"><span class="font-bold text-[#64748B]">Estado:</span><span class="font-black">${todayMood ? ICONS.mood[todayMood] || '😊' : '—'} ${todayMood ? LABELS.mood[todayMood] : ''}</span></div>
             </div>
           </div>
         </div>
         ${todayNote ? `
-        <!-- 📝 NOTAS DE LA MAESTRA -->
-        <div class="cloud-card p-5 mt-6">
-          <div class="flex items-center gap-3 mb-4">
-            <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-pink-500 to-rose-500 text-white flex items-center justify-center shadow-lg shadow-pink-200 text-xl">💬</div>
-            <h4 class="font-black text-lg text-[#1A2340]">Notas de la Maestra</h4>
+        <div class="mt-4 p-4 rounded-xl border border-[#FCE7F3] bg-[#FDF2F8]">
+          <div class="flex items-center gap-2 mb-2">
+            <span class="text-lg">💬</span>
+            <span class="text-xs font-black text-[#64748B] uppercase tracking-widest">Nota de la maestra</span>
           </div>
           <p class="text-sm text-[#334155] font-medium italic">"${Helpers.escapeHTML(todayNote)}"</p>
         </div>` : ''}
@@ -339,11 +340,20 @@ export const DailyReportModule = {
 
       if (!log) {
         container.innerHTML = `
-          <div class="bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl p-10 text-center">
+          <div class="rounded-2xl border-2 border-dashed border-[#E2E8F0] p-10 text-center">
             <div class="text-5xl mb-3">📋</div>
-            <h4 class="font-black text-slate-600 text-lg">Sin reporte para este día</h4>
-            <p class="text-xs text-slate-300 mt-3 font-bold uppercase tracking-wider capitalize">${dateLabel}</p>
+            <h4 class="font-black text-[#1A2340] text-base">Sin reporte para este día</h4>
+            <p class="text-[10px] text-[#CBD5E1] mt-2 font-bold uppercase tracking-widest">${dateLabel}</p>
           </div>`;
+        requestAnimationFrame(() => {
+          const qsM = document.getElementById('qsMood'); if (qsM) qsM.textContent = '—';
+          const qsML = document.getElementById('qsMoodLabel'); if (qsML) qsML.textContent = 'Sin registro';
+          const qsF = document.getElementById('qsFood'); if (qsF) qsF.textContent = '—';
+          const qsFL = document.getElementById('qsFoodLabel'); if (qsFL) qsFL.textContent = 'Sin registro';
+          const qsN = document.getElementById('qsNap'); if (qsN) qsN.textContent = '—';
+          const qsNL = document.getElementById('qsNapLabel'); if (qsNL) qsNL.textContent = 'Sin registro';
+          const rl = document.getElementById('rutinaDateLabel'); if (rl) rl.textContent = dateLabel;
+        });
         return;
       }
       container.innerHTML = this._renderReport(log, dateLabel);
@@ -378,16 +388,26 @@ export const DailyReportModule = {
 
       if (error) throw error;
 
-      const todayLabel = fmtDate(new Date().toLocaleString());
+      const todayLabel = new Date().toLocaleDateString('es-DO', { weekday: 'long', day: 'numeric', month: 'long' });
 
       if (!log) {
         container.innerHTML = `
-          <div class="bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl p-10 text-center">
+          <div class="rounded-2xl border-2 border-dashed border-[#E2E8F0] p-10 text-center">
             <div class="text-5xl mb-3">📋</div>
-            <h4 class="font-black text-slate-600 text-lg">Sin reporte por ahora</h4>
-            <p class="text-sm text-slate-400 mt-1">La maestra aún no ha registrado la rutina de hoy.</p>
-            <p class="text-xs text-slate-300 mt-3 font-bold uppercase tracking-wider">${todayLabel}</p>
+            <h4 class="font-black text-[#1A2340] text-base">Sin reporte por ahora</h4>
+            <p class="text-xs text-[#94A3B8] mt-2 font-bold">La maestra aún no ha registrado la rutina de hoy.</p>
+            <p class="text-[10px] text-[#CBD5E1] mt-2 font-bold uppercase tracking-widest">${todayLabel}</p>
           </div>`;
+        requestAnimationFrame(() => {
+          const rl = document.getElementById('rutinaDateLabel');
+          const qsM = document.getElementById('qsMood'); if (qsM) qsM.textContent = '—';
+          const qsML = document.getElementById('qsMoodLabel'); if (qsML) qsML.textContent = 'Sin registro';
+          const qsF = document.getElementById('qsFood'); if (qsF) qsF.textContent = '—';
+          const qsFL = document.getElementById('qsFoodLabel'); if (qsFL) qsFL.textContent = 'Sin registro';
+          const qsN = document.getElementById('qsNap'); if (qsN) qsN.textContent = '—';
+          const qsNL = document.getElementById('qsNapLabel'); if (qsNL) qsNL.textContent = 'Sin registro';
+          if (rl) rl.textContent = todayLabel;
+        });
         return;
       }
 
@@ -401,13 +421,11 @@ export const DailyReportModule = {
   },
 
   _renderReport(log, todayLabel) {
-    // ── Resumen rápido ──────────────────────────────────────────────
     const moodIcon = log.mood ? (ICONS.mood[log.mood] || '😊') : '—';
     const napIcon = log.nap ? (ICONS.nap[log.nap] || '💤') : '—';
     const moodLbl = log.mood ? (LABELS.mood[log.mood] || log.mood) : 'Sin registro';
     const napLbl = log.nap ? (LABELS.nap[log.nap] || log.nap) : 'Sin registro';
 
-    // Parsear food - soportar JSON estructurado y string legacy
     let foodBreakfast = null, foodLunch = null, foodSnack = null;
     if (log.food) {
       try {
@@ -415,158 +433,131 @@ export const DailyReportModule = {
         foodBreakfast = foodObj.breakfast || null;
         foodLunch = foodObj.lunch || null;
         foodSnack = foodObj.snack || null;
-      } catch {
-        // Legacy: string simple
-        foodBreakfast = log.food;
-      }
+      } catch { foodBreakfast = log.food; }
     }
 
     const getFoodStatus = (val) => {
-      if (val === 'todo') return { icon: '✅', text: 'Comió todo', pct: '100%' };
-      if (val === 'poco') return { icon: '⚠️', text: 'Comió poco', pct: '40%' };
-      if (val === 'nada') return { icon: '❌', text: 'No comió', pct: '0%' };
-      if (val === 'ayuda') return { icon: '🆘', text: 'Necesitó ayuda', pct: '—' };
-      return { icon: '—', text: 'Sin registro', pct: '—' };
+      if (val === 'todo') return { icon: '✅', text: 'Comió todo', bg: 'bg-green-50', border: 'border-green-200', txt: 'text-green-700' };
+      if (val === 'poco') return { icon: '⚠️', text: 'Comió poco', bg: 'bg-amber-50', border: 'border-amber-200', txt: 'text-amber-700' };
+      if (val === 'nada') return { icon: '❌', text: 'No comió', bg: 'bg-red-50', border: 'border-red-200', txt: 'text-red-700' };
+      if (val === 'ayuda') return { icon: '🆘', text: 'Necesitó ayuda', bg: 'bg-blue-50', border: 'border-blue-200', txt: 'text-blue-700' };
+      return { icon: '—', text: 'Sin registro', bg: 'bg-slate-50', border: 'border-slate-200', txt: 'text-slate-500' };
     };
 
     const bf = getFoodStatus(foodBreakfast);
     const lu = getFoodStatus(foodLunch);
     const sn = getFoodStatus(foodSnack);
 
-    // Resumen de comidas: mostrar la más relevante según hora
     const hour = new Date().getHours();
     let activeMealIcon, activeMealLbl;
-    if (hour < 10) { activeMealIcon = bf.icon; activeMealLbl = 'Desayuno: ' + bf.text; }
-    else if (hour < 14) { activeMealIcon = lu.icon; activeMealLbl = 'Almuerzo: ' + lu.text; }
-    else { activeMealIcon = sn.icon; activeMealLbl = 'Merienda: ' + sn.text; }
+    if (hour < 10) { activeMealIcon = bf.icon; activeMealLbl = `Desayuno: ${bf.text}`; }
+    else if (hour < 14) { activeMealIcon = lu.icon; activeMealLbl = `Almuerzo: ${lu.text}`; }
+    else { activeMealIcon = sn.icon; activeMealLbl = `Merienda: ${sn.text}`; }
 
     const updTime = log.created_at ? fmtTime(log.created_at) : '';
 
-    // ── Calculate today's stats ─────────────────────────────────────
-    let todaySleepMs = 0;
-    let todayMilkOz = 0;
-    let todayDiaperWet = 0;
-    let todayDiaperSoiled = 0;
-
+    let todaySleepMs = 0, todayMilkOz = 0, todayDiaperWet = 0, todayDiaperSoiled = 0;
     (log.infant_data || []).forEach(ev => {
-      if (ev.type === 'sleep' && ev.end_time) {
-        const dur = calculateDuration(ev.start_time, ev.end_time);
-        todaySleepMs += dur.totalMs;
-      }
+      if (ev.type === 'sleep' && ev.end_time) { todaySleepMs += calculateDuration(ev.start_time, ev.end_time).totalMs; }
       if (ev.type === 'milk' && ev.oz) todayMilkOz += Number(ev.oz);
       if (ev.type === 'diaper' && ev.subtype === 'wet') todayDiaperWet++;
       if (ev.type === 'diaper' && ev.subtype === 'soiled') todayDiaperSoiled++;
     });
 
-    const todaySleepHours = Math.floor(todaySleepMs / (1000 * 60 * 60));
-    const todaySleepMinutes = Math.floor((todaySleepMs % (1000 * 60 * 60)) / (1000 * 60));
+    const todaySleepHours = todaySleepMs > 0 ? Math.floor(todaySleepMs / (1000 * 60 * 60)) : 0;
+    const todaySleepMinutes = todaySleepMs > 0 ? Math.floor((todaySleepMs % (1000 * 60 * 60)) / (1000 * 60)) : 0;
 
-    // ── Timeline de eventos (infant_data) ───────────────────────────
     const events = log.infant_data || [];
+
+    // Populate quick status chips
+    requestAnimationFrame(() => {
+      const qsMood = document.getElementById('qsMood');
+      const qsMoodLabel = document.getElementById('qsMoodLabel');
+      const qsFood = document.getElementById('qsFood');
+      const qsFoodLabel = document.getElementById('qsFoodLabel');
+      const qsNap = document.getElementById('qsNap');
+      const qsNapLabel = document.getElementById('qsNapLabel');
+      const rutinaDateLabel = document.getElementById('rutinaDateLabel');
+      if (qsMood) qsMood.textContent = moodIcon;
+      if (qsMoodLabel) qsMoodLabel.textContent = moodLbl;
+      if (qsFood) qsFood.textContent = activeMealIcon;
+      if (qsFoodLabel) qsFoodLabel.textContent = activeMealLbl;
+      if (qsNap) qsNap.textContent = napIcon;
+      if (qsNapLabel) qsNapLabel.textContent = napLbl;
+      if (rutinaDateLabel) rutinaDateLabel.textContent = todayLabel;
+    });
+
     const timeline = events.map(e => this._renderEvent(e)).join('');
 
     return `
-      <style>
-        .dr-card{background:white;border-radius:20px;border:1px solid #f1f5f9;box-shadow:0 2px 12px rgba(0,0,0,.04);overflow:hidden}
-        .dr-timeline-item{display:flex;align-items:flex-start;gap:14px;padding:14px 0;border-bottom:1px solid #f8fafc}
-        .dr-timeline-item:last-child{border:none}
-        .dr-dot{width:36px;height:36px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;background:#f8fafc}
-        .dr-summary-chip{display:flex;align-items:center;gap:8px;padding:12px 16px;border-radius:16px;background:#f8fafc;border:1px solid #f1f5f9}
-        .dr-meal-row{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:10px;background:#fafafa}
-      </style>
-
-      <div class="space-y-5">
-        <!-- Header del reporte -->
-        <div class="dr-card">
-          <div class="bg-gradient-to-r from-[#28B54D] to-[#1A8035] p-4 text-white flex items-center justify-between">
-            <div>
-              <div class="font-black text-lg leading-tight">Reporte del Día</div>
-              <div class="text-xs text-green-100 font-bold capitalize">${todayLabel}</div>
+      <div class="space-y-4">
+        <!-- Reporte del Día Card -->
+        <div class="rounded-2xl border border-[#E2E8F0] bg-white overflow-hidden shadow-sm">
+          <!-- Stats 4 columns -->
+          <div class="grid grid-cols-4 divide-x divide-[#F1F5F9]">
+            <div class="p-3 text-center">
+              <div class="text-xl font-black text-[#8B5CF6]">${todaySleepHours}h ${todaySleepMinutes}m</div>
+              <div class="text-[9px] font-black text-[#64748B] uppercase tracking-wider mt-0.5">Sueño</div>
             </div>
-            <div class="text-right">
-              <div class="text-xs text-green-100 font-bold">Última actualización</div>
-              <div class="font-black text-sm">${updTime}</div>
+            <div class="p-3 text-center">
+              <div class="text-xl font-black text-[#0B63C7]">${todayMilkOz} oz</div>
+              <div class="text-[9px] font-black text-[#64748B] uppercase tracking-wider mt-0.5">Leche</div>
             </div>
-          </div>
-
-          <!-- Resumen 3 indicadores -->
-          <div class="grid grid-cols-3 divide-x divide-slate-100 p-2">
-            <div class="dr-summary-chip flex-col text-center rounded-none border-0 bg-transparent">
-              <span class="text-2xl">${moodIcon}</span>
-              <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider mt-1">Ánimo</span>
-              <span class="text-xs font-bold text-slate-600">${moodLbl}</span>
+            <div class="p-3 text-center">
+              <div class="text-xl font-black text-[#28B54D]">${todayDiaperWet}</div>
+              <div class="text-[9px] font-black text-[#64748B] uppercase tracking-wider mt-0.5">Pañales M</div>
             </div>
-            <div class="dr-summary-chip flex-col text-center rounded-none border-0 bg-transparent">
-              <span class="text-2xl">${activeMealIcon}</span>
-              <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider mt-1">Alimentación</span>
-              <span class="text-xs font-bold text-slate-600">${activeMealLbl}</span>
-            </div>
-            <div class="dr-summary-chip flex-col text-center rounded-none border-0 bg-transparent">
-              <span class="text-2xl">${napIcon}</span>
-              <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider mt-1">Siesta</span>
-              <span class="text-xs font-bold text-slate-600">${napLbl}</span>
+            <div class="p-3 text-center">
+              <div class="text-xl font-black text-[#FF7A00]">${todayDiaperSoiled}</div>
+              <div class="text-[9px] font-black text-[#64748B] uppercase tracking-wider mt-0.5">Pañales S</div>
             </div>
           </div>
 
-          <!-- Today's Stats -->
-          <div class="p-4 border-t border-slate-100 grid grid-cols-2 md:grid-cols-4 gap-3">
-            <div class="text-center">
-              <div class="text-lg font-black text-[#8B5CF6]">${todaySleepHours}h ${todaySleepMinutes}m</div>
-              <div class="text-[9px] font-bold text-slate-400 uppercase">Sueño hoy</div>
-            </div>
-            <div class="text-center">
-              <div class="text-lg font-black text-[#0B63C7]">${todayMilkOz} oz</div>
-              <div class="text-[9px] font-bold text-slate-400 uppercase">Leche hoy</div>
-            </div>
-            <div class="text-center">
-              <div class="text-lg font-black text-[#0B63C7]">${todayDiaperWet}</div>
-              <div class="text-[9px] font-bold text-slate-400 uppercase">Pañales mojados</div>
-            </div>
-            <div class="text-center">
-              <div class="text-lg font-black text-[#FF7A00]">${todayDiaperSoiled}</div>
-              <div class="text-[9px] font-bold text-slate-400 uppercase">Pañales sucios</div>
-            </div>
-          </div>
-
-          <!-- Detalle de comidas -->
-          <div class="p-4 border-t border-slate-100 space-y-2">
-            <div class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-2">Detalle de comidas</div>
-            <div class="dr-meal-row">
+          <!-- Detalle de 3 comidas -->
+          <div class="p-4 border-t border-[#F1F5F9] space-y-2">
+            <div class="text-[10px] font-black text-[#64748B] uppercase tracking-widest mb-2">Comidas del día</div>
+            <div class="flex items-center gap-3 p-3 rounded-xl ${bf.bg} border ${bf.border}">
               <span class="text-lg">🍞</span>
-              <span class="text-xs font-bold text-slate-600 flex-1">Desayuno</span>
-              <span class="text-xs font-black ${bf.icon==='✅'?'text-green-600':bf.icon==='❌'?'text-red-600':'text-slate-500'}">${bf.icon} ${bf.text}</span>
+              <span class="text-xs font-bold text-[#1A2340] flex-1">Desayuno</span>
+              <span class="text-xs font-black ${bf.txt}">${bf.icon} ${bf.text}</span>
             </div>
-            <div class="dr-meal-row">
+            <div class="flex items-center gap-3 p-3 rounded-xl ${lu.bg} border ${lu.border}">
               <span class="text-lg">🥗</span>
-              <span class="text-xs font-bold text-slate-600 flex-1">Almuerzo</span>
-              <span class="text-xs font-black ${lu.icon==='✅'?'text-green-600':lu.icon==='❌'?'text-red-600':'text-slate-500'}">${lu.icon} ${lu.text}</span>
+              <span class="text-xs font-bold text-[#1A2340] flex-1">Almuerzo</span>
+              <span class="text-xs font-black ${lu.txt}">${lu.icon} ${lu.text}</span>
             </div>
-            <div class="dr-meal-row">
+            <div class="flex items-center gap-3 p-3 rounded-xl ${sn.bg} border ${sn.border}">
               <span class="text-lg">🍎</span>
-              <span class="text-xs font-bold text-slate-600 flex-1">Merienda</span>
-              <span class="text-xs font-black ${sn.icon==='✅'?'text-green-600':sn.icon==='❌'?'text-red-600':'text-slate-500'}">${sn.icon} ${sn.text}</span>
+              <span class="text-xs font-bold text-[#1A2340] flex-1">Merienda</span>
+              <span class="text-xs font-black ${sn.txt}">${sn.icon} ${sn.text}</span>
             </div>
           </div>
+
+          ${log.notes ? `
+          <div class="p-4 border-t border-[#F1F5F9]">
+            <div class="text-[10px] font-black text-[#64748B] uppercase tracking-widest mb-2">📝 Observación</div>
+            <p class="text-sm text-[#334155] font-medium leading-relaxed italic">"${Helpers.escapeHTML(log.notes)}"</p>
+          </div>` : ''}
+
+          <!-- Updated time -->
+          ${updTime ? `<div class="px-4 py-2 bg-[#F8FAFC] border-t border-[#F1F5F9] text-right">
+            <span class="text-[9px] font-bold text-[#94A3B8] uppercase tracking-widest">Actualizado ${updTime}</span>
+          </div>` : ''}
         </div>
 
-        ${log.notes ? `
-        <div class="dr-card p-4 flex items-start gap-3">
-          <span class="text-xl mt-0.5">📝</span>
-          <div>
-            <div class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">Observación de la maestra</div>
-            <p class="text-sm font-medium text-slate-700 leading-relaxed">${Helpers.escapeHTML(log.notes)}</p>
-          </div>
-        </div>` : ''}
-
         ${events.length > 0 ? `
-        <div class="dr-card p-4">
-          <div class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-            🕐 Timeline de eventos
+        <!-- Timeline de eventos -->
+        <div class="rounded-2xl border border-[#E2E8F0] bg-white overflow-hidden shadow-sm">
+          <div class="p-4 border-b border-[#F1F5F9]">
+            <div class="text-[10px] font-black text-[#64748B] uppercase tracking-widest flex items-center gap-2">
+              <span class="w-5 h-5 rounded-lg bg-[#28B54D]/10 flex items-center justify-center">🕐</span>
+              Timeline de eventos (${events.length})
+            </div>
           </div>
-          <div class="space-y-0">${timeline}</div>
+          <div class="p-4">${timeline}</div>
         </div>` : ''}
 
-        <!-- VISUAL TIMELINE — Línea de tiempo visual del día -->
+        <!-- Visual Timeline -->
         ${this._renderVisualTimeline(log)}
       </div>`;
   },
@@ -619,19 +610,22 @@ export const DailyReportModule = {
     if (allEvents.length === 0) return '';
 
     return `
-      <div class="dr-card p-4 mt-2">
-        <div class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-          📊 Resumen visual del día
+      <div class="rounded-2xl border border-[#E2E8F0] bg-white overflow-hidden shadow-sm">
+        <div class="p-4 border-b border-[#F1F5F9]">
+          <div class="text-[10px] font-black text-[#64748B] uppercase tracking-widest flex items-center gap-2">
+            <span class="w-5 h-5 rounded-lg bg-[#8B5CF6]/10 flex items-center justify-center">📊</span>
+            Resumen visual del día
+          </div>
         </div>
-        <div style="overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding:8px 0">
+        <div class="p-4" style="overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch">
           <div style="display:flex;align-items:flex-start;gap:0;min-width:max-content;position:relative;padding:0 8px">
-            <div style="position:absolute;top:18px;left:20px;right:20px;height:3px;background:#e2e8f0;border-radius:2px;z-index:0"></div>
+            <div style="position:absolute;top:18px;left:20px;right:20px;height:3px;background:linear-gradient(90deg,#E2E8F0,#CBD5E1,#E2E8F0);border-radius:2px;z-index:0"></div>
             ${allEvents.map((ev, i) => `
-              ${i > 0 ? '<div style="width:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0;padding-top:14px"><div style="width:100%;height:2px;border-radius:2px;background:#28B54D40"></div></div>' : ''}
+              ${i > 0 ? '<div style="width:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;padding-top:14px"><div style="width:100%;height:2px;border-radius:2px;background:linear-gradient(90deg,#28B54D30,#28B54D60,#28B54D30)"></div></div>' : ''}
               <div style="display:flex;flex-direction:column;align-items:center;min-width:60px;max-width:68px;position:relative;z-index:1;padding:0 2px">
-                <div style="width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.1rem;border:2px solid #28B54D;background:white;flex-shrink:0">${ev.icon}</div>
-                <span style="font-size:.5rem;font-weight:900;text-transform:uppercase;color:#64748b;text-align:center;line-height:1.2;margin-top:4px;max-width:64px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${Helpers.escapeHTML(ev.label)}</span>
-                <span style="font-size:.45rem;font-weight:700;color:#94a3b8;margin-top:1px">${fmtTime(ev.time)}</span>
+                <div style="width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.1rem;border:2.5px solid #28B54D;background:white;flex-shrink:0;box-shadow:0 2px 8px rgba(40,181,77,0.15)">${ev.icon}</div>
+                <span style="font-size:.55rem;font-weight:900;text-transform:uppercase;color:#1A2340;text-align:center;line-height:1.2;margin-top:5px;max-width:64px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${Helpers.escapeHTML(ev.label)}</span>
+                <span style="font-size:.5rem;font-weight:700;color:#94A3B8;margin-top:1px">${fmtTime(ev.time)}</span>
               </div>
             `).join('')}
           </div>
@@ -667,17 +661,13 @@ export const DailyReportModule = {
         if (e.end_time) {
           const dur = e.duration || '';
           detail = dur ? `Siesta de ${dur}` : `Despertó: ${fmtTime(e.end_time)}`;
-        } else {
-          detail = 'En siesta...';
-        }
+        } else { detail = 'En siesta...'; }
         break;
       case 'diaper':
         icon = e.subtype === 'wet' ? '💧' : '💩';
         label = e.subtype === 'wet' ? 'Pañal mojado' : 'Pañal sucio'; break;
-      case 'diaper_change':
-        icon = '🧻'; label = 'Cambio de pañal'; break;
-      case 'bath':
-        icon = '🚽'; label = 'Fue al baño'; break;
+      case 'diaper_change': icon = '🧻'; label = 'Cambio de pañal'; break;
+      case 'bath': icon = '🚽'; label = 'Fue al baño'; break;
       case 'temp':
         icon = '🌡️'; label = 'Temperatura';
         detail = e.value ? `${e.value}°` : '';
@@ -686,20 +676,13 @@ export const DailyReportModule = {
       case 'med':
         icon = '💊'; label = 'Medicamento';
         detail = [e.name, e.dose].filter(Boolean).join(' — '); break;
-      case 'note':
-        icon = '📝'; label = 'Nota'; detail = e.text || ''; break;
-      case 'handwash':
-        icon = '🧼'; label = 'Lavado de manos'; break;
-      case 'toothbrush':
-        icon = '🪥'; label = 'Cepillado dental'; break;
-      case 'activity':
-        icon = '🏫'; label = 'Actividad educativa'; break;
-      case 'playground':
-        icon = '🌳'; label = 'Salida al patio'; break;
-      case 'welcome_song':
-        icon = '👋'; label = 'Canción de bienvenida'; break;
-      case 'prayer':
-        icon = '🙏'; label = 'Oración / reflexión'; break;
+      case 'note': icon = '📝'; label = 'Nota'; detail = e.text || ''; break;
+      case 'handwash': icon = '🧼'; label = 'Lavado de manos'; break;
+      case 'toothbrush': icon = '🪥'; label = 'Cepillado dental'; break;
+      case 'activity': icon = '🏫'; label = 'Actividad educativa'; break;
+      case 'playground': icon = '🌳'; label = 'Salida al patio'; break;
+      case 'welcome_song': icon = '👋'; label = 'Canción de bienvenida'; break;
+      case 'prayer': icon = '🙏'; label = 'Oración / reflexión'; break;
       case 'behavior':
         icon = '🤝'; label = e.label || 'Comportamiento';
         if (e.category && e.data) {
@@ -710,26 +693,23 @@ export const DailyReportModule = {
             montessori: { manipulation: 'Manipulación de materiales', fine_motor: 'Motricidad fina', gross_motor: 'Motricidad gruesa', language: 'Lenguaje', concentration: 'Concentración', autonomy: 'Autonomía' }
           };
           const catLabels = behaviorLabels[e.category];
-          if (catLabels && e.data[e.category]) {
-            detail = catLabels[e.data[e.category]] || e.data[e.category];
-          }
+          if (catLabels && e.data[e.category]) detail = catLabels[e.data[e.category]] || e.data[e.category];
         }
         break;
-      default:
-        label = eventLabel; break;
+      default: label = eventLabel; break;
     }
 
-    const autoTag = e.auto ? '<span class="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-600 ml-1">AUTO</span>' : '';
+    const autoTag = e.auto ? '<span class="text-[8px] font-black px-1.5 py-0.5 rounded-full bg-[#0B63C7]/10 text-[#0B63C7] ml-1">AUTO</span>' : '';
 
     return `
-    <div class="dr-timeline-item">
-      <div class="dr-dot">${icon}</div>
+    <div class="flex items-start gap-3 py-3 border-b border-[#F8FAFC] last:border-none">
+      <div class="w-10 h-10 rounded-xl bg-[#F8FAFC] flex items-center justify-center text-lg flex-shrink-0">${icon}</div>
       <div class="flex-1 min-w-0">
         <div class="flex items-center justify-between gap-2">
-          <span class="text-sm font-black text-slate-700">${Helpers.escapeHTML(label)}${autoTag}</span>
-          <span class="text-[10px] font-bold text-slate-400 shrink-0">${time}</span>
+          <span class="text-xs font-black text-[#1A2340]">${Helpers.escapeHTML(label)}${autoTag}</span>
+          <span class="text-[10px] font-bold text-[#94A3B8] shrink-0">${time}</span>
         </div>
-        ${detail ? `<p class="text-xs text-slate-500 mt-0.5">${Helpers.escapeHTML(detail)}</p>` : ''}
+        ${detail ? `<p class="text-[11px] text-[#64748B] mt-0.5 font-medium">${Helpers.escapeHTML(detail)}</p>` : ''}
       </div>
     </div>`;
   },

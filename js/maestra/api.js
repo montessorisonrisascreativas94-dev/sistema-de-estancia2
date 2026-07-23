@@ -96,20 +96,22 @@ export const MaestraApi = {
     return data || [];
   },
 
-  async getDailyRoutine(classroomId) {
-    const cached = _getCache('getDailyRoutine', classroomId);
+  async getDailyRoutine(classroomId, date) {
+    const today = date || new Date().getFullYear() + '-' + String(new Date().getMonth() + 1).padStart(2, '0') + '-' + String(new Date().getDate()).padStart(2, '0');
+    const cacheKey = `${classroomId}:${today}`;
+    const cached = _getCache('getDailyRoutine', cacheKey);
     if (cached) return cached;
 
     const { data, error } = await supabase
       .from('daily_logs')
       .select('id, student_id, date, mood, food, nap, eating, sleeping, activities, notes, infant_data, status, created_at')
       .eq('classroom_id', classroomId)
-      .order('created_at', { ascending: false })
-      .limit(50);
+      .eq('date', today)
+      .order('created_at', { ascending: true });
 
     handleError(error);
     const result = data || [];
-    _setCache('getDailyRoutine', result, 15000, classroomId);
+    _setCache('getDailyRoutine', result, 15000, cacheKey);
     return result;
   },
 

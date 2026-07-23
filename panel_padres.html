@@ -83,12 +83,9 @@
     }
     @media (max-width: 767px) {
       html { overflow-y: auto !important; -webkit-overflow-scrolling: touch !important; }
-      body { overflow-y: auto !important; -webkit-overflow-scrolling: touch !important; height: auto !important; position: static !important; }
-      body #layoutShell { overflow: visible !important; height: auto !important; min-height: auto !important; position: static !important; }
-      .app-panel-padre { min-height: auto !important; height: auto !important; overflow: visible !important; }
-      #layoutShell, #layoutShell > * { overflow: visible !important; max-height: none !important; }
+      body { overflow-x: hidden !important; overflow-y: auto !important; -webkit-overflow-scrolling: touch !important; height: auto !important; position: relative !important; }
+      #layoutShell { overflow: visible !important; height: auto !important; min-height: auto !important; position: relative !important; }
       .section { overflow: visible !important; }
-      * { -webkit-overflow-scrolling: touch !important; }
     }
     
     /* ============================================
@@ -1379,24 +1376,50 @@
 
           <!-- RUTINA DIARIA -->
           <section id="rutina-diaria" class="section hidden">
-            <div class="flex flex-col gap-6">
-              <!-- Header -->
-              <div class="flex items-center justify-between">
-                <h3 class="text-2xl font-black text-[#1A2340] flex items-center gap-3">
-                  <div class="w-10 h-10 rounded-xl bg-[#28B54D] text-white flex items-center justify-center shadow-lg shadow-green-200">
-                    <i data-lucide="clipboard-list" class="w-5 h-5"></i>
+            <div class="flex flex-col gap-5">
+              <!-- Header moderno -->
+              <div class="rounded-2xl p-5 text-white relative overflow-hidden" style="background:linear-gradient(135deg,#28B54D,#1A8035)">
+                <div class="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2"></div>
+                <div class="absolute bottom-0 left-0 w-20 h-20 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2"></div>
+                <div class="relative z-10 flex items-center justify-between">
+                  <div class="flex items-center gap-3">
+                    <div class="w-11 h-11 rounded-2xl bg-white/20 flex items-center justify-center backdrop-blur-sm">
+                      <i data-lucide="clipboard-list" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                      <h3 class="text-lg font-black tracking-tight">Rutina de Hoy</h3>
+                      <p id="rutinaDateLabel" class="text-[10px] font-bold text-white/70 uppercase tracking-widest"></p>
+                    </div>
                   </div>
-                  Rutina de Hoy
-                </h3>
-                <div class="flex items-center gap-2">
-                  <input type="date" id="rutinaDatePicker" class="border-2 border-slate-100 rounded-xl px-3 py-2 text-sm font-bold text-slate-600 outline-none focus:border-[#28B54D] bg-white" onchange="DailyReportModule.loadDate(this.value)">
-                  <button onclick="DailyReportModule.load()" class="p-2 rounded-xl bg-slate-100 text-slate-500 hover:bg-slate-200 transition-all" title="Actualizar">
-                    <i data-lucide="refresh-cw" class="w-4 h-4"></i>
-                  </button>
+                  <div class="flex items-center gap-2">
+                    <input type="date" id="rutinaDatePicker" class="bg-white/15 backdrop-blur-sm border border-white/20 rounded-xl px-3 py-2 text-xs font-bold text-white outline-none focus:border-white/50 placeholder-white/50 [color-scheme:dark]" onchange="DailyReportModule.loadDate(this.value)">
+                    <button onclick="DailyReportModule.load()" class="p-2 rounded-xl bg-white/15 backdrop-blur-sm border border-white/20 text-white hover:bg-white/25 transition-all" title="Actualizar">
+                      <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                    </button>
+                  </div>
                 </div>
               </div>
 
-              <!-- Daily report (today) -->
+              <!-- Quick Status Chips -->
+              <div id="rutinaQuickStatus" class="grid grid-cols-3 gap-3">
+                <div class="cloud-card p-3 text-center">
+                  <div class="text-2xl mb-1" id="qsMood">😀</div>
+                  <div class="text-[9px] font-black text-[#64748B] uppercase tracking-wider">Ánimo</div>
+                  <div class="text-[11px] font-bold text-[#1A2340]" id="qsMoodLabel">Sin registro</div>
+                </div>
+                <div class="cloud-card p-3 text-center">
+                  <div class="text-2xl mb-1" id="qsFood">🍽️</div>
+                  <div class="text-[9px] font-black text-[#64748B] uppercase tracking-wider">Alimentación</div>
+                  <div class="text-[11px] font-bold text-[#1A2340]" id="qsFoodLabel">Sin registro</div>
+                </div>
+                <div class="cloud-card p-3 text-center">
+                  <div class="text-2xl mb-1" id="qsNap">😴</div>
+                  <div class="text-[9px] font-black text-[#64748B] uppercase tracking-wider">Siesta</div>
+                  <div class="text-[11px] font-bold text-[#1A2340]" id="qsNapLabel">Sin registro</div>
+                </div>
+              </div>
+
+              <!-- Daily report -->
               <div id="dailyReportContainer">
                 <div class="animate-pulse space-y-4">
                   <div class="h-32 bg-slate-100 rounded-2xl"></div>
@@ -1404,18 +1427,20 @@
                 </div>
               </div>
 
-              <!-- Resumen Semanal Inteligente — moved here from home -->
-              <div class="cloud-card">
-                <div class="flex items-center gap-3 mb-5">
-                  <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-[#0B63C7] to-[#28B54D] text-white flex items-center justify-center shadow-md">
-                    <span class="text-lg">📊</span>
-                  </div>
-                  <div>
-                    <h3 class="font-black text-xl text-[#1A2340]">Resumen Semanal</h3>
-                    <p class="text-xs font-black text-[#64748B] uppercase tracking-[0.15em]">Estadísticas de los últimos 7 días</p>
+              <!-- Resumen Semanal -->
+              <div class="cloud-card overflow-hidden">
+                <div class="p-5 border-b border-[#E2E8F0]">
+                  <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#0B63C7] to-[#28B54D] text-white flex items-center justify-center shadow-md">
+                      <span class="text-lg">📊</span>
+                    </div>
+                    <div>
+                      <h3 class="font-black text-base text-[#1A2340]">Resumen Semanal</h3>
+                      <p class="text-[10px] font-bold text-[#64748B] uppercase tracking-widest">Estadísticas de los últimos 7 días</p>
+                    </div>
                   </div>
                 </div>
-                <div id="weeklySummaryContainer">
+                <div id="weeklySummaryContainer" class="p-5">
                   <div class="animate-pulse space-y-4">
                     <div class="h-24 bg-slate-100 rounded-2xl"></div>
                   </div>

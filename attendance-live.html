@@ -502,9 +502,10 @@
     async function requestCameraPermission() {
       try {
         const facingMode = isFacingBack ? "environment" : "user";
-        await navigator.mediaDevices.getUserMedia({ 
+        const stream = await navigator.mediaDevices.getUserMedia({ 
           video: { facingMode: facingMode } 
         });
+        stream.getTracks().forEach(t => t.stop());
         return true;
       } catch (err) {
         console.error("Camera permission denied:", err);
