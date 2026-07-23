@@ -20,9 +20,6 @@ export const ReportsModule = {
 
       // Update dashboard widgets
       const data = dashboard?.[0] || {};
-      
-      // Here you would update the dashboard UI with the data
-      console.log('Reports dashboard data:', data);
     } catch (error) {
       console.error('Error loading reports dashboard:', error);
     }

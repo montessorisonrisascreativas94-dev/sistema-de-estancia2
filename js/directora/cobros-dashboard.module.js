@@ -12,7 +12,6 @@ export const CobrosDashboardModule = {
   },
 
   async init() {
-    console.log('🔄 Inicializando CobrosDashboardModule...');
     this._bindEvents();
     await this.loadData();
   },

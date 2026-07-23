@@ -24,7 +24,6 @@ export const RegistrarCobroModule = {
   },
 
   async init() {
-    console.log('🔄 Inicializando Registrar Cobro...');
     this._bindEvents();
     await this._loadStudents();
   },

@@ -316,9 +316,6 @@ export const DirectorApi = {
   // --- CHAT ---
   async getChatUsers(myId, roleFilter) {
     try {
-      console.log('getChatUsers called with myId:', myId, 'roleFilter:', roleFilter);
-      
-      // Primero: obtener TODOS perfiles activos
       let query = supabase
         .from('profiles')
         .select('id, name, role, avatar_url, email, phone')
@@ -337,12 +334,8 @@ export const DirectorApi = {
         console.error('Error fetching profiles:', profilesErr);
         return { data: [], error: profilesErr };
       }
-      
-      console.log('getChatUsers: allProfiles count:', (allProfiles || []).length);
 
-      // Filtrar perfiles con nombre válido
       let validProfiles = (allProfiles || []).filter(u => u.name && u.name.trim().length > 0);
-      console.log('getChatUsers: validProfiles count:', validProfiles.length);
 
       // Obtener IDs de padres con estudiantes activos
       const { data: activeStudents } = await supabase
@@ -351,7 +344,6 @@ export const DirectorApi = {
         .eq('is_active', true);
 
       const activeParentIds = [...new Set((activeStudents || []).map(s => s.parent_id).filter(Boolean))];
-      console.log('getChatUsers: activeParentIds count:', activeParentIds.length, 'IDs:', activeParentIds);
 
       // Filtrar perfiles finales:
       // - Padres: solo si están en activeParentIds
@@ -362,8 +354,6 @@ export const DirectorApi = {
         }
         return true;
       });
-
-      console.log('getChatUsers: finalUsers count:', finalUsers.length, 'finalUsers:', finalUsers);
 
       return { data: finalUsers, error: null };
     } catch (e) { 

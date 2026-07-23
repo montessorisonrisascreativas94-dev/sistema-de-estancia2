@@ -72,19 +72,15 @@ export const AcademicCycleModule = {
   },
 
   async _loadYears() {
-    console.log('AcademicCycleModule._loadYears()');
     const { data, error } = await supabase.from('school_years').select('*').order('start_date',{ascending:false}).limit(10);
     if (error) console.error('Error loading school_years:', error);
-    console.log('school_years data:', data);
     this._years = data || [];
     this._currentYear = this._years.find(y=>y.is_current) || this._years[0];
-    console.log('_currentYear:', this._currentYear);
   },
 
   _renderShell() {
     const c = $el('academicCycleContainer');
     if (!c) return;
-    console.log('AcademicCycleModule._renderShell() called');
     const yr = this._currentYear;
     c.innerHTML = `<div class="space-y-5">
       <div class="flex flex-wrap items-center justify-between gap-3">
@@ -125,11 +121,9 @@ export const AcademicCycleModule = {
 
   // ── PRE-INSCRIPCIONES ────────────────────────────────────────────────────
   async loadPreregistrations() {
-    console.log('AcademicCycleModule.loadPreregistrations() called');
     const {data, error} = await supabase.from('student_preregistrations').select('*').order('created_at',{ascending:false}).limit(200);
     if (error) console.error('Error loading preregistrations:', error);
     const list = data||[]; this._allPreinsc=list;
-    console.log('pre-registrations list:', list);
     const cnt = s => list.filter(r=>r.status===s).length;
     const c=$el('academicTabContent'); if(!c)return;
     c.innerHTML=`<div class="space-y-4">
@@ -528,7 +522,7 @@ export const AcademicCycleModule = {
           throw error;
         }
       } catch (rpcError) {
-        console.log('RPC no disponible, usando método manual:', rpcError);
+        console.warn('RPC no disponible, usando método manual:', rpcError?.message);
         // Método manual si la RPC no existe
         result = await this._doConvertManual(preinscId, classId, planId, mat, monthlyFee);
       }

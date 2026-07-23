@@ -21,7 +21,7 @@ export const ChatModule = {
     const { data: profile } = await supabase.from('profiles').select('name, avatar_url').eq('id', user.id).single();
     this._currentUserProfile = profile || {};
 
-    // Bind send button + enter key — once only
+    // Bind send button + enter key ï¿½ once only
     const sendBtn = document.getElementById('btnSendChatMessage');
     const input   = document.getElementById('chatMessageInput');
     if (sendBtn && !sendBtn._bound) {
@@ -53,39 +53,29 @@ export const ChatModule = {
     const list = document.getElementById('chatContactsList');
     if (!list) return;
     list.innerHTML = Helpers.skeleton(4);
-    console.log('=== Director Chat: _loadContacts started ===');
 
     try {
     const roleVal = document.getElementById('chatRoleFilter')?.value || '';
-    console.log('roleVal:', roleVal);
     const [usersRes, unreadData] = await Promise.all([
       DirectorApi.getChatUsers(this._currentUserId, roleVal || null),
-      // get_unread_counts puede no existir — nunca bloquear la carga de contactos
       supabase.rpc('get_unread_counts').then(r => r.data || {}).catch(() => ({}))
     ]);
-    console.log('usersRes:', usersRes);
     const { data: users, error } = usersRes;
     if (error) throw error;
-    console.log('users from API:', users);
-    console.log('unreadData:', unreadData);
 
-      // Enrich padres with student name
       const parentIds = (users || []).filter(u => u.role === 'padre').map(u => u.id);
-      console.log('parentIds:', parentIds);
       let studentMap = {};
       if (parentIds.length) {
         const { data: students } = await DirectorApi.getStudentsByParentIds(parentIds);
-        console.log('students from getStudentsByParentIds:', students);
         (students || []).forEach(s => {
           if (!studentMap[s.parent_id]) studentMap[s.parent_id] = { studentName: s.name, classroomName: s.classrooms?.name || '' };
         });
       }
-      console.log('studentMap:', studentMap);
 
       this._allContacts = (users || []).map(u => {
         const si = studentMap[u.id] || {};
-        // Para padres: mostrar nombre del estudiante como título principal
-        // y nombre del padre como subtítulo
+        // Para padres: mostrar nombre del estudiante como tï¿½tulo principal
+        // y nombre del padre como subtï¿½tulo
         const parentName   = u.name || 'Sin nombre';
         const studentName  = si?.studentName || null;
         const displayName  = (u.role === 'padre' && studentName)
@@ -100,7 +90,7 @@ export const ChatModule = {
           if (studentName)        parts.push(`?? ${studentName}`);
           if (si?.classroomName)  parts.push(`?? ${si.classroomName}`);
           parts.push(`?? ${parentName}`);
-          meta = parts.join(' · ');
+          meta = parts.join(' ï¿½ ');
         }
 
         const contact = {
@@ -113,10 +103,8 @@ export const ChatModule = {
           roleLabel,
           meta
         };
-        console.log('Built contact:', contact);
         return contact;
       });
-      console.log('=== Final this._allContacts:', this._allContacts);
 
       this._renderContacts();
     } catch (e) {
@@ -146,7 +134,7 @@ export const ChatModule = {
         <div class="min-w-0 flex-1">
           <div class="font-bold text-slate-800 text-sm truncate ${c.unread > 0 ? 'text-slate-900' : ''}">${Helpers.escapeHTML(c.name || 'Sin nombre')}</div>
           ${c.parentName ? `<div class="text-[10px] text-slate-500 font-bold truncate">?? ${Helpers.escapeHTML(c.parentName)}</div>` : ''}
-          <div class="text-[10px] text-slate-400 font-bold uppercase truncate">${c.roleLabel}${c.studentName && c.parentName ? '' : c.meta !== 'Personal Karpus' ? ' · ' + Helpers.escapeHTML(c.meta) : ''}</div>
+          <div class="text-[10px] text-slate-400 font-bold uppercase truncate">${c.roleLabel}${c.studentName && c.parentName ? '' : c.meta !== 'Personal Karpus' ? ' ï¿½ ' + Helpers.escapeHTML(c.meta) : ''}</div>
         </div>
         ${c.unread > 0 ? `<div class="w-2 h-2 bg-rose-500 rounded-full shrink-0"></div>` : ''}
       </div>`).join('');
@@ -184,8 +172,8 @@ export const ChatModule = {
 
     if (nameEl)   nameEl.textContent   = contact.name;
     if (metaEl)   metaEl.textContent   = contact.parentName
-      ? `${contact.roleLabel} · ?? ${contact.parentName} · ${contact.meta.split(' · ').slice(-1)[0] || ''}`
-      : contact.roleLabel + ' · ' + contact.meta;
+      ? `${contact.roleLabel} ï¿½ ?? ${contact.parentName} ï¿½ ${contact.meta.split(' ï¿½ ').slice(-1)[0] || ''}`
+      : contact.roleLabel + ' ï¿½ ' + contact.meta;
     if (avatarEl) avatarEl.innerHTML   = contact.avatar
       ? `<img src="${contact.avatar}" class="w-full h-full object-cover">`
       : (contact.name || '?').charAt(0);
@@ -202,7 +190,7 @@ export const ChatModule = {
     container.innerHTML = '<div class="flex-1 flex items-center justify-center"><div class="w-8 h-8 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div></div>';
 
     try {
-      // Reset paginación al abrir un chat nuevo
+      // Reset paginaciï¿½n al abrir un chat nuevo
       SharedChat.resetPagination(this._conversationId);
 
       let messages = [], conversationId = null;
@@ -211,7 +199,7 @@ export const ChatModule = {
         messages = res.messages || [];
         conversationId = res.conversationId || null;
       } catch (_) {
-        // get_direct_messages puede no existir aún — mostrar chat vacío
+        // get_direct_messages puede no existir aï¿½n ï¿½ mostrar chat vacï¿½o
         messages = [];
         conversationId = null;
       }
@@ -219,7 +207,7 @@ export const ChatModule = {
 
       container.innerHTML = '';
       if (!messages.length) {
-        container.innerHTML = '<div class="flex-1 flex flex-col items-center justify-center text-slate-400 opacity-60 gap-2"><i data-lucide="message-circle" class="w-10 h-10 text-blue-300"></i><p class="text-sm">Inicia la conversación</p></div>';
+        container.innerHTML = '<div class="flex-1 flex flex-col items-center justify-center text-slate-400 opacity-60 gap-2"><i data-lucide="message-circle" class="w-10 h-10 text-blue-300"></i><p class="text-sm">Inicia la conversaciï¿½n</p></div>';
         if (window.lucide) lucide.createIcons();
         return;
       }
@@ -315,7 +303,7 @@ export const ChatModule = {
       }
 
       // Push notification (silent fail)
-      sendPush({ user_id: this._activeContactId, title: 'Nuevo mensaje de Dirección', message: text, type: 'chat' }).catch(() => {});
+      sendPush({ user_id: this._activeContactId, title: 'Nuevo mensaje de Direcciï¿½n', message: text, type: 'chat' }).catch(() => {});
     } catch (e) {
       Helpers.toast('Error al enviar mensaje', 'error');
       // Remove optimistic message
@@ -344,7 +332,7 @@ export const ChatModule = {
         if (!typingEl) return;
         
         if (typingData.isTyping && typingData.userId !== this._currentUserId) {
-          typingEl.textContent = `${typingData.userName} está escribiendo...`;
+          typingEl.textContent = `${typingData.userName} estï¿½ escribiendo...`;
           typingEl.classList.remove('hidden');
         } else {
           typingEl.classList.add('hidden');
@@ -354,7 +342,7 @@ export const ChatModule = {
 
     // Escuchar input para broadcast
     const input = document.getElementById('chatMessageInput');
-    const user = { name: 'Dirección' }; // O obtener de profiles
+    const user = { name: 'Direcciï¿½n' }; // O obtener de profiles
     let typingTimeout;
     
     if (input && !input._typingBound) {
