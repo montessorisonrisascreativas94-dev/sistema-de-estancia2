@@ -104,139 +104,314 @@ export const Helpers = {
   },
 
   /**
-   * Plantilla profesional de carnet de una sola cara (split 50/50) para impresion
+   * Plantilla premium de carnet estudiantil — Colegio Montessori Sonrisas Creativas
+   * Frente + Reverso, compacto, sin espacios vacíos
    * @param {string} qrImg - data URL del QR
    * @param {string} name - nombre del estudiante
    * @param {string} matricula - matricula (se muestra con prefijo MSC-)
-   * @param {object} opts - { classroom, schedule, year, logoUrl }
+   * @param {object} opts - { classroom, nivel, p1_name, p2_name, year, logoUrl }
    */
   getQRPrintTemplate(qrImg, name, matricula, opts = {}) {
     const mat = (matricula || '').startsWith('MSC-') ? matricula : 'MSC-' + (matricula || '');
     const classroom = opts.classroom || '';
-    const schedule  = opts.schedule  || '08:00 AM - 12:30 PM';
+    const nivel     = opts.nivel     || '';
+    const p1Name    = opts.p1_name   || '';
+    const p2Name    = opts.p2_name   || '';
     const year      = opts.year      || new Date().getFullYear();
     const school    = 'Colegio Montessori Sonrisas Creativas';
+    const logoUrl   = opts.logoUrl   || (window.location.origin + '/img/monte.jpg');
+    const phone     = '+1 (809) 532-4903';
+    const email     = 'montessorisonrisascreativas@gmail.com';
+    const web       = 'montessorisonrisascreativas.com';
+    const address   = 'F2VC+X76, Santo Domingo, Rep. Dominicana';
 
-    // SVG Pentagon mascot (green)
-    const pentagon = `<svg width="28" height="32" viewBox="0 0 180 210" style="display:block">
-      <ellipse cx="90" cy="22" rx="46" ry="16" fill="#0B63C7"/>
-      <path d="M 52 28 Q 40 42 48 56 L 132 56 Q 140 42 128 28 Z" fill="#0B63C7"/>
-      <polygon points="90,56 168,112 140,198 40,198 12,112" fill="#28B54D" stroke="#1A8035" stroke-width="4"/>
-      <circle cx="75" cy="128" r="13" fill="white"/><circle cx="105" cy="128" r="13" fill="white"/>
-      <circle cx="76" cy="129" r="6" fill="#1A2340"/><circle cx="106" cy="129" r="6" fill="#1A2340"/>
-      <circle cx="79" cy="126" r="2.5" fill="white"/><circle cx="109" cy="126" r="2.5" fill="white"/>
-      <path d="M 66 155 Q 90 170 114 155" stroke="#1A2340" stroke-width="5" fill="none" stroke-linecap="round"/>
-    </svg>`;
+    return this._buildCarnetHTML(qrImg, name, mat, { classroom, nivel, p1Name, p2Name, year, school, logoUrl, phone, email, web, address });
+  },
 
+  /**
+   * Construye el HTML completo del carnet (frente + reverso)
+   */
+  _buildCarnetHTML(qrImg, name, mat, d) {
     return `<!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Carnet ${mat}</title>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
-    *{margin:0;padding:0;box-sizing:border-box}
-    body{font-family:'Nunito',sans-serif;background:#f1f5f9;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-    .page{width:210mm;min-height:297mm;margin:0 auto;padding:10mm;background:#f1f5f9}
-    .card-wrap{display:inline-flex;gap:0;margin:4mm;vertical-align:top}
-    /* Card dimensions: 85.6mm x 54mm (credit card size) */
-    .card-single{width:85.6mm;height:54mm;border-radius:4mm;overflow:hidden;position:relative;border:1.5pt solid #28B54D;background:white;box-shadow:0 4px 12px rgba(40,181,77,.15);display:flex;flex-direction:column}
-    /* Cabecera del carnet */
-    .card-header{background:linear-gradient(135deg,#28B54D 0%,#1A8035 100%);width:100%;height:9mm;display:flex;align-items:center;justify-content:space-between;padding:0 3mm;flex-shrink:0}
-    .school-title{color:white;font-size:5pt;font-weight:900;letter-spacing:.2pt;text-transform:uppercase}
-    /* Cuerpo dividido en 2 mitades (50 / 50) */
-    .card-body-split{flex:1;display:flex;width:100%;height:calc(100% - 15mm)}
-    /* Mitad Izquierda - QR */
-    .split-left-qr{width:50%;border-right:1px dashed #e2e8f0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#fafafb;padding:1.5mm}
-    .qr-container{width:28mm;height:28mm;background:white;border:1pt solid #28B54D;border-radius:1.5mm;padding:1mm;display:flex;align-items:center;justify-content:center}
-    .qr-container img{width:100%;height:100%;display:block}
-    .qr-helper-text{font-size:4.5pt;font-weight:900;color:#718096;margin-top:1mm;text-transform:uppercase;letter-spacing:.3pt}
-    /* Mitad Derecha - Información y Foto del Estudiante */
-    .split-right-info{width:50%;display:flex;flex-direction:column;justify-content:space-between;padding:2mm 3mm}
-    .student-badge-row{display:flex;align-items:center;gap:2mm}
-    /* Foto del estudiante redondeada */
-    .student-avatar{width:11mm;height:11mm;border-radius:2mm;border:1pt solid #FF8A00;background:#fff8f0;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0}
-    .student-avatar img{width:100%;height:100%;object-fit:cover}
-    .student-avatar-placeholder{font-size:12pt;color:#FF8A00}
-    /* Bloque de datos */
-    .student-data{display:flex;flex-direction:column}
-    .student-name{font-size:6.5pt;font-weight:900;color:#1A2340;line-height:1.1;margin-bottom:.5mm}
-    .student-id{font-size:5.5pt;font-weight:900;color:#FF8A00;font-family:monospace}
-    .academic-details{display:flex;flex-direction:column;gap:.5mm;margin-top:1mm}
-    .detail-item{display:flex;flex-direction:column}
-    .detail-label{font-size:4pt;font-weight:900;color:#a0aec0;text-transform:uppercase;letter-spacing:.2pt}
-    .detail-value{font-size:5.2pt;font-weight:700;color:#2d3748}
-    /* Pie de carnet */
-    .card-footer{background:#1A2340;height:6mm;display:flex;align-items:center;justify-content:space-between;padding:0 3mm;flex-shrink:0}
-    .footer-text{color:rgba(255,255,255,.8);font-size:4.5pt;font-weight:800;letter-spacing:.5pt;text-transform:uppercase}
-    /* Print layout: 2 cols x 5 rows = 10 per page */
-    .cards-grid{display:flex;flex-wrap:wrap;gap:4mm}
-    @media print{
-      body{background:white}
-      .page{padding:8mm;background:white}
-      .card-single{box-shadow:none}
-      @page{size:A4;margin:0}
-    }
-  </style>
+<meta charset="UTF-8">
+<title>Carnet ${mat}</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Baloo+2:wght@400;600;700;800&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Nunito',sans-serif;background:#e8ecf1;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.page{width:210mm;height:297mm;margin:0 auto;padding:5mm;background:#e8ecf1;display:flex;flex-wrap:wrap;align-content:flex-start;justify-content:center;gap:0}
+
+/* CARNET */
+.carnet-pair{width:96mm;display:flex;flex-direction:column;align-items:center;margin:1.5mm auto;flex-shrink:0;gap:1.2mm}
+.carnet{width:85.6mm;height:53.98mm;border-radius:3.5mm;overflow:hidden;position:relative;background:white;box-shadow:0 2px 10px rgba(0,0,0,.12),0 0 0 0.3pt #d1d9e6;flex-shrink:0}
+
+/* MASCOT SHADOW */
+.mascot{position:absolute;pointer-events:none;z-index:4;filter:drop-shadow(0 1px 2px rgba(0,0,0,.15))}
+
+/* FRONT HEADER */
+.f-top{display:flex;align-items:center;justify-content:space-between;padding:1.8mm 2.5mm 1.5mm;background:linear-gradient(135deg,#f0faf0 0%,#e8f5e9 50%,#E3F2FD 100%);border-bottom:0.35mm solid #2E7D32;position:relative;z-index:2}
+.f-logo-w{display:flex;align-items:center;gap:1.5mm}
+.f-logo{width:9mm;height:9mm;border-radius:2mm;overflow:hidden;border:0.3mm solid #2E7D32;box-shadow:0 1px 3px rgba(0,0,0,.15);flex-shrink:0;background:white}
+.f-logo img{width:100%;height:100%;object-fit:cover}
+.f-school{display:flex;flex-direction:column}
+.f-school-n{font-family:'Baloo 2',cursive;font-size:4.8pt;font-weight:800;color:#0D2C54;line-height:1.1}
+.f-school-s{font-family:'Baloo 2',cursive;font-size:3.2pt;font-weight:700;color:#2E7D32;line-height:1}
+.f-year{font-family:'Baloo 2',cursive;font-size:4.5pt;font-weight:800;color:white;background:linear-gradient(135deg,#1565C0,#0D2C54);padding:0.8mm 2mm;border-radius:1.8mm;line-height:1;box-shadow:0 1px 3px rgba(21,101,192,.3)}
+
+/* FRONT BODY */
+.f-body{display:flex;height:calc(100% - 13mm);position:relative;z-index:1}
+
+/* QR ZONE — bigger QR */
+.f-qr{width:38%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1.2mm 0.8mm;position:relative;background:linear-gradient(180deg,rgba(46,125,50,.03) 0%,rgba(255,255,255,0) 100%)}
+.f-qr-box{width:25mm;height:25mm;background:white;border:0.5mm solid #2E7D32;border-radius:2.5mm;padding:1.5mm;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(46,125,50,.15);position:relative}
+.f-qr-box img{width:100%;height:100%;display:block}
+.f-qr-lbl{font-size:2.6pt;font-weight:800;color:#718096;text-transform:uppercase;letter-spacing:0.1pt;margin-top:1mm;text-align:center;line-height:1.3}
+.f-qr-ico{font-size:2.8pt;color:#2E7D32;margin-top:0.2mm}
+
+/* DIVIDER between QR and info */
+.f-divider{width:0.3mm;background:linear-gradient(180deg,rgba(46,125,50,.0) 0%,rgba(46,125,50,.25) 30%,rgba(46,125,50,.25) 70%,rgba(46,125,50,.0) 100%);flex-shrink:0;margin:1.5mm 0}
+
+/* INFO ZONE — compact, no white space */
+.f-info{width:62%;display:flex;flex-direction:column;justify-content:center;padding:1mm 2.5mm 0.8mm 1.5mm;position:relative}
+.f-name{font-family:'Baloo 2',cursive;font-size:6pt;font-weight:800;color:#0D2C54;line-height:1.12;margin-bottom:0.3mm;text-shadow:0 0.5px 0 rgba(0,0,0,.04)}
+.f-mat{font-size:3.5pt;font-weight:800;color:#FB8C00;letter-spacing:0.08pt;margin-bottom:1mm;padding:0.3mm 1.2mm;background:#FFF3E0;border-radius:1mm;display:inline-block;width-fit}
+.f-fields{display:flex;flex-direction:column;gap:0.5mm}
+.f-field{display:flex;align-items:center;gap:0.8mm}
+.f-fi{width:3mm;height:3mm;border-radius:0.8mm;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:2.5pt}
+.f-fi.grn{background:#E8F5E9;color:#2E7D32}
+.f-fi.blu{background:#E3F2FD;color:#1565C0}
+.f-fi.org{background:#FFF3E0;color:#FB8C00}
+.f-fi.ylw{background:#FFFDE7;color:#F57F17}
+.f-ft{display:flex;flex-direction:column}
+.f-fl{font-size:2.3pt;font-weight:800;color:#90A4AE;text-transform:uppercase;letter-spacing:0.1pt;line-height:1}
+.f-fv{font-size:3.5pt;font-weight:700;color:#37474F;line-height:1.12}
+
+/* FRONT BOTTOM */
+.f-bot{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(135deg,#0D2C54 0%,#1565C0 100%);padding:1.1mm 2.5mm;display:flex;align-items:center;justify-content:space-between;z-index:2}
+.f-bot-l{display:flex;align-items:center;gap:1.2mm}
+.f-shield{font-size:3pt;color:#FFC107}
+.f-sec{font-size:2.6pt;font-weight:800;color:rgba(255,255,255,.9);letter-spacing:0.12pt;text-transform:uppercase}
+.f-motto{font-size:2.4pt;font-weight:700;color:rgba(255,255,255,.6);font-style:italic}
+.f-motto .heart{color:#FB8C00}
+
+/* ===== BACK ===== */
+.b-top{display:flex;align-items:center;justify-content:center;padding:2mm 3mm 1.5mm;background:linear-gradient(135deg,#f0faf0 0%,#e8f5e9 50%,#FFF3E0 100%);border-bottom:0.3mm solid #2E7D32;position:relative;z-index:2}
+.b-logo{width:17mm;height:17mm;border-radius:3.5mm;overflow:hidden;border:0.4mm solid #2E7D32;box-shadow:0 2px 8px rgba(0,0,0,.12);background:white}
+.b-logo img{width:100%;height:100%;object-fit:cover}
+.b-title{font-family:'Baloo 2',cursive;font-size:5pt;font-weight:800;color:#0D2C54;text-align:center;margin-top:0.8mm;line-height:1.1}
+.b-sub{font-size:3.2pt;font-weight:600;color:#718096;text-align:center;line-height:1.1;margin-top:0.3mm}
+
+.b-body{padding:1.5mm 3.5mm;display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;position:relative;z-index:1}
+
+.b-notice{font-size:3.2pt;font-weight:600;color:#546E7A;text-align:center;line-height:1.4;padding:1.2mm 2mm;background:#F5F5F5;border-radius:1.5mm;border-left:0.4mm solid #FB8C00;margin-bottom:1mm}
+
+.b-contact{display:flex;flex-wrap:wrap;justify-content:center;gap:0.8mm 2.5mm;margin-bottom:1mm}
+.b-ci{display:flex;align-items:center;gap:0.6mm;font-size:3pt;font-weight:600;color:#455A64}
+.b-cicon{font-size:3pt}
+
+/* BACK BOTTOM */
+.b-bot{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(135deg,#0D2C54 0%,#1565C0 100%);padding:1mm 2.5mm;display:flex;align-items:center;justify-content:center;z-index:2;gap:1.2mm;flex-wrap:wrap}
+.b-val{font-size:2.4pt;font-weight:800;color:rgba(255,255,255,.85);letter-spacing:0.1pt;text-transform:uppercase}
+.b-vdot{font-size:1.8pt;color:#FFC107}
+
+/* WATERMARKS */
+.wm{position:absolute;pointer-events:none}
+.wm-c{border-radius:50%;border:0.25mm solid;opacity:.06}
+.wm-t{opacity:.035;pointer-events:none}
+.wm-l{opacity:.045;pointer-events:none;font-size:2.5mm;color:#2E7D32}
+.wm-s{opacity:.055;pointer-events:none;font-size:2.2mm;color:#FFC107}
+.wm-d{border-radius:50%;opacity:.05}
+
+@media print{
+  body{background:white;margin:0;padding:0}
+  .page{padding:3mm;background:white;gap:0}
+  .carnet{box-shadow:none;page-break-inside:avoid}
+  .carnet-pair{page-break-inside:avoid}
+  @page{size:A4 portrait;margin:4mm}
+}
+</style>
 </head>
 <body>
 <div class="page">
-  <div class="cards-grid">
+<div class="carnet-pair">
 
-    <!-- Tarjeta Single Split -->
-    <div class="card-single">
-      <!-- Cabecera -->
-      <div class="card-header">
-        <span class="school-title">${school}</span>
-        ${pentagon}
-      </div>
+  <!-- ====== FRENTE ====== -->
+  <div class="carnet">
+    <!-- Watermarks -->
+    <svg class="wm wm-t" style="top:10mm;right:2mm;width:7mm;height:9mm" viewBox="0 0 100 120"><path d="M50 5 L85 45 L70 45 L90 80 L65 80 L75 110 L25 110 L35 80 L10 80 L30 45 L15 45 Z" fill="#2E7D32"/></svg>
+    <div class="wm wm-c" style="width:6mm;height:6mm;top:15mm;left:50mm;border-color:#FB8C00"></div>
+    <div class="wm wm-c" style="width:5mm;height:5mm;bottom:12mm;left:45mm;border-color:#1565C0"></div>
+    <span class="wm wm-s" style="top:18mm;left:3mm">&#9733;</span>
+    <span class="wm wm-s" style="bottom:15mm;right:4mm;font-size:1.8mm">&#9733;</span>
+    <span class="wm wm-l" style="top:20mm;right:6mm">&#127811;</span>
+    <span class="wm wm-l" style="bottom:18mm;left:52mm;font-size:1.8mm">&#127811;</span>
+    <div class="wm wm-d" style="width:2.5mm;height:2.5mm;top:22mm;left:60mm;background:#FFC107"></div>
+    <div class="wm wm-d" style="width:2mm;height:2mm;bottom:20mm;left:38mm;background:#2E7D32"></div>
 
-      <!-- Cuerpo Dividido en Dos (Left QR / Right Info) -->
-      <div class="card-body-split">
-        <!-- Izquierda: Código QR -->
-        <div class="split-left-qr">
-          <div class="qr-container">
-            <img src="${qrImg}" alt="QR Acceso">
-          </div>
-          <span class="qr-helper-text">Escanear para entrada/salida</span>
-        </div>
-
-        <!-- Derecha: Datos y Foto -->
-        <div class="split-right-info">
-          <div class="student-badge-row">
-            <!-- Avatar del Estudiante -->
-            <div class="student-avatar">
-              <span class="student-avatar-placeholder">👶</span>
-            </div>
-            <!-- Nombre e ID -->
-            <div class="student-data">
-              <h4 class="student-name">${Helpers.escapeHTML(name || 'Estudiante')}</h4>
-              <span class="student-id">${mat}</span>
-            </div>
-          </div>
-
-          <!-- Detalles Académicos -->
-          <div class="academic-details">
-            ${classroom ? `<div class="detail-item">
-              <span class="detail-label">Aula</span>
-              <span class="detail-value">${Helpers.escapeHTML(classroom)}</span>
-            </div>` : ''}
-            <div class="detail-item">
-              <span class="detail-label">Horario escolar</span>
-              <span class="detail-value">${Helpers.escapeHTML(schedule)}</span>
-            </div>
-          </div>
+    <!-- HEADER -->
+    <div class="f-top">
+      <div class="f-logo-w">
+        <div class="f-logo"><img src="${d.logoUrl}" alt="Logo"></div>
+        <div class="f-school">
+          <div class="f-school-n">Colegio Montessori</div>
+          <div class="f-school-s">Sonrisas Creativas</div>
         </div>
       </div>
+      <div class="f-year">${d.year}-${(d.year+1).toString().slice(-2)}</div>
+    </div>
 
-      <!-- Pie de Tarjeta -->
-      <div class="card-footer">
-        <span class="footer-text">Seguridad & Control de Acceso</span>
-        <span class="footer-text" style="color:#FF8A00">Curso ${year}</span>
+    <!-- Sun mascot peeking from header -->
+    <svg class="mascot" style="top:0.5mm;left:42mm;width:7mm;height:7mm" viewBox="0 0 100 100">
+      <circle cx="50" cy="55" r="28" fill="#FFC107"/>
+      <circle cx="50" cy="55" r="22" fill="#FFD54F"/>
+      <circle cx="42" cy="50" r="4" fill="white"/><circle cx="58" cy="50" r="4" fill="white"/>
+      <circle cx="43" cy="51" r="2" fill="#0D2C54"/><circle cx="59" cy="51" r="2" fill="#0D2C54"/>
+      <path d="M 40 60 Q 50 67 60 60" stroke="#0D2C54" stroke-width="2" fill="none" stroke-linecap="round"/>
+      <circle cx="36" cy="58" r="1.8" fill="#FFAB91" opacity=".5"/>
+      <circle cx="64" cy="58" r="1.8" fill="#FFAB91" opacity=".5"/>
+      <line x1="50" y1="20" x2="50" y2="12" stroke="#FFC107" stroke-width="2.5" stroke-linecap="round"/>
+      <line x1="24" y1="32" x2="18" y2="27" stroke="#FFC107" stroke-width="2.5" stroke-linecap="round"/>
+      <line x1="76" y1="32" x2="82" y2="27" stroke="#FFC107" stroke-width="2.5" stroke-linecap="round"/>
+      <line x1="16" y1="55" x2="8" y2="55" stroke="#FFC107" stroke-width="2.5" stroke-linecap="round"/>
+      <line x1="84" y1="55" x2="92" y2="55" stroke="#FFC107" stroke-width="2.5" stroke-linecap="round"/>
+    </svg>
+
+    <!-- BODY -->
+    <div class="f-body">
+      <!-- QR ZONE -->
+      <div class="f-qr">
+        <div class="f-qr-box">
+          ${qrImg ? `<img src="${qrImg}" alt="QR">` : '<span style="font-size:6pt;color:#94a3b8">QR</span>'}
+        </div>
+        <div class="f-qr-ico">&#128270;</div>
+        <div class="f-qr-lbl">Escanear para</div>
+        <div class="f-qr-lbl">Entrada / Salida</div>
+
+        <!-- Triangle leaning on QR bottom -->
+        <svg class="mascot" style="bottom:-2mm;left:-1mm;width:7mm;height:7.5mm" viewBox="0 0 100 100">
+          <polygon points="50,10 88,85 12,85" fill="#FB8C00" stroke="#E65100" stroke-width="3"/>
+          <circle cx="38" cy="52" r="5" fill="white"/><circle cx="62" cy="52" r="5" fill="white"/>
+          <circle cx="39" cy="53" r="2.5" fill="#0D2C54"/><circle cx="63" cy="53" r="2.5" fill="#0D2C54"/>
+          <path d="M 36 64 Q 50 74 64 64" stroke="#0D2C54" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+          <circle cx="32" cy="62" r="1.8" fill="#FFAB91" opacity=".5"/>
+          <circle cx="68" cy="62" r="1.8" fill="#FFAB91" opacity=".5"/>
+        </svg>
+      </div>
+
+      <!-- DIVIDER -->
+      <div class="f-divider"></div>
+
+      <!-- INFO ZONE -->
+      <div class="f-info">
+        <div class="f-name">${Helpers.escapeHTML((name || 'Estudiante').substring(0, 30))}</div>
+        <div class="f-mat">${mat}</div>
+        <div class="f-fields">
+          ${d.nivel ? `<div class="f-field"><div class="f-fi grn">&#127891;</div><div class="f-ft"><span class="f-fl">Nivel</span><span class="f-fv">${Helpers.escapeHTML(d.nivel)}</span></div></div>` : ''}
+          ${d.classroom ? `<div class="f-field"><div class="f-fi blu">&#127979;</div><div class="f-ft"><span class="f-fl">Aula</span><span class="f-fv">${Helpers.escapeHTML(d.classroom)}</span></div></div>` : ''}
+          ${d.p1Name ? `<div class="f-field"><div class="f-fi org">&#128104;</div><div class="f-ft"><span class="f-fl">Padre</span><span class="f-fv">${Helpers.escapeHTML(d.p1Name.substring(0, 24))}</span></div></div>` : ''}
+          ${d.p2Name ? `<div class="f-field"><div class="f-fi ylw">&#128105;</div><div class="f-ft"><span class="f-fl">Madre</span><span class="f-fv">${Helpers.escapeHTML(d.p2Name.substring(0, 24))}</span></div></div>` : ''}
+          <div class="f-field"><div class="f-fi grn">&#128218;</div><div class="f-ft"><span class="f-fl">Curso</span><span class="f-fv">${d.year}-${(d.year+1).toString().slice(-2)}</span></div></div>
+        </div>
       </div>
     </div>
 
+    <!-- BOTTOM -->
+    <div class="f-bot">
+      <div class="f-bot-l">
+        <span class="f-shield">&#128737;</span>
+        <span class="f-sec">SEGURIDAD &bull; CONTROL DE ACCESO</span>
+      </div>
+      <span class="f-motto">Educamos con amor <span class="heart">&#10084;</span></span>
+    </div>
   </div>
+
+  <!-- ====== REVERSO ====== -->
+  <div class="carnet">
+    <!-- Decorative clouds -->
+    <svg class="wm" style="top:3mm;left:2mm;width:8mm;height:5mm;opacity:.06;z-index:1" viewBox="0 0 100 60"><ellipse cx="50" cy="35" rx="35" ry="18" fill="#90CAF9"/><ellipse cx="30" cy="30" rx="20" ry="14" fill="#90CAF9"/><ellipse cx="70" cy="30" rx="20" ry="14" fill="#90CAF9"/></svg>
+    <svg class="wm" style="top:2mm;right:5mm;width:6mm;height:4mm;opacity:.05;z-index:1" viewBox="0 0 100 60"><ellipse cx="50" cy="35" rx="35" ry="18" fill="#90CAF9"/><ellipse cx="30" cy="30" rx="20" ry="14" fill="#90CAF9"/></svg>
+    <svg class="wm wm-t" style="bottom:10mm;left:3mm;width:7mm;height:9mm" viewBox="0 0 100 120"><path d="M50 5 L85 45 L70 45 L90 80 L65 80 L75 110 L25 110 L35 80 L10 80 L30 45 L15 45 Z" fill="#2E7D32"/></svg>
+    <svg class="wm wm-t" style="bottom:12mm;right:4mm;width:5mm;height:7mm;opacity:.03" viewBox="0 0 100 120"><path d="M50 5 L85 45 L70 45 L90 80 L65 80 L75 110 L25 110 L35 80 L10 80 L30 45 L15 45 Z" fill="#FB8C00"/></svg>
+    <div class="wm wm-c" style="width:8mm;height:8mm;bottom:10mm;right:3mm;border-color:#2E7D32"></div>
+    <span class="wm wm-s" style="top:20mm;right:5mm;font-size:2mm">&#9733;</span>
+    <span class="wm wm-s" style="top:8mm;left:60mm;font-size:1.5mm">&#9733;</span>
+    <span class="wm wm-s" style="bottom:14mm;left:5mm;font-size:1.8mm">&#9733;</span>
+    <span class="wm wm-l" style="top:22mm;left:4mm">&#127811;</span>
+    <span class="wm wm-l" style="bottom:16mm;right:8mm;font-size:1.5mm">&#127811;</span>
+    <div class="wm wm-d" style="width:2mm;height:2mm;top:16mm;left:70mm;background:#FFC107"></div>
+    <div class="wm wm-d" style="width:1.5mm;height:1.5mm;bottom:18mm;left:50mm;background:#FB8C00"></div>
+
+    <!-- Sun mascot top-left -->
+    <svg class="mascot" style="top:1mm;left:1mm;width:6mm;height:6mm;opacity:.75" viewBox="0 0 100 100">
+      <circle cx="50" cy="50" r="26" fill="#FFC107"/>
+      <circle cx="50" cy="50" r="20" fill="#FFD54F"/>
+      <circle cx="43" cy="46" r="3.2" fill="white"/><circle cx="57" cy="46" r="3.2" fill="white"/>
+      <circle cx="44" cy="47" r="1.6" fill="#0D2C54"/><circle cx="58" cy="47" r="1.6" fill="#0D2C54"/>
+      <path d="M 42 54 Q 50 60 58 54" stroke="#0D2C54" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+      <line x1="50" y1="18" x2="50" y2="11" stroke="#FFC107" stroke-width="2" stroke-linecap="round"/>
+      <line x1="26" y1="30" x2="20" y2="25" stroke="#FFC107" stroke-width="2" stroke-linecap="round"/>
+      <line x1="74" y1="30" x2="80" y2="25" stroke="#FFC107" stroke-width="2" stroke-linecap="round"/>
+    </svg>
+
+    <!-- Pentagon waving from bottom-right -->
+    <svg class="mascot" style="bottom:3mm;right:1mm;width:8mm;height:8mm" viewBox="0 0 100 100">
+      <polygon points="50,8 93,38 76,88 24,88 7,38" fill="#2E7D32" stroke="#1B5E20" stroke-width="2.5"/>
+      <circle cx="38" cy="40" r="4.5" fill="white"/><circle cx="62" cy="40" r="4.5" fill="white"/>
+      <circle cx="39" cy="41" r="2.2" fill="#0D2C54"/><circle cx="63" cy="41" r="2.2" fill="#0D2C54"/>
+      <path d="M 36 54 Q 50 63 64 54" stroke="#0D2C54" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      <circle cx="33" cy="52" r="1.8" fill="#A5D6A7" opacity=".5"/>
+      <circle cx="67" cy="52" r="1.8" fill="#A5D6A7" opacity=".5"/>
+      <!-- waving hand -->
+      <line x1="88" y1="35" x2="95" y2="28" stroke="#1B5E20" stroke-width="2.5" stroke-linecap="round"/>
+      <circle cx="95" cy="26" r="2.5" fill="#2E7D32"/>
+    </svg>
+
+    <!-- Triangle bottom-left -->
+    <svg class="mascot" style="bottom:4mm;left:1.5mm;width:6mm;height:6.5mm;opacity:.65" viewBox="0 0 100 100">
+      <polygon points="50,12 85,82 15,82" fill="#FB8C00" stroke="#E65100" stroke-width="2.5"/>
+      <circle cx="40" cy="48" r="3.5" fill="white"/><circle cx="60" cy="48" r="3.5" fill="white"/>
+      <circle cx="41" cy="49" r="1.8" fill="#0D2C54"/><circle cx="61" cy="49" r="1.8" fill="#0D2C54"/>
+      <path d="M 38 60 Q 50 68 62 60" stroke="#0D2C54" stroke-width="2" fill="none" stroke-linecap="round"/>
+    </svg>
+
+    <!-- TOP -->
+    <div class="b-top">
+      <div style="text-align:center">
+        <div class="b-logo"><img src="${d.logoUrl}" alt="Logo"></div>
+        <div class="b-title">Colegio Montessori</div>
+        <div class="b-sub">Sonrisas Creativas</div>
+      </div>
+    </div>
+
+    <!-- BODY -->
+    <div class="b-body">
+      <div class="b-notice">
+        &#128274; Este carnet es propiedad del ${d.school}.<br>
+        En caso de p&eacute;rdida favor devolver a la instituci&oacute;n.
+      </div>
+      <div class="b-contact">
+        <div class="b-ci"><span class="b-cicon">&#9742;</span> ${d.phone}</div>
+        <div class="b-ci"><span class="b-cicon">&#9993;</span> ${d.email}</div>
+        <div class="b-ci"><span class="b-cicon">&#127760;</span> ${d.web}</div>
+        <div class="b-ci"><span class="b-cicon">&#128205;</span> ${d.address}</div>
+      </div>
+    </div>
+
+    <!-- BOTTOM -->
+    <div class="b-bot">
+      <span class="b-val">RESPETO</span><span class="b-vdot">&bull;</span>
+      <span class="b-val">AMOR</span><span class="b-vdot">&bull;</span>
+      <span class="b-val">CREATIVIDAD</span><span class="b-vdot">&bull;</span>
+      <span class="b-val">DISCIPLINA</span><span class="b-vdot">&bull;</span>
+      <span class="b-val">INDEPENDENCIA</span><span class="b-vdot">&bull;</span>
+      <span class="b-val">EMPAT&#205;A</span><span class="b-vdot">&bull;</span>
+      <span class="b-val">SOLIDARIDAD</span>
+    </div>
+  </div>
+
+</div>
 </div>
 <script>window.onload=()=>{setTimeout(()=>{window.print();setTimeout(()=>window.close(),600)},600)}</script>
 </body>
@@ -244,13 +419,12 @@ export const Helpers = {
   },
 
   /**
-   * Imprime todos los carnets de una lista de estudiantes en un solo PDF (single-sided split design)
-   * @param {Array} students - [{name, matricula, classroom, schedule, avatarUrl}]
+   * Imprime todos los carnets — Premium Montessori, frente+reverso, 6/página A4
+   * @param {Array} students - [{name, matricula, classroom, nivel, p1_name, p2_name}]
    */
   async printAllCarnets(students = []) {
     if (!students.length) { this.toast('Sin estudiantes para imprimir', 'warning'); return; }
 
-    // Load QR lib
     await new Promise(resolve => {
       if (window.QRCode) { resolve(); return; }
       const s = document.createElement('script');
@@ -259,7 +433,6 @@ export const Helpers = {
       document.head.appendChild(s);
     });
 
-    // Generate QR images for all students
     const qrImages = await Promise.all(students.map(st => new Promise(res => {
       const tmp = document.createElement('div');
       tmp.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:200px;height:200px';
@@ -275,113 +448,220 @@ export const Helpers = {
       } catch (_) { document.body.removeChild(tmp); res({ ...st, qrImg: '', mat }); }
     })));
 
-    // Pentagon SVG mascot
-    const pentagon = `<svg width="26" height="30" viewBox="0 0 180 210" style="display:block">
-      <ellipse cx="90" cy="22" rx="46" ry="16" fill="#0B63C7"/>
-      <path d="M 52 28 Q 40 42 48 56 L 132 56 Q 140 42 128 28 Z" fill="#0B63C7"/>
-      <polygon points="90,56 168,112 140,198 40,198 12,112" fill="#28B54D" stroke="#1A8035" stroke-width="4"/>
-      <circle cx="75" cy="128" r="13" fill="white"/><circle cx="105" cy="128" r="13" fill="white"/>
-      <circle cx="76" cy="129" r="6" fill="#1A2340"/><circle cx="106" cy="129" r="6" fill="#1A2340"/>
-      <circle cx="79" cy="126" r="2.5" fill="white"/><circle cx="109" cy="126" r="2.5" fill="white"/>
-      <path d="M 66 155 Q 90 170 114 155" stroke="#1A2340" stroke-width="5" fill="none" stroke-linecap="round"/>
-    </svg>`;
-
     const year = new Date().getFullYear();
     const school = 'Colegio Montessori Sonrisas Creativas';
-    const defaultSchedule = '08:00 AM - 12:30 PM';
+    const logoUrl = window.location.origin + '/img/monte.jpg';
+    const phone   = '+1 (809) 532-4903';
+    const email   = 'montessorisonrisascreativas@gmail.com';
+    const web     = 'montessorisonrisascreativas.com';
+    const address = 'F2VC+X76, Santo Domingo, Rep. Dominicana';
 
-    const cardsHTML = qrImages.map(st => `
-      <!-- Tarjeta Single Split -->
-      <div class="card-single">
-        <!-- Cabecera -->
-        <div class="card-header">
-          <span class="school-title">${school}</span>
-          ${pentagon}
-        </div>
+    const cardsHTML = qrImages.map(st => {
+      const d = { classroom: st.classroom||'', nivel: st.nivel||'', p1Name: st.p1_name||'', p2Name: st.p2_name||'', year, school, logoUrl, phone, email, web, address };
+      return `
+    <div class="carnet-pair">
+      <!-- FRENTE -->
+      <div class="carnet">
+        <svg class="wm wm-t" style="top:10mm;right:2mm;width:7mm;height:9mm" viewBox="0 0 100 120"><path d="M50 5 L85 45 L70 45 L90 80 L65 80 L75 110 L25 110 L35 80 L10 80 L30 45 L15 45 Z" fill="#2E7D32"/></svg>
+        <div class="wm wm-c" style="width:6mm;height:6mm;top:15mm;left:50mm;border-color:#FB8C00"></div>
+        <div class="wm wm-c" style="width:5mm;height:5mm;bottom:12mm;left:45mm;border-color:#1565C0"></div>
+        <span class="wm wm-s" style="top:18mm;left:3mm">&#9733;</span>
+        <span class="wm wm-s" style="bottom:15mm;right:4mm;font-size:1.8mm">&#9733;</span>
+        <span class="wm wm-l" style="top:20mm;right:6mm">&#127811;</span>
+        <span class="wm wm-l" style="bottom:18mm;left:52mm;font-size:1.8mm">&#127811;</span>
+        <div class="wm wm-d" style="width:2.5mm;height:2.5mm;top:22mm;left:60mm;background:#FFC107"></div>
+        <div class="wm wm-d" style="width:2mm;height:2mm;bottom:20mm;left:38mm;background:#2E7D32"></div>
 
-        <!-- Cuerpo Dividido en Dos (Left QR / Right Info) -->
-        <div class="card-body-split">
-          <!-- Izquierda: Código QR -->
-          <div class="split-left-qr">
-            <div class="qr-container">
-              ${st.qrImg ? `<img src="${st.qrImg}" alt="QR Acceso">` : '<span style="font-size:8pt;color:#94a3b8">QR</span>'}
-            </div>
-            <span class="qr-helper-text">Escanear para entrada/salida</span>
-          </div>
-
-          <!-- Derecha: Datos y Foto -->
-          <div class="split-right-info">
-            <div class="student-badge-row">
-              <!-- Avatar del Estudiante -->
-              <div class="student-avatar">
-                <span class="student-avatar-placeholder">👶</span>
-              </div>
-              <!-- Nombre e ID -->
-              <div class="student-data">
-                <h4 class="student-name">${Helpers.escapeHTML((st.name||'—').substring(0,26))}</h4>
-                <span class="student-id">${st.mat}</span>
-              </div>
-            </div>
-
-            <!-- Detalles Académicos -->
-            <div class="academic-details">
-              ${st.classroom ? `<div class="detail-item">
-                <span class="detail-label">Aula</span>
-                <span class="detail-value">${Helpers.escapeHTML(st.classroom)}</span>
-              </div>` : ''}
-              <div class="detail-item">
-                <span class="detail-label">Horario escolar</span>
-                <span class="detail-value">${Helpers.escapeHTML(st.schedule || defaultSchedule)}</span>
-              </div>
+        <div class="f-top">
+          <div class="f-logo-w">
+            <div class="f-logo"><img src="${logoUrl}" alt="Logo"></div>
+            <div class="f-school">
+              <div class="f-school-n">Colegio Montessori</div>
+              <div class="f-school-s">Sonrisas Creativas</div>
             </div>
           </div>
+          <div class="f-year">${year}-${(year+1).toString().slice(-2)}</div>
         </div>
 
-        <!-- Pie de Tarjeta -->
-        <div class="card-footer">
-          <span class="footer-text">Seguridad & Control de Acceso</span>
-          <span class="footer-text" style="color:#FF8A00">Curso ${year}</span>
+        <svg class="mascot" style="top:0.5mm;left:42mm;width:7mm;height:7mm" viewBox="0 0 100 100">
+          <circle cx="50" cy="55" r="28" fill="#FFC107"/><circle cx="50" cy="55" r="22" fill="#FFD54F"/>
+          <circle cx="42" cy="50" r="4" fill="white"/><circle cx="58" cy="50" r="4" fill="white"/>
+          <circle cx="43" cy="51" r="2" fill="#0D2C54"/><circle cx="59" cy="51" r="2" fill="#0D2C54"/>
+          <path d="M 40 60 Q 50 67 60 60" stroke="#0D2C54" stroke-width="2" fill="none" stroke-linecap="round"/>
+          <circle cx="36" cy="58" r="1.8" fill="#FFAB91" opacity=".5"/><circle cx="64" cy="58" r="1.8" fill="#FFAB91" opacity=".5"/>
+          <line x1="50" y1="20" x2="50" y2="12" stroke="#FFC107" stroke-width="2.5" stroke-linecap="round"/>
+          <line x1="24" y1="32" x2="18" y2="27" stroke="#FFC107" stroke-width="2.5" stroke-linecap="round"/>
+          <line x1="76" y1="32" x2="82" y2="27" stroke="#FFC107" stroke-width="2.5" stroke-linecap="round"/>
+          <line x1="16" y1="55" x2="8" y2="55" stroke="#FFC107" stroke-width="2.5" stroke-linecap="round"/>
+          <line x1="84" y1="55" x2="92" y2="55" stroke="#FFC107" stroke-width="2.5" stroke-linecap="round"/>
+        </svg>
+
+        <div class="f-body">
+          <div class="f-qr">
+            <div class="f-qr-box">
+              ${st.qrImg ? `<img src="${st.qrImg}" alt="QR">` : '<span style="font-size:6pt;color:#94a3b8">QR</span>'}
+            </div>
+            <div class="f-qr-ico">&#128270;</div>
+            <div class="f-qr-lbl">Escanear para</div>
+            <div class="f-qr-lbl">Entrada / Salida</div>
+            <svg class="mascot" style="bottom:-2mm;left:-1mm;width:7mm;height:7.5mm" viewBox="0 0 100 100">
+              <polygon points="50,10 88,85 12,85" fill="#FB8C00" stroke="#E65100" stroke-width="3"/>
+              <circle cx="38" cy="52" r="5" fill="white"/><circle cx="62" cy="52" r="5" fill="white"/>
+              <circle cx="39" cy="53" r="2.5" fill="#0D2C54"/><circle cx="63" cy="53" r="2.5" fill="#0D2C54"/>
+              <path d="M 36 64 Q 50 74 64 64" stroke="#0D2C54" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+              <circle cx="32" cy="62" r="1.8" fill="#FFAB91" opacity=".5"/><circle cx="68" cy="62" r="1.8" fill="#FFAB91" opacity=".5"/>
+            </svg>
+          </div>
+          <div class="f-divider"></div>
+          <div class="f-info">
+            <div class="f-name">${Helpers.escapeHTML((st.name||'Estudiante').substring(0, 30))}</div>
+            <div class="f-mat">${st.mat}</div>
+            <div class="f-fields">
+              ${d.nivel ? `<div class="f-field"><div class="f-fi grn">&#127891;</div><div class="f-ft"><span class="f-fl">Nivel</span><span class="f-fv">${Helpers.escapeHTML(d.nivel)}</span></div></div>` : ''}
+              ${d.classroom ? `<div class="f-field"><div class="f-fi blu">&#127979;</div><div class="f-ft"><span class="f-fl">Aula</span><span class="f-fv">${Helpers.escapeHTML(d.classroom)}</span></div></div>` : ''}
+              ${d.p1Name ? `<div class="f-field"><div class="f-fi org">&#128104;</div><div class="f-ft"><span class="f-fl">Padre</span><span class="f-fv">${Helpers.escapeHTML(d.p1Name.substring(0, 24))}</span></div></div>` : ''}
+              ${d.p2Name ? `<div class="f-field"><div class="f-fi ylw">&#128105;</div><div class="f-ft"><span class="f-fl">Madre</span><span class="f-fv">${Helpers.escapeHTML(d.p2Name.substring(0, 24))}</span></div></div>` : ''}
+              <div class="f-field"><div class="f-fi grn">&#128218;</div><div class="f-ft"><span class="f-fl">Curso</span><span class="f-fv">${year}-${(year+1).toString().slice(-2)}</span></div></div>
+            </div>
+          </div>
         </div>
-      </div>`).join('\n');
+
+        <div class="f-bot">
+          <div class="f-bot-l"><span class="f-shield">&#128737;</span><span class="f-sec">SEGURIDAD &bull; CONTROL DE ACCESO</span></div>
+          <span class="f-motto">Educamos con amor <span class="heart">&#10084;</span></span>
+        </div>
+      </div>
+
+      <!-- REVERSO -->
+      <div class="carnet">
+        <svg class="wm" style="top:3mm;left:2mm;width:8mm;height:5mm;opacity:.06;z-index:1" viewBox="0 0 100 60"><ellipse cx="50" cy="35" rx="35" ry="18" fill="#90CAF9"/><ellipse cx="30" cy="30" rx="20" ry="14" fill="#90CAF9"/><ellipse cx="70" cy="30" rx="20" ry="14" fill="#90CAF9"/></svg>
+        <svg class="wm" style="top:2mm;right:5mm;width:6mm;height:4mm;opacity:.05;z-index:1" viewBox="0 0 100 60"><ellipse cx="50" cy="35" rx="35" ry="18" fill="#90CAF9"/><ellipse cx="30" cy="30" rx="20" ry="14" fill="#90CAF9"/></svg>
+        <svg class="wm wm-t" style="bottom:10mm;left:3mm;width:7mm;height:9mm" viewBox="0 0 100 120"><path d="M50 5 L85 45 L70 45 L90 80 L65 80 L75 110 L25 110 L35 80 L10 80 L30 45 L15 45 Z" fill="#2E7D32"/></svg>
+        <svg class="wm wm-t" style="bottom:12mm;right:4mm;width:5mm;height:7mm;opacity:.03" viewBox="0 0 100 120"><path d="M50 5 L85 45 L70 45 L90 80 L65 80 L75 110 L25 110 L35 80 L10 80 L30 45 L15 45 Z" fill="#FB8C00"/></svg>
+        <div class="wm wm-c" style="width:8mm;height:8mm;bottom:10mm;right:3mm;border-color:#2E7D32"></div>
+        <span class="wm wm-s" style="top:20mm;right:5mm;font-size:2mm">&#9733;</span>
+        <span class="wm wm-s" style="top:8mm;left:60mm;font-size:1.5mm">&#9733;</span>
+        <span class="wm wm-s" style="bottom:14mm;left:5mm;font-size:1.8mm">&#9733;</span>
+        <span class="wm wm-l" style="top:22mm;left:4mm">&#127811;</span>
+        <span class="wm wm-l" style="bottom:16mm;right:8mm;font-size:1.5mm">&#127811;</span>
+        <div class="wm wm-d" style="width:2mm;height:2mm;top:16mm;left:70mm;background:#FFC107"></div>
+        <div class="wm wm-d" style="width:1.5mm;height:1.5mm;bottom:18mm;left:50mm;background:#FB8C00"></div>
+
+        <svg class="mascot" style="top:1mm;left:1mm;width:6mm;height:6mm;opacity:.75" viewBox="0 0 100 100">
+          <circle cx="50" cy="50" r="26" fill="#FFC107"/><circle cx="50" cy="50" r="20" fill="#FFD54F"/>
+          <circle cx="43" cy="46" r="3.2" fill="white"/><circle cx="57" cy="46" r="3.2" fill="white"/>
+          <circle cx="44" cy="47" r="1.6" fill="#0D2C54"/><circle cx="58" cy="47" r="1.6" fill="#0D2C54"/>
+          <path d="M 42 54 Q 50 60 58 54" stroke="#0D2C54" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+          <line x1="50" y1="18" x2="50" y2="11" stroke="#FFC107" stroke-width="2" stroke-linecap="round"/>
+          <line x1="26" y1="30" x2="20" y2="25" stroke="#FFC107" stroke-width="2" stroke-linecap="round"/>
+          <line x1="74" y1="30" x2="80" y2="25" stroke="#FFC107" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <svg class="mascot" style="bottom:3mm;right:1mm;width:8mm;height:8mm" viewBox="0 0 100 100">
+          <polygon points="50,8 93,38 76,88 24,88 7,38" fill="#2E7D32" stroke="#1B5E20" stroke-width="2.5"/>
+          <circle cx="38" cy="40" r="4.5" fill="white"/><circle cx="62" cy="40" r="4.5" fill="white"/>
+          <circle cx="39" cy="41" r="2.2" fill="#0D2C54"/><circle cx="63" cy="41" r="2.2" fill="#0D2C54"/>
+          <path d="M 36 54 Q 50 63 64 54" stroke="#0D2C54" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+          <circle cx="33" cy="52" r="1.8" fill="#A5D6A7" opacity=".5"/><circle cx="67" cy="52" r="1.8" fill="#A5D6A7" opacity=".5"/>
+          <line x1="88" y1="35" x2="95" y2="28" stroke="#1B5E20" stroke-width="2.5" stroke-linecap="round"/><circle cx="95" cy="26" r="2.5" fill="#2E7D32"/>
+        </svg>
+        <svg class="mascot" style="bottom:4mm;left:1.5mm;width:6mm;height:6.5mm;opacity:.65" viewBox="0 0 100 100">
+          <polygon points="50,12 85,82 15,82" fill="#FB8C00" stroke="#E65100" stroke-width="2.5"/>
+          <circle cx="40" cy="48" r="3.5" fill="white"/><circle cx="60" cy="48" r="3.5" fill="white"/>
+          <circle cx="41" cy="49" r="1.8" fill="#0D2C54"/><circle cx="61" cy="49" r="1.8" fill="#0D2C54"/>
+          <path d="M 38 60 Q 50 68 62 60" stroke="#0D2C54" stroke-width="2" fill="none" stroke-linecap="round"/>
+        </svg>
+
+        <div class="b-top">
+          <div style="text-align:center">
+            <div class="b-logo"><img src="${logoUrl}" alt="Logo"></div>
+            <div class="b-title">Colegio Montessori</div>
+            <div class="b-sub">Sonrisas Creativas</div>
+          </div>
+        </div>
+        <div class="b-body">
+          <div class="b-notice">&#128274; Este carnet es propiedad del ${school}.<br>En caso de p&eacute;rdida favor devolver a la instituci&oacute;n.</div>
+          <div class="b-contact">
+            <div class="b-ci"><span class="b-cicon">&#9742;</span> ${phone}</div>
+            <div class="b-ci"><span class="b-cicon">&#9993;</span> ${email}</div>
+            <div class="b-ci"><span class="b-cicon">&#127760;</span> ${web}</div>
+            <div class="b-ci"><span class="b-cicon">&#128205;</span> ${address}</div>
+          </div>
+        </div>
+        <div class="b-bot">
+          <span class="b-val">RESPETO</span><span class="b-vdot">&bull;</span>
+          <span class="b-val">AMOR</span><span class="b-vdot">&bull;</span>
+          <span class="b-val">CREATIVIDAD</span><span class="b-vdot">&bull;</span>
+          <span class="b-val">DISCIPLINA</span><span class="b-vdot">&bull;</span>
+          <span class="b-val">INDEPENDENCIA</span><span class="b-vdot">&bull;</span>
+          <span class="b-val">EMPAT&#205;A</span><span class="b-vdot">&bull;</span>
+          <span class="b-val">SOLIDARIDAD</span>
+        </div>
+      </div>
+    </div>`;
+    }).join('\n');
 
     const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Carnets Estudiantes</title>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Baloo+2:wght@400;600;700;800&display=swap');
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Nunito',sans-serif;background:white;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-.page{width:210mm;margin:0 auto;padding:8mm}
-.cards-grid{display:flex;flex-wrap:wrap;gap:4mm;justify-content:flex-start}
-.card-single{width:85.6mm;height:54mm;border-radius:4mm;overflow:hidden;position:relative;border:1.5pt solid #28B54D;background:white;flex-shrink:0;display:flex;flex-direction:column}
-/* Cabecera del carnet */
-.card-header{background:linear-gradient(135deg,#28B54D 0%,#1A8035 100%);width:100%;height:9mm;display:flex;align-items:center;justify-content:space-between;padding:0 3mm;flex-shrink:0}
-.school-title{color:white;font-size:5pt;font-weight:900;letter-spacing:.2pt;text-transform:uppercase}
-/* Cuerpo dividido en 2 mitades (50 / 50) */
-.card-body-split{flex:1;display:flex;width:100%;height:calc(100% - 15mm)}
-/* Mitad Izquierda - QR */
-.split-left-qr{width:50%;border-right:1px dashed #e2e8f0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#fafafb;padding:1.5mm}
-.qr-container{width:28mm;height:28mm;background:white;border:1pt solid #28B54D;border-radius:1.5mm;padding:1mm;display:flex;align-items:center;justify-content:center}
-.qr-container img{width:100%;height:100%}
-.qr-helper-text{font-size:4.5pt;font-weight:900;color:#718096;margin-top:1mm;text-transform:uppercase;letter-spacing:.3pt}
-/* Mitad Derecha - Información y Foto del Estudiante */
-.split-right-info{width:50%;display:flex;flex-direction:column;justify-content:space-between;padding:2mm 3mm}
-.student-badge-row{display:flex;align-items:center;gap:2mm}
-/* Foto del estudiante redondeada */
-.student-avatar{width:11mm;height:11mm;border-radius:2mm;border:1pt solid #FF8A00;background:#fff8f0;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.student-avatar-placeholder{font-size:12pt;color:#FF8A00}
-/* Bloque de datos */
-.student-data{display:flex;flex-direction:column}
-.student-name{font-size:6.5pt;font-weight:900;color:#1A2340;line-height:1.1;margin-bottom:.5mm}
-.student-id{font-size:5.5pt;font-weight:900;color:#FF8A00;font-family:monospace}
-.academic-details{display:flex;flex-direction:column;gap:.5mm;margin-top:1mm}
-.detail-item{display:flex;flex-direction:column}
-.detail-label{font-size:4pt;font-weight:900;color:#a0aec0;text-transform:uppercase;letter-spacing:.2pt}
-.detail-value{font-size:5.2pt;font-weight:700;color:#2d3748}
-/* Pie de carnet */
-.card-footer{background:#1A2340;height:6mm;display:flex;align-items:center;justify-content:space-between;padding:0 3mm;flex-shrink:0}
-.footer-text{color:rgba(255,255,255,.8);font-size:4.5pt;font-weight:800;letter-spacing:.5pt;text-transform:uppercase}
-@media print{@page{size:A4;margin:0}.page{padding:6mm}}
+body{font-family:'Nunito',sans-serif;background:#e8ecf1;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.page{width:210mm;height:297mm;margin:0 auto;padding:5mm;background:#e8ecf1;display:flex;flex-wrap:wrap;align-content:flex-start;justify-content:center;gap:0}
+.carnet-pair{width:96mm;display:flex;flex-direction:column;align-items:center;margin:1.5mm auto;flex-shrink:0;gap:1.2mm}
+.carnet{width:85.6mm;height:53.98mm;border-radius:3.5mm;overflow:hidden;position:relative;background:white;box-shadow:0 2px 10px rgba(0,0,0,.12),0 0 0 0.3pt #d1d9e6;flex-shrink:0}
+.mascot{position:absolute;pointer-events:none;z-index:4;filter:drop-shadow(0 1px 2px rgba(0,0,0,.15))}
+.f-top{display:flex;align-items:center;justify-content:space-between;padding:1.8mm 2.5mm 1.5mm;background:linear-gradient(135deg,#f0faf0 0%,#e8f5e9 50%,#E3F2FD 100%);border-bottom:0.35mm solid #2E7D32;position:relative;z-index:2}
+.f-logo-w{display:flex;align-items:center;gap:1.5mm}
+.f-logo{width:9mm;height:9mm;border-radius:2mm;overflow:hidden;border:0.3mm solid #2E7D32;box-shadow:0 1px 3px rgba(0,0,0,.15);flex-shrink:0;background:white}
+.f-logo img{width:100%;height:100%;object-fit:cover}
+.f-school{display:flex;flex-direction:column}
+.f-school-n{font-family:'Baloo 2',cursive;font-size:4.8pt;font-weight:800;color:#0D2C54;line-height:1.1}
+.f-school-s{font-family:'Baloo 2',cursive;font-size:3.2pt;font-weight:700;color:#2E7D32;line-height:1}
+.f-year{font-family:'Baloo 2',cursive;font-size:4.5pt;font-weight:800;color:white;background:linear-gradient(135deg,#1565C0,#0D2C54);padding:0.8mm 2mm;border-radius:1.8mm;line-height:1;box-shadow:0 1px 3px rgba(21,101,192,.3)}
+.f-body{display:flex;height:calc(100% - 13mm);position:relative;z-index:1}
+.f-qr{width:38%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1.2mm 0.8mm;position:relative;background:linear-gradient(180deg,rgba(46,125,50,.03) 0%,rgba(255,255,255,0) 100%)}
+.f-qr-box{width:25mm;height:25mm;background:white;border:0.5mm solid #2E7D32;border-radius:2.5mm;padding:1.5mm;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(46,125,50,.15);position:relative}
+.f-qr-box img{width:100%;height:100%;display:block}
+.f-qr-lbl{font-size:2.6pt;font-weight:800;color:#718096;text-transform:uppercase;letter-spacing:0.1pt;margin-top:1mm;text-align:center;line-height:1.3}
+.f-qr-ico{font-size:2.8pt;color:#2E7D32;margin-top:0.2mm}
+.f-divider{width:0.3mm;background:linear-gradient(180deg,rgba(46,125,50,.0) 0%,rgba(46,125,50,.25) 30%,rgba(46,125,50,.25) 70%,rgba(46,125,50,.0) 100%);flex-shrink:0;margin:1.5mm 0}
+.f-info{width:62%;display:flex;flex-direction:column;justify-content:center;padding:1mm 2.5mm 0.8mm 1.5mm;position:relative}
+.f-name{font-family:'Baloo 2',cursive;font-size:6pt;font-weight:800;color:#0D2C54;line-height:1.12;margin-bottom:0.3mm;text-shadow:0 0.5px 0 rgba(0,0,0,.04)}
+.f-mat{font-size:3.5pt;font-weight:800;color:#FB8C00;letter-spacing:0.08pt;margin-bottom:1mm;padding:0.3mm 1.2mm;background:#FFF3E0;border-radius:1mm;display:inline-block;width-fit}
+.f-fields{display:flex;flex-direction:column;gap:0.5mm}
+.f-field{display:flex;align-items:center;gap:0.8mm}
+.f-fi{width:3mm;height:3mm;border-radius:0.8mm;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:2.5pt}
+.f-fi.grn{background:#E8F5E9;color:#2E7D32}.f-fi.blu{background:#E3F2FD;color:#1565C0}.f-fi.org{background:#FFF3E0;color:#FB8C00}.f-fi.ylw{background:#FFFDE7;color:#F57F17}
+.f-ft{display:flex;flex-direction:column}
+.f-fl{font-size:2.3pt;font-weight:800;color:#90A4AE;text-transform:uppercase;letter-spacing:0.1pt;line-height:1}
+.f-fv{font-size:3.5pt;font-weight:700;color:#37474F;line-height:1.12}
+.f-bot{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(135deg,#0D2C54 0%,#1565C0 100%);padding:1.1mm 2.5mm;display:flex;align-items:center;justify-content:space-between;z-index:2}
+.f-bot-l{display:flex;align-items:center;gap:1.2mm}
+.f-shield{font-size:3pt;color:#FFC107}
+.f-sec{font-size:2.6pt;font-weight:800;color:rgba(255,255,255,.9);letter-spacing:0.12pt;text-transform:uppercase}
+.f-motto{font-size:2.4pt;font-weight:700;color:rgba(255,255,255,.6);font-style:italic}
+.f-motto .heart{color:#FB8C00}
+.b-top{display:flex;align-items:center;justify-content:center;padding:2mm 3mm 1.5mm;background:linear-gradient(135deg,#f0faf0 0%,#e8f5e9 50%,#FFF3E0 100%);border-bottom:0.3mm solid #2E7D32;position:relative;z-index:2}
+.b-logo{width:17mm;height:17mm;border-radius:3.5mm;overflow:hidden;border:0.4mm solid #2E7D32;box-shadow:0 2px 8px rgba(0,0,0,.12);background:white}
+.b-logo img{width:100%;height:100%;object-fit:cover}
+.b-title{font-family:'Baloo 2',cursive;font-size:5pt;font-weight:800;color:#0D2C54;text-align:center;margin-top:0.8mm;line-height:1.1}
+.b-sub{font-size:3.2pt;font-weight:600;color:#718096;text-align:center;line-height:1.1;margin-top:0.3mm}
+.b-body{padding:1.5mm 3.5mm;display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;position:relative;z-index:1}
+.b-notice{font-size:3.2pt;font-weight:600;color:#546E7A;text-align:center;line-height:1.4;padding:1.2mm 2mm;background:#F5F5F5;border-radius:1.5mm;border-left:0.4mm solid #FB8C00;margin-bottom:1mm}
+.b-contact{display:flex;flex-wrap:wrap;justify-content:center;gap:0.8mm 2.5mm;margin-bottom:1mm}
+.b-ci{display:flex;align-items:center;gap:0.6mm;font-size:3pt;font-weight:600;color:#455A64}
+.b-cicon{font-size:3pt}
+.b-bot{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(135deg,#0D2C54 0%,#1565C0 100%);padding:1mm 2.5mm;display:flex;align-items:center;justify-content:center;z-index:2;gap:1.2mm;flex-wrap:wrap}
+.b-val{font-size:2.4pt;font-weight:800;color:rgba(255,255,255,.85);letter-spacing:0.1pt;text-transform:uppercase}
+.b-vdot{font-size:1.8pt;color:#FFC107}
+.wm{position:absolute;pointer-events:none}
+.wm-c{border-radius:50%;border:0.25mm solid;opacity:.06}
+.wm-t{opacity:.035;pointer-events:none}
+.wm-l{opacity:.045;pointer-events:none;font-size:2.5mm;color:#2E7D32}
+.wm-s{opacity:.055;pointer-events:none;font-size:2.2mm;color:#FFC107}
+.wm-d{border-radius:50%;opacity:.05}
+@media print{body{background:white;margin:0;padding:0}.page{padding:3mm;background:white;gap:0}.carnet{box-shadow:none;page-break-inside:avoid}.carnet-pair{page-break-inside:avoid}@page{size:A4 portrait;margin:4mm}}
 </style></head><body>
-<div class="page"><div class="cards-grid">${cardsHTML}</div></div>
+<div class="page">${cardsHTML}</div>
 <script>window.onload=()=>{setTimeout(()=>{window.print();setTimeout(()=>window.close(),800)},800)}<\/script>
 </body></html>`;
 

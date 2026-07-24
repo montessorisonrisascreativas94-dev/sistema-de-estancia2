@@ -78,6 +78,7 @@ window.App = {
     openScheduleConfig:       Routine.openScheduleConfig,
     resetScheduleConfig:      Routine.resetScheduleConfig,
     toggleTimeline:           Routine.toggleTimeline,
+    toggleTimelineActive:     Routine.toggleTimelineActive,
     _toggleViewMode:          Routine._toggleViewModeFn,
 
   // Tasks

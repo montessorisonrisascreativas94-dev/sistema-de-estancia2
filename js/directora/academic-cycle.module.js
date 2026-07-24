@@ -227,6 +227,21 @@ export const AcademicCycleModule = {
     }
   },
 
+  async openAdmitModal(preinscId) {
+    try {
+      const { data: pre } = await supabase
+        .from('student_preregistrations')
+        .select('*')
+        .eq('id', preinscId)
+        .single();
+      if (!pre) { Helpers.toast('Preinscripción no encontrada', 'error'); return; }
+      const { StudentRecordModal } = await import('../shared/student-record-modal.js');
+      StudentRecordModal.open('admit', null, pre);
+    } catch (e) {
+      Helpers.toast('Error al cargar preinscripción: ' + (e.message || e), 'error');
+    }
+  },
+
   async viewPreinsc(id){
     const {data:r}=await supabase.from('student_preregistrations').select('*').eq('id',id).single();
     if(!r)return;
@@ -360,7 +375,7 @@ export const AcademicCycleModule = {
           </button>
         `:''}
         ${(r.status==='pending'||r.status==='admitted')?`
-          <button onclick="App.ui.closeModal();App.academic.convertPreinsc(${r.id})" class="px-4 py-2 text-white font-black text-xs uppercase rounded-xl" style="background:#28B54D">
+          <button onclick="App.ui.closeModal();App.academic.openAdmitModal(${r.id})" class="px-4 py-2 text-white font-black text-xs uppercase rounded-xl" style="background:#28B54D">
             🎉 Completar Inscripción
           </button>
         `:''}

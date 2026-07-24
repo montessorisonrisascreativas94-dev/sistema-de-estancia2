@@ -314,6 +314,26 @@ function _msgBubble(m, myId) {
   </div>`;
 }
 
+function _updatePresenceIndicator(presenceState, myId) {
+  const metaEl = document.getElementById('chatActiveMeta');
+  if (!metaEl) return;
+  const currentMeta = metaEl.dataset.original || metaEl.textContent;
+  if (!metaEl.dataset.original) metaEl.dataset.original = currentMeta;
+
+  const onlineUserIds = new Set();
+  for (const [key, presences] of Object.entries(presenceState)) {
+    for (const p of presences) {
+      if (p.user_id && p.user_id !== myId) onlineUserIds.add(p.user_id);
+    }
+  }
+
+  if (onlineUserIds.size > 0) {
+    metaEl.innerHTML = `${safeEscapeHTML(metaEl.dataset.original)} <span class="inline-flex items-center gap-1 text-green-600 font-bold"><span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>En línea</span>`;
+  } else {
+    metaEl.textContent = metaEl.dataset.original;
+  }
+}
+
 function renderMessages(messages, myId, container) {
   if (!messages.length) return;
   container.innerHTML = messages.map(m => _msgBubble(m, myId)).join('');
@@ -370,7 +390,7 @@ function subscribeToChat(conversationId) {
   
   ChatModule.subscribeToConversation(conversationId, 
     (newMsg) => {
-      if (newMsg.sender_id === user?.id) return; // ya está en UI (optimistic)
+      if (newMsg.sender_id === user?.id) return;
       const container = document.getElementById('chatMessagesContainer');
       if (container) {
         container.insertAdjacentHTML('beforeend', _msgBubble(newMsg, user?.id));
@@ -378,7 +398,6 @@ function subscribeToChat(conversationId) {
       }
     },
     (typingData) => {
-      // ✅ TYPING INDICATOR
       const typingEl = document.getElementById('chatTypingIndicator');
       if (!typingEl) return;
       
@@ -388,6 +407,9 @@ function subscribeToChat(conversationId) {
       } else {
         typingEl.classList.add('hidden');
       }
+    },
+    (presenceState) => {
+      _updatePresenceIndicator(presenceState, user?.id);
     }
   );
 

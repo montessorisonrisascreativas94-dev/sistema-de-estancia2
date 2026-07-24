@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" class="panel-padre-scroll">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
@@ -82,10 +82,10 @@
       min-height: 100vh;
     }
     @media (max-width: 767px) {
-      html { overflow-y: auto !important; -webkit-overflow-scrolling: touch !important; }
-      body { overflow: visible !important; overflow-x: hidden !important; overflow-y: auto !important; -webkit-overflow-scrolling: touch !important; height: auto !important; position: relative !important; }
-      .app-panel-padre { min-height: auto !important; height: auto !important; overflow: visible !important; }
-      #layoutShell { overflow: visible !important; height: auto !important; min-height: auto !important; position: relative !important; flex: 1 1 0% !important; }
+      html { overflow: auto !important; -webkit-overflow-scrolling: touch !important; }
+      body { overflow: auto !important; -webkit-overflow-scrolling: touch !important; height: auto !important; position: relative !important; }
+      .app-panel-padre, .app { display: block !important; min-height: auto !important; height: auto !important; overflow: visible !important; }
+      #layoutShell { overflow: visible !important; height: auto !important; min-height: auto !important; position: relative !important; }
       .section { overflow: visible !important; }
     }
     
@@ -312,8 +312,8 @@
 
       /* ── BODY: scrollable on mobile ── */
       body.panel-padre-body {
-        overflow-y: auto !important;
-        overflow-x: hidden !important;
+        overflow: auto !important;
+        -webkit-overflow-scrolling: touch !important;
         height: auto !important;
         position: relative !important;
       }
@@ -414,7 +414,7 @@
     }
   </style>
 </head>
-<body class="text-slate-700 panel-padre-body overflow-x-hidden min-h-screen" style="background: var(--bg-gray);" aria-label="Panel de padres Sonrisas Creativas">
+<body class="text-slate-700 panel-padre-body min-h-screen" style="background: var(--bg-gray);" aria-label="Panel de padres Sonrisas Creativas">
 
   <!-- Overlay de Carga Inicial — Skeleton en lugar de spinner -->
   <div id="initialLoading" style="background:#f1f5f9;padding:24px;overflow:hidden;position:fixed;inset:0;z-index:9999;">
@@ -602,7 +602,7 @@
     </aside>
     
     <!-- CONTENIDO PRINCIPAL -->
-      <main id="layoutShell" class="flex-1 transition-all duration-300 min-h-screen">
+      <main id="layoutShell" class="flex-1 transition-all duration-300">
       
       <!-- Header Móvil -->
       <div class="sticky top-0 z-30 bg-white/80 backdrop-blur-lg border-b border-[#E2E8F0] px-4 py-4 flex items-center gap-4 md:hidden">

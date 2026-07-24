@@ -327,15 +327,32 @@ export const ChatModule = {
         }
       },
       (typingData) => {
-        // ? TYPING INDICATOR
         const typingEl = document.getElementById('chatTypingIndicator');
         if (!typingEl) return;
         
         if (typingData.isTyping && typingData.userId !== this._currentUserId) {
-          typingEl.textContent = `${typingData.userName} est� escribiendo...`;
+          typingEl.textContent = `${typingData.userName} está escribiendo...`;
           typingEl.classList.remove('hidden');
         } else {
           typingEl.classList.add('hidden');
+        }
+      },
+      (presenceState) => {
+        const metaEl = document.getElementById('chatActiveMeta');
+        if (!metaEl) return;
+        if (!metaEl.dataset.original) metaEl.dataset.original = metaEl.textContent;
+
+        const onlineUserIds = new Set();
+        for (const [, presences] of Object.entries(presenceState)) {
+          for (const p of presences) {
+            if (p.user_id && p.user_id !== this._currentUserId) onlineUserIds.add(p.user_id);
+          }
+        }
+
+        if (onlineUserIds.size > 0) {
+          metaEl.innerHTML = `${Helpers.escapeHTML(metaEl.dataset.original)} <span class="inline-flex items-center gap-1 text-green-600 font-bold"><span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>En línea</span>`;
+        } else {
+          metaEl.textContent = metaEl.dataset.original;
         }
       }
     );

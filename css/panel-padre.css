@@ -42,6 +42,7 @@ body.panel-padre-body {
   color: var(--p-text);
   min-height: 100vh;
   overflow-x: hidden;
+  overscroll-behavior-y: auto;
 }
 body.panel-padre-body::before,
 body.panel-padre-body::after { display: none !important; }
@@ -153,10 +154,11 @@ body.panel-padre-body #btnLogout:hover {
 /* Mobile nav */
 @media (max-width: 767px) {
   body.panel-padre-body {
-    overflow-y: auto !important;
-    overflow-x: hidden !important;
+    overflow: auto !important;
+    -webkit-overflow-scrolling: touch !important;
     height: auto !important;
     position: relative !important;
+    overscroll-behavior-y: auto !important;
   }
   body.panel-padre-body #layoutShell {
     overflow: visible !important;
@@ -792,24 +794,67 @@ body.panel-padre-body .cloud-card:hover {
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* ── PRODUCTION: Touch-friendly tap targets on mobile ─────── */
+/* ══════════════════════════════════════════════════════════════
+   PANEL PADRE — MOBILE SCROLL FIX
+   Neutraliza TODOS los bloqueadores de scroll de CSS externos:
+   - layout.css: overflow-x hidden en html,body + .app min-height
+   - premium-mobile.css: overscroll-behavior-y contain
+   - Tailwind: overflow-x-hidden + min-h-screen en body/layoutShell
+   ══════════════════════════════════════════════════════════════ */
 @media (max-width: 767px) {
-  .concept-btn, .month-btn { min-height: 44px; }
-  body.panel-padre-body .sidebar-node { min-height: 44px; }
-  /* Fix: flex container must not constrain height on mobile */
+  /* 1. Body: eliminar TODOS los overflow que bloquean scroll vertical */
+  html.panel-padre-scroll,
+  html.panel-padre-scroll body,
+  body.panel-padre-body {
+    overflow: auto !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    overscroll-behavior-y: auto !important;
+    height: auto !important;
+    max-height: none !important;
+    position: relative !important;
+    min-height: 0 !important;
+  }
+
+  /* 2. Flex container (.app): no debe crear scroll context ni restringir altura */
+  body.panel-padre-body .app,
   body.panel-padre-body .app-panel-padre,
   body.panel-padre-body .flex.min-h-screen {
+    display: block !important;
     min-height: auto !important;
     height: auto !important;
+    max-height: none !important;
     overflow: visible !important;
-    display: block !important;
+    overflow-y: visible !important;
   }
-  body.panel-padre-body #layoutShell {
+
+  /* 3. layoutShell: contenido principal — crece con su contenido */
+  body.panel-padre-body #layoutShell,
+  body.panel-padre-body main {
+    flex: none !important;
+    min-height: auto !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    overflow-y: visible !important;
     width: 100% !important;
     margin-left: 0 !important;
-    overflow: visible !important;
-    min-height: auto !important;
-    height: auto !important;
-    flex: none !important;
   }
+
+  /* 4. Secciones: visibles para que el contenido determine la altura */
+  body.panel-padre-body .section,
+  body.panel-padre-body #contentArea {
+    overflow: visible !important;
+    height: auto !important;
+  }
+
+  /* 5. Header móvil sticky: no debe interferir con el scroll del body */
+  body.panel-padre-body .sticky {
+    position: sticky !important;
+  }
+
+  /* Touch-friendly tap targets */
+  .concept-btn, .month-btn { min-height: 44px; }
+  body.panel-padre-body .sidebar-node { min-height: 44px; }
 }

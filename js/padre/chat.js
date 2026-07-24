@@ -293,16 +293,13 @@ export const ChatModule = {
         if (newMsg.sender_id !== user?.id) {
           const container = document.getElementById('chatMessages');
           if (container) {
-            // Remove typing indicator if present
             document.getElementById('typing-indicator')?.remove();
             container.appendChild(this._buildBubble(newMsg, user?.id));
             ScrollModule.scrollToBottom(container, true);
           }
-          // Mark as read
           SharedChatModule.markAsRead(this._conversationId);
         }
       },
-      // Typing callback
       ({ userName, isTyping }) => {
         const container = document.getElementById('chatMessages');
         if (!container) return;
@@ -325,6 +322,24 @@ export const ChatModule = {
           }
         } else {
           existing?.remove();
+        }
+      },
+      (presenceState) => {
+        const metaEl = document.getElementById('chatActiveMeta');
+        if (!metaEl) return;
+        if (!metaEl.dataset.original) metaEl.dataset.original = metaEl.textContent;
+
+        const onlineUserIds = new Set();
+        for (const [, presences] of Object.entries(presenceState)) {
+          for (const p of presences) {
+            if (p.user_id && p.user_id !== user?.id) onlineUserIds.add(p.user_id);
+          }
+        }
+
+        if (onlineUserIds.size > 0) {
+          metaEl.innerHTML = escapeHtml(metaEl.dataset.original) + ' <span class="inline-flex items-center gap-1 text-green-600 font-bold"><span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>En línea</span>';
+        } else {
+          metaEl.textContent = metaEl.dataset.original;
         }
       }
     );
