@@ -477,13 +477,14 @@
 
   <script src="js/shared/supabase-js.min.js"></script>
   <script>
-    let html5QrCodeScanner = null;
+    let html5QrCode = null;
     let isFacingBack = true;
     let isFullscreen = false;
     let countIn = 0;
     let countOut = 0;
     let countTotal = 0;
     let deferredPrompt = null;
+    let isScannerStarting = false;
 
     function updateClock() {
       const now = new Date();
@@ -498,39 +499,65 @@
     updateClock();
     setInterval(updateClock, 1000);
 
-    // Function to explicitly request camera permission
-    async function requestCameraPermission() {
-      try {
-        const facingMode = isFacingBack ? "environment" : "user";
-        const stream = await navigator.mediaDevices.getUserMedia({ 
-          video: { facingMode: facingMode } 
-        });
-        stream.getTracks().forEach(t => t.stop());
-        return true;
-      } catch (err) {
-        console.error("Camera permission denied:", err);
-        return false;
+    async function stopScanner() {
+      if (html5QrCode) {
+        try {
+          const state = html5QrCode.getState();
+          if (state === 2) {
+            await html5QrCode.stop();
+          }
+        } catch(e) {}
+        try { html5QrCode.clear(); } catch(e) {}
+        html5QrCode = null;
       }
     }
 
     async function startScanner() {
-      const permissionGranted = await requestCameraPermission();
-      if (!permissionGranted) {
-        document.getElementById('camModal').classList.add('show');
-        return;
-      }
+      if (isScannerStarting) return;
+      isScannerStarting = true;
 
-      const facingMode = isFacingBack ? { facingMode: "environment" } : { facingMode: "user" };
-      const config = { fps: 10, qrbox: { width: 250, height: 250 } };
-      
-      if (html5QrCodeScanner) {
-        html5QrCodeScanner.clear().then(() => {
-          html5QrCodeScanner.start(facingMode, config, onScanSuccess, onScanFailure);
-        });
-      } else {
-        html5QrCodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 }, false);
-        html5QrCodeScanner.render(onScanSuccess, onScanFailure);
-        document.getElementById('reader__dashboard').style.display = 'none';
+      try {
+        await stopScanner();
+        await new Promise(r => setTimeout(r, 300));
+
+        const facingMode = isFacingBack ? "environment" : "user";
+        html5QrCode = new Html5Qrcode("reader");
+
+        const config = {
+          fps: 10,
+          qrbox: function(viewfinderWidth, viewfinderHeight) {
+            const minDim = Math.min(viewfinderWidth, viewfinderHeight);
+            const size = Math.floor(minDim * 0.7);
+            return { width: size, height: size };
+          },
+          aspectRatio: 1.0,
+          disableFlip: false
+        };
+
+        await html5QrCode.start(
+          { facingMode: facingMode },
+          config,
+          onScanSuccess,
+          onScanFailure
+        );
+
+        document.getElementById('camModal').classList.remove('show');
+        document.getElementById('hintText').textContent = '📷 Apunta el código QR a la cámara · 🔄 cambiar cámara · ⛶ pantalla completa';
+      } catch(err) {
+        console.error("Error starting camera:", err);
+        const hint = document.getElementById('hintText');
+        if (err.toString().includes('NotAllowedError') || err.toString().includes('Permission')) {
+          hint.textContent = '⚠️ Permiso de cámara denegado. Recargue la página y permita el acceso.';
+        } else if (err.toString().includes('NotFoundError')) {
+          hint.textContent = '⚠️ No se encontró cámara. Conecte una cámara y recargue.';
+        } else if (err.toString().includes('NotReadableError')) {
+          hint.textContent = '⚠️ Camera en uso por otra app. Cierre otras apps de cámara e intente de nuevo.';
+        } else {
+          hint.textContent = '⚠️ Error al iniciar cámara. Toque el ícono 🔄 para reintentar.';
+        }
+        document.getElementById('camModal').classList.add('show');
+      } finally {
+        isScannerStarting = false;
       }
     }
 
@@ -542,8 +569,10 @@
     function onScanFailure(error) {
     }
 
-    document.getElementById('btnToggleCam').addEventListener('click', () => {
+    document.getElementById('btnToggleCam').addEventListener('click', async () => {
       isFacingBack = !isFacingBack;
+      await stopScanner();
+      await new Promise(r => setTimeout(r, 500));
       startScanner();
     });
 
@@ -572,7 +601,6 @@
       try {
         data = JSON.parse(qrData);
       } catch(e) {
-        // Handle possible formats: maybe "matricula|nombre|role|type" or similar
         const parts = qrData.split('|');
         if (parts.length >= 2) {
           data = {

@@ -161,6 +161,7 @@ body.panel-padre-body #btnLogout:hover {
   body.panel-padre-body #layoutShell {
     overflow: visible !important;
     height: auto !important;
+    min-height: auto !important;
   }
   body.panel-padre-body #sidebar {
     border-radius: 20px !important;
@@ -795,4 +796,20 @@ body.panel-padre-body .cloud-card:hover {
 @media (max-width: 767px) {
   .concept-btn, .month-btn { min-height: 44px; }
   body.panel-padre-body .sidebar-node { min-height: 44px; }
+  /* Fix: flex container must not constrain height on mobile */
+  body.panel-padre-body .app-panel-padre,
+  body.panel-padre-body .flex.min-h-screen {
+    min-height: auto !important;
+    height: auto !important;
+    overflow: visible !important;
+    display: block !important;
+  }
+  body.panel-padre-body #layoutShell {
+    width: 100% !important;
+    margin-left: 0 !important;
+    overflow: visible !important;
+    min-height: auto !important;
+    height: auto !important;
+    flex: none !important;
+  }
 }
