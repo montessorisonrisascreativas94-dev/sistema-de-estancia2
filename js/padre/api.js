@@ -108,7 +108,7 @@ export const Api = {
           'getTaskGrades'
         ),
         handle(supabase.from(TABLES.GRADES)
-          .select('id, subject, score, period, created_at')
+          .select('id, subject, score, numeric_score, period_id, periods(name), created_at')
           .eq('student_id', studentId)
           .order('created_at', { ascending: false })
           .limit(20), 'getReportGrades')

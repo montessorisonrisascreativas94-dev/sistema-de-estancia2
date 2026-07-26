@@ -9,11 +9,11 @@ const MES = ['enero','febrero','marzo','abril','mayo','junio',
              'julio','agosto','septiembre','octubre','noviembre','diciembre'];
 
 // ── Helpers exportados ────────────────────────────────────────────────────────
-export function calcMora(dueDate) {
-  return Helpers.calculateMora(dueDate);
+export function calcMora(dueDate, baseAmount = 0) {
+  return Helpers.calculateMora(dueDate, baseAmount);
 }
-export function getMoraBreakdown(dueDate) {
-  return Helpers.getMoraBreakdown(dueDate);
+export function getMoraBreakdown(dueDate, baseAmount = 0) {
+  return Helpers.getMoraBreakdown(dueDate, baseAmount);
 }
 export function normalizeStatus(p) {
   const s = (p.status || '').toLowerCase();

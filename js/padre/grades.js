@@ -226,30 +226,6 @@ export const GradesModule = {
     return { label: 'Necesita mejorar', color: 'text-red-200' };
   },
 
-  renderGradeCard(g) {
-    const score = parseFloat(g.score) || 0;
-    const color = score >= 90 ? 'text-emerald-500' : (score >= 70 ? 'text-blue-500' : 'text-amber-500');
-    const bg = score >= 90 ? 'bg-emerald-50' : (score >= 70 ? 'bg-blue-50' : 'bg-amber-50');
-    
-    return `
-      <div class="bg-white p-4 rounded-3xl border-2 border-slate-50 shadow-sm hover:shadow-md transition-all flex items-center justify-between group">
-        <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-xl ${bg} flex items-center justify-center group-hover:scale-110 transition-transform">
-            <i data-lucide="book" class="w-5 h-5 ${color}"></i>
-          </div>
-          <div>
-            <h4 class="font-bold text-slate-700 text-sm">${escapeHtml(g.subject || 'Materia')}</h4>
-            <p class="text-[9px] text-slate-400 font-bold uppercase tracking-widest">${Helpers.formatDate(g.created_at)}</p>
-          </div>
-        </div>
-        <div class="text-right">
-          <div class="text-xl font-black ${color}">${score}</div>
-          <p class="text-[8px] font-bold uppercase text-slate-300">Puntaje</p>
-        </div>
-      </div>
-    `;
-  },
-
   renderTaskEvidenceCard(t) {
     // Prefer numeric score display
     const numScore = t.numeric_score != null ? parseFloat(t.numeric_score) : null;
@@ -310,59 +286,4 @@ export const GradesModule = {
     `;
   },
 
-  renderChart(grades) {
-    const canvas = document.getElementById('gradesChart');
-    if (!canvas || !window.Chart || grades.length === 0) return;
-
-    const chartData = [...grades].slice(0, 8).reverse();
-    const labels = chartData.map(g => g.subject || 'Materia');
-    const scores = chartData.map(g => parseFloat(g.score) || 0);
-
-    new Chart(canvas, {
-      type: 'line',
-      data: {
-        labels: labels,
-        datasets: [{
-          label: 'Puntaje',
-          data: scores,
-          borderColor: '#6366f1',
-          backgroundColor: 'rgba(99, 102, 241, 0.05)',
-          borderWidth: 3,
-          tension: 0.4,
-          pointBackgroundColor: '#ffffff',
-          pointBorderColor: '#6366f1',
-          pointBorderWidth: 2,
-          pointRadius: 4,
-          fill: true
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            backgroundColor: '#1e293b',
-            titleFont: { family: 'Nunito', size: 12, weight: 'bold' },
-            bodyFont: { family: 'Nunito', size: 11 },
-            padding: 10,
-            cornerRadius: 12,
-            displayColors: false
-          }
-        },
-        scales: {
-          y: {
-            beginAtZero: true,
-            max: 100,
-            grid: { color: '#f1f5f9', drawBorder: false },
-            ticks: { font: { family: 'Nunito', weight: '700', size: 10 }, color: '#94a3b8' }
-          },
-          x: {
-            grid: { display: false },
-            ticks: { font: { family: 'Nunito', weight: '700', size: 9 }, color: '#94a3b8' }
-          }
-        }
-      }
-    });
-  }
 };

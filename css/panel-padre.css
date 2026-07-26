@@ -485,23 +485,81 @@ body.panel-padre-body [id*="modal"] [class*="bg-emerald"] {
   color: #B91C1C !important;
 }
 
-/* ── PAGOS — borde acento azul ───────────────────────────── */
-#paymentsHistory .payment-card {
-  border-left: 4px solid var(--p-blue) !important;
+/* ── PAGOS — estilos de tarjetas ─────────────────────────── */
+
+/* Historial scroll personalizado */
+body.panel-padre-body #paymentsHistory {
+  scrollbar-width: thin;
+  scrollbar-color: #CBD5E1 transparent;
 }
-/* Pago pendiente: naranja */
-#paymentsHistory .payment-card.pending {
-  border-left-color: var(--p-orange) !important;
+body.panel-padre-body #paymentsHistory::-webkit-scrollbar {
+  width: 5px;
 }
-/* Pago vencido: rojo */
-#paymentsHistory .payment-card.overdue {
-  border-left-color: var(--p-red) !important;
+body.panel-padre-body #paymentsHistory::-webkit-scrollbar-track {
+  background: transparent;
+}
+body.panel-padre-body #paymentsHistory::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 10px;
+}
+body.panel-padre-body #paymentsHistory::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
+
+/* Historial: max-h responsivo */
+body.panel-padre-body #paymentsHistory {
+  max-height: 50vh;
+}
+@media (min-width: 768px) {
+  body.panel-padre-body #paymentsHistory {
+    max-height: 700px;
+  }
+}
+
+/* Card entrance animation */
+@keyframes payCardIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+body.panel-padre-body .pay-card-enter {
+  animation: payCardIn 0.25s ease-out both;
+}
+
+/* Status left-border colors on cards */
+body.panel-padre-body .pay-status-paid     { border-left: 3px solid #28B54D; }
+body.panel-padre-body .pay-status-review   { border-left: 3px solid #0B63C7; }
+body.panel-padre-body .pay-status-pending  { border-left: 3px solid #F59E0B; }
+body.panel-padre-body .pay-status-overdue  { border-left: 3px solid #EF4444; }
+body.panel-padre-body .pay-status-rechazado{ border-left: 3px solid #DC2626; }
+
+/* Summary card hover lift */
+body.panel-padre-body #paymentSummaryCards > div {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+body.panel-padre-body #paymentSummaryCards > div:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+}
+
+/* History count badge */
+body.panel-padre-body .pay-count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1;
 }
 
 /* ── CHAT / MENSAJERÍA ───────────────────────────────────
    Azul como color de identidad, botón enviar naranja
 ──────────────────────────────────────────────────────────── */
 body.panel-padre-body #btnSendMessage,
+body.panel-padre-body #btnSendChatMessage,
 body.panel-padre-body [id*="send-btn"],
 body.panel-padre-body .btn-send-chat {
   background: var(--p-orange) !important;
@@ -509,13 +567,15 @@ body.panel-padre-body .btn-send-chat {
   color: #fff !important;
 }
 body.panel-padre-body #btnSendMessage:hover,
+body.panel-padre-body #btnSendChatMessage:hover,
 body.panel-padre-body .btn-send-chat:hover {
   background: var(--p-orange-h) !important;
 }
+body.panel-padre-body #messageInput:focus,
 body.panel-padre-body #chatMessageInput:focus,
 body.panel-padre-body [id*="chat-input"]:focus {
-  box-shadow: 0 0 0 3px rgba(46,187,87,.15) !important;
-  border-color: var(--p-green) !important;
+  box-shadow: 0 0 0 3px rgba(255,138,0,.12) !important;
+  border-color: var(--p-orange) !important;
 }
 
 /* ── GRID DASHBOARD ─────────────────────────────────────── */
@@ -857,4 +917,63 @@ body.panel-padre-body .cloud-card:hover {
   /* Touch-friendly tap targets */
   .concept-btn, .month-btn { min-height: 44px; }
   body.panel-padre-body .sidebar-node { min-height: 44px; }
+
+  /* Cloud cards: prevent content overflow */
+  body.panel-padre-body .cloud-card {
+    overflow: visible !important;
+    word-break: break-word;
+  }
+  body.panel-padre-body .cloud-card * {
+    max-width: 100%;
+  }
+
+  /* Quick stats grid — ensure 2 cols on small screens */
+  body.panel-padre-body .grid-cols-2 {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  /* Payment summary cards: 2x2 grid on all mobile */
+  body.panel-padre-body #paymentSummaryCards {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  /* Debt/Rating banners: prevent text overflow */
+  body.panel-padre-body #debtBanner,
+  body.panel-padre-body #pending-rating-banner {
+    max-width: 100vw;
+    overflow: hidden;
+  }
+  body.panel-padre-body #debtBanner *,
+  body.panel-padre-body #pending-rating-banner * {
+    overflow-wrap: break-word;
+    word-break: break-word;
+  }
+
+  /* Activity feed items: prevent overflow */
+  body.panel-padre-body #recentActivityFeed .activity-item {
+    overflow: hidden;
+  }
+
+  /* Grades table: allow horizontal scroll */
+  body.panel-padre-body #gradesContent table {
+    min-width: 600px;
+  }
+
+  /* Profile avatar: smaller on mobile */
+  body.panel-padre-body #profile .w-32 {
+    width: 5.5rem !important;
+    height: 5.5rem !important;
+  }
+
+  /* Sidebar menu toggle: ensure visible on mobile */
+  body.panel-padre-body #menuToggleBtn {
+    display: flex !important;
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  /* Wizard progress dots: smaller text */
+  body.panel-padre-body #wizardProgress span {
+    font-size: 8px !important;
+  }
 }

@@ -621,6 +621,19 @@
     font-size: 1.2rem;
   }
 
+  .app-banner-btn-primary {
+    background: #28B54D;
+    color: white;
+    padding: 12px 28px;
+    font-size: 0.95rem;
+    border-radius: 14px;
+    box-shadow: 0 4px 16px rgba(40, 181, 77, 0.35);
+  }
+  .app-banner-btn-primary:hover {
+    background: #1A8035;
+    box-shadow: 0 8px 24px rgba(40, 181, 77, 0.45);
+  }
+
   .app-banner-close {
     background: rgba(255, 255, 255, 0.2);
     border: none;
@@ -1312,17 +1325,13 @@ document.head.appendChild(sk);
         </svg>
       </div>
       <div class="app-banner-content">
-        <div class="app-banner-title">¡Descarga nuestra app! 📱</div>
+        <div class="app-banner-title">¡Instala nuestra app! 📱</div>
         <div class="app-banner-text">Accede a todas las funciones desde tu teléfono móvil</div>
       </div>
       <div class="app-banner-buttons">
-        <a href="#" class="app-banner-btn" id="androidBtn">
-          <i class="bi bi-android2"></i>
-          Android
-        </a>
-        <button class="app-banner-btn" id="iosBtn">
-          <i class="bi bi-apple"></i>
-          iOS
+        <button class="app-banner-btn app-banner-btn-primary" id="installAppBtn">
+          <i class="bi bi-download"></i>
+          Instalar App
         </button>
       </div>
       <button class="app-banner-close" id="closeBanner" aria-label="Cerrar banner">
@@ -1335,7 +1344,7 @@ document.head.appendChild(sk);
   <div class="app-modal-overlay" id="iosModal">
     <div class="app-modal">
       <div class="app-modal-header">
-        <div class="app-modal-title">Cómo instalar en iOS 🍎</div>
+        <div class="app-modal-title">Cómo instalar en iPhone/iPad 🍎</div>
         <button class="app-modal-close" id="closeModal">
           <i class="bi bi-x-lg"></i>
         </button>
@@ -1381,7 +1390,7 @@ document.head.appendChild(sk);
     document.addEventListener('DOMContentLoaded', function() {
       const appBanner = document.getElementById('appBanner');
       const closeBanner = document.getElementById('closeBanner');
-      const iosBtn = document.getElementById('iosBtn');
+      const installBtn = document.getElementById('installAppBtn');
       const iosModal = document.getElementById('iosModal');
       const closeModal = document.getElementById('closeModal');
       const gotItBtn = document.getElementById('gotItBtn');
@@ -1392,6 +1401,12 @@ document.head.appendChild(sk);
         appBanner.style.display = 'none';
       }
 
+      // Detect platform
+      const ua = navigator.userAgent || '';
+      const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      const isAndroid = /Android/i.test(ua);
+      const isMobile = isIOS || isAndroid;
+
       // Close banner
       closeBanner.addEventListener('click', function() {
         appBanner.style.animation = 'slideUpBanner 0.3s ease-in reverse';
@@ -1401,9 +1416,35 @@ document.head.appendChild(sk);
         }, 300);
       });
 
-      // Open iOS modal
-      iosBtn.addEventListener('click', function() {
-        iosModal.classList.add('active');
+      // Deferred install prompt (Android/Chrome)
+      let deferredPrompt = null;
+      window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+      });
+
+      // Install button handler
+      installBtn.addEventListener('click', function() {
+        if (isIOS) {
+          // iOS: show Safari instructions modal
+          iosModal.classList.add('active');
+        } else if (deferredPrompt) {
+          // Android/Chrome: trigger native install prompt
+          deferredPrompt.prompt();
+          deferredPrompt.userChoice.then((choice) => {
+            if (choice.outcome === 'accepted') {
+              appBanner.style.display = 'none';
+              localStorage.setItem('appBannerDismissed', 'true');
+            }
+            deferredPrompt = null;
+          });
+        } else if (isAndroid) {
+          // Android but no prompt available (Firefox, etc.) — show iOS modal adapted
+          iosModal.classList.add('active');
+        } else {
+          // Desktop: show iOS modal with general instructions
+          iosModal.classList.add('active');
+        }
       });
 
       // Close modal

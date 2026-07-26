@@ -27,10 +27,13 @@ export const TasksModule = {
         
         // Actualizar UI de botones
         filtersContainer.querySelectorAll('button').forEach(b => {
-          b.classList.toggle('bg-emerald-100', b === btn);
-          b.classList.toggle('text-emerald-700', b === btn);
-          b.classList.toggle('text-slate-500', b !== btn);
-          b.classList.toggle('font-bold', b === btn);
+          const isActive = b === btn;
+          b.classList.toggle('bg-[#0B63C7]', isActive);
+          b.classList.toggle('text-white', isActive);
+          b.classList.toggle('font-black', isActive);
+          b.classList.toggle('shadow-md', isActive);
+          b.classList.toggle('text-[#64748B]', !isActive);
+          b.classList.toggle('font-medium', !isActive);
         });
       });
       filtersContainer._initialized = true;

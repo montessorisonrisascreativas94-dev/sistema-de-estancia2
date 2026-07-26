@@ -18,6 +18,7 @@ let _scheduleConfig = null;
 let _viewMode = localStorage.getItem('sonrisas_view_mode') || 'horizontal';
 let _timelineCollapsed = localStorage.getItem('sonrisas_tl_collapsed') === '1';
 let _timelineActive = localStorage.getItem('sonrisas_tl_active') !== '0';
+let _attendanceTaken = false;
 
 const SCHEDULE_STORAGE_KEY = 'sonrisas_schedule_config';
 const SCHEDULE_VERSION = 4;
@@ -154,6 +155,12 @@ function _getSchedule() {
 function _getEventStatus(event, nowMinutes) {
   const startMin = _timeToMinutes(event.startTime);
   const endMin = startMin + (event.duration || 30);
+
+  // If attendance not taken yet, only 'welcome' event can activate
+  if (!_attendanceTaken && event.id !== 'welcome') {
+    return 'pending';
+  }
+
   if (nowMinutes < startMin) return 'pending';
   if (nowMinutes >= startMin && nowMinutes < endMin) return 'in_progress';
   return 'completed';
@@ -469,12 +476,17 @@ function _buildUI(students, schedule, nowMinutes, todayLabel, timeLabel, complet
   return `
     <div class="space-y-4 pb-28" id="routineView">
 
-      <!-- STICKY HEADER -->
+      <!-- STICKY HEADER — Línea de Tiempo del Día -->
       <div style="position:sticky;top:0;z-index:40;background:white;border-bottom:2px solid #f1f5f9;padding:10px 0;margin-bottom:4px">
         <div class="flex items-center justify-between mb-2 px-1">
-          <div>
-            <h3 class="text-lg font-black text-slate-800">Rutina Express</h3>
-            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">${todayLabel} · ${timeLabel}</p>
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-xl flex items-center justify-center text-lg" style="background:${_attendanceTaken ? '#dcfce7' : '#f1f5f9'};color:${_attendanceTaken ? '#16a34a' : '#94a3b8'}">
+              ${_attendanceTaken ? '📋' : '⏳'}
+            </div>
+            <div>
+              <h3 class="text-base font-black text-slate-800">Línea de Tiempo del Día</h3>
+              <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">${todayLabel} · ${timeLabel}</p>
+            </div>
           </div>
           <div class="flex gap-2 items-center">
             <div class="text-right">
@@ -527,21 +539,35 @@ function _buildUI(students, schedule, nowMinutes, todayLabel, timeLabel, complet
       ` : ''}
 
       <!-- ═══════════════════════════════════════════════════════════════ -->
-      <!-- LEVEL 1: TIMELINE DEL DÍA (COLLAPSABLE + AUTO-ACTIVATION) -->
+      <!-- LEVEL 1: TIMELINE DEL DÍA -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
-      <div>
-        <div class="flex items-center justify-between mb-2 px-1">
-          <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Línea de tiempo del día</p>
+      <div class="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+        <div class="flex items-center justify-between mb-3">
           <div class="flex items-center gap-2">
-            <button onclick="App.toggleTimelineActive()" class="text-[10px] font-black uppercase tracking-wide flex items-center gap-1 px-2 py-1 rounded-lg ${isTimelineActive ? 'bg-green-50 text-green-600' : 'bg-slate-100 text-slate-500'}">
-              ${isTimelineActive ? '🟢 Activa' : '⚪ Inactiva'}
+            <span class="w-7 h-7 rounded-lg flex items-center justify-center text-sm" style="background:${isTimelineActive ? '#dcfce7' : '#f1f5f9'};color:${isTimelineActive ? '#16a34a' : '#94a3b8'}">
+              ${isTimelineActive ? '🟢' : '⚪'}
+            </span>
+            <p class="text-[11px] font-black text-slate-500 uppercase tracking-widest">Cronología del día</p>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <button onclick="App.toggleTimelineActive()" class="text-[10px] font-black uppercase tracking-wide flex items-center gap-1 px-2.5 py-1 rounded-lg ${isTimelineActive ? 'bg-green-50 text-green-600' : 'bg-slate-100 text-slate-400'}">
+              ${isTimelineActive ? 'Activa' : 'Inactiva'}
             </button>
-            <button onclick="App.toggleTimeline()" class="text-[10px] font-black uppercase tracking-wide flex items-center gap-1 px-2 py-1 rounded-lg ${isCollapsed ? 'bg-blue-50 text-blue-600' : 'bg-slate-100 text-slate-500'}">
-              ${isCollapsed ? '▼ Mostrar' : '▲ Ocultar'}
+            <button onclick="App.toggleTimeline()" class="text-[10px] font-black uppercase tracking-wide flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 text-slate-500">
+              ${isCollapsed ? '▼' : '▲'}
             </button>
-            <button onclick="App.openScheduleConfig()" class="text-[10px] font-black text-blue-600 uppercase tracking-wide flex items-center gap-1">⚙️</button>
+            <button onclick="App.openScheduleConfig()" class="text-[10px] font-black text-blue-500 uppercase tracking-wide flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-blue-50">⚙️</button>
           </div>
         </div>
+        ${!_attendanceTaken ? `
+          <div class="rounded-xl bg-amber-50 border border-amber-200 p-3 flex items-center gap-2 mb-3">
+            <span class="text-lg">📋</span>
+            <div>
+              <p class="text-[11px] font-black text-amber-700">Toma la lista primero</p>
+              <p class="text-[10px] font-bold text-amber-500">La línea de tiempo se activará cuando registres la asistencia</p>
+            </div>
+          </div>
+        ` : ''}
         ${isCollapsed ? _renderTimelineCollapsed(schedule, nowMinutes) : _renderTimelineExpanded(schedule, nowMinutes, _logsMap, students)}
       </div>
 
@@ -589,6 +615,7 @@ export async function initRoutine() {
     attendance.filter(a => ['present', 'late'].includes(a.status)).map(a => a.student_id)
   );
   const students = allStudents.filter(s => presentStudentIds.has(s.id));
+  _attendanceTaken = presentStudentIds.size > 0;
 
   const logs = await MaestraApi.getDailyRoutine(classroom.id, today);
   _logsMap = {};

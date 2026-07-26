@@ -28,6 +28,21 @@ const TYPE_CONFIG = {
 
 const PRIORITY_WEIGHT = { critical: 10, important: 5, informative: 0 };
 
+const READ_STORAGE_KEY = 'padre_activity_read_ids';
+
+function _getReadIds() {
+  try { return JSON.parse(localStorage.getItem(READ_STORAGE_KEY) || '[]'); } catch { return []; }
+}
+
+function _markAsRead(id) {
+  const read = _getReadIds();
+  if (!read.includes(id)) {
+    read.push(id);
+    if (read.length > 200) read.splice(0, read.length - 200);
+    localStorage.setItem(READ_STORAGE_KEY, JSON.stringify(read));
+  }
+}
+
 function timeAgo(dateStr) {
   if (!dateStr) return '';
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -80,10 +95,13 @@ export const RecentActivityModule = {
 
       // Procesar notificaciones
       if (notifications.status === 'fulfilled' && notifications.value.data) {
+        const readIds = _getReadIds();
         for (const n of notifications.value.data) {
           const cfg = TYPE_CONFIG[n.type] || TYPE_CONFIG.default;
+          const localId = `notif-${n.id}`;
+          const isLocallyRead = readIds.includes(localId);
           this._items.push({
-            id: `notif-${n.id}`,
+            id: localId,
             dbId: n.id,
             type: n.type || 'info',
             title: n.title || 'Novedad',
@@ -96,7 +114,7 @@ export const RecentActivityModule = {
             priority: n.priority || 'informative',
             priorityWeight: PRIORITY_WEIGHT[n.priority || 'informative'] || 0,
             target: cfg.target,
-            isRead: n.is_read,
+            isRead: n.is_read || isLocallyRead,
             isPinned: n.is_pinned || false,
             createdAt: n.created_at,
             link: n.link,
@@ -109,6 +127,7 @@ export const RecentActivityModule = {
 
       // Agregar posts del muro — agrupados por autor
       if (posts.status === 'fulfilled' && posts.value.data) {
+        const readIds = _getReadIds();
         const authorPosts = new Map();
         for (const p of posts.value.data) {
           const teacher = Array.isArray(p.teacher) ? p.teacher[0] : (p.teacher || {});
@@ -121,11 +140,13 @@ export const RecentActivityModule = {
 
         for (const [authorName, postList] of authorPosts) {
           const count = postList.length;
-          const latestPost = postList[0]; // Ya ordenados por fecha desc
+          const latestPost = postList[0];
           const allIds = postList.map(p => p.id).join(',');
+          const groupId = `posts-${authorName.replace(/\s+/g, '-').toLowerCase()}`;
+          const isLocallyRead = readIds.includes(groupId) || postList.every(p => readIds.includes(`post-${p.id}`));
 
           this._items.push({
-            id: `posts-${authorName.replace(/\s+/g, '-').toLowerCase()}`,
+            id: groupId,
             dbId: latestPost.id,
             type: 'announcement',
             title: count > 1
@@ -142,7 +163,7 @@ export const RecentActivityModule = {
             priority: 'informative',
             priorityWeight: 0,
             target: 'class',
-            isRead: false,
+            isRead: isLocallyRead,
             isPinned: false,
             createdAt: latestPost.created_at,
             link: 'class',
@@ -243,7 +264,8 @@ export const RecentActivityModule = {
         </div>`;
     }
 
-    const itemsHTML = this._items.map(item => this._renderItem(item)).join('');
+    const visibleItems = this._items.filter(i => !i.isRead);
+    const itemsHTML = visibleItems.map(item => this._renderItem(item)).join('');
     this._container.innerHTML = counterHTML + `<div class="space-y-2">${itemsHTML}</div>`;
     if (window.lucide) lucide.createIcons();
   },
@@ -263,9 +285,9 @@ export const RecentActivityModule = {
 
     return `
       <div data-activity-id="${item.id}" data-target="${target}" data-notif-id="${item.notifId || ''}"
-        class="flex items-start gap-3 p-3 rounded-xl ${item.bg} border ${item.border} cursor-pointer hover:shadow-md hover:scale-[1.01] transition-all group activity-item ${unread ? 'ring-1 ring-opacity-20' : 'opacity-60'}"
-        style="${unread ? 'box-shadow: inset 3px 0 0 ' + item.accent : ''}">
-        <div class="w-10 h-10 rounded-xl bg-white flex items-center justify-center shrink-0 shadow-sm group-hover:scale-110 transition-transform" style="font-size:1.2rem">
+        class="flex items-start gap-3 p-3 rounded-xl ${item.bg} border ${item.border} cursor-pointer hover:shadow-md hover:scale-[1.01] transition-all group activity-item ring-1 ring-opacity-30"
+        style="box-shadow: inset 3px 0 0 ${item.accent}">
+        <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-sm group-hover:scale-110 transition-transform" style="background:${item.accent}25; font-size:1.3rem">
           ${item.icon}
         </div>
         <div class="flex-1 min-w-0">
@@ -298,13 +320,22 @@ export const RecentActivityModule = {
   },
 
   async _autoMarkAllRead() {
-    const unreadItems = this._items.filter(i => !i.isRead && i.notifId);
+    const unreadItems = this._items.filter(i => !i.isRead);
     if (!unreadItems.length) return;
 
-    const ids = unreadItems.map(i => i.notifId);
-    try {
-      await supabase.from('notifications').update({ is_read: true }).in('id', ids);
-    } catch (_) {}
+    // Persist to localStorage for all item types
+    for (const item of unreadItems) {
+      _markAsRead(item.id);
+    }
+
+    // Update DB for notification items
+    const notifItems = unreadItems.filter(i => i.notifId);
+    if (notifItems.length) {
+      const ids = notifItems.map(i => i.notifId);
+      try {
+        await supabase.from('notifications').update({ is_read: true }).in('id', ids);
+      } catch (_) {}
+    }
 
     for (const item of unreadItems) item.isRead = true;
 
@@ -329,19 +360,19 @@ document.addEventListener('click', function(e) {
     window.App.navigateTo(target);
   }
 
-  // Marcar leído y eliminar
+  // Marcar leído
   if (activityId) {
     const mod = window.RecentActivityModule;
     const itemData = mod._items.find(i => i.id === activityId);
 
     if (itemData) {
       itemData.isRead = true;
+      _markAsRead(activityId);
       if (notifId) {
         supabase.from('notifications').update({ is_read: true }).eq('id', notifId).then(() => {});
       }
     }
 
-    mod._items = mod._items.filter(i => i.id !== activityId);
     mod._sortItems();
     mod._render();
   }

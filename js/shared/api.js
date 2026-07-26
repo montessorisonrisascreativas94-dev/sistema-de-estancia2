@@ -230,7 +230,7 @@ export const Api = {
           .order('created_at', { ascending: false }),
         'getTaskGrades'
       ),
-      handle(db(TABLES.GRADES).select('id, subject, score, period, notes, created_at').eq('student_id', studentId).order('period', { ascending: true }), 'getReportGrades')
+      handle(db(TABLES.GRADES).select('id, subject, score, numeric_score, period_id, periods(name), notes, created_at').eq('student_id', studentId).order('created_at', { ascending: true }), 'getReportGrades')
     ]);
 
     return {

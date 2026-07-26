@@ -99,11 +99,15 @@ export const DailyReportModule = {
     if (this._channel) { this._channel.unsubscribe(); }
     if (!this._studentId) return;
     const today = localToday();
-    this._channel = supabase.channel(`daily_log_${this._studentId}`)
+    const sid = String(this._studentId);
+    this._channel = supabase.channel(`daily_log_parent_${sid}`)
       .on('postgres_changes', {
-        event: '*', schema: 'public', table: 'daily_logs',
-        filter: `student_id=eq.${this._studentId}`
-      }, () => {
+        event: '*', schema: 'public', table: 'daily_logs'
+        // No server-side filter — bigint cast issues with Supabase realtime filters
+      }, (payload) => {
+        // Client-side filter: only react to changes for our student
+        if (String(payload.new?.student_id) !== sid &&
+            String(payload.old?.student_id) !== sid) return;
         const picker = document.getElementById('rutinaDatePicker');
         const currentDate = picker?.value || today;
         if (currentDate === today) this.load();

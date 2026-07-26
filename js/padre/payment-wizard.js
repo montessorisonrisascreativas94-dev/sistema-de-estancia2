@@ -57,7 +57,21 @@ export const WizardPayment = {
     await this._loadConceptPrices();
     this._initMonthGrid();
     this._initMoraCalculator();
-    this.goStep(1);
+    // Preserve wizard state if user navigated away and came back
+    if (!this._step || this._step === 1) {
+      this.goStep(1);
+    } else {
+      this.goStep(this._step);
+    }
+    // Restore filter visual state
+    if (this._filterPending) {
+      const btn = document.getElementById('wizFilterBtn');
+      if (btn) {
+        btn.className = 'text-[10px] font-black text-[#0B63C7] bg-[#E8F2FF] px-3 py-1.5 rounded-full border border-[#0B63C7]/30 transition-all flex items-center gap-1';
+        btn.innerHTML = '<i data-lucide="filter" class="w-3 h-3"></i> Mostrar todos';
+        if (window.lucide) lucide.createIcons();
+      }
+    }
   },
 
   // ─── Concept Prices from DB ──────────────────────
@@ -153,8 +167,9 @@ export const WizardPayment = {
       const monthVal = selectedOpts[0]?.value;
       const [yr, mo] = monthVal.split('-').map(Number);
       const dueDate = `${yr}-${String(mo).padStart(2,'0')}-05`;
-      const mora = calcMora(dueDate);
-      const breakdown = getMoraBreakdown(dueDate);
+      const baseFee = Number(AppState?.get?.('financeConfig')?.monthly_fee) || base;
+      const mora = calcMora(dueDate, baseFee);
+      const breakdown = getMoraBreakdown(dueDate, baseFee);
 
       if (mora <= 0) { hint.classList.add('hidden'); return; }
 
@@ -457,6 +472,12 @@ export const WizardPayment = {
       if (window.PaymentsModule) {
         await window.PaymentsModule.loadPayments();
       }
+
+      // Scroll to history so user sees their new payment
+      setTimeout(() => {
+        const historyEl = document.getElementById('paymentsHistory');
+        if (historyEl) historyEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }, 300);
 
     } catch (err) {
       Helpers.toast('Error al enviar: ' + (err.message || 'Error desconocido'), 'error');

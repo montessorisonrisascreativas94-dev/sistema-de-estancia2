@@ -1,7 +1,6 @@
 import { supabase, ensureRole, initOneSignal } from '../shared/supabase.js';
 import { Api } from './api.js';
 import { Helpers } from '../shared/helpers.js';
-import { SmartLoader } from '../shared/smart-loader.js';
 import { AppState } from './appState.js';
 import { VideoCallModule } from '../shared/videocall.js';
 import { PaymentsModule }  from './payments.js';
@@ -108,7 +107,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // ✅ FIX OneSignal: Solo inicializar en el dominio correcto para evitar errores de consola
     const host = window.location.hostname;
-    const isProd = host === 'montessorisonrisascreativas.com' || host === 'www.montessorisonrisascreativas.com' || host.endsWith('.montessorisonrisascreativas.com') || host === 'localhost';
+    const isProd = host === 'montessorisonrisascreativas.com' || host === 'www.montessorisonrisascreativas.com' || host.endsWith('.montessorisonrisascreativas.com');
     
     if (isProd) {
       try { await initOneSignal(auth.user); } catch(e) {
@@ -155,31 +154,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupNavigation();
     setupGlobalListeners();
     
-    // Sidebar Manager
-    import('../shared/sidebar-manager.js')
-      .then(({ initSidebar }) => initSidebar())
-      .catch(() => {
-        // Fallback mínimo
-        const menuBtn = document.getElementById('menuBtn');
-        const sidebar  = document.getElementById('sidebar');
-        const overlay  = document.getElementById('sidebarOverlay');
-        const _openSidebar = () => {
-          sidebar?.classList.add('mobile-visible');
-          if (overlay) overlay.style.display = 'block';
-        };
-        const _closeSidebar = () => {
-          sidebar?.classList.remove('mobile-visible');
-          if (overlay) overlay.style.display = 'none';
-        };
-        if (menuBtn && sidebar) {
-          menuBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            sidebar.classList.contains('mobile-visible') ? _closeSidebar() : _openSidebar();
-          });
-        }
-        if (overlay) overlay.addEventListener('click', _closeSidebar);
-      });
-
     // Activar sección home inmediatamente
     document.querySelectorAll('.section').forEach(s => s.classList.add('hidden'));
     const homeSection = document.getElementById('home');
@@ -352,13 +326,17 @@ async function refreshDashboard() {
   const attStatus = todayAtt?.status;
   const attMap = { present:'✅ Presente', presente:'✅ Presente', late:'⏰ Tardanza', absent:'❌ Ausente' };
   set('attendanceStatus', attMap[attStatus?.toLowerCase()] || (attStatus ? attStatus : '—'));
-  // Tasks
+  // Tasks: count evidences that don't have a grade yet (no grade_letter)
   const evidences = academic?.evidences || [];
-  const pendingTasks = evidences.filter(e => !e.submitted && !e.status?.includes('submitted')).length;
-  set('tasksStatus', pendingTasks > 0 ? `${pendingTasks} pendiente${pendingTasks !== 1 ? 's' : ''}` : '✅ Al día');
-  // Last grade
-  const lastEv = evidences.length ? evidences[evidences.length - 1] : null;
-  set('lastGradeValue', lastEv ? (lastEv.score ?? lastEv.grade ?? lastEv.value ?? '—') : '—');
+  const ungraded = evidences.filter(e => !e.grade_letter).length;
+  const graded = evidences.filter(e => e.grade_letter).length;
+  set('tasksStatus', ungraded > 0 ? `${ungraded} sin calificar` : (graded > 0 ? '✅ Al día' : '—'));
+  // Last grade: from reports (period grades) or latest graded evidence
+  const reports = academic?.reports || [];
+  const lastReport = reports.length ? reports[reports.length - 1] : null;
+  const lastGradedEv = evidences.filter(e => e.grade_letter).pop();
+  const lastGrade = lastReport?.numeric_score ?? lastReport?.score ?? lastGradedEv?.grade_letter ?? '—';
+  set('lastGradeValue', lastGrade);
   // Messages badge  
   const unreadCount = AppState.get('unreadMessages') || 0;
   set('messagesStatus', unreadCount > 0 ? `${unreadCount} nuevo${unreadCount !== 1 ? 's' : ''}` : 'Sin nuevos');
@@ -400,93 +378,6 @@ function _updateDebtBanner(finance) {
   } else {
     banner.classList.add('hidden');
   }
-}
-
-// ── Tarjetas del Dashboard ────────────────────────────────────────────────────
-function renderHomeCards(student, data) {
-  const grid = document.getElementById('dashboardGrid');
-  if (!grid) return;
-
-  const { finance, academic, todayAtt } = data || {};
-  const debtTotal = finance?.debt?.total || 0;
-  const pendingItems = finance?.debt?.items || [];
-  const inReview = pendingItems.filter(p => p.evidence_url || p.proof_url).length > 0;
-  const isLive = AppState.get('isClassLive');
-
-  // Mapeo de estados de asistencia
-  const attLabels = {
-    present: 'Presente',
-    presente: 'Presente',
-    absent: 'Ausente',
-    ausente: 'Ausente',
-    late: 'Tarde',
-    tarde: 'Tarde'
-  };
-  const currentAtt = attLabels[todayAtt?.toLowerCase()] || 'Hoy';
-
-  // Iconos como unicode para evitar problemas de encoding
-  const ICONS = {
-    calendar:  '\uD83D\uDCC5', // 📅
-    chat:      '\uD83D\uDCAC', // 💬
-    video:     '\uD83C\uDFA5', // 🎥
-    card:      '\uD83D\uDCB3', // 💳
-    trophy:    '\uD83C\uDFC6', // 🏆
-    live:      '\uD83D\uDD34', // 🔴
-  };
-
-  const cards = [
-    {
-      title: 'Asistencia',
-      value: currentAtt,
-      sub: todayAtt ? 'Actualizado' : 'Ver registro',
-      icon: ICONS.calendar,
-      color: todayAtt ? 'border-emerald-300' : 'border-emerald-200',
-      iconBg: todayAtt ? 'bg-emerald-500 text-white' : 'bg-emerald-100 text-emerald-700',
-      target: 'live-attendance'
-    },
-    {
-      title: isLive ? 'Clase en Vivo' : 'Videollamada',
-      value: isLive ? (ICONS.live + ' En vivo') : 'Aula Virtual',
-      sub: isLive ? 'Unirse ahora' : 'Disponible pronto',
-      icon: ICONS.video,
-      color: isLive ? 'border-rose-300 ring-2 ring-rose-300 animate-pulse' : 'border-violet-200',
-      iconBg: isLive ? 'bg-rose-100 text-rose-700' : 'bg-violet-100 text-violet-700',
-      target: 'videocall'
-    },
-    {
-      title: 'Pagos',
-      value: Helpers.formatCurrency(debtTotal),
-      sub: debtTotal > 0 ? 'Pendiente' : (inReview ? 'En Revisión' : 'Al día'),
-      icon: ICONS.card,
-      color: debtTotal > 0 ? 'border-amber-200' : (inReview ? 'border-blue-200' : 'border-emerald-200'),
-      iconBg: debtTotal > 0 ? 'bg-amber-100 text-amber-700' : (inReview ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'),
-      target: 'payments'
-    },
-    {
-      title: 'Notas',
-      value: String(academic?.evidences?.length ?? 0),
-      sub: 'Calificaciones',
-      icon: ICONS.trophy,
-      color: 'border-green-200',
-      iconBg: 'bg-green-100 text-green-700',
-      target: 'grades'
-    }
-  ];
-
-  grid.innerHTML = cards.map(card =>
-    '<div class="bg-white rounded-2xl p-4 border-2 ' + card.color + ' shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all cursor-pointer group relative" data-target="' + card.target + '">' +
-      '<span id="badge-card-' + card.target + '" class="hidden absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] bg-rose-500 text-white text-[9px] font-black rounded-full flex items-center justify-center shadow px-1 z-10">0</span>' +
-      '<div class="flex justify-between items-start mb-3">' +
-        '<div class="w-11 h-11 rounded-xl ' + card.iconBg + ' flex items-center justify-center text-xl shadow-sm group-hover:scale-110 transition-transform">' + card.icon + '</div>' +
-        '<i data-lucide="chevron-right" class="w-4 h-4 text-slate-300 group-hover:text-slate-500 transition-colors mt-1"></i>' +
-      '</div>' +
-      '<p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">' + card.title + '</p>' +
-      '<h4 class="text-sm font-black text-slate-800 leading-tight">' + card.value + '</h4>' +
-      '<p class="text-[10px] font-bold text-slate-500 mt-0.5">' + card.sub + '</p>' +
-    '</div>'
-  ).join('');
-
-  if (window.lucide) lucide.createIcons();
 }
 
 // ── Reporte Diario ────────────────────────────────────────────────────────────
@@ -1001,8 +892,6 @@ function updateHeaderProfile(profile, student, allStudents = []) {
     el.textContent = student?.classrooms?.name || 'Sin aula';
   });
 
-
-
   // Mobile header avatar
   if (mobileAvatar) {
     mobileAvatar.innerHTML = student?.avatar_url
@@ -1170,24 +1059,6 @@ async function checkActiveMeetings() {
     const meetings = await VideoCallModule.getMyMeetings();
     const active   = (meetings || []).find(m => m.status === 'live');
     AppState.set('isClassLive', !!active);
-
-    const btn = document.querySelector('.node-videocall');
-    if (!btn) return;
-
-    if (active) {
-      btn.classList.remove('hidden');
-      btn.classList.add('ring-2', 'ring-rose-400', 'animate-pulse');
-      if (!btn._vcInitialized) {
-        btn.addEventListener('click', () => {
-          navigateTo('videocall');
-          window.open('https://meet.jit.si/ColegioSonrisas-edu-2026_' + active.room_name, '_blank');
-        });
-        btn._vcInitialized = true;
-      }
-    } else {
-      btn.classList.add('hidden');
-      btn.classList.remove('ring-2', 'ring-rose-400', 'animate-pulse');
-    }
   } catch (_) {}
 }
 
