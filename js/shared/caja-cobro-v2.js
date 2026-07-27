@@ -915,11 +915,12 @@ export const CajaCobroV2 = {
       const rnc = document.getElementById('rncEmpresa')?.value?.trim();
       const empresa = document.getElementById('nombreEmpresa')?.value?.trim();
       const excludeDGII = document.getElementById('excludeDGII')?.checked || false;
-      let notes = '';
-      if (rnc) notes += `RNC:${rnc}|`;
-      if (empresa) notes += `Empresa:${empresa}|`;
-      if (_discountPct > 0) notes += `Descuento:${_discountPct}% (-${fmt(discount)})|`;
-      if (excludeDGII) notes += `EXCLUDE_DGII:true|`;
+      const rncData = {};
+      if (rnc) rncData.rnc = rnc;
+      if (empresa) rncData.business_name = empresa;
+      let notes = Object.keys(rncData).length ? JSON.stringify(rncData) : '';
+      if (_discountPct > 0) notes += (notes ? '|' : '') + `Descuento:${_discountPct}% (-${fmt(discount)})`;
+      if (excludeDGII) notes += (notes ? '|' : '') + `EXCLUDE_DGII:true`;
 
       const currentYear = new Date().getFullYear();
       const inserts = _cart.map(c => ({

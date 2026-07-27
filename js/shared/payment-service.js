@@ -31,7 +31,7 @@ export function daysUntilDue(dueDate) {
 }
 
 // ── Columnas seguras ──────────────────────────────────────────────────────────
-const PAYMENT_COLS = 'id,student_id,amount,concept,status,due_date,created_at,paid_date,method,bank,reference,month_paid,evidence_url,notes';
+const PAYMENT_COLS = 'id,student_id,amount,concept,status,due_date,created_at,paid_date,method,bank,reference,transfer_date,month_paid,evidence_url,notes';
 const PAYMENT_COLS_WITH_STUDENT = PAYMENT_COLS + ',students:student_id(name,p1_email,parent_id,classroom_id,classrooms:classroom_id(name))';
 
 export const PaymentService = {
@@ -172,3 +172,29 @@ export const PaymentService = {
       .subscribe();
   }
 };
+
+/**
+ * Parsea el campo notes de un pago.
+ * Soporta formato JSON nuevo y formato pipe viejo.
+ * @param {string} notes
+ * @returns {{ rnc?: string, business_name?: string, discount?: string, exclude_dgii?: boolean }}
+ */
+export function parsePaymentNotes(notes) {
+  if (!notes) return {};
+  const trimmed = notes.trim();
+  if (trimmed.startsWith('{')) {
+    try { return JSON.parse(trimmed); } catch (_) {}
+  }
+  const result = {};
+  for (const part of trimmed.split('|')) {
+    const [key, ...rest] = part.split(':');
+    const val = rest.join(':');
+    if (!key || !val) continue;
+    const k = key.trim().toLowerCase();
+    if (k === 'rnc') result.rnc = val.trim();
+    else if (k === 'empresa') result.business_name = val.trim();
+    else if (k === 'descuento') result.discount = val.trim();
+    else if (k === 'exclude_dgii') result.exclude_dgii = val.trim() === 'true';
+  }
+  return result;
+}

@@ -283,7 +283,8 @@ export const TasksModule = {
     try {
       const student = AppState.get('currentStudent');
       if (!student?.classroom_id) {
-        container.innerHTML = Helpers.emptyState('Sin aula asignada', '🎒');
+        container.innerHTML = Helpers.emptyState('Sin aula asignada', 'school');
+        if (window.lucide) lucide.createIcons();
         return;
       }
 
@@ -326,8 +327,9 @@ export const TasksModule = {
       if (!filtered.length) {
         container.innerHTML = Helpers.emptyState(
           filter === 'pending' ? '¡Todo al día! No hay tareas pendientes' : 'No hay tareas en esta categoría',
-          filter === 'pending' ? '🎉' : '🎒'
+          filter === 'pending' ? 'check-circle' : 'inbox'
         );
+        if (window.lucide) lucide.createIcons();
         return;
       }
 
@@ -335,7 +337,8 @@ export const TasksModule = {
       if (window.lucide) lucide.createIcons();
 
     } catch (err) {
-      container.innerHTML = Helpers.emptyState('Error al cargar tareas', '❌');
+      container.innerHTML = Helpers.emptyState('Error al cargar tareas', 'alert-triangle');
+      if (window.lucide) lucide.createIcons();
     }
   },
 

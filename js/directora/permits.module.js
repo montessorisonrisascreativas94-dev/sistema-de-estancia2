@@ -3,6 +3,7 @@ import { TABLES } from '../shared/constants.js';
 import { Helpers } from '../shared/helpers.js';
 
 export const PermitsModule = {
+  _listenersBound: false,
   async init() {
     this._bindFilters();
     await this.loadHistory();
@@ -10,6 +11,8 @@ export const PermitsModule = {
   },
 
   _bindFilters() {
+    if (this._listenersBound) return;
+    this._listenersBound = true;
     document.getElementById('permitFilterStatus')?.addEventListener('change', () => this.loadHistory());
   },
 

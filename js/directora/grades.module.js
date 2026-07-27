@@ -67,7 +67,12 @@ export const GradesModule = {
     this._bindEvents();
   },
 
+  _listenersBound: false,
+
   _bindEvents() {
+    if (this._listenersBound) return;
+    this._listenersBound = true;
+
     document.getElementById('gradesFilterPeriod')?.addEventListener('change', (e) => {
       this._currentPeriodId = e.target.value || null;
       this._loadAllData();

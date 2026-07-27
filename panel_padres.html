@@ -1132,6 +1132,13 @@
                       </select>
                     </div>
 
+                    <!-- NO. REFERENCIA -->
+                    <div>
+                      <label class="block text-[10px] font-black text-[#64748B] uppercase tracking-[0.2em] mb-1.5">No. Referencia de Transferencia</label>
+                      <input type="text" id="paymentRefNumber" class="w-full px-4 py-2.5 border-2 border-[#E2E8F0] rounded-xl bg-[#F8FAFC] focus:bg-white focus:ring-2 focus:ring-[#28B54D] focus:border-[#28B54D] outline-none transition-all font-bold text-[#1A2340] text-sm" placeholder="Ej: 0012345678 (lo encuentras en tu app bancaria)">
+                      <p class="text-[9px] text-[#94A3B8] mt-1 ml-1">Numero de confirmacion que aparece en tu transferencia</p>
+                    </div>
+
                     <!-- MÉTODO FIJO -->
                     <div class="flex items-center gap-2 p-2.5 border border-[#28B54D]/20 rounded-xl bg-[#E8FFF0] text-[#28B54D] font-bold text-xs">
                       <i data-lucide="arrow-right-left" class="w-4 h-4 shrink-0"></i>
@@ -1222,6 +1229,9 @@
                         <input type="file" id="paymentFileInput" class="hidden" accept="image/jpeg,image/png,image/webp,application/pdf" onchange="window.WizardPayment.handleFileSelect(this.files[0])">
                       </div>
                     </div>
+
+                    <!-- Resultados OCR automatico -->
+                    <div id="wizOCRResults" class="hidden"></div>
 
                     <!-- Comprobante fiscal (opcional) -->
                     <div>

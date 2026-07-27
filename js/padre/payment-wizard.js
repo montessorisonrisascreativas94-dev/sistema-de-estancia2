@@ -8,6 +8,7 @@ import { AppState, TABLES } from './appState.js';
 import { Helpers, escapeHtml } from '../shared/helpers.js';
 import { calcMora, getMoraBreakdown } from '../shared/payment-service.js';
 import { emitEvent } from '../shared/supabase.js';
+import { processTransferReceipt, showOCRProgress, showOCRResults, applyOCRToWizardForm, getOCRDate } from '../shared/ocr-service.js';
 
 const CONCEPT_META = {
   mensualidad:   { icon: '📚', label: 'Colegiatura',   showMonths: true },
@@ -351,16 +352,67 @@ export const WizardPayment = {
     if (nameEl) nameEl.textContent = file.name;
     if (sizeEl) sizeEl.textContent = (file.size / 1024).toFixed(1) + ' KB';
     if (window.lucide) lucide.createIcons();
+
+    // Ejecutar OCR automaticamente en imagenes
+    if (file.type.startsWith('image/')) {
+      this._runAutoOCR(file);
+    }
+  },
+
+  async _runAutoOCR(file) {
+    const ocrContainer = document.getElementById('wizOCRResults');
+    if (!ocrContainer) return;
+
+    showOCRProgress('wizOCRResults');
+
+    try {
+      const result = await processTransferReceipt(file);
+      this._finalizeOCRSteps(result);
+      showOCRResults('wizOCRResults', result);
+
+      if (result.bank || result.reference || result.amount) {
+        applyOCRToWizardForm(result);
+        this._ocrResult = result;
+        this._ocrDate = result.date || null;
+      }
+    } catch (e) {
+      console.error('[OCR] Error:', e);
+      ocrContainer.innerHTML = `
+        <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl">
+          <p class="text-xs font-bold text-slate-500">No se pudo leer el comprobante</p>
+          <p class="text-[10px] text-slate-400 mt-1">Completa los datos manualmente</p>
+        </div>`;
+    }
   },
 
   clearFile() {
     this._file = null;
+    this._ocrDate = null;
+    this._ocrResult = null;
     const fileInput = document.getElementById('paymentFileInput');
     if (fileInput) fileInput.value = '';
     const placeholder = document.getElementById('wizFilePlaceholder');
     const preview = document.getElementById('wizFilePreview');
     if (placeholder) placeholder.classList.remove('hidden');
     if (preview) preview.classList.add('hidden');
+    const ocrResults = document.getElementById('wizOCRResults');
+    if (ocrResults) { ocrResults.classList.add('hidden'); ocrResults.innerHTML = ''; }
+  },
+
+  _finalizeOCRSteps(result) {
+    const map = { bank: 'ocrStep1', reference: 'ocrStep2', amount: 'ocrStep3', date: 'ocrStep4' };
+    for (const [key, id] of Object.entries(map)) {
+      const el = document.getElementById(id);
+      if (!el) continue;
+      el.classList.remove('animate-pulse', 'bg-blue-100', 'text-blue-500');
+      if (result[key]) {
+        el.classList.add('bg-emerald-100', 'text-emerald-600');
+        el.innerHTML = '✅ ' + el.textContent.replace(/^..\s/, '');
+      } else {
+        el.classList.add('bg-slate-100', 'text-slate-400');
+        el.innerHTML = '— ' + el.textContent.replace(/^..\s/, '');
+      }
+    }
   },
 
   // ─── Submit ──────────────────────
@@ -434,25 +486,51 @@ export const WizardPayment = {
       }
 
       const method = document.getElementById('paymentMethod')?.value || 'transferencia';
-      const rnc = document.getElementById('needsRNC')?.checked ? document.getElementById('paymentRNC')?.value : null;
-      const businessName = document.getElementById('needsRNC')?.checked ? document.getElementById('paymentBusinessName')?.value : null;
+      const refNumber = document.getElementById('paymentRefNumber')?.value?.trim() || null;
+      const rnc = document.getElementById('needsRNC')?.checked ? document.getElementById('paymentRNC')?.value?.trim() : null;
+      const businessName = document.getElementById('needsRNC')?.checked ? document.getElementById('paymentBusinessName')?.value?.trim() : null;
+      const rncData = (rnc && businessName) ? JSON.stringify({ rnc, business_name: businessName }) : null;
+      const ocrDate = getOCRDate();
 
       for (const month of selectedMonths) {
+        const [yr, mo] = month.split('-').map(Number);
+        const dueDate = new Date(yr, mo, 5, 12, 0, 0).toISOString().split('T')[0];
         const insertPayload = {
           student_id: student.id,
           amount,
           month_paid: month,
+          due_date: dueDate,
           concept,
           method,
           bank,
+          reference: refNumber,
           evidence_url: publicUrl,
-          notes: rnc ? `RNC: ${rnc} - ${businessName}` : null,
+          transfer_date: ocrDate,
+          notes: rncData,
           status: 'review',
           created_at: new Date().toISOString()
         };
         if (fiscalUrl) insertPayload.proof_url = fiscalUrl;
-        const { error: insertErr } = await supabase.from(TABLES.PAYMENTS).insert(insertPayload);
-        if (insertErr) throw insertErr;
+
+        const { data: existing } = await supabase
+          .from(TABLES.PAYMENTS)
+          .select('id, status')
+          .eq('student_id', student.id)
+          .eq('month_paid', month)
+          .maybeSingle();
+
+        if (existing && existing.status === 'paid') {
+          Helpers.toast(`Ya existe un pago aprobado para ${month}, se omite`, 'info');
+          continue;
+        }
+
+        if (existing) {
+          const { error: updErr } = await supabase.from(TABLES.PAYMENTS).update(insertPayload).eq('id', existing.id);
+          if (updErr) throw updErr;
+        } else {
+          const { error: insertErr } = await supabase.from(TABLES.PAYMENTS).insert(insertPayload);
+          if (insertErr) throw insertErr;
+        }
       }
 
       this.goStep(4);

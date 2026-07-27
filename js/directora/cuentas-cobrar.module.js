@@ -11,11 +11,15 @@ const fmt = n => 'RD$' + Number(n||0).toLocaleString('es-DO',{minimumFractionDig
 
 export const CuentasCobrarModule = {
   _data: [],
+  _listenersBound: false,
 
   async init() {
     await this.load();
-    $el('btnCCExport')?.addEventListener('click', () => this.exportDeudores());
-    $el('btnCCRemind')?.addEventListener('click', () => this.sendReminders());
+    if (!this._listenersBound) {
+      this._listenersBound = true;
+      $el('btnCCExport')?.addEventListener('click', () => this.exportDeudores());
+      $el('btnCCRemind')?.addEventListener('click', () => this.sendReminders());
+    }
   },
 
   async load() {

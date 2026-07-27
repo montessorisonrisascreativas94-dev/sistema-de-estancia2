@@ -5,6 +5,7 @@
  */
 import { PaymentService } from './payment-service.js';
 import { Helpers } from './helpers.js';
+import { processTransferReceipt } from './ocr-service.js';
 
 export const PaymentQueue = {
   _channel: null,
@@ -77,6 +78,11 @@ export const PaymentQueue = {
     const imgUrl  = p.evidence_url || '';
     const isImg   = /\.(jpg|jpeg|png|webp|gif)$/i.test(imgUrl);
 
+    const infoBadges = [];
+    if (p.bank) infoBadges.push(`<span class="text-[9px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded-full">🏦 ${Helpers.escapeHTML(p.bank)}</span>`);
+    if (p.reference) infoBadges.push(`<span class="text-[9px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded-full">📎 Ref: ${Helpers.escapeHTML(p.reference)}</span>`);
+    if (p.transfer_date) infoBadges.push(`<span class="text-[9px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded-full">📅 ${p.transfer_date}</span>`);
+
     return `
       <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden" id="qcard-${p.id}">
         <div class="flex items-center gap-3 p-4 border-b border-slate-100">
@@ -105,6 +111,11 @@ export const PaymentQueue = {
             <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
             Leer con OCR
           </button>` : ''}
+        </div>` : ''}
+
+        ${infoBadges.length ? `
+        <div class="flex items-center gap-1.5 px-4 py-2 bg-slate-50/80 border-b border-slate-100 flex-wrap">
+          ${infoBadges.join('')}
         </div>` : ''}
 
         ${p.excuse_text ? `` : ''}
@@ -140,28 +151,24 @@ export const PaymentQueue = {
     resultEl.textContent = '🔍 Leyendo imagen...';
 
     try {
-      if (!window.Tesseract) {
-        resultEl.textContent = '⚠️ Tesseract no disponible. Verifica el comprobante manualmente.';
+      const result = await processTransferReceipt(imgUrl);
+
+      if (result.error) {
+        resultEl.innerHTML = `<div class="font-bold text-amber-600">⚠️ ${result.error}</div>`;
         return;
       }
 
-      const { data: { text } } = await window.Tesseract.recognize(imgUrl, 'spa+eng', {
-        logger: () => {}
-      });
-
-      // Extraer referencia bancaria (números de 6-20 dígitos)
-      const refMatch = text.match(/\b\d{6,20}\b/g);
-      const ref = refMatch ? refMatch[0] : null;
-
-      // Extraer monto (patrones como $1,234.56 o 1234.56)
-      const amtMatch = text.match(/[\$RD]?\s*[\d,]+\.?\d{0,2}/g);
-      const detectedAmount = amtMatch ? amtMatch[0].replace(/[^0-9.]/g, '') : null;
+      const text = result.text;
+      const ref = result.reference;
+      const detectedAmount = result.amount ? String(result.amount) : null;
 
       resultEl.innerHTML = `
         <div class="font-bold mb-1">📄 Texto detectado:</div>
         <div class="text-[10px] leading-relaxed opacity-80 max-h-24 overflow-y-auto">${Helpers.escapeHTML(text.slice(0, 400))}</div>
         ${ref ? `<div class="mt-2 font-black text-blue-900">🔢 Referencia detectada: <span class="bg-blue-200 px-1.5 py-0.5 rounded">${ref}</span></div>` : ''}
-        ${detectedAmount ? `<div class="font-black text-blue-900">💰 Monto detectado: <span class="bg-blue-200 px-1.5 py-0.5 rounded">$${detectedAmount}</span></div>` : ''}`;
+        ${detectedAmount ? `<div class="font-black text-blue-900">💰 Monto detectado: <span class="bg-blue-200 px-1.5 py-0.5 rounded">$${detectedAmount}</span></div>` : ''}
+        ${result.bank ? `<div class="font-black text-blue-900">🏦 Banco detectado: <span class="bg-blue-200 px-1.5 py-0.5 rounded">${result.bank}</span></div>` : ''}
+        ${result.date ? `<div class="font-black text-blue-900">📅 Fecha detectada: <span class="bg-blue-200 px-1.5 py-0.5 rounded">${result.date}</span></div>` : ''}`;
 
       // Verificar duplicado si se detectó referencia
       if (ref && dupEl) {
@@ -179,6 +186,8 @@ export const PaymentQueue = {
 
   /** Aprobar desde la cola */
   async approve(id) {
+    const ref = prompt('Numero de referencia de la transferencia:');
+    if (!ref?.trim()) { Helpers.toast('Se necesita el numero de referencia', 'warning'); return; }
     const card = document.getElementById(`qcard-${id}`);
     if (card) {
       card.style.opacity = '0.5';
@@ -186,6 +195,10 @@ export const PaymentQueue = {
     }
     try {
       await PaymentService.approve(id);
+      await supabase.from('payments').update({
+        reference: ref.trim(),
+        validated_by: (await supabase.auth.getUser())?.data?.user?.id || null
+      }).eq('id', id);
       Helpers.toast('✅ Pago aprobado y notificación enviada al padre', 'success');
       card?.remove();
       // Actualizar contador

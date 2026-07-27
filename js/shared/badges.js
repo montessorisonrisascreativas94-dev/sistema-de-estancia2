@@ -11,11 +11,24 @@ export const BadgeSystem = {
 
   async init(userId) {
     if (!userId) return;
+    if (this._userId === userId && this._channel) return;
+    this.destroy();
     this._userId = userId;
     this._role = this._detectRole();
     this._initTimestamps();
     await this._loadCounts();
     this._subscribeRealtime();
+  },
+
+  destroy() {
+    if (this._channel) {
+      try {
+        import('./supabase.js').then(({ supabase }) => supabase.removeChannel(this._channel));
+      } catch (_) {}
+      this._channel = null;
+    }
+    this._userId = null;
+    this._counts = {};
   },
 
   // Detecta el panel activo por elementos unicos en el DOM
@@ -97,11 +110,12 @@ export const BadgeSystem = {
     import('./supabase.js').then(function(mod) {
       import('./realtime-manager.js').then(function(rtMod) {
         rtMod.RealtimeManager.subscribe('badges_' + self._userId, function(channel) {
+          self._channel = channel;
           self._setupChannelListeners(channel);
         });
       }).catch(function() {
-        // Fallback sin RealtimeManager
         const channel = mod.supabase.channel('badges_direct_' + self._userId);
+        self._channel = channel;
         self._setupChannelListeners(channel);
         channel.subscribe();
       });

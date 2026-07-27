@@ -4,6 +4,7 @@ import { Helpers } from '../shared/helpers.js';
 const CURRENCY = 'RD$';
 
 export const CobrosDashboardModule = {
+  _listenersBound: false,
   state: {
     period: 'day',
     loading: true,
@@ -17,6 +18,9 @@ export const CobrosDashboardModule = {
   },
 
   _bindEvents() {
+    if (this._listenersBound) return;
+    this._listenersBound = true;
+
     const self = this;
 
     const periodButtons = document.querySelectorAll('[data-cobros-period]');

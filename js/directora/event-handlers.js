@@ -13,7 +13,7 @@ const ACTIONS = {
 };
 
 // ?? Delegaci?n optimizada
-document.addEventListener('click', e => {
+const delegatedClickHandler = e => {
   // 1. Manejo de Secciones (Navegaci?n)
   const navTarget = e.target.closest('[data-section]');
   if (navTarget) {
@@ -55,7 +55,13 @@ document.addEventListener('click', e => {
         break;
     }
   }
-});
+};
+
+document.addEventListener('click', delegatedClickHandler);
+
+export function removeGlobalClickHandler() {
+  document.removeEventListener('click', delegatedClickHandler);
+}
 
 // Safe localStorage helpers
 export const SafeStorage = {

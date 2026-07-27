@@ -293,7 +293,8 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:
       <div class="inv-payment-card">
         <div class="inv-payment-grid">
           <div class="inv-payment-item"><div class="inv-payment-item-label">Método</div><div class="inv-payment-item-value" style="text-transform:capitalize">${pay.method || 'Efectivo'}</div></div>
-          <div class="inv-payment-item"><div class="inv-payment-item-label">Referencia</div><div class="inv-payment-item-value">${inv.payment_reference || '—'}</div></div>
+          <div class="inv-payment-item"><div class="inv-payment-item-label">Banco</div><div class="inv-payment-item-value">${pay.bank || '—'}</div></div>
+          <div class="inv-payment-item"><div class="inv-payment-item-label">Referencia</div><div class="inv-payment-item-value">${pay.reference || inv.payment_reference || '—'}</div></div>
           <div class="inv-payment-item"><div class="inv-payment-item-label">Fecha</div><div class="inv-payment-item-value">${fmtDate(payDate)}</div></div>
           <div class="inv-payment-item"><div class="inv-payment-item-label">Hora</div><div class="inv-payment-item-value">${fmtTime(payDate)}</div></div>
           <div class="inv-payment-item"><div class="inv-payment-item-label">Atendido por</div><div class="inv-payment-item-value">${inv.attended_by || 'Sistema'}</div></div>
@@ -560,6 +561,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
       <div class="summary-row"><span class="summary-label">Período</span><span class="summary-value">${periodText || '—'}</span></div>
       <div class="summary-row"><span class="summary-label">Concepto</span><span class="summary-value">${inv.concept || 'Mensualidad'}</span></div>
       <div class="summary-row"><span class="summary-label">Método</span><span class="summary-value" style="text-transform:capitalize">${pay.method || '—'}</span></div>
+      ${pay.bank ? `<div class="summary-row"><span class="summary-label">Banco</span><span class="summary-value">${pay.bank}</span></div>` : ''}
+      ${pay.reference ? `<div class="summary-row"><span class="summary-label">Referencia</span><span class="summary-value">${pay.reference}</span></div>` : ''}
       <div class="summary-row"><span class="summary-label">Estado</span><span class="summary-value" style="color:#28B54D">PAGADO ✓</span></div>
       <div class="summary-row summary-total"><span class="summary-label">Total Pagado</span><span class="summary-value">${fmtCurrency(inv.total || inv.amount)}</span></div>
     </div>

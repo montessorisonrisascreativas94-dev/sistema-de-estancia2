@@ -238,11 +238,12 @@ export const RecentActivityModule = {
       this._container.innerHTML = `
         <div class="text-center py-8">
           <div class="w-16 h-16 rounded-3xl bg-[#E8FFF0] flex items-center justify-center mx-auto mb-3">
-            <span class="text-3xl">🎉</span>
+            <i data-lucide="check-circle" class="w-8 h-8 text-[#28B54D]"></i>
           </div>
           <p class="font-black text-[#1A2340] text-sm">No tienes novedades</p>
           <p class="text-[10px] text-[#64748B] font-bold mt-1">Todo está al día</p>
         </div>`;
+      if (window.lucide) lucide.createIcons();
       return;
     }
 

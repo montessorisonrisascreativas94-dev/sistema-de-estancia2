@@ -8,6 +8,9 @@ export const RoomsModule = {
   },
 
   setupListeners() {
+    if (this._listenersBound) return;
+    this._listenersBound = true;
+
     const btnAdd = document.getElementById('btnAddRoom');
     if (btnAdd) btnAdd.onclick = () => this.openModal();
 

@@ -285,14 +285,17 @@ export const DirectorApi = {
 
   // --- CONFIGURACIÃ“N ---
   async getSchoolSettings() {
-    try {
-      // .maybeSingle() devuelve null si no hay fila, en lugar de Error 406
-      return await supabase.from('school_settings').select('id, generation_day, due_day, open_time, close_time, work_days, phone, business_hours').eq('id', SCHOOL_SETTINGS_ID).maybeSingle();
-    } catch (e) { return logError('getSchoolSettings', e); }
+    return QueryCache.get('school_settings', async () => {
+      try {
+        return await supabase.from('school_settings').select('id, generation_day, due_day, open_time, close_time, work_days, phone, business_hours').eq('id', SCHOOL_SETTINGS_ID).maybeSingle();
+      } catch (e) { return logError('getSchoolSettings', e); }
+    }, 5 * 60_000);
   },
 
   async updateSchoolSettings(updates) {
-    return await supabase.from('school_settings').update(updates).eq('id', SCHOOL_SETTINGS_ID);
+    const result = await supabase.from('school_settings').update(updates).eq('id', SCHOOL_SETTINGS_ID);
+    QueryCache.invalidate('school_settings');
+    return result;
   },
 
   // --- CLASSROOMS ---

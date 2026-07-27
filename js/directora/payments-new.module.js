@@ -2,6 +2,7 @@ import { supabase } from '../shared/supabase.js';
 import { Helpers } from '../shared/helpers.js';
 import { Security } from '../shared/security.js';
 import { InvoicingModule } from './invoicing.module.js';
+import { processTransferReceipt } from '../shared/ocr-service.js';
 
 const CURRENCY = 'RD$';
 const fmt = (n) => `${CURRENCY} ${Number(n || 0).toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -452,7 +453,7 @@ export const NewPaymentsModule = {
       btn.disabled = true; btn.textContent = 'Rechazando...';
       try {
         await supabase.from('payments').update({
-          status: 'pending',
+          status: 'rechazado',
           notes: 'RECHAZADO: ' + reason
         }).eq('id', payment.id);
         App.ui.closeModal();
@@ -469,32 +470,123 @@ export const NewPaymentsModule = {
     const voucherUrl = payment.evidence_url || payment.proof_url || '';
     const proofUrl  = payment.proof_url && payment.proof_url !== voucherUrl ? payment.proof_url : '';
     const isImage = voucherUrl && /\.(jpg|jpeg|png|gif|webp)/i.test(voucherUrl);
+    const conceptLabel = (payment.concept || '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) || 'Mensualidad';
+    const conceptMap = {
+      mensualidad: 'Colegiatura', uniforme: 'Uniforme', libros: 'Libros',
+      materiales: 'Materiales', inscripcion: 'Inscripcion', reinscripcion: 'Reinscripcion',
+      excursiones: 'Excursiones', eventos: 'Eventos', transporte: 'Transporte',
+      alimentacion: 'Alimentacion', graduacion: 'Graduacion', otro: 'Otro'
+    };
+    const displayConcept = conceptMap[(payment.concept || '').toLowerCase()] || conceptLabel;
+    const today = new Date().toISOString().split('T')[0];
 
     window.openGlobalModal(
       '<div class="bg-gradient-to-r from-[#0B63C7] to-blue-500 text-white p-6 rounded-t-3xl flex items-center gap-3">' +
         '<div class="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center text-2xl">&#128179;</div>' +
-        '<div><h3 class="text-xl font-black">Comprobante de Transferencia</h3><p class="text-xs text-white/70 font-bold uppercase tracking-widest">' + (payment.bank || '') + (payment.reference ? ' #' + payment.reference : '') + '</p></div>' +
+        '<div><h3 class="text-xl font-black">Revisar Transferencia</h3><p class="text-xs text-white/70 font-bold uppercase tracking-widest">' + (payment.bank || 'Banco no indicado') + '</p></div>' +
       '</div>' +
       '<div class="p-6">' +
-        '<div class="bg-slate-50 rounded-2xl p-4 mb-4 grid grid-cols-2 gap-3 text-sm">' +
+        '<div class="bg-white border border-slate-100 rounded-2xl p-4 mb-4 grid grid-cols-2 gap-3 text-sm">' +
           '<div><span class="text-xs text-slate-400 uppercase">Monto</span><div class="font-black text-slate-800">' + fmt(payment.amount) + '</div></div>' +
           '<div><span class="text-xs text-slate-400 uppercase">Mes</span><div class="font-bold text-slate-700">' + (payment.month_paid || '-') + '</div></div>' +
-          '<div><span class="text-xs text-slate-400 uppercase">Banco</span><div class="font-bold text-slate-700">' + (payment.bank || '-') + '</div></div>' +
-          '<div><span class="text-xs text-slate-400 uppercase">Referencia</span><div class="font-bold text-slate-700">' + (payment.reference || '-') + '</div></div>' +
+          '<div><span class="text-xs text-slate-400 uppercase">Banco Origen</span><div class="font-bold text-slate-700">' + (payment.bank || '-') + '</div></div>' +
+          '<div><span class="text-xs text-slate-400 uppercase">Concepto</span><div class="font-bold text-slate-700">' + displayConcept + '</div></div>' +
+          '<div class="col-span-2"><span class="text-xs text-slate-400 uppercase">Fecha</span><div class="font-bold text-slate-700">' + new Date(payment.created_at).toLocaleDateString('es-DO', { day: 'numeric', month: 'long', year: 'numeric' }) + '</div></div>' +
         '</div>' +
-        (isImage
-          ? '<div class="border border-slate-200 rounded-2xl overflow-hidden bg-white mb-4"><img src="' + Security.safeUrl(voucherUrl) + '" class="w-full max-h-80 object-contain cursor-pointer" onclick="window.open(\'' + Security.safeUrl(voucherUrl) + '\', \'_blank\')" title="Click para ver en tamaño completo"></div>'
-          : '<a href="' + Security.safeUrl(voucherUrl) + '" target="_blank" rel="noopener noreferrer" class="flex items-center gap-3 p-4 border border-slate-200 rounded-2xl bg-white hover:bg-blue-50 transition-colors text-[#0B63C7] mb-4"><i data-lucide="file-text" class="w-6 h-6"></i><div><div class="font-bold text-sm">Ver comprobante</div><div class="text-[10px] text-slate-400">Abrir en nueva pesta&ntilde;a</div></div></a>') +
+
+        '<div class="mb-4">' +
+          '<label class="block text-[11px] font-black text-slate-400 uppercase tracking-wider mb-2">Comprobante de Transferencia</label>' +
+          (voucherUrl
+            ? '<div class="border border-slate-200 rounded-2xl overflow-hidden bg-white">' +
+                (isImage
+                  ? '<img src="' + Security.safeUrl(voucherUrl) + '" class="w-full max-h-80 object-contain cursor-pointer" onclick="window.open(\'' + Security.safeUrl(voucherUrl) + '\', \'_blank\')" title="Click para ver en tamanho completo" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'">' +
+                    '<div class="hidden items-center gap-3 p-4 text-[#0B63C7] hover:bg-blue-50 transition-colors">' +
+                      '<i data-lucide="image" class="w-6 h-6"></i>' +
+                      '<div><div class="font-bold text-sm">Error al cargar imagen</div><div class="text-[10px] text-slate-400">Haz clic para abrir en nueva pestana</div></div>' +
+                    '</div>'
+                  : '<a href="' + Security.safeUrl(voucherUrl) + '" target="_blank" rel="noopener noreferrer" class="flex items-center gap-3 p-4 text-[#0B63C7] hover:bg-blue-50 transition-colors">' +
+                      '<i data-lucide="file-text" class="w-6 h-6"></i>' +
+                      '<div><div class="font-bold text-sm">Ver comprobante</div><div class="text-[10px] text-slate-400">Abrir en nueva pestana</div></div>' +
+                    '</a>') +
+              '</div>'
+            : '<div class="border border-dashed border-slate-200 rounded-2xl p-8 text-center text-slate-400 text-sm">Sin comprobante adjunto</div>') +
+        '</div>' +
+
         (proofUrl
-          ? '<a href="' + Security.safeUrl(proofUrl) + '" target="_blank" rel="noopener noreferrer" class="flex items-center gap-3 p-3 border border-slate-200 rounded-2xl bg-white hover:bg-blue-50 transition-colors text-[#0B63C7]"><i data-lucide="file-check" class="w-4 h-4"></i><span class="text-sm font-bold">Ver factura fiscal</span></a>'
+          ? '<div class="mb-4"><a href="' + Security.safeUrl(proofUrl) + '" target="_blank" rel="noopener noreferrer" class="flex items-center gap-3 p-3 border border-slate-200 rounded-2xl bg-white hover:bg-blue-50 transition-colors text-[#0B63C7]"><i data-lucide="file-check" class="w-4 h-4"></i><span class="text-sm font-bold">Ver factura fiscal</span></a></div>'
           : '') +
+
+        '<div class="bg-white border border-slate-100 rounded-2xl p-5 mb-4 space-y-4">' +
+          '<div class="flex items-center justify-between">' +
+            '<p class="text-[11px] font-black text-slate-400 uppercase tracking-wider">Datos de la Transferencia</p>' +
+            (payment.reference || payment.transfer_date ? '<span class="text-[9px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">Prellenado del padre</span>' : '') +
+          '</div>' +
+          '<div class="grid grid-cols-1 md:grid-cols-2 gap-4">' +
+            '<div>' +
+              '<label class="block text-[11px] font-black text-slate-500 mb-1.5">No. Referencia / Transferencia *</label>' +
+              '<input id="vModalRefInput" type="text" class="w-full px-4 py-2.5 border-2 border-slate-200 rounded-xl outline-none focus:ring-4 focus:ring-blue-100 focus:border-[#0B63C7] transition-all text-sm font-bold" placeholder="Ej: 0012345678" value="' + (payment.reference || '') + '">' +
+            '</div>' +
+            '<div>' +
+              '<label class="block text-[11px] font-black text-slate-500 mb-1.5">Fecha de Transferencia</label>' +
+              '<input id="vModalDateInput" type="date" class="w-full px-4 py-2.5 border-2 border-slate-200 rounded-xl outline-none focus:ring-4 focus:ring-blue-100 focus:border-[#0B63C7] transition-all text-sm font-bold" value="' + (payment.transfer_date || today) + '">' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
       '</div>' +
       '<div class="bg-white p-5 rounded-b-3xl border-t border-slate-100 flex justify-end gap-3">' +
         '<button onclick="App.ui.closeModal()" class="px-6 py-2.5 text-slate-500 font-black text-xs uppercase hover:bg-slate-50 rounded-2xl">Cerrar</button>' +
-        '<button onclick="App.ui.closeModal(); window.__pendingVoucherPayment && window.NewPaymentsModule._reviewApprove(window.__pendingVoucherPayment)" class="px-8 py-2.5 bg-gradient-to-r from-emerald-600 to-emerald-500 text-white rounded-2xl font-black text-xs uppercase shadow-lg hover:-translate-y-0.5 active:scale-95 transition-all">Aprobar</button>' +
+        '<button id="vModalRejectBtn" class="px-6 py-2.5 bg-rose-500 text-white rounded-2xl font-black text-xs uppercase shadow-lg hover:-translate-y-0.5 active:scale-95 transition-all">Rechazar</button>' +
+        '<button id="vModalApproveBtn" class="px-8 py-2.5 bg-gradient-to-r from-emerald-600 to-emerald-500 text-white rounded-2xl font-black text-xs uppercase shadow-lg hover:-translate-y-0.5 active:scale-95 transition-all">Aprobar</button>' +
       '</div>'
     );
     if (window.lucide) lucide.createIcons();
+    setTimeout(() => { document.getElementById('vModalRefInput')?.focus(); }, 200);
+
+    // OCR automatico del comprobante
+    if (voucherUrl && isImage) {
+      this._autoOCRForVoucher(voucherUrl);
+    }
+
+    // Aprobar con referencia
+    document.getElementById('vModalApproveBtn')?.addEventListener('click', async () => {
+      const ref = document.getElementById('vModalRefInput')?.value?.trim();
+      if (!ref) { Helpers.toast('Ingresa el numero de referencia', 'warning'); document.getElementById('vModalRefInput')?.focus(); return; }
+      const transferDate = document.getElementById('vModalDateInput')?.value;
+      const btn = document.getElementById('vModalApproveBtn');
+      btn.disabled = true; btn.textContent = 'Aprobando...';
+      try {
+        const updatePayload = {
+          status: 'paid',
+          paid_date: transferDate ? transferDate + 'T12:00:00' : new Date().toISOString(),
+          reference: ref,
+          transfer_date: transferDate || null
+        };
+        const { data: authData } = await supabase.auth.getUser();
+        updatePayload.validated_by = authData?.user?.id || null;
+        await supabase.from('payments').update(updatePayload).eq('id', payment.id);
+        App.ui.closeModal();
+        Helpers.toast('Transferencia aprobada y registrada', 'success');
+        if (this.state.selectedStudent) {
+          await this._loadPendingItems(this.state.selectedStudent);
+          await this._loadPaymentHistory(this.state.selectedStudent);
+        }
+        try {
+          const { data: authData } = await supabase.auth.getUser();
+          const result = await InvoicingModule.generateInvoice(payment.id, authData?.user?.id);
+          if (result?.success) Helpers.toast(`Factura ${result.invoice_number} generada`, 'success');
+        } catch (_) {}
+      } catch (_) {
+        Helpers.toast('Error al aprobar', 'error');
+        btn.disabled = false; btn.textContent = 'Aprobar';
+      }
+    });
+
+    // Rechazar
+    document.getElementById('vModalRejectBtn')?.addEventListener('click', () => {
+      App.ui.closeModal();
+      this._reviewReject(payment);
+    });
+
     window.__pendingVoucherPayment = payment;
   },
 
@@ -776,6 +868,49 @@ export const NewPaymentsModule = {
       Helpers.toast('No hay factura disponible', 'warning');
     }
     this._closeSuccessModal();
+  },
+
+  async _autoOCRForVoucher(voucherUrl) {
+    const refInput = document.getElementById('vModalRefInput');
+    const dateInput = document.getElementById('vModalDateInput');
+    if (!refInput) return;
+
+    const ocrIndicator = document.createElement('div');
+    ocrIndicator.id = 'vOcrIndicator';
+    ocrIndicator.className = 'flex items-center gap-2 text-[10px] text-blue-600 font-bold mt-2';
+    ocrIndicator.innerHTML = '<div class="w-3.5 h-3.5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div> Leyendo comprobante...';
+    refInput.parentElement?.appendChild(ocrIndicator);
+
+    try {
+      const result = await processTransferReceipt(voucherUrl);
+      const indicator = document.getElementById('vOcrIndicator');
+      if (indicator) indicator.remove();
+
+      if (result.error) return;
+
+      let filled = [];
+      if (result.reference && !refInput.value) {
+        refInput.value = result.reference;
+        filled.push('Referencia');
+      }
+      if (result.date && dateInput) {
+        dateInput.value = result.date;
+        filled.push('Fecha');
+      }
+      if (result.bank) filled.push('Banco: ' + result.bank);
+      if (result.amount) filled.push('Monto: RD$ ' + result.amount.toLocaleString('es-DO', {minimumFractionDigits: 2}));
+
+      if (filled.length) {
+        const toast = document.createElement('div');
+        toast.className = 'flex items-center gap-2 text-[10px] text-emerald-700 font-bold bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2 mt-2';
+        toast.innerHTML = '<span>✅</span> OCR detectó: ' + filled.join(', ');
+        refInput.parentElement?.appendChild(toast);
+        setTimeout(() => { toast.style.opacity = '0'; toast.style.transition = 'opacity 0.4s'; setTimeout(() => toast.remove(), 400); }, 5000);
+      }
+    } catch (_) {
+      const indicator = document.getElementById('vOcrIndicator');
+      if (indicator) indicator.remove();
+    }
   },
 
   // ── Alias para compatibilidad con panel_directora.html ───────────────────

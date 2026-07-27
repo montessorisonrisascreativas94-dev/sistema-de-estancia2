@@ -5,6 +5,7 @@ const CURRENCY = 'RD$';
 const MONTH_NAMES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 
 export const RegistrarCobroModule = {
+  _listenersBound: false,
   state: {
     paso: 1,
     studentSearch: '',
@@ -29,6 +30,9 @@ export const RegistrarCobroModule = {
   },
 
   _bindEvents() {
+    if (this._listenersBound) return;
+    this._listenersBound = true;
+
     const self = this;
 
     // Buscador

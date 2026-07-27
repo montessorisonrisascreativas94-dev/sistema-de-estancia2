@@ -7,6 +7,7 @@ import { auditLog } from '../shared/db-utils.js';
 import { QueryCache } from '../shared/query-cache.js';
 
 export const TeachersModule = {
+  _listenersBound: false,
   async init(renderTargetId = 'teachersTableBody') {
     const container = document.getElementById(renderTargetId);
     if (!container) return;
@@ -35,7 +36,8 @@ export const TeachersModule = {
 
       // BUSCADOR EN TIEMPO REAL
       const searchInput = document.getElementById('searchTeacher');
-      if (searchInput) {
+      if (searchInput && !this._listenersBound) {
+        this._listenersBound = true;
         searchInput.addEventListener('input', (e) => {
           const term = e.target.value.toLowerCase();
           const allStaff = AppState.get('teachers') || [];

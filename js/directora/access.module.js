@@ -4,6 +4,7 @@ import { Helpers } from '../shared/helpers.js';
 export const AccessModule = {
   _chart: null,
   _data: { staff: [], students: [], attendance: [] },
+  _listenersBound: false,
 
   async init() {
     const table = document.getElementById('access-monitor-table-body');
@@ -15,12 +16,15 @@ export const AccessModule = {
     if (document.getElementById('accessDateTo'))   document.getElementById('accessDateTo').value   = today;
 
     // Listeners de filtros
-    const on = (id, ev, fn) => document.getElementById(id)?.addEventListener(ev, fn);
-    on('accessDateFrom',   'change', () => this.load());
-    on('accessDateTo',     'change', () => this.load());
-    on('accessSearch',     'input',  () => this._render());
-    document.getElementById('btnExportAccessReport')?.addEventListener('click', () => this.exportDailyReport());
-    document.getElementById('btnIntelligentReport')?.addEventListener('click', () => this.exportIntelligenceReport());
+    if (!this._listenersBound) {
+      this._listenersBound = true;
+      const on = (id, ev, fn) => document.getElementById(id)?.addEventListener(ev, fn);
+      on('accessDateFrom',   'change', () => this.load());
+      on('accessDateTo',     'change', () => this.load());
+      on('accessSearch',     'input',  () => this._render());
+      document.getElementById('btnExportAccessReport')?.addEventListener('click', () => this.exportDailyReport());
+      document.getElementById('btnIntelligentReport')?.addEventListener('click', () => this.exportIntelligenceReport());
+    }
     
     await this.load();
   },

@@ -1,16 +1,10 @@
 import { supabase } from '../shared/supabase.js';
 import { TABLES } from './appState.js';
+import { QueryCache } from '../shared/query-cache.js';
 
-const _cache = new Map();
-function cached(key, ttlMs, fn) {
-  const now = Date.now();
-  const hit = _cache.get(key);
-  if (hit && now - hit.ts < ttlMs) return Promise.resolve(hit.val);
-  return fn().then(val => { _cache.set(key, { val, ts: now }); return val; });
-}
 export function invalidateCache(pattern) {
-  if (!pattern) { _cache.clear(); return; }
-  for (const k of _cache.keys()) { if (k.startsWith(pattern)) _cache.delete(k); }
+  if (!pattern) { QueryCache.clear(); return; }
+  QueryCache.invalidatePrefix(pattern);
 }
 
 /**
@@ -32,7 +26,7 @@ export const Api = {
    * 👶 Obtener datos detallados del estudiante
    */
   async getStudent(studentId) {
-    return cached(`student:${studentId}`, 60000, () =>
+    return QueryCache.get(`student:${studentId}`, () =>
       handle(
         supabase
           .from(TABLES.STUDENTS)
@@ -41,7 +35,7 @@ export const Api = {
           .single(),
         'getStudent'
       )
-    );
+    , 60_000);
   },
 
   /**
@@ -96,7 +90,7 @@ export const Api = {
    * 🎓 Notas y Evidencias
    */
   async getStudentGrades(studentId) {
-    return cached(`grades:${studentId}`, 30000, async () => {
+    return QueryCache.get(`grades:${studentId}`, async () => {
       const [evidences, reports] = await Promise.all([
         handle(
           supabase.from(TABLES.TASK_EVIDENCES)
@@ -114,7 +108,7 @@ export const Api = {
           .limit(20), 'getReportGrades')
       ]);
       return { evidences: evidences || [], reports: reports || [] };
-    });
+    }, 30_000);
   },
 
   /**

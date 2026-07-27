@@ -94,13 +94,24 @@ export const AccessModule = {
   },
 
   _initOfflineSupport() {
-    window.addEventListener('online', () => {
+    if (this._onlineHandler) window.removeEventListener('online', this._onlineHandler);
+    if (this._offlineHandler) window.removeEventListener('offline', this._offlineHandler);
+
+    this._onlineHandler = () => {
       Helpers.toast('Conexión restaurada. Sincronizando...', 'info');
       this._syncOfflinePunches();
-    });
-    window.addEventListener('offline', () => {
+    };
+    this._offlineHandler = () => {
       Helpers.toast('Modo Offline: Los accesos se guardarán localmente.', 'warning');
-    });
+    };
+
+    window.addEventListener('online', this._onlineHandler);
+    window.addEventListener('offline', this._offlineHandler);
+  },
+
+  destroy() {
+    if (this._onlineHandler) { window.removeEventListener('online', this._onlineHandler); this._onlineHandler = null; }
+    if (this._offlineHandler) { window.removeEventListener('offline', this._offlineHandler); this._offlineHandler = null; }
   },
 
   async _syncOfflinePunches() {

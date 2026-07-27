@@ -3,6 +3,7 @@ import { Helpers } from '../shared/helpers.js';
 import { Security } from '../shared/security.js';
 import { AppState } from './state.js';
 import { sendEmail } from '../shared/supabase.js';
+import { processTransferReceipt } from '../shared/ocr-service.js';
 import { calcMora } from '../shared/payment-service.js';
 import { InvoiceModule } from '../shared/invoice.js';
 import { SCHOOL_SETTINGS_ID, MONTH_LABELS } from '../shared/constants.js';
@@ -28,51 +29,54 @@ export const PaymentsModule = {
   async init() {
     this._initPeriodSelectors();
     await this._loadSettings();
-    document.getElementById('filterPaymentMonth')?.addEventListener('change', () => { this.loadPayments(); this.loadIncomeChart(); });
-    document.getElementById('filterPaymentYear')?.addEventListener('change',  () => { this.loadPayments(); this.loadIncomeChart(); });
-    document.getElementById('filterPaymentStatus')?.addEventListener('change', () => this.loadPayments());
-    // FIX debounce: prevent DB/render thrash on every keystroke
-    const _searchDebounced = Helpers.debounce((q) => {
-      const cached = AppState.get('paymentsData');
-      if (cached && q) {
-        this._renderPaymentRows(cached.filter(p =>
-          p.students?.name?.toLowerCase().includes(q)
-        ));
-      } else {
+    if (!this._listenersBound) {
+      this._listenersBound = true;
+      document.getElementById('filterPaymentMonth')?.addEventListener('change', () => { this.loadPayments(); this.loadIncomeChart(); });
+      document.getElementById('filterPaymentYear')?.addEventListener('change',  () => { this.loadPayments(); this.loadIncomeChart(); });
+      document.getElementById('filterPaymentStatus')?.addEventListener('change', () => this.loadPayments());
+      // FIX debounce: prevent DB/render thrash on every keystroke
+      const _searchDebounced = Helpers.debounce((q) => {
+        const cached = AppState.get('paymentsData');
+        if (cached && q) {
+          this._renderPaymentRows(cached.filter(p =>
+            p.students?.name?.toLowerCase().includes(q)
+          ));
+        } else {
+          this.loadPayments();
+        }
+      }, 300);
+      document.getElementById('searchPaymentStudent')?.addEventListener('input', (e) =>
+        _searchDebounced(e.target.value.toLowerCase().trim())
+      );
+      document.getElementById('btnNewPayment')?.addEventListener('click',       () => this.openPaymentModal());
+      document.getElementById('btnGeneratePayments')?.addEventListener('click', () => this.runCycle());
+      document.getElementById('btnRefreshPayments')?.addEventListener('click',  () => this.loadPayments());
+      document.getElementById('btnSavePaymentConfig')?.addEventListener('click',() => this.savePaymentConfig?.());
+      document.getElementById('btnSendPaymentReminders')?.addEventListener('click',() => this.sendReminders?.());
+      document.getElementById('btnExportMorosidad')?.addEventListener('click',  () => this.exportMorosidad?.());
+      // Exportación de facturas
+      document.getElementById('btnExportInvoices')?.addEventListener('click', () => this._openExportModal());
+      document.getElementById('statusPills')?.addEventListener('click', (e) => {
+        const pill = e.target.closest('[data-status]');
+        if (!pill) return;
+        const status = pill.dataset.status;
+        const sel = document.getElementById('filterPaymentStatus');
+        if (sel) sel.value = status;
+        document.querySelectorAll('.status-pill').forEach(p => {
+          p.classList.toggle('bg-teal-600', p.dataset.status === status);
+          p.classList.toggle('text-white',  p.dataset.status === status);
+          p.classList.toggle('bg-slate-100', p.dataset.status !== status);
+          p.classList.toggle('text-slate-500', p.dataset.status !== status);
+        });
         this.loadPayments();
-      }
-    }, 300);
-    document.getElementById('searchPaymentStudent')?.addEventListener('input', (e) =>
-      _searchDebounced(e.target.value.toLowerCase().trim())
-    );
-    document.getElementById('btnNewPayment')?.addEventListener('click',       () => this.openPaymentModal());
-    document.getElementById('btnGeneratePayments')?.addEventListener('click', () => this.runCycle());
-    document.getElementById('btnRefreshPayments')?.addEventListener('click',  () => this.loadPayments());
-    document.getElementById('btnSavePaymentConfig')?.addEventListener('click',() => this.savePaymentConfig?.());
-    document.getElementById('btnSendPaymentReminders')?.addEventListener('click',() => this.sendReminders?.());
-    document.getElementById('btnExportMorosidad')?.addEventListener('click',  () => this.exportMorosidad?.());
-    // Exportación de facturas
-    document.getElementById('btnExportInvoices')?.addEventListener('click', () => this._openExportModal());
-    document.getElementById('statusPills')?.addEventListener('click', (e) => {
-      const pill = e.target.closest('[data-status]');
-      if (!pill) return;
-      const status = pill.dataset.status;
-      const sel = document.getElementById('filterPaymentStatus');
-      if (sel) sel.value = status;
-      document.querySelectorAll('.status-pill').forEach(p => {
-        p.classList.toggle('bg-teal-600', p.dataset.status === status);
-        p.classList.toggle('text-white',  p.dataset.status === status);
-        p.classList.toggle('bg-slate-100', p.dataset.status !== status);
-        p.classList.toggle('text-slate-500', p.dataset.status !== status);
       });
-      this.loadPayments();
-    });
-    document.getElementById('chartYear')?.addEventListener('change', () => {
-      const fy = document.getElementById('filterPaymentYear');
-      const cy = document.getElementById('chartYear');
-      if (fy && cy && fy.value !== cy.value) fy.value = cy.value;
-      this.loadPayments(); this.loadIncomeChart();
-    });
+      document.getElementById('chartYear')?.addEventListener('change', () => {
+        const fy = document.getElementById('filterPaymentYear');
+        const cy = document.getElementById('chartYear');
+        if (fy && cy && fy.value !== cy.value) fy.value = cy.value;
+        this.loadPayments(); this.loadIncomeChart();
+      });
+    }
     await this.loadPayments();
     this.loadIncomeChart();
   },
@@ -133,7 +137,7 @@ export const PaymentsModule = {
       // Query por año completo + filtro en cliente
       let q = supabase
         .from('payments')
-        .select('id, student_id, amount, concept, status, due_date, created_at, paid_date, method, bank, reference, month_paid, evidence_url, proof_url, notes, students:student_id(id, name, monthly_fee, classroom_id, classrooms:classroom_id(name))')
+        .select('id, student_id, amount, concept, status, due_date, created_at, paid_date, method, bank, reference, transfer_date, month_paid, evidence_url, proof_url, notes, students:student_id(id, name, monthly_fee, classroom_id, classrooms:classroom_id(name))')
         .gte('created_at', yearVal + '-01-01T00:00:00')
         .lte('created_at', yearVal + '-12-31T23:59:59')
         .order('created_at', { ascending: false })
@@ -458,11 +462,20 @@ export const PaymentsModule = {
     const voucherUrl = p.evidence_url || p.proof_url || '';
     const proofUrl  = p.proof_url && p.proof_url !== voucherUrl ? p.proof_url : '';
     const isImage = voucherUrl && /\.(jpg|jpeg|png|gif|webp)/i.test(voucherUrl);
+    const conceptLabel = (p.concept || '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) || 'Mensualidad';
+    const conceptMap = {
+      mensualidad: 'Colegiatura', uniforme: 'Uniforme', libros: 'Libros',
+      materiales: 'Materiales', inscripcion: 'Inscripcion', reinscripcion: 'Reinscripcion',
+      excursiones: 'Excursiones', eventos: 'Eventos', transporte: 'Transporte',
+      alimentacion: 'Alimentacion', graduacion: 'Graduacion', otro: 'Otro'
+    };
+    const displayConcept = conceptMap[(p.concept || '').toLowerCase()] || conceptLabel;
+    const today = new Date().toISOString().split('T')[0];
 
     window.openGlobalModal(
       '<div class="bg-gradient-to-r from-teal-600 to-teal-500 text-white p-6 rounded-t-3xl flex items-center gap-3">' +
         '<div class="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center text-2xl">&#128179;</div>' +
-        '<div><h3 class="text-xl font-black">Revisar Transferencia</h3><p class="text-xs text-white/70 font-bold uppercase tracking-widest">Comprobante de pago</p></div>' +
+        '<div><h3 class="text-xl font-black">Revisar Transferencia</h3><p class="text-xs text-white/70 font-bold uppercase tracking-widest">Verificar comprobante de pago</p></div>' +
       '</div>' +
       '<div class="p-6 bg-slate-50/30">' +
         '<div class="bg-white border border-slate-100 rounded-2xl p-5 mb-4">' +
@@ -477,16 +490,48 @@ export const PaymentsModule = {
           '<div class="grid grid-cols-2 gap-3 text-sm">' +
             '<div><span class="text-xs text-slate-400 uppercase">Monto</span><div class="font-black text-slate-800">RD$ ' + amt + '</div></div>' +
             '<div><span class="text-xs text-slate-400 uppercase">Mes</span><div class="font-bold text-slate-700">' + (p.month_paid || '-') + '</div></div>' +
-            '<div><span class="text-xs text-slate-400 uppercase">Banco</span><div class="font-bold text-slate-700">' + (p.bank || '-') + '</div></div>' +
-            '<div><span class="text-xs text-slate-400 uppercase">Referencia</span><div class="font-bold text-slate-700">' + (p.reference || '-') + '</div></div>' +
+            '<div><span class="text-xs text-slate-400 uppercase">Banco Origen</span><div class="font-bold text-slate-700">' + (p.bank || '-') + '</div></div>' +
+            '<div><span class="text-xs text-slate-400 uppercase">Concepto</span><div class="font-bold text-slate-700">' + displayConcept + '</div></div>' +
+            '<div class="col-span-2"><span class="text-xs text-slate-400 uppercase">Fecha</span><div class="font-bold text-slate-700">' + new Date(p.created_at).toLocaleDateString('es-DO', { day: 'numeric', month: 'long', year: 'numeric' }) + '</div></div>' +
           '</div>' +
         '</div>' +
-        (voucherUrl
-          ? (isImage
-            ? '<div class="border border-slate-200 rounded-2xl overflow-hidden bg-white mb-4"><img src="' + Security.safeUrl(voucherUrl) + '" class="w-full max-h-64 object-contain cursor-pointer" onclick="window.open(\'' + Security.safeUrl(voucherUrl) + '\', \'_blank\')" title="Click para ver en tamaño completo"></div>'
-            : '<a href="' + Security.safeUrl(voucherUrl) + '" target="_blank" rel="noopener noreferrer" class="flex items-center gap-3 p-4 border border-slate-200 rounded-2xl bg-white hover:bg-teal-50 transition-colors text-teal-600 mb-4"><i data-lucide="file-text" class="w-6 h-6"></i><div><div class="font-bold text-sm">Ver comprobante</div></div></a>')
-          : '<div class="border border-dashed border-slate-200 rounded-2xl p-6 text-center text-slate-400 text-sm mb-4">Sin comprobante adjunto</div>') +
+
+        '<div class="mb-4">' +
+          '<label class="block text-[11px] font-black text-slate-400 uppercase tracking-wider mb-2">Comprobante de Transferencia</label>' +
+          (voucherUrl
+            ? '<div class="border border-slate-200 rounded-2xl overflow-hidden bg-white">' +
+                (isImage
+                  ? '<img src="' + Security.safeUrl(voucherUrl) + '" class="w-full max-h-64 object-contain cursor-pointer" onclick="window.open(\'' + Security.safeUrl(voucherUrl) + '\', \'_blank\')" title="Click para ver en tamanho completo" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'">' +
+                    '<div class="hidden items-center gap-3 p-4 text-teal-600 hover:bg-teal-50 transition-colors">' +
+                      '<i data-lucide="image" class="w-6 h-6"></i>' +
+                      '<div><div class="font-bold text-sm">Error al cargar imagen</div></div>' +
+                    '</div>'
+                  : '<a href="' + Security.safeUrl(voucherUrl) + '" target="_blank" rel="noopener noreferrer" class="flex items-center gap-3 p-4 border border-slate-200 rounded-2xl bg-white hover:bg-teal-50 transition-colors text-teal-600">' +
+                      '<i data-lucide="file-text" class="w-6 h-6"></i>' +
+                      '<div><div class="font-bold text-sm">Ver comprobante</div></div>' +
+                    '</a>') +
+              '</div>'
+            : '<div class="border border-dashed border-slate-200 rounded-2xl p-6 text-center text-slate-400 text-sm mb-4">Sin comprobante adjunto</div>') +
+        '</div>' +
+
         (proofUrl ? '<a href="' + Security.safeUrl(proofUrl) + '" target="_blank" rel="noopener noreferrer" class="flex items-center gap-2 p-3 border border-slate-200 rounded-2xl bg-white hover:bg-teal-50 text-teal-600 text-sm font-bold mb-4"><i data-lucide="file-check" class="w-4 h-4"></i>Ver factura fiscal</a>' : '') +
+
+        '<div class="bg-white border border-slate-100 rounded-2xl p-5 mb-4 space-y-4">' +
+          '<div class="flex items-center justify-between">' +
+            '<p class="text-[11px] font-black text-slate-400 uppercase tracking-wider">Datos de la Transferencia</p>' +
+            (p.reference || p.transfer_date ? '<span class="text-[9px] font-bold text-teal-600 bg-teal-50 px-2 py-0.5 rounded-full">Prellenado del padre</span>' : '') +
+          '</div>' +
+          '<div class="grid grid-cols-1 md:grid-cols-2 gap-4">' +
+            '<div>' +
+              '<label class="block text-[11px] font-black text-slate-500 mb-1.5">No. Referencia / Transferencia *</label>' +
+              '<input id="asistTransferRefInput" type="text" class="w-full px-4 py-2.5 border-2 border-slate-200 rounded-xl outline-none focus:ring-4 focus:ring-teal-100 focus:border-teal-500 transition-all text-sm font-bold" placeholder="Ej: 0012345678" value="' + (p.reference || '') + '">' +
+            '</div>' +
+            '<div>' +
+              '<label class="block text-[11px] font-black text-slate-500 mb-1.5">Fecha de Transferencia</label>' +
+              '<input id="asistTransferDateInput" type="date" class="w-full px-4 py-2.5 border-2 border-slate-200 rounded-xl outline-none focus:ring-4 focus:ring-teal-100 focus:border-teal-500 transition-all text-sm font-bold" value="' + (p.transfer_date || today) + '">' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
       '</div>' +
       '<div class="bg-white p-5 rounded-b-3xl border-t border-slate-100 flex justify-end gap-3">' +
         '<button onclick="App.payments.closeModal()" class="px-5 py-2.5 text-slate-500 font-black text-xs uppercase hover:bg-slate-50 rounded-2xl">Cerrar</button>' +
@@ -495,14 +540,31 @@ export const PaymentsModule = {
       '</div>'
     );
     if (window.lucide) lucide.createIcons();
+    setTimeout(() => { document.getElementById('asistTransferRefInput')?.focus(); }, 200);
+
+    // OCR automatico del comprobante
+    if (voucherUrl && isImage) {
+      this._autoOCRForReview(voucherUrl);
+    }
 
     document.getElementById('btnAsistApproveTransfer')?.addEventListener('click', async () => {
+      const ref = document.getElementById('asistTransferRefInput')?.value?.trim();
+      if (!ref) { Helpers.toast('Ingresa el numero de referencia de la transferencia', 'warning'); document.getElementById('asistTransferRefInput')?.focus(); return; }
       const btn = document.getElementById('btnAsistApproveTransfer');
       btn.disabled = true; btn.textContent = 'Aprobando...';
       try {
-        await supabase.from('payments').update({ status: 'paid', paid_date: new Date().toISOString() }).eq('id', p.id);
+        const transferDate = document.getElementById('asistTransferDateInput')?.value;
+        const { data: authData } = await supabase.auth.getUser();
+        const updatePayload = {
+          status: 'paid',
+          paid_date: transferDate ? transferDate + 'T12:00:00' : new Date().toISOString(),
+          reference: ref,
+          transfer_date: transferDate || null,
+          validated_by: authData?.user?.id || null
+        };
+        await supabase.from('payments').update(updatePayload).eq('id', p.id);
         App.payments.closeModal();
-        Helpers.toast('Transferencia aprobada', 'success');
+        Helpers.toast('Transferencia aprobada y registrada', 'success');
         this.loadPayments(); this.loadStats();
         try { await supabase.functions.invoke('generate-invoice', { body: { payment_id: p.id, send_email: true } }); } catch (_) {}
       } catch (_) { Helpers.toast('Error al aprobar', 'error'); btn.disabled = false; btn.textContent = 'Aprobar'; }
@@ -514,12 +576,55 @@ export const PaymentsModule = {
       const btn = document.getElementById('btnAsistRejectTransfer');
       btn.disabled = true; btn.textContent = 'Rechazando...';
       try {
-        await supabase.from('payments').update({ status: 'pending', notes: 'RECHAZADO: ' + reason }).eq('id', p.id);
+        await supabase.from('payments').update({ status: 'rechazado', notes: 'RECHAZADO: ' + reason }).eq('id', p.id);
         App.payments.closeModal();
         Helpers.toast('Transferencia rechazada', 'info');
         this.loadPayments(); this.loadStats();
       } catch (_) { Helpers.toast('Error al rechazar', 'error'); btn.disabled = false; btn.textContent = 'Rechazar'; }
     });
+  },
+
+  async _autoOCRForReview(voucherUrl) {
+    const refInput = document.getElementById('asistTransferRefInput');
+    const dateInput = document.getElementById('asistTransferDateInput');
+    if (!refInput) return;
+
+    const ocrIndicator = document.createElement('div');
+    ocrIndicator.id = 'asistOcrIndicator';
+    ocrIndicator.className = 'flex items-center gap-2 text-[10px] text-teal-600 font-bold mt-2';
+    ocrIndicator.innerHTML = '<div class="w-3.5 h-3.5 border-2 border-teal-500 border-t-transparent rounded-full animate-spin"></div> Leyendo comprobante...';
+    refInput.parentElement?.appendChild(ocrIndicator);
+
+    try {
+      const result = await processTransferReceipt(voucherUrl);
+      const indicator = document.getElementById('asistOcrIndicator');
+      if (indicator) indicator.remove();
+
+      if (result.error) return;
+
+      let filled = [];
+      if (result.reference && !refInput.value) {
+        refInput.value = result.reference;
+        filled.push('Referencia');
+      }
+      if (result.date && dateInput) {
+        dateInput.value = result.date;
+        filled.push('Fecha');
+      }
+      if (result.bank) filled.push('Banco: ' + result.bank);
+      if (result.amount) filled.push('Monto: RD$ ' + result.amount.toLocaleString('es-DO', {minimumFractionDigits: 2}));
+
+      if (filled.length) {
+        const toast = document.createElement('div');
+        toast.className = 'flex items-center gap-2 text-[10px] text-emerald-700 font-bold bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2 mt-2';
+        toast.innerHTML = '<span>✅</span> OCR detectó: ' + filled.join(', ');
+        refInput.parentElement?.appendChild(toast);
+        setTimeout(() => { toast.style.opacity = '0'; toast.style.transition = 'opacity 0.4s'; setTimeout(() => toast.remove(), 400); }, 5000);
+      }
+    } catch (_) {
+      const indicator = document.getElementById('asistOcrIndicator');
+      if (indicator) indicator.remove();
+    }
   },
 
   async _confirmApproval(id) {

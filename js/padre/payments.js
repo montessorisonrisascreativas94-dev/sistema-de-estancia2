@@ -32,7 +32,7 @@ export const PaymentsModule = {
     try {
       const { data, error } = await supabase
         .from(TABLES.PAYMENTS)
-        .select('id,student_id,amount,concept,status,due_date,created_at,paid_date,method,month_paid,evidence_url,notes')
+        .select('id,student_id,amount,concept,status,due_date,created_at,paid_date,method,month_paid,evidence_url,reference,notes')
         .eq('student_id', this._studentId)
         .order('due_date', { ascending: false });
       if (error) throw error;
@@ -54,7 +54,7 @@ export const PaymentsModule = {
         return s;
       };
 
-      const statusPriority = { paid: 4, review: 3, overdue: 2, pending: 1 };
+      const statusPriority = { paid: 5, review: 4, rechazado: 3, overdue: 2, pending: 1 };
       const monthMap = new Map();
       for (const p of data || []) {
         const key = normalizeMonth(p.month_paid);
@@ -233,7 +233,7 @@ export const PaymentsModule = {
 
     const SC = {
       paid:      { label: 'Aprobado',    cls: 'bg-emerald-100 text-emerald-700', icon: 'check-circle',   statusCls: 'pay-status-paid' },
-      review:    { label: 'En Revisión', cls: 'bg-blue-100 text-blue-700',       icon: 'clock',          statusCls: 'pay-status-review' },
+      review:    { label: 'En Revisión', cls: 'bg-blue-100 text-blue-700 animate-pulse', icon: 'clock',          statusCls: 'pay-status-review' },
       overdue:   { label: 'Vencido',     cls: 'bg-rose-100 text-rose-700',       icon: 'alert-triangle', statusCls: 'pay-status-overdue' },
       rechazado: { label: 'Rechazado',   cls: 'bg-rose-100 text-rose-700',       icon: 'x-circle',       statusCls: 'pay-status-rechazado' },
       pending:   { label: 'Pendiente',   cls: 'bg-amber-100 text-amber-700',     icon: 'alert-circle',   statusCls: 'pay-status-pending' }
@@ -274,8 +274,9 @@ export const PaymentsModule = {
                 <p class="font-black text-slate-800 text-sm truncate">${escapeHtml(p.month_paid || 'Colegiatura')} · ${escapeHtml(conceptLabel)}</p>
                 <div class="flex items-center gap-1.5 mt-0.5 flex-wrap">
                   <span class="text-[9px] font-bold text-slate-400 uppercase">${Helpers.formatDate(p.created_at)}</span>
-                  ${p.bank ? `<span class="text-[9px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded-full">🏦 ${escapeHtml(p.bank)}</span>` : ''}
-                  ${urgencyBadge}
+                ${p.bank ? `<span class="text-[9px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded-full">🏦 ${escapeHtml(p.bank)}</span>` : ''}
+                ${p.reference ? `<span class="text-[9px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded-full">📎 Ref: ${escapeHtml(p.reference)}</span>` : ''}
+                ${urgencyBadge}
                 </div>
                 ${p.due_date && !isPaid ? `<p class="text-[9px] font-black uppercase mt-0.5 ${mora > 0 ? 'text-rose-500' : 'text-slate-400'}">Vence: ${new Date(p.due_date + 'T00:00:00').toLocaleDateString('es-DO')}</p>` : ''}
               </div>
@@ -332,7 +333,7 @@ export const PaymentsModule = {
         .from('payments')
         .select(`
           id, amount, concept, status, month_paid, due_date, paid_date,
-          method, bank, reference, notes,
+          method, bank, reference, transfer_date, notes,
           validated_by,
           students:student_id (
             name, p1_name, p1_email, p2_name, photo_url,
@@ -391,6 +392,7 @@ export const PaymentsModule = {
         method: payment.method || 'efectivo',
         bank: payment.bank || '',
         reference: payment.reference || '',
+        transfer_date: payment.transfer_date || '',
         paid_date: payment.paid_date
       },
       school: schoolSettings

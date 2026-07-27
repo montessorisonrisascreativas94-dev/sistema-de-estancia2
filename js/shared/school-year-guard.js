@@ -13,8 +13,9 @@ export const SchoolYearGuard = {
 
   async getActivePeriod() {
     if (_cachedPeriod && Date.now() - (_cachedPeriod._ts || 0) < 60000) return _cachedPeriod;
-    const { data } = await supabase.from('periods').select('*').eq('is_active', true).single();
-    _cachedPeriod = data ? { ...data, _ts: Date.now() } : null;
+    const { data, error } = await supabase.from('periods').select('*').eq('is_active', true);
+    if (error) { console.warn('[SchoolYearGuard] periods query failed:', error.message); return null; }
+    _cachedPeriod = data && data.length ? { ...data[0], _ts: Date.now() } : null;
     return _cachedPeriod;
   },
 
@@ -25,8 +26,9 @@ export const SchoolYearGuard = {
 
   async isPeriodOpen(periodId) {
     if (!periodId) return true;
-    const { data } = await supabase.from('periods').select('status, is_blocked').eq('id', periodId).single();
-    return data && data.status === 'open' && !data.is_blocked;
+    const { data, error } = await supabase.from('periods').select('status, is_blocked').eq('id', periodId);
+    if (error || !data || !data.length) return false;
+    return data[0].status === 'open' && !data[0].is_blocked;
   },
 
   async isCurrentPeriodOpen() {

@@ -7,7 +7,12 @@ export const ParentRatingModule = {
     this.initializeEventListeners();
   },
 
+  destroy() {
+    this._listenersBound = false;
+  },
+
   initializeEventListeners() {
+    if (this._listenersBound) return;
     const ratingForm = document.getElementById('parent-rating-form');
     if (ratingForm) {
       ratingForm.addEventListener('submit', (e) => this.handleRatingSubmit(e));
@@ -34,6 +39,7 @@ export const ParentRatingModule = {
         this.highlightStars(currentRating);
       });
     }
+    this._listenersBound = true;
   },
 
   setRating(rating) {

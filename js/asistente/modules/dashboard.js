@@ -29,7 +29,9 @@ export const DashboardModule = {
       const midnight = new Date(now); midnight.setHours(24,0,0,0);
       return midnight - now;
     };
-    setTimeout(() => { updateDate(); setInterval(updateDate, 86400000); }, msUntilMidnight());
+    if (this._dateInterval) clearInterval(this._dateInterval);
+    if (this._dateTimeout) clearTimeout(this._dateTimeout);
+    this._dateTimeout = setTimeout(() => { updateDate(); this._dateInterval = setInterval(updateDate, 86400000); }, msUntilMidnight());
 
     await Promise.all([
       this.loadStats(),

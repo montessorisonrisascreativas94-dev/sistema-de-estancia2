@@ -1425,6 +1425,98 @@ CREATE INDEX IF NOT EXISTS idx_payroll_employee ON public.payroll_records(employ
 CREATE INDEX IF NOT EXISTS idx_payment_concepts_active ON public.payment_concepts(is_active) WHERE is_active = true;
 
 -- ============================================================
+-- 5.1 INDICES CRITICOS FALTANTES
+-- ============================================================
+
+-- periods (usados en get_current_period, get_active_period, activate_period)
+CREATE INDEX IF NOT EXISTS idx_periods_is_active ON public.periods(is_active) WHERE is_active = true;
+CREATE INDEX IF NOT EXISTS idx_periods_status ON public.periods(status);
+CREATE INDEX IF NOT EXISTS idx_periods_classroom ON public.periods(classroom_id);
+CREATE INDEX IF NOT EXISTS idx_periods_school_year ON public.periods(school_year_id);
+
+-- invoices (usados en get_invoices_by_student, get_invoices_by_payment)
+CREATE INDEX IF NOT EXISTS idx_invoices_student_id ON public.invoices(student_id);
+CREATE INDEX IF NOT EXISTS idx_invoices_payment_id ON public.invoices(payment_id);
+CREATE INDEX IF NOT EXISTS idx_invoices_status ON public.invoices(status);
+CREATE INDEX IF NOT EXISTS idx_invoices_created_at ON public.invoices(created_at DESC);
+
+-- messages (usados en get_unread_counts, mark_messages_read)
+CREATE INDEX IF NOT EXISTS idx_messages_sender ON public.messages(sender_id);
+CREATE INDEX IF NOT EXISTS idx_messages_unread ON public.messages(conversation_id, is_read) WHERE is_read = false;
+
+-- grades (usados en close_period, historial estudiante)
+CREATE INDEX IF NOT EXISTS idx_grades_student ON public.grades(student_id);
+CREATE INDEX IF NOT EXISTS idx_grades_classroom ON public.grades(classroom_id);
+
+-- report_cards
+CREATE INDEX IF NOT EXISTS idx_report_cards_student ON public.report_cards(student_id);
+CREATE INDEX IF NOT EXISTS idx_report_cards_classroom ON public.report_cards(classroom_id);
+
+-- classrooms (usados en RLS, teacher assignments, live)
+CREATE INDEX IF NOT EXISTS idx_classrooms_teacher ON public.classrooms(teacher_id);
+CREATE INDEX IF NOT EXISTS idx_classrooms_active ON public.classrooms(is_live) WHERE is_live = true;
+
+-- incidents
+CREATE INDEX IF NOT EXISTS idx_incidents_student ON public.incidents(student_id);
+CREATE INDEX IF NOT EXISTS idx_incidents_classroom ON public.incidents(classroom_id);
+CREATE INDEX IF NOT EXISTS idx_incidents_status ON public.incidents(status);
+
+-- comments
+CREATE INDEX IF NOT EXISTS idx_comments_post ON public.comments(post_id);
+
+-- attendance_requests
+CREATE INDEX IF NOT EXISTS idx_attendance_requests_student ON public.attendance_requests(student_id);
+CREATE INDEX IF NOT EXISTS idx_attendance_requests_status ON public.attendance_requests(status);
+
+-- inquiries (usados en RLS parent_id)
+CREATE INDEX IF NOT EXISTS idx_inquiries_parent ON public.inquiries(parent_id);
+CREATE INDEX IF NOT EXISTS idx_inquiries_student ON public.inquiries(student_id);
+CREATE INDEX IF NOT EXISTS idx_inquiries_status ON public.inquiries(status);
+
+-- staff_permits
+CREATE INDEX IF NOT EXISTS idx_staff_permits_staff ON public.staff_permits(staff_id);
+CREATE INDEX IF NOT EXISTS idx_staff_permits_status ON public.staff_permits(status);
+
+-- daily_logs
+CREATE INDEX IF NOT EXISTS idx_daily_logs_classroom ON public.daily_logs(classroom_id);
+CREATE INDEX IF NOT EXISTS idx_daily_logs_date ON public.daily_logs(date);
+CREATE INDEX IF NOT EXISTS idx_daily_logs_status ON public.daily_logs(status);
+
+-- task_evidences
+CREATE INDEX IF NOT EXISTS idx_task_evidences_student ON public.task_evidences(student_id);
+CREATE INDEX IF NOT EXISTS idx_task_evidences_status ON public.task_evidences(status);
+
+-- conversations
+CREATE INDEX IF NOT EXISTS idx_conversations_type ON public.conversations(type);
+CREATE INDEX IF NOT EXISTS idx_conversations_classroom ON public.conversations(classroom_id);
+
+-- audit_logs (usados en busqueda por usuario/accion)
+CREATE INDEX IF NOT EXISTS idx_audit_logs_user ON public.audit_logs(user_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON public.audit_logs(action);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON public.audit_logs(created_at DESC);
+
+-- nap_sessions (usados en daily routine por classroom)
+CREATE INDEX IF NOT EXISTS idx_nap_sessions_classroom ON public.nap_sessions(classroom_id);
+
+-- accounting_journal (usados en joins con payments)
+CREATE INDEX IF NOT EXISTS idx_journal_payment_id ON public.accounting_journal(payment_id);
+
+-- orders
+CREATE INDEX IF NOT EXISTS idx_orders_student ON public.orders(student_id);
+
+-- likes
+CREATE INDEX IF NOT EXISTS idx_likes_user ON public.likes(user_id);
+
+-- student_preregistrations (busqueda por email del padre)
+CREATE INDEX IF NOT EXISTS idx_preregistrations_p1_email ON public.student_preregistrations(p1_email);
+
+-- payments (indice compuesto para el padre: buscar pagos por estudiante + estado)
+CREATE INDEX IF NOT EXISTS idx_payments_student_status ON public.payments(student_id, status) WHERE deleted_at IS NULL;
+
+-- payments (indice para la cola de validacion)
+CREATE INDEX IF NOT EXISTS idx_payments_pending_evidence ON public.payments(status, created_at DESC) WHERE evidence_url IS NOT NULL AND status IN ('pending','pendiente','review');
+
+-- ============================================================
 -- 6. HABILITAR ROW LEVEL SECURITY (RLS)
 -- ============================================================
 ALTER TABLE public.profiles                ENABLE ROW LEVEL SECURITY;
