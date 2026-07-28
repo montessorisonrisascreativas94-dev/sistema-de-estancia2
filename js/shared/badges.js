@@ -100,8 +100,37 @@ export const BadgeSystem = {
           }
         }
       } catch (_) {}
-
     } catch (_) {}
+
+    // Active meetings count
+    try {
+      const { supabase } = await import('./supabase.js');
+      let meetingQuery = supabase.from('meetings').select('id', { count: 'exact', head: true }).eq('status', 'live');
+
+      // For parents, only count meetings for their child's classroom
+      if (this._role === 'padre') {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: students } = await supabase
+            .from('students')
+            .select('classroom_id')
+            .eq('parent_id', user.id)
+            .is('deleted_at', null)
+            .eq('is_active', true);
+          const classroomIds = students?.map(s => s.classroom_id).filter(Boolean) || [];
+          if (classroomIds.length) {
+            meetingQuery = meetingQuery.in('target_id', classroomIds);
+          }
+        }
+      }
+
+      const { count: meetingCount } = await meetingQuery;
+      if (meetingCount > 0) {
+        this._renderBadge('videocall', meetingCount, 'urgent');
+        this._renderCardBadge('videocall', meetingCount);
+      }
+    } catch (_) {}
+
   },
 
   _subscribeRealtime() {
@@ -300,7 +329,20 @@ export const BadgeSystem = {
       self._showMiniToast(self._toastMsg('inquiry'));
     });
 
-    // 8. Solicitudes de permisos (personal)
+    // 8. Reuniones activas (videocall)
+    channel.on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'meetings'
+    }, function(payload) {
+      const ns = payload.new && payload.new.status;
+      const os = payload.old && payload.old.status;
+
+      // Count live meetings
+      self._updateMeetingBadge();
+    });
+
+    // 9. Solicitudes de permisos (personal)
     channel.on('postgres_changes', {
       event: 'INSERT',
       schema: 'public',
@@ -313,6 +355,41 @@ export const BadgeSystem = {
         self._showMiniToast('Nueva solicitud de permiso');
       }
     });
+  },
+
+  async _updateMeetingBadge() {
+    try {
+      const { supabase } = await import('./supabase.js');
+      let meetingQuery = supabase.from('meetings').select('id', { count: 'exact', head: true }).eq('status', 'live');
+
+      if (this._role === 'padre') {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: students } = await supabase
+            .from('students')
+            .select('classroom_id')
+            .eq('parent_id', user.id)
+            .is('deleted_at', null)
+            .eq('is_active', true);
+          const classroomIds = students?.map(s => s.classroom_id).filter(Boolean) || [];
+          if (classroomIds.length) {
+            meetingQuery = meetingQuery.in('target_id', classroomIds);
+          }
+        }
+      }
+
+      const { count } = await meetingQuery;
+      const prev = this._getBadgeCount('videocall');
+      if (count > 0 && prev === 0) {
+        this._renderBadge('videocall', count, 'urgent');
+        this._renderCardBadge('videocall', count);
+        this._showMiniToast('🔴 Clase en vivo iniciada');
+        this._applyGlow('videocall', 'live');
+      } else if (count === 0 && prev > 0) {
+        this._renderBadge('videocall', 0);
+        this._renderCardBadge('videocall', 0);
+      }
+    } catch (_) {}
   },
 
   async mark(section) {
@@ -394,18 +471,21 @@ export const BadgeSystem = {
 
   // Badge en el sidebar (badge-class, badge-tasks, badge-pagos, etc.)
   _renderBadge(section, count, type = 'default') {
-    this._counts[section] = count; // guardar en memoria
+    this._counts[section] = count;
     const badge = document.getElementById('badge-' + section);
     if (!badge) return;
+    const isPulseDot = badge.classList.contains('animate-pulse');
     if (count > 0) {
-      badge.textContent = count > 99 ? '99+' : String(count);
+      if (!isPulseDot) {
+        badge.textContent = count > 99 ? '99+' : String(count);
+      }
       badge.classList.remove('hidden');
       badge.classList.add('flex');
-      
-      // Estilos por tipo
-      badge.classList.toggle('bg-rose-600', type === 'urgent');
-      badge.classList.toggle('bg-blue-600', type === 'new');
-      if (type === 'default') badge.classList.add('bg-rose-500');
+      if (!isPulseDot) {
+        badge.classList.toggle('bg-rose-600', type === 'urgent');
+        badge.classList.toggle('bg-blue-600', type === 'new');
+        if (type === 'default') badge.classList.add('bg-rose-500');
+      }
     } else {
       badge.classList.add('hidden');
       badge.classList.remove('flex');

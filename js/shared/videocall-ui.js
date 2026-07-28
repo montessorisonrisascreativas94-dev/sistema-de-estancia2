@@ -13,6 +13,7 @@ const ROOM_PREFIX = 'ColegioSonrisas-edu-2026';
 
 export const VideoCallUI = {
   _api: null,
+  _realtimeChannel: null,
 
   /**
    * Renderiza la sección completa de videollamadas según el rol.
@@ -34,6 +35,12 @@ export const VideoCallUI = {
       this._wireButtons(container, role, userName, classroomId);
 
       if (window.lucide) lucide.createIcons();
+
+      // Subscribe to realtime changes for live meeting updates
+      if (this._realtimeChannel) {
+        supabase.removeChannel(this._realtimeChannel);
+      }
+      this._realtimeChannel = await this._getActiveMeetingRealtime(role, classroomId, containerId, userName, studentName);
     } catch (e) {
       container.innerHTML = Helpers.emptyState('Error al cargar videollamadas', 'video-off');
     }
@@ -178,9 +185,18 @@ export const VideoCallUI = {
     const isHost = ['maestra', 'directora', 'asistente'].includes(role);
 
     // Unirse a reunión activa
-    container.querySelector('#btn-join-active')?.addEventListener('click', (e) => {
-      const room = e.currentTarget.dataset.room;
-      this._joinRoom(room, userName);
+      container.querySelector('#btn-join-active')?.addEventListener('click', async (e) => {
+      const btn = e.currentTarget;
+      btn.disabled = true;
+      btn.innerHTML = '<i data-lucide="loader" class="w-4 h-4 animate-spin"></i> Uniendo...';
+      if (window.lucide) lucide.createIcons();
+      try {
+        const room = e.currentTarget.dataset.room;
+        await this._joinRoom(room, userName);
+      } catch (_) {}
+      btn.disabled = false;
+      btn.innerHTML = '<i data-lucide="video" class="w-5 h-5"></i> Unirse ahora';
+      if (window.lucide) lucide.createIcons();
     });
 
     // Reunión instantánea (host only)
@@ -229,8 +245,7 @@ export const VideoCallUI = {
     container.querySelectorAll('.btn-copy-link').forEach(btn => {
       btn.addEventListener('click', (e) => {
         const room = e.currentTarget.dataset.room;
-        const fullRoom = `${ROOM_PREFIX}_${room}`;
-        const url = `https://${JITSI_DOMAIN}/${fullRoom}`;
+        const url = `https://${JITSI_DOMAIN}/${room}`;
         navigator.clipboard?.writeText(url).then(() => {
           Helpers.toast('Enlace copiado al portapapeles', 'success');
         }).catch(() => {
@@ -244,7 +259,7 @@ export const VideoCallUI = {
       btn.addEventListener('click', async (e) => {
         if (!confirm('¿Terminar la reunión para todos?')) return;
         const id = e.currentTarget.dataset.meetingId;
-        await supabase.from('meetings').update({ status: 'finished', end_time: new Date().toISOString() }).eq('id', id);
+        await supabase.from('meetings').update({ status: 'ended', end_time: new Date().toISOString() }).eq('id', id);
         Helpers.toast('Reunión terminada', 'success');
         this.renderSection(container.id, { role, userName, classroomId });
       });
@@ -268,7 +283,7 @@ export const VideoCallUI = {
   },
 
   _joinRoom(roomName, userName) {
-    const fullRoom = `${ROOM_PREFIX}_${roomName}`;
+    const fullRoom = roomName;
 
     // Track meeting attendance in DB
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -284,28 +299,29 @@ export const VideoCallUI = {
         }).catch(() => {});
     }).catch(() => {});
 
-    // ALWAYS open in new tab for best experience (no membersOnly lobby, no iframe limits)
-    window.open(`https://${JITSI_DOMAIN}/${fullRoom}#userInfo.displayName="${encodeURIComponent(userName)}"&config.startWithAudioMuted=false&config.startWithVideoMuted=false&config.prejoinPageEnabled=false&config.disableDeepLinking=true&interfaceConfig.SHOW_JITSI_WATERMARK=false&interfaceConfig.SHOW_BRAND_WATERMARK=false&interfaceConfig.DEFAULT_BACKGROUND=%231e293b`, '_blank', 'noopener,noreferrer');
-
-    // Show feedback in UI
+    // Try iframe embed first; fallback to new tab if it fails
     const jitsiContainer = document.getElementById('jitsi-container');
     if (jitsiContainer) {
       jitsiContainer.classList.remove('hidden');
       jitsiContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      jitsiContainer.innerHTML = `
-        <div class="flex flex-col items-center justify-center h-full bg-gradient-to-br from-violet-600 to-purple-600 text-white gap-4 p-8">
-          <div class="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center text-4xl animate-pulse">🎥</div>
-          <p class="font-black text-xl">Videollamada abierta</p>
-          <p class="text-sm text-white/80 text-center max-w-sm">La sala se abrió en una nueva pestaña. Si no la ves, verifica que tu navegador no bloqueó ventanas emergentes.</p>
-          <button onclick="window.open('https://${JITSI_DOMAIN}/${fullRoom}#userInfo.displayName=${encodeURIComponent(userName)}','_blank')"
-            class="px-8 py-3 bg-white/20 hover:bg-white/30 text-white rounded-2xl font-black text-sm uppercase tracking-wider backdrop-blur-sm transition-all flex items-center gap-2">
-            <i data-lucide="external-link" class="w-4 h-4"></i> Abrir de nuevo
-          </button>
-          <button onclick="document.getElementById('jitsi-container').classList.add('hidden')"
-            class="text-xs text-white/50 hover:text-white/80 transition-colors mt-2 font-bold">
-            Cerrar este mensaje
-          </button>
-        </div>`;
+      try {
+        if (typeof JitsiMeetExternalAPI !== 'undefined' || document.querySelector('script[src*="external_api.js"]')) {
+          // If Jitsi API is already loaded, try embed
+          this._startJitsi(roomName, userName, jitsiContainer);
+        } else {
+          // Fall back to new tab
+          this._openNewTab(fullRoom, userName);
+        }
+      } catch (_) {
+        this._openNewTab(fullRoom, userName);
+      }
+    } else {
+      this._openNewTab(fullRoom, userName);
+    }
+
+    // Show feedback in UI
+    if (jitsiContainer && !jitsiContainer.querySelector('iframe')) {
+      jitsiContainer.innerHTML = this._buildJitsiFallbackHTML(fullRoom, userName);
       if (window.lucide) lucide.createIcons();
     }
 
@@ -315,9 +331,30 @@ export const VideoCallUI = {
     }
   },
 
+  _openNewTab(roomName, userName) {
+    window.open(`https://${JITSI_DOMAIN}/${roomName}#userInfo.displayName="${encodeURIComponent(userName)}"&config.startWithAudioMuted=false&config.startWithVideoMuted=false&config.prejoinPageEnabled=false&config.disableDeepLinking=true&interfaceConfig.SHOW_JITSI_WATERMARK=false&interfaceConfig.SHOW_BRAND_WATERMARK=false&interfaceConfig.DEFAULT_BACKGROUND=%231e293b`, '_blank', 'noopener,noreferrer');
+  },
+
+  _buildJitsiFallbackHTML(roomName, userName) {
+    return `
+      <div class="flex flex-col items-center justify-center h-full bg-gradient-to-br from-violet-600 to-purple-600 text-white gap-4 p-8">
+        <div class="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center text-4xl animate-pulse">🎥</div>
+        <p class="font-black text-xl">Videollamada abierta</p>
+        <p class="text-sm text-white/80 text-center max-w-sm">La sala se abrió en una nueva pestaña. Si no la ves, verifica que tu navegador no bloqueó ventanas emergentes.</p>
+        <button onclick="window.open('https://${JITSI_DOMAIN}/${roomName}#userInfo.displayName=${encodeURIComponent(userName)}','_blank')"
+          class="px-8 py-3 bg-white/20 hover:bg-white/30 text-white rounded-2xl font-black text-sm uppercase tracking-wider backdrop-blur-sm transition-all flex items-center gap-2">
+          <i data-lucide="external-link" class="w-4 h-4"></i> Abrir de nuevo
+        </button>
+        <button onclick="this.closest('#jitsi-container').classList.add('hidden')"
+          class="text-xs text-white/50 hover:text-white/80 transition-colors mt-2 font-bold">
+          Cerrar este mensaje
+        </button>
+      </div>`;
+  },
+
   _startJitsi(roomName, userName, container) {
     try {
-      const fullRoom = `${ROOM_PREFIX}_${roomName}`;
+      const fullRoom = roomName;
 
       this._api = new window.JitsiMeetExternalAPI(JITSI_DOMAIN, {
         roomName:   fullRoom,
@@ -400,6 +437,19 @@ export const VideoCallUI = {
     } catch (_) { return []; }
   },
 
+  async _getActiveMeetingRealtime(role, classroomId, containerId, userName, studentName) {
+    const channel = supabase.channel('meetings-live');
+    channel.on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'meetings',
+      filter: classroomId ? `target_id=eq.${classroomId}` : undefined
+    }, () => {
+      this.renderSection(containerId, { role, userName, studentName, classroomId });
+    }).subscribe();
+    return channel;
+  },
+
   async _notifyParticipants(meetingId, classroomId) {
     if (!classroomId) return;
     try {
@@ -411,7 +461,7 @@ export const VideoCallUI = {
           title: '🔴 Clase en vivo ahora',
           message: 'Tu maestra inició una videollamada. ¡Únete ahora desde tu panel!',
           type: 'videocall',
-          link: 'panel_padres.html'
+          link: 'panel_padres.html#videocall'
         }).catch(() => {})
       );
       await Promise.allSettled(pushes);

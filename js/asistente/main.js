@@ -746,6 +746,16 @@ window.selectAssistantChat = async (userId, name, role, avatarUrl = null) => {
     // Marcar como leídos al abrir
     if (conversationId) ChatModule.markAsRead(conversationId);
 
+    // Clear badge on selected contact
+    const chatListEl = document.getElementById('chatContactsList');
+    const contactEl = chatListEl?.querySelector(`[data-user-id="${userId}"]`);
+    if (contactEl) {
+      const badge = contactEl.querySelector('span.bg-rose-500');
+      if (badge) badge.remove();
+      const dot = Array.from(contactEl.querySelectorAll('div')).find(d => d.classList.contains('bg-rose-500'));
+      if (dot) dot.remove();
+    }
+
     if (container) {
       container.innerHTML = messages.length 
         ? messages.map(m => _msgBubble(m, user.id)).join('')
@@ -861,23 +871,30 @@ async function initAssistantChat() {
       return;
     }
 
+    const unreadCounts = await ChatModule.getUnreadCounts().then(r => r.counts || {}).catch(() => ({}));
+
     list.innerHTML = activeProfiles.map(p => {
       const studentName = p.role === 'padre' ? (studentMap[p.id] || null) : null;
       const mainTitle = studentName ? `Estudiante: ${studentName}` : (p.name || 'Sin nombre');
       const subTitle = studentName ? `Padre: ${p.name || 'Sin nombre'}` : (p.role || 'Usuario');
+      const unread = unreadCounts[p.id] || 0;
 
       return `
       <div onclick="window.selectAssistantChat('${p.id}', '${Helpers.escapeHTML(p.name)}', '${p.role}', '${p.avatar_url || ''}')" 
            data-user-id="${p.id}"
            class="flex items-center gap-3 p-3 rounded-2xl hover:bg-white hover:shadow-sm cursor-pointer transition-all border border-transparent hover:border-slate-100 group mb-1 relative">
-        <div class="w-12 h-12 rounded-full bg-teal-100 text-teal-700 flex items-center justify-center font-bold overflow-hidden border-2 border-teal-50 shrink-0 shadow-sm">
-          ${p.avatar_url ? `<img src="${p.avatar_url}" class="w-full h-full object-cover">` : (p.name || '?').charAt(0)}
+        <div class="relative shrink-0">
+          <div class="w-12 h-12 rounded-full bg-teal-100 text-teal-700 flex items-center justify-center font-bold overflow-hidden border-2 border-teal-50 shrink-0 shadow-sm">
+            ${p.avatar_url ? `<img src="${p.avatar_url}" class="w-full h-full object-cover">` : (p.name || '?').charAt(0)}
+          </div>
+          ${unread > 0 ? `<span class="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-rose-500 text-white text-[9px] font-black rounded-full flex items-center justify-center px-1 shadow animate-pulse">${unread > 9 ? '9+' : unread}</span>` : ''}
         </div>
         <div class="absolute bottom-3 left-11 w-3.5 h-3.5 bg-slate-300 border-2 border-white rounded-full presence-indicator"></div>
         <div class="min-w-0 flex-1">
           <div class="font-bold text-slate-700 text-sm truncate group-hover:text-teal-700">${Helpers.escapeHTML(mainTitle)}</div>
           <div class="text-[10px] text-slate-400 font-bold uppercase truncate">${Helpers.escapeHTML(subTitle)}</div>
         </div>
+        ${unread > 0 ? `<div class="w-2 h-2 bg-rose-500 rounded-full shrink-0 animate-pulse"></div>` : ''}
       </div>
     `}).join('');
 

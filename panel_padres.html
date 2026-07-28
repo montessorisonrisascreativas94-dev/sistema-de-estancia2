@@ -560,6 +560,7 @@
             <button type="button" data-target="videocall" class="submenu-item w-full flex items-center gap-2 text-left">
               <i data-lucide="video" class="w-4 h-4 shrink-0"></i>
               <span>Videollamada</span>
+              <span id="badge-videocall" class="hidden w-2 h-2 bg-red-500 rounded-full ml-auto animate-pulse shrink-0"></span>
             </button>
           </div>
         </div>
@@ -747,8 +748,9 @@
           <div class="cloud-card mb-8">
             <div class="flex items-center justify-between mb-5">
               <h3 class="font-black text-xl text-[#1A2340] flex items-center gap-2">
-                <span class="w-9 h-9 rounded-xl bg-gradient-to-br from-[#0B63C7] to-[#28B54D] text-white flex items-center justify-center text-lg shadow-md">
-                  <i data-lucide="bell" class="w-5 h-5"></i>
+                <span class="w-9 h-9 rounded-xl bg-gradient-to-br from-[#FF7A00] to-[#E06900] text-white flex items-center justify-center text-lg shadow-md shadow-orange-200 relative overflow-hidden">
+                  <i data-lucide="activity" class="w-5 h-5 relative z-10"></i>
+                  <span class="absolute inset-0 bg-white/20 animate-pulse rounded-xl"></span>
                 </span>
                 Actividad Reciente
               </h3>

@@ -992,6 +992,13 @@ export const CajaCobroV2 = {
   // ── CONFIRMAR COBRO ───────────────────────────────────────────────────────
   async confirmCobro() {
     if (!_cart.length || !_method || !_student) return;
+
+    const cajaAbierta = await this._isCajaOpen();
+    if (!cajaAbierta) {
+      Helpers.toast('Debe abrir la caja antes de realizar cobros', 'warning');
+      return;
+    }
+
     const btn = document.getElementById('btnConfirmarCobro');
     if (btn) { btn.disabled=true; btn.textContent='Procesando...'; }
 
@@ -1014,44 +1021,75 @@ export const CajaCobroV2 = {
       if (excludeDGII) notes += (notes ? '|' : '') + `EXCLUDE_DGII:true`;
 
       const currentYear = new Date().getFullYear();
-      const inserts = _cart.map(c => ({
-        student_id:  _student.id,
-        amount:      c.amount,
-        concept:     c.concept,
-        method:      _method,
-        status:      'paid',
-        paid_date:   now,
-        month_paid:  c.type==='colegiatura'
-          ? currentYear + '-' + String(c._monthIdx+1).padStart(2,'0')
-          : null,
-        created_at:  now,
-        notes: notes || null,
-        exclude_dgii: excludeDGII
-      }));
 
-      const { error } = await supabase.from('payments').insert(inserts);
-      if (error) throw error;
+      // ── Split cart: items from review (UPDATE) vs new items (INSERT) ──
+      const reviewItems = _cart.filter(c => c._reviewId);
+      const newItems = _cart.filter(c => !c._reviewId);
 
+      const allPaymentIds = [];
+
+      // 1) UPDATE existing review payments to 'paid'
+      for (const item of reviewItems) {
+        const monthPaid = item.type === 'colegiatura'
+          ? currentYear + '-' + String(item._monthIdx + 1).padStart(2, '0')
+          : null;
+        await supabase.from('payments').update({
+          status: 'paid',
+          paid_date: now,
+          method: _method,
+          month_paid: monthPaid,
+          notes: notes || null,
+          exclude_dgii: excludeDGII
+        }).eq('id', item._reviewId);
+        allPaymentIds.push(item._reviewId);
+      }
+
+      // 2) INSERT new payments for non-review items
+      if (newItems.length > 0) {
+        const inserts = newItems.map(c => ({
+          student_id:  _student.id,
+          amount:      c.amount,
+          concept:     c.concept,
+          method:      _method,
+          status:      'paid',
+          paid_date:   now,
+          month_paid:  c.type==='colegiatura'
+            ? currentYear + '-' + String(c._monthIdx+1).padStart(2,'0')
+            : null,
+          created_at:  now,
+          notes: notes || null,
+          exclude_dgii: excludeDGII
+        }));
+
+        const { error } = await supabase.from('payments').insert(inserts);
+        if (error) throw error;
+
+        const { data: newPays } = await supabase
+          .from('payments')
+          .select('id')
+          .eq('student_id', _student.id)
+          .eq('status', 'paid')
+          .gte('paid_date', todayStr + 'T00:00:00')
+          .order('created_at', { ascending: false })
+          .limit(1);
+
+        if (newPays?.[0]?.id) {
+          allPaymentIds.push(newPays[0].id);
+        }
+      }
+
+      const targetPayId = allPaymentIds[0];
       const colegiaturas = _cart.filter(c => c.type === 'colegiatura');
       const monthPaid = colegiaturas.length > 0
         ? colegiaturas.map(c => c._monthIdx + 1).join(',')
         : null;
 
-      const { data: newPays } = await supabase
-        .from('payments')
-        .select('id, amount, month_paid')
-        .eq('student_id', _student.id)
-        .eq('status', 'paid')
-        .gte('paid_date', todayStr + 'T00:00:00')
-        .order('created_at', { ascending: false })
-        .limit(1);
-
       let invoiceResult = null;
-      if (newPays?.[0]?.id) {
+      if (targetPayId) {
         // 1) Try edge function first
         try {
           const { data, error: invErr } = await supabase.functions.invoke('generate-invoice', {
-            body: { payment_id: newPays[0].id, send_email: false }
+            body: { payment_id: targetPayId, send_email: false }
           });
           if (!invErr && data?.invoice?.id) {
             invoiceResult = data;
@@ -1061,11 +1099,10 @@ export const CajaCobroV2 = {
         // 2) Fallback: create invoice client-side if edge function failed
         if (!invoiceResult?.invoice?.id) {
           try {
-            const pay = newPays[0];
             const stu = _student || {};
             const now = new Date().toISOString();
-            const receiptNo = `KPK-${new Date().getFullYear()}${String(new Date().getMonth()+1).padStart(2,'0')}-${String(pay.id).slice(-6).toUpperCase()}`;
-            const hashInput = `INV-${pay.id}-${Date.now()}-KPK`;
+            const receiptNo = `KPK-${new Date().getFullYear()}${String(new Date().getMonth()+1).padStart(2,'0')}-${String(targetPayId).slice(-6).toUpperCase()}`;
+            const hashInput = `INV-${targetPayId}-${Date.now()}-KPK`;
             const hashBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(hashInput));
             const sha256Hash = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2,'0')).join('');
             const uuidFolio = crypto.randomUUID();
@@ -1076,7 +1113,7 @@ export const CajaCobroV2 = {
             const invData = {
               invoice_number: receiptNo,
               receipt_number: receiptNo,
-              payment_id: pay.id,
+              payment_id: targetPayId,
               student_id: stu.id,
               student_name: stu.name,
               student_matricula: stu.matricula,
@@ -1107,7 +1144,6 @@ export const CajaCobroV2 = {
               .from('invoices').insert(invData).select('*').single();
 
             if (!invErr && newInv?.id) {
-              // Fetch school settings to enrich response
               const { data: school } = await supabase
                 .from('school_settings').select('*').eq('id', 1).single();
 
@@ -1146,7 +1182,7 @@ export const CajaCobroV2 = {
         try {
           const { emitEvent: emit } = await import('./supabase.js');
           emit('payment.approved', {
-            payment_id:   newPays[0].id,
+            payment_id:   targetPayId,
             student_name: _student.name,
             amount:       fmt(total),
             month:        monthPaid || 'Colegiatura'
@@ -1157,7 +1193,7 @@ export const CajaCobroV2 = {
         try {
           const concepts = _cart.map(c => c.concept).join(', ');
           this._logToAccounting({
-            id: newPays[0]?.id,
+            id: targetPayId,
             concept: concepts,
             student_name: _student?.name,
             amount: total,
@@ -1170,7 +1206,7 @@ export const CajaCobroV2 = {
           try {
             const { emitEvent: emit2 } = await import('./supabase.js');
             emit2('invoice.dgii_queue', {
-              payment_id: newPays[0]?.id,
+              payment_id: targetPayId,
               amount: total,
               exclude: false
             }).catch(() => {});
@@ -1179,7 +1215,7 @@ export const CajaCobroV2 = {
       }
 
       document.querySelectorAll('[id^="cajaModal_"]').forEach(e=>e.remove());
-      this._showSuccess(total, invoiceResult, newPays?.[0]?.id);
+      this._showSuccess(total, invoiceResult, targetPayId);
       this.loadStudents();
 
     } catch (err) {
@@ -1360,20 +1396,71 @@ export const CajaCobroV2 = {
       return;
     }
 
-    const bal = prompt(`Apertura de Caja 1 — ${directorName}\n\nEfectivo inicial en caja (RD$):`, '0');
-    if (bal === null) return;
+    const modalId = 'openCajaModal_' + Date.now();
+    const overlay = document.createElement('div');
+    overlay.id = modalId;
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(6px);z-index:9998;display:flex;align-items:center;justify-content:center;padding:12px';
+    overlay.onclick = e => { if(e.target===overlay) overlay.remove(); };
+    overlay.innerHTML = `
+    <div style="background:white;border-radius:18px;width:100%;max-width:400px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.25)">
+      <div style="background:linear-gradient(135deg,#0B63C7,#0850A0);padding:20px 22px;text-align:center">
+        <div style="width:52px;height:52px;border-radius:14px;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;margin:0 auto 10px;font-size:1.5rem">🏦</div>
+        <div style="font-size:1.1rem;font-weight:900;color:white">Abrir Caja</div>
+        <div style="font-size:.72rem;color:rgba(255,255,255,.75);font-weight:600;margin-top:2px">${directorName} — ${new Date().toLocaleDateString('es-DO',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</div>
+      </div>
+      <div style="padding:22px">
+        <div style="margin-bottom:14px">
+          <div style="font-size:.68rem;font-weight:900;color:#475569;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Nombre de la Cajera</div>
+          <input id="cajaCajeraName" value="${directorName}" placeholder="Nombre de quien abre la caja"
+            style="width:100%;padding:12px 14px;border:2px solid #e2e8f0;border-radius:12px;font-size:.85rem;font-weight:700;color:#1a2340;outline:none;box-sizing:border-box;transition:border-color .15s"
+            onfocus="this.style.borderColor='#0B63C7'" onblur="this.style.borderColor='#e2e8f0'">
+        </div>
+        <div style="margin-bottom:18px">
+          <div style="font-size:.68rem;font-weight:900;color:#475569;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Efectivo Inicial en Caja (RD$)</div>
+          <input id="cajaOpeningBalance" type="number" min="0" step="0.01" value="0" placeholder="0.00"
+            style="width:100%;padding:12px 14px;border:2px solid #e2e8f0;border-radius:12px;font-size:1.1rem;font-weight:900;color:#1a2340;outline:none;box-sizing:border-box;transition:border-color .15s"
+            onfocus="this.style.borderColor='#0B63C7'" onblur="this.style.borderColor='#e2e8f0'">
+        </div>
+        <div style="display:flex;gap:10px">
+          <button onclick="document.getElementById('${modalId}').remove()" style="flex:1;padding:12px;border-radius:12px;border:2px solid #e2e8f0;background:white;color:#64748b;font-size:.82rem;font-weight:800;cursor:pointer">Cancelar</button>
+          <button onclick="CajaCobroV2._confirmOpenCaja('${modalId}')" style="flex:1.5;padding:12px;border-radius:12px;border:none;background:linear-gradient(135deg,#0B63C7,#0850A0);color:white;font-size:.82rem;font-weight:900;cursor:pointer;box-shadow:0 4px 14px rgba(11,99,199,.3)">Abrir Caja</button>
+        </div>
+      </div>
+    </div>`;
+    document.body.appendChild(overlay);
+    setTimeout(() => document.getElementById('cajaCajeraName')?.focus(), 100);
+  },
+
+  async _confirmOpenCaja(modalId) {
+    const cajeraName = document.getElementById('cajaCajeraName')?.value?.trim();
+    const balance = Number(document.getElementById('cajaOpeningBalance')?.value || 0);
+    if (!cajeraName) {
+      Helpers.toast('Ingrese el nombre de la cajera', 'warning');
+      return;
+    }
+
+    const profile = window.AppState?.get?.('profile') || {};
+    const todayStr = today();
 
     const { error } = await supabase.from('caja_sessions').upsert({
       date: todayStr,
-      opening_balance: Number(bal) || 0,
+      opening_balance: balance,
       status: 'open',
       opened_by: profile.id || null,
-      notes: `Caja 1 — ${directorName}`
+      notes: `Caja 1 — ${cajeraName}`
     }, { onConflict: 'date' });
 
     if (error) return Helpers.toast('Error: ' + error.message, 'error');
-    Helpers.toast(`Caja abierta con ${fmt(Number(bal)||0)}`, 'success');
+    document.getElementById(modalId)?.remove();
+    Helpers.toast(`Caja abierta por ${cajeraName} con ${fmt(balance)}`, 'success');
     this.loadStudents();
+  },
+
+  async _isCajaOpen() {
+    const todayStr = today();
+    const { data } = await supabase.from('caja_sessions')
+      .select('status').eq('date', todayStr).limit(1).maybeSingle();
+    return data?.status === 'open';
   },
 
   async _closeCajaSession() {

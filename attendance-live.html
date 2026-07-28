@@ -477,6 +477,10 @@
 
   <script src="js/shared/supabase-js.min.js"></script>
   <script>
+    const SUPABASE_URL = 'https://yswizaskeftxpcphixiy.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlzd2l6YXNrZWZ0eHBjcGhpeGl5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIzNDM4NTcsImV4cCI6MjA5NzkxOTg1N30.SQEZzGCCsADmbYTNrpjw6k1uBs8mXnhn8IhzTHH6rto';
+    const supabaseClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+
     let html5QrCode = null;
     let isFacingBack = true;
     let isFullscreen = false;
@@ -485,6 +489,8 @@
     let countTotal = 0;
     let deferredPrompt = null;
     let isScannerStarting = false;
+    let lastScanTime = 0;
+    const SCAN_DEBOUNCE_MS = 4000;
 
     function updateClock() {
       const now = new Date();
@@ -551,7 +557,7 @@
         } else if (err.toString().includes('NotFoundError')) {
           hint.textContent = '⚠️ No se encontró cámara. Conecte una cámara y recargue.';
         } else if (err.toString().includes('NotReadableError')) {
-          hint.textContent = '⚠️ Camera en uso por otra app. Cierre otras apps de cámara e intente de nuevo.';
+          hint.textContent = '⚠️ Cámara en uso por otra app. Cierre otras apps de cámara e intente de nuevo.';
         } else {
           hint.textContent = '⚠️ Error al iniciar cámara. Toque el ícono 🔄 para reintentar.';
         }
@@ -562,27 +568,28 @@
     }
 
     function onScanSuccess(qrCodeMessage) {
+      const now = Date.now();
+      if (now - lastScanTime < SCAN_DEBOUNCE_MS) return;
+      lastScanTime = now;
       console.log("Código escaneado:", qrCodeMessage);
-      showResult(qrCodeMessage);
+      processScan(qrCodeMessage);
     }
 
     function onScanFailure(error) {
     }
 
-    document.getElementById('btnToggleCam').addEventListener('click', async () => {
-      isFacingBack = !isFacingBack;
-      await stopScanner();
-      await new Promise(r => setTimeout(r, 500));
-      startScanner();
-    });
+    function extractCode(qrData) {
+      try {
+        const obj = JSON.parse(qrData);
+        return obj.matricula || obj.code || obj.id || null;
+      } catch(e) {
+        const parts = qrData.split('|');
+        if (parts.length >= 2) return parts[0];
+        return qrData.trim();
+      }
+    }
 
-    document.getElementById('btnFullscreen').addEventListener('click', () => {
-      isFullscreen = !isFullscreen;
-      document.getElementById('scannerWrap').classList.toggle('fullscreen', isFullscreen);
-      document.getElementById('btnFullscreen').classList.toggle('active', isFullscreen);
-    });
-
-    function showResult(qrData) {
+    async function processScan(qrData) {
       const overlay = document.getElementById('overlay');
       const resIcon = document.getElementById('res-icon');
       const resName = document.getElementById('res-name');
@@ -597,48 +604,133 @@
         minute: '2-digit'
       });
 
-      let data = null;
+      const code = extractCode(qrData);
+      if (!code) {
+        resName.textContent = 'Código inválido';
+        resRole.textContent = '—';
+        resMsg.textContent = 'No se pudo leer el código QR';
+        resMsg.classList.add('error');
+        resIcon.classList.remove('success');
+        resIcon.classList.add('error');
+        resIcon.textContent = '❌';
+        resTime.textContent = timeStr;
+        overlay.classList.add('show');
+        setTimeout(() => overlay.classList.remove('show'), 3000);
+        return;
+      }
+
+      if (!supabaseClient) {
+        resName.textContent = 'Error de conexión';
+        resRole.textContent = '—';
+        resMsg.textContent = 'No se pudo conectar al servidor';
+        resMsg.classList.add('error');
+        resIcon.classList.remove('success');
+        resIcon.classList.add('error');
+        resIcon.textContent = '❌';
+        resTime.textContent = timeStr;
+        overlay.classList.add('show');
+        setTimeout(() => overlay.classList.remove('show'), 3000);
+        return;
+      }
+
       try {
-        data = JSON.parse(qrData);
-      } catch(e) {
-        const parts = qrData.split('|');
-        if (parts.length >= 2) {
-          data = {
-            matricula: parts[0],
-            name: parts[1],
-            role: parts[2] || 'Estudiante',
-            type: parts[3] || 'in'
-          };
-        } else {
-          data = { name: qrData, role: 'Usuario', type: 'in' };
+        const { data: result, error } = await supabaseClient.rpc('process_door_punch', { p_code: code });
+
+        if (error) {
+          console.error('RPC error:', error);
+          resName.textContent = 'Error del servidor';
+          resRole.textContent = '—';
+          resMsg.textContent = 'Error al procesar. Intente de nuevo.';
+          resMsg.classList.add('error');
+          resIcon.classList.remove('success');
+          resIcon.classList.add('error');
+          resIcon.textContent = '❌';
+          resTime.textContent = timeStr;
+          overlay.classList.add('show');
+          setTimeout(() => overlay.classList.remove('show'), 3000);
+          return;
         }
+
+        if (!result || result.success === false) {
+          resName.textContent = result?.name || 'Desconocido';
+          resRole.textContent = result?.role || '—';
+          resMsg.textContent = result?.message || 'Código no reconocido';
+          resMsg.classList.add('error');
+          resIcon.classList.remove('success');
+          resIcon.classList.add('error');
+          resIcon.textContent = '⚠️';
+          resTime.textContent = timeStr;
+          overlay.classList.add('show');
+          setTimeout(() => overlay.classList.remove('show'), 3000);
+          return;
+        }
+
+        if (result.type === 'check_in') {
+          countIn++;
+        } else if (result.type === 'check_out') {
+          countOut++;
+        }
+        countTotal = countIn + countOut;
+        document.getElementById('count-in').textContent = countIn;
+        document.getElementById('count-out').textContent = countOut;
+        document.getElementById('count-total').textContent = countTotal;
+
+        const isEntry = result.type === 'check_in';
+        const statusLabel = result.status === 'late' ? ' (Tardanza)' : '';
+
+        resName.textContent = result.name || 'Desconocido';
+        resRole.textContent = result.role || 'Estudiante';
+        resMsg.textContent = isEntry ? '¡Entrada registrada!' : '¡Salida registrada!' + statusLabel;
+        resMsg.classList.remove('error');
+        resIcon.classList.remove('error');
+        resIcon.classList.add('success');
+        resIcon.textContent = '✅';
+        resTime.textContent = result.time || timeStr;
+
+        overlay.classList.add('show');
+        setTimeout(() => overlay.classList.remove('show'), 3000);
+
+        // Send push notification + email via process-event edge function
+        try {
+          await supabaseClient.functions.invoke('process-event', {
+            body: {
+              type: 'attendance.' + (isEntry ? 'checkin' : 'checkout'),
+              data: {
+                parent_email: result.parent_email,
+                student_name: result.name,
+                time: result.time || timeStr
+              }
+            }
+          });
+        } catch (_) {}
+
+      } catch(e) {
+        console.error('Scan processing error:', e);
+        resName.textContent = 'Error';
+        resRole.textContent = '—';
+        resMsg.textContent = 'Error de conexión. Verifique su internet.';
+        resMsg.classList.add('error');
+        resIcon.classList.remove('success');
+        resIcon.classList.add('error');
+        resIcon.textContent = '❌';
+        resTime.textContent = timeStr;
+        overlay.classList.add('show');
+        setTimeout(() => overlay.classList.remove('show'), 3000);
       }
-
-      if (data.type === 'in') {
-        countIn++;
-      } else if (data.type === 'out') {
-        countOut++;
-      }
-      countTotal = countIn + countOut;
-      document.getElementById('count-in').textContent = countIn;
-      document.getElementById('count-out').textContent = countOut;
-      document.getElementById('count-total').textContent = countTotal;
-
-      resName.textContent = data.name || 'Desconocido';
-      resRole.textContent = data.role || 'Estudiante';
-      resMsg.textContent = data.type === 'in' ? '¡Entrada registrada!' : '¡Salida registrada!';
-      resMsg.classList.remove('error');
-      resIcon.classList.remove('error');
-      resIcon.classList.add('success');
-      resIcon.textContent = '✅';
-      resTime.textContent = timeStr;
-
-      overlay.classList.add('show');
-
-      setTimeout(() => {
-        overlay.classList.remove('show');
-      }, 3000);
     }
+
+    document.getElementById('btnToggleCam').addEventListener('click', async () => {
+      isFacingBack = !isFacingBack;
+      await stopScanner();
+      await new Promise(r => setTimeout(r, 500));
+      startScanner();
+    });
+
+    document.getElementById('btnFullscreen').addEventListener('click', () => {
+      isFullscreen = !isFullscreen;
+      document.getElementById('scannerWrap').classList.toggle('fullscreen', isFullscreen);
+      document.getElementById('btnFullscreen').classList.toggle('active', isFullscreen);
+    });
 
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();

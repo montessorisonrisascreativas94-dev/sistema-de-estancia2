@@ -11,6 +11,13 @@ import { openGlobalModal } from '../shared/modal.js';
 
 const MONTH_NAMES_ES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
 
+async function isCajaOpen() {
+  const todayStr = new Date().toISOString().split('T')[0];
+  const { data } = await supabase.from('caja_sessions')
+    .select('status').eq('date', todayStr).limit(1).maybeSingle();
+  return data?.status === 'open';
+}
+
 function calcStatus(p) {
   if (!p || !p.status) return 'pending';
   const s = p.status.toLowerCase().trim();
@@ -420,6 +427,7 @@ export const PaymentsModule = {
     const paidDate  = status === 'paid' ? new Date().toISOString() : null;
     if (!studentId) return Helpers.toast('Selecciona un estudiante', 'warning');
     if (!amount || amount <= 0) return Helpers.toast('Ingresa un monto válido', 'warning');
+    if (status === 'paid' && !(await isCajaOpen())) return Helpers.toast('Debe abrir la caja antes de registrar cobros', 'warning');
     const btn = document.getElementById('btnSavePaymentAction');
     if (btn) { btn.disabled = true; btn.textContent = 'Guardando...'; }
     try {
@@ -628,6 +636,7 @@ export const PaymentsModule = {
   },
 
   async _confirmApproval(id) {
+    if (!(await isCajaOpen())) return Helpers.toast('Debe abrir la caja antes de aprobar cobros', 'warning');
     try {
       const { error } = await supabase.from('payments').update({ status: 'paid', paid_date: new Date().toISOString() }).eq('id', id);
       if (error) throw error;

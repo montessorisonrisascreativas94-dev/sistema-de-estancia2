@@ -72,20 +72,22 @@
   </div>
 
   <script type="module">
-    const params = new URLSearchParams(window.location.search);
-    const uuid = params.get('uuid');
-    const content = document.getElementById('content');
+    (async () => {
+      const params = new URLSearchParams(window.location.search);
+      const uuid = params.get('uuid');
+      const content = document.getElementById('content');
 
-    if (!uuid) {
-      content.innerHTML = `
-        <div class="error-state">
-          <div class="icon">❓</div>
-          <h3>Sin código de validación</h3>
-          <p>Escanea el código QR de una factura válida o accede desde el enlace proporcionado en el correo electrónico.</p>
-        </div>`;
-    } else {
+      if (!uuid) {
+        content.innerHTML = `
+          <div class="error-state">
+            <div class="icon">❓</div>
+            <h3>Sin código de validación</h3>
+            <p>Escanea el código QR de una factura válida o accede desde el enlace proporcionado en el correo electrónico.</p>
+          </div>`;
+        return;
+      }
+
       try {
-        // Conectar a Supabase
         const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
         const supabase = createClient(
           'https://yswizaskeftxpcphixiy.supabase.co',
@@ -159,7 +161,7 @@
             <p>No se pudo conectar con el servidor. Por favor intente nuevamente.</p>
           </div>`;
       }
-    }
+    })();
   </script>
 </body>
 </html>

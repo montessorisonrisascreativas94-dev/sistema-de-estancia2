@@ -50,7 +50,8 @@ export const InvoiceModule = {
     const period     = inv.period || pay.month_paid || '';
     const uuidFolio  = inv.uuid_folio || inv.digital_folio || '';
     const hash       = inv.sha256_hash || '';
-    const validationUrl = inv.validation_url || '';
+    const isFiscal   = !!(inv.fiscal_parent_rnc || inv.fiscal_parent_company_name);
+    const invoiceType = isFiscal ? 'COMPROBANTE FISCAL' : 'CONSUMIDOR FINAL';
 
     const monthNames = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
     let periodText = '';
@@ -67,6 +68,8 @@ export const InvoiceModule = {
     const studentPhoto = stu.photo_url || '';
     const age = stu.date_of_birth ? Math.floor((Date.now() - new Date(stu.date_of_birth).getTime()) / (365.25*24*60*60*1000)) : '';
 
+    const R = (label, value) => `<div class="inv-row"><span class="inv-lbl">${label}</span><span class="inv-val">${value}</span></div>`;
+
     return `<!DOCTYPE html><html lang="es"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Factura ${receiptNo}</title>
@@ -77,100 +80,105 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:
 .page{background:#fff;max-width:800px;margin:24px auto;border-radius:16px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,.1)}
 
 /* HEADER */
-.inv-hd{background:linear-gradient(135deg,#0B63C7 0%,#0850A0 50%,#063D7A 100%);padding:32px 36px 24px;display:flex;justify-content:space-between;align-items:flex-start;gap:20px;position:relative;overflow:hidden}
+.inv-hd{background:linear-gradient(135deg,#0B63C7 0%,#0850A0 50%,#063D7A 100%);padding:28px 36px 22px;display:flex;justify-content:space-between;align-items:flex-start;gap:20px;position:relative;overflow:hidden}
 .inv-hd::before{content:'';position:absolute;top:-50%;right:-20%;width:300px;height:300px;background:radial-gradient(circle,rgba(255,255,255,.08) 0%,transparent 70%);border-radius:50%}
 .inv-hd-left{flex:1;position:relative;z-index:1}
-.inv-hd-logo{width:64px;height:64px;border-radius:14px;overflow:hidden;margin-bottom:12px;border:2px solid rgba(255,255,255,.3);background:white;box-shadow:0 4px 12px rgba(0,0,0,.15)}
+.inv-hd-logo{width:56px;height:56px;border-radius:12px;overflow:hidden;margin-bottom:10px;border:2px solid rgba(255,255,255,.3);background:white;box-shadow:0 4px 12px rgba(0,0,0,.15)}
 .inv-hd-logo img{width:100%;height:100%;object-fit:cover}
-.inv-hd-name{font-size:20px;font-weight:900;color:white;letter-spacing:-.3px;line-height:1.2}
-.inv-hd-sub{font-size:11px;color:rgba(255,255,255,.75);font-weight:600;margin-top:2px}
-.inv-hd-info{font-size:11px;color:rgba(255,255,255,.65);margin-top:8px;line-height:1.7}
-.inv-hd-right{text-align:right;position:relative;z-index:1;flex-shrink:0}
-.inv-hd-badge{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);border-radius:14px;padding:16px 22px;backdrop-filter:blur(8px)}
-.inv-hd-label{font-size:10px;color:rgba(255,255,255,.7);font-weight:800;text-transform:uppercase;letter-spacing:.1em}
-.inv-hd-number{font-size:24px;font-weight:900;color:white;margin-top:2px;font-variant-numeric:tabular-nums}
-.inv-hd-date{font-size:11px;color:rgba(255,255,255,.7);margin-top:4px}
+.inv-hd-name{font-size:18px;font-weight:900;color:white;letter-spacing:-.3px;line-height:1.2}
+.inv-hd-sub{font-size:10px;color:rgba(255,255,255,.7);font-weight:600;margin-top:2px}
+.inv-hd-info{font-size:10px;color:rgba(255,255,255,.6);margin-top:6px;line-height:1.7}
+.inv-hd-right{text-align:right;position:relative;z-index:1;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:8px}
+.inv-hd-badge{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);border-radius:12px;padding:14px 20px;backdrop-filter:blur(8px)}
+.inv-hd-label{font-size:9px;color:rgba(255,255,255,.65);font-weight:800;text-transform:uppercase;letter-spacing:.1em}
+.inv-hd-number{font-size:22px;font-weight:900;color:white;margin-top:2px;font-variant-numeric:tabular-nums}
+.inv-hd-date{font-size:10px;color:rgba(255,255,255,.65);margin-top:3px}
+.inv-type-badge{background:${isFiscal?'rgba(255,193,7,.2)':'rgba(40,181,77,.2)'};border:1px solid ${isFiscal?'rgba(255,193,7,.4)':'rgba(40,181,77,.4)'};border-radius:8px;padding:6px 14px;font-size:9px;font-weight:900;color:${isFiscal?'#FFD54F':'#86EFAC'};text-transform:uppercase;letter-spacing:.12em}
 
 /* STATUS BAR */
-.inv-status{display:flex;align-items:center;gap:10px;padding:14px 36px;background:${status==='paid'?'linear-gradient(90deg,#f0fdf4,#ecfdf5)':'#fffbeb'};border-bottom:2px solid ${status==='paid'?'#bbf7d0':'#fde68a'}"}
-.inv-status-dot{width:36px;height:36px;border-radius:50%;background:${stColor};display:flex;align-items:center;justify-content:center;color:white;font-size:16px;flex-shrink:0;box-shadow:0 2px 8px ${stColor}44}
-.inv-status-text h3{font-size:14px;font-weight:800;color:${stColor}}
-.inv-status-text p{font-size:11px;color:#64748b;font-weight:600}
+.inv-status{display:flex;align-items:center;gap:10px;padding:12px 36px;background:${status==='paid'?'linear-gradient(90deg,#f0fdf4,#ecfdf5)':'#fffbeb'};border-bottom:2px solid ${status==='paid'?'#bbf7d0':'#fde68a'}}
+.inv-status-dot{width:32px;height:32px;border-radius:50%;background:${stColor};display:flex;align-items:center;justify-content:center;color:white;font-size:14px;flex-shrink:0;box-shadow:0 2px 8px ${stColor}44}
+.inv-status-text h3{font-size:13px;font-weight:900;color:${stColor}}
+.inv-status-text p{font-size:10px;color:#64748b;font-weight:600}
 
 /* SECTIONS */
-.inv-body{padding:28px 36px}
-.inv-section{margin-bottom:24px}
-.inv-section-title{font-size:10px;font-weight:900;color:#0B63C7;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.inv-body{padding:24px 36px}
+.inv-section{margin-bottom:22px}
+.inv-section-title{font-size:9px;font-weight:900;color:#0B63C7;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
 .inv-section-title::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,#e2e8f0,transparent)}
+
+/* INFO ROWS (Label: Value format) */
+.inv-row{display:flex;justify-content:space-between;align-items:baseline;padding:7px 0;border-bottom:1px solid #f1f5f9;gap:12px}
+.inv-row:last-child{border:none}
+.inv-lbl{font-size:11px;font-weight:800;color:#475569;text-transform:uppercase;letter-spacing:.3px;white-space:nowrap;flex-shrink:0}
+.inv-val{font-size:12px;font-weight:800;color:#1a2340;text-align:right;word-break:break-word}
 
 /* INFO CARDS */
 .inv-info-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-.inv-card{background:#f8fafc;border:1px solid #e9ecef;border-radius:12px;padding:16px 20px}
-.inv-card-header{display:flex;align-items:center;gap:10px;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid #e9ecef}
-.inv-card-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
-.inv-card-title{font-size:11px;font-weight:900;color:#64748b;text-transform:uppercase;letter-spacing:.5px}
-.inv-card-row{display:flex;justify-content:space-between;padding:5px 0;font-size:12px;border-bottom:1px solid #f1f5f9}
-.inv-card-row:last-child{border:none}
-.inv-card-label{color:#94a3b8;font-weight:600}
-.inv-card-value{color:#1a2340;font-weight:700;text-align:right}
+.inv-card{background:#f8fafc;border:1px solid #e9ecef;border-radius:12px;padding:16px 18px}
+.inv-card-header{display:flex;align-items:center;gap:8px;margin-bottom:10px;padding-bottom:8px;border-bottom:2px solid #e2e8f0}
+.inv-card-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.inv-card-title{font-size:10px;font-weight:900;color:#475569;text-transform:uppercase;letter-spacing:.5px}
 
 /* TABLE */
 .inv-table-wrap{border:1px solid #e9ecef;border-radius:12px;overflow:hidden}
 .inv-table{width:100%;border-collapse:collapse}
 .inv-table thead tr{background:linear-gradient(135deg,#0B63C7,#0850A0)}
-.inv-table thead th{padding:14px 16px;font-size:10px;font-weight:900;color:white;text-transform:uppercase;letter-spacing:.08em;text-align:left}
+.inv-table thead th{padding:12px 14px;font-size:9px;font-weight:900;color:white;text-transform:uppercase;letter-spacing:.08em;text-align:left}
 .inv-table thead th:last-child,.inv-table thead th:nth-child(n+3){text-align:right}
 .inv-table tbody tr{border-bottom:1px solid #f1f5f9;transition:background .15s}
 .inv-table tbody tr:nth-child(even){background:#fafbfc}
-.inv-table tbody td{padding:14px 16px;font-size:13px;color:#1a2340}
-.inv-table tbody td:last-child,.inv-table tbody td:nth-child(n+3){text-align:right;font-weight:700}
-.inv-table tbody td:first-child{font-weight:700}
+.inv-table tbody td{padding:12px 14px;font-size:12px;color:#1a2340}
+.inv-table tbody td:last-child,.inv-table tbody td:nth-child(n+3){text-align:right;font-weight:800}
+.inv-table tbody td:first-child{font-weight:800}
 
 /* TOTALS */
 .inv-totals-wrap{display:flex;justify-content:flex-end;margin-top:4px}
-.inv-totals{background:#f8fafc;border:1px solid #e9ecef;border-radius:12px;padding:20px 24px;min-width:300px}
-.inv-total-row{display:flex;justify-content:space-between;padding:8px 0;font-size:13px}
-.inv-total-row span:first-child{color:#64748b;font-weight:600}
-.inv-total-row span:last-child{color:#1a2340;font-weight:700}
-.inv-total-divider{border:none;border-top:1px solid #e2e8f0;margin:8px 0}
-.inv-total-final{display:flex;justify-content:space-between;padding:12px 0;border-top:3px solid #28B54D;margin-top:8px}
-.inv-total-final span:first-child{font-size:16px;font-weight:900;color:#28B54D;text-transform:uppercase;letter-spacing:.5px}
-.inv-total-final span:last-child{font-size:28px;font-weight:900;color:#28B54D;font-variant-numeric:tabular-nums}
+.inv-totals{background:#f8fafc;border:1px solid #e9ecef;border-radius:12px;padding:16px 22px;min-width:280px}
+.inv-total-row{display:flex;justify-content:space-between;padding:6px 0;font-size:12px}
+.inv-total-row .inv-lbl{font-size:11px;font-weight:700;color:#475569}
+.inv-total-row .inv-val{font-size:12px;font-weight:800;color:#1a2340}
+.inv-total-divider{border:none;border-top:1px solid #e2e8f0;margin:6px 0}
+.inv-total-final{display:flex;justify-content:space-between;padding:10px 0;border-top:3px solid #28B54D;margin-top:6px}
+.inv-total-final .inv-lbl{font-size:14px;font-weight:900;color:#28B54D;text-transform:uppercase;letter-spacing:.5px}
+.inv-total-final .inv-val{font-size:26px;font-weight:900;color:#28B54D;font-variant-numeric:tabular-nums}
 
-/* PAYMENT METHOD CARD */
-.inv-payment-card{background:linear-gradient(135deg,#f8fafc,#f1f5f9);border:1px solid #e2e8f0;border-radius:14px;padding:20px 24px}
-.inv-payment-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:12px}
-.inv-payment-item{text-align:center;padding:10px;background:white;border-radius:10px;border:1px solid #f1f5f9}
-.inv-payment-item-label{font-size:9px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
-.inv-payment-item-value{font-size:13px;font-weight:800;color:#1a2340}
+/* PAYMENT METHOD */
+.inv-payment-card{background:linear-gradient(135deg,#f8fafc,#f1f5f9);border:1px solid #e2e8f0;border-radius:12px;padding:16px 20px}
+.inv-payment-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:10px}
+.inv-payment-item{padding:10px;background:white;border-radius:10px;border:1px solid #f1f5f9}
+.inv-payment-item .inv-lbl{font-size:8px;font-weight:900;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;display:block}
+.inv-payment-item .inv-val{font-size:12px;font-weight:800;color:#1a2340;display:block}
 
 /* ADDITIONAL INFO */
-.inv-additional-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
-.inv-additional-item{padding:12px;background:#f8fafc;border-radius:10px;border:1px solid #e9ecef;text-align:center}
-.inv-additional-item-label{font-size:9px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px}
-.inv-additional-item-value{font-size:13px;font-weight:800;color:#1a2340;margin-top:4px}
+.inv-additional-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.inv-additional-item{padding:10px;background:#f8fafc;border-radius:10px;border:1px solid #e9ecef}
+.inv-additional-item .inv-lbl{font-size:8px;font-weight:900;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;display:block}
+.inv-additional-item .inv-val{font-size:12px;font-weight:800;color:#1a2340;margin-top:3px;display:block}
 
 /* FOOTER */
-.inv-footer{background:linear-gradient(135deg,#1a2340,#0f172a);padding:28px 36px;color:white}
-.inv-footer-top{display:flex;justify-content:space-between;align-items:flex-start;gap:24px;margin-bottom:20px}
-.inv-footer-message{font-size:13px;color:rgba(255,255,255,.85);font-weight:600;line-height:1.6}
-.inv-footer-policies{font-size:10px;color:rgba(255,255,255,.5);line-height:1.7;margin-top:8px}
-.inv-footer-badge{display:flex;align-items:center;gap:12px;padding:14px 18px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:12px;flex-shrink:0}
-.inv-footer-badge-text{font-size:10px;color:rgba(255,255,255,.7);font-weight:700;text-transform:uppercase;letter-spacing:.5px}
-.inv-footer-badge-status{font-size:18px;font-weight:900;color:#28B54D;margin-top:2px}
-.inv-footer-divider{border:none;border-top:1px solid rgba(255,255,255,.1);margin:16px 0}
-.inv-footer-meta{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
-.inv-footer-meta-item{font-size:10px;color:rgba(255,255,255,.45);font-weight:600}
-.inv-footer-meta-item strong{color:rgba(255,255,255,.65)}
-.inv-footer-barcode{text-align:center;margin-top:16px;padding:12px;background:rgba(255,255,255,.05);border-radius:10px}
+.inv-footer{background:linear-gradient(135deg,#1a2340,#0f172a);padding:24px 36px;color:white}
+.inv-footer-top{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;margin-bottom:16px}
+.inv-footer-message{font-size:12px;color:rgba(255,255,255,.85);font-weight:600;line-height:1.6}
+.inv-footer-policies{font-size:9px;color:rgba(255,255,255,.45);line-height:1.7;margin-top:6px}
+.inv-footer-badge{display:flex;align-items:center;gap:10px;padding:12px 16px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:10px;flex-shrink:0}
+.inv-footer-badge-text{font-size:9px;color:rgba(255,255,255,.6);font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+.inv-footer-badge-status{font-size:16px;font-weight:900;color:#28B54D;margin-top:2px}
+.inv-footer-divider{border:none;border-top:1px solid rgba(255,255,255,.1);margin:14px 0}
+.inv-footer-meta{display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px}
+.inv-footer-meta-item{font-size:9px;color:rgba(255,255,255,.4);font-weight:600}
+.inv-footer-meta-item strong{color:rgba(255,255,255,.6)}
+.inv-footer-barcode{text-align:center;margin-top:14px;padding:10px;background:rgba(255,255,255,.05);border-radius:10px}
 .inv-footer-barcode canvas,.inv-footer-barcode svg{max-width:200px}
-.inv-footer-qr{display:flex;align-items:center;gap:16px;margin-top:12px;padding:12px;background:rgba(255,255,255,.06);border-radius:10px}
-.inv-footer-qr canvas{border-radius:8px;background:white;padding:4px}
+.inv-footer-qr-wrap{display:flex;align-items:center;gap:14px;padding:12px;background:rgba(255,255,255,.08);border-radius:10px;border:1px solid rgba(255,255,255,.1)}
+.inv-footer-qr-box{width:80px;height:80px;background:white;border-radius:8px;padding:6px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.inv-footer-qr-box canvas{border-radius:4px}
 .inv-footer-qr-text{font-size:10px;color:rgba(255,255,255,.6);line-height:1.6}
+.inv-footer-qr-text strong{color:rgba(255,255,255,.85)}
 
 /* STAMP */
-.inv-stamp{text-align:center;margin-top:20px;padding-top:16px;border-top:1px dashed rgba(255,255,255,.15)}
-.inv-stamp-text{font-size:9px;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:1px}
+.inv-stamp{text-align:center;margin-top:16px;padding-top:12px;border-top:1px dashed rgba(255,255,255,.15)}
+.inv-stamp-text{font-size:8px;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:1.2px}
 
 @media print{
   body{background:#fff}
@@ -182,8 +190,8 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:
   .inv-info-grid{grid-template-columns:1fr}
   .inv-hd{flex-direction:column}
   .inv-hd-right{align-self:flex-start}
-  .inv-body{padding:20px}
-  .inv-footer{padding:20px}
+  .inv-body{padding:18px}
+  .inv-footer{padding:18px}
   .inv-payment-grid{grid-template-columns:1fr 1fr}
   .inv-additional-grid{grid-template-columns:1fr 1fr}
 }
@@ -193,16 +201,16 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:
   <!-- HEADER -->
   <div class="inv-hd">
     <div class="inv-hd-left">
-      <div class="inv-hd-logo"><img src="${logoUrl}" alt="${sch.school_name || this.SCHOOL}" onerror="this.parentElement.innerHTML='<div style=\\'width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:24px;background:#eff6ff\\'>🏫</div>'"></div>
+      <div class="inv-hd-logo"><img src="${logoUrl}" alt="${sch.school_name || this.SCHOOL}" onerror="this.parentElement.innerHTML='<div style=\\'width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:20px;background:#eff6ff\\'>🏫</div>'"></div>
       <div class="inv-hd-name">${sch.school_name || this.SCHOOL}</div>
       <div class="inv-hd-sub">Centro Educativo Montessori</div>
       <div class="inv-hd-info">
-        ${sch.address ? `${sch.address}<br>` : ''}
-        ${sch.phone ? `Tel: ${sch.phone}` : ''}${sch.phone && sch.email ? ' · ' : ''}${sch.email ? `Email: ${sch.email}` : ''}<br>
-        ${sch.rnc ? `RNC: ${sch.rnc}` : ''}${sch.rnc && sch.website ? ' · ' : ''}${sch.website ? `${sch.website}` : ''}
+        ${sch.address ? `${sch.address}` : ''}${sch.address && sch.phone ? ' · ' : ''}${sch.phone ? `Tel: ${sch.phone}` : ''}<br>
+        ${sch.rnc ? `RNC: ${sch.rnc}` : ''}${sch.rnc && sch.email ? ' · ' : ''}${sch.email || ''}
       </div>
     </div>
     <div class="inv-hd-right">
+      <div class="inv-type-badge">${invoiceType}</div>
       <div class="inv-hd-badge">
         <div class="inv-hd-label">Factura N°</div>
         <div class="inv-hd-number">${receiptNo}</div>
@@ -215,7 +223,7 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:
   <div class="inv-status">
     <div class="inv-status-dot">${status==='paid'?'✓':'!'}</div>
     <div class="inv-status-text">
-      <h3>Pago Confirmado y Aprobado</h3>
+      <h3>${status==='paid'?'Pago Confirmado y Aprobado':stLabel}</h3>
       <p>${fmtDate(payDate)} ${fmtTime(payDate) ? '· ' + fmtTime(payDate) : ''}</p>
     </div>
   </div>
@@ -231,22 +239,22 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:
             <div class="inv-card-icon" style="background:linear-gradient(135deg,#eff6ff,#dbeafe);color:#0B63C7">👤</div>
             <div class="inv-card-title">Padre / Tutor</div>
           </div>
-          <div class="inv-card-row"><span class="inv-card-label">Nombre</span><span class="inv-card-value">${stu.p1_name || '—'}</span></div>
-          <div class="inv-card-row"><span class="inv-card-label">Email</span><span class="inv-card-value">${stu.p1_email || '—'}</span></div>
-          <div class="inv-card-row"><span class="inv-card-label">Teléfono</span><span class="inv-card-value">${stu.p1_phone || '—'}</span></div>
-          ${inv.fiscal_parent_rnc ? `<div class="inv-card-row"><span class="inv-card-label">RNC</span><span class="inv-card-value">${inv.fiscal_parent_rnc}</span></div>` : ''}
-          ${inv.fiscal_parent_company_name ? `<div class="inv-card-row"><span class="inv-card-label">Empresa</span><span class="inv-card-value">${inv.fiscal_parent_company_name}</span></div>` : ''}
+          ${R('Nombre:', stu.p1_name || '—')}
+          ${R('Email:', stu.p1_email || '—')}
+          ${R('Teléfono:', stu.p1_phone || '—')}
+          ${inv.fiscal_parent_rnc ? R('RNC:', inv.fiscal_parent_rnc) : ''}
+          ${inv.fiscal_parent_company_name ? R('Empresa:', inv.fiscal_parent_company_name) : ''}
         </div>
         <div class="inv-card">
           <div class="inv-card-header">
             <div class="inv-card-icon" style="background:linear-gradient(135deg,#f0fdf4,#dcfce7);color:#28B54D">🎓</div>
             <div class="inv-card-title">Estudiante</div>
           </div>
-          ${studentPhoto ? `<div style="text-align:center;margin-bottom:10px"><img src="${studentPhoto}" style="width:48px;height:48px;border-radius:50%;object-fit:cover;border:2px solid #e2e8f0" onerror="this.style.display='none'"></div>` : ''}
-          <div class="inv-card-row"><span class="inv-card-label">Nombre</span><span class="inv-card-value">${stu.name || '—'}</span></div>
-          <div class="inv-card-row"><span class="inv-card-label">Matrícula</span><span class="inv-card-value">${stu.matricula || '—'}</span></div>
-          <div class="inv-card-row"><span class="inv-card-label">Curso / Aula</span><span class="inv-card-value">${stu.classroom || '—'}</span></div>
-          ${age ? `<div class="inv-card-row"><span class="inv-card-label">Edad</span><span class="inv-card-value">${age} años</span></div>` : ''}
+          ${studentPhoto ? `<div style="text-align:center;margin-bottom:8px"><img src="${studentPhoto}" style="width:42px;height:42px;border-radius:50%;object-fit:cover;border:2px solid #e2e8f0" onerror="this.style.display='none'"></div>` : ''}
+          ${R('Nombre:', stu.name || '—')}
+          ${R('Matrícula:', stu.matricula || '—')}
+          ${R('Curso / Aula:', stu.classroom || '—')}
+          ${age ? R('Edad:', age + ' años') : ''}
         </div>
       </div>
     </div>
@@ -277,12 +285,12 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:
     <div class="inv-section">
       <div class="inv-totals-wrap">
         <div class="inv-totals">
-          <div class="inv-total-row"><span>Subtotal</span><span>${fmtCurrency(subtotal)}</span></div>
-          ${discount > 0 ? `<div class="inv-total-row" style="color:#28B54D"><span>Descuento</span><span>-${fmtCurrency(discount)}</span></div>` : ''}
-          ${taxAmount > 0 ? `<div class="inv-total-row"><span>Impuestos</span><span>${fmtCurrency(taxAmount)}</span></div>` : ''}
+          ${R('Subtotal:', fmtCurrency(subtotal))}
+          ${discount > 0 ? `<div class="inv-total-row"><span class="inv-lbl" style="color:#28B54D">Descuento:</span><span class="inv-val" style="color:#28B54D">-${fmtCurrency(discount)}</span></div>` : ''}
+          ${taxAmount > 0 ? R('Impuestos:', fmtCurrency(taxAmount)) : ''}
           <hr class="inv-total-divider">
-          <div class="inv-total-final"><span>Total</span><span>${fmtCurrency(total)}</span></div>
-          <div class="inv-total-row" style="margin-top:4px;padding-top:8px;border-top:1px dashed #e2e8f0"><span style="color:#28B54D;font-weight:800">Estado</span><span style="color:${stColor};font-weight:900">${stLabel}</span></div>
+          <div class="inv-total-final"><span class="inv-lbl">Total</span><span class="inv-val">${fmtCurrency(total)}</span></div>
+          ${R('Estado:', `<span style="color:${stColor};font-weight:900">${stLabel}</span>`)}
         </div>
       </div>
     </div>
@@ -292,13 +300,13 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:
       <div class="inv-section-title">Método de Pago</div>
       <div class="inv-payment-card">
         <div class="inv-payment-grid">
-          <div class="inv-payment-item"><div class="inv-payment-item-label">Método</div><div class="inv-payment-item-value" style="text-transform:capitalize">${pay.method || 'Efectivo'}</div></div>
-          <div class="inv-payment-item"><div class="inv-payment-item-label">Banco</div><div class="inv-payment-item-value">${pay.bank || '—'}</div></div>
-          <div class="inv-payment-item"><div class="inv-payment-item-label">Referencia</div><div class="inv-payment-item-value">${pay.reference || inv.payment_reference || '—'}</div></div>
-          <div class="inv-payment-item"><div class="inv-payment-item-label">Fecha</div><div class="inv-payment-item-value">${fmtDate(payDate)}</div></div>
-          <div class="inv-payment-item"><div class="inv-payment-item-label">Hora</div><div class="inv-payment-item-value">${fmtTime(payDate)}</div></div>
-          <div class="inv-payment-item"><div class="inv-payment-item-label">Atendido por</div><div class="inv-payment-item-value">${inv.attended_by || 'Sistema'}</div></div>
-          <div class="inv-payment-item"><div class="inv-payment-item-label">Caja</div><div class="inv-payment-item-value">Principal</div></div>
+          <div class="inv-payment-item"><span class="inv-lbl">Método:</span><span class="inv-val" style="text-transform:capitalize">${pay.method || 'Efectivo'}</span></div>
+          <div class="inv-payment-item"><span class="inv-lbl">Banco:</span><span class="inv-val">${pay.bank || '—'}</span></div>
+          <div class="inv-payment-item"><span class="inv-lbl">Referencia:</span><span class="inv-val">${pay.reference || inv.payment_reference || '—'}</span></div>
+          <div class="inv-payment-item"><span class="inv-lbl">Fecha:</span><span class="inv-val">${fmtDate(payDate)}</span></div>
+          <div class="inv-payment-item"><span class="inv-lbl">Hora:</span><span class="inv-val">${fmtTime(payDate)}</span></div>
+          <div class="inv-payment-item"><span class="inv-lbl">Atendido por:</span><span class="inv-val">${inv.attended_by || 'Sistema'}</span></div>
+          <div class="inv-payment-item"><span class="inv-lbl">Caja:</span><span class="inv-val">Principal</span></div>
         </div>
       </div>
     </div>
@@ -307,10 +315,10 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:
     <div class="inv-section">
       <div class="inv-section-title">Información Adicional</div>
       <div class="inv-additional-grid">
-        <div class="inv-additional-item"><div class="inv-additional-item-label">Período</div><div class="inv-additional-item-value">${periodText}</div></div>
-        <div class="inv-additional-item"><div class="inv-additional-item-label">Estado</div><div class="inv-additional-item-value" style="color:${stColor}">${stLabel}</div></div>
-        <div class="inv-additional-item"><div class="inv-additional-item-label">Folio Digital</div><div class="inv-additional-item-value" style="font-size:9px;font-family:monospace;word-break:break-all">${uuidFolio || '—'}</div></div>
-        <div class="inv-additional-item"><div class="inv-additional-item-label">Fecha Emisión</div><div class="inv-additional-item-value">${fmtDate(issuedDate)}</div></div>
+        <div class="inv-additional-item"><span class="inv-lbl">Período:</span><span class="inv-val">${periodText}</span></div>
+        <div class="inv-additional-item"><span class="inv-lbl">Estado:</span><span class="inv-val" style="color:${stColor}">${stLabel}</span></div>
+        <div class="inv-additional-item"><span class="inv-lbl">Folio Digital:</span><span class="inv-val" style="font-size:8px;font-family:monospace;word-break:break-all">${uuidFolio ? uuidFolio.slice(0,8)+'...' : '—'}</span></div>
+        <div class="inv-additional-item"><span class="inv-lbl">Fecha Emisión:</span><span class="inv-val">${fmtDate(issuedDate)}</span></div>
       </div>
     </div>
 
@@ -341,13 +349,13 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:
     <hr class="inv-footer-divider">
 
     <!-- QR + BARCODE + HASH -->
-    <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
-      <div class="inv-footer-qr" style="flex:0 0 auto" id="invQR_${inv.id || 'gen'}"></div>
+    <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-start">
+      <div class="inv-footer-qr-wrap" style="flex:0 0 auto" id="invQR_${inv.id || 'gen'}"></div>
       <div style="flex:1;min-width:200px">
         <div class="inv-footer-barcode" id="invBarcode_${inv.id || 'gen'}"></div>
-        <div style="margin-top:8px;text-align:center">
-          <div style="font-size:9px;color:rgba(255,255,255,.4);font-weight:600">Hash SHA-256 de validación</div>
-          <div style="font-size:8px;color:rgba(255,255,255,.3);font-family:monospace;word-break:break-all;margin-top:2px">${hash || '—'}</div>
+        <div style="margin-top:6px;text-align:center">
+          <div style="font-size:8px;color:rgba(255,255,255,.35);font-weight:700">Hash SHA-256</div>
+          <div style="font-size:7px;color:rgba(255,255,255,.25);font-family:monospace;word-break:break-all;margin-top:2px">${hash || '—'}</div>
         </div>
       </div>
     </div>
@@ -358,11 +366,10 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:
       <div class="inv-footer-meta-item">Documento generado electrónicamente</div>
       <div class="inv-footer-meta-item"><strong>Folio:</strong> ${uuidFolio || '—'}</div>
       <div class="inv-footer-meta-item"><strong>Generado:</strong> ${fmtDate(issuedDate)} ${fmtTime(issuedDate)}</div>
-      ${validationUrl ? `<div class="inv-footer-meta-item"><strong>Validar:</strong> ${validationUrl}</div>` : ''}
     </div>
 
     <div class="inv-stamp">
-      <div class="inv-stamp-text">${sch.school_name || this.SCHOOL} — Documento con valor fiscal</div>
+      <div class="inv-stamp-text">${sch.school_name || this.SCHOOL} — Documento con valor fiscal — ${invoiceType}</div>
     </div>
   </div>
 
@@ -416,23 +423,27 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:
     const inv = data.invoice || data;
     const receiptNo = inv.invoice_number || inv.receipt_number || '';
     const uuidFolio = inv.uuid_folio || '';
-    const validationUrl = inv.validation_url || '';
 
     // QR
     const qrEl = container.querySelector(`[id^="invQR_"]`);
     if (qrEl && window.QRCode) {
       qrEl.innerHTML = '';
-      new window.QRCode(qrEl, {
-        text: validationUrl || `INV-${inv.id}`,
-        width: 80, height: 80,
-        colorDark: '#ffffff', colorLight: 'transparent',
+      const qrBox = document.createElement('div');
+      qrBox.className = 'inv-footer-qr-box';
+      qrEl.appendChild(qrBox);
+      new window.QRCode(qrBox, {
+        text: inv.validation_url || `https://montessorisonrisascreativas.com/validate-invoice.html?uuid=${uuidFolio || inv.id}`,
+        width: 68, height: 68,
+        colorDark: '#1a2340', colorLight: '#ffffff',
         correctLevel: window.QRCode.CorrectLevel.M
       });
-      qrEl.insertAdjacentHTML('beforeend',
-        `<div class="inv-footer-qr-text"><strong style="color:rgba(255,255,255,.85)">Escanea para validar</strong><br>Código QR de verificación de esta factura</div>`);
+      const txt = document.createElement('div');
+      txt.className = 'inv-footer-qr-text';
+      txt.innerHTML = `<strong>Escanea para validar</strong><br>Código QR de verificación`;
+      qrEl.appendChild(txt);
     } else if (qrEl) {
-      qrEl.innerHTML = `<div style="width:80px;height:80px;background:rgba(255,255,255,.1);border-radius:8px;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.4);font-size:10px">QR</div>
-        <div class="inv-footer-qr-text"><strong style="color:rgba(255,255,255,.85)">Validación</strong><br>${validationUrl || '—'}</div>`;
+      qrEl.innerHTML = `<div class="inv-footer-qr-box" style="display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:9px">QR</div>
+        <div class="inv-footer-qr-text"><strong>Validación</strong><br>${uuidFolio || '—'}</div>`;
     }
 
     // Barcode
@@ -443,16 +454,16 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:
       bcEl.appendChild(canvas);
       try {
         JsBarcode(canvas, receiptNo.replace(/[^a-zA-Z0-9]/g, ''), {
-          format: 'CODE128', width: 1.5, height: 30,
-          displayValue: true, font: 'monospace', fontSize: 10,
-          background: 'transparent', lineColor: 'rgba(255,255,255,0.5)',
+          format: 'CODE128', width: 1.5, height: 28,
+          displayValue: true, font: 'monospace', fontSize: 9,
+          background: 'transparent', lineColor: 'rgba(255,255,255,0.45)',
           margin: 0
         });
       } catch (_) {
-        bcEl.innerHTML = `<div style="font-size:11px;color:rgba(255,255,255,.5);font-family:monospace">${receiptNo}</div>`;
+        bcEl.innerHTML = `<div style="font-size:10px;color:rgba(255,255,255,.4);font-family:monospace">${receiptNo}</div>`;
       }
     } else if (bcEl) {
-      bcEl.innerHTML = `<div style="font-size:11px;color:rgba(255,255,255,.5);font-family:monospace;padding:8px">${receiptNo}</div>`;
+      bcEl.innerHTML = `<div style="font-size:10px;color:rgba(255,255,255,.4);font-family:monospace;padding:8px">${receiptNo}</div>`;
     }
   },
 
@@ -498,6 +509,8 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:
     let periodText = pay.month_paid || '';
     if (periodText.includes('-')) { const [y,m] = periodText.split('-'); periodText = `${monthNames[parseInt(m)-1]||m} ${y}`; }
     const SITE_URL = sch.website || 'https://montessorisonrisascreativas.com';
+    const isFiscal = !!(inv.fiscal_parent_rnc || inv.fiscal_parent_company_name);
+    const invoiceType = isFiscal ? 'COMPROBANTE FISCAL' : 'CONSUMIDOR FINAL';
 
     const emailHTML = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Factura ${receiptNo}</title>
@@ -542,6 +555,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
     <h1>${sch.school_name || this.SCHOOL}</h1>
     <p>${sch.address || ''} ${sch.phone ? '· Tel: ' + sch.phone : ''}</p>
     <div class="hd-badge"><span>${receiptNo}</span></div>
+    <div style="margin-top:8px;display:inline-block;padding:4px 12px;border-radius:6px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);font-size:9px;font-weight:900;color:rgba(255,255,255,.85);text-transform:uppercase;letter-spacing:.12em">${invoiceType}</div>
   </div>
   <div class="status">
     <div class="status-dot">✓</div>
@@ -549,9 +563,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
   </div>
   <div class="cta">
     <div class="cta-title">Acciones disponibles</div>
-    <a href="${SITE_URL}/validate-invoice.html?uuid=${inv.uuid_folio || ''}" class="btn-blue">📄 Descargar Factura PDF</a>
+    ${inv.pdf_url ? `<a href="${inv.pdf_url}" class="btn-blue">📥 Descargar Factura PDF</a>` : ''}
     <div class="btn-row">
-      <a href="${SITE_URL}/validate-invoice.html?uuid=${inv.uuid_folio || ''}" class="btn-outline">🔗 Ver Factura Online</a>
+      ${inv.pdf_url ? `<a href="${inv.pdf_url}" class="btn-outline">📄 Ver Factura</a>` : ''}
       <a href="mailto:${sch.email || 'admin@montessorisonrisascreativas.com'}" class="btn-gray">✉️ Contactar</a>
     </div>
   </div>
@@ -644,7 +658,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
         ${pdfUrl ? `<a href="${pdfUrl}" target="_blank" style="padding:10px 18px;border-radius:10px;background:#0B63C7;color:white;text-decoration:none;font-size:.8rem;font-weight:800;display:flex;align-items:center;gap:6px">📥 Descargar PDF</a>` : ''}
         <button onclick="window.InvoicingModule?.openInvoiceModal && InvoiceModule._printInvoice()" style="padding:10px 18px;border-radius:10px;border:2px solid #0B63C7;background:#eff6ff;color:#0B63C7;font-size:.8rem;font-weight:800;cursor:pointer;display:flex;align-items:center;gap:6px">🖨️ Imprimir</button>
         <button onclick="InvoiceModule._resendEmail()" style="padding:10px 18px;border-radius:10px;border:2px solid #28B54D;background:#f0fdf4;color:#28B54D;font-size:.8rem;font-weight:800;cursor:pointer;display:flex;align-items:center;gap:6px">📧 Reenviar</button>
-        ${validationUrl ? `<a href="${validationUrl}" target="_blank" style="padding:10px 18px;border-radius:10px;border:2px solid #e2e8f0;background:white;color:#64748b;text-decoration:none;font-size:.8rem;font-weight:800;display:flex;align-items:center;gap:6px">🔗 Ver Online</a>` : ''}
         <div style="flex:1"></div>
         <button onclick="document.getElementById('invoiceModalOverlay').remove()" style="padding:10px 18px;border-radius:10px;border:none;background:#f1f5f9;color:#64748b;font-size:.8rem;font-weight:800;cursor:pointer">Cerrar</button>
       </div>
@@ -703,7 +716,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
     const overlay = document.createElement('div');
     overlay.id = 'cajaSuccessModal';
     overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(6px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
-    overlay.onclick = e => { if(e.target===overlay) el.remove(); };
+    overlay.onclick = e => { if(e.target===overlay) overlay.remove(); };
 
     overlay.innerHTML = `
     <div style="background:white;border-radius:20px;padding:0;max-width:420px;width:100%;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.25)">
@@ -776,17 +789,29 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
     const inv = data.invoice || data;
     if (inv.pdf_url) {
       window.open(inv.pdf_url, '_blank');
-    } else {
-      Helpers.toast('Generando PDF...', 'info');
-      this.generatePDF(data).then(blob => {
-        if (blob) {
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url; a.download = `Factura_${inv.invoice_number || 'draft'}.pdf`;
-          a.click(); URL.revokeObjectURL(url);
-        }
-      });
+      return;
     }
+    if (!window.html2pdf && !window.jspdf?.jsPDF) {
+      Helpers.toast('Generador de PDF no disponible. Use Imprimir (Ctrl+P) para guardar como PDF.', 'warning');
+      this._printInvoice();
+      return;
+    }
+    Helpers.toast('Generando PDF...', 'info');
+    this.generatePDF(data).then(blob => {
+      if (blob) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = `Factura_${inv.invoice_number || 'draft'}.pdf`;
+        a.click(); URL.revokeObjectURL(url);
+        Helpers.toast('PDF descargado', 'success');
+      } else {
+        Helpers.toast('No se pudo generar el PDF. Use Imprimir para guardar como PDF.', 'warning');
+        this._printInvoice();
+      }
+    }).catch(() => {
+      Helpers.toast('Error al generar PDF. Use Imprimir (Ctrl+P).', 'warning');
+      this._printInvoice();
+    });
   },
 
   _shareWhatsApp() {

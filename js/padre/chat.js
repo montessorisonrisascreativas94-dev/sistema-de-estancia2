@@ -59,17 +59,25 @@ export const ChatModule = {
         return;
       }
 
-      list.innerHTML = this._contacts.map(c =>
-        '<div data-contact-id="' + c.id + '" class="flex items-center gap-3 p-3 rounded-2xl hover:bg-white hover:shadow-sm cursor-pointer transition-all border border-transparent hover:border-slate-100 group mb-1">' +
-          '<div class="w-12 h-12 rounded-full bg-[#E8F2FF] text-[#0B63C7] flex items-center justify-center font-bold overflow-hidden border-2 border-blue-50 shrink-0 aspect-square shadow-sm">' +
-            (c.avatar_url ? '<img src="' + Security.safeUrl(c.avatar_url) + '" class="w-full h-full object-cover">' : c.name.charAt(0)) +
+      // Fetch unread counts per contact
+      const unreadCounts = await SharedChatModule.getUnreadCounts().then(r => r.counts || {}).catch(() => ({}));
+
+      list.innerHTML = this._contacts.map(c => {
+        const unread = unreadCounts[c.id] || 0;
+        return '<div data-contact-id="' + c.id + '" class="flex items-center gap-3 p-3 rounded-2xl hover:bg-white hover:shadow-sm cursor-pointer transition-all border border-transparent hover:border-slate-100 group mb-1 relative">' +
+          '<div class="relative shrink-0">' +
+            '<div class="w-12 h-12 rounded-full bg-[#E8F2FF] text-[#0B63C7] flex items-center justify-center font-bold overflow-hidden border-2 border-blue-50 shrink-0 aspect-square shadow-sm">' +
+              (c.avatar_url ? '<img src="' + Security.safeUrl(c.avatar_url) + '" class="w-full h-full object-cover">' : c.name.charAt(0)) +
+            '</div>' +
+            (unread > 0 ? '<span class="absolute -top-1 -right-1 min-w-[20px] h-[20px] bg-rose-500 text-white text-[10px] font-black rounded-full flex items-center justify-center px-1 shadow animate-pulse">' + (unread > 9 ? '9+' : unread) + '</span>' : '') +
           '</div>' +
           '<div class="min-w-0 flex-1">' +
-            '<div class="font-bold text-slate-700 text-sm truncate group-hover:text-green-700">' + escapeHtml(c.name) + '</div>' +
+            '<div class="font-bold text-slate-700 text-sm truncate group-hover:text-green-700 ' + (unread > 0 ? 'text-slate-900' : '') + '">' + escapeHtml(c.name) + '</div>' +
             '<div class="text-[10px] text-slate-400 font-bold uppercase truncate">' + (c.roleLabel || c.role || '') + '</div>' +
           '</div>' +
-        '</div>'
-      ).join('');
+          (unread > 0 ? '<div class="w-2 h-2 bg-rose-500 rounded-full shrink-0 animate-pulse"></div>' : '') +
+        '</div>';
+      }).join('');
 
     } catch (err) {
       list.innerHTML = Helpers.emptyState('Error al cargar contactos');

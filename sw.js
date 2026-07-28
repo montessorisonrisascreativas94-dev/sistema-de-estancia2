@@ -1,7 +1,3 @@
-self.addEventListener('message', (event) => {
-  // Manejador preventivo para evitar el error de registro tardío (sw.ts:21)
-});
-
 /**
  * Colegio Montessori Sonrisas Creativas — Service Worker PWA
  * IMPORTANTE: Este SW solo maneja caché PWA.
@@ -9,7 +5,14 @@ self.addEventListener('message', (event) => {
  * NO definir handlers push/notificationclick aquí para no interferir con OneSignal.
  */
 
-const CACHE_NAME = 'karpus-pwa-v6';
+const CACHE_NAME = 'karpus-pwa-v7';
+
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
+
 const ASSETS = [
   './',
   'login.html',

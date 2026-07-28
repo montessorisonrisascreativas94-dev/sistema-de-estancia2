@@ -1229,6 +1229,10 @@ export const AccountingModule = {
     const totalARS  = records.reduce((s,r)=>s+Number(r.ars||0),0);
     const totalISR  = records.reduce((s,r)=>s+Number(r.isr||0),0);
     const totalBruto= records.reduce((s,r)=>s+Number(r.gross_salary||0),0);
+    const totalAFPP = records.reduce((s,r)=>s+Number(r.afp_patronal||0),0);
+    const totalARSP = records.reduce((s,r)=>s+Number(r.ars_patronal||0),0);
+    const conSalario = employees.filter(e => Number(e.salary) > 0);
+    const sinSalario = employees.filter(e => !Number(e.salary));
 
     // Monthly payroll cost (last 12 months)
     const now = new Date();
@@ -1247,6 +1251,7 @@ export const AccountingModule = {
           <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
             <p class="text-[9px] font-black uppercase text-slate-400 mb-1">Empleados</p>
             <p class="text-lg font-black text-slate-800">${employees.length}</p>
+            <p class="text-[8px] text-slate-400 font-bold">${conSalario.length} con salario · ${sinSalario.length} sin asignar</p>
           </div>
           <div class="bg-white rounded-2xl p-4 border border-blue-100 shadow-sm">
             <p class="text-[9px] font-black uppercase text-[#0B63C7] mb-1">Bruto Total</p>
@@ -1255,6 +1260,11 @@ export const AccountingModule = {
           <div class="bg-white rounded-2xl p-4 border border-rose-100 shadow-sm">
             <p class="text-[9px] font-black uppercase text-rose-400 mb-1">Deducciones</p>
             <p class="text-lg font-black text-rose-600">${fmt(totalAFP+totalARS+totalISR)}</p>
+          </div>
+          <div class="bg-white rounded-2xl p-4 border border-violet-100 shadow-sm">
+            <p class="text-[9px] font-black uppercase text-violet-400 mb-1">Costo Patronal</p>
+            <p class="text-lg font-black text-violet-600">${fmt(totalAFPP+totalARSP)}</p>
+            <p class="text-[8px] text-violet-400 font-bold">AFP+ARS patronal</p>
           </div>
           <div class="bg-white rounded-2xl p-4 border border-amber-100 shadow-sm">
             <p class="text-[9px] font-black uppercase text-amber-400 mb-1">Pendiente</p>
@@ -1269,7 +1279,7 @@ export const AccountingModule = {
           <button onclick="AccountingModule._calcNominaModal()"
             class="flex items-center gap-1.5 px-4 py-2 text-white rounded-xl font-black text-xs hover:opacity-90"
             style="background:#0B63C7">
-            <i data-lucide="calculator" class="w-3.5 h-3.5"></i> Calcular Nómina
+            <i data-lucide="calculator" class="w-3.5 h-3.5"></i> Procesar Nómina
           </button>
           <button onclick="AccountingModule._batchPayslips()"
             class="flex items-center gap-1.5 px-4 py-2 bg-[#E8F2FF] text-[#0B63C7] rounded-xl font-black text-xs hover:bg-[#0B63C7] hover:text-white transition-all">
@@ -1277,78 +1287,256 @@ export const AccountingModule = {
           </button>
         </div>
 
-        <!-- Empleados con cálculo de deducciones -->
+        <!-- Tarjetas de empleados con salario -->
+        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+          <div class="p-4 border-b border-slate-100 flex items-center justify-between">
+            <h3 class="font-black text-slate-800 text-sm">Empleados con Salario</h3>
+            <span class="text-[9px] font-black text-slate-400">${conSalario.length} registrados</span>
+          </div>
+          ${conSalario.length ? `
+          <div class="divide-y divide-slate-50">
+            ${conSalario.map(e => {
+              const n = calcNeto(Number(e.salary));
+              return `
+              <div class="p-4 hover:bg-slate-50 flex items-center gap-4">
+                <div class="w-10 h-10 rounded-xl bg-[#E8F2FF] flex items-center justify-center font-black text-[#0B63C7] text-sm flex-shrink-0">
+                  ${(e.name||'?').charAt(0)}
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="text-sm font-black text-slate-800 truncate">${esc(e.name)}</div>
+                  <div class="text-[10px] font-bold text-slate-400 capitalize">${esc(e.role)} ${e.phone ? '· '+esc(e.phone) : ''}</div>
+                </div>
+                <div class="text-right flex-shrink-0">
+                  <div class="text-xs font-black text-slate-700">${fmt(n.bruto)}</div>
+                  <div class="text-[8px] text-slate-400 font-bold">Bruto</div>
+                </div>
+                <div class="text-right flex-shrink-0 min-w-[80px]">
+                  <div class="text-xs font-black text-[#28B54D]">${fmt(n.neto)}</div>
+                  <div class="text-[8px] text-slate-400 font-bold">Neto</div>
+                </div>
+                <div class="flex gap-1 flex-shrink-0">
+                  <button onclick="AccountingModule._setSalary('${e.id}','${esc(e.name)}')"
+                    class="px-2.5 py-1.5 bg-[#E8F2FF] text-[#0B63C7] rounded-lg text-[8px] font-black hover:bg-[#0B63C7] hover:text-white transition-all">
+                    Editar
+                  </button>
+                  <button onclick="AccountingModule._printPayslip('${e.id}','${esc(e.name)}',${n.bruto},${n.afp},${n.ars},${n.isr},${n.neto})"
+                    class="px-2.5 py-1.5 bg-[#0B63C7] text-white rounded-lg text-[8px] font-black hover:bg-[#0850A0] transition-all">
+                    PDF
+                  </button>
+                </div>
+              </div>`;
+            }).join('')}
+          </div>` : `
+          <div class="p-8 text-center">
+            <p class="text-slate-400 text-sm font-bold mb-3">No hay empleados con salario asignado</p>
+            <button onclick="AccountingModule._openSalaryManager()"
+              class="px-4 py-2 bg-[#0B63C7] text-white rounded-xl font-black text-xs">
+              <i data-lucide="settings-2" class="w-3.5 h-3.5 inline"></i> Gestionar Salarios
+            </button>
+          </div>`}
+        </div>
+
+        <!-- Empleados sin salario -->
+        ${sinSalario.length ? `
+        <div class="bg-white rounded-2xl border border-amber-100 shadow-sm overflow-hidden">
+          <div class="p-4 border-b border-amber-100 flex items-center justify-between bg-amber-50">
+            <h3 class="font-black text-amber-700 text-sm flex items-center gap-2">
+              <i data-lucide="alert-triangle" class="w-4 h-4"></i> Sin Salario Asignado
+            </h3>
+            <span class="text-[9px] font-black text-amber-500">${sinSalario.length} empleados</span>
+          </div>
+          <div class="divide-y divide-slate-50">
+            ${sinSalario.map(e => `
+              <div class="p-3 hover:bg-slate-50 flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center font-black text-amber-500 text-xs flex-shrink-0">
+                  ${(e.name||'?').charAt(0)}
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="text-xs font-black text-slate-800 truncate">${esc(e.name)}</div>
+                  <div class="text-[9px] font-bold text-slate-400 capitalize">${esc(e.role)}</div>
+                </div>
+                <button onclick="AccountingModule._setSalary('${e.id}','${esc(e.name)}')"
+                  class="px-3 py-1.5 bg-[#0B63C7] text-white rounded-lg text-[8px] font-black hover:bg-[#0850A0] transition-all flex items-center gap-1">
+                  <i data-lucide="plus" class="w-3 h-3"></i> Asignar Salario
+                </button>
+              </div>
+            `).join('')}
+          </div>
+        </div>` : ''}
+
+        <!-- Historial de nóminas procesadas -->
         <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
           <div class="p-4 border-b border-slate-100">
-            <h3 class="font-black text-slate-800 text-sm">Planilla de Empleados</h3>
+            <h3 class="font-black text-slate-800 text-sm">Historial de Nóminas Procesadas</h3>
           </div>
+          ${records.length ? `
           <div class="overflow-x-auto">
             <table class="w-full text-xs">
-              <thead class="bg-[#E8F2FF]"><tr>
-                <th class="px-4 py-3 text-left font-black text-[#0850A0] uppercase text-[9px]">Empleado</th>
-                <th class="px-4 py-3 text-left font-black text-[#0850A0] uppercase text-[9px]">Cargo</th>
-                <th class="px-4 py-3 text-right font-black text-[#0850A0] uppercase text-[9px]">Salario Bruto</th>
-                <th class="px-4 py-3 text-right font-black text-[#0850A0] uppercase text-[9px]">AFP (2.87%)</th>
-                <th class="px-4 py-3 text-right font-black text-[#0850A0] uppercase text-[9px]">ARS (3.04%)</th>
-                <th class="px-4 py-3 text-right font-black text-[#0850A0] uppercase text-[9px]">ISR</th>
-                <th class="px-4 py-3 text-right font-black text-[#0850A0] uppercase text-[9px]">Salario Neto</th>
-                <th class="px-4 py-3 text-center font-black text-[#0850A0] uppercase text-[9px]">Recibo</th>
+              <thead class="bg-slate-50"><tr>
+                <th class="px-4 py-3 text-left font-black text-slate-400 uppercase text-[9px]">Período</th>
+                <th class="px-4 py-3 text-left font-black text-slate-400 uppercase text-[9px]">Empleado</th>
+                <th class="px-4 py-3 text-right font-black text-slate-400 uppercase text-[9px]">Bruto</th>
+                <th class="px-4 py-3 text-right font-black text-slate-400 uppercase text-[9px]">AFP</th>
+                <th class="px-4 py-3 text-right font-black text-slate-400 uppercase text-[9px]">ARS</th>
+                <th class="px-4 py-3 text-right font-black text-slate-400 uppercase text-[9px]">ISR</th>
+                <th class="px-4 py-3 text-right font-black text-slate-400 uppercase text-[9px]">Neto</th>
+                <th class="px-4 py-3 text-center font-black text-slate-400 uppercase text-[9px]">Estado</th>
               </tr></thead>
               <tbody class="divide-y divide-slate-50">
-                ${employees.length ? employees.map(e => {
-                  if (!e.salary) return `
-                    <tr class="hover:bg-slate-50">
-                      <td class="px-4 py-3 font-black text-slate-800">${esc(e.name)}</td>
-                      <td class="px-4 py-3 text-slate-500 capitalize">${esc(e.role)}</td>
-                      <td colspan="5" class="px-4 py-3 text-center text-slate-400 text-[9px]">Sin salario configurado</td>
-                      <td class="px-4 py-3 text-center">
-                        <button onclick="AccountingModule._setSalary('${e.id}','${esc(e.name)}')"
-                          class="px-2 py-1 bg-[#E8F2FF] text-[#0B63C7] rounded-lg text-[9px] font-black">Asignar</button>
-                      </td>
-                    </tr>`;
-                  const n = calcNeto(Number(e.salary));
-                  return `
-                    <tr class="hover:bg-slate-50">
-                      <td class="px-4 py-3 font-black text-slate-800">${esc(e.name)}</td>
-                      <td class="px-4 py-3 text-slate-500 capitalize">${esc(e.role)}</td>
-                      <td class="px-4 py-3 text-right font-bold text-slate-700">${fmt(n.bruto)}</td>
-                      <td class="px-4 py-3 text-right text-rose-500">${fmt(n.afp)}</td>
-                      <td class="px-4 py-3 text-right text-rose-500">${fmt(n.ars)}</td>
-                      <td class="px-4 py-3 text-right text-rose-500">${fmt(n.isr)}</td>
-                      <td class="px-4 py-3 text-right font-black text-[#28B54D]">${fmt(n.neto)}</td>
-                      <td class="px-4 py-3 text-center">
-                        <button onclick="AccountingModule._printPayslip('${e.id}','${esc(e.name)}',${n.bruto},${n.afp},${n.ars},${n.isr},${n.neto})"
-                          class="px-2 py-1 bg-[#0B63C7] text-white rounded-lg text-[9px] font-black hover:bg-[#0850A0]">
-                          PDF
-                        </button>
-                      </td>
-                    </tr>`;
-                }).join('')
-                : `<tr><td colspan="8" class="text-center py-8 text-slate-400">Sin empleados registrados</td></tr>`}
+                ${records.map(r => `
+                  <tr class="hover:bg-slate-50">
+                    <td class="px-4 py-3 font-bold text-[#0B63C7] font-mono">${esc(r.period)}</td>
+                    <td class="px-4 py-3 font-black text-slate-800">${esc(r.profiles?.name||'—')}</td>
+                    <td class="px-4 py-3 text-right font-bold text-slate-700">${fmt(r.gross_salary)}</td>
+                    <td class="px-4 py-3 text-right text-rose-500">${fmt(r.afp)}</td>
+                    <td class="px-4 py-3 text-right text-rose-500">${fmt(r.ars)}</td>
+                    <td class="px-4 py-3 text-right text-rose-500">${fmt(r.isr)}</td>
+                    <td class="px-4 py-3 text-right font-black text-[#28B54D]">${fmt(r.net_salary)}</td>
+                    <td class="px-4 py-3 text-center">
+                      <span class="px-2 py-1 rounded-full text-[8px] font-black ${
+                        r.status==='pagado' ? 'bg-emerald-100 text-emerald-700' :
+                        r.status==='cancelado' ? 'bg-red-100 text-red-700' :
+                        'bg-amber-100 text-amber-700'}">
+                        ${r.status==='pagado' ? 'Pagado' : r.status==='cancelado' ? 'Cancelado' : 'Pendiente'}
+                      </span>
+                      ${r.status==='pendiente' ? `
+                        <button onclick="AccountingModule._payPayrollRecord('${r.id}')"
+                          class="ml-1 px-2 py-0.5 bg-[#28B54D] text-white rounded text-[7px] font-black">Pagar</button>
+                      ` : ''}
+                    </td>
+                  </tr>
+                `).join('')}
               </tbody>
             </table>
-          </div>
+          </div>` : `
+          <div class="p-8 text-center text-slate-400 text-sm font-bold">
+            No hay nóminas procesadas aún. Usa "Procesar Nómina" para generar la primera.
+          </div>`}
         </div>
       </div>`;
     if (window.lucide) lucide.createIcons();
   },
 
+  async _payPayrollRecord(id) {
+    try {
+      await supabase.from('payroll_records').update({ status:'pagado', paid_at: new Date().toISOString() }).eq('id',id);
+      supabase.functions.invoke('generate-payroll-invoice', { body: { payroll_id: id, send_email: false } }).catch(() => {});
+      Helpers.toast('Nómina marcada como pagada', 'success');
+      this._loadNomina();
+    } catch(e) { Helpers.toast('Error: '+e.message, 'error'); }
+  },
+
+  async _openSalaryManager() {
+    const { data: profiles } = await supabase.from('profiles')
+      .select('id,name,role,salary,phone,email')
+      .in('role',['maestra','maestro','asistente','encargada','administrativo','staff','docente','admin'])
+      .order('name');
+    const modalId = 'salaryManager_' + Date.now();
+    const html = `
+      <div class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[10000] flex items-center justify-center p-4" id="${modalId}">
+        <div class="bg-white rounded-3xl w-full max-w-2xl shadow-2xl overflow-hidden" style="max-height:85vh">
+          <div class="p-5" style="background:linear-gradient(135deg,#0B63C7,#0850A0)">
+            <div class="flex items-center justify-between">
+              <div>
+                <h3 class="text-lg font-black text-white">Gestión de Salarios</h3>
+                <p class="text-xs text-blue-200 mt-1">Asigna o edita el salario de cada empleado</p>
+              </div>
+              <button onclick="document.getElementById('${modalId}').remove()" class="p-2 rounded-xl bg-white/20 text-white">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M18 6L6 18M6 6l12 12"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="p-5 overflow-y-auto" style="max-height:calc(85vh - 100px)">
+            <div class="space-y-2">
+              ${(profiles||[]).map(p => {
+                const n = Number(p.salary) > 0 ? calcNeto(Number(p.salary)) : null;
+                return `
+                <div class="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:border-blue-200 transition-all">
+                  <div class="w-9 h-9 rounded-xl bg-[#E8F2FF] flex items-center justify-center font-black text-[#0B63C7] text-sm flex-shrink-0">
+                    ${(p.name||'?').charAt(0)}
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <div class="text-sm font-black text-slate-800 truncate">${esc(p.name)}</div>
+                    <div class="text-[9px] font-bold text-slate-400 capitalize">${esc(p.role)}</div>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <input type="number" id="smSalary_${p.id}" value="${Number(p.salary)||''}" placeholder="0"
+                      class="w-32 px-3 py-2 border-2 border-slate-100 rounded-xl text-sm font-black text-slate-800 outline-none focus:border-blue-400 text-right"
+                      oninput="document.getElementById('smPreview_${p.id}').textContent = this.value > 0 ? 'Neto: '+AccountingModule._previewNeto(this.value) : ''">
+                    <div id="smPreview_${p.id}" class="text-[8px] font-bold text-slate-400 min-w-[80px] text-right">${n ? 'Neto: '+fmt(n.neto) : ''}</div>
+                  </div>
+                </div>`;
+              }).join('')}
+            </div>
+          </div>
+          <div class="p-4 border-t border-slate-100 flex gap-2 bg-slate-50">
+            <button onclick="document.getElementById('${modalId}').remove()"
+              class="flex-1 py-2.5 text-slate-500 font-black text-xs border-2 border-slate-200 rounded-xl">Cancelar</button>
+            <button onclick="AccountingModule._saveAllSalaries('${modalId}')"
+              class="flex-1 py-2.5 text-white font-black text-xs rounded-xl" style="background:#0B63C7">
+              <i data-lucide="save" class="w-3.5 h-3.5 inline"></i> Guardar Todos
+            </button>
+          </div>
+        </div>
+      </div>`;
+    const d = document.createElement('div');
+    d.innerHTML = html;
+    document.body.appendChild(d);
+    if (window.lucide) lucide.createIcons();
+  },
+
+  _previewNeto(val) {
+    const n = calcNeto(Number(val||0));
+    return fmt(n.neto);
+  },
+
+  async _saveAllSalaries(modalId) {
+    const inputs = document.querySelectorAll('[id^="smSalary_"]');
+    let updated = 0;
+    for (const input of inputs) {
+      const id = input.id.replace('smSalary_', '');
+      const val = Number(input.value || 0);
+      if (val > 0) {
+        const { error } = await supabase.from('profiles').update({ salary: val }).eq('id', id);
+        if (!error) updated++;
+      }
+    }
+    document.getElementById(modalId)?.remove();
+    Helpers.toast(`${updated} salarios actualizados`, 'success');
+    this._loadNomina();
+  },
+
   async _setSalary(id, name) {
+    const { data: profile } = await supabase.from('profiles').select('salary').eq('id',id).single();
+    const currentSalary = Number(profile?.salary||0);
     const modalId = 'salaryModal_' + Date.now();
     const html = `
       <div class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[10000] flex items-center justify-center p-4" id="${modalId}">
         <div class="bg-white rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden">
           <div class="p-5" style="background:linear-gradient(135deg,#0B63C7,#0850A0)">
-            <h3 class="text-lg font-black text-white">Asignar Salario</h3>
-            <p class="text-xs text-blue-200 mt-1">${esc(name)}</p>
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-white font-black text-lg">${(name||'?').charAt(0)}</div>
+              <div>
+                <h3 class="text-lg font-black text-white">${currentSalary > 0 ? 'Editar' : 'Asignar'} Salario</h3>
+                <p class="text-xs text-blue-200 mt-1">${esc(name)}</p>
+              </div>
+            </div>
           </div>
           <div class="p-5 space-y-3">
             <div>
               <label class="block text-[10px] font-black text-slate-400 uppercase mb-1">Salario Mensual Bruto (RD$)</label>
-              <input id="salaryInput_${id}" type="number" step="0.01" placeholder="RD$ 0.00"
+              <input id="salaryInput_${id}" type="number" step="0.01" value="${currentSalary||''}" placeholder="RD$ 0.00"
                 class="w-full px-3 py-3 border-2 border-slate-100 rounded-xl text-lg font-black text-slate-800 outline-none focus:border-blue-400 text-center">
             </div>
-            <div id="salaryPreview_${id}" class="text-center text-xs text-slate-400 font-bold"></div>
+            <div id="salaryPreview_${id}" class="text-center text-xs text-slate-400 font-bold">${currentSalary > 0 ? (() => { const n = calcNeto(currentSalary); return 'Neto: '+fmt(n.neto)+' | AFP: '+fmt(n.afp)+' | ARS: '+fmt(n.ars)+' | ISR: '+fmt(n.isr); })() : ''}</div>
+            <div class="bg-blue-50 rounded-xl p-3">
+              <div class="grid grid-cols-2 gap-2 text-[10px]">
+                <div><span class="font-bold text-slate-500">AFP Empleado:</span> <span class="font-black text-slate-700">2.87%</span></div>
+                <div><span class="font-bold text-slate-500">ARS Empleado:</span> <span class="font-black text-slate-700">3.04%</span></div>
+                <div><span class="font-bold text-slate-500">AFP Patronal:</span> <span class="font-black text-slate-700">7.10%</span></div>
+                <div><span class="font-bold text-slate-500">ARS Patronal:</span> <span class="font-black text-slate-700">7.09%</span></div>
+              </div>
+            </div>
           </div>
           <div class="p-4 border-t border-slate-100 flex gap-2 bg-slate-50">
             <button onclick="document.getElementById('${modalId}')?.parentElement?.remove()"
@@ -1364,11 +1552,12 @@ export const AccountingModule = {
     const input = document.getElementById(`salaryInput_${id}`);
     if (input) {
       input.focus();
+      input.select();
       input.addEventListener('input', () => {
         const val = Number(input.value || 0);
         const n = calcNeto(val);
         const prev = document.getElementById(`salaryPreview_${id}`);
-        if (prev && val > 0) prev.textContent = `Neto: ${fmt(n.neto)} | AFP: ${fmt(n.afp)} | ARS: ${fmt(n.ars)} | ISR: ${fmt(n.isr)}`;
+        if (prev && val > 0) prev.innerHTML = `Neto: <strong class="text-[#28B54D]">${fmt(n.neto)}</strong> | AFP: ${fmt(n.afp)} | ARS: ${fmt(n.ars)} | ISR: ${fmt(n.isr)}`;
         else if (prev) prev.textContent = '';
       });
     }
@@ -1434,6 +1623,11 @@ export const AccountingModule = {
     if (!period) return Helpers.toast('Selecciona un período', 'warning');
     Helpers.toast('Procesando nómina...', 'info');
 
+    const { data: existing } = await supabase.from('payroll_records').select('id').eq('period',period).limit(1);
+    if (existing?.length) {
+      if (!confirm(`Ya existen registros de nómina para ${period}. ¿Deseas agregar duplicados?`)) return;
+    }
+
     const { data: employees } = await supabase.from('profiles')
       .select('id,name,role,salary')
       .in('role',['maestra','maestro','asistente','encargada','administrativo','staff','docente','admin'])
@@ -1445,25 +1639,40 @@ export const AccountingModule = {
       return;
     }
 
+    const cfg = (() => { try { return JSON.parse(localStorage.getItem('acct_nomina_config')||'{}'); } catch { return {}; } })();
+    const afpEmp = parseFloat(cfg.afp_empleado) || AFP_EMPLEADO;
+    const arsEmp = parseFloat(cfg.ars_empleado) || ARS_EMPLEADO;
+    const afpPat = parseFloat(cfg.afp_patronal) || AFP_PATRONAL;
+    const arsPat = parseFloat(cfg.ars_patronal) || ARS_PATRONAL;
+
     const records = employees.map(e => {
-      const n = calcNeto(Number(e.salary));
+      const salary = Number(e.salary);
+      const afpEmpAmt = salary * afpEmp;
+      const arsEmpAmt = salary * arsEmp;
+      const isrAnual = calcISR((salary - afpEmpAmt - arsEmpAmt) * 12);
+      const isrMensual = isrAnual / 12;
       return {
         employee_id: e.id,
         period,
-        gross_salary: n.bruto,
-        afp: n.afp,
-        ars: n.ars,
-        isr: n.isr,
-        net_salary: n.neto,
+        gross_salary: salary,
+        afp: afpEmpAmt,
+        ars: arsEmpAmt,
+        isr: isrMensual,
+        net_salary: salary - afpEmpAmt - arsEmpAmt - isrMensual,
+        afp_patronal: salary * afpPat,
+        ars_patronal: salary * arsPat,
         status: 'pendiente',
         created_at: new Date().toISOString()
       };
     });
 
-    const { error } = await supabase.from('payroll_records').insert(records);
+    const { data: inserted, error } = await supabase.from('payroll_records').insert(records).select();
     if (error) return Helpers.toast('Error: ' + error.message, 'error');
     document.getElementById(modalId)?.parentElement?.remove();
     Helpers.toast(`Nómina procesada: ${records.length} empleados`, 'success');
+    (inserted||[]).forEach(r => {
+      supabase.functions.invoke('generate-payroll-invoice', { body: { payroll_id: r.id, send_email: false } }).catch(() => {});
+    });
     await this._loadNomina();
   },
 

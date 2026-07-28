@@ -1067,6 +1067,67 @@ function _renderExtraEventModal(studentId) {
   `;
 }
 
+function _renderTempModal(studentId) {
+  return `
+    <div class="bg-white overflow-hidden" style="border-radius:24px;max-width:360px;margin:0 auto">
+      <div class="p-5" style="background:linear-gradient(135deg,#EF4444,#F87171)">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <span class="text-2xl">🌡️</span>
+            <div><h3 class="text-lg font-black text-white">Temperatura</h3><p class="text-xs font-bold text-white/80">Registrar temperatura corporal</p></div>
+          </div>
+          <button onclick="UI.Modal.close('tempModal')" class="p-2 rounded-xl bg-white/20 text-white">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="p-5 space-y-4">
+        <div>
+          <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Temperatura (°C)</label>
+          <div class="flex gap-2 mt-2">
+            ${[36.0,36.5,37.0,37.5,38.0,38.5,39.0,39.5,40.0].map(t => `
+              <button onclick="document.getElementById('tempValue').value='${t}';this.parentElement.querySelectorAll('button').forEach(b=>b.classList.remove('border-red-500','bg-red-50'));this.classList.add('border-red-500','bg-red-50')"
+                class="flex-1 py-2 rounded-xl border-2 border-slate-100 font-black text-xs text-slate-600">${t}</button>
+            `).join('')}
+          </div>
+          <input type="number" id="tempValue" min="34" max="42" step="0.1" placeholder="Otro valor"
+            class="w-full mt-2 p-3 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-700 outline-none focus:border-red-400" inputmode="decimal">
+        </div>
+        <div>
+          <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Hora</label>
+          <input type="time" id="tempTime" value="${new Date().toTimeString().slice(0,5)}"
+            class="w-full mt-2 p-3 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-700 outline-none focus:border-red-400">
+        </div>
+        <button id="tempSaveBtn" onclick="App._confirmTemp('${studentId}')"
+          class="w-full py-3 rounded-xl font-black text-xs uppercase text-white" style="background:#EF4444">Guardar Temperatura</button>
+      </div>
+    </div>
+  `;
+}
+
+function _openTempModal(studentId) {
+  UI.Modal.open('tempModal', _renderTempModal(studentId));
+}
+
+export async function _confirmTemp(studentId) {
+  const btn = document.getElementById('tempSaveBtn');
+  btn.disabled = true; btn.textContent = 'Guardando...';
+  const classroom = AppState.get('classroom');
+  const value = parseFloat(document.getElementById('tempValue')?.value);
+  if (isNaN(value) || value < 34 || value > 42) { safeToast('Ingresa una temperatura válida (34-42°C)', 'warning'); btn.disabled = false; btn.textContent = 'Guardar Temperatura'; return; }
+  const time = document.getElementById('tempTime')?.value || null;
+  try {
+    await MaestraApi.upsertDailyLog({
+      student_id: studentId, classroom_id: classroom.id, date: _today(),
+      infant_event: { type: 'temp', label: 'Temperatura', value, time }
+    });
+    safeToast('Temperatura registrada', 'success');
+    UI.Modal.close('tempModal');
+    await initRoutine();
+    openStudentRoutine(studentId);
+  } catch { safeToast('Error al guardar', 'error'); btn.disabled = false; btn.textContent = 'Guardar Temperatura'; }
+}
+
 export function openStudentRoutine(studentId) {
   const students = AppState.get('students') || [];
   const student = students.find(s => s.id === studentId);
@@ -1086,20 +1147,24 @@ export function openStudentRoutine(studentId) {
   const EVENT_ICONS = { sleep: '😴', milk: '🍼', diaper: e => e.subtype === 'wet' ? '💧' : '💩', bath: '🚽', temp: '🌡️', med: '💊', behavior: '🤝', handwash: '🧼', toothbrush: '🪥', activity: '🏫', playground: '🌳', health: e => e.subtype === 'vomit' ? '🤮' : '😷', incident: '🤕', note: '📝' };
   const EVENT_LABELS = { handwash: 'Lavado de manos', toothbrush: 'Cepillado dental', activity: 'Actividad', playground: 'Patio', sleep: 'Siesta', milk: 'Biberón', diaper: 'Pañal', bath: 'Baño', temp: 'Temperatura', med: 'Medicamento', note: 'Nota', behavior: 'Comportamiento' };
 
-  const timelineHtml = events.length > 0 ? events.map(evt => {
+  const sortedEvents = [...events].sort((a, b) => new Date(a.created_at||0) - new Date(b.created_at||0));
+  const timelineHtml = sortedEvents.length > 0 ? sortedEvents.map(evt => {
     const time = evt.created_at ? _fmtTime(evt.created_at) : (evt.start_time ? _fmtTime(evt.start_time) : '');
     const label = evt.label || EVENT_LABELS[evt.type] || evt.type;
     const getIcon = EVENT_ICONS[evt.type];
     const icon = typeof getIcon === 'function' ? getIcon(evt) : (getIcon || '📌');
     const detail = evt.type === 'sleep' ? (evt.end_time ? 'Despertó ' + _fmtTime(evt.end_time) : 'En siesta...') : evt.type === 'milk' ? (evt.oz ? evt.oz + ' oz' + (evt.temp ? ' · ' + TEMP_OPTIONS.find(t => t.val === evt.temp)?.label : '') : '') : evt.type === 'temp' ? (evt.value ? evt.value + '°C' : '') : evt.type === 'med' ? (evt.name || '') : '';
     return `
-      <div class="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50">
+      <div class="flex items-center gap-2 p-2 rounded-lg hover:bg-slate-50 group">
         <div class="w-8 h-8 rounded-lg flex items-center justify-center text-sm flex-shrink-0" style="background:#f1f5f9">${icon}</div>
         <div class="flex-1 min-w-0">
           <div class="text-xs font-bold text-slate-700">${safeEscapeHTML(label)}</div>
           ${detail ? `<div class="text-[10px] text-slate-400">${safeEscapeHTML(detail)}</div>` : ''}
         </div>
         <span class="text-[10px] font-bold text-slate-400">${time}</span>
+        <button onclick="event.stopPropagation();if(confirm('¿Eliminar este evento?'))App.deleteInfantEvent('${studentId}','${evt.id}')" class="opacity-0 group-hover:opacity-100 p-1 rounded-lg hover:bg-red-50 text-slate-300 hover:text-red-500 transition-all" title="Eliminar evento">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+        </button>
       </div>
     `;
   }).join('') : '<p class="text-center text-slate-400 text-xs py-4">Sin eventos aún</p>';
@@ -1178,6 +1243,11 @@ export function openStudentRoutine(studentId) {
               </button>
             `).join('')}
           </div>
+          ${_sleepMap[studentId] ? `
+          <button onclick="App.routineWakeStudent('${studentId}')"
+            class="mt-2 w-full p-2.5 rounded-xl text-white font-black text-[10px] uppercase flex items-center justify-center gap-2" style="background:#7c3aed">
+            <span>😴</span> Despertar
+          </button>` : ''}
         </div>
 
         <!-- Higiene -->
@@ -1347,6 +1417,21 @@ export function openStudentRoutine(studentId) {
 // HELPER FUNCTIONS
 // ═══════════════════════════════════════════════════════════════════════════════
 
+export async function deleteInfantEvent(studentId, eventId) {
+  if (!studentId || !eventId) return;
+  const classroom = AppState.get('classroom');
+  try {
+    const log = _logsMap[studentId];
+    if (!log?.infant_data) return;
+    const filtered = log.infant_data.filter(e => e.id !== eventId);
+    if (filtered.length === log.infant_data.length) return;
+    await supabase.from('daily_logs').update({ infant_data: filtered }).eq('id', log.id);
+    safeToast('Evento eliminado', 'success');
+    await initRoutine();
+    openStudentRoutine(studentId);
+  } catch { safeToast('Error al eliminar', 'error'); }
+}
+
 export async function setStudentMood(studentId, mood) {
   const classroom = AppState.get('classroom');
   try {
@@ -1405,9 +1490,8 @@ export async function addStudentEvent(studentId, eventId) {
       _openMilkModal(studentId);
       return;
     } else if (ev.type === 'temp') {
-      const temp = prompt('Temperatura (°C):');
-      if (temp === null) return;
-      await MaestraApi.upsertDailyLog({ student_id: studentId, classroom_id: classroom.id, date: _today(), infant_event: { type: 'temp', label: ev.label, value: parseFloat(temp) || null } });
+      _openTempModal(studentId);
+      return;
     } else if (ev.type === 'med') {
       _openMedModal(studentId);
       return;
@@ -1434,6 +1518,7 @@ export async function routineWakeAll() {
   const classroom = AppState.get('classroom');
   const studentsToWake = Object.keys(_sleepMap);
   if (studentsToWake.length === 0) return;
+  if (!confirm(`¿Despertar a ${studentsToWake.length} estudiante(s)?`)) return;
   try {
     for (const studentId of studentsToWake) {
       await MaestraApi.upsertDailyLog({ student_id: studentId, classroom_id: classroom.id, date: _today(), infant_event: { type: 'sleep', end_time: new Date().toISOString() } });
@@ -1441,6 +1526,16 @@ export async function routineWakeAll() {
     safeToast('Todas las siestas terminadas!', 'success');
     await initRoutine();
   } catch { safeToast('Error al actualizar siestas', 'error'); }
+}
+
+export async function routineWakeStudent(studentId) {
+  const classroom = AppState.get('classroom');
+  try {
+    await MaestraApi.upsertDailyLog({ student_id: studentId, classroom_id: classroom.id, date: _today(), infant_event: { type: 'sleep', end_time: new Date().toISOString() } });
+    safeToast('Estudiante despertado', 'success');
+    await initRoutine();
+    openStudentRoutine(studentId);
+  } catch { safeToast('Error al despertar', 'error'); }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1460,6 +1555,8 @@ function _openExtraEventModal(studentId) {
 }
 
 async function _confirmMilk(studentId) {
+  const btn = document.querySelector('#milkModal button:last-of-type');
+  if (btn) { btn.disabled = true; btn.textContent = 'Guardando...'; }
   const classroom = AppState.get('classroom');
   const oz = parseFloat(document.getElementById('milkOz')?.value) || null;
   const temp = document.getElementById('milkTemp')?.value || null;
@@ -1474,17 +1571,19 @@ async function _confirmMilk(studentId) {
     UI.Modal.close('milkModal');
     await initRoutine();
     openStudentRoutine(studentId);
-  } catch { safeToast('Error al guardar', 'error'); }
+  } catch { safeToast('Error al guardar', 'error'); if (btn) { btn.disabled = false; btn.textContent = 'Guardar Biberón'; } }
 }
 
 async function _confirmMed(studentId) {
+  const btn = document.querySelector('#medModal button:last-of-type');
+  if (btn) { btn.disabled = true; btn.textContent = 'Guardando...'; }
   const classroom = AppState.get('classroom');
   const name = document.getElementById('medName')?.value || '';
   const dose = document.getElementById('medDose')?.value || '';
   const time = document.getElementById('medTime')?.value || null;
   const authorized = document.getElementById('medAuth')?.checked || false;
   const notes = document.getElementById('medNotes')?.value || '';
-  if (!name) { safeToast('Ingresa el nombre del medicamento', 'warning'); return; }
+  if (!name) { safeToast('Ingresa el nombre del medicamento', 'warning'); if (btn) { btn.disabled = false; btn.textContent = 'Guardar Medicamento'; } return; }
   try {
     await MaestraApi.upsertDailyLog({
       student_id: studentId, classroom_id: classroom.id, date: _today(),
@@ -1494,15 +1593,17 @@ async function _confirmMed(studentId) {
     UI.Modal.close('medModal');
     await initRoutine();
     openStudentRoutine(studentId);
-  } catch { safeToast('Error al guardar', 'error'); }
+  } catch { safeToast('Error al guardar', 'error'); if (btn) { btn.disabled = false; btn.textContent = 'Guardar Medicamento'; } }
 }
 
 async function _confirmExtraEvent(studentId) {
+  const btn = document.querySelector('#extraEventModal button:last-of-type');
+  if (btn) { btn.disabled = true; btn.textContent = 'Guardando...'; }
   const classroom = AppState.get('classroom');
   const type = document.getElementById('extraType')?.value;
   const desc = document.getElementById('extraDesc')?.value || '';
   const notify = document.getElementById('extraNotify')?.checked || false;
-  if (!type) { safeToast('Selecciona un tipo de evento', 'warning'); return; }
+  if (!type) { safeToast('Selecciona un tipo de evento', 'warning'); if (btn) { btn.disabled = false; btn.textContent = 'Guardar Evento'; } return; }
   const evDef = EXTRA_EVENTS.find(e => e.id === type);
   try {
     await MaestraApi.upsertDailyLog({
@@ -1513,7 +1614,7 @@ async function _confirmExtraEvent(studentId) {
     UI.Modal.close('extraEventModal');
     await initRoutine();
     openStudentRoutine(studentId);
-  } catch { safeToast('Error al guardar', 'error'); }
+  } catch { safeToast('Error al guardar', 'error'); if (btn) { btn.disabled = false; btn.textContent = 'Guardar Evento'; } }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

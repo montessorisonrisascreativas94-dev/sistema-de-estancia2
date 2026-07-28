@@ -6,12 +6,11 @@ export const VideoCallModule = {
   _api: null,
 
   /**
-   * ?? Programar una reunión profesional
+   * ?? Programar una reuniï¿½n profesional
    * @param {Object} data { title, description, start_time, type, target_id, host_id }
    */
   async scheduleMeeting(data) {
-    // Generar sala única y segura
-    const roomName = `karpus_${data.type}_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+    const roomName = `ColegioSonrisas-edu-2026_${data.type}_${Date.now()}_${Math.random().toString(36).substring(7)}`;
 
     const { data: meeting, error } = await supabase
       .from('meetings')
@@ -25,14 +24,14 @@ export const VideoCallModule = {
 
     if (error) throw error;
 
-    // ?? Enviar Invitaciones Automáticas
+    // ?? Enviar Invitaciones Automï¿½ticas
     await this._notifyParticipants(meeting);
 
     return meeting;
   },
 
   /**
-   * ?? Sistema de Invitación Inteligente
+   * ?? Sistema de Invitaciï¿½n Inteligente
    */
   async _notifyParticipants(meeting) {
     let userIds = [];
@@ -57,7 +56,7 @@ export const VideoCallModule = {
 
       const notifications = userIds.map(uid => sendPush({
         user_id: uid,
-        title: '?? Invitación a Videollamada',
+        title: '?? Invitaciï¿½n a Videollamada',
         message: `${meeting.title} - ${timeStr}`,
         link: 'videocall'
       }));
@@ -68,7 +67,7 @@ export const VideoCallModule = {
   },
 
   /**
-   * ?? Obtener mis reuniones (Lógica Unificada)
+   * ?? Obtener mis reuniones (Lï¿½gica Unificada)
    */
   async getMyMeetings() {
     const { data, error } = await supabase
@@ -86,7 +85,7 @@ export const VideoCallModule = {
   },
 
   async endMeeting(meetingId) {
-    await supabase.from('meetings').update({ status: 'finished', end_time: new Date().toISOString() }).eq('id', meetingId);
+    await supabase.from('meetings').update({ status: 'ended', end_time: new Date().toISOString() }).eq('id', meetingId);
     if (this._api) {
       this._api.dispose();
       this._api = null;

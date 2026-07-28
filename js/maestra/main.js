@@ -64,12 +64,16 @@ window.App = {
     openBulkRoutineModal:     Routine.openBulkRoutineModal,
     routineQuickGroup:        Routine.routineQuickGroup,
     routineWakeAll:           Routine.routineWakeAll,
+    routineWakeStudent:       Routine.routineWakeStudent,
     setStudentMood:           Routine.setStudentMood,
     setStudentFood:           Routine.setStudentFood,
     setStudentNap:            Routine.setStudentNap,
     setStudentBehavior:       Routine.setStudentBehavior,
     addStudentEvent:          Routine.addStudentEvent,
+    deleteInfantEvent:        Routine.deleteInfantEvent,
     saveStudentNote:          Routine.saveStudentNote,
+    _openTempModal:           Routine._openTempModal,
+    _confirmTemp:             Routine._confirmTemp,
     publishDailyLogs:         Routine.publishDailyLogs,
     expandTimelineEvent:      Routine.expandTimelineEvent,
     collapseTimelineEvent:    Routine.collapseTimelineEvent,
@@ -1137,9 +1141,7 @@ async function startJitsi() {
     // 3. Iniciar la reunión
     await VideoCallModule.startMeeting(meeting.id);
 
-    // 4. Abrir en nueva pestaña (evita lobby membersOnly)
-    const _fullRoom = 'ColegioSonrisas-edu-2026_' + meeting.room_name;
-    window.open('https://meet.jit.si/' + _fullRoom, '_blank');
+    window.open('https://meet.jit.si/' + meeting.room_name, '_blank');
 
     safeToast('¡Clase iniciada! Los padres han sido notificados 🎥', 'success');
   } catch (e) {
