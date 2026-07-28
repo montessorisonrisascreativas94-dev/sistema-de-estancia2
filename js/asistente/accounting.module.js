@@ -18,7 +18,7 @@ const TABS = [
   { id: 'pagos',     icon: 'receipt',           label: 'Pagos'         },
   { id: 'cxc',       icon: 'users',             label: 'CxC Padres'    },
   { id: 'cxp',       icon: 'shopping-cart',     label: 'CxP'           },
-  { id: 'caja',      icon: 'vault',             label: 'Caja'          },
+  { id: 'caja',      icon: 'wallet',             label: 'Caja'          },
   { id: 'nomina',    icon: 'briefcase',         label: 'Nómina'        },
   { id: 'dgii',      icon: 'landmark',          label: 'DGII'          },
   { id: 'config',    icon: 'settings-2',        label: 'Configuración' },

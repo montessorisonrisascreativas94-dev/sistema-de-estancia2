@@ -38,6 +38,13 @@ let _dbConcepts  = []; // Concepts from payment_concepts table
 export function initCajaCobro(containerId = 'cajaContainer') {
   _containerId = containerId;
   renderCajaMain();
+  CajaCobroV2._subscribeRealtime();
+  CajaCobroV2._startAutoPolling();
+}
+
+export function destroyCajaCobro() {
+  CajaCobroV2._unsubscribeRealtime();
+  CajaCobroV2._stopAutoPolling();
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -199,6 +206,7 @@ export const CajaCobroV2 = {
       }
     } catch(_) {}
     if (window.lucide) lucide.createIcons();
+    this._updateTransfersBadge();
   },
 
   renderTable(list) {
@@ -250,7 +258,7 @@ export const CajaCobroV2 = {
     // Cargar datos del estudiante, charges, historial y enrollment
     const [{ data: stu }, { data: charges }, { data: history }, { data: enrollment }] = await Promise.all([
       supabase.from('students').select('id,name,matricula,p1_name,p1_phone,classrooms:classroom_id(name,level),monthly_fee').eq('id',studentId).single(),
-      supabase.from('payments').select('id,concept,amount,status,due_date,month_paid').eq('student_id',studentId).in('status',['pending','overdue']).order('due_date').limit(50),
+      supabase.from('payments').select('id,concept,amount,status,due_date,month_paid,evidence_url,method,bank,reference').eq('student_id',studentId).in('status',['pending','overdue','review']).order('due_date').limit(50),
       supabase.from('payments').select('amount,method,paid_date,concept').eq('student_id',studentId).eq('status','paid').order('paid_date',{ascending:false}).limit(5),
       supabase.from('student_enrollments').select('id,payment_plans:payment_plan_id(name,plan_installments(month_number,month_name,amount,type))').eq('student_id',studentId).order('created_at',{ascending:false}).limit(1).maybeSingle(),
     ]);
@@ -273,6 +281,69 @@ export const CajaCobroV2 = {
         paidSet.add(String(parseInt(parts[1], 10))); // "7"
       }
     });
+
+    // ── PRE-SELECCIONAR pagos en revisión del padre ──────────────────────
+    // Meses en review: marcar en el grid con estilo especial
+    const reviewMonthSet = new Set();
+    const reviewCharges = _charges.filter(c => c.status === 'review');
+    const currentYear = new Date().getFullYear();
+
+    reviewCharges.forEach(c => {
+      if (c.month_paid) {
+        reviewMonthSet.add(c.month_paid);
+        const parts = String(c.month_paid).split('-');
+        if (parts.length >= 2) {
+          reviewMonthSet.add(parseInt(parts[1], 10));
+          reviewMonthSet.add(String(parseInt(parts[1], 10)));
+        }
+      }
+    });
+
+    // Pre-cargar carrito con items en review
+    _cart = [];
+    const reviewConcepts = [];
+    const MONTHS_FULL_REVIEW = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+    reviewCharges.forEach(c => {
+      if (c.month_paid && c.concept && c.concept.toLowerCase().includes('colegiatura')) {
+        // Colegiatura en review → pre-seleccionar mes
+        const parts = String(c.month_paid).split('-');
+        const monthIdx = parseInt(parts[1], 10) - 1;
+        const exists = _cart.find(item => item._monthIdx === monthIdx);
+        if (!exists) {
+          _cart.push({
+            _monthIdx: monthIdx,
+            concept: c.concept || 'Colegiatura ' + (MONTHS_FULL_REVIEW[monthIdx] || ''),
+            description: 'Mensualidad escolar (en revisión)',
+            amount: Number(c.amount || 0),
+            type: 'colegiatura',
+            _reviewId: c.id
+          });
+        }
+      } else if (c.concept) {
+        // Concepto adicional en review → pre-seleccionar
+        const exists = _cart.find(item => item.concept === c.concept);
+        if (!exists) {
+          _cart.push({
+            _conceptId: 'review_' + c.id,
+            concept: c.concept,
+            description: 'En revisión del padre',
+            amount: Number(c.amount || 0),
+            type: 'extra',
+            _reviewId: c.id
+          });
+          reviewConcepts.push(c.concept);
+        }
+      }
+    });
+
+    // Auto-seleccionar método si todos los pagos en review usan el mismo
+    if (reviewCharges.length > 0) {
+      const methods = [...new Set(reviewCharges.map(c => c.method).filter(Boolean))];
+      if (methods.length === 1) {
+        _method = methods[0];
+      }
+    }
 
     // Cuotas del plan — buscar por mes calendario
     const installments = enrollment?.payment_plans?.plan_installments || [];
@@ -348,18 +419,21 @@ export const CajaCobroV2 = {
               const amt = instMap[monthNum] !== undefined ? instMap[monthNum] : defaultFee;
               const yearKey = new Date().getFullYear() + '-' + String(monthNum).padStart(2,'0');
               const isPaid    = paidSet.has(yearKey) || paidSet.has(monthNum) || paidSet.has(String(monthNum));
-              const isOverdue = !isPaid && i < nowMonth;
+              const isReview  = !isPaid && (reviewMonthSet.has(yearKey) || reviewMonthSet.has(monthNum) || reviewMonthSet.has(String(monthNum)));
+              const isOverdue = !isPaid && !isReview && i < nowMonth;
               const isCurrent = i === nowMonth;
-              const bg    = isPaid ? '#f0fdf4' : isOverdue ? '#fff1f2' : isCurrent ? '#eff6ff' : '#f8fafc';
-              const bc    = isPaid ? '#bbf7d0' : isOverdue ? '#fecdd3' : isCurrent ? '#bfdbfe' : '#e2e8f0';
-              const tc    = isPaid ? '#16a34a' : isOverdue ? '#ef4444' : isCurrent ? '#2563eb' : '#64748b';
-              const ico   = isPaid ? '✓' : isOverdue ? '!' : isCurrent ? '→' : '○';
+              const bg    = isPaid ? '#f0fdf4' : isReview ? '#fff7ed' : isOverdue ? '#fff1f2' : isCurrent ? '#eff6ff' : '#f8fafc';
+              const bc    = isPaid ? '#bbf7d0' : isReview ? '#fed7aa' : isOverdue ? '#fecdd3' : isCurrent ? '#bfdbfe' : '#e2e8f0';
+              const tc    = isPaid ? '#16a34a' : isReview ? '#ea580c' : isOverdue ? '#ef4444' : isCurrent ? '#2563eb' : '#64748b';
+              const ico   = isPaid ? '✓' : isReview ? '⏳' : isOverdue ? '!' : isCurrent ? '→' : '○';
+              const isInCart = _cart.some(c => c._monthIdx === i);
               return `<button id="month_${i}" onclick="CajaCobroV2.toggleMonth(${i},'${m}',${amt})"
-                style="padding:10px 6px;border-radius:10px;border:2px solid ${bc};background:${bg};cursor:${isPaid?'not-allowed':'pointer'};transition:all .12s;text-align:center;display:flex;flex-direction:column;align-items:center;gap:2px"
-                ${isPaid?'disabled':''} data-month="${i}" data-label="${m}" data-amount="${amt}" data-paid="${isPaid}">
-                <span style="font-size:.58rem;font-weight:900;color:${tc}">${ico}</span>
-                <span style="font-size:.75rem;font-weight:800;color:${isPaid?'#16a34a':'#1a2340'}">${MONTHS_SHORT[i]}</span>
-                <span style="font-size:.65rem;font-weight:700;color:${tc}">${amt>0?fmt(amt).replace('RD$',''):''}</span>
+                style="padding:10px 6px;border-radius:10px;border:2px solid ${isInCart?'#0B63C7':bc};background:${isInCart?'#eff6ff':bg};cursor:${isPaid?'not-allowed':'pointer'};transition:all .12s;text-align:center;display:flex;flex-direction:column;align-items:center;gap:2px"
+                ${isPaid && !isReview?'disabled':''} data-month="${i}" data-label="${m}" data-amount="${amt}" data-paid="${isPaid}" data-review="${isReview}">
+                <span style="font-size:.58rem;font-weight:900;color:${isInCart?'#0B63C7':tc}">${ico}</span>
+                <span style="font-size:.75rem;font-weight:800;color:${isPaid?'#16a34a':isInCart?'#0B63C7':'#1a2340'}">${MONTHS_SHORT[i]}</span>
+                <span style="font-size:.65rem;font-weight:700;color:${isInCart?'#0B63C7':tc}">${amt>0?fmt(amt).replace('RD$',''):''}</span>
+                ${isReview?'<span style="font-size:.5rem;font-weight:900;color:#ea580c;margin-top:1px">Revisión</span>':''}
               </button>`;
             }).join('')}
           </div>
@@ -371,16 +445,24 @@ export const CajaCobroV2 = {
 
         <!-- TAB: Conceptos -->
         <div id="cajaPane_conceptos" style="padding:14px;display:none">
+          ${reviewConcepts.length ? `<div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:8px 12px;margin-bottom:10px;display:flex;align-items:center;gap:8px">
+            <span style="font-size:.85rem">⏳</span>
+            <span style="font-size:.7rem;font-weight:800;color:#ea580c">${reviewConcepts.length} concepto${reviewConcepts.length>1?'s':''} del padre en revisión — pre-seleccionado${reviewConcepts.length>1?'s':''}</span>
+          </div>` : ''}
           <div style="font-size:.62rem;font-weight:900;color:#94a3b8;text-transform:uppercase;margin-bottom:10px">Conceptos adicionales</div>
           <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px">
-            ${displayConcepts.slice(0,6).map(c=>`
+            ${displayConcepts.slice(0,6).map(c=>{
+              const isInCart = _cart.some(item => item._conceptId === c.id);
+              return `
               <button onclick="CajaCobroV2.addExtraConcept('${c.id}','${Helpers.escapeHTML(c.label)}',${c.amount})"
                 id="concept_${c.id}"
-                style="padding:12px 8px;border-radius:12px;border:2px solid #e2e8f0;background:white;cursor:pointer;transition:all .12s;text-align:center;display:flex;flex-direction:column;align-items:center;gap:4px">
+                style="padding:12px 8px;border-radius:12px;border:2px solid ${isInCart?'#FF8A00':'#e2e8f0'};background:${isInCart?'#fff7ed':'white'};cursor:pointer;transition:all .12s;text-align:center;display:flex;flex-direction:column;align-items:center;gap:4px">
                 <span style="font-size:1.3rem">${c.icon||'🏷️'}</span>
-                <span style="font-size:.7rem;font-weight:800;color:#1a2340;line-height:1.2">${Helpers.escapeHTML(c.label)}</span>
+                <span style="font-size:.7rem;font-weight:800;color:${isInCart?'#ea580c':'#1a2340'};line-height:1.2">${Helpers.escapeHTML(c.label)}</span>
                 <span style="font-size:.7rem;font-weight:900;color:#0B63C7">${c.amount>0?fmt(c.amount):'Libre'}</span>
-              </button>`).join('')}
+                ${isInCart?'<span style="font-size:.5rem;font-weight:900;color:#ea580c">En revisión</span>':''}
+              </button>`;
+            }).join('')}
           </div>
           <div style="background:#f8fafc;border-radius:12px;padding:14px;border:1px solid #e2e8f0">
             <div style="font-size:.62rem;font-weight:900;color:#94a3b8;text-transform:uppercase;margin-bottom:8px">Concepto libre</div>
@@ -498,6 +580,13 @@ export const CajaCobroV2 = {
         tabBtn.style.fontWeight = t===tab ? '900' : '700';
       }
     });
+    // Pre-seleccionar método visual si ya hay uno elegido
+    if (tab === 'pago' && _method) {
+      const btn = document.querySelector(`[data-method="${_method}"]`);
+      if (btn) { btn.style.borderColor='#0B63C7'; btn.style.background='#eff6ff'; btn.style.color='#0B63C7'; }
+      // Disparar el detail del método
+      this.selectMethod(_method, btn);
+    }
     if (tab === 'resumen') this._updateCart();
   },
 
@@ -647,13 +736,15 @@ export const CajaCobroV2 = {
               ${_cart.map((c, i) => {
                 const isMora = c.type === 'mora';
                 const isDiscount = c.type === 'discount';
+                const isReview = !!c._reviewId;
                 const rowBg = i % 2 === 0 ? 'white' : '#fafbfc';
-                const amountColor = isMora ? '#EF4444' : isDiscount ? '#16A34A' : '#0B63C7';
+                const amountColor = isMora ? '#EF4444' : isDiscount ? '#16A34A' : isReview ? '#ea580c' : '#0B63C7';
                 const desc = c.type === 'colegiatura' ? 'Mensualidad escolar' : (c.description || 'Concepto adicional');
                 return `
-                  <tr style="background:${rowBg};border-bottom:1px solid #f1f5f9">
+                  <tr style="background:${isReview?'#fff7ed':rowBg};border-bottom:1px solid #f1f5f9">
                     <td style="padding:10px 14px">
                       <div style="font-weight:800;color:#1a2340;font-size:.8rem">${Helpers.escapeHTML(c.concept)}</div>
+                      ${isReview?'<span style="display:inline-block;font-size:.55rem;font-weight:900;color:#ea580c;background:#fed7aa;padding:1px 6px;border-radius:4px;margin-top:2px">⏳ En revisión del padre</span>':''}
                     </td>
                     <td style="padding:10px 14px;font-size:.75rem;color:#64748b">${Helpers.escapeHTML(desc)}</td>
                     <td style="padding:10px 14px;text-align:right;font-weight:900;color:${amountColor};font-size:.85rem">${isDiscount ? '-' : ''}${fmt(c.amount)}</td>
@@ -1142,34 +1233,96 @@ export const CajaCobroV2 = {
 
   // ── TRANSFERENCIAS PENDIENTES ─────────────────────────────────────────────
   async openPendingTransfers() {
+    this._pendingTransfersOpen = true;
     const { data: transfers } = await supabase.from('payments')
-      .select('id,amount,method,concept,students:student_id(name),created_at,receipt_url,bank_name,reference')
+      .select('id,amount,method,concept,bank,reference,month_paid,evidence_url,created_at,students:student_id(name,matricula)')
       .eq('status','review').order('created_at',{ascending:false}).limit(50);
 
     const overlay = document.createElement('div');
+    overlay.id = 'pendingTransfersModal';
     overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(6px);z-index:9999;display:flex;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto';
     overlay.onclick = e => { if(e.target===overlay) overlay.remove(); };
     overlay.innerHTML = `<div style="background:white;border-radius:18px;width:100%;max-width:580px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.25);margin:auto">
       <div style="padding:16px 20px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between">
         <div style="font-weight:900;color:#1a2340">🏦 Transferencias pendientes (${(transfers||[]).length})</div>
-        <button onclick="this.closest('div[style]').remove()" style="border:none;background:#f1f5f9;border-radius:50%;width:32px;height:32px;cursor:pointer;font-size:1rem">✕</button>
+        <button onclick="CajaCobroV2._closePendingTransfers()" style="border:none;background:#f1f5f9;border-radius:50%;width:32px;height:32px;cursor:pointer;font-size:1rem">✕</button>
       </div>
-      <div style="padding:16px;display:flex;flex-direction:column;gap:10px;max-height:75vh;overflow-y:auto">
+      <div id="pendingTransfersList" style="padding:16px;display:flex;flex-direction:column;gap:10px;max-height:75vh;overflow-y:auto">
         ${!(transfers||[]).length ? '<p style="text-align:center;color:#94a3b8;padding:24px">Sin transferencias pendientes</p>' :
-          (transfers||[]).map(t=>`<div style="border:1px solid #f1f5f9;border-radius:14px;padding:16px">
+          (transfers||[]).map(t=>`<div style="border:1px solid #f1f5f9;border-radius:14px;padding:16px" data-transfer-id="${t.id}">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
               <div>
                 <div style="font-weight:900;font-size:.95rem;color:#1a2340">${Helpers.escapeHTML(t.students?.name||'—')}</div>
-                <div style="font-size:.75rem;color:#94a3b8">${t.bank_name||'—'} · Ref: ${t.reference||'—'}</div>
+                <div style="font-size:.68rem;color:#94a3b8">${t.students?.matricula||''}</div>
+                <div style="font-size:.72rem;color:#64748b;margin-top:2px">
+                  <span style="background:#f1f5f9;padding:2px 6px;border-radius:4px;font-weight:700">${Helpers.escapeHTML(t.concept||'—')}</span>
+                  ${t.month_paid?` <span style="color:#94a3b8">· ${t.month_paid}</span>`:''}
+                </div>
+                <div style="font-size:.72rem;color:#94a3b8;margin-top:3px">🏦 ${t.bank||t.method||'—'} · Ref: ${t.reference||'—'}</div>
               </div>
               <span style="font-weight:900;font-size:1.1rem;color:#0B63C7">${fmt(t.amount)}</span>
             </div>
-            ${t.receipt_url?`<div style="margin-bottom:12px"><img src="${t.receipt_url}" style="width:100%;max-height:220px;object-fit:cover;border-radius:10px;cursor:pointer" onclick="window.open('${t.receipt_url}','_blank')"></div>`:''}
+            ${(t.evidence_url||t.proof_url)?`<div style="margin-bottom:12px"><img src="${t.evidence_url||t.proof_url}" style="width:100%;max-height:220px;object-fit:contain;border-radius:10px;cursor:pointer;border:1px solid #e2e8f0" onclick="window.open('${t.evidence_url||t.proof_url}','_blank')" alt="Comprobante"></div>`:`<div style="margin-bottom:12px;padding:16px;background:#f8fafc;border-radius:10px;text-align:center;color:#94a3b8;font-size:.75rem">Sin comprobante adjunto</div>`}
             <div style="display:flex;gap:8px">
-              <button onclick="CajaCobroV2.approveTransfer(${t.id}, this.closest('div[style]'))" style="flex:1;padding:10px;border-radius:10px;border:none;background:#28B54D;color:white;font-weight:900;cursor:pointer">✓ Aprobar</button>
-              <button onclick="CajaCobroV2.rejectTransfer(${t.id}, this.closest('div[style]'))" style="flex:1;padding:10px;border-radius:10px;border:none;background:#ef4444;color:white;font-weight:900;cursor:pointer">✗ Rechazar</button>
+              <button onclick="CajaCobroV2.approveTransfer(${t.id}, this.closest('[data-transfer-id]'))" style="flex:1;padding:10px;border-radius:10px;border:none;background:#28B54D;color:white;font-weight:900;cursor:pointer;font-size:.8rem">✓ Aprobar</button>
+              <button onclick="CajaCobroV2.rejectTransfer(${t.id}, this.closest('[data-transfer-id]'))" style="flex:1;padding:10px;border-radius:10px;border:none;background:#ef4444;color:white;font-weight:900;cursor:pointer;font-size:.8rem">✗ Rechazar</button>
+              <button onclick="CajaCobroV2._viewTransferDetail(${t.id})" style="padding:10px 14px;border-radius:10px;border:1px solid #e2e8f0;background:white;color:#64748b;font-weight:900;cursor:pointer;font-size:.8rem">👁</button>
             </div>
           </div>`).join('')}
+      </div>
+    </div>`;
+    document.body.appendChild(overlay);
+  },
+
+  _closePendingTransfers() {
+    const modal = document.getElementById('pendingTransfersModal');
+    if (modal) modal.remove();
+    this._pendingTransfersOpen = false;
+  },
+
+  async _viewTransferDetail(id) {
+    const { data: pay } = await supabase.from('payments')
+      .select('id,amount,concept,method,bank,reference,evidence_url,proof_url,notes,created_at,students:student_id(name,matricula,p1_name,p1_phone)')
+      .eq('id', id).single();
+    if (!pay) return Helpers.toast('No encontrado', 'error');
+
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(6px);z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px';
+    overlay.onclick = e => { if(e.target===overlay) overlay.remove(); };
+    const imgUrl = pay.evidence_url || pay.proof_url;
+    overlay.innerHTML = `<div style="background:white;border-radius:18px;width:100%;max-width:480px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+      <div style="background:linear-gradient(135deg,#0B63C7,#0850A0);padding:14px 18px;display:flex;justify-content:space-between;align-items:center">
+        <span style="font-weight:900;color:white;font-size:.9rem">Detalle del Pago</span>
+        <button onclick="this.closest('div[style]').parentElement.remove()" style="background:rgba(255,255,255,.2);border:none;color:white;border-radius:50%;width:28px;height:28px;cursor:pointer;font-size:1rem">✕</button>
+      </div>
+      <div style="padding:18px">
+        <div style="display:flex;gap:12px;align-items:center;margin-bottom:14px">
+          <div style="width:42px;height:42px;border-radius:10px;background:#eff6ff;display:flex;align-items:center;justify-content:center;font-weight:900;color:#0B63C7;font-size:1rem">${(pay.students?.name||'?').charAt(0)}</div>
+          <div>
+            <div style="font-weight:900;color:#1a2340">${Helpers.escapeHTML(pay.students?.name||'—')}</div>
+            <div style="font-size:.7rem;color:#94a3b8">${pay.students?.matricula||''} · ${pay.students?.p1_name||''}</div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
+          ${[
+            ['Concepto', pay.concept],
+            ['Monto', fmt(pay.amount)],
+            ['Método', pay.method],
+            ['Banco', pay.bank||'—'],
+            ['Referencia', pay.reference||'—'],
+            ['Fecha', pay.created_at ? new Date(pay.created_at).toLocaleString('es-DO') : '—']
+          ].map(([l,v])=>`<div style="background:#f8fafc;padding:8px 10px;border-radius:8px">
+            <div style="font-size:.55rem;font-weight:900;color:#94a3b8;text-transform:uppercase">${l}</div>
+            <div style="font-size:.8rem;font-weight:800;color:#1a2340;margin-top:2px">${Helpers.escapeHTML(String(v))}</div>
+          </div>`).join('')}
+        </div>
+        ${imgUrl ? `<div style="margin-bottom:14px">
+          <img src="${imgUrl}" style="width:100%;max-height:300px;object-fit:contain;border-radius:10px;border:1px solid #e2e8f0;cursor:pointer" onclick="window.open('${imgUrl}','_blank')" alt="Comprobante">
+        </div>` : '<p style="text-align:center;color:#94a3b8;margin-bottom:14px">Sin comprobante adjunto</p>'}
+        <div style="display:flex;gap:8px">
+          <button onclick="CajaCobroV2.approveTransfer(${pay.id},null);this.closest('div[style]').parentElement.remove()" style="flex:1;padding:11px;border-radius:10px;border:none;background:#28B54D;color:white;font-weight:900;cursor:pointer">✓ Aprobar</button>
+          <button onclick="CajaCobroV2.rejectTransfer(${pay.id},null);this.closest('div[style]').parentElement.remove()" style="flex:1;padding:11px;border-radius:10px;border:none;background:#ef4444;color:white;font-weight:900;cursor:pointer">✗ Rechazar</button>
+        </div>
       </div>
     </div>`;
     document.body.appendChild(overlay);
@@ -1322,6 +1475,122 @@ export const CajaCobroV2 = {
         payment_id: paymentData.id
       }).catch(() => {});
     } catch(_) {}
+  },
+
+  // ── REALTIME: Suscripción a cambios en pagos ──────────────────────────────
+  _rtChannel: null,
+  _pollInterval: null,
+  _pendingTransfersOpen: false,
+
+  _subscribeRealtime() {
+    if (this._rtChannel) return;
+    try {
+      const channel = supabase.channel('caja-payments-watch');
+      channel.on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'payments'
+      }, (payload) => {
+        const newStatus = payload.new?.status;
+        const oldStatus = payload.old?.status;
+        // Si cambió el status o es un INSERT relevante
+        if (newStatus && ['pending','review','paid','overdue'].includes(newStatus)) {
+          this.loadStudents();
+          // Auto-refresh modal de transferencias si está abierto
+          if (this._pendingTransfersOpen && (newStatus === 'review' || oldStatus === 'review')) {
+            this._refreshPendingTransfers();
+          }
+          // Actualizar badge del botón
+          this._updateTransfersBadge();
+        }
+      });
+      channel.subscribe();
+      this._rtChannel = channel;
+    } catch (_) {}
+  },
+
+  _unsubscribeRealtime() {
+    if (this._rtChannel) {
+      try { supabase.removeChannel(this._rtChannel); } catch (_) {}
+      this._rtChannel = null;
+    }
+    if (this._pollInterval) {
+      clearInterval(this._pollInterval);
+      this._pollInterval = null;
+    }
+  },
+
+  _startAutoPolling() {
+    if (this._pollInterval) return;
+    this._pollInterval = setInterval(() => {
+      this.loadStudents();
+      this._updateTransfersBadge();
+    }, 30000);
+  },
+
+  _stopAutoPolling() {
+    if (this._pollInterval) {
+      clearInterval(this._pollInterval);
+      this._pollInterval = null;
+    }
+  },
+
+  // ── BADGE EN BOTÓN TRANSFERENCIAS ────────────────────────────────────────
+  async _updateTransfersBadge() {
+    try {
+      const { count } = await supabase.from('payments')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'review');
+      const btn = document.querySelector('[onclick*="openPendingTransfers"]');
+      if (!btn) return;
+      // Remover badge existente
+      const existing = btn.querySelector('.transfer-badge');
+      if (existing) existing.remove();
+      if (count && count > 0) {
+        const badge = document.createElement('span');
+        badge.className = 'transfer-badge';
+        badge.style.cssText = 'background:#EF4444;color:white;border-radius:50%;min-width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;font-size:.6rem;font-weight:900;padding:0 4px;margin-left:4px';
+        badge.textContent = count > 99 ? '99+' : count;
+        btn.appendChild(badge);
+      }
+    } catch (_) {}
+  },
+
+  // ── REFRESH MODAL TRANSFERENCIAS ─────────────────────────────────────────
+  async _refreshPendingTransfers() {
+    const listEl = document.getElementById('pendingTransfersList');
+    if (!listEl) return;
+    const { data: transfers } = await supabase.from('payments')
+      .select('id,amount,method,concept,bank,reference,month_paid,evidence_url,created_at,students:student_id(name,matricula)')
+      .eq('status','review').order('created_at',{ascending:false}).limit(50);
+    if (!transfers) return;
+    // Actualizar contador del header
+    const header = document.querySelector('#pendingTransfersModal [style*="font-weight:900"]');
+    if (header) header.textContent = `🏦 Transferencias pendientes (${transfers.length})`;
+    // Re-renderizar lista
+    if (transfers.length === 0) {
+      listEl.innerHTML = '<p style="text-align:center;color:#94a3b8;padding:24px">Sin transferencias pendientes</p>';
+      return;
+    }
+    listEl.innerHTML = transfers.map(t=>`<div style="border:1px solid #f1f5f9;border-radius:14px;padding:16px" data-transfer-id="${t.id}">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div>
+          <div style="font-weight:900;font-size:.95rem;color:#1a2340">${Helpers.escapeHTML(t.students?.name||'—')}</div>
+          <div style="font-size:.68rem;color:#94a3b8">${t.students?.matricula||''}</div>
+          <div style="font-size:.72rem;color:#64748b;margin-top:2px">
+            <span style="background:#f1f5f9;padding:2px 6px;border-radius:4px;font-weight:700">${Helpers.escapeHTML(t.concept||'—')}</span>
+            ${t.month_paid?` <span style="color:#94a3b8">· ${t.month_paid}</span>`:''}
+          </div>
+          <div style="font-size:.72rem;color:#94a3b8;margin-top:3px">🏦 ${t.bank||t.method||'—'} · Ref: ${t.reference||'—'}</div>
+        </div>
+        <span style="font-weight:900;font-size:1.1rem;color:#0B63C7">${fmt(t.amount)}</span>
+      </div>
+      ${(t.evidence_url||t.proof_url)?`<div style="margin-bottom:12px"><img src="${t.evidence_url||t.proof_url}" style="width:100%;max-height:220px;object-fit:contain;border-radius:10px;cursor:pointer;border:1px solid #e2e8f0" onclick="window.open('${t.evidence_url||t.proof_url}','_blank')" alt="Comprobante"></div>`:`<div style="margin-bottom:12px;padding:16px;background:#f8fafc;border-radius:10px;text-align:center;color:#94a3b8;font-size:.75rem">Sin comprobante adjunto</div>`}
+      <div style="display:flex;gap:8px">
+        <button onclick="CajaCobroV2.approveTransfer(${t.id}, this.closest('[data-transfer-id]'))" style="flex:1;padding:10px;border-radius:10px;border:none;background:#28B54D;color:white;font-weight:900;cursor:pointer;font-size:.8rem">✓ Aprobar</button>
+        <button onclick="CajaCobroV2.rejectTransfer(${t.id}, this.closest('[data-transfer-id]'))" style="flex:1;padding:10px;border-radius:10px;border:none;background:#ef4444;color:white;font-weight:900;cursor:pointer;font-size:.8rem">✗ Rechazar</button>
+      </div>
+    </div>`).join('');
   }
 };
 

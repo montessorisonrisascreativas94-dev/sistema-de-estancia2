@@ -21,7 +21,7 @@ const TABS = [
   { id: 'libro-diario', icon: 'book-open',         label: 'Libro Diario'      },
   { id: 'cxc',          icon: 'users',             label: 'CxC Padres'        },
   { id: 'cxp',          icon: 'shopping-cart',     label: 'CxP Suplidores'    },
-  { id: 'caja',         icon: 'vault',             label: 'Caja General'      },
+  { id: 'caja',         icon: 'wallet',             label: 'Caja General'      },
   { id: 'cashflow',     icon: 'trending-up',       label: 'Flujo de Caja'     },
   { id: 'nomina',       icon: 'briefcase',         label: 'Nómina'            },
   { id: 'dgii',         icon: 'landmark',          label: 'DGII'              },
@@ -2408,7 +2408,7 @@ export const AccountingModule = {
 
   _savePaymentConfig()    { Helpers.toast('Configuración de cobro guardada', 'success'); },
   _sendReminders()        { this._sendCxCReminders(); },
-  _generateChargesNow()   { supabase.functions.invoke('generate-monthly-charges',{}).catch(()=>{}); Helpers.toast('Generando cobros del mes...', 'info'); },
+  _generateChargesNow()   { supabase.functions.invoke('auto-payment-cycle',{}).catch(()=>{}); Helpers.toast('Generando cobros del mes...', 'info'); },
 
   async _saveFiscalConfig() {
     const cfg = {

@@ -234,6 +234,27 @@ export const BadgeSystem = {
 
     // 6. Comprobantes de pago subidos (panel directora/asistente)
     channel.on('postgres_changes', {
+      event: 'INSERT',
+      schema: 'public',
+      table: 'payments'
+    }, function(payload) {
+      const ns = ((payload.new && payload.new.status) || '').toLowerCase();
+      if (ns === 'review' || ns === 'revision' || (ns === 'pending' && payload.new.evidence_url)) {
+        const active = self._getActiveSection();
+        if (active !== 'pagos') {
+          const prev = self._getBadgeCount('pagos');
+          self._renderBadge('pagos', prev + 1);
+          self._applyGlow('pagos', 'receipt');
+          self._showMiniToast(self._toastMsg('receipt'));
+        }
+        // Auto-refresh módulo caja si está activo
+        if (typeof window.CajaCobroV2 !== 'undefined' && window.CajaCobroV2.reload) {
+          window.CajaCobroV2.reload();
+        }
+      }
+    });
+
+    channel.on('postgres_changes', {
       event: 'UPDATE',
       schema: 'public',
       table: 'payments'
@@ -257,6 +278,10 @@ export const BadgeSystem = {
           self._renderBadge('pagos', prev + 1);
           self._applyGlow('pagos', 'receipt');
           self._showMiniToast(self._toastMsg('receipt'));
+        }
+        // Auto-refresh módulo caja si está activo
+        if (typeof window.CajaCobroV2 !== 'undefined' && window.CajaCobroV2.reload) {
+          window.CajaCobroV2.reload();
         }
       }
     });
