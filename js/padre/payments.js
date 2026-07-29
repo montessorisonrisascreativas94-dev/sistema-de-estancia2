@@ -373,7 +373,7 @@ export const PaymentsModule = {
     const invoiceData = {
       invoice: {
         id: payment.id,
-        invoice_number: `KK-${String(payment.id).slice(-6).toUpperCase().padStart(6,'0')}`,
+        invoice_number: `MSC-${String(payment.id).slice(-6).toUpperCase().padStart(6,'0')}`,
         amount: Number(payment.amount || 0),
         concept: payment.concept || payment.month_paid || 'Mensualidad',
         status: payment.status || 'paid',

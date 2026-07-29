@@ -247,7 +247,7 @@ export async function admitStudent(preregId) {
     const monthlyFee    = n('monthlyFee', 3000);
     const dueDay        = parseInt(document.getElementById('dueDay')?.value) || 5;
     const startMonth    = v('admitStartMonth') || new Date().toISOString().slice(0,7);
-    const matricula     = v('stMatricula') || ('KK-' + new Date().getFullYear() + '-' + String(Math.floor(Math.random()*9000)+1000));
+    const matricula     = v('stMatricula') || ('MSC-' + new Date().getFullYear() + '-' + String(Math.floor(Math.random()*9000)+1000));
     const emailUser     = v('stEmailUser') || reg.p1_email;
     const siblingId     = v('stSiblingId');
 

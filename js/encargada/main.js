@@ -50,10 +50,8 @@ export function goToSection(sectionId) {
       case 'dashboard':
         loadDashboard();
         break;
-      case 'eficiencia':
+      case 'rendimiento-eficiencia':
         loadEfficiency();
-        break;
-      case 'ranking':
         loadRanking();
         break;
       case 'permisos':
@@ -62,7 +60,9 @@ export function goToSection(sectionId) {
       case 'chat':
         loadChat();
         break;
-      case 'alertas':
+      case 'reportes-comparativas-alertas':
+        loadReportesTareas();
+        loadComparativoAulas();
         loadAlerts();
         break;
       case 'configuracion':
@@ -78,24 +78,14 @@ export function goToSection(sectionId) {
       case 'accesos-qr':
         loadAccesosQR();
         break;
-      case 'reportes-cumplimiento':
+      case 'control-rutinas-cumplimiento':
+        loadControlRutinas();
         loadReportesCumplimiento();
         break;
-      case 'control-rutinas':
-        loadControlRutinas();
-        break;
-      case 'reportes-tareas':
-        loadReportesTareas();
-        break;
-      case 'comparativo-aulas':
-        loadComparativoAulas();
-        break;
+
     }
   }
-  const _parentSection = {
-    'eficiencia': 'maestras',
-    'ranking': 'maestras'
-  };
+  const _parentSection = {};
   const activeSidebarId = _parentSection[sectionId] || sectionId;
   document.querySelectorAll('[data-section]').forEach(btn => {
     const match = btn.dataset.section === activeSidebarId || btn.dataset.section === sectionId;

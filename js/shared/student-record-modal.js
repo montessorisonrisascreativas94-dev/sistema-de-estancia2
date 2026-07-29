@@ -782,8 +782,11 @@ export const StudentRecordModal = {
     const nivel = sel?.options[sel?.selectedIndex]?.dataset?.level || '';
     const p1 = document.getElementById('srm-p1name')?.value?.trim() || '';
     const p2 = document.getElementById('srm-p2name')?.value?.trim() || '';
+    const p1phone = document.getElementById('srm-p1phone')?.value?.trim() || '';
+    const p2phone = document.getElementById('srm-p2phone')?.value?.trim() || '';
+    const isActive = document.getElementById('srm-active')?.checked ?? true;
     const win = window.open('', '_blank');
-    if (win) { win.document.write(Helpers.getQRPrintTemplate(qrImg, name, matricula, { classroom, nivel, p1_name: p1, p2_name: p2 })); win.document.close(); }
+    if (win) { win.document.write(Helpers.getQRPrintTemplate(qrImg, name, matricula, { classroom, nivel, p1_name: p1, p2_name: p2, p1_phone: p1phone, p2_phone: p2phone, student_id: _state.studentId || '', is_active: isActive })); win.document.close(); }
   },
 
   async sendCredentials() {

@@ -117,6 +117,12 @@ export const Helpers = {
     const nivel     = opts.nivel     || '';
     const p1Name    = opts.p1_name   || '';
     const p2Name    = opts.p2_name   || '';
+    const p1Phone   = opts.p1_phone  || '';
+    const p2Phone   = opts.p2_phone  || '';
+    const parentName  = opts._parentName  || '';
+    const parentPhone = opts._parentPhone || '';
+    const studentId   = opts.student_id   || '';
+    const isActive    = opts.is_active    !== undefined ? opts.is_active : true;
     const year      = opts.year      || new Date().getFullYear();
     const school    = 'Colegio Montessori Sonrisas Creativas';
     const logoUrl   = opts.logoUrl   || (window.location.origin + '/img/monte.jpg');
@@ -125,7 +131,7 @@ export const Helpers = {
     const web       = 'montessorisonrisascreativas.com';
     const address   = 'F2VC+X76, Santo Domingo, Rep. Dominicana';
 
-    return this._buildCarnetHTML(qrImg, name, mat, { classroom, nivel, p1Name, p2Name, year, school, logoUrl, phone, email, web, address });
+    return this._buildCarnetHTML(qrImg, name, mat, { classroom, nivel, p1Name, p2Name, p1Phone, p2Phone, parentName, parentPhone, studentId, isActive, year, school, logoUrl, phone, email, web, address });
   },
 
   /**
@@ -306,13 +312,14 @@ body{font-family:'Nunito',sans-serif;background:#e8ecf1;-webkit-print-color-adju
       <!-- INFO ZONE -->
       <div class="f-info">
         <div class="f-name">${Helpers.escapeHTML((name || 'Estudiante').substring(0, 30))}</div>
-        <div class="f-mat">${mat}</div>
+        <div class="f-mat">${mat}${d.studentId ? ` · ID: ${Helpers.escapeHTML(d.studentId)}` : ''}</div>
         <div class="f-fields">
-          ${d.nivel ? `<div class="f-field"><div class="f-fi grn">&#127891;</div><div class="f-ft"><span class="f-fl">Nivel</span><span class="f-fv">${Helpers.escapeHTML(d.nivel)}</span></div></div>` : ''}
-          ${d.classroom ? `<div class="f-field"><div class="f-fi blu">&#127979;</div><div class="f-ft"><span class="f-fl">Aula</span><span class="f-fv">${Helpers.escapeHTML(d.classroom)}</span></div></div>` : ''}
-          ${d.p1Name ? `<div class="f-field"><div class="f-fi org">&#128104;</div><div class="f-ft"><span class="f-fl">Padre</span><span class="f-fv">${Helpers.escapeHTML(d.p1Name.substring(0, 24))}</span></div></div>` : ''}
-          ${d.p2Name ? `<div class="f-field"><div class="f-fi ylw">&#128105;</div><div class="f-ft"><span class="f-fl">Madre</span><span class="f-fv">${Helpers.escapeHTML(d.p2Name.substring(0, 24))}</span></div></div>` : ''}
-          <div class="f-field"><div class="f-fi grn">&#128218;</div><div class="f-ft"><span class="f-fl">Curso</span><span class="f-fv">${d.year}-${(d.year+1).toString().slice(-2)}</span></div></div>
+          <div class="f-field"><div class="f-fi grn">&#127891;</div><div class="f-ft"><span class="f-fl">Nivel</span><span class="f-fv">${d.nivel ? Helpers.escapeHTML(d.nivel) : '-'}</span></div></div>
+          <div class="f-field"><div class="f-fi blu">&#127979;</div><div class="f-ft"><span class="f-fl">Aula</span><span class="f-fv">${d.classroom ? Helpers.escapeHTML(d.classroom) : '-'}</span></div></div>
+          <div class="f-field"><div class="f-fi org">&#128104;</div><div class="f-ft"><span class="f-fl">Tutor 1</span><span class="f-fv">${d.p1Name ? Helpers.escapeHTML(d.p1Name.substring(0, 22)) : '-'}${d.p1Phone ? ` · ${Helpers.escapeHTML(d.p1Phone)}` : ''}</span></div></div>
+          <div class="f-field"><div class="f-fi ylw">&#128105;</div><div class="f-ft"><span class="f-fl">Tutor 2</span><span class="f-fv">${d.p2Name ? Helpers.escapeHTML(d.p2Name.substring(0, 22)) : '-'}${d.p2Phone ? ` · ${Helpers.escapeHTML(d.p2Phone)}` : ''}</span></div></div>
+          ${d.parentName ? `<div class="f-field"><div class="f-fi org">&#128101;</div><div class="f-ft"><span class="f-fl">Otro</span><span class="f-fv">${Helpers.escapeHTML(d.parentName.substring(0, 16))}${d.parentPhone ? ` · ${Helpers.escapeHTML(d.parentPhone)}` : ''}</span></div></div>` : ''}
+          <div class="f-field"><div class="f-fi ${d.isActive ? 'grn' : 'org'}">${d.isActive ? '&#10003;' : '&#10007;'}</div><div class="f-ft"><span class="f-fl">Estado</span><span class="f-fv">${d.isActive ? 'Activo' : 'Inactivo'}</span></div></div>
         </div>
       </div>
     </div>
@@ -457,7 +464,7 @@ body{font-family:'Nunito',sans-serif;background:#e8ecf1;-webkit-print-color-adju
     const address = 'F2VC+X76, Santo Domingo, Rep. Dominicana';
 
     const cardsHTML = qrImages.map(st => {
-      const d = { classroom: st.classroom||'', nivel: st.nivel||'', p1Name: st.p1_name||'', p2Name: st.p2_name||'', year, school, logoUrl, phone, email, web, address };
+      const d = { classroom: st.classroom||'', nivel: st.nivel||'', p1Name: st.p1_name||'', p2Name: st.p2_name||'', p1Phone: st.p1_phone||'', p2Phone: st.p2_phone||'', parentName: st._parentName||'', parentPhone: st._parentPhone||'', studentId: st.student_id||'', isActive: st.is_active !== false, year, school, logoUrl, phone, email, web, address };
       return `
     <div class="carnet-pair">
       <!-- FRENTE -->
@@ -515,13 +522,14 @@ body{font-family:'Nunito',sans-serif;background:#e8ecf1;-webkit-print-color-adju
           <div class="f-divider"></div>
           <div class="f-info">
             <div class="f-name">${Helpers.escapeHTML((st.name||'Estudiante').substring(0, 30))}</div>
-            <div class="f-mat">${st.mat}</div>
+            <div class="f-mat">${st.mat}${d.studentId ? ` · ID: ${Helpers.escapeHTML(d.studentId)}` : ''}</div>
             <div class="f-fields">
-              ${d.nivel ? `<div class="f-field"><div class="f-fi grn">&#127891;</div><div class="f-ft"><span class="f-fl">Nivel</span><span class="f-fv">${Helpers.escapeHTML(d.nivel)}</span></div></div>` : ''}
-              ${d.classroom ? `<div class="f-field"><div class="f-fi blu">&#127979;</div><div class="f-ft"><span class="f-fl">Aula</span><span class="f-fv">${Helpers.escapeHTML(d.classroom)}</span></div></div>` : ''}
-              ${d.p1Name ? `<div class="f-field"><div class="f-fi org">&#128104;</div><div class="f-ft"><span class="f-fl">Padre</span><span class="f-fv">${Helpers.escapeHTML(d.p1Name.substring(0, 24))}</span></div></div>` : ''}
-              ${d.p2Name ? `<div class="f-field"><div class="f-fi ylw">&#128105;</div><div class="f-ft"><span class="f-fl">Madre</span><span class="f-fv">${Helpers.escapeHTML(d.p2Name.substring(0, 24))}</span></div></div>` : ''}
-              <div class="f-field"><div class="f-fi grn">&#128218;</div><div class="f-ft"><span class="f-fl">Curso</span><span class="f-fv">${year}-${(year+1).toString().slice(-2)}</span></div></div>
+              <div class="f-field"><div class="f-fi grn">&#127891;</div><div class="f-ft"><span class="f-fl">Nivel</span><span class="f-fv">${d.nivel ? Helpers.escapeHTML(d.nivel) : '-'}</span></div></div>
+              <div class="f-field"><div class="f-fi blu">&#127979;</div><div class="f-ft"><span class="f-fl">Aula</span><span class="f-fv">${d.classroom ? Helpers.escapeHTML(d.classroom) : '-'}</span></div></div>
+              <div class="f-field"><div class="f-fi org">&#128104;</div><div class="f-ft"><span class="f-fl">Tutor 1</span><span class="f-fv">${d.p1Name ? Helpers.escapeHTML(d.p1Name.substring(0, 22)) : '-'}${d.p1Phone ? ` · ${Helpers.escapeHTML(d.p1Phone)}` : ''}</span></div></div>
+              <div class="f-field"><div class="f-fi ylw">&#128105;</div><div class="f-ft"><span class="f-fl">Tutor 2</span><span class="f-fv">${d.p2Name ? Helpers.escapeHTML(d.p2Name.substring(0, 22)) : '-'}${d.p2Phone ? ` · ${Helpers.escapeHTML(d.p2Phone)}` : ''}</span></div></div>
+              ${d.parentName ? `<div class="f-field"><div class="f-fi org">&#128101;</div><div class="f-ft"><span class="f-fl">Otro</span><span class="f-fv">${Helpers.escapeHTML(d.parentName.substring(0, 16))}${d.parentPhone ? ` · ${Helpers.escapeHTML(d.parentPhone)}` : ''}</span></div></div>` : ''}
+              <div class="f-field"><div class="f-fi ${d.isActive ? 'grn' : 'org'}">${d.isActive ? '&#10003;' : '&#10007;'}</div><div class="f-ft"><span class="f-fl">Estado</span><span class="f-fv">${d.isActive ? 'Activo' : 'Inactivo'}</span></div></div>
             </div>
           </div>
         </div>

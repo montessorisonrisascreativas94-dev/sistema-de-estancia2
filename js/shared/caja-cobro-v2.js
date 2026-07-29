@@ -1101,8 +1101,8 @@ export const CajaCobroV2 = {
           try {
             const stu = _student || {};
             const now = new Date().toISOString();
-            const receiptNo = `KPK-${new Date().getFullYear()}${String(new Date().getMonth()+1).padStart(2,'0')}-${String(targetPayId).slice(-6).toUpperCase()}`;
-            const hashInput = `INV-${targetPayId}-${Date.now()}-KPK`;
+            const receiptNo = `MSC-${new Date().getFullYear()}${String(new Date().getMonth()+1).padStart(2,'0')}-${String(targetPayId).slice(-6).toUpperCase()}`;
+            const hashInput = `INV-${targetPayId}-${Date.now()}-MSC`;
             const hashBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(hashInput));
             const sha256Hash = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2,'0')).join('');
             const uuidFolio = crypto.randomUUID();

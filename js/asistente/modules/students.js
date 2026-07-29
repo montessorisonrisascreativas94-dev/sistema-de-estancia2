@@ -41,7 +41,13 @@ export const StudentsModule = {
       classroom: s.classrooms?.name || '',
       nivel:     s.classrooms?.level || s.level || '',
       p1_name:   s.p1_name || '',
-      p2_name:   s.p2_name || ''
+      p2_name:   s.p2_name || '',
+      p1_phone:  s.p1_phone || '',
+      p2_phone:  s.p2_phone || '',
+      _parentName:  s._parentName || '',
+      _parentPhone: s._parentPhone || '',
+      student_id:   s.id || '',
+      is_active:    s.is_active !== false
     }));
     await Helpers.printAllCarnets(list);
   },
@@ -192,7 +198,13 @@ export const StudentsModule = {
       classroom: s.classrooms?.name || '',
       nivel:     s.classrooms?.level || s.level || '',
       p1_name:   s.p1_name || '',
-      p2_name:   s.p2_name || ''
+      p2_name:   s.p2_name || '',
+      p1_phone:  s.p1_phone || '',
+      p2_phone:  s.p2_phone || '',
+      _parentName:  s._parentName || '',
+      _parentPhone: s._parentPhone || '',
+      student_id:   s.id || '',
+      is_active:    s.is_active !== false
     }));
     await Helpers.printAllCarnets(formattedStudents);
   },

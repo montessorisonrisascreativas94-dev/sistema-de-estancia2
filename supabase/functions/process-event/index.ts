@@ -325,7 +325,7 @@ Deno.serve(async (req) => {
               '<p style="margin:0;color:#92400e">Periodo: ' + (period_name || 'Actual') + '</p></div>' +
               '<p style="color:#374151">Le recomendamos conversar con la maestra para establecer un plan de apoyo.</p>' +
               '<a href="https://montessorisonrisascreativas.com/panel_padres.html" style="display:inline-block;padding:12px 24px;background:#f59e0b;color:white;text-decoration:none;border-radius:8px;font-weight:bold;margin-top:8px">Ver Calificaciones</a>'
-          }));
+          )));
         }
 
         // Email to directora

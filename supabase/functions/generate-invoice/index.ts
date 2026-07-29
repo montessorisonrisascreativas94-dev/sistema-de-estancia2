@@ -70,13 +70,13 @@ Deno.serve(async (req) => {
     const { data: rpcResult, error: rpcErr } = await supabase.rpc('generate_receipt_number');
     if (rpcErr || !rpcResult) {
       // Fallback: generar localmente
-      receiptNo = `KPK-${(school?.school_code || 'MSC')}-${new Date().getFullYear()}${String(new Date().getMonth()+1).padStart(2,'0')}-${String(payment_id).padStart(4,'0').toUpperCase()}`;
+      receiptNo = `MSC-${(school?.school_code || 'MSC')}-${new Date().getFullYear()}${String(new Date().getMonth()+1).padStart(2,'0')}-${String(payment_id).padStart(4,'0').toUpperCase()}`;
     } else {
       receiptNo = rpcResult;
     }
 
     // 4. Crear hash SHA-256 para validación
-    const hashInput = `INV-${payment_id}-${Date.now()}-KPK`;
+    const hashInput = `INV-${payment_id}-${Date.now()}-MSC`;
     const encoder = new TextEncoder();
     const hashBuffer = await crypto.subtle.digest('SHA-256', encoder.encode(hashInput));
     const hashArray = Array.from(new Uint8Array(hashBuffer));

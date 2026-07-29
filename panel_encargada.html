@@ -707,6 +707,18 @@
       color:white !important;
     }
 
+    /* Purple icons for all sidebar navigation buttons */
+    .kk-nav-item i[data-lucide],
+    .kk-nav-sub-item i[data-lucide] {
+      color: #C4B5FD !important;
+    }
+    .kk-nav-item:hover i[data-lucide],
+    .kk-nav-item.active i[data-lucide],
+    .kk-nav-sub-item:hover i[data-lucide],
+    .kk-nav-sub-item.active i[data-lucide] {
+      color: white !important;
+    }
+
     /* -----------------------------------------------
        LOADER INICIAL
     ----------------------------------------------- */
@@ -870,23 +882,10 @@
           <span class="label">Dashboard</span>
         </button>
 
-        <div class="kk-nav-group">
-          <button class="kk-nav-item kk-nav-group-toggle w-full" data-group="maestras" data-tooltip="Maestras">
-            <i data-lucide="users" class="text-green-300 shrink-0"></i>
-            <span class="label flex-1 text-left">Maestras</span>
-            <i data-lucide="chevron-down" class="kk-nav-chevron w-3.5 h-3.5 label opacity-60 shrink-0"></i>
-          </button>
-          <div class="kk-nav-sub" id="group-maestras" style="display:none">
-            <button data-section="eficiencia" class="kk-nav-sub-item">
-              <i data-lucide="trending-up" class="w-3.5 h-3.5 text-green-200 shrink-0"></i>
-              <span>Eficiencia</span>
-            </button>
-            <button data-section="ranking" class="kk-nav-sub-item">
-              <i data-lucide="trophy" class="w-3.5 h-3.5 text-yellow-200 shrink-0"></i>
-              <span>Ranking</span>
-            </button>
-          </div>
-        </div>
+        <button data-section="rendimiento-eficiencia" class="kk-nav-item" data-tooltip="Rendimiento y Eficiencia">
+          <i data-lucide="gauge" class="shrink-0"></i>
+          <span class="label">Rendimiento y Eficiencia</span>
+        </button>
 
         <button data-section="padres-opinion" class="kk-nav-item" data-tooltip="Opinión de Padres">
           <i data-lucide="message-square-heart" class="text-pink-300"></i>
@@ -913,29 +912,14 @@
           <span class="label">Muro Escolar</span>
         </button>
 
-        <button data-section="control-rutinas" class="kk-nav-item" data-tooltip="Control de Rutinas">
-          <i data-lucide="clipboard-list" class="text-amber-300"></i>
-          <span class="label">Control de Rutinas</span>
+        <button data-section="control-rutinas-cumplimiento" class="kk-nav-item" data-tooltip="Control de Rutinas y Cumplimiento">
+          <i data-lucide="clipboard-check" class="shrink-0"></i>
+          <span class="label">Control de Rutinas y Cumplimiento</span>
         </button>
 
-        <button data-section="reportes-cumplimiento" class="kk-nav-item" data-tooltip="Reportes de Cumplimiento">
-          <i data-lucide="bar-chart-3" class="text-cyan-300"></i>
-          <span class="label">Cumplimiento</span>
-        </button>
-
-        <button data-section="reportes-tareas" class="kk-nav-item" data-tooltip="Reportes de Tareas">
-          <i data-lucide="check-square" class="text-emerald-300"></i>
-          <span class="label">Reportes Tareas</span>
-        </button>
-
-        <button data-section="comparativo-aulas" class="kk-nav-item" data-tooltip="Comparativo por Aulas">
-          <i data-lucide="layout-grid" class="text-violet-300"></i>
-          <span class="label">Comparativo Aulas</span>
-        </button>
-
-        <button data-section="alertas" class="kk-nav-item" data-tooltip="Alertas Inteligentes">
-          <i data-lucide="bell" class="text-rose-300"></i>
-          <span class="label">Alertas Inteligentes</span>
+        <button data-section="reportes-comparativas-alertas" class="kk-nav-item" data-tooltip="Reportes, Comparativas y Alertas">
+          <i data-lucide="file-spreadsheet" class="shrink-0"></i>
+          <span class="label">Reportes, Comparativas y Alertas</span>
           <span id="badge-alertas" class="hidden kk-badge">0</span>
         </button>
 
@@ -1116,22 +1100,14 @@
           </div>
         </section>
 
-        <section id="eficiencia" class="section">
+        <section id="rendimiento-eficiencia" class="section">
           <div class="section-shell">
             <div class="section-header">
-              <h1 class="section-title">Eficiencia de Maestras</h1>
-              <p class="section-subtitle">Monitoreo detallado del desempeño docente.</p>
+              <h1 class="section-title">Rendimiento y Eficiencia</h1>
+              <p class="section-subtitle">Eficiencia docente y ranking de maestras.</p>
             </div>
             <div id="eficienciaContent" class="text-slate-400">Cargando...</div>
-          </div>
-        </section>
-
-        <section id="ranking" class="section">
-          <div class="section-shell">
-            <div class="section-header">
-              <h1 class="section-title">Ranking de Maestras</h1>
-              <p class="section-subtitle">Top 10 maestras basadas en eficiencia, opiniones y cumplimiento.</p>
-            </div>
+            <hr class="my-6 border-purple-100">
             <div id="rankingContent" class="text-slate-400">Cargando...</div>
           </div>
         </section>
@@ -1176,23 +1152,15 @@
           </div>
         </section>
 
-        <section id="reportes-cumplimiento" class="section">
+        <section id="control-rutinas-cumplimiento" class="section">
           <div class="section-shell">
             <div class="section-header">
-              <h1 class="section-title">Reportes de Cumplimiento</h1>
-              <p class="section-subtitle">Diario, semanal, mensual y anual.</p>
-            </div>
-            <div id="cumplimientoContent" class="text-slate-400">Cargando...</div>
-          </div>
-        </section>
-
-        <section id="control-rutinas" class="section">
-          <div class="section-shell">
-            <div class="section-header">
-              <h1 class="section-title">Control de Rutinas</h1>
-              <p class="section-subtitle">Monitoreo de horarios, rutinas y tiempos.</p>
+              <h1 class="section-title">Control de Rutinas y Cumplimiento</h1>
+              <p class="section-subtitle">Monitoreo de rutinas diarias y reportes de cumplimiento.</p>
             </div>
             <div id="rutinasContent" class="text-slate-400">Cargando...</div>
+            <hr class="my-6 border-purple-100">
+            <div id="cumplimientoContent" class="text-slate-400">Cargando...</div>
           </div>
         </section>
 
@@ -1206,32 +1174,16 @@
           </div>
         </section>
 
-        <section id="reportes-tareas" class="section">
+        <section id="reportes-comparativas-alertas" class="section">
           <div class="section-shell">
             <div class="section-header">
-              <h1 class="section-title">Reportes de Tareas</h1>
-              <p class="section-subtitle">Seguimiento de tareas asignadas y entregadas.</p>
+              <h1 class="section-title">Reportes, Comparativas y Alertas</h1>
+              <p class="section-subtitle">Tareas, comparativo por aulas y alertas inteligentes.</p>
             </div>
             <div id="tareasContent" class="text-slate-400">Cargando...</div>
-          </div>
-        </section>
-
-        <section id="comparativo-aulas" class="section">
-          <div class="section-shell">
-            <div class="section-header">
-              <h1 class="section-title">Comparativo por Aulas</h1>
-              <p class="section-subtitle">Rendimiento, cumplimiento, participación y más.</p>
-            </div>
+            <hr class="my-6 border-purple-100">
             <div id="comparativoContent" class="text-slate-400">Cargando...</div>
-          </div>
-        </section>
-
-        <section id="alertas" class="section">
-          <div class="section-shell">
-            <div class="section-header">
-              <h1 class="section-title">Alertas Inteligentes</h1>
-              <p class="section-subtitle">Alertas generadas automáticamente por bajo rendimiento, incumplimientos, etc.</p>
-            </div>
+            <hr class="my-6 border-purple-100">
             <div id="alertasContent" class="text-slate-400">Cargando...</div>
           </div>
         </section>
