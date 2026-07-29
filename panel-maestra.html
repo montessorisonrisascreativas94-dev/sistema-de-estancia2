@@ -1167,17 +1167,7 @@
   </script>
   <!-- Lógica PWA Profesional -->
   <script src="js/pwa-install.js" defer></script>
-  <script>
-    // Service Worker registration (Unified for PWA + OneSignal)
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/OneSignalSDKWorker.js', { scope: '/' })
-          .then(() => {})
-          .catch(() => {});
-      });
-    }
-
-  </script>
+  <script src="js/pwa-update.js" defer></script>
 
   <!-- Download App Banner Styles -->
   <style>

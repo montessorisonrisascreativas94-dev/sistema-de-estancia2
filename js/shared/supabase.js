@@ -539,7 +539,7 @@ async function _initOneSignalAsync(currentUser) {
           appId: ONESIGNAL_APP_ID,
           allowLocalhostAsSecureOrigin: false,
           serviceWorkerParam: { scope: '/' },
-          serviceWorkerPath: 'OneSignalSDKWorker.js',
+          serviceWorkerPath: 'sw.js',
           notifyButton: { enable: false },
           welcomeNotification: { disable: false }
         });

@@ -21,7 +21,8 @@ let _timelineActive = localStorage.getItem('sonrisas_tl_active') !== '0';
 let _attendanceTaken = false;
 
 const SCHEDULE_STORAGE_KEY = 'sonrisas_schedule_config';
-const SCHEDULE_VERSION = 4;
+const DAILY_OVERRIDES_KEY = 'sonrisas_daily_overrides';
+const SCHEDULE_VERSION = 5;
 
 const DEFAULT_SCHEDULE = [
   { id: 'welcome',      emoji: '🖐️', label: 'Bienvenida',         color: '#FF8A00', startTime: '07:30', duration: 15,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true,  visibleDirector: true,  days: [1,2,3,4,5,6], active: true },
@@ -149,17 +150,15 @@ function _saveScheduleConfig() {
 }
 function _getSchedule() {
   if (!_scheduleConfig) _loadScheduleConfig();
-  return _scheduleConfig.filter(e => e.active && e.days.includes(_getDayOfWeek()));
+  const omitted = _getDailyOmittedEvents();
+  return _scheduleConfig.filter(e => e.active && e.days.includes(_getDayOfWeek()) && !omitted.includes(e.id));
 }
 
 function _getEventStatus(event, nowMinutes) {
   const startMin = _timeToMinutes(event.startTime);
   const endMin = startMin + (event.duration || 30);
 
-  // If attendance not taken yet, only 'welcome' event can activate
-  if (!_attendanceTaken && event.id !== 'welcome') {
-    return 'pending';
-  }
+  if (!_timelineActive) return 'pending';
 
   if (nowMinutes < startMin) return 'pending';
   if (nowMinutes >= startMin && nowMinutes < endMin) return 'in_progress';
@@ -374,7 +373,7 @@ function _studentCardMini(s, log) {
   const diaperCount = (log?.infant_data || []).filter(e => e.type === 'diaper' || e.type === 'bath').length;
 
   return `
-    <div class="sc-card" style="${borderStyle}" onclick="App.openStudentRoutine('${s.id}')">
+    <div class="sc-card" style="${borderStyle}" onclick="App.openStudentRoutine(this.dataset.sid)" data-sid="${encodeURIComponent(s.id)}">
       ${sleeping ? '<div class="sc-badge sc-badge-sleep">💤</div>' : ''}
       ${hasMed ? '<div class="sc-badge sc-badge-med">💊</div>' : ''}
       <div class="sc-avatar">
@@ -425,6 +424,7 @@ function _renderExpandedEvent(event, students, logsMap, nowMinutes) {
   const progress = _getEventProgress(event, students, logsMap);
   const startMin = _timeToMinutes(event.startTime);
   const endMin = startMin + (event.duration || 30);
+  const isOmittedToday = _getDailyOmittedEvents().includes(event.id);
   return `
     <div class="rounded-2xl border-2 overflow-hidden mb-3" style="border-color:${event.color}30;background:white;animation:evSlideIn .25s ease">
       <style>@keyframes evSlideIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}</style>
@@ -432,7 +432,7 @@ function _renderExpandedEvent(event, students, logsMap, nowMinutes) {
         <span class="text-2xl">${event.emoji}</span>
         <div class="flex-1 min-w-0">
           <h4 class="font-black text-sm" style="color:${event.color}">${safeEscapeHTML(event.label)}</h4>
-          <div class="text-[10px] font-bold text-slate-400">${_fmtTimeShort(event.startTime)} – ${_fmtTimeShort(_minutesToTime(endMin))} · ${event.duration}min</div>
+          <div class="text-[10px] font-bold text-slate-400">${_fmtTimeShort(event.startTime)} – ${_fmtTimeShort(_minutesToTime(endMin))} · ${event.duration}min${isOmittedToday ? ' · <span class="text-amber-500">Omitido hoy</span>' : ''}</div>
         </div>
         <button onclick="App.collapseTimelineEvent();event.stopPropagation()" class="p-1.5 rounded-lg bg-white/60 hover:bg-white text-slate-400">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M18 6L6 18M6 6l12 12"/></svg>
@@ -454,6 +454,7 @@ function _renderExpandedEvent(event, students, logsMap, nowMinutes) {
       </div>` : ''}
       <div class="p-3 flex gap-2">
         ${event.groupEventId ? `<button onclick="App.routineQuickGroup('${event.groupEventId}');event.stopPropagation()" class="flex-1 py-2.5 rounded-xl font-black text-[10px] uppercase text-white tracking-wider" style="background:${event.color}">Registrar Ahora</button>` : ''}
+        <button onclick="App.toggleOmitToday('${event.id}');event.stopPropagation()" class="flex-1 py-2.5 rounded-xl border-2 font-black text-[10px] uppercase tracking-wider ${isOmittedToday ? 'border-amber-300 text-amber-600 bg-amber-50' : 'border-slate-200 text-slate-500'}">${isOmittedToday ? '↩ Restaurar' : '⊘ Omitir hoy'}</button>
         <button onclick="App.openEventConfig('${event.id}');event.stopPropagation()" class="px-3 py-2.5 rounded-xl border-2 border-slate-200 font-black text-[10px] uppercase text-slate-500">⚙️</button>
       </div>
     </div>
@@ -559,16 +560,17 @@ function _buildUI(students, schedule, nowMinutes, todayLabel, timeLabel, complet
             <button onclick="App.openScheduleConfig()" class="text-[10px] font-black text-blue-500 uppercase tracking-wide flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-blue-50">⚙️</button>
           </div>
         </div>
-        ${!_attendanceTaken ? `
-          <div class="rounded-xl bg-amber-50 border border-amber-200 p-3 flex items-center gap-2 mb-3">
-            <span class="text-lg">📋</span>
-            <div>
-              <p class="text-[11px] font-black text-amber-700">Toma la lista primero</p>
-              <p class="text-[10px] font-bold text-amber-500">La línea de tiempo se activará cuando registres la asistencia</p>
-            </div>
-          </div>
-        ` : ''}
         ${isCollapsed ? _renderTimelineCollapsed(schedule, nowMinutes) : _renderTimelineExpanded(schedule, nowMinutes, _logsMap, students)}
+        ${_getDailyOmittedEvents().length > 0 ? `
+        <div class="flex gap-2 mt-3">
+          <button onclick="App.clearDailyOverrides()" class="flex-1 py-2 rounded-xl border-2 border-amber-200 font-black text-[10px] uppercase text-amber-600 flex items-center justify-center gap-1 hover:bg-amber-50 transition-all">
+            ↩ Restaurar eventos omitidos
+          </button>
+        </div>` : ''}
+        <button onclick="App.openQuickAddModal()"
+          class="mt-3 w-full py-2.5 rounded-xl border-2 border-dashed border-blue-200 font-black text-xs uppercase text-blue-500 flex items-center justify-center gap-2 hover:bg-blue-50 transition-all">
+          <span class="text-lg">➕</span> Agregar evento (baño, popó, biberón, etc.)
+        </button>
       </div>
 
       <!-- EXPANDED EVENT PANEL -->
@@ -790,6 +792,10 @@ export function openEventConfig(eventId) {
             <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
           </label>
         </div>
+        <div class="flex items-center gap-2 p-3 rounded-xl bg-blue-50">
+          <input type="checkbox" id="cfgRecalc" class="w-4 h-4 accent-blue-600">
+          <label for="cfgRecalc" class="text-[11px] font-bold text-blue-700 cursor-pointer">Mover eventos siguientes automáticamente</label>
+        </div>
         <div class="flex gap-3 pt-2">
           <button onclick="UI.Modal.close('eventConfigModal')" class="flex-1 py-3 rounded-xl border-2 border-slate-200 font-black text-xs uppercase text-slate-500">Cancelar</button>
           <button onclick="App.saveEventConfig('${ev.id}')" class="flex-1 py-3 rounded-xl font-black text-xs uppercase text-white" style="background:${ev.color}">Guardar</button>
@@ -803,49 +809,130 @@ export function openEventConfig(eventId) {
 export function saveEventConfig(eventId) {
   const evIndex = (_scheduleConfig || []).findIndex(e => e.id === eventId);
   if (evIndex === -1) return;
+  const oldStart = _scheduleConfig[evIndex].startTime;
+  const oldDuration = _scheduleConfig[evIndex].duration;
+  const newStart = document.getElementById('cfgStartTime')?.value || oldStart;
+  const newDuration = parseInt(document.getElementById('cfgDuration')?.value) || oldDuration;
+  const doRecalc = document.getElementById('cfgRecalc')?.checked || false;
+
   _scheduleConfig[evIndex] = {
     ..._scheduleConfig[evIndex],
-    startTime: document.getElementById('cfgStartTime')?.value || _scheduleConfig[evIndex].startTime,
-    duration: parseInt(document.getElementById('cfgDuration')?.value) || _scheduleConfig[evIndex].duration,
+    startTime: newStart,
+    duration: newDuration,
     emoji: document.getElementById('cfgEmoji')?.value || _scheduleConfig[evIndex].emoji,
     color: document.getElementById('cfgColor')?.value || _scheduleConfig[evIndex].color,
     active: document.getElementById('cfgActive')?.checked ?? true,
     days: (() => { const d = []; document.querySelectorAll('.cfg-day-btn').forEach(b => { if (b.classList.contains('border-blue-400')) d.push(parseInt(b.dataset.day)); }); return d.length > 0 ? d : _scheduleConfig[evIndex].days; })()
   };
+
+  if (doRecalc) {
+    const oldEndMin = _timeToMinutes(oldStart) + oldDuration;
+    const newEndMin = _timeToMinutes(newStart) + newDuration;
+    const shiftMin = newEndMin - oldEndMin;
+    if (shiftMin !== 0) {
+      for (let i = evIndex + 1; i < _scheduleConfig.length; i++) {
+        const curStartMin = _timeToMinutes(_scheduleConfig[i].startTime);
+        _scheduleConfig[i].startTime = _minutesToTime(curStartMin + shiftMin);
+      }
+    }
+  }
+
   _saveScheduleConfig();
   UI.Modal.close('eventConfigModal');
-  safeToast('Evento configurado', 'success');
+  safeToast('Evento configurado' + (doRecalc ? ' — horarios siguientes recalculados' : ''), 'success');
   initRoutine();
 }
+
+export function addScheduleEvent() {
+  const id = 'custom_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+  const newEv = {
+    id, emoji: '📌', label: 'Nuevo evento', color: '#64748B',
+    startTime: '08:00', duration: 30, type: 'colectivo', auto: false,
+    needsConfirm: false, visibleParents: true, visibleDirector: true,
+    days: [1,2,3,4,5,6], active: true
+  };
+  _scheduleConfig.push(newEv);
+  _saveScheduleConfig();
+  openScheduleConfig();
+  safeToast('Nuevo evento agregado — configúralo', 'success');
+}
+
+export function deleteScheduleEvent(eventId) {
+  if (!_scheduleConfig) return;
+  const idx = _scheduleConfig.findIndex(e => e.id === eventId);
+  if (idx === -1) return;
+  const isDefault = DEFAULT_SCHEDULE.some(d => d.id === eventId);
+  if (isDefault) { safeToast('No puedes eliminar un evento predeterminado', 'warning'); return; }
+  if (!confirm('¿Eliminar este evento de la rutina?')) return;
+  _scheduleConfig.splice(idx, 1);
+  _saveScheduleConfig();
+  openScheduleConfig();
+  safeToast('Evento eliminado', 'success');
+}
+
+export function _moveScheduleEvent(fromIdx, toIdx) {
+  if (!_scheduleConfig || fromIdx === toIdx) return;
+  const [moved] = _scheduleConfig.splice(fromIdx, 1);
+  _scheduleConfig.splice(toIdx, 0, moved);
+  _saveScheduleConfig();
+}
+
+let _dragEvIdx = null;
 
 export function openScheduleConfig() {
   const schedule = _scheduleConfig || DEFAULT_SCHEDULE;
   const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+
+  const omitted = _getDailyOmittedEvents();
+  let scheduleHtml = '';
+  schedule.forEach((ev, i) => {
+    const isDefault = DEFAULT_SCHEDULE.some(d => d.id === ev.id);
+    const isOmittedToday = omitted.includes(ev.id);
+    scheduleHtml += `
+      <div class="flex items-center justify-center" style="margin:-4px 0">
+        <button onclick="App.insertEventAt(${i})" class="w-7 h-7 rounded-full border-2 border-dashed border-blue-200 bg-white flex items-center justify-center text-blue-400 hover:bg-blue-50 hover:border-blue-400 transition-all text-xs font-black" title="Insertar evento aquí">+</button>
+      </div>
+      <div draggable="true"
+        data-idx="${i}"
+        class="flex items-center gap-2 p-3 rounded-xl border ${isOmittedToday ? 'border-amber-200 bg-amber-50 opacity-60' : 'border-slate-100 bg-white'} hover:border-blue-200 transition-all cursor-pointer schedule-row"
+        onclick="if(!this.dataset.dragging)App.openEventConfig('${ev.id}')"
+        ondragstart="event.dataTransfer.setData('text/plain','${i}');_dragEvIdx=${i};this.dataset.dragging='1';this.classList.add('opacity-40','border-blue-400')"
+        ondragend="this.classList.remove('opacity-40','border-blue-400');delete this.dataset.dragging;_dragEvIdx=null"
+        ondragover="event.preventDefault();this.parentElement.querySelectorAll('.schedule-row').forEach(r=>r.classList.remove('border-blue-400','bg-blue-50'));this.classList.add('border-blue-400','bg-blue-50')"
+        ondragleave="this.classList.remove('border-blue-400','bg-blue-50')"
+        ondrop="event.preventDefault();this.classList.remove('border-blue-400','bg-blue-50');var from=_dragEvIdx;if(from===null)return;var to=parseInt(this.dataset.idx);if(from===to)return;App._moveScheduleEvent(from,to);App.openScheduleConfig()">
+        <span class="text-slate-300 cursor-grab active:cursor-grabbing select-none text-sm" title="Arrastrar para reordenar">☰</span>
+        <span class="text-xl">${ev.emoji}</span>
+        <div class="flex-1 min-w-0">
+          <div class="text-sm font-black text-slate-800 truncate">${safeEscapeHTML(ev.label)}</div>
+          <div class="text-[10px] font-bold text-slate-400">${_fmtTimeShort(ev.startTime)} · ${ev.duration}min${isOmittedToday ? ' · <span class="text-amber-500">Omitido hoy</span>' : ''}</div>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="w-3 h-3 rounded-full" style="background:${ev.color}"></span>
+          <span class="text-[10px] font-bold ${ev.active ? 'text-green-600' : 'text-slate-300'}">${ev.active ? 'Activo' : 'Inactivo'}</span>
+          ${!isDefault ? `<button onclick="event.stopPropagation();App.deleteScheduleEvent('${ev.id}')" class="p-1 rounded-lg hover:bg-red-50 text-slate-300 hover:text-red-500 transition-all" title="Eliminar">🗑️</button>` : ''}
+        </div>
+      </div>
+    `;
+  });
+  scheduleHtml += `
+    <div class="flex items-center justify-center" style="margin:-4px 0">
+      <button onclick="App.addScheduleEvent()" class="w-7 h-7 rounded-full border-2 border-dashed border-blue-200 bg-white flex items-center justify-center text-blue-400 hover:bg-blue-50 hover:border-blue-400 transition-all text-xs font-black" title="Agregar al final">+</button>
+    </div>`;
+
   UI.Modal.open('scheduleConfigModal', `
-    <div class="bg-white overflow-hidden" style="border-radius:32px;max-height:85vh;overflow-y:auto">
-      <div class="p-6" style="background:linear-gradient(135deg,#0B63C7,#28B54D)">
+    <div class="bg-white overflow-hidden" style="border-radius:32px;max-height:85vh;display:flex;flex-direction:column">
+      <div class="p-6 flex-shrink-0" style="background:linear-gradient(135deg,#0B63C7,#28B54D)">
         <div class="flex items-center justify-between">
-          <div><h3 class="text-xl font-black text-white">Configurar Horario</h3><p class="text-sm font-bold text-white/80">Personaliza la rutina del día</p></div>
+          <div><h3 class="text-xl font-black text-white">Configurar Horario</h3><p class="text-sm font-bold text-white/80">Arrastra ☰ — toca para configurar — + para insertar</p></div>
           <button onclick="UI.Modal.close('scheduleConfigModal')" class="p-2 rounded-xl bg-white/20 text-white"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
         </div>
       </div>
-      <div class="p-4 space-y-2">
-        ${schedule.map(ev => `
-          <div class="flex items-center gap-3 p-3 rounded-xl border border-slate-100 bg-white hover:border-blue-200 transition-all cursor-pointer" onclick="App.openEventConfig('${ev.id}')">
-            <span class="text-xl">${ev.emoji}</span>
-            <div class="flex-1 min-w-0">
-              <div class="text-sm font-black text-slate-800 truncate">${safeEscapeHTML(ev.label)}</div>
-              <div class="text-[10px] font-bold text-slate-400">${_fmtTimeShort(ev.startTime)} · ${ev.duration}min</div>
-            </div>
-            <div class="flex items-center gap-2">
-              <span class="w-3 h-3 rounded-full" style="background:${ev.color}"></span>
-              <span class="text-[10px] font-bold ${ev.active ? 'text-green-600' : 'text-slate-300'}">${ev.active ? 'Activo' : 'Inactivo'}</span>
-            </div>
-          </div>
-        `).join('')}
+      <div class="p-4 overflow-y-auto flex-1" id="sc-list">
+        ${scheduleHtml}
       </div>
-      <div class="p-4 border-t border-slate-100">
-        <button onclick="App.resetScheduleConfig()" class="w-full py-3 rounded-xl border-2 border-red-200 font-black text-xs uppercase text-red-500">Restaurar Horario Predeterminado</button>
+      <div class="p-4 border-t border-slate-100 flex-shrink-0 space-y-2">
+        <button onclick="App.resetScheduleConfig()" class="w-full py-3 rounded-xl border-2 border-red-200 font-black text-xs uppercase text-red-500 hover:bg-red-50 transition-all">Restaurar Horario Predeterminado</button>
       </div>
     </div>
   `);
@@ -857,6 +944,60 @@ export function resetScheduleConfig() {
   UI.Modal.close('scheduleConfigModal');
   safeToast('Horario restaurado', 'success');
   initRoutine();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// DAILY ROUTINE OVERRIDES (Rutina del Día)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function _loadDailyOverrides() {
+  try { return JSON.parse(localStorage.getItem(DAILY_OVERRIDES_KEY) || '{}'); } catch { return {}; }
+}
+
+function _saveDailyOverrides(data) {
+  localStorage.setItem(DAILY_OVERRIDES_KEY, JSON.stringify(data));
+}
+
+function _getDailyKey() {
+  return _today();
+}
+
+function _getDailyOmittedEvents() {
+  const all = _loadDailyOverrides();
+  return all[_getDailyKey()]?.omitted || [];
+}
+
+export function toggleOmitToday(eventId) {
+  const all = _loadDailyOverrides();
+  const key = _getDailyKey();
+  if (!all[key]) all[key] = { omitted: [] };
+  const idx = all[key].omitted.indexOf(eventId);
+  if (idx > -1) { all[key].omitted.splice(idx, 1); safeToast('Evento visible hoy', 'success'); }
+  else { all[key].omitted.push(eventId); safeToast('Evento omitido hoy', 'success'); }
+  _saveDailyOverrides(all);
+  initRoutine();
+}
+
+export function insertEventAt(index) {
+  const id = 'custom_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+  const newEv = {
+    id, emoji: '📌', label: 'Nuevo evento', color: '#64748B',
+    startTime: '08:00', duration: 30, type: 'colectivo', auto: false,
+    needsConfirm: false, visibleParents: true, visibleDirector: true,
+    days: [1,2,3,4,5,6], active: true
+  };
+  _scheduleConfig.splice(index, 0, newEv);
+  _saveScheduleConfig();
+  openScheduleConfig();
+  safeToast('Evento insertado — configúralo', 'success');
+}
+
+export function clearDailyOverrides() {
+  const all = _loadDailyOverrides();
+  delete all[_getDailyKey()];
+  _saveDailyOverrides(all);
+  initRoutine();
+  safeToast('Rutina de hoy restaurada', 'success');
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1129,12 +1270,16 @@ export async function _confirmTemp(studentId) {
 }
 
 export function openStudentRoutine(studentId) {
+  try { studentId = decodeURIComponent(studentId); } catch {}
   const students = AppState.get('students') || [];
   const student = students.find(s => s.id === studentId);
-  if (!student) return;
+  if (!student) { safeToast('No se encontró el estudiante', 'error'); return; }
   const log = _logsMap[studentId];
   let currentFood = {};
   if (log?.food) { try { currentFood = JSON.parse(log.food); } catch {} }
+  const events = log?.infant_data || [];
+  const hasEvent = (type, subtype) => events.some(e => e.type === type && (!subtype || e.subtype === subtype));
+
   const mealLabels = { breakfast: '🍞 Desayuno', lunch: '🥗 Almuerzo', snack: '🍎 Merienda' };
   const foodOptions = [
     { val: 'todo', icon: '✅', label: 'Todo' },
@@ -1143,34 +1288,91 @@ export function openStudentRoutine(studentId) {
     { val: 'ayuda', icon: '🆘', label: 'Ayuda' }
   ];
 
-  const events = log?.infant_data || [];
-  const EVENT_ICONS = { sleep: '😴', milk: '🍼', diaper: e => e.subtype === 'wet' ? '💧' : '💩', bath: '🚽', temp: '🌡️', med: '💊', behavior: '🤝', handwash: '🧼', toothbrush: '🪥', activity: '🏫', playground: '🌳', health: e => e.subtype === 'vomit' ? '🤮' : '😷', incident: '🤕', note: '📝' };
-  const EVENT_LABELS = { handwash: 'Lavado de manos', toothbrush: 'Cepillado dental', activity: 'Actividad', playground: 'Patio', sleep: 'Siesta', milk: 'Biberón', diaper: 'Pañal', bath: 'Baño', temp: 'Temperatura', med: 'Medicamento', note: 'Nota', behavior: 'Comportamiento' };
+  // ── Collect all registered events for the top summary ──
+  const registeredBadges = [];
+  if (log?.mood) {
+    const mood = MOOD_OPTIONS.find(m => m.val === log.mood);
+    if (mood) registeredBadges.push({ emoji: mood.emoji, label: mood.label, color: '#3B82F6' });
+  }
+  if (currentFood.breakfast) registeredBadges.push({ emoji: '🍞', label: 'Desayuno: ' + (foodOptions.find(f => f.val === currentFood.breakfast)?.label || currentFood.breakfast), color: '#FF8A00' });
+  if (currentFood.lunch) registeredBadges.push({ emoji: '🥗', label: 'Almuerzo: ' + (foodOptions.find(f => f.val === currentFood.lunch)?.label || currentFood.lunch), color: '#28B54D' });
+  if (currentFood.snack) registeredBadges.push({ emoji: '🍎', label: 'Merienda: ' + (foodOptions.find(f => f.val === currentFood.snack)?.label || currentFood.snack), color: '#F59E0B' });
+  if (log?.nap) registeredBadges.push({ emoji: '😴', label: 'Siesta', color: '#8B5CF6' });
+  if (hasEvent('milk')) registeredBadges.push({ emoji: '🍼', label: 'Biberón', color: '#0B63C7' });
+  if (hasEvent('activity')) registeredBadges.push({ emoji: '🎨', label: 'Actividad', color: '#7C3AED' });
+  if (hasEvent('sensorial')) registeredBadges.push({ emoji: '🔬', label: 'Sensorial', color: '#6366F1' });
+  if (hasEvent('playground')) registeredBadges.push({ emoji: '🌳', label: 'Patio', color: '#16A34A' });
+  if (hasEvent('handwash')) registeredBadges.push({ emoji: '🧼', label: 'Lavado', color: '#0B63C7' });
+  if (hasEvent('toothbrush')) registeredBadges.push({ emoji: '🪥', label: 'Cepillado', color: '#06B6D4' });
+  if (hasEvent('diaper', 'soiled')) registeredBadges.push({ emoji: '💩', label: 'Popó', color: '#FF8A00' });
+  if (hasEvent('diaper', 'wet')) registeredBadges.push({ emoji: '💧', label: 'Pipí', color: '#0B63C7' });
+  if (hasEvent('bath')) registeredBadges.push({ emoji: '🚽', label: 'Baño', color: '#28B54D' });
+  if (hasEvent('temp')) registeredBadges.push({ emoji: '🌡️', label: 'Temperatura', color: '#EF4444' });
+  if (hasEvent('med')) registeredBadges.push({ emoji: '💊', label: 'Medicamento', color: '#EC4899' });
+  if (hasEvent('behavior')) registeredBadges.push({ emoji: '🤝', label: 'Conducta', color: '#F59E0B' });
+  if (log?.notes) registeredBadges.push({ emoji: '📝', label: 'Nota', color: '#64748B' });
 
+  // ── Timeline events ──
+  const EVENT_ICONS = { sleep: '😴', milk: '🍼', diaper: e => e.subtype === 'wet' ? '💧' : '💩', bath: '🚽', temp: '🌡️', med: '💊', behavior: '🤝', handwash: '🧼', toothbrush: '🪥', activity: '🏫', playground: '🌳', health: e => e.subtype === 'vomit' ? '🤮' : '😷', incident: '🤕', note: '📝' };
+  const EVENT_LABELS = { handwash: 'Lavado de manos', toothbrush: 'Cepillado dental', activity: 'Actividad', playground: 'Patio', sensorial: 'Sensorial', sleep: 'Siesta', milk: 'Biberón', diaper: 'Pañal', bath: 'Baño', temp: 'Temperatura', med: 'Medicamento', note: 'Nota', behavior: 'Comportamiento' };
   const sortedEvents = [...events].sort((a, b) => new Date(a.created_at||0) - new Date(b.created_at||0));
   const timelineHtml = sortedEvents.length > 0 ? sortedEvents.map(evt => {
     const time = evt.created_at ? _fmtTime(evt.created_at) : (evt.start_time ? _fmtTime(evt.start_time) : '');
     const label = evt.label || EVENT_LABELS[evt.type] || evt.type;
     const getIcon = EVENT_ICONS[evt.type];
     const icon = typeof getIcon === 'function' ? getIcon(evt) : (getIcon || '📌');
-    const detail = evt.type === 'sleep' ? (evt.end_time ? 'Despertó ' + _fmtTime(evt.end_time) : 'En siesta...') : evt.type === 'milk' ? (evt.oz ? evt.oz + ' oz' + (evt.temp ? ' · ' + TEMP_OPTIONS.find(t => t.val === evt.temp)?.label : '') : '') : evt.type === 'temp' ? (evt.value ? evt.value + '°C' : '') : evt.type === 'med' ? (evt.name || '') : '';
+    const detail = evt.type === 'sleep' ? (evt.end_time ? 'Despertó ' + _fmtTime(evt.end_time) : 'En siesta...') : evt.type === 'milk' ? (evt.oz ? evt.oz + ' oz' + (evt.temp ? ' · ' + (TEMP_OPTIONS.find(t => t.val === evt.temp)?.label || evt.temp) : '') : '') : evt.type === 'temp' ? (evt.value ? evt.value + '°C' : '') : evt.type === 'med' ? (evt.name || '') : evt.type === 'incident' ? (evt.description || '') : '';
     return `
-      <div class="flex items-center gap-2 p-2 rounded-lg hover:bg-slate-50 group">
+      <div class="flex items-center gap-2 p-2 rounded-lg hover:bg-slate-50 group" style="${!evt.id ? 'opacity:0.5' : ''}">
         <div class="w-8 h-8 rounded-lg flex items-center justify-center text-sm flex-shrink-0" style="background:#f1f5f9">${icon}</div>
         <div class="flex-1 min-w-0">
           <div class="text-xs font-bold text-slate-700">${safeEscapeHTML(label)}</div>
           ${detail ? `<div class="text-[10px] text-slate-400">${safeEscapeHTML(detail)}</div>` : ''}
         </div>
         <span class="text-[10px] font-bold text-slate-400">${time}</span>
+        ${evt.id ? `
         <button onclick="event.stopPropagation();if(confirm('¿Eliminar este evento?'))App.deleteInfantEvent('${studentId}','${evt.id}')" class="opacity-0 group-hover:opacity-100 p-1 rounded-lg hover:bg-red-50 text-slate-300 hover:text-red-500 transition-all" title="Eliminar evento">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
-        </button>
+        </button>` : '<div class="w-6"></div>'}
       </div>
     `;
   }).join('') : '<p class="text-center text-slate-400 text-xs py-4">Sin eventos aún</p>';
 
+  // ── Helper: section header ──
+  const section = (title, content) => `
+    <div class="pt-1">
+      <h4 class="text-xs font-black text-slate-800 mb-3 flex items-center gap-2">${title}</h4>
+      ${content}
+    </div>
+  `;
+
+  // ── Helper: button with registered detection ──
+  const chipBtn = (onclick, emoji, label, isRegistered, regColor = '#28B54D') => `
+    <button onclick="${onclick}"
+      class="p-2 rounded-xl border-2 ${isRegistered ? 'border-green-400 bg-green-50' : 'border-slate-100 bg-white'} flex flex-col items-center gap-0.5 active:scale-95 transition-all"
+      style="${isRegistered ? 'box-shadow:0 0 0 2px rgba(34,197,94,0.15)' : ''}">
+      <span class="text-lg">${emoji}</span>
+      <span class="text-[7px] font-black ${isRegistered ? 'text-green-700' : 'text-slate-500'} text-center leading-tight">${label}</span>
+      ${isRegistered ? '<span class="text-[6px] font-black text-green-500">✓</span>' : ''}
+    </button>
+  `;
+
+  const chipBtnNS = (onclick, emoji, label, isRegistered, note) => `
+    <button onclick="${onclick}"
+      class="flex-1 p-2.5 rounded-xl border-2 ${isRegistered ? 'border-green-400 bg-green-50' : 'border-slate-100 bg-white'} text-left active:scale-95 transition-all"
+      style="${isRegistered ? 'box-shadow:0 0 0 2px rgba(34,197,94,0.15)' : ''}">
+      <div class="flex items-center gap-2">
+        <span class="text-base">${emoji}</span>
+        <span class="text-[10px] font-black ${isRegistered ? 'text-green-700' : 'text-slate-600'}">${label}</span>
+        ${isRegistered ? '<span class="ml-auto text-[8px] font-black text-green-500">✓</span>' : ''}
+      </div>
+      ${note ? `<div class="text-[8px] text-slate-400 mt-0.5 ml-7">${note}</div>` : ''}
+    </button>
+  `;
+
   const modalContent = `
     <div class="bg-white overflow-hidden" style="border-radius:32px">
+      <!-- STUDENT HEADER -->
       <div class="p-5" style="background:linear-gradient(135deg,#28B54D,#239943)">
         <div class="flex items-center gap-4">
           <div class="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center overflow-hidden">
@@ -1186,39 +1388,56 @@ export function openStudentRoutine(studentId) {
         </div>
       </div>
 
-      <div class="p-5 space-y-5 max-h-[70vh] overflow-y-auto">
-        <!-- Estado Emocional (8 options) -->
-        <div>
-          <h4 class="text-xs font-black text-slate-800 mb-2">😊 Estado Emocional</h4>
+      <div class="p-5 space-y-5 max-h-[70vh] overflow-y-auto" id="sr-scroll">
+
+        <!-- ═══ EVENTOS REGISTRADOS (TOP BADGES) ═══ -->
+        ${registeredBadges.length > 0 ? section('✅ Eventos Registrados', `
+          <div class="flex flex-wrap gap-1.5">
+            ${registeredBadges.map(b => `
+              <span class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[10px] font-black" 
+                style="background:${b.color}18;border:2px solid ${b.color};color:${b.color}">
+                ${b.emoji} ${safeEscapeHTML(b.label)}
+              </span>
+            `).join('')}
+          </div>
+        `) : section('📋 Eventos', '<p class="text-xs text-slate-400 py-2">Aún no hay eventos registrados para hoy</p>')}
+
+        <div class="border-b border-slate-100"></div>
+
+        <!-- ═══ ESTADO EMOCIONAL ═══ -->
+        ${section('😊 Estado Emocional', `
           <div class="grid grid-cols-4 gap-1.5">
             ${MOOD_OPTIONS.map(m => `
               <button onclick="App.setStudentMood('${studentId}','${m.val}')"
-                class="p-2 rounded-xl border-2 ${log?.mood === m.val ? 'border-blue-400 bg-blue-50' : 'border-slate-100 bg-white'} text-center">
+                class="p-2 rounded-xl border-2 ${log?.mood === m.val ? 'border-green-400 bg-green-50' : 'border-slate-100 bg-white'} text-center active:scale-95 transition-all"
+                style="${log?.mood === m.val ? 'box-shadow:0 0 0 2px rgba(34,197,94,0.15)' : ''}">
                 <span class="text-xl block">${m.emoji}</span>
-                <span class="text-[7px] font-black text-slate-500 block">${m.label}</span>
+                <span class="text-[7px] font-black ${log?.mood === m.val ? 'text-green-700' : 'text-slate-500'} block">${m.label}</span>
+                ${log?.mood === m.val ? '<span class="text-[6px] font-black text-green-500">✓</span>' : ''}
               </button>
             `).join('')}
           </div>
-        </div>
+        `)}
 
-        <!-- Alimentación -->
-        <div>
-          <h4 class="text-xs font-black text-slate-800 mb-2">🍽️ Alimentación</h4>
+        <div class="border-b border-slate-100"></div>
+
+        <!-- ═══ ALIMENTACIÓN ═══ -->
+        ${section('🍽️ Alimentación', `
           <div class="space-y-2">
             ${['breakfast', 'lunch', 'snack'].map(mealKey => {
               const currentVal = currentFood[mealKey] || '';
               return `
-                <div class="rounded-xl border border-slate-100 p-2.5">
-                  <div class="flex items-center justify-between mb-1.5">
-                    <span class="text-[11px] font-black text-slate-600">${mealLabels[mealKey]}</span>
-                    ${currentVal ? `<span class="text-[9px] font-bold px-2 py-0.5 rounded-full ${currentVal === 'todo' ? 'bg-green-100 text-green-700' : currentVal === 'poco' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}">${foodOptions.find(f => f.val === currentVal)?.label || currentVal}</span>` : ''}
+                <div class="rounded-xl border ${currentVal ? 'border-green-200 bg-green-50/30' : 'border-slate-100'} p-3">
+                  <div class="flex items-center justify-between mb-2">
+                    <span class="text-xs font-black text-slate-700">${mealLabels[mealKey]}</span>
+                    ${currentVal ? `<span class="text-[9px] font-bold px-2 py-0.5 rounded-full ${currentVal === 'todo' ? 'bg-green-100 text-green-700' : currentVal === 'poco' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}">${foodOptions.find(f => f.val === currentVal)?.label || currentVal}</span>` : '<span class="text-[9px] font-bold text-slate-300">Pendiente</span>'}
                   </div>
-                  <div class="grid grid-cols-4 gap-1">
+                  <div class="grid grid-cols-4 gap-1.5">
                     ${foodOptions.map(fo => `
                       <button onclick="App.setStudentFood('${studentId}','${fo.val}','${mealKey}')"
-                        class="p-1.5 rounded-lg border-2 ${currentVal === fo.val ? 'border-blue-400 bg-blue-50' : 'border-slate-100 bg-white'} text-center">
+                        class="py-2 rounded-xl border-2 ${currentVal === fo.val ? 'border-green-400 bg-green-50' : 'border-slate-100 bg-white'} text-center active:scale-95 transition-all">
                         <span class="text-base">${fo.icon}</span>
-                        <span class="text-[7px] font-black text-slate-500 block">${fo.label}</span>
+                        <span class="text-[7px] font-black ${currentVal === fo.val ? 'text-green-700' : 'text-slate-500'} block">${fo.label}</span>
                       </button>
                     `).join('')}
                   </div>
@@ -1226,20 +1445,23 @@ export function openStudentRoutine(studentId) {
               `;
             }).join('')}
           </div>
-        </div>
+        `)}
 
-        <!-- Siesta -->
-        <div>
-          <h4 class="text-xs font-black text-slate-800 mb-2">😴 Ciclo de Sueño</h4>
+        <div class="border-b border-slate-100"></div>
+
+        <!-- ═══ CICLO DE SUEÑO ═══ -->
+        ${section('😴 Ciclo de Sueño', `
           <div class="grid grid-cols-4 gap-1.5">
             ${[
               { val: 'si', label: 'Dormido', icon: '💤' }, { val: 'no', label: 'No durmió', icon: '☀️' },
               { val: 'poco', label: 'Se despertó', icon: '⏰' }, { val: 'excelente', label: 'Excelente', icon: '⭐' }
             ].map(n => `
               <button onclick="App.setStudentNap('${studentId}','${n.val}')"
-                class="p-2 rounded-xl border-2 ${log?.nap === n.val ? 'border-blue-400 bg-blue-50' : 'border-slate-100 bg-white'} text-center">
+                class="p-2 rounded-xl border-2 ${log?.nap === n.val ? 'border-green-400 bg-green-50' : 'border-slate-100 bg-white'} text-center active:scale-95 transition-all"
+                style="${log?.nap === n.val ? 'box-shadow:0 0 0 2px rgba(34,197,94,0.15)' : ''}">
                 <span class="text-base">${n.icon}</span>
-                <span class="text-[8px] font-black text-slate-600 block">${n.label}</span>
+                <span class="text-[8px] font-black ${log?.nap === n.val ? 'text-green-700' : 'text-slate-600'} block">${n.label}</span>
+                ${log?.nap === n.val ? '<span class="text-[6px] font-black text-green-500">✓</span>' : ''}
               </button>
             `).join('')}
           </div>
@@ -1248,69 +1470,83 @@ export function openStudentRoutine(studentId) {
             class="mt-2 w-full p-2.5 rounded-xl text-white font-black text-[10px] uppercase flex items-center justify-center gap-2" style="background:#7c3aed">
             <span>😴</span> Despertar
           </button>` : ''}
-        </div>
+        `)}
 
-        <!-- Higiene -->
-        <div>
-          <h4 class="text-xs font-black text-slate-800 mb-2">🧼 Higiene y Esfínteres</h4>
-          <div class="grid grid-cols-5 gap-1.5">
-            ${INDIV_EVENTS.filter(e => ['poop', 'pee', 'toilet', 'diaper'].includes(e.id)).map(ev => `
-              <button onclick="App.addStudentEvent('${studentId}','${ev.id}')"
-                class="p-2 rounded-xl border-2 border-slate-100 bg-white flex flex-col items-center gap-0.5">
-                <span class="text-lg">${ev.icon}</span>
-                <span class="text-[8px] font-black text-slate-600">${ev.label}</span>
-              </button>
-            `).join('')}
-            <button onclick="App.addStudentEvent('${studentId}','handwash')"
-              class="p-2 rounded-xl border-2 border-slate-100 bg-white flex flex-col items-center gap-0.5">
-              <span class="text-lg">🧼</span>
-              <span class="text-[8px] font-black text-slate-600">Lavado</span>
-            </button>
-          </div>
-        </div>
+        <div class="border-b border-slate-100"></div>
 
-        <!-- Biberón (enhanced) -->
-        <div>
-          <h4 class="text-xs font-black text-slate-800 mb-2">🍼 Biberón</h4>
+        <!-- ═══ BIBERÓN ═══ -->
+        ${section('🍼 Biberón', `
           <button onclick="App._openMilkModal('${studentId}')"
-            class="w-full p-3 rounded-xl border-2 border-slate-100 bg-white flex items-center gap-3 text-left hover:border-blue-200 transition-all">
+            class="w-full p-3 rounded-xl border-2 ${hasEvent('milk') ? 'border-green-300 bg-green-50' : 'border-slate-100 bg-white'} flex items-center gap-3 text-left hover:border-blue-200 transition-all">
             <span class="text-xl">🍼</span>
             <div class="flex-1">
-              <div class="text-xs font-black text-slate-700">Registrar Biberón</div>
+              <div class="text-xs font-black ${hasEvent('milk') ? 'text-green-700' : 'text-slate-700'}">${hasEvent('milk') ? 'Registrar otro Biberón' : 'Registrar Biberón'}</div>
               <div class="text-[10px] text-slate-400">Onzas, temperatura y hora</div>
             </div>
+            ${hasEvent('milk') ? '<span class="text-[10px] font-black text-green-600 mr-1">✓</span>' : ''}
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
           </button>
-          ${(log?.infant_data || []).filter(e => e.type === 'milk').length > 0 ? `
+          ${events.filter(e => e.type === 'milk').length > 0 ? `
           <div class="mt-2 space-y-1">
-            ${(log.infant_data || []).filter(e => e.type === 'milk').map(evt => `
+            ${events.filter(e => e.type === 'milk').map(evt => `
               <div class="flex items-center gap-2 p-2 rounded-lg bg-blue-50 text-[10px]">
                 <span>🍼</span>
                 <span class="font-bold text-blue-700">${evt.oz ? evt.oz + ' oz' : ''}</span>
-                ${evt.temp ? `<span class="text-blue-500">${TEMP_OPTIONS.find(t => t.val === evt.temp)?.label || evt.temp}</span>` : ''}
+                ${evt.temp ? `<span class="text-blue-500">· ${TEMP_OPTIONS.find(t => t.val === evt.temp)?.label || evt.temp}</span>` : ''}
                 <span class="ml-auto text-blue-400">${evt.created_at ? _fmtTime(evt.created_at) : ''}</span>
               </div>
             `).join('')}
           </div>` : ''}
-        </div>
+        `)}
 
-        <!-- Salud y Alertas -->
-        <div>
-          <h4 class="text-xs font-black text-slate-800 mb-2">🏥 Salud y Alertas</h4>
-          <div class="grid grid-cols-5 gap-1.5">
-            ${INDIV_EVENTS.filter(e => ['temp', 'med', 'hit', 'vomit', 'cough'].includes(e.id)).map(ev => `
-              <button onclick="${ev.id === 'med' ? `App._openMedModal('${studentId}')` : `App.addStudentEvent('${studentId}','${ev.id}')`}"
-                class="p-2 rounded-xl border-2 border-slate-100 bg-white flex flex-col items-center gap-0.5">
-                <span class="text-lg">${ev.icon}</span>
-                <span class="text-[8px] font-black text-slate-600">${ev.label}</span>
-              </button>
-            `).join('')}
+        <div class="border-b border-slate-100"></div>
+
+        <!-- ═══ ACTIVIDADES ═══ -->
+        ${section('🎨 Actividades', `
+          <div class="grid grid-cols-3 gap-1.5">
+            ${chipBtn("App.addStudentEvent('" + studentId + "','activity')", '🎨', 'Actividad', hasEvent('activity'))}
+            ${chipBtn("App.addStudentEvent('" + studentId + "','sensorial')", '🔬', 'Sensorial', hasEvent('sensorial'))}
+            ${chipBtn("App.addStudentEvent('" + studentId + "','playground')", '🌳', 'Patio', hasEvent('playground'))}
+            ${chipBtn("App.addStudentEvent('" + studentId + "','handwash')", '🧼', 'Lavado manos', hasEvent('handwash'))}
+            ${chipBtn("App.addStudentEvent('" + studentId + "','toothbrush')", '🪥', 'Cepillado', hasEvent('toothbrush'))}
           </div>
-        </div>
+        `)}
 
-        <!-- Eventos Extra -->
-        <div>
-          <h4 class="text-xs font-black text-slate-800 mb-2">⚠️ Eventos Extra</h4>
+        <div class="border-b border-slate-100"></div>
+
+        <!-- ═══ HIGIENE ═══ -->
+        ${section('🧼 Higiene y Esfínteres', `
+          <div class="grid grid-cols-3 gap-1.5">
+            ${chipBtn("App.addStudentEvent('" + studentId + "','poop')", '💩', 'Popó', hasEvent('diaper', 'soiled'))}
+            ${chipBtn("App.addStudentEvent('" + studentId + "','pee')", '💧', 'Pipí', hasEvent('diaper', 'wet'))}
+            ${chipBtn("App.addStudentEvent('" + studentId + "','toilet')", '🚽', 'Baño', hasEvent('bath'))}
+            ${chipBtn("App.addStudentEvent('" + studentId + "','diaper')", '🧻', 'Cambio pañal', hasEvent('diaper_change'))}
+            <button onclick="App.addStudentEvent('${studentId}','note')"
+              class="p-2 rounded-xl border-2 ${log?.notes ? 'border-green-400 bg-green-50' : 'border-slate-100 bg-white'} flex flex-col items-center gap-0.5 active:scale-95 transition-all col-span-2">
+              <span class="text-lg">📝</span>
+              <span class="text-[7px] font-black ${log?.notes ? 'text-green-700' : 'text-slate-500'}">Nota rápida</span>
+              ${log?.notes ? '<span class="text-[6px] font-black text-green-500">✓</span>' : ''}
+            </button>
+          </div>
+        `)}
+
+        <div class="border-b border-slate-100"></div>
+
+        <!-- ═══ SALUD ═══ -->
+        ${section('🏥 Salud y Alertas', `
+          <div class="grid grid-cols-3 gap-1.5">
+            ${chipBtn("App.addStudentEvent('" + studentId + "','temp')", '🌡️', 'Temperatura', hasEvent('temp'))}
+            ${chipBtnNS("App._openMedModal('" + studentId + "')", '💊', 'Medicamento', hasEvent('med'))}
+            ${chipBtn("App.addStudentEvent('" + studentId + "','hit')", '🤕', 'Golpe/Caída', hasEvent('incident', 'hit'))}
+            ${chipBtn("App.addStudentEvent('" + studentId + "','vomit')", '🤮', 'Vómito', hasEvent('health', 'vomit'))}
+            ${chipBtn("App.addStudentEvent('" + studentId + "','cough')", '😷', 'Tos/Congestión', hasEvent('health', 'cough'))}
+          </div>
+        `)}
+
+        <div class="border-b border-slate-100"></div>
+
+        <!-- ═══ EVENTOS EXTRA ═══ -->
+        ${section('⚠️ Eventos Extra', `
           <button onclick="App._openExtraEventModal('${studentId}')"
             class="w-full p-3 rounded-xl border-2 border-dashed border-slate-200 bg-white flex items-center gap-3 text-left hover:border-red-300 transition-all">
             <span class="text-xl">➕</span>
@@ -1320,93 +1556,96 @@ export function openStudentRoutine(studentId) {
             </div>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
           </button>
-        </div>
+        `)}
 
-        <!-- Conducta Social -->
-        <div>
-          <h4 class="text-xs font-black text-slate-800 mb-2">🤝 Conducta Social</h4>
-          <div class="grid grid-cols-2 gap-1.5">
-            ${[
-              { val: 'shared', icon: '🤝', label: 'Compartió' }, { val: 'alone', icon: '🧍', label: 'Jugó solo' },
-              { val: 'group', icon: '👥', label: 'Grupo' }, { val: 'emotional_support', icon: '💛', label: 'Apoyo emocional' }
-            ].map(b => `
-              <button onclick="App.setStudentBehavior('${studentId}','social','${b.val}')"
-                class="p-2 rounded-xl border-2 border-slate-100 bg-white flex items-center gap-2 text-left">
-                <span class="text-base">${b.icon}</span>
-                <span class="text-[9px] font-black text-slate-600">${b.label}</span>
-              </button>
-            `).join('')}
+        <div class="border-b border-slate-100"></div>
+
+        <!-- ═══ CONDUCTA ═══ -->
+        ${section('🤝 Conducta', `
+          <div class="space-y-3">
+            <div>
+              <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wide mb-1.5">Social</p>
+              <div class="grid grid-cols-2 gap-1.5">
+                ${[
+                  { val: 'shared', icon: '🤝', label: 'Compartió' }, { val: 'alone', icon: '🧍', label: 'Jugó solo' },
+                  { val: 'group', icon: '👥', label: 'Grupo' }, { val: 'emotional_support', icon: '💛', label: 'Apoyo emocional' }
+                ].map(b => `
+                  <button onclick="App.setStudentBehavior('${studentId}','social','${b.val}')"
+                    class="p-2 rounded-xl border-2 border-slate-100 bg-white flex items-center gap-2 text-left active:scale-95 transition-all">
+                    <span class="text-base">${b.icon}</span>
+                    <span class="text-[9px] font-black text-slate-600">${b.label}</span>
+                  </button>
+                `).join('')}
+              </div>
+            </div>
+            <div>
+              <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wide mb-1.5">Clase</p>
+              <div class="grid grid-cols-2 gap-1.5">
+                ${[
+                  { val: 'attention', icon: '👂', label: 'Atención' }, { val: 'participation', icon: '🙋', label: 'Participó' },
+                  { val: 'curiosity', icon: '🔍', label: 'Curiosidad' }, { val: 'completed', icon: '✅', label: 'Terminó' },
+                  { val: 'needed_help', icon: '🙋‍♀️', label: 'Necesitó ayuda' }
+                ].map(b => `
+                  <button onclick="App.setStudentBehavior('${studentId}','classroom','${b.val}')"
+                    class="p-2 rounded-xl border-2 border-slate-100 bg-white flex items-center gap-2 text-left active:scale-95 transition-all">
+                    <span class="text-base">${b.icon}</span>
+                    <span class="text-[9px] font-black text-slate-600">${b.label}</span>
+                  </button>
+                `).join('')}
+              </div>
+            </div>
+            <div>
+              <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wide mb-1.5">Emocional</p>
+              <div class="grid grid-cols-2 gap-1.5">
+                ${[
+                  { val: 'controlled', icon: '😌', label: 'Controló' }, { val: 'frustrated', icon: '😤', label: 'Se frustró' },
+                  { val: 'crying', icon: '😭', label: 'Lloró' }, { val: 'anxious', icon: '😰', label: 'Ansiedad' },
+                  { val: 'calmed', icon: '🧘', label: 'Se calmó' }
+                ].map(b => `
+                  <button onclick="App.setStudentBehavior('${studentId}','emotional','${b.val}')"
+                    class="p-2 rounded-xl border-2 border-slate-100 bg-white flex items-center gap-2 text-left active:scale-95 transition-all">
+                    <span class="text-base">${b.icon}</span>
+                    <span class="text-[9px] font-black text-slate-600">${b.label}</span>
+                  </button>
+                `).join('')}
+              </div>
+            </div>
+            <div>
+              <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wide mb-1.5">Montessori</p>
+              <div class="grid grid-cols-3 gap-1.5">
+                ${[
+                  { val: 'manipulation', icon: '🤲', label: 'Manipulación' }, { val: 'fine_motor', icon: '✋', label: 'Fina' },
+                  { val: 'gross_motor', icon: '🏃', label: 'Gruesa' }, { val: 'language', icon: '💬', label: 'Lenguaje' },
+                  { val: 'concentration', icon: '🎯', label: 'Concentración' }, { val: 'autonomy', icon: '💪', label: 'Autonomía' }
+                ].map(b => `
+                  <button onclick="App.setStudentBehavior('${studentId}','montessori','${b.val}')"
+                    class="p-2 rounded-xl border-2 border-slate-100 bg-white flex flex-col items-center gap-0.5 active:scale-95 transition-all">
+                    <span class="text-base">${b.icon}</span>
+                    <span class="text-[8px] font-black text-slate-600">${b.label}</span>
+                  </button>
+                `).join('')}
+              </div>
+            </div>
           </div>
-        </div>
+        `)}
 
-        <!-- Conducta en Clase -->
-        <div>
-          <h4 class="text-xs font-black text-slate-800 mb-2">📚 Conducta en Clase</h4>
-          <div class="grid grid-cols-2 gap-1.5">
-            ${[
-              { val: 'attention', icon: '👂', label: 'Atención' }, { val: 'participation', icon: '🙋', label: 'Participó' },
-              { val: 'curiosity', icon: '🔍', label: 'Curiosidad' }, { val: 'completed', icon: '✅', label: 'Terminó' },
-              { val: 'needed_help', icon: '🙋‍♀️', label: 'Necesitó ayuda' }
-            ].map(b => `
-              <button onclick="App.setStudentBehavior('${studentId}','classroom','${b.val}')"
-                class="p-2 rounded-xl border-2 border-slate-100 bg-white flex items-center gap-2 text-left">
-                <span class="text-base">${b.icon}</span>
-                <span class="text-[9px] font-black text-slate-600">${b.label}</span>
-              </button>
-            `).join('')}
-          </div>
-        </div>
+        <div class="border-b border-slate-100"></div>
 
-        <!-- Regulación Emocional -->
-        <div>
-          <h4 class="text-xs font-black text-slate-800 mb-2">🧠 Regulación Emocional</h4>
-          <div class="grid grid-cols-2 gap-1.5">
-            ${[
-              { val: 'controlled', icon: '😌', label: 'Controló' }, { val: 'frustrated', icon: '😤', label: 'Se frustró' },
-              { val: 'crying', icon: '😭', label: 'Lloró' }, { val: 'anxious', icon: '😰', label: 'Ansiedad' },
-              { val: 'calmed', icon: '🧘', label: 'Se calmó' }
-            ].map(b => `
-              <button onclick="App.setStudentBehavior('${studentId}','emotional','${b.val}')"
-                class="p-2 rounded-xl border-2 border-slate-100 bg-white flex items-center gap-2 text-left">
-                <span class="text-base">${b.icon}</span>
-                <span class="text-[9px] font-black text-slate-600">${b.label}</span>
-              </button>
-            `).join('')}
-          </div>
-        </div>
-
-        <!-- Montessori -->
-        <div>
-          <h4 class="text-xs font-black text-slate-800 mb-2">🧩 Desarrollo Montessori</h4>
-          <div class="grid grid-cols-3 gap-1.5">
-            ${[
-              { val: 'manipulation', icon: '🤲', label: 'Manipulación' }, { val: 'fine_motor', icon: '✋', label: 'Fina' },
-              { val: 'gross_motor', icon: '🏃', label: 'Gruesa' }, { val: 'language', icon: '💬', label: 'Lenguaje' },
-              { val: 'concentration', icon: '🎯', label: 'Concentración' }, { val: 'autonomy', icon: '💪', label: 'Autonomía' }
-            ].map(b => `
-              <button onclick="App.setStudentBehavior('${studentId}','montessori','${b.val}')"
-                class="p-2 rounded-xl border-2 border-slate-100 bg-white flex flex-col items-center gap-0.5">
-                <span class="text-base">${b.icon}</span>
-                <span class="text-[8px] font-black text-slate-600">${b.label}</span>
-              </button>
-            `).join('')}
-          </div>
-        </div>
-
-        <!-- Nota -->
-        <div>
-          <h4 class="text-xs font-black text-slate-800 mb-2">📝 Nota Individual</h4>
+        <!-- ═══ NOTA ═══ -->
+        ${section('📝 Nota Individual', `
           <textarea id="studentNote-${studentId}" placeholder="Escribe una nota sobre el día..."
-            class="w-full p-3 border-2 border-slate-100 rounded-xl text-xs focus:border-blue-400 outline-none" rows="2">${safeEscapeHTML(log?.notes || '')}</textarea>
+            class="w-full p-3 border-2 border-slate-100 rounded-xl text-xs focus:border-blue-400 outline-none" rows="3">${safeEscapeHTML(log?.notes || '')}</textarea>
           <button onclick="App.saveStudentNote('${studentId}')"
-            class="mt-2 w-full p-2.5 rounded-xl text-white font-black text-[10px] uppercase" style="background:#28B54D">Guardar Nota</button>
-        </div>
+            class="mt-2 w-full p-3 rounded-xl text-white font-black text-xs uppercase" style="background:#28B54D">Guardar Nota</button>
+        `)}
 
-        <!-- Timeline Individual -->
-        <div>
-          <h4 class="text-xs font-black text-slate-800 mb-2">🕐 Línea de tiempo del día</h4>
+        <div class="border-b border-slate-100"></div>
+
+        <!-- ═══ TIMELINE ═══ -->
+        ${section('🕐 Línea de tiempo del día', `
           <div class="space-y-1 max-h-48 overflow-y-auto">${timelineHtml}</div>
-        </div>
+        `)}
+
       </div>
     </div>
   `;
@@ -1432,12 +1671,17 @@ export async function deleteInfantEvent(studentId, eventId) {
   } catch { safeToast('Error al eliminar', 'error'); }
 }
 
+function _isModalOpen() {
+  return !!document.getElementById('studentRoutineModal')?.querySelector('#sr-scroll');
+}
+
 export async function setStudentMood(studentId, mood) {
   const classroom = AppState.get('classroom');
   try {
     await MaestraApi.upsertDailyLog({ student_id: studentId, classroom_id: classroom.id, date: _today(), mood });
     safeToast('Estado emocional guardado', 'success');
     await initRoutine();
+    if (_isModalOpen()) openStudentRoutine(studentId);
   } catch { safeToast('Error al guardar', 'error'); }
 }
 
@@ -1456,6 +1700,7 @@ export async function setStudentFood(studentId, food, mealKey) {
     await MaestraApi.upsertDailyLog({ student_id: studentId, classroom_id: classroom.id, date: _today(), food: JSON.stringify(currentFood) });
     safeToast('Alimentación guardada', 'success');
     await initRoutine();
+    if (_isModalOpen()) openStudentRoutine(studentId);
   } catch { safeToast('Error al guardar', 'error'); }
 }
 
@@ -1465,6 +1710,7 @@ export async function setStudentNap(studentId, nap) {
     await MaestraApi.upsertDailyLog({ student_id: studentId, classroom_id: classroom.id, date: _today(), nap });
     safeToast('Siesta guardada', 'success');
     await initRoutine();
+    if (_isModalOpen()) openStudentRoutine(studentId);
   } catch { safeToast('Error al guardar', 'error'); }
 }
 
@@ -1477,14 +1723,16 @@ export async function setStudentBehavior(studentId, category, value) {
     });
     safeToast('Comportamiento registrado', 'success');
     await initRoutine();
+    if (_isModalOpen()) openStudentRoutine(studentId);
   } catch { safeToast('Error al guardar', 'error'); }
 }
 
-export async function addStudentEvent(studentId, eventId) {
+export async function addStudentEvent(studentId, eventId, customLabel) {
   const classroom = AppState.get('classroom');
   const ev = INDIV_EVENTS.find(e => e.id === eventId);
   if (!ev) return;
   if (_isDuplicate(studentId, eventId)) { safeToast('Evento registrado hace poco', 'warning'); return; }
+  const label = customLabel || ev.label;
   try {
     if (ev.type === 'milk') {
       _openMilkModal(studentId);
@@ -1496,10 +1744,11 @@ export async function addStudentEvent(studentId, eventId) {
       _openMedModal(studentId);
       return;
     } else {
-      await MaestraApi.upsertDailyLog({ student_id: studentId, classroom_id: classroom.id, date: _today(), infant_event: { type: ev.type, subtype: ev.subtype, label: ev.label } });
+      await MaestraApi.upsertDailyLog({ student_id: studentId, classroom_id: classroom.id, date: _today(), infant_event: { type: ev.type, subtype: ev.subtype, label } });
     }
-    safeToast(`${ev.label} registrado`, 'success');
+    safeToast(`${label} registrado`, 'success');
     await initRoutine();
+    if (_isModalOpen()) openStudentRoutine(studentId);
   } catch { safeToast('Error al guardar', 'error'); }
 }
 
@@ -1510,7 +1759,7 @@ export async function saveStudentNote(studentId) {
     await MaestraApi.upsertDailyLog({ student_id: studentId, classroom_id: classroom.id, date: _today(), notes: noteEl?.value || '' });
     safeToast('Nota guardada', 'success');
     await initRoutine();
-    UI.Modal.close('studentRoutineModal');
+    openStudentRoutine(studentId);
   } catch { safeToast('Error al guardar', 'error'); }
 }
 
@@ -1542,19 +1791,19 @@ export async function routineWakeStudent(studentId) {
 // BIBERÓN, MEDICAMENTO, EVENTOS EXTRA — MODALS
 // ═══════════════════════════════════════════════════════════════════════════════
 
-function _openMilkModal(studentId) {
+export function _openMilkModal(studentId) {
   UI.Modal.open('milkModal', _renderMilkModal(studentId));
 }
 
-function _openMedModal(studentId) {
+export function _openMedModal(studentId) {
   UI.Modal.open('medModal', _renderMedModal(studentId));
 }
 
-function _openExtraEventModal(studentId) {
+export function _openExtraEventModal(studentId) {
   UI.Modal.open('extraEventModal', _renderExtraEventModal(studentId));
 }
 
-async function _confirmMilk(studentId) {
+export async function _confirmMilk(studentId) {
   const btn = document.querySelector('#milkModal button:last-of-type');
   if (btn) { btn.disabled = true; btn.textContent = 'Guardando...'; }
   const classroom = AppState.get('classroom');
@@ -1574,7 +1823,7 @@ async function _confirmMilk(studentId) {
   } catch { safeToast('Error al guardar', 'error'); if (btn) { btn.disabled = false; btn.textContent = 'Guardar Biberón'; } }
 }
 
-async function _confirmMed(studentId) {
+export async function _confirmMed(studentId) {
   const btn = document.querySelector('#medModal button:last-of-type');
   if (btn) { btn.disabled = true; btn.textContent = 'Guardando...'; }
   const classroom = AppState.get('classroom');
@@ -1596,7 +1845,7 @@ async function _confirmMed(studentId) {
   } catch { safeToast('Error al guardar', 'error'); if (btn) { btn.disabled = false; btn.textContent = 'Guardar Medicamento'; } }
 }
 
-async function _confirmExtraEvent(studentId) {
+export async function _confirmExtraEvent(studentId) {
   const btn = document.querySelector('#extraEventModal button:last-of-type');
   if (btn) { btn.disabled = true; btn.textContent = 'Guardando...'; }
   const classroom = AppState.get('classroom');
@@ -1615,6 +1864,95 @@ async function _confirmExtraEvent(studentId) {
     await initRoutine();
     openStudentRoutine(studentId);
   } catch { safeToast('Error al guardar', 'error'); if (btn) { btn.disabled = false; btn.textContent = 'Guardar Evento'; } }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// QUICK ADD EVENT FROM TIMELINE
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const QUICK_EVENTS = [
+  { id: 'poop',     icon: '💩', label: 'Popó' },
+  { id: 'pee',      icon: '💧', label: 'Pipí' },
+  { id: 'toilet',   icon: '🚽', label: 'Baño' },
+  { id: 'diaper',   icon: '🧻', label: 'Cambio pañal' },
+  { id: 'milk',     icon: '🍼', label: 'Biberón' },
+  { id: 'temp',     icon: '🌡️', label: 'Temperatura' },
+  { id: 'activity', icon: '🎨', label: 'Actividad' },
+  { id: 'sensorial',icon: '🔬', label: 'Sensorial' },
+  { id: 'playground',icon: '🌳', label: 'Patio' },
+  { id: 'handwash', icon: '🧼', label: 'Lavado manos' },
+  { id: 'toothbrush',icon: '🪥', label: 'Cepillado' },
+  { id: 'med',      icon: '💊', label: 'Medicamento' },
+  { id: 'hit',      icon: '🤕', label: 'Golpe/Caída' },
+  { id: 'vomit',    icon: '🤮', label: 'Vómito' },
+  { id: 'cough',    icon: '😷', label: 'Tos/Congestión' },
+];
+
+export function openQuickAddModal() {
+  const classroom = AppState.get('classroom');
+  const allStudents = AppState.get('students') || [];
+  const today = _today();
+  const presentStudents = allStudents.filter(s => {
+    if (!_logsMap) return true;
+    const log = _logsMap[s.id];
+    return !log || log.date !== today || log.status === 'present' || log.status === 'late';
+  });
+  const studentOptions = presentStudents.length > 0 ? presentStudents : allStudents;
+
+  UI.Modal.open('quickAddModal', `
+    <div class="bg-white overflow-hidden" style="border-radius:24px;max-width:420px;margin:0 auto">
+      <div class="p-5" style="background:linear-gradient(135deg,#0B63C7,#28B54D)">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <span class="text-2xl">➕</span>
+            <div><h3 class="text-lg font-black text-white">Agregar Evento</h3><p class="text-xs font-bold text-white/80">Selecciona tipo y alumno</p></div>
+          </div>
+          <button onclick="UI.Modal.close('quickAddModal')" class="p-2 rounded-xl bg-white/20 text-white">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="p-5 space-y-4 max-h-[75vh] overflow-y-auto">
+        <div>
+          <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Alumno</label>
+          <select id="qaStudent" class="w-full mt-1 p-3 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-700 outline-none focus:border-blue-400 bg-white">
+            <option value="">Seleccionar alumno...</option>
+            ${studentOptions.map(s => `<option value="${s.id}">${safeEscapeHTML(s.name || s.full_name || '')}</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tipo de evento</label>
+          <div class="grid grid-cols-3 gap-1.5 mt-2">
+            ${QUICK_EVENTS.map(ev => `
+              <button type="button"
+                onclick="document.getElementById('qaType').value='${ev.id}';document.getElementById('qaCustomLabel').value='${ev.label}';this.parentElement.querySelectorAll('button').forEach(b=>b.classList.remove('border-blue-500','bg-blue-50'));this.classList.add('border-blue-500','bg-blue-50')"
+                class="p-2 rounded-xl border-2 border-slate-100 text-center flex flex-col items-center gap-0.5 active:scale-95 transition-all">
+                <span class="text-lg">${ev.icon}</span>
+                <span class="text-[7px] font-black text-slate-600">${ev.label}</span>
+              </button>
+            `).join('')}
+          </div>
+          <input type="hidden" id="qaType" value="">
+        </div>
+        <div>
+          <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nombre personalizado</label>
+          <input id="qaCustomLabel" type="text" placeholder="Ej: Baño con agua tibia"
+            class="w-full mt-1 p-3 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-700 outline-none focus:border-blue-400">
+        </div>
+        <button onclick="App._submitQuickAdd()" class="w-full py-3 rounded-xl font-black text-xs uppercase text-white" style="background:#28B54D">Registrar Evento</button>
+      </div>
+    </div>
+  `);
+}
+
+export async function _submitQuickAdd() {
+  const studentId = document.getElementById('qaStudent')?.value;
+  const eventId = document.getElementById('qaType')?.value;
+  const customLabel = document.getElementById('qaCustomLabel')?.value?.trim();
+  if (!studentId) { safeToast('Selecciona un alumno', 'warning'); return; }
+  if (!eventId) { safeToast('Selecciona un tipo de evento', 'warning'); return; }
+  UI.Modal.close('quickAddModal');
+  await addStudentEvent(studentId, eventId, customLabel || undefined);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

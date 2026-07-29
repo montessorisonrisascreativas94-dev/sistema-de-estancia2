@@ -1187,16 +1187,7 @@
   <script type="module" src="js/asistente/main.js"></script>
   <script src="js/shared/lightbox.js" defer></script>
   <script src="js/shared/confirm-dialog.js" defer></script>
-  <script>
-    // Service Worker registration (Unified for PWA + OneSignal)
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/OneSignalSDKWorker.js', { scope: '/' })
-          .then(() => {})
-          .catch(() => {});
-      });
-    }
-  </script>
+  <script src="js/pwa-update.js" defer></script>
 
   <!-- Payment Modal -->
   <div id="paymentModal" class="fixed inset-0 bg-black/30 z-50 hidden items-center justify-center">

@@ -10,12 +10,8 @@
   <style>html{display:none;}</style>
   <!-- X-Frame-Options debe ser configurado por el servidor, no por meta tag -->
   <script>if(self===top){document.documentElement.style.display='block';}else{top.location=self.location;}</script>
-  <!-- Service Worker  registrar lo antes posible para OneSignal -->
-  <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/OneSignalSDKWorker.js', { scope: '/' }).catch(() => {});
-    }
-  </script>
+  <!-- Service Worker (PWA + OneSignal) -->
+  <script src="js/pwa-update.js" defer></script>
   <!-- OneSignal SDK -->
   <script>
   (function(){

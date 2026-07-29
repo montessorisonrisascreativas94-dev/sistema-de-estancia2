@@ -1,11 +1,10 @@
 /**
  * Colegio Montessori Sonrisas Creativas — Service Worker PWA
- * IMPORTANTE: Este SW solo maneja caché PWA.
- * Las notificaciones push las maneja OneSignalSDKWorker.js en el mismo scope.
- * NO definir handlers push/notificationclick aquí para no interferir con OneSignal.
+ * Importa OneSignalSDKWorker.js para manejar notificaciones push en el mismo scope.
  */
+importScripts('./OneSignalSDKWorker.js');
 
-const CACHE_NAME = 'karpus-pwa-v7';
+const CACHE_NAME = 'karpus-pwa-v8';
 
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
@@ -90,7 +89,4 @@ self.addEventListener('fetch', e => {
   }
 });
 
-// ⚠️ NO agregar handlers push/notificationclick aquí.
-// OneSignalSDKWorker.js maneja todo lo relacionado con notificaciones push.
-// Tener dos handlers en el mismo scope causa que las notificaciones se dupliquen
-// o no lleguen correctamente en móvil.
+// OneSignalSDKWorker.js se importa arriba para manejar notificaciones push.

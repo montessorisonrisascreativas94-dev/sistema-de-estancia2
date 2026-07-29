@@ -16,11 +16,7 @@
     #initial-loading { z-index: 9999; }
   </style>
   <script>if(self===top){document.documentElement.style.display='block';}else{top.location=self.location;}</script>
-  <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/OneSignalSDKWorker.js', { scope: '/' }).catch(() => {});
-    }
-  </script>
+  <script src="js/pwa-update.js" defer></script>
   <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
   <title>Panel Encargada — Colegio Montessori Sonrisas Creativas</title>
   <link rel="icon" href="logo/favicon.ico" type="image/x-icon">
@@ -1090,13 +1086,6 @@
               </div>
             </div>
 
-            <div class="mt-6 bg-white rounded-2xl border border-purple-100 p-6">
-              <h3 class="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-                <i data-lucide="alert-triangle" class="w-5 h-5 text-purple-400"></i>
-                Alertas Pendientes
-              </h3>
-              <div id="alertasPendientes" class="text-slate-400">No hay alertas en este momento.</div>
-            </div>
           </div>
         </section>
 

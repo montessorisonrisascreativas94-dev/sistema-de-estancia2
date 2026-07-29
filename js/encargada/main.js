@@ -182,7 +182,6 @@ async function loadDashboard() {
     }
     const mejorMaestraEl = document.getElementById('mejorMaestra');
     const mejorAulaEl = document.getElementById('mejorAula');
-    const alertasPendientesEl = document.getElementById('alertasPendientes');
     if (mejorMaestraEl) {
       mejorMaestraEl.innerHTML = teachers?.[0] ? `
         <div class="text-center">
@@ -204,40 +203,7 @@ async function loadDashboard() {
         </div>
       ` : '<p class="text-slate-400">No hay aulas</p>';
     }
-    if (alertasPendientesEl) {
-      alertasPendientesEl.innerHTML = `
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div class="bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-200 rounded-2xl p-6">
-            <h4 class="font-black text-purple-900 mb-4 flex items-center gap-2">
-              <i data-lucide="info" class="w-5 h-5"></i>
-              Bienvenido al Panel de Encargada
-            </h4>
-            <ul class="space-y-2 text-sm text-purple-800">
-              <li class="flex items-center gap-2">
-                <i data-lucide="check" class="w-4 h-4"></i>
-                Explora las secciones de Maestras, Permisos y Chat
-              </li>
-              <li class="flex items-center gap-2">
-                <i data-lucide="check" class="w-4 h-4"></i>
-                Monitorea el rendimiento docente en tiempo real
-              </li>
-            </ul>
-          </div>
-          <div class="bg-gradient-to-br from-violet-50 to-violet-100 border border-violet-200 rounded-2xl p-6">
-            <h4 class="font-black text-violet-900 mb-4 flex items-center gap-2">
-              <i data-lucide="settings" class="w-5 h-5"></i>
-              Configuración Rápida
-            </h4>
-            <ul class="space-y-2 text-sm text-violet-800">
-              <li class="flex items-start gap-2">
-                <i data-lucide="arrow-right" class="w-4 h-4 mt-0.5"></i>
-                Ajusta tu perfil en la sección de Mi Perfil
-              </li>
-            </ul>
-          </div>
-        </div>
-      `;
-    }
+
     if (window.lucide) lucide.createIcons();
   } catch (e) {
     console.error('[Dashboard] Error:', e);
@@ -1438,12 +1404,12 @@ async function loadMuroEscolar() {
 
     el.innerHTML = `
       <div class="bg-white rounded-2xl border border-slate-100 p-6 mb-6">
-        <h3 class="font-black text-indigo-700 mb-4 flex items-center gap-2"><i data-lucide="plus-circle" class="w-5 h-5"></i> Nueva Publicación</h3>
+        <h3 class="font-black text-purple-700 mb-4 flex items-center gap-2"><i data-lucide="plus-circle" class="w-5 h-5"></i> Nueva Publicación</h3>
         <div class="space-y-3">
           <textarea id="muroText" rows="3" placeholder="Escribe un aviso, novedad o mensaje para las familias..."
-            class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 outline-none transition-all text-sm"></textarea>
+            class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-purple-500 focus:ring-4 focus:ring-purple-50 outline-none transition-all text-sm"></textarea>
           <div class="flex flex-wrap items-center gap-3">
-            <select id="muroClassroom" class="px-3 py-2 rounded-xl border border-slate-200 text-sm focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 outline-none">
+            <select id="muroClassroom" class="px-3 py-2 rounded-xl border border-slate-200 text-sm focus:border-purple-500 focus:ring-4 focus:ring-purple-50 outline-none">
               <option value="">Todas las aulas</option>
               ${cls.map(c => `<option value="${c.id}">${c.name}</option>`).join('')}
             </select>
@@ -1451,7 +1417,7 @@ async function loadMuroEscolar() {
               <i data-lucide="image" class="w-4 h-4"></i> Foto
               <input type="file" accept="image/*" id="muroFile" class="hidden">
             </label>
-            <button id="btnMuroPublish" class="ml-auto px-5 py-2 bg-indigo-600 text-white rounded-xl font-black text-xs hover:bg-indigo-700 transition-all shadow-md">
+            <button id="btnMuroPublish" class="ml-auto px-5 py-2 rounded-xl font-black text-xs transition-all shadow-md" style="background:#7C3AED!important;color:white!important">
               Publicar
             </button>
           </div>
