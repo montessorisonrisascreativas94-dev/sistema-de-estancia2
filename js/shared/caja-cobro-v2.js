@@ -450,19 +450,22 @@ export const CajaCobroV2 = {
             <span style="font-size:.7rem;font-weight:800;color:#ea580c">${reviewConcepts.length} concepto${reviewConcepts.length>1?'s':''} del padre en revisión — pre-seleccionado${reviewConcepts.length>1?'s':''}</span>
           </div>` : ''}
           <div style="font-size:.62rem;font-weight:900;color:#94a3b8;text-transform:uppercase;margin-bottom:10px">Conceptos adicionales</div>
-          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px">
-            ${displayConcepts.slice(0,6).map(c=>{
+          <div id="conceptosGrid" style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-bottom:10px;max-height:280px;overflow-y:auto;padding:2px">
+            ${displayConcepts.map(c=>{
               const isInCart = _cart.some(item => item._conceptId === c.id);
               return `
               <button onclick="CajaCobroV2.addExtraConcept('${c.id}','${Helpers.escapeHTML(c.label)}',${c.amount})"
                 id="concept_${c.id}"
-                style="padding:12px 8px;border-radius:12px;border:2px solid ${isInCart?'#FF8A00':'#e2e8f0'};background:${isInCart?'#fff7ed':'white'};cursor:pointer;transition:all .12s;text-align:center;display:flex;flex-direction:column;align-items:center;gap:4px">
-                <span style="font-size:1.3rem">${c.icon||'🏷️'}</span>
-                <span style="font-size:.7rem;font-weight:800;color:${isInCart?'#ea580c':'#1a2340'};line-height:1.2">${Helpers.escapeHTML(c.label)}</span>
-                <span style="font-size:.7rem;font-weight:900;color:#0B63C7">${c.amount>0?fmt(c.amount):'Libre'}</span>
-                ${isInCart?'<span style="font-size:.5rem;font-weight:900;color:#ea580c">En revisión</span>':''}
+                style="padding:10px 4px;border-radius:10px;border:2px solid ${isInCart?'#FF8A00':'#e2e8f0'};background:${isInCart?'#fff7ed':'white'};cursor:pointer;transition:all .12s;text-align:center;display:flex;flex-direction:column;align-items:center;gap:3px">
+                <span style="font-size:1.1rem">${c.icon||'🏷️'}</span>
+                <span style="font-size:.6rem;font-weight:800;color:${isInCart?'#ea580c':'#1a2340'};line-height:1.2">${Helpers.escapeHTML(c.label)}</span>
+                <span style="font-size:.6rem;font-weight:900;color:#0B63C7">${c.amount>0?fmt(c.amount):'Libre'}</span>
+                ${isInCart?'<span style="font-size:.45rem;font-weight:900;color:#ea580c">✓</span>':''}
               </button>`;
             }).join('')}
+          </div>
+          <div style="text-align:right;margin-bottom:10px">
+            <button onclick="CajaCobroV2.showAllConceptsModal()" style="font-size:.65rem;font-weight:900;color:#0B63C7;border:none;background:none;cursor:pointer;padding:4px 8px;text-decoration:underline">📋 Ver todos los conceptos</button>
           </div>
           <div style="background:#f8fafc;border-radius:12px;padding:14px;border:1px solid #e2e8f0">
             <div style="font-size:.62rem;font-weight:900;color:#94a3b8;text-transform:uppercase;margin-bottom:8px">Concepto libre</div>
@@ -560,6 +563,7 @@ export const CajaCobroV2 = {
         @media(max-width:600px){
           #cajaModalInner{max-width:98vw!important}
           #cajaTabs button{font-size:.55rem!important;padding:6px 2px!important}
+          #conceptosGrid{grid-template-columns:repeat(3,1fr)!important}
         }
       </style>
     </div>`;
@@ -670,6 +674,50 @@ export const CajaCobroV2 = {
     document.getElementById('freeConceptLabel').value = '';
     document.getElementById('freeConceptAmt').value   = '';
     this._updateCart();
+  },
+
+  // ── MODAL: TODOS LOS CONCEPTOS ────────────────────────────────────────────
+  showAllConceptsModal() {
+    const allConcepts = _dbConcepts.length > 0
+      ? _dbConcepts.map(c => ({ id: 'db_'+c.id, label: c.name, amount: c.amount, icon: '🏷️' }))
+      : getCatalog();
+    const overlay = document.createElement('div');
+    overlay.id = 'allConceptsModalCaja';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(6px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+    overlay.onclick = e => { if(e.target===overlay) overlay.remove(); };
+    overlay.innerHTML = `
+      <div style="background:#f8fafc;border-radius:16px;width:100%;max-width:900px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.25)">
+        <div style="padding:14px 18px;background:linear-gradient(135deg,#0B63C7,#0850A0);display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+          <div style="font-weight:900;font-size:.95rem;color:white">📋 Todos los conceptos</div>
+          <button onclick="this.closest('#allConceptsModalCaja').remove()" style="width:30px;height:30px;border-radius:50%;border:none;background:rgba(255,255,255,.2);color:white;font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center">✕</button>
+        </div>
+        <div style="padding:16px;overflow-y:auto;flex:1">
+          <div class="conceptosAllGrid" style="display:grid;gap:8px">
+            ${allConcepts.map(c => {
+              const isInCart = _cart.some(item => item._conceptId === c.id);
+              return `
+              <button onclick="CajaCobroV2.addExtraConcept('${c.id}','${Helpers.escapeHTML(c.label)}',${c.amount});this.closest('#allConceptsModalCaja').remove()"
+                id="allConcept_${c.id}"
+                style="padding:14px 6px;border-radius:12px;border:2px solid ${isInCart?'#FF8A00':'#e2e8f0'};background:${isInCart?'#fff7ed':'white'};cursor:pointer;transition:all .12s;text-align:center;display:flex;flex-direction:column;align-items:center;gap:4px">
+                <span style="font-size:1.5rem">${c.icon||'🏷️'}</span>
+                <span style="font-size:.65rem;font-weight:800;color:${isInCart?'#ea580c':'#1a2340'};line-height:1.2">${Helpers.escapeHTML(c.label)}</span>
+                <span style="font-size:.65rem;font-weight:900;color:#0B63C7">${c.amount>0?fmt(c.amount):'Libre'}</span>
+                ${isInCart?'<span style="font-size:.5rem;font-weight:900;color:#ea580c">✓ En carrito</span>':''}
+              </button>`;
+            }).join('')}
+          </div>
+        </div>
+        <div style="padding:10px 16px;border-top:1px solid #e2e8f0;text-align:center;font-size:.7rem;color:#94a3b8;flex-shrink:0">
+          ${allConcepts.length} concepto${allConcepts.length!==1?'s':''} disponibles · Sincronizado desde la base de datos
+        </div>
+      </div>
+      <style id="allConceptsStyle">
+        #allConceptsModalCaja .conceptosAllGrid{grid-template-columns:repeat(6,1fr)}
+        @media(max-width:700px){#allConceptsModalCaja .conceptosAllGrid{grid-template-columns:repeat(3,1fr)!important}}
+        @media(max-width:450px){#allConceptsModalCaja .conceptosAllGrid{grid-template-columns:repeat(2,1fr)!important}}
+      </style>`;
+    document.body.appendChild(overlay);
+    if (window.lucide) lucide.createIcons();
   },
 
   // ── DESCUENTO ──────────────────────────────────────────────────────────────

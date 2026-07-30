@@ -122,9 +122,9 @@ async function loadDashboard() {
       supabase.from('task_evidences').select('id, task_id, created_at'),
       supabase.from('posts').select('id, teacher_id, created_at'),
       supabase.from('messages').select('id, sender_id, created_at'),
-      supabase.from('grades').select('id, grade_letter, created_at'),
-      supabase.from('daily_routines').select('id, classroom_id, date'),
-      supabase.from('teacher_ratings').select('id, rating, teacher_id')
+      supabase.from('grades').select('id, numeric_score, created_at'),
+      supabase.from('daily_logs').select('id, classroom_id, date'),
+      supabase.from('parent_ratings').select('id, rating, teacher_id')
     ]);
 
     const allTasks = tasksRes.status === 'fulfilled' ? (tasksRes.value.data || []) : [];
@@ -136,10 +136,7 @@ async function loadDashboard() {
     const allRatings = ratingsRes.status === 'fulfilled' ? (ratingsRes.value.data || []) : [];
 
     const avgGrade = allGrades.length > 0
-      ? (allGrades.reduce((sum, g) => {
-          const map = { A: 4, B: 3, C: 2, D: 1 };
-          return sum + (map[g.grade_letter] || 0);
-        }, 0) / allGrades.length).toFixed(1)
+      ? (allGrades.reduce((sum, g) => sum + (g.numeric_score || 0), 0) / allGrades.length).toFixed(1)
       : '—';
 
     const avgRating = allRatings.length > 0
@@ -890,7 +887,7 @@ async function loadPadresOpinion() {
       el.innerHTML = `
         <div class="text-center py-16">
           <div class="w-20 h-20 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <i data-lucide="message-square-heart" class="w-10 h-10 text-indigo-400"></i>
+            <i data-lucide="heart" class="w-10 h-10 text-indigo-400"></i>
           </div>
           <h3 class="text-xl font-black text-slate-700 mb-2">Sin opiniones aún</h3>
           <p class="text-slate-500 text-sm">Las opiniones de los padres aparecerán aquí cuando las envíen</p>
