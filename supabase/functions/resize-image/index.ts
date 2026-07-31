@@ -20,18 +20,8 @@
  */
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const CORS = {
-  'Access-Control-Allow-Origin':  '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-application-name',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-};
-
-const json = (data: unknown, status = 200) =>
-  new Response(JSON.stringify(data), {
-    status,
-    headers: { ...CORS, 'Content-Type': 'application/json' },
-  });
+import { handleOptions, checkCors, json } from "../_shared/cors.ts";
+import { getUser } from "../_shared/auth.ts";
 
 // ── Validación de schema ──────────────────────────────────────────────────────
 function validateInput(body: Record<string, unknown>): string | null {
@@ -46,19 +36,25 @@ function validateInput(body: Record<string, unknown>): string | null {
 }
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
-  if (req.method !== 'POST')    return json({ error: 'Method not allowed' }, 405);
+  const optionsResp = handleOptions(req);
+  if (optionsResp) return optionsResp;
+  const { origin, denied } = checkCors(req);
+  if (denied) return json({ error: 'Forbidden' }, 403, origin);
+  if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405, origin);
+
+  const user = await getUser(req);
+  if (!user) return json({ error: 'No autorizado' }, 401, origin);
 
   try {
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL')              ?? '';
     const SERVICE_KEY  = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-    if (!SUPABASE_URL || !SERVICE_KEY) return json({ error: 'Missing env vars' }, 500);
+    if (!SUPABASE_URL || !SERVICE_KEY) return json({ error: 'Missing env vars' }, 500, origin);
 
     const body = await req.json() as Record<string, unknown>;
 
     // Validar schema
     const validationError = validateInput(body);
-    if (validationError) return json({ error: validationError }, 400);
+    if (validationError) return json({ error: validationError }, 400, origin);
 
     const {
       base64,
@@ -145,7 +141,7 @@ Deno.serve(async (req) => {
 
     if (uploadError) {
       console.error('[resize-image] Upload error:', uploadError.message);
-      return json({ error: uploadError.message }, 500);
+      return json({ error: 'Upload error' }, 500, origin);
     }
 
     // Obtener URL pública
@@ -169,11 +165,11 @@ Deno.serve(async (req) => {
       processedSize,
       savings:       `${savings}%`,
       format:        outputMime,
-    });
+    }, 200, origin);
 
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error('[resize-image] Unexpected error:', msg);
-    return json({ error: msg }, 500);
+    return json({ error: 'Unexpected error' }, 500, origin);
   }
 });

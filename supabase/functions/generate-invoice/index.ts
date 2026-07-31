@@ -8,33 +8,29 @@
  *   - send_email: boolean (solo flag, el email se envía desde client)
  */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const CORS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-application-name',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-};
-
-const json = (data: unknown, status = 200) =>
-  new Response(JSON.stringify(data), {
-    status,
-    headers: { ...CORS, 'Content-Type': 'application/json' },
-  });
+import { handleOptions, checkCors, json } from "../_shared/cors.ts";
+import { requireStaff } from "../_shared/auth.ts";
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
+  const optionsResp = handleOptions(req);
+  if (optionsResp) return optionsResp;
+  const { origin, denied } = checkCors(req);
+  if (denied) return json({ error: 'Forbidden' }, 403, origin);
+
+  const auth = await requireStaff(req);
+  if (!auth.allowed) return json({ error: auth.error ?? 'Forbidden' }, auth.status, origin);
 
   try {
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
     const SERVICE_KEY  = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
     const SITE_URL    = Deno.env.get('SITE_URL') ?? 'https://montessorisonrisascreativas.com';
 
-    if (!SUPABASE_URL || !SERVICE_KEY) return json({ error: 'Missing env vars' }, 500);
+    if (!SUPABASE_URL || !SERVICE_KEY) return json({ error: 'Missing env vars' }, 500, origin);
     const supabase = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } });
 
     const body = await req.json();
     const { payment_id } = body;
-    if (!payment_id) return json({ error: 'Missing payment_id' }, 400);
+    if (!payment_id) return json({ error: 'Missing payment_id' }, 400, origin);
 
     // 1. Obtener datos del pago con joins completos
     const { data: payment, error: errPayment } = await supabase
@@ -52,7 +48,7 @@ Deno.serve(async (req) => {
       .single();
 
     if (errPayment || !payment) {
-      return json({ error: 'Payment not found: ' + (errPayment?.message || 'Unknown') }, 404);
+      return json({ error: 'Payment not found' }, 404, origin);
     }
 
     const student = (payment as any).students ?? {};
@@ -146,7 +142,7 @@ Deno.serve(async (req) => {
       errInvoice = retry.error;
       if (errInvoice) {
         console.error('[generate-invoice] Invoice insert still failed:', errInvoice);
-        return json({ error: 'Invoice insert failed: ' + errInvoice.message }, 500);
+        return json({ error: 'Invoice insert failed' }, 500, origin);
       }
     }
 
@@ -213,11 +209,11 @@ Deno.serve(async (req) => {
         paid_date: payment.paid_date || payment.created_at,
         month_paid: payment.month_paid,
       },
-    });
+    }, 200, origin);
 
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     console.error('[generate-invoice] fatal:', msg);
-    return json({ error: msg }, 500);
+    return json({ error: 'Unexpected error' }, 500, origin);
   }
 });

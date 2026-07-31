@@ -1,17 +1,7 @@
 // @ts-nocheck
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const CORS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-application-name',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-};
-
-const json = (data, status = 200) =>
-  new Response(JSON.stringify(data), {
-    status,
-    headers: { ...CORS, 'Content-Type': 'application/json' },
-  });
+import { handleOptions, checkCors, json } from "../_shared/cors.ts";
+import { requireRole } from "../_shared/auth.ts";
 
 const fmt = (d) => d ? new Date(d).toLocaleString('es-DO') : '';
 
@@ -127,7 +117,13 @@ async function writeToSheet(token, spreadsheetId, sheetName, rows) {
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
+  const optionsResp = handleOptions(req);
+  if (optionsResp) return optionsResp;
+  const { origin, denied } = checkCors(req);
+  if (denied) return json({ error: 'Forbidden' }, 403, origin);
+
+  const auth = await requireRole(req, ['directora', 'asistente', 'admin', 'service_role']);
+  if (!auth.allowed) return json({ error: auth.error ?? 'Forbidden' }, auth.status, origin);
 
   try {
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL')               ?? '';
@@ -136,8 +132,8 @@ Deno.serve(async (req) => {
     const SA_KEY       = Deno.env.get('GOOGLE_PRIVATE_KEY')         ?? '';
     const SHEET_ID     = Deno.env.get('GOOGLE_SPREADSHEET_ID')      ?? GOOGLE_SPREADSHEET_ID;
 
-    if (!SUPABASE_URL || !SERVICE_KEY) return json({ error: 'Missing Supabase env vars' }, 500);
-    if (!SA_EMAIL || !SA_KEY || !SHEET_ID) return json({ error: 'Missing Google env vars' }, 500);
+    if (!SUPABASE_URL || !SERVICE_KEY) return json({ error: 'Missing Supabase env vars' }, 500, origin);
+    if (!SA_EMAIL || !SA_KEY || !SHEET_ID) return json({ error: 'Missing Google env vars' }, 500, origin);
 
     const supabase = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } });
 
@@ -242,9 +238,10 @@ Deno.serve(async (req) => {
       }
     }
 
-    return json({ success: true, timestamp, results });
+    return json({ success: true, timestamp, results }, 200, origin);
 
   } catch (e) {
-    return json({ error: String(e) }, 500);
+    console.error('[backup-to-sheets] fatal:', e);
+    return json({ error: 'Unexpected error' }, 500, origin);
   }
 });

@@ -9,26 +9,22 @@
  *   '0 10 1 * *'
  */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const CORS = {
-  'Access-Control-Allow-Origin':  '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-application-name',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-};
-
-const json = (data: unknown, status = 200) =>
-  new Response(JSON.stringify(data), {
-    status,
-    headers: { ...CORS, 'Content-Type': 'application/json' },
-  });
+import { handleOptions, checkCors, json } from "../_shared/cors.ts";
+import { requireRole } from "../_shared/auth.ts";
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
+  const optionsResp = handleOptions(req);
+  if (optionsResp) return optionsResp;
+  const { origin, denied } = checkCors(req);
+  if (denied) return json({ error: 'Forbidden' }, 403, origin);
+
+  const auth = await requireRole(req, ['directora', 'asistente', 'admin', 'encargada', 'service_role']);
+  if (!auth.allowed) return json({ error: auth.error ?? 'Forbidden' }, auth.status, origin);
 
   try {
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL')              ?? '';
     const SERVICE_KEY  = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-    if (!SUPABASE_URL || !SERVICE_KEY) return json({ error: 'Missing env vars' }, 500);
+    if (!SUPABASE_URL || !SERVICE_KEY) return json({ error: 'Missing env vars' }, 500, origin);
 
     const supabase = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } });
 
@@ -47,12 +43,12 @@ Deno.serve(async (req) => {
       .from('students')
       .select('id, name, student_enrollments!left(id,payment_plans!left(plan_installments(month_number,amount)))')
       .eq('is_active', true);
-    if (sErr) return json({ error: sErr.message }, 500);
+    if (sErr) return json({ error: 'Database error' }, 500, origin);
     const activeStudents = ((students || []) as any[]).filter((s: any) => {
       const fee = Number(s.student_enrollments?.[0]?.payment_plans?.plan_installments?.[0]?.amount ?? 0);
       return fee > 0;
     });
-  if (!activeStudents.length) return json({ ok: true, generated: 0, message: 'No active students with fee plan' });
+  if (!activeStudents.length) return json({ ok: true, generated: 0, message: 'No active students with fee plan' }, 200, origin);
 
     // ── Determinar qué meses necesitan cobros ────────────────────────────────
     // Genera cobros para el mes actual + los últimos 3 meses (backfill)
@@ -127,11 +123,11 @@ Deno.serve(async (req) => {
       generated: totalGenerated,
       by_month:  results,
       ran_at:    now.toISOString(),
-    });
+    }, 200, origin);
 
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     console.error('[auto-payment-cycle] Fatal:', msg);
-    return json({ error: msg }, 500);
+    return json({ error: 'Unexpected error' }, 500, origin);
   }
 });

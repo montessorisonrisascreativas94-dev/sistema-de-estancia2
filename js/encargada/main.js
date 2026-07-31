@@ -935,7 +935,7 @@ async function loadAccesosQR() {
     try {
       const [stuRes, teaRes] = await Promise.allSettled([
         supabase.from('students')
-          .select('id, name, matricula, qr_code, is_active, classrooms:classroom_id(name)')
+          .select('id, name, matricula, qr_code, is_active, p1_name, p1_phone, p2_name, p2_phone, classrooms:classroom_id(name, level)')
           .eq('is_active', true)
           .order('name'),
         supabase.from('profiles')
@@ -987,6 +987,7 @@ async function loadAccesosQR() {
                 <th class="px-4 py-3 font-black text-xs uppercase text-purple-500">Estudiante</th>
                 <th class="px-4 py-3 font-black text-xs uppercase text-purple-500 hidden sm:table-cell">Aula</th>
                 <th class="px-4 py-3 font-black text-xs uppercase text-purple-500">QR</th>
+                <th class="px-4 py-3 font-black text-xs uppercase text-purple-500 text-right">Acción</th>
               </tr></thead>
               <tbody class="divide-y divide-purple-50">
                 ${students.length === 0 ? '<tr><td colspan="3" class="px-4 py-12 text-center text-slate-400">No hay estudiantes registrados</td></tr>' : ''}
@@ -995,6 +996,9 @@ async function loadAccesosQR() {
                     <td class="px-4 py-3"><div class="font-bold text-slate-800">${Helpers.escapeHTML(s.name || '—')}</div><div class="text-xs text-slate-400">${s.matricula || '—'}</div></td>
                     <td class="px-4 py-3 hidden sm:table-cell text-slate-600">${s.classrooms?.name || '—'}</td>
                     <td class="px-4 py-3">${s.qr_code ? '<span class="px-2.5 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-black">Activo</span>' : '<span class="px-2.5 py-1 bg-slate-100 text-slate-500 rounded-full text-xs font-black">Pendiente</span>'}</td>
+                    <td class="px-4 py-3 text-right">
+                      <button onclick="printStudentCarnet('${s.id}')" class="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-black transition-all">Imprimir Carnet</button>
+                    </td>
                   </tr>
                 `).join('')}
               </tbody>
@@ -1030,6 +1034,47 @@ async function loadAccesosQR() {
     if (window.lucide) lucide.createIcons();
   } catch (e) {
     el.innerHTML = `<p class="text-rose-500">Error al cargar: ${e.message}</p>`;
+  }
+}
+
+async function printStudentCarnet(studentId) {
+  if (!window.QRCode) {
+    await new Promise(r => { const s = document.createElement('script'); s.src = 'js/shared/qrcode.min.js'; s.onload = r; document.head.appendChild(s); });
+  }
+  const { data: st } = await supabase.from('students')
+    .select('*, classrooms:classroom_id(name, level), parent:parent_id(name, phone)')
+    .eq('id', studentId).single();
+  if (!st) return Helpers.toast('Estudiante no encontrado', 'error');
+
+  const tmp = document.createElement('div');
+  tmp.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:200px;height:200px';
+  document.body.appendChild(tmp);
+  const mat = (st.matricula || '').startsWith('MSC-') ? st.matricula : 'MSC-' + (st.matricula || '');
+  let qrImg = '';
+  try {
+    new window.QRCode(tmp, { text: mat, width: 200, height: 200, colorDark: '#1e293b', colorLight: '#ffffff', correctLevel: window.QRCode.CorrectLevel.H });
+    await new Promise(r => setTimeout(r, 250));
+    qrImg = tmp.querySelector('img')?.src || tmp.querySelector('canvas')?.toDataURL() || '';
+  } catch (_) {}
+  document.body.removeChild(tmp);
+
+  const win = window.open('', '_blank');
+  if (win) {
+    win.document.write(Helpers.getQRPrintTemplate(qrImg, st.name, st.matricula, {
+      classroom:  st.classrooms?.name || '',
+      nivel:      st.classrooms?.level || '',
+      p1_name:    st.p1_name || '',
+      p2_name:    st.p2_name || '',
+      p1_phone:   st.p1_phone || '',
+      p2_phone:   st.p2_phone || '',
+      _parentName:  st.parent?.name || '',
+      _parentPhone: st.parent?.phone || '',
+      student_id:   st.id || '',
+      is_active:    st.is_active !== false
+    }));
+    win.document.close();
+  } else {
+    Helpers.toast('Permite ventanas emergentes para imprimir', 'warning');
   }
 }
 

@@ -113,13 +113,27 @@ export function openStudentProfile(studentId) {
   }, 100);
 
   // Función global para imprimir desde el panel maestra
-  window._printStudentQRMaestra = (id) => {
+  window._printStudentQRMaestra = async (id) => {
+    const { supabase } = await import('../../shared/supabase.js');
     const s = AppState.get('students').find(x => x.id == id);
     const canvas = document.querySelector('#student-qr-container canvas');
     if (!canvas || !s) return;
     const imgData = canvas.toDataURL("image/png");
+    const { data: full } = await supabase.from('students')
+      .select('*, classrooms:classroom_id(name, level)')
+      .eq('id', id).maybeSingle();
+    const f = full || {};
     const win = window.open('', '_blank');
-    win.document.write(Helpers.getQRPrintTemplate(imgData, s.name, s.matricula));
+    win.document.write(Helpers.getQRPrintTemplate(imgData, f.name || s.name, f.matricula || s.matricula, {
+      classroom: f.classrooms?.name || '',
+      nivel:     f.classrooms?.level || '',
+      p1_name:   f.p1_name || '',
+      p2_name:   f.p2_name || '',
+      p1_phone:  f.p1_phone || '',
+      p2_phone:  f.p2_phone || '',
+      student_id: f.id || s.id || '',
+      is_active:  (f.is_active ?? s.is_active) !== false
+    }));
     win.document.close();
   };
 }

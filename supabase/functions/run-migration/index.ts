@@ -1,21 +1,32 @@
 // @ts-nocheck
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { handleOptions, checkCors } from '../_shared/cors.ts';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS'
-};
+const json = (data: unknown, status: number, origin: string) =>
+  new Response(JSON.stringify(data), {
+    status,
+    headers: { ...corsHeaders(origin), 'Content-Type': 'application/json' },
+  });
+
+function corsHeaders(origin: string): Record<string, string> {
+  return {
+    'Access-Control-Allow-Origin': origin || '',
+    'Access-Control-Allow-Headers': 'authorization, apikey, content-type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Vary': 'Origin',
+  };
+}
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+  const optionsResp = handleOptions(req);
+  if (optionsResp) return optionsResp;
+  const { origin, denied } = checkCors(req);
+  if (denied) return json({ error: 'Forbidden' }, 403, origin);
 
   try {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'Falta cabecera de Authorization' }), {
-        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
+      return json({ error: 'Falta cabecera de Authorization' }, 401, origin);
     }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -37,9 +48,7 @@ Deno.serve(async (req) => {
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user) {
       console.error('[run-migration] Error de autenticación:', userError);
-      return new Response(JSON.stringify({ error: 'No autorizado', details: userError?.message }), {
-        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
+      return json({ error: 'No autorizado' }, 401, origin);
     }
 
     // Cliente admin para ejecutar DDL
@@ -57,9 +66,7 @@ Deno.serve(async (req) => {
       .single();
 
     if (profileErr || profile?.role !== 'directora') {
-      return new Response(JSON.stringify({ error: 'Solo la directora puede ejecutar migraciones' }), {
-        status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
+      return json({ error: 'Solo la directora puede ejecutar migraciones' }, 403, origin);
     }
 
     console.log('[run-migration] Iniciando migración para usuario:', user.id);
@@ -240,24 +247,18 @@ CREATE POLICY invoice_items_staff_all ON public.invoice_items FOR ALL
     console.log('[run-migration] Migraciones completadas:', results);
     const overallSuccess = results.every(result => result.status === 'success');
 
-    return new Response(JSON.stringify({
+    return json({
       success: overallSuccess,
       message: overallSuccess ? 'Migraciones procesadas' : 'Algunas migraciones fallaron',
       results,
       timestamp: new Date().toISOString()
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
+    }, 200, origin);
 
   } catch (e) {
     console.error('[run-migration] Error global:', e);
-    return new Response(JSON.stringify({ 
-      error: 'Error en migración',
-      details: String(e)
-    }), {
-      status: 500, 
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
+    return json({
+      error: 'Error en migración'
+    }, 500, origin);
   }
 });
 

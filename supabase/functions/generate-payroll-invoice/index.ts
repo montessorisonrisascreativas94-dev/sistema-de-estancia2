@@ -7,28 +7,29 @@
  *   - send_email: boolean — opcional, envía recibo por email
  */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { corsHeaders } from "../_shared/cors.ts";
-
-const json = (data: unknown, status = 200) =>
-  new Response(JSON.stringify(data), {
-    status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-  });
+import { handleOptions, checkCors, json } from "../_shared/cors.ts";
+import { requireStaff } from "../_shared/auth.ts";
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+  const optionsResp = handleOptions(req);
+  if (optionsResp) return optionsResp;
+  const { origin, denied } = checkCors(req);
+  if (denied) return json({ error: 'Forbidden' }, 403, origin);
+
+  const auth = await requireStaff(req);
+  if (!auth.allowed) return json({ error: auth.error ?? 'Forbidden' }, auth.status, origin);
 
   try {
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
     const SERVICE_KEY  = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
     const SITE_URL     = Deno.env.get('SITE_URL') ?? 'https://montessorisonrisascreativas.com';
 
-    if (!SUPABASE_URL || !SERVICE_KEY) return json({ error: 'Missing env vars' }, 500);
+    if (!SUPABASE_URL || !SERVICE_KEY) return json({ error: 'Missing env vars' }, 500, origin);
     const supabase = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } });
 
     const body = await req.json();
     const { payroll_id, send_email } = body;
-    if (!payroll_id) return json({ error: 'Missing payroll_id' }, 400);
+    if (!payroll_id) return json({ error: 'Missing payroll_id' }, 400, origin);
 
     const { data: payroll, error: errPR } = await supabase
       .from('payroll_records')
@@ -40,7 +41,7 @@ Deno.serve(async (req) => {
       .eq('id', payroll_id)
       .single();
 
-    if (errPR || !payroll) return json({ error: 'Payroll record not found' }, 404);
+    if (errPR || !payroll) return json({ error: 'Payroll record not found' }, 404, origin);
 
     const employee = (payroll as any).profiles ?? {};
 
@@ -85,7 +86,7 @@ Deno.serve(async (req) => {
       .select('*')
       .single();
 
-    if (errInv) return json({ error: 'Failed to create invoice: ' + errInv.message }, 500);
+    if (errInv) return json({ error: 'Failed to create invoice' }, 500, origin);
 
     return json({
       success: true,
@@ -116,11 +117,11 @@ Deno.serve(async (req) => {
         ars_patronal: payroll.ars_patronal,
       },
       hash: sha256Hash,
-    });
+    }, 200, origin);
 
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     console.error('[generate-payroll-invoice] fatal:', msg);
-    return json({ error: msg }, 500);
+    return json({ error: 'Unexpected error' }, 500, origin);
   }
 });

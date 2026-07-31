@@ -766,33 +766,63 @@ export const AcademicCycleModule = {
   // ── NUEVO PLAN DE PAGO ───────────────────────────────────────────────────
   openNewPlanModal() {
     const months=['Agosto','Septiembre','Octubre','Noviembre','Diciembre','Enero','Febrero','Marzo','Abril','Mayo','Junio'];
+    const rowStyle = 'display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:10px;background:#f8fafc;border:1px solid #f1f5f9';
     window.openGlobalModal(`<div class="p-6 max-h-[85vh] overflow-y-auto">
-      <h3 class="text-lg font-black text-slate-800 mb-5">Nuevo Plan — ${this._currentYear?.name||''}</h3>
-      <div class="grid grid-cols-2 gap-4 mb-4">
-        <div><label class="text-[10px] font-black text-slate-400 uppercase block mb-1">Nombre</label>
-          <input id="np_name" type="text" placeholder="Plan A / B / C" class="w-full border-2 border-slate-100 rounded-xl px-3 py-2.5 text-sm font-bold outline-none focus:border-blue-400"></div>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+        <div style="width:40px;height:40px;border-radius:12px;background:#E8F2FF;display:flex;align-items:center;justify-content:center;font-size:1.2rem">📋</div>
+        <div>
+          <h3 class="text-lg font-black text-slate-800">Nuevo Plan de Pago</h3>
+          <p class="text-xs text-slate-400 font-bold">${this._currentYear?.name||''}</p>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-4 mb-5">
+        <div><label class="text-[10px] font-black text-slate-400 uppercase block mb-1">Nombre del Plan *</label>
+          <input id="np_name" type="text" placeholder="Ej: Plan Básico" class="w-full border-2 border-slate-100 rounded-xl px-3 py-2.5 text-sm font-bold outline-none focus:border-blue-400"></div>
         <div><label class="text-[10px] font-black text-slate-400 uppercase block mb-1">Nivel</label>
           <select id="np_level" class="w-full border-2 border-slate-100 rounded-xl px-3 py-2.5 text-sm font-bold outline-none bg-white"><option>Inicial</option><option>Primaria</option></select></div>
         <div><label class="text-[10px] font-black text-slate-400 uppercase block mb-1">Horario</label>
           <select id="np_schedule" class="w-full border-2 border-slate-100 rounded-xl px-3 py-2.5 text-sm font-bold outline-none bg-white"><option>8:00-12:00</option><option>8:00-13:30</option><option>8:00-15:00</option><option>8:00-17:00</option></select></div>
-        <div><label class="text-[10px] font-black text-slate-400 uppercase block mb-1">Cuota inscripción (RD$)</label>
-          <input id="np_reg" type="number" placeholder="0.00" class="w-full border-2 border-slate-100 rounded-xl px-3 py-2.5 text-sm font-bold outline-none focus:border-blue-400"></div>
+        <div><label class="text-[10px] font-black text-slate-400 uppercase block mb-1">Cuota Inscripción (RD$)</label>
+          <div class="relative"><span class="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">$</span>
+          <input id="np_reg" type="number" placeholder="0.00" class="w-full border-2 border-slate-100 rounded-xl px-7 py-2.5 text-sm font-bold outline-none focus:border-blue-400"></div></div>
       </div>
-      <p class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-2">Cuotas mensuales</p>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <p class="text-[10px] font-black text-slate-400 uppercase tracking-wider">Cuotas Mensuales</p>
+        <div style="font-size:11px;font-weight:900;color:#0B63C7" id="npTotalPreview">Total: RD$0.00/mes</div>
+      </div>
       <div class="space-y-2" id="np_months">
-        ${months.map((m,i)=>`<div class="flex items-center gap-3">
-          <span class="w-28 text-xs font-bold text-slate-600">${m}</span>
-          <input type="number" id="np_m${i}" placeholder="0.00" class="flex-1 border border-slate-100 rounded-xl px-3 py-2 text-sm font-bold outline-none focus:border-blue-400 bg-slate-50">
-          <label class="flex items-center gap-1 text-xs font-bold text-slate-500 cursor-pointer">
-            <input type="checkbox" id="np_skip${i}" class="rounded"> Omitir
+        ${months.map((m,i)=>`<div style="${rowStyle}">
+          <span style="width:100px;font-size:.8rem;font-weight:700;color:#475569">${m}</span>
+          <div style="position:relative;flex:1"><span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:.7rem;font-weight:700;color:#94a3b8">$</span>
+          <input type="number" id="np_m${i}" placeholder="0.00" oninput="App.academic._updatePlanTotal()" style="width:100%;padding:8px 8px 8px 24px;border:1px solid #e2e8f0;border-radius:8px;font-size:.8rem;font-weight:700;outline:none;background:white"></div>
+          <label style="display:flex;align-items:center;gap:4px;font-size:.7rem;font-weight:700;color:#94a3b8;cursor:pointer;white-space:nowrap">
+            <input type="checkbox" id="np_skip${i}" onchange="App.academic._updatePlanTotal()" style="accent-color:#0B63C7"> Omitir
           </label>
         </div>`).join('')}
       </div>
-      <div class="mt-5 flex justify-end gap-2">
+      <div style="margin-top:14px;display:flex;justify-content:flex-end;gap:8px">
         <button onclick="App.ui.closeModal()" class="px-4 py-2 text-slate-500 font-bold text-xs uppercase border border-slate-200 rounded-xl">Cancelar</button>
-        <button id="btnSavePlan" onclick="App.academic._doSavePlan()" class="px-5 py-2 text-white font-black text-xs uppercase rounded-xl" style="background:#0B63C7">Guardar Plan</button>
+        <button id="btnSavePlan" onclick="App.academic._doSavePlan()" class="px-5 py-2 text-white font-black text-xs uppercase rounded-xl" style="background:#0B63C7">Crear Plan</button>
       </div>
     </div>`,true);
+  },
+
+  _updatePlanTotal() {
+    const months=['Agosto','Septiembre','Octubre','Noviembre','Diciembre','Enero','Febrero','Marzo','Abril','Mayo','Junio'];
+    let total = 0; let count = 0;
+    months.forEach((_, i) => {
+      const skip = document.getElementById(`np_skip${i}`)?.checked;
+      if (skip) return;
+      const amt = parseFloat(document.getElementById(`np_m${i}`)?.value || 0);
+      total += amt; if (amt > 0) count++;
+    });
+    const preview = document.getElementById('npTotalPreview');
+    if (preview) {
+      const reg = parseFloat(document.getElementById('np_reg')?.value || 0);
+      preview.textContent = count > 0
+        ? `Total: RD$${total.toLocaleString('es-DO',{minimumFractionDigits:2})}/mes (${count} cuotas) · Insc: RD$${reg.toLocaleString('es-DO',{minimumFractionDigits:2})}`
+        : 'Total: RD$0.00/mes';
+    }
   },
 
   async _doSavePlan() {

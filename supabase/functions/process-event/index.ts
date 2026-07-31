@@ -1,35 +1,40 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { Resend } from "https://esm.sh/resend@2.1.0";
-
-const CORS = {
-  'Access-Control-Allow-Origin':  '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-application-name',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-};
-
-const json = (data: unknown, status = 200) =>
-  new Response(JSON.stringify(data), {
-    status,
-    headers: { ...CORS, 'Content-Type': 'application/json' },
-  });
+import { handleOptions, checkCors, json } from "../_shared/cors.ts";
+import { isServiceRole, getUser } from "../_shared/auth.ts";
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
+  const optionsResp = handleOptions(req);
+  if (optionsResp) return optionsResp;
+  const { origin, denied } = checkCors(req);
+  if (denied) return json({ error: 'Forbidden' }, 403, origin);
 
   try {
+    // Auth: se permite anon SOLO para eventos del kiosko de asistencia.
+    // El resto requiere sesión (JWT) o service role (cron/triggers DB).
+    const KIOSK_TYPES = ['attendance.checkin', 'attendance.checkout', 'attendance.check_in', 'attendance.check_out'];
+    const body = await req.json();
+    const eventType: string = body?.type ?? '';
+    if (!eventType) return json({ error: 'Missing event type' }, 400, origin);
+
+    const authed = await getUser(req);
+    const serviceOk = isServiceRole(req);
+    if (!serviceOk && !authed && !KIOSK_TYPES.includes(eventType)) {
+      return json({ error: 'No autorizado' }, 401, origin);
+    }
+
     const SUPABASE_URL  = Deno.env.get('SUPABASE_URL')              ?? '';
     const SERVICE_KEY   = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-    const ANON_KEY      = Deno.env.get('SUPABASE_ANON_KEY')         ?? '';
     const RESEND_KEY    = Deno.env.get('RESEND_API_KEY')            ?? '';
     const FROM_EMAIL    = Deno.env.get('FROM_EMAIL')                ?? 'Colegio Montessori Sonrisas Creativas <avisos@montessorisonrisascreativas.com>';
 
-    if (!SUPABASE_URL || !SERVICE_KEY) return json({ error: 'Missing env vars' }, 500);
+    if (!SUPABASE_URL || !SERVICE_KEY) return json({ error: 'Missing env vars' }, 500, origin);
 
     const supabase = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } });
     const resend   = RESEND_KEY ? new Resend(RESEND_KEY) : null;
 
-    const { type, data } = await req.json();
-    if (!type) return json({ error: 'Missing event type' }, 400);
+    const { type, data } = body;
+    if (!type) return json({ error: 'Missing event type' }, 400, origin);
 
     console.log('[process-event] type:', type, '| data keys:', Object.keys(data || {}));
 
@@ -325,9 +330,8 @@ Deno.serve(async (req) => {
               '<p style="margin:0;color:#92400e">Periodo: ' + (period_name || 'Actual') + '</p></div>' +
               '<p style="color:#374151">Le recomendamos conversar con la maestra para establecer un plan de apoyo.</p>' +
               '<a href="https://montessorisonrisascreativas.com/panel_padres.html" style="display:inline-block;padding:12px 24px;background:#f59e0b;color:white;text-decoration:none;border-radius:8px;font-weight:bold;margin-top:8px">Ver Calificaciones</a>'
-          )));
+          )}));
         }
-
         // Email to directora
         const { data: admins } = await supabase.from('profiles').select('email').in('role', ['directora']);
         if (resend && admins?.length) {
@@ -353,11 +357,11 @@ Deno.serve(async (req) => {
         result = { skipped: true, type };
     }
 
-    return json({ ok: true, type, ...result });
+    return json({ ok: true, type, ...result }, 200, origin);
 
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     console.error('[process-event] Fatal:', msg);
-    return json({ error: msg }, 500);
+    return json({ error: 'Unexpected error' }, 500, origin);
   }
 });

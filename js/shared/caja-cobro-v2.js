@@ -40,6 +40,10 @@ export function initCajaCobro(containerId = 'cajaContainer') {
   renderCajaMain();
   CajaCobroV2._subscribeRealtime();
   CajaCobroV2._startAutoPolling();
+  // Periodic caja auto-check every 30 minutes
+  if (!window._cajaAutoCheckInterval) {
+    window._cajaAutoCheckInterval = setInterval(() => CajaCobroV2._autoCloseCheck(), 1800000);
+  }
 }
 
 export function destroyCajaCobro() {
@@ -66,14 +70,28 @@ async function renderCajaMain() {
         <i data-lucide="landmark" style="width:22px;height:22px;color:white"></i>
       </div>
       <div>
-        <div style="font-size:1.1rem;font-weight:900;color:white;letter-spacing:-0.01em">Caja 1</div>
-        <div style="font-size:.68rem;color:rgba(255,255,255,.75);font-weight:700">Directora — ${new Date().toLocaleDateString('es-DO',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="font-size:1.1rem;font-weight:900;color:white;letter-spacing:-0.01em">Caja</div>
+          <span class="caja-status-badge" style="font-size:.6rem;font-weight:900;padding:2px 8px;border-radius:20px;background:rgba(255,255,255,.15);color:rgba(255,255,255,.85)">⏳ Cargando...</span>
+        </div>
+        <div style="font-size:.68rem;color:rgba(255,255,255,.75);font-weight:700">${window.AppState?.get?.('profile')?.role === 'asistente' ? 'Asistente' : 'Directora'} — ${new Date().toLocaleDateString('es-DO',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</div>
       </div>
     </div>
-    <div style="display:flex;gap:8px">
+    <div style="display:flex;gap:8px" id="cajaHeaderActions">
       <button onclick="CajaCobroV2._openCajaSession()" style="padding:8px 14px;border-radius:10px;border:1.5px solid rgba(255,255,255,.3);background:rgba(255,255,255,.15);color:white;font-size:.68rem;font-weight:800;cursor:pointer;backdrop-filter:blur(4px)">Abrir Caja</button>
       <button onclick="CajaCobroV2._closeCajaSession()" style="padding:8px 14px;border-radius:10px;border:1.5px solid rgba(255,255,255,.3);background:rgba(255,255,255,.15);color:white;font-size:.68rem;font-weight:800;cursor:pointer;backdrop-filter:blur(4px)">Cerrar Caja</button>
     </div>
+  </div>
+  <!-- Caja Status Alert -->
+  <div id="cajaStatusAlert" style="display:none;background:#FEF2F2;border:2px solid #FECACA;border-radius:12px;padding:10px 16px;margin-bottom:14px;align-items:center;gap:10px">
+    <div style="display:flex;align-items:center;gap:10px;flex:1">
+      <span style="font-size:1.2rem">🔒</span>
+      <div>
+        <div style="font-size:.75rem;font-weight:900;color:#DC2626">Caja Cerrada</div>
+        <div style="font-size:.65rem;font-weight:600;color:#B91C1C">Debe abrir la caja antes de realizar cobros</div>
+      </div>
+    </div>
+    <button onclick="CajaCobroV2._openCajaSession()" style="padding:6px 14px;border-radius:8px;border:none;background:#DC2626;color:white;font-size:.68rem;font-weight:900;cursor:pointer;white-space:nowrap">Abrir Caja</button>
   </div>
   <!-- Devolver Efectivo Button -->
   <div style="background:white;border-radius:14px;border:1px solid #fee2e2;padding:10px 16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between">
@@ -149,7 +167,23 @@ export const CajaCobroV2 = {
 
   // ── CARGAR ESTUDIANTES + KPIs ─────────────────────────────────────────────
   async loadStudents() {
+    // Auto-close check on every load
+    this._autoCloseCheck();
+
     const todayStr = today();
+    // Update caja status alert
+    this._getCajaStatus().then(status => {
+      const alert = document.getElementById('cajaStatusAlert');
+      if (alert) {
+        if (status.open) { alert.style.display = 'none'; }
+        else { alert.style.display = 'flex'; }
+      }
+      const hdrBtn = document.querySelector('#cajaHeaderActions');
+      if (hdrBtn) {
+        const badge = hdrBtn.querySelector('.caja-status-badge');
+        if (badge) badge.textContent = status.open ? '🟢 Abierta' : '🔴 Cerrada';
+      }
+    });
     const [{ data: pays }, { data: students }, { data: pending }] = await Promise.all([
       supabase.from('payments').select('amount').eq('status','paid').gte('paid_date',todayStr+'T00:00:00').lte('paid_date',todayStr+'T23:59:59').limit(500),
       supabase.from('students').select('id,name,matricula,classroom_id,classrooms:classroom_id(name),p1_name,p1_phone').eq('is_active',true).is('deleted_at',null).order('name').limit(500),
@@ -369,8 +403,15 @@ export const CajaCobroV2 = {
 
     // Conceptos de DB (si hay) se muestran primero; fallback al catálogo local
     const displayConcepts = _dbConcepts.length > 0
-      ? _dbConcepts.map(c => ({ id: 'db_'+c.id, label: c.name, amount: c.amount, icon: '🏷️' }))
-      : catalog;
+      ? _dbConcepts.map(c => ({
+          id: 'db_'+c.id,
+          label: c.name,
+          amount: c.amount,
+          icon: CATEGORY_ICONS[c.category] || '🏷️',
+          bgColor: CATEGORY_BG[c.category] || '#F1F5F9',
+          txtColor: CATEGORY_TXT[c.category] || '#64748B'
+        }))
+      : catalog.map(c => ({ ...c, icon: c.icon || '🏷️', bgColor: c.bgColor || '#F1F5F9', txtColor: c.txtColor || '#64748B' }));
 
     overlay.innerHTML = `
     <div id="cajaModalInner" style="background:#f8fafc;border-radius:16px;width:100%;max-width:720px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.25);margin:auto;position:relative;display:flex;flex-direction:column">
@@ -392,6 +433,18 @@ export const CajaCobroV2 = {
             <div style="font-size:1rem;font-weight:900;color:white">${fmt(_charges.reduce((s,c)=>s+Number(c.amount||0),0))}</div>
           </div>
           <button onclick="document.getElementById('${modalId}').remove()" style="width:30px;height:30px;border-radius:50%;border:none;background:rgba(255,255,255,.2);color:white;font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">✕</button>
+        </div>
+      </div>
+
+      <!-- Caja Status Warning -->
+      <div id="cajaStatusBanner" style="display:none;padding:8px 14px;background:#FEF2F2;border-bottom:2px solid #FECACA;flex-shrink:0">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:1rem">🔒</span>
+          <div>
+            <span style="font-size:.7rem;font-weight:900;color:#DC2626">Caja Cerrada</span>
+            <span style="font-size:.65rem;font-weight:600;color:#B91C1C;margin-left:6px">— Debe abrir la caja antes de realizar cobros</span>
+          </div>
+          <button onclick="CajaCobroV2._openCajaSession()" style="margin-left:auto;padding:4px 12px;border-radius:8px;border:none;background:#DC2626;color:white;font-size:.65rem;font-weight:900;cursor:pointer;white-space:nowrap">Abrir Caja</button>
         </div>
       </div>
 
@@ -453,13 +506,15 @@ export const CajaCobroV2 = {
           <div id="conceptosGrid" style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-bottom:10px;max-height:280px;overflow-y:auto;padding:2px">
             ${displayConcepts.map(c=>{
               const isInCart = _cart.some(item => item._conceptId === c.id);
+              const bgColor = c.bgColor || '#F1F5F9';
+              const txtColor = c.txtColor || '#64748B';
               return `
               <button onclick="CajaCobroV2.addExtraConcept('${c.id}','${Helpers.escapeHTML(c.label)}',${c.amount})"
                 id="concept_${c.id}"
-                style="padding:10px 4px;border-radius:10px;border:2px solid ${isInCart?'#FF8A00':'#e2e8f0'};background:${isInCart?'#fff7ed':'white'};cursor:pointer;transition:all .12s;text-align:center;display:flex;flex-direction:column;align-items:center;gap:3px">
-                <span style="font-size:1.1rem">${c.icon||'🏷️'}</span>
+                style="padding:8px 4px;border-radius:10px;border:2px solid ${isInCart?'#FF8A00':'#e2e8f0'};background:${isInCart?'#fff7ed':'white'};cursor:pointer;transition:all .12s;text-align:center;display:flex;flex-direction:column;align-items:center;gap:2px">
+                <div style="width:28px;height:28px;border-radius:8px;background:${bgColor};display:flex;align-items:center;justify-content:center;font-size:.85rem">${c.icon||'🏷️'}</div>
                 <span style="font-size:.6rem;font-weight:800;color:${isInCart?'#ea580c':'#1a2340'};line-height:1.2">${Helpers.escapeHTML(c.label)}</span>
-                <span style="font-size:.6rem;font-weight:900;color:#0B63C7">${c.amount>0?fmt(c.amount):'Libre'}</span>
+                <span style="font-size:.6rem;font-weight:900;color:${txtColor}">${c.amount>0?fmt(c.amount):'Libre'}</span>
                 ${isInCart?'<span style="font-size:.45rem;font-weight:900;color:#ea580c">✓</span>':''}
               </button>`;
             }).join('')}
@@ -571,6 +626,14 @@ export const CajaCobroV2 = {
     document.body.appendChild(overlay);
     if (window.lucide) lucide.createIcons();
     this._updateCart();
+
+    // Check caja status and show warning if closed
+    this._getCajaStatus().then(status => {
+      const banner = overlay.querySelector('#cajaStatusBanner');
+      if (banner) {
+        banner.style.display = status.open ? 'none' : 'flex';
+      }
+    });
   },
 
   _showTab(tab) {
@@ -679,8 +742,15 @@ export const CajaCobroV2 = {
   // ── MODAL: TODOS LOS CONCEPTOS ────────────────────────────────────────────
   showAllConceptsModal() {
     const allConcepts = _dbConcepts.length > 0
-      ? _dbConcepts.map(c => ({ id: 'db_'+c.id, label: c.name, amount: c.amount, icon: '🏷️' }))
-      : getCatalog();
+      ? _dbConcepts.map(c => ({
+          id: 'db_'+c.id,
+          label: c.name,
+          amount: c.amount,
+          icon: CATEGORY_ICONS[c.category] || '🏷️',
+          bgColor: CATEGORY_BG[c.category] || '#F1F5F9',
+          txtColor: CATEGORY_TXT[c.category] || '#64748B'
+        }))
+      : getCatalog().map(c => ({ ...c, icon: c.icon || '🏷️', bgColor: c.bgColor || '#F1F5F9', txtColor: c.txtColor || '#64748B' }));
     const overlay = document.createElement('div');
     overlay.id = 'allConceptsModalCaja';
     overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(6px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
@@ -695,13 +765,15 @@ export const CajaCobroV2 = {
           <div class="conceptosAllGrid" style="display:grid;gap:8px">
             ${allConcepts.map(c => {
               const isInCart = _cart.some(item => item._conceptId === c.id);
+              const bgColor = c.bgColor || '#F1F5F9';
+              const txtColor = c.txtColor || '#64748B';
               return `
               <button onclick="CajaCobroV2.addExtraConcept('${c.id}','${Helpers.escapeHTML(c.label)}',${c.amount});this.closest('#allConceptsModalCaja').remove()"
                 id="allConcept_${c.id}"
-                style="padding:14px 6px;border-radius:12px;border:2px solid ${isInCart?'#FF8A00':'#e2e8f0'};background:${isInCart?'#fff7ed':'white'};cursor:pointer;transition:all .12s;text-align:center;display:flex;flex-direction:column;align-items:center;gap:4px">
-                <span style="font-size:1.5rem">${c.icon||'🏷️'}</span>
+                style="padding:12px 8px;border-radius:12px;border:2px solid ${isInCart?'#FF8A00':'#e2e8f0'};background:${isInCart?'#fff7ed':'white'};cursor:pointer;transition:all .12s;text-align:center;display:flex;flex-direction:column;align-items:center;gap:3px">
+                <div style="width:32px;height:32px;border-radius:8px;background:${bgColor};display:flex;align-items:center;justify-content:center;font-size:1rem">${c.icon||'🏷️'}</div>
                 <span style="font-size:.65rem;font-weight:800;color:${isInCart?'#ea580c':'#1a2340'};line-height:1.2">${Helpers.escapeHTML(c.label)}</span>
-                <span style="font-size:.65rem;font-weight:900;color:#0B63C7">${c.amount>0?fmt(c.amount):'Libre'}</span>
+                <span style="font-size:.65rem;font-weight:900;color:${txtColor}">${c.amount>0?fmt(c.amount):'Libre'}</span>
                 ${isInCart?'<span style="font-size:.5rem;font-weight:900;color:#ea580c">✓ En carrito</span>':''}
               </button>`;
             }).join('')}
@@ -1070,6 +1142,12 @@ export const CajaCobroV2 = {
 
       const currentYear = new Date().getFullYear();
 
+      const payBank = _method === 'transferencia' ? (document.getElementById('tfBanco')?.value || '') :
+                      _method === 'cheque' ? (document.getElementById('chqBanco')?.value || '') : '';
+      const payRef = _method === 'transferencia' ? (document.getElementById('tfRef')?.value || '') :
+                     _method === 'cheque' ? (document.getElementById('chqNum')?.value || '') :
+                     _method === 'mixto' ? (document.getElementById('mixRef')?.value || '') : '';
+
       // ── Split cart: items from review (UPDATE) vs new items (INSERT) ──
       const reviewItems = _cart.filter(c => c._reviewId);
       const newItems = _cart.filter(c => !c._reviewId);
@@ -1085,6 +1163,8 @@ export const CajaCobroV2 = {
           status: 'paid',
           paid_date: now,
           method: _method,
+          bank: payBank || null,
+          reference: payRef || null,
           month_paid: monthPaid,
           notes: notes || null,
           exclude_dgii: excludeDGII
@@ -1099,6 +1179,8 @@ export const CajaCobroV2 = {
           amount:      c.amount,
           concept:     c.concept,
           method:      _method,
+          bank: payBank || null,
+          reference: payRef || null,
           status:      'paid',
           paid_date:   now,
           month_paid:  c.type==='colegiatura'
@@ -1175,6 +1257,8 @@ export const CajaCobroV2 = {
               total: total,
               status: 'paid',
               payment_method: _method,
+              bank: payBank || null,
+              payment_reference: payRef || null,
               payment_date: now,
               issued_date: now,
               notes: notes || null,
@@ -1201,7 +1285,7 @@ export const CajaCobroV2 = {
                 receipt_number: receiptNo,
                 student: { name: stu.name, matricula: stu.matricula, p1_name: stu.p1_name, p1_email: stu.p1_email, p1_phone: stu.p1_phone, classroom: stu.classrooms?.name, level: stu.classrooms?.level },
                 school: { school_name: school?.school_name || 'Colegio Montessori Sonrisas Creativas', rnc: school?.rnc, phone: school?.phone, email: school?.email, website: school?.website || 'https://montessorisonrisascreativas.com', logo_url: school?.logo_url, address: school?.address, city: school?.city, state: school?.state },
-                payment: { concept: _cart.map(c=>c.concept).join(', '), amount: total, method: _method, paid_date: now, month_paid: _cart.find(c=>c.type==='colegiatura') ? currentYear + '-' + String(_cart.find(c=>c.type==='colegiatura')._monthIdx+1).padStart(2,'0') : null },
+                payment: { concept: _cart.map(c=>c.concept).join(', '), amount: total, method: _method, paid_date: now, bank: payBank || null, reference: payRef || null, month_paid: _cart.find(c=>c.type==='colegiatura') ? currentYear + '-' + String(_cart.find(c=>c.type==='colegiatura')._monthIdx+1).padStart(2,'0') : null },
               };
             } else {
               console.warn('[CajaCobroV2] Client-side invoice insert failed:', invErr);
@@ -1506,18 +1590,45 @@ export const CajaCobroV2 = {
 
   async _isCajaOpen() {
     const todayStr = today();
-    const { data } = await supabase.from('caja_sessions')
-      .select('status').eq('date', todayStr).limit(1).maybeSingle();
-    return data?.status === 'open';
+    const profile = window.AppState?.get?.('profile') || {};
+    const userId = profile.id || profile.user_id || null;
+    let query = supabase.from('caja_sessions')
+      .select('status,opened_by,notes')
+      .eq('date', todayStr)
+      .limit(5);
+    const { data: sessions } = await query;
+    if (!sessions || sessions.length === 0) return false;
+    if (userId) {
+      const mine = sessions.find(s => s.opened_by === userId);
+      if (mine) return mine.status === 'open';
+    }
+    return sessions.some(s => s.status === 'open');
   },
 
-  async _closeCajaSession() {
+  async _getCajaStatus() {
+    const todayStr = today();
+    const profile = window.AppState?.get?.('profile') || {};
+    const userId = profile.id || profile.user_id || null;
+    const { data: sessions } = await supabase.from('caja_sessions')
+      .select('status,opened_by,notes,opening_balance,closing_balance')
+      .eq('date', todayStr)
+      .limit(5);
+    if (!sessions || sessions.length === 0) return { open: false, mine: false, session: null };
+    if (userId) {
+      const mine = sessions.find(s => s.opened_by === userId);
+      if (mine) return { open: mine.status === 'open', mine: true, session: mine };
+    }
+    const anyOpen = sessions.find(s => s.status === 'open');
+    return { open: !!anyOpen, mine: false, session: anyOpen || sessions[0] };
+  },
+
+  async _closeCajaSession(silent = false) {
     const todayStr = today();
     const { data: session } = await supabase.from('caja_sessions')
       .select('*').eq('date', todayStr).limit(1).maybeSingle();
 
     if (session?.status === 'closed') {
-      Helpers.toast('La caja ya está cerrada hoy', 'info');
+      if (!silent) Helpers.toast('La caja ya está cerrada hoy', 'info');
       return;
     }
 
@@ -1526,17 +1637,74 @@ export const CajaCobroV2 = {
       .gte('paid_date', todayStr+'T00:00:00').lte('paid_date', todayStr+'T23:59:59');
 
     const totalHoy = (pays||[]).reduce((s,p) => s + Number(p.amount||0), 0);
-    if (!confirm(`¿Cerrar la caja del día?\n\nTotal cobrado: ${fmt(totalHoy)}\nBalance apertura: ${fmt(session?.opening_balance||0)}`)) return;
+    if (!silent && !confirm(`¿Cerrar la caja del día?\n\nTotal cobrado: ${fmt(totalHoy)}\nBalance apertura: ${fmt(session?.opening_balance||0)}`)) return;
 
     const { error } = await supabase.from('caja_sessions').upsert({
       date: todayStr,
       closing_balance: totalHoy,
-      status: 'closed'
+      status: 'closed',
+      notes: session?.notes || 'Caja'
     }, { onConflict: 'date' });
 
-    if (error) return Helpers.toast('Error: ' + error.message, 'error');
-    Helpers.toast('Caja cerrada correctamente', 'success');
+    if (error) {
+      if (!silent) Helpers.toast('Error: ' + error.message, 'error');
+      return;
+    }
+    if (!silent) Helpers.toast('Caja cerrada correctamente', 'success');
     this.loadStudents();
+    return true;
+  },
+
+  // ── CIERRE AUTOMÁTICO DE CAJA A MEDIANOCHE ─────────────────────
+  async _autoCloseCheck() {
+    try {
+      const now = new Date();
+      const hour = now.getHours();
+      const min = now.getMinutes();
+
+      // Auto-cierre entre 12:00 AM y 5:00 AM del día siguiente
+      if (hour >= 0 && hour < 5) {
+        const yesterday = new Date(now);
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+        const { data: session } = await supabase.from('caja_sessions')
+          .select('*').eq('date', yesterdayStr).limit(1).maybeSingle();
+
+        if (session && session.status === 'open') {
+          const { data: pays } = await supabase.from('payments')
+            .select('amount').eq('status','paid')
+            .gte('paid_date', yesterdayStr+'T00:00:00').lte('paid_date', yesterdayStr+'T23:59:59');
+
+          const totalHoy = (pays||[]).reduce((s,p) => s + Number(p.amount||0), 0);
+          await supabase.from('caja_sessions').upsert({
+            date: yesterdayStr,
+            closing_balance: totalHoy,
+            status: 'closed',
+            notes: (session.notes || 'Caja') + ' — Cierre automático'
+          }, { onConflict: 'date' });
+          console.log('[Caja] Auto-cierre ejecutado para:', yesterdayStr);
+        }
+      }
+
+      // Recordatorio de cierre entre 8 PM y 11:59 PM
+      if (hour >= 20 && hour < 24) {
+        const todayStr = today();
+        const { data: session } = await supabase.from('caja_sessions')
+          .select('status').eq('date', todayStr).limit(1).maybeSingle();
+        if (session?.status === 'open') {
+          // Check if we already showed reminder in last 2 hours
+          const lastReminder = parseInt(localStorage.getItem('caja_close_reminder') || '0');
+          if (Date.now() - lastReminder > 7200000) {
+            localStorage.setItem('caja_close_reminder', String(Date.now()));
+            if (hour >= 21) {
+              // After 9 PM, show stronger warning
+              Helpers.toast('🔔 La caja sigue abierta. ¡No olvides cerrarla antes de irte!', 'warning');
+            }
+          }
+        }
+      }
+    } catch (_) { /* silent */ }
   },
 
   // ── DEVOLUCIÓN DE EFECTIVO ────────────────────────────────────────────────
@@ -1730,6 +1898,10 @@ export const CajaCobroV2 = {
 };
 
 // ── CARGAR CONCEPTOS DE LA BASE DE DATOS ────────────────────────────────────
+const CATEGORY_ICONS = { colegiatura:'📅', inscripcion:'📝', reinscripcion:'🔄', uniforme:'👕', libros:'📚', materiales:'✏️', actividades:'🎨', excursiones:'🚌', comedor:'🍽️', tutorias:'👨‍🏫', certificados:'📄', transporte:'🚐', otros:'🏷️' };
+const CATEGORY_BG = { colegiatura:'#E8F2FF', inscripcion:'#FFF3E0', reinscripcion:'#FFF3E0', uniforme:'#E6F7EB', libros:'#E6F7EB', materiales:'#F1F5F9', actividades:'#F1F5F9', excursiones:'#F1F5F9', comedor:'#F1F5F9', tutorias:'#F1F5F9', certificados:'#F1F5F9', transporte:'#F1F5F9', otros:'#F1F5F9' };
+const CATEGORY_TXT = { colegiatura:'#0B63C7', inscripcion:'#FF7A00', reinscripcion:'#FF7A00', uniforme:'#28B54D', libros:'#28B54D', materiales:'#64748B', actividades:'#64748B', excursiones:'#64748B', comedor:'#64748B', tutorias:'#64748B', certificados:'#64748B', transporte:'#64748B', otros:'#64748B' };
+
 async function _loadDbConcepts() {
   try {
     const { data, error } = await supabase
@@ -1744,7 +1916,9 @@ async function _loadDbConcepts() {
         id: 'db_' + c.id,
         label: c.name,
         amount: c.amount,
-        icon: '🏷️'
+        icon: CATEGORY_ICONS[c.category] || '🏷️',
+        bgColor: CATEGORY_BG[c.category] || '#F1F5F9',
+        txtColor: CATEGORY_TXT[c.category] || '#64748B'
       })));
     }
   } catch (e) {

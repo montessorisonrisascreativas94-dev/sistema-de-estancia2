@@ -52,12 +52,18 @@ export const InvoiceModule = {
     const hash       = inv.sha256_hash || '';
     const isFiscal   = !!(inv.fiscal_parent_rnc || inv.fiscal_parent_company_name);
     const invoiceType = isFiscal ? 'COMPROBANTE FISCAL' : 'CONSUMIDOR FINAL';
+    const payMethod  = (pay.method || inv.payment_method || 'efectivo').toLowerCase();
+    const isTransfer = payMethod === 'transferencia' || payMethod === 'transfer' || payMethod === 'cheque' || payMethod === 'tarjeta' || payMethod === 'mixto';
 
     const monthNames = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
     let periodText = '';
     if (period && period.includes('-')) {
-      const [y, m] = period.split('-');
-      periodText = `${monthNames[parseInt(m)-1] || m} ${y}`;
+      const parts = period.split(',');
+      periodText = parts.map(p => {
+        const [y, m] = p.trim().split('-');
+        if (y && m) return `${monthNames[parseInt(m)-1] || m} ${y}`;
+        return p.trim();
+      }).join(', ');
     } else { periodText = period || '—'; }
 
     const fmtCurrency = (n) => `${this.CURRENCY} ${Number(n||0).toLocaleString('es-DO', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
@@ -270,7 +276,7 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:
           <tbody>
             <tr>
               <td>${inv.concept || 'Mensualidad'}</td>
-              <td>${periodText}${pay.bank ? ` · ${pay.bank}` : ''}</td>
+              <td>${periodText}</td>
               <td>1</td>
               <td>${fmtCurrency(amount)}</td>
               <td>${discount > 0 ? '-' + fmtCurrency(discount) : '—'}</td>
@@ -300,9 +306,9 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:
       <div class="inv-section-title">Método de Pago</div>
       <div class="inv-payment-card">
         <div class="inv-payment-grid">
-          <div class="inv-payment-item"><span class="inv-lbl">Método:</span><span class="inv-val" style="text-transform:capitalize">${pay.method || 'Efectivo'}</span></div>
-          <div class="inv-payment-item"><span class="inv-lbl">Banco:</span><span class="inv-val">${pay.bank || '—'}</span></div>
-          <div class="inv-payment-item"><span class="inv-lbl">Referencia:</span><span class="inv-val">${pay.reference || inv.payment_reference || '—'}</span></div>
+          <div class="inv-payment-item"><span class="inv-lbl">Método:</span><span class="inv-val" style="text-transform:capitalize">${pay.method || inv.payment_method || 'Efectivo'}</span></div>
+          ${isTransfer ? `<div class="inv-payment-item"><span class="inv-lbl">Banco:</span><span class="inv-val">${pay.bank || inv.bank || '—'}</span></div>` : ''}
+          ${isTransfer ? `<div class="inv-payment-item"><span class="inv-lbl">Referencia:</span><span class="inv-val">${pay.reference || inv.payment_reference || '—'}</span></div>` : ''}
           <div class="inv-payment-item"><span class="inv-lbl">Fecha:</span><span class="inv-val">${fmtDate(payDate)}</span></div>
           <div class="inv-payment-item"><span class="inv-lbl">Hora:</span><span class="inv-val">${fmtTime(payDate)}</span></div>
           <div class="inv-payment-item"><span class="inv-lbl">Atendido por:</span><span class="inv-val">${inv.attended_by || 'Sistema'}</span></div>
@@ -382,37 +388,32 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:
   // ════════════════════════════════════════════════════════════════
 
   async generatePDF(data) {
+    if (!window.html2pdf) {
+      this._printInvoice();
+      return null;
+    }
+
     const html = this.renderInvoiceHTML(data);
     const container = document.createElement('div');
     container.innerHTML = html;
-    container.style.cssText = 'position:fixed;left:-9999px;top:0;width:800px;z-index:-1;background:white';
+    container.style.cssText = 'position:fixed;left:0;top:0;width:800px;background:white;opacity:0.01;pointer-events:none;z-index:-1';
     document.body.appendChild(container);
 
-    // Generar QR y barcode en el container
     await this._renderQRAndBarcode(container, data);
-
-    // Esperar a que carguen las fuentes
-    await new Promise(r => setTimeout(r, 300));
+    await new Promise(r => setTimeout(r, 600));
 
     let pdfBlob = null;
-    if (window.html2pdf) {
+    try {
       const opt = {
         margin: [8, 8, 8, 8],
         filename: `Factura_${data.invoice?.invoice_number || 'draft'}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+        html2canvas: { scale: 2, useCORS: true, letterRendering: true, allowTaint: false },
         jsPDF: { unit: 'mm', format: 'letter', orientation: 'portrait' },
       };
       pdfBlob = await html2pdf().set(opt).from(container).outputPdf('blob');
-    } else if (window.jspdf?.jsPDF) {
-      // Fallback: usar print window
-      const win = window.open('', '_blank', 'width=820,height=1000');
-      if (win) {
-        win.document.write(html);
-        win.document.close();
-        await new Promise(r => setTimeout(r, 500));
-        win.print();
-      }
+    } catch (e) {
+      console.warn('[InvoiceModule] html2pdf error:', e);
     }
 
     document.body.removeChild(container);
@@ -424,46 +425,55 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:
     const receiptNo = inv.invoice_number || inv.receipt_number || '';
     const uuidFolio = inv.uuid_folio || '';
 
-    // QR
     const qrEl = container.querySelector(`[id^="invQR_"]`);
-    if (qrEl && window.QRCode) {
-      qrEl.innerHTML = '';
-      const qrBox = document.createElement('div');
-      qrBox.className = 'inv-footer-qr-box';
-      qrEl.appendChild(qrBox);
-      new window.QRCode(qrBox, {
-        text: inv.validation_url || `https://montessorisonrisascreativas.com/validate-invoice.html?uuid=${uuidFolio || inv.id}`,
-        width: 68, height: 68,
-        colorDark: '#1a2340', colorLight: '#ffffff',
-        correctLevel: window.QRCode.CorrectLevel.M
-      });
-      const txt = document.createElement('div');
-      txt.className = 'inv-footer-qr-text';
-      txt.innerHTML = `<strong>Escanea para validar</strong><br>Código QR de verificación`;
-      qrEl.appendChild(txt);
-    } else if (qrEl) {
-      qrEl.innerHTML = `<div class="inv-footer-qr-box" style="display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:9px">QR</div>
-        <div class="inv-footer-qr-text"><strong>Validación</strong><br>${uuidFolio || '—'}</div>`;
+    if (qrEl) {
+      if (window.QRCode && uuidFolio) {
+        qrEl.innerHTML = '';
+        const wrap = document.createElement('div');
+        wrap.style.cssText = 'display:flex;align-items:center;gap:14px';
+        const qrBox = document.createElement('div');
+        qrBox.style.cssText = 'width:80px;height:80px;background:white;border-radius:8px;padding:6px;flex-shrink:0;display:flex;align-items:center;justify-content:center';
+        wrap.appendChild(qrBox);
+        try {
+          new window.QRCode(qrBox, {
+            text: inv.validation_url || `https://montessorisonrisascreativas.com/validate-invoice.html?uuid=${uuidFolio || inv.id}`,
+            width: 68, height: 68,
+            colorDark: '#1a2340', colorLight: '#ffffff',
+            correctLevel: window.QRCode.CorrectLevel.M
+          });
+        } catch (_) { qrBox.textContent = 'QR'; }
+        const txt = document.createElement('div');
+        txt.style.cssText = 'font-size:10px;color:rgba(255,255,255,.6);line-height:1.6';
+        txt.innerHTML = `<strong>Escanea para validar</strong><br>Código QR de verificación`;
+        wrap.appendChild(txt);
+        qrEl.appendChild(wrap);
+      } else if (qrEl) {
+        qrEl.innerHTML = `<div style="display:flex;align-items:center;gap:14px;padding:12px;background:rgba(255,255,255,.08);border-radius:10px;border:1px solid rgba(255,255,255,.1)">
+          <div style="width:80px;height:80px;background:white;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:9px;flex-shrink:0">QR</div>
+          <div style="font-size:10px;color:rgba(255,255,255,.6);line-height:1.6"><strong>Validación</strong><br>${uuidFolio || '—'}</div>
+        </div>`;
+      }
     }
 
-    // Barcode
     const bcEl = container.querySelector(`[id^="invBarcode_"]`);
-    if (bcEl && window.JsBarcode) {
-      bcEl.innerHTML = '';
-      const canvas = document.createElement('canvas');
-      bcEl.appendChild(canvas);
-      try {
-        JsBarcode(canvas, receiptNo.replace(/[^a-zA-Z0-9]/g, ''), {
-          format: 'CODE128', width: 1.5, height: 28,
-          displayValue: true, font: 'monospace', fontSize: 9,
-          background: 'transparent', lineColor: 'rgba(255,255,255,0.45)',
-          margin: 0
-        });
-      } catch (_) {
-        bcEl.innerHTML = `<div style="font-size:10px;color:rgba(255,255,255,.4);font-family:monospace">${receiptNo}</div>`;
+    if (bcEl) {
+      if (window.JsBarcode && receiptNo) {
+        bcEl.innerHTML = '';
+        const canvas = document.createElement('canvas');
+        bcEl.appendChild(canvas);
+        try {
+          window.JsBarcode(canvas, receiptNo.replace(/[^a-zA-Z0-9]/g, ''), {
+            format: 'CODE128', width: 1.5, height: 28,
+            displayValue: true, font: 'monospace', fontSize: 9,
+            background: 'transparent', lineColor: 'rgba(255,255,255,0.45)',
+            margin: 0
+          });
+        } catch (_) {
+          bcEl.innerHTML = `<div style="font-size:10px;color:rgba(255,255,255,.4);font-family:monospace;padding:8px;text-align:center">${receiptNo}</div>`;
+        }
+      } else {
+        bcEl.innerHTML = `<div style="font-size:10px;color:rgba(255,255,255,.4);font-family:monospace;padding:8px;text-align:center">${receiptNo}</div>`;
       }
-    } else if (bcEl) {
-      bcEl.innerHTML = `<div style="font-size:10px;color:rgba(255,255,255,.4);font-family:monospace;padding:8px">${receiptNo}</div>`;
     }
   },
 

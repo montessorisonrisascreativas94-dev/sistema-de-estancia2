@@ -1,14 +1,14 @@
 [functions.send-push]
-verify_jwt = false
+verify_jwt = true
 
 [functions.process-event]
 verify_jwt = false
 
 [functions.run-migration]
-verify_jwt = false
+verify_jwt = true
 
 [functions.send-email]
 verify_jwt = true
 
 [functions.generate-invoice]
-verify_jwt = false
+verify_jwt = true

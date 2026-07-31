@@ -772,21 +772,32 @@ export const StudentRecordModal = {
   },
 
   printCarnet() {
-    const matricula = document.getElementById('srm-matricula')?.value?.trim();
-    const name = document.getElementById('srm-name')?.value?.trim();
+    const matricula = document.getElementById('srm-matricula')?.value?.trim() || _state.data?.matricula || '';
+    const name = document.getElementById('srm-name')?.value?.trim() || _state.data?.name || '';
     const container = document.getElementById('srm-qr-container');
     const qrImg = container?.querySelector('img')?.src || container?.querySelector('canvas')?.toDataURL();
     if (!qrImg || !matricula) return Helpers.toast('Genera el QR primero', 'warning');
     const sel = document.getElementById('srm-classroom');
-    const classroom = sel?.options[sel?.selectedIndex]?.text || '';
-    const nivel = sel?.options[sel?.selectedIndex]?.dataset?.level || '';
-    const p1 = document.getElementById('srm-p1name')?.value?.trim() || '';
-    const p2 = document.getElementById('srm-p2name')?.value?.trim() || '';
-    const p1phone = document.getElementById('srm-p1phone')?.value?.trim() || '';
-    const p2phone = document.getElementById('srm-p2phone')?.value?.trim() || '';
-    const isActive = document.getElementById('srm-active')?.checked ?? true;
+    const classroom = sel?.options[sel?.selectedIndex]?.text || _state.data?.classrooms?.name || _state.classes?.find(c => String(c.id) === String(_state.data?.classroom_id))?.name || '';
+    const nivel = sel?.options[sel?.selectedIndex]?.dataset?.level || _state.data?.classrooms?.level || _state.classes?.find(c => String(c.id) === String(_state.data?.classroom_id))?.level || '';
+    const p1 = document.getElementById('srm-p1name')?.value?.trim() || _state.data?.p1_name || '';
+    const p2 = document.getElementById('srm-p2name')?.value?.trim() || _state.data?.p2_name || '';
+    const p1phone = document.getElementById('srm-p1phone')?.value?.trim() || _state.data?.p1_phone || '';
+    const p2phone = document.getElementById('srm-p2phone')?.value?.trim() || _state.data?.p2_phone || '';
+    const isActive = document.getElementById('srm-active')?.checked ?? _state.data?.is_active ?? true;
     const win = window.open('', '_blank');
-    if (win) { win.document.write(Helpers.getQRPrintTemplate(qrImg, name, matricula, { classroom, nivel, p1_name: p1, p2_name: p2, p1_phone: p1phone, p2_phone: p2phone, student_id: _state.studentId || '', is_active: isActive })); win.document.close(); }
+    if (win) {
+      win.document.write(Helpers.getQRPrintTemplate(qrImg, name, matricula, {
+        classroom, nivel,
+        p1_name: p1, p2_name: p2,
+        p1_phone: p1phone, p2_phone: p2phone,
+        _parentName:  _state.data?.parent?.name || '',
+        _parentPhone: _state.data?.parent?.phone || '',
+        student_id: _state.studentId || _state.data?.id || '',
+        is_active: isActive
+      }));
+      win.document.close();
+    }
   },
 
   async sendCredentials() {

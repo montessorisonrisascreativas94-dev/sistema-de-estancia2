@@ -13,9 +13,16 @@ const MONTH_NAMES_ES = ['enero','febrero','marzo','abril','mayo','junio','julio'
 
 async function isCajaOpen() {
   const todayStr = new Date().toISOString().split('T')[0];
-  const { data } = await supabase.from('caja_sessions')
-    .select('status').eq('date', todayStr).limit(1).maybeSingle();
-  return data?.status === 'open';
+  const profile = window.AppState?.get?.('profile') || {};
+  const userId = profile.id || profile.user_id || null;
+  const { data: sessions } = await supabase.from('caja_sessions')
+    .select('status,opened_by').eq('date', todayStr).limit(5);
+  if (!sessions || sessions.length === 0) return false;
+  if (userId) {
+    const mine = sessions.find(s => s.opened_by === userId);
+    if (mine) return mine.status === 'open';
+  }
+  return sessions.some(s => s.status === 'open');
 }
 
 function calcStatus(p) {

@@ -4,34 +4,21 @@
  * Incluye posts generales (classroom_id IS NULL) + posts del aula del estudiante.
  */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const CORS = {
-  'Access-Control-Allow-Origin':  '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-application-name',
-  'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
-};
-
-const json = (data: unknown, status = 200) =>
-  new Response(JSON.stringify(data), {
-    status,
-    headers: { ...CORS, 'Content-Type': 'application/json' },
-  });
+import { handleOptions, checkCors, json } from "../_shared/cors.ts";
+import { getUser } from "../_shared/auth.ts";
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
+  const optionsResp = handleOptions(req);
+  if (optionsResp) return optionsResp;
+  const { origin, denied } = checkCors(req);
+  if (denied) return json({ error: 'Forbidden' }, 403, origin);
 
   try {
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
     const SERVICE_KEY  = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 
     if (!SUPABASE_URL || !SERVICE_KEY) {
-      return json({ error: 'Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY' }, 500);
-    }
-
-    // Verificar autenticación del caller usando el JWT del header
-    const authHeader = req.headers.get('Authorization') ?? '';
-    if (!authHeader.startsWith('Bearer ')) {
-      return json({ error: 'Missing authorization header' }, 401);
+      return json({ error: 'Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY' }, 500, origin);
     }
 
     // Usar service role para leer sin RLS
@@ -40,11 +27,20 @@ Deno.serve(async (req) => {
     });
 
     // Verificar que el JWT es válido
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authErr } = await admin.auth.getUser(token);
-    if (authErr || !user) {
-      return json({ error: 'Token inválido' }, 401);
+    const user = await getUser(req);
+    if (!user) {
+      return json({ error: 'Token inválido' }, 401, origin);
     }
+
+    // Verificar rol y pertenencia
+    const { data: profile } = await admin
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .maybeSingle();
+    const role = profile?.role ?? '';
+
+    const STAFF = ['directora', 'asistente', 'admin', 'encargada', 'maestra'];
 
     // Parsear classroom_id del body
     let classroomId: number | null = null;
@@ -52,6 +48,23 @@ Deno.serve(async (req) => {
       const body = await req.json();
       classroomId = body.classroom_id ? Number(body.classroom_id) : null;
     } catch (_) {}
+
+    if (!STAFF.includes(role)) {
+      if (classroomId) {
+        // Padre/maestra: solo su propio salón (estudiante vinculado)
+        const { data: owned, error: ownErr } = await admin
+          .from('students')
+          .select('id')
+          .eq('classroom_id', classroomId)
+          .eq('parent_id', user.id)
+          .maybeSingle();
+        if (ownErr || !owned) {
+          return json({ error: 'Acceso denegado al aula' }, 403, origin);
+        }
+      } else if (role !== 'padre') {
+        return json({ error: 'Acceso denegado' }, 403, origin);
+      }
+    }
 
     // Fetch posts con service role (sin RLS)
     let query = admin
@@ -74,7 +87,7 @@ Deno.serve(async (req) => {
     const { data: posts, error } = await query;
     if (error) {
       console.error('[get-posts] DB error:', error.message);
-      return json({ error: error.message }, 400);
+      return json({ error: 'Database error' }, 400, origin);
     }
 
     // Resolver URLs de media relativas a URLs públicas de Supabase Storage
@@ -93,11 +106,11 @@ Deno.serve(async (req) => {
     });
 
     console.log(`[get-posts] user=${user.id} classroom=${classroomId} posts=${resolvedPosts.length}`);
-    return json({ posts: resolvedPosts });
+    return json({ posts: resolvedPosts }, 200, origin);
 
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     console.error('[get-posts] Fatal:', msg);
-    return json({ error: msg }, 500);
+    return json({ error: 'Unexpected error' }, 500, origin);
   }
 });

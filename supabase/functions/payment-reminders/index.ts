@@ -11,18 +11,8 @@
  */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { Resend } from "https://esm.sh/resend@2.1.0";
-
-const CORS = {
-  'Access-Control-Allow-Origin':  '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-application-name',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-};
-
-const json = (data: unknown, status = 200) =>
-  new Response(JSON.stringify(data), {
-    status,
-    headers: { ...CORS, 'Content-Type': 'application/json' },
-  });
+import { handleOptions, checkCors, json } from "../_shared/cors.ts";
+import { requireRole } from "../_shared/auth.ts";
 
 // Calcula mora: RD$50/día, cada 7 días = bloque de RD$500
 function calcMora(dueDateStr: string): number {
@@ -40,7 +30,13 @@ function formatCurrency(n: number): string {
 }
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
+  const optionsResp = handleOptions(req);
+  if (optionsResp) return optionsResp;
+  const { origin, denied } = checkCors(req);
+  if (denied) return json({ error: 'Forbidden' }, 403, origin);
+
+  const auth = await requireRole(req, ['directora', 'asistente', 'admin', 'service_role']);
+  if (!auth.allowed) return json({ error: auth.error ?? 'Forbidden' }, auth.status, origin);
 
   try {
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL')              ?? '';
@@ -48,7 +44,7 @@ Deno.serve(async (req) => {
     const RESEND_KEY   = Deno.env.get('RESEND_API_KEY')            ?? '';
     const FROM_EMAIL   = Deno.env.get('FROM_EMAIL')                ?? 'Colegio Montessori Sonrisas Creativas <avisos@montessorisonrisascreativas.com>';
 
-    if (!SUPABASE_URL || !SERVICE_KEY) return json({ error: 'Missing env vars' }, 500);
+    if (!SUPABASE_URL || !SERVICE_KEY) return json({ error: 'Missing env vars' }, 500, origin);
 
     const supabase = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } });
     const resend   = RESEND_KEY ? new Resend(RESEND_KEY) : null;
@@ -110,7 +106,7 @@ Deno.serve(async (req) => {
           .gte('due_date', monthStart)
           .lte('due_date', monthEnd);
 
-        if (e2) return json({ error: e2.message }, 500);
+        if (e2) return json({ error: 'Database error' }, 500, origin);
         allPayments = byDate ?? [];
       }
       updateTimestamp = false; // manual no actualiza last_reminder_sent para no bloquear reenvíos
@@ -135,7 +131,7 @@ Deno.serve(async (req) => {
           .in('status', ['overdue', 'pending'])
           .lte('due_date', in3daysStr);
 
-        if (err2) return json({ error: err2.message }, 500);
+        if (err2) return json({ error: 'Database error' }, 500, origin);
         allPayments = fallback ?? [];
       } else {
         allPayments = data ?? [];
@@ -144,11 +140,11 @@ Deno.serve(async (req) => {
     }
 
     console.log(`[payment-reminders] Found ${allPayments.length} payments to remind`);
-    return await processReminders(supabase, resend, FROM_EMAIL, allPayments, updateTimestamp);
+    return await processReminders(supabase, resend, FROM_EMAIL, allPayments, updateTimestamp, origin);
 
   } catch (e) {
     console.error('[payment-reminders] fatal:', e);
-    return json({ error: String(e) }, 500);
+    return json({ error: 'Unexpected error' }, 500, origin);
   }
 });
 
@@ -157,12 +153,14 @@ async function processReminders(
   resend: InstanceType<typeof Resend> | null,
   fromEmail: string,
   payments: Record<string, unknown>[],
-  updateTimestamp: boolean
+  updateTimestamp: boolean,
+  origin: string
 ): Promise<Response> {
   const CORS = {
-    'Access-Control-Allow-Origin':  '*',
+    'Access-Control-Allow-Origin':  origin || '',
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Vary': 'Origin',
   };
 
   let emailsSent = 0;

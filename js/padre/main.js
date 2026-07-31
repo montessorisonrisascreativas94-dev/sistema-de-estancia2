@@ -27,6 +27,7 @@ window.App = {
   attendance: AttendanceModule, chat: ChatModule, profile: ProfileModule,
   grades: GradesModule, navigateTo: navigateTo,
   openDigitalID: openDigitalID,
+  printStudentCarnet: printStudentCarnetPadre,
   switchStudent: switchStudent,
   updateHeaderProfile: updateHeaderProfile,
   openRatingModal: () => {
@@ -777,6 +778,9 @@ async function openDigitalID() {
           <p class="text-xs font-bold text-slate-400 uppercase tracking-widest">${Helpers.escapeHTML(student.classrooms?.name || 'Sin aula')}</p>
         </div>
         <div id="digitalIDQR" class="p-4 bg-slate-50 rounded-3xl border-2 border-slate-100"></div>
+        <button onclick="App.printStudentCarnet('${student.id}')" class="mt-1 w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black text-xs uppercase tracking-widest transition-all active:scale-95">
+          <i data-lucide="printer" class="w-4 h-4 inline mr-1"></i> Imprimir Carnet
+        </button>
         <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Muestra este código en la puerta para marcar asistencia rápida</p>
       </div>
     </div>
@@ -801,6 +805,49 @@ async function openDigitalID() {
   // ✨ Modo Brillo Máximo (Opcional - solo si el navegador lo soporta)
   if ('wakeLock' in navigator) {
     try { await navigator.wakeLock.request('screen'); } catch(_) {}
+  }
+}
+
+async function printStudentCarnetPadre(studentId) {
+  if (!window.QRCode) {
+    await new Promise(r => { const s = document.createElement('script'); s.src = 'js/shared/qrcode.min.js'; s.onload = r; document.head.appendChild(s); });
+  }
+  const { supabase } = await import('../shared/supabase.js');
+  const { Helpers: H } = await import('../shared/helpers.js');
+  const { data: st } = await supabase.from('students')
+    .select('*, classrooms:classroom_id(name, level), parent:parent_id(name, phone)')
+    .eq('id', studentId).single();
+  if (!st) return H.toast('Estudiante no encontrado', 'error');
+
+  const tmp = document.createElement('div');
+  tmp.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:200px;height:200px';
+  document.body.appendChild(tmp);
+  const mat = (st.matricula || '').startsWith('MSC-') ? st.matricula : 'MSC-' + (st.matricula || '');
+  let qrImg = '';
+  try {
+    new window.QRCode(tmp, { text: mat, width: 200, height: 200, colorDark: '#1e293b', colorLight: '#ffffff', correctLevel: window.QRCode.CorrectLevel.H });
+    await new Promise(r => setTimeout(r, 250));
+    qrImg = tmp.querySelector('img')?.src || tmp.querySelector('canvas')?.toDataURL() || '';
+  } catch (_) {}
+  document.body.removeChild(tmp);
+
+  const win = window.open('', '_blank');
+  if (win) {
+    win.document.write(H.getQRPrintTemplate(qrImg, st.name, st.matricula, {
+      classroom:  st.classrooms?.name || '',
+      nivel:      st.classrooms?.level || '',
+      p1_name:    st.p1_name || '',
+      p2_name:    st.p2_name || '',
+      p1_phone:   st.p1_phone || '',
+      p2_phone:   st.p2_phone || '',
+      _parentName:  st.parent?.name || '',
+      _parentPhone: st.parent?.phone || '',
+      student_id:   st.id || '',
+      is_active:    st.is_active !== false
+    }));
+    win.document.close();
+  } else {
+    H.toast('Permite ventanas emergentes para imprimir', 'warning');
   }
 }
 

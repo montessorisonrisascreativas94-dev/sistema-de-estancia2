@@ -1,16 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const CORS = {
-  'Access-Control-Allow-Origin':  '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-application-name',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-};
-
-const json = (data: unknown, status = 200) =>
-  new Response(JSON.stringify(data), {
-    status,
-    headers: { ...CORS, 'Content-Type': 'application/json' },
-  });
+import { handleOptions, checkCors, json } from "../_shared/cors.ts";
+import { requireRole } from "../_shared/auth.ts";
 
 async function osNotify(appId: string, key: string, payload: Record<string, unknown>) {
   const res = await fetch('https://onesignal.com/api/v1/notifications', {
@@ -83,7 +73,13 @@ async function getSubscriptionIds(appId: string, key: string, externalUserId: st
 }
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
+  const optionsResp = handleOptions(req);
+  if (optionsResp) return optionsResp;
+  const { origin, denied } = checkCors(req);
+  if (denied) return json({ error: 'Forbidden' }, 403, origin);
+
+  const auth = await requireRole(req, ['directora', 'asistente', 'admin', 'encargada', 'maestra', 'service_role']);
+  if (!auth.allowed) return json({ error: auth.error ?? 'Forbidden' }, auth.status, origin);
 
   try {
     const SUPABASE_URL     = Deno.env.get('SUPABASE_URL')              ?? '';
@@ -91,7 +87,7 @@ Deno.serve(async (req) => {
     const ONESIGNAL_APP_ID = Deno.env.get('ONESIGNAL_APP_ID')         ?? '';
     const ONESIGNAL_KEY    = Deno.env.get('ONESIGNAL_REST_API_KEY')    ?? '';
 
-    if (!SUPABASE_URL || !SERVICE_KEY) return json({ error: 'Missing Supabase env vars' }, 500);
+    if (!SUPABASE_URL || !SERVICE_KEY) return json({ error: 'Missing Supabase env vars' }, 500, origin);
 
     const supabase = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } });
 
@@ -99,7 +95,11 @@ Deno.serve(async (req) => {
     const { user_id, title, message, type = 'info', link = null } = body;
 
     if (!user_id || !title || !message) {
-      return json({ error: 'Missing: user_id, title, message' }, 400);
+      return json({ error: 'Missing: user_id, title, message' }, 400, origin);
+    }
+
+    if (typeof title !== 'string' || typeof message !== 'string' || title.length > 300 || message.length > 1000) {
+      return json({ error: 'Invalid title or message' }, 400, origin);
     }
 
     // 0. Verificar si ya tenemos un player_id guardado (para diagnóstico)
@@ -117,7 +117,7 @@ Deno.serve(async (req) => {
     // 2. OneSignal push
     if (!ONESIGNAL_APP_ID || !ONESIGNAL_KEY) {
       console.warn('[send-push] OneSignal no configurado');
-      return json({ ok: true, notification_saved: !dbErr, onesignal: 'not_configured' });
+      return json({ ok: true, notification_saved: !dbErr, onesignal: 'not_configured' }, 200, origin);
     }
 
     const fullLink = link
@@ -163,7 +163,7 @@ Deno.serve(async (req) => {
         onesignalStatus = 'sent';
         onesignalDetail = `id=${r1.id} recipients=${r1.recipients}`;
         console.log('[send-push] ✅ Enviado via external_user_id');
-        return json({ ok: true, notification_saved: !dbErr, onesignal: onesignalStatus, detail: onesignalDetail });
+        return json({ ok: true, notification_saved: !dbErr, onesignal: onesignalStatus, detail: onesignalDetail }, 200, origin);
       }
 
       // ── Intento 2: player_ids via API v2 lookup ───────────────────────────
@@ -189,7 +189,7 @@ Deno.serve(async (req) => {
             .eq('id', user_id)
             .then(() => {}).catch(() => {});
 
-          return json({ ok: true, notification_saved: !dbErr, onesignal: onesignalStatus, detail: onesignalDetail });
+          return json({ ok: true, notification_saved: !dbErr, onesignal: onesignalStatus, detail: onesignalDetail }, 200, origin);
         }
         console.warn('[send-push] Intento 2 falló:', JSON.stringify(r2.errors || r2));
       }
@@ -214,7 +214,7 @@ Deno.serve(async (req) => {
           onesignalStatus = 'sent_via_saved_player_id';
           onesignalDetail = `id=${r3.id} recipients=${r3.recipients}`;
           console.log('[send-push] ✅ Enviado via saved player_id');
-          return json({ ok: true, notification_saved: !dbErr, onesignal: onesignalStatus, detail: onesignalDetail });
+          return json({ ok: true, notification_saved: !dbErr, onesignal: onesignalStatus, detail: onesignalDetail }, 200, origin);
         }
         console.warn('[send-push] Intento 3 falló:', JSON.stringify(r3.errors || r3));
       }
@@ -229,11 +229,11 @@ Deno.serve(async (req) => {
       console.error('[send-push] Exception:', onesignalDetail);
     }
 
-    return json({ ok: true, notification_saved: !dbErr, onesignal: onesignalStatus, detail: onesignalDetail });
+    return json({ ok: true, notification_saved: !dbErr, onesignal: onesignalStatus, detail: onesignalDetail }, 200, origin);
 
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     console.error('[send-push] Fatal:', msg);
-    return json({ error: msg }, 500);
+    return json({ error: 'Unexpected error' }, 500, origin);
   }
 });

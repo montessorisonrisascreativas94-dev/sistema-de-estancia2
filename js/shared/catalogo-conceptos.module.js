@@ -28,19 +28,19 @@ const DEFAULT_CONCEPTS = [
 ];
 
 const CATEGORY_META = {
-  colegiatura:   { label: 'Colegiatura',    icon: '📅', color: 'bg-[#E8F2FF] text-[#0B63C7] border-[#0B63C7]' },
-  inscripcion:   { label: 'Inscripción',    icon: '📝', color: 'bg-[#FFF3E0] text-[#FF7A00] border-[#FF7A00]' },
-  reinscripcion: { label: 'Reinscripción',  icon: '🔄', color: 'bg-[#FFF3E0] text-[#FF7A00] border-[#FF7A00]' },
-  uniforme:      { label: 'Uniforme',       icon: '👕', color: 'bg-[#E6F7EB] text-[#28B54D] border-[#28B54D]' },
-  libros:        { label: 'Libros',         icon: '📚', color: 'bg-[#E6F7EB] text-[#28B54D] border-[#28B54D]' },
-  materiales:    { label: 'Materiales',     icon: '✏️', color: 'bg-slate-100 text-slate-600 border-slate-300' },
-  actividades:   { label: 'Actividades',    icon: '🎨', color: 'bg-slate-100 text-slate-600 border-slate-300' },
-  excursiones:   { label: 'Excursiones',    icon: '🚌', color: 'bg-slate-100 text-slate-600 border-slate-300' },
-  comedor:       { label: 'Comedor',        icon: '🍽️', color: 'bg-slate-100 text-slate-600 border-slate-300' },
-  tutorias:      { label: 'Tutorías',       icon: '👨‍🏫', color: 'bg-slate-100 text-slate-600 border-slate-300' },
-  certificados:  { label: 'Certificados',   icon: '📄', color: 'bg-slate-100 text-slate-600 border-slate-300' },
-  transporte:    { label: 'Transporte',     icon: '🚐', color: 'bg-slate-100 text-slate-600 border-slate-300' },
-  otros:         { label: 'Otros',          icon: '🏷️', color: 'bg-slate-100 text-slate-600 border-slate-300' },
+  colegiatura:   { label: 'Colegiatura',    icon: '📅', color: 'bg-[#E8F2FF] text-[#0B63C7] border-[#0B63C7]', bgColor: '#E8F2FF', txtColor: '#0B63C7' },
+  inscripcion:   { label: 'Inscripción',    icon: '📝', color: 'bg-[#FFF3E0] text-[#FF7A00] border-[#FF7A00]', bgColor: '#FFF3E0', txtColor: '#FF7A00' },
+  reinscripcion: { label: 'Reinscripción',  icon: '🔄', color: 'bg-[#FFF3E0] text-[#FF7A00] border-[#FF7A00]', bgColor: '#FFF3E0', txtColor: '#FF7A00' },
+  uniforme:      { label: 'Uniforme',       icon: '👕', color: 'bg-[#E6F7EB] text-[#28B54D] border-[#28B54D]', bgColor: '#E6F7EB', txtColor: '#28B54D' },
+  libros:        { label: 'Libros',         icon: '📚', color: 'bg-[#E6F7EB] text-[#28B54D] border-[#28B54D]', bgColor: '#E6F7EB', txtColor: '#28B54D' },
+  materiales:    { label: 'Materiales',     icon: '✏️', color: 'bg-slate-100 text-slate-600 border-slate-300', bgColor: '#F1F5F9', txtColor: '#64748B' },
+  actividades:   { label: 'Actividades',    icon: '🎨', color: 'bg-slate-100 text-slate-600 border-slate-300', bgColor: '#F1F5F9', txtColor: '#64748B' },
+  excursiones:   { label: 'Excursiones',    icon: '🚌', color: 'bg-slate-100 text-slate-600 border-slate-300', bgColor: '#F1F5F9', txtColor: '#64748B' },
+  comedor:       { label: 'Comedor',        icon: '🍽️', color: 'bg-slate-100 text-slate-600 border-slate-300', bgColor: '#F1F5F9', txtColor: '#64748B' },
+  tutorias:      { label: 'Tutorías',       icon: '👨‍🏫', color: 'bg-slate-100 text-slate-600 border-slate-300', bgColor: '#F1F5F9', txtColor: '#64748B' },
+  certificados:  { label: 'Certificados',   icon: '📄', color: 'bg-slate-100 text-slate-600 border-slate-300', bgColor: '#F1F5F9', txtColor: '#64748B' },
+  transporte:    { label: 'Transporte',     icon: '🚐', color: 'bg-slate-100 text-slate-600 border-slate-300', bgColor: '#F1F5F9', txtColor: '#64748B' },
+  otros:         { label: 'Otros',          icon: '🏷️', color: 'bg-slate-100 text-slate-600 border-slate-300', bgColor: '#F1F5F9', txtColor: '#64748B' },
 };
 
 const esc = s => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -223,6 +223,16 @@ export const CatalogoModule = {
     this._render();
   },
 
+  _previewCategoryIcon(cat) {
+    const meta = CATEGORY_META[cat];
+    const preview = document.getElementById('catIconPreview');
+    if (preview && meta) {
+      preview.innerHTML = `<span style="font-size:1.2rem">${meta.icon}</span><span>${meta.label}</span>`;
+      preview.style.background = meta.bgColor || '#F1F5F9';
+      preview.style.color = meta.txtColor || '#64748B';
+    }
+  },
+
   _onSearch(val) {
     this._search = val.toLowerCase();
     // Re-filter without full reload
@@ -276,11 +286,16 @@ export const CatalogoModule = {
           </div>
           <div>
             <label class="block text-[11px] font-black text-slate-400 uppercase tracking-wider mb-1.5 ml-1">Categoría *</label>
-            <select id="catConceptCategory" class="${inputCls} appearance-none">
+            <select id="catConceptCategory" onchange="CatalogoModule._previewCategoryIcon(this.value)"
+              class="${inputCls} appearance-none">
               ${Object.entries(CATEGORY_META).map(([key, meta]) =>
                 `<option value="${key}" ${concept?.category === key ? 'selected' : ''}>${meta.icon} ${meta.label}</option>`
               ).join('')}
             </select>
+            <div id="catIconPreview" style="margin-top:6px;display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:10px;background:${concept ? CATEGORY_META[concept.category]?.bgColor || '#F1F5F9' : '#F1F5F9'};font-size:.75rem;font-weight:700;color:${concept ? CATEGORY_META[concept.category]?.txtColor || '#64748B' : '#64748B'}">
+              <span style="font-size:1.2rem">${concept ? CATEGORY_META[concept.category]?.icon || '🏷️' : '🏷️'}</span>
+              <span>${concept ? CATEGORY_META[concept.category]?.label || 'General' : 'Vista previa del icono'}</span>
+            </div>
           </div>
           <div>
             <label class="block text-[11px] font-black text-slate-400 uppercase tracking-wider mb-1.5 ml-1">Monto (RD$)</label>

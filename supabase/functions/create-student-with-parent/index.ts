@@ -1,13 +1,18 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { corsHeaders } from "../_shared/cors.ts";
+import { handleOptions, checkCors, json } from "../_shared/cors.ts";
+import { requireStaff } from "../_shared/auth.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
+  const optionsResp = handleOptions(req);
+  if (optionsResp) return optionsResp;
+  const { origin, denied } = checkCors(req);
+  if (denied) return json({ error: 'Forbidden' }, 403, origin);
+
+  const auth = await requireStaff(req);
+  if (!auth.allowed) return json({ error: auth.error ?? 'Forbidden' }, auth.status, origin);
 
   try {
     const { studentData, parentData } = await req.json();
@@ -69,16 +74,10 @@ Deno.serve(async (req) => {
 
     if (studentError) throw studentError;
 
-    return new Response(JSON.stringify({ student: newStudent }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 201,
-    });
+    return json({ student: newStudent }, 201, origin);
 
   } catch (error) {
     console.error("Error creando estudiante:", error);
-    return new Response(JSON.stringify({ error: error.message }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 400,
-    });
+    return json({ error: "Error al crear estudiante" }, 400, origin);
   }
 });

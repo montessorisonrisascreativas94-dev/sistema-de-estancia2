@@ -171,7 +171,7 @@ export const InvoicingModule = {
         invoice,
         student: { name: invoice.student_name, matricula: invoice.student_matricula, p1_name: invoice.parent_name, p1_phone: invoice.parent_phone, classroom: invoice.classroom_name },
         school: { school_name: invoice.school_name, address: invoice.school_address, phone: invoice.school_phone, email: invoice.school_email, rnc: invoice.school_rnc, website: invoice.school_website, logo_url: invoice.school_logo_url },
-        payment: { method: invoice.payment_method, paid_date: invoice.payment_date, month_paid: invoice.period }
+        payment: { method: invoice.payment_method, paid_date: invoice.payment_date, month_paid: invoice.period, bank: invoice.bank, reference: invoice.payment_reference }
       };
       const blob = await InvoiceModule.generatePDF(data);
       if (blob) {
@@ -219,7 +219,7 @@ export const InvoicingModule = {
       invoice,
       student: { name: invoice.student_name, matricula: invoice.student_matricula, p1_name: invoice.parent_name, p1_phone: invoice.parent_phone, classroom: invoice.classroom_name, photo_url: invoice.student_photo_url },
       school: { school_name: invoice.school_name || this.settings?.school_name, address: invoice.school_address || this.settings?.address, phone: invoice.school_phone || this.settings?.phone, email: invoice.school_email || this.settings?.email, rnc: invoice.school_rnc || this.settings?.rnc, website: invoice.school_website || this.settings?.website, logo_url: invoice.school_logo_url || this.settings?.logo_url },
-      payment: { method: invoice.payment_method, paid_date: invoice.payment_date, month_paid: invoice.period, bank: invoice.payment_reference }
+      payment: { method: invoice.payment_method, paid_date: invoice.payment_date, month_paid: invoice.period, bank: invoice.bank, reference: invoice.payment_reference }
     };
     InvoiceModule.openInvoiceModal(data);
   },
@@ -232,7 +232,7 @@ export const InvoicingModule = {
       invoice,
       student: { name: invoice.student_name, p1_email: null, p2_email: null, classroom: invoice.classroom_name },
       school: { school_name: invoice.school_name, address: invoice.school_address, phone: invoice.school_phone, email: invoice.school_email, rnc: invoice.school_rnc, website: invoice.school_website, logo_url: invoice.school_logo_url },
-      payment: { method: invoice.payment_method, paid_date: invoice.payment_date, month_paid: invoice.period }
+      payment: { method: invoice.payment_method, paid_date: invoice.payment_date, month_paid: invoice.period, bank: invoice.bank, reference: invoice.payment_reference }
     };
     // Buscar emails del estudiante
     if (invoice.student_id) {

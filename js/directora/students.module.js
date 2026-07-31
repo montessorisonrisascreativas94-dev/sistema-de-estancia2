@@ -473,12 +473,18 @@ export const StudentsModule = {
     const students = Array.isArray(raw) ? raw : [];
     // Map them to the format expected by Helpers.printAllCarnets
     const formattedStudents = students.map(s => ({
-      name: s.name,
-      matricula: s.matricula,
-      classroom: s.classrooms?.name || '',
+      name:      s.name || '',
+      matricula: s.matricula || '',
+      classroom: s.classrooms?.name || s.classroom_name || '',
       nivel:     s.classrooms?.level || s.level || '',
       p1_name:   s.p1_name || '',
-      p2_name:   s.p2_name || ''
+      p2_name:   s.p2_name || '',
+      p1_phone:  s.p1_phone || '',
+      p2_phone:  s.p2_phone || '',
+      _parentName:  s._parentName || '',
+      _parentPhone: s._parentPhone || '',
+      student_id:   s.id || '',
+      is_active:    s.is_active !== false
     }));
     await Helpers.printAllCarnets(formattedStudents);
   },

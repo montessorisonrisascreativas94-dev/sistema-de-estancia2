@@ -19,6 +19,20 @@ export const Helpers = {
 
   },
 
+  /**
+   * 🔠 Formato de nombre propio (Title Case) con manejo de conectores en español.
+   * "luis y negro" → "Luis y Negro" | "MARIA JOSE" → "Maria Jose"
+   */
+  titleCase(str = '') {
+    const minor = new Set(['de','del','la','las','los','y','e','o','u','a','al','el','en','por','para','con','van','da','di','do','von']);
+    return String(str || '').trim().replace(/\s+/g, ' ').split(' ').map((w, i) => {
+      if (!w) return w;
+      const low = w.toLowerCase();
+      if (i !== 0 && minor.has(low)) return low;
+      return w.split('-').map(p => (p ? p.charAt(0).toUpperCase() + p.slice(1).toLowerCase() : p)).join('-');
+    }).join(' ');
+  },
+
 
   /**
    * 🔔 Toast moderno con microinteracciones
@@ -157,17 +171,17 @@ body{font-family:'Nunito',sans-serif;background:#e8ecf1;-webkit-print-color-adju
 .mascot{position:absolute;pointer-events:none;z-index:4;filter:drop-shadow(0 1px 2px rgba(0,0,0,.15))}
 
 /* FRONT HEADER */
-.f-top{display:flex;align-items:center;justify-content:space-between;padding:1.8mm 2.5mm 1.5mm;background:linear-gradient(135deg,#f0faf0 0%,#e8f5e9 50%,#E3F2FD 100%);border-bottom:0.35mm solid #2E7D32;position:relative;z-index:2}
-.f-logo-w{display:flex;align-items:center;gap:1.5mm}
-.f-logo{width:9mm;height:9mm;border-radius:2mm;overflow:hidden;border:0.3mm solid #2E7D32;box-shadow:0 1px 3px rgba(0,0,0,.15);flex-shrink:0;background:white}
+.f-top{display:flex;align-items:center;justify-content:space-between;padding:1.5mm 2.5mm 1.3mm;background:linear-gradient(135deg,#f0faf0 0%,#e8f5e9 50%,#E3F2FD 100%);border-bottom:0.35mm solid #2E7D32;position:relative;z-index:2}
+.f-logo-w{display:flex;align-items:center;gap:1.8mm}
+.f-logo{width:11.5mm;height:11.5mm;border-radius:2.5mm;overflow:hidden;border:0.3mm solid #2E7D32;box-shadow:0 1px 3px rgba(0,0,0,.15);flex-shrink:0;background:white}
 .f-logo img{width:100%;height:100%;object-fit:cover}
 .f-school{display:flex;flex-direction:column}
-.f-school-n{font-family:'Baloo 2',cursive;font-size:4.8pt;font-weight:800;color:#0D2C54;line-height:1.1}
-.f-school-s{font-family:'Baloo 2',cursive;font-size:3.2pt;font-weight:700;color:#2E7D32;line-height:1}
+.f-school-n{font-family:'Baloo 2',cursive;font-size:5pt;font-weight:800;color:#0D2C54;line-height:1.1}
+.f-school-s{font-family:'Baloo 2',cursive;font-size:3.5pt;font-weight:700;color:#2E7D32;line-height:1}
 .f-year{font-family:'Baloo 2',cursive;font-size:4.5pt;font-weight:800;color:white;background:linear-gradient(135deg,#1565C0,#0D2C54);padding:0.8mm 2mm;border-radius:1.8mm;line-height:1;box-shadow:0 1px 3px rgba(21,101,192,.3)}
 
 /* FRONT BODY */
-.f-body{display:flex;height:calc(100% - 13mm);position:relative;z-index:1}
+.f-body{display:flex;height:calc(100% - 15mm);position:relative;z-index:1}
 
 /* QR ZONE — bigger QR */
 .f-qr{width:38%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1.2mm 0.8mm;position:relative;background:linear-gradient(180deg,rgba(46,125,50,.03) 0%,rgba(255,255,255,0) 100%)}
@@ -203,11 +217,11 @@ body{font-family:'Nunito',sans-serif;background:#e8ecf1;-webkit-print-color-adju
 .f-motto .heart{color:#FB8C00}
 
 /* ===== BACK ===== */
-.b-top{display:flex;align-items:center;justify-content:center;padding:2mm 3mm 1.5mm;background:linear-gradient(135deg,#f0faf0 0%,#e8f5e9 50%,#FFF3E0 100%);border-bottom:0.3mm solid #2E7D32;position:relative;z-index:2}
-.b-logo{width:17mm;height:17mm;border-radius:3.5mm;overflow:hidden;border:0.4mm solid #2E7D32;box-shadow:0 2px 8px rgba(0,0,0,.12);background:white}
+.b-top{display:flex;align-items:center;justify-content:center;padding:1.8mm 3mm 1.5mm;background:linear-gradient(135deg,#f0faf0 0%,#e8f5e9 50%,#FFF3E0 100%);border-bottom:0.3mm solid #2E7D32;position:relative;z-index:2}
+.b-logo{width:21mm;height:21mm;border-radius:4mm;overflow:hidden;border:0.4mm solid #2E7D32;box-shadow:0 2px 8px rgba(0,0,0,.12);background:white}
 .b-logo img{width:100%;height:100%;object-fit:cover}
-.b-title{font-family:'Baloo 2',cursive;font-size:5pt;font-weight:800;color:#0D2C54;text-align:center;margin-top:0.8mm;line-height:1.1}
-.b-sub{font-size:3.2pt;font-weight:600;color:#718096;text-align:center;line-height:1.1;margin-top:0.3mm}
+.b-title{font-family:'Baloo 2',cursive;font-size:5.5pt;font-weight:800;color:#0D2C54;text-align:center;margin-top:0.8mm;line-height:1.1}
+.b-sub{font-size:3.5pt;font-weight:600;color:#718096;text-align:center;line-height:1.1;margin-top:0.3mm}
 
 .b-body{padding:1.5mm 3.5mm;display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;position:relative;z-index:1}
 
@@ -311,14 +325,14 @@ body{font-family:'Nunito',sans-serif;background:#e8ecf1;-webkit-print-color-adju
 
       <!-- INFO ZONE -->
       <div class="f-info">
-        <div class="f-name">${Helpers.escapeHTML((name || 'Estudiante').substring(0, 30))}</div>
+        <div class="f-name">${Helpers.escapeHTML((Helpers.titleCase(name) || 'Estudiante').substring(0, 30))}</div>
         <div class="f-mat">${mat}${d.studentId ? ` · ID: ${Helpers.escapeHTML(d.studentId)}` : ''}</div>
         <div class="f-fields">
           <div class="f-field"><div class="f-fi grn">&#127891;</div><div class="f-ft"><span class="f-fl">Nivel</span><span class="f-fv">${d.nivel ? Helpers.escapeHTML(d.nivel) : '-'}</span></div></div>
           <div class="f-field"><div class="f-fi blu">&#127979;</div><div class="f-ft"><span class="f-fl">Aula</span><span class="f-fv">${d.classroom ? Helpers.escapeHTML(d.classroom) : '-'}</span></div></div>
-          <div class="f-field"><div class="f-fi org">&#128104;</div><div class="f-ft"><span class="f-fl">Tutor 1</span><span class="f-fv">${d.p1Name ? Helpers.escapeHTML(d.p1Name.substring(0, 22)) : '-'}${d.p1Phone ? ` · ${Helpers.escapeHTML(d.p1Phone)}` : ''}</span></div></div>
-          <div class="f-field"><div class="f-fi ylw">&#128105;</div><div class="f-ft"><span class="f-fl">Tutor 2</span><span class="f-fv">${d.p2Name ? Helpers.escapeHTML(d.p2Name.substring(0, 22)) : '-'}${d.p2Phone ? ` · ${Helpers.escapeHTML(d.p2Phone)}` : ''}</span></div></div>
-          ${d.parentName ? `<div class="f-field"><div class="f-fi org">&#128101;</div><div class="f-ft"><span class="f-fl">Otro</span><span class="f-fv">${Helpers.escapeHTML(d.parentName.substring(0, 16))}${d.parentPhone ? ` · ${Helpers.escapeHTML(d.parentPhone)}` : ''}</span></div></div>` : ''}
+          <div class="f-field"><div class="f-fi org">&#128104;</div><div class="f-ft"><span class="f-fl">Tutor 1</span><span class="f-fv">${d.p1Name ? Helpers.escapeHTML(Helpers.titleCase(d.p1Name).substring(0, 22)) : '-'}${d.p1Phone ? ` · ${Helpers.escapeHTML(d.p1Phone)}` : ''}</span></div></div>
+          <div class="f-field"><div class="f-fi ylw">&#128105;</div><div class="f-ft"><span class="f-fl">Tutor 2</span><span class="f-fv">${d.p2Name ? Helpers.escapeHTML(Helpers.titleCase(d.p2Name).substring(0, 22)) : '-'}${d.p2Phone ? ` · ${Helpers.escapeHTML(d.p2Phone)}` : ''}</span></div></div>
+          ${d.parentName ? `<div class="f-field"><div class="f-fi org">&#128101;</div><div class="f-ft"><span class="f-fl">Otro</span><span class="f-fv">${Helpers.escapeHTML(Helpers.titleCase(d.parentName).substring(0, 16))}${d.parentPhone ? ` · ${Helpers.escapeHTML(d.parentPhone)}` : ''}</span></div></div>` : ''}
           <div class="f-field"><div class="f-fi ${d.isActive ? 'grn' : 'org'}">${d.isActive ? '&#10003;' : '&#10007;'}</div><div class="f-ft"><span class="f-fl">Estado</span><span class="f-fv">${d.isActive ? 'Activo' : 'Inactivo'}</span></div></div>
         </div>
       </div>
@@ -432,6 +446,38 @@ body{font-family:'Nunito',sans-serif;background:#e8ecf1;-webkit-print-color-adju
   async printAllCarnets(students = []) {
     if (!students.length) { this.toast('Sin estudiantes para imprimir', 'warning'); return; }
 
+    // Completa datos faltantes (aula, nivel, tutores, teléfonos) desde la BD
+    // para que ningún carnet muestre guiones cuando los datos existen.
+    const incomplete = students.filter(s => !s.p1_name || !s.p2_name || !s.classroom || !s.nivel || !s.p1_phone || !s.p2_phone);
+    if (incomplete.length) {
+      try {
+        const { supabase } = await import('./supabase.js');
+        const ids = incomplete.map(s => s.student_id || s.id).filter(v => v !== undefined && v !== null && v !== '');
+        if (ids.length) {
+          const { data: rows } = await supabase.from('students')
+            .select('id, p1_name, p1_phone, p2_name, p2_phone, parent_id, profiles:parent_id(name, phone), classrooms:classroom_id(id, name, level)')
+            .in('id', ids);
+          const byId = {};
+          (rows || []).forEach(r => { byId[String(r.id)] = r; });
+          students = students.map(s => {
+            const db = byId[String(s.student_id || s.id || '')];
+            if (!db) return s;
+            return {
+              ...s,
+              classroom:     s.classroom  || db.classrooms?.name || '',
+              nivel:         s.nivel      || db.classrooms?.level || '',
+              p1_name:       s.p1_name    || db.p1_name || '',
+              p1_phone:      s.p1_phone   || db.p1_phone || '',
+              p2_name:       s.p2_name    || db.p2_name || '',
+              p2_phone:      s.p2_phone   || db.p2_phone || '',
+              _parentName:   s._parentName  || db.profiles?.name || '',
+              _parentPhone:  s._parentPhone || db.profiles?.phone || ''
+            };
+          });
+        }
+      } catch (_) { /* sin conexión: usamos lo que llegó del panel */ }
+    }
+
     await new Promise(resolve => {
       if (window.QRCode) { resolve(); return; }
       const s = document.createElement('script');
@@ -521,14 +567,14 @@ body{font-family:'Nunito',sans-serif;background:#e8ecf1;-webkit-print-color-adju
           </div>
           <div class="f-divider"></div>
           <div class="f-info">
-            <div class="f-name">${Helpers.escapeHTML((st.name||'Estudiante').substring(0, 30))}</div>
+            <div class="f-name">${Helpers.escapeHTML((Helpers.titleCase(st.name) || 'Estudiante').substring(0, 30))}</div>
             <div class="f-mat">${st.mat}${d.studentId ? ` · ID: ${Helpers.escapeHTML(d.studentId)}` : ''}</div>
             <div class="f-fields">
               <div class="f-field"><div class="f-fi grn">&#127891;</div><div class="f-ft"><span class="f-fl">Nivel</span><span class="f-fv">${d.nivel ? Helpers.escapeHTML(d.nivel) : '-'}</span></div></div>
               <div class="f-field"><div class="f-fi blu">&#127979;</div><div class="f-ft"><span class="f-fl">Aula</span><span class="f-fv">${d.classroom ? Helpers.escapeHTML(d.classroom) : '-'}</span></div></div>
-              <div class="f-field"><div class="f-fi org">&#128104;</div><div class="f-ft"><span class="f-fl">Tutor 1</span><span class="f-fv">${d.p1Name ? Helpers.escapeHTML(d.p1Name.substring(0, 22)) : '-'}${d.p1Phone ? ` · ${Helpers.escapeHTML(d.p1Phone)}` : ''}</span></div></div>
-              <div class="f-field"><div class="f-fi ylw">&#128105;</div><div class="f-ft"><span class="f-fl">Tutor 2</span><span class="f-fv">${d.p2Name ? Helpers.escapeHTML(d.p2Name.substring(0, 22)) : '-'}${d.p2Phone ? ` · ${Helpers.escapeHTML(d.p2Phone)}` : ''}</span></div></div>
-              ${d.parentName ? `<div class="f-field"><div class="f-fi org">&#128101;</div><div class="f-ft"><span class="f-fl">Otro</span><span class="f-fv">${Helpers.escapeHTML(d.parentName.substring(0, 16))}${d.parentPhone ? ` · ${Helpers.escapeHTML(d.parentPhone)}` : ''}</span></div></div>` : ''}
+              <div class="f-field"><div class="f-fi org">&#128104;</div><div class="f-ft"><span class="f-fl">Tutor 1</span><span class="f-fv">${d.p1Name ? Helpers.escapeHTML(Helpers.titleCase(d.p1Name).substring(0, 22)) : '-'}${d.p1Phone ? ` · ${Helpers.escapeHTML(d.p1Phone)}` : ''}</span></div></div>
+              <div class="f-field"><div class="f-fi ylw">&#128105;</div><div class="f-ft"><span class="f-fl">Tutor 2</span><span class="f-fv">${d.p2Name ? Helpers.escapeHTML(Helpers.titleCase(d.p2Name).substring(0, 22)) : '-'}${d.p2Phone ? ` · ${Helpers.escapeHTML(d.p2Phone)}` : ''}</span></div></div>
+              ${d.parentName ? `<div class="f-field"><div class="f-fi org">&#128101;</div><div class="f-ft"><span class="f-fl">Otro</span><span class="f-fv">${Helpers.escapeHTML(Helpers.titleCase(d.parentName).substring(0, 16))}${d.parentPhone ? ` · ${Helpers.escapeHTML(d.parentPhone)}` : ''}</span></div></div>` : ''}
               <div class="f-field"><div class="f-fi ${d.isActive ? 'grn' : 'org'}">${d.isActive ? '&#10003;' : '&#10007;'}</div><div class="f-ft"><span class="f-fl">Estado</span><span class="f-fv">${d.isActive ? 'Activo' : 'Inactivo'}</span></div></div>
             </div>
           </div>
@@ -617,15 +663,15 @@ body{font-family:'Nunito',sans-serif;background:#e8ecf1;-webkit-print-color-adju
 .carnet-pair{width:96mm;display:flex;flex-direction:column;align-items:center;margin:1.5mm auto;flex-shrink:0;gap:1.2mm}
 .carnet{width:85.6mm;height:53.98mm;border-radius:3.5mm;overflow:hidden;position:relative;background:white;box-shadow:0 2px 10px rgba(0,0,0,.12),0 0 0 0.3pt #d1d9e6;flex-shrink:0}
 .mascot{position:absolute;pointer-events:none;z-index:4;filter:drop-shadow(0 1px 2px rgba(0,0,0,.15))}
-.f-top{display:flex;align-items:center;justify-content:space-between;padding:1.8mm 2.5mm 1.5mm;background:linear-gradient(135deg,#f0faf0 0%,#e8f5e9 50%,#E3F2FD 100%);border-bottom:0.35mm solid #2E7D32;position:relative;z-index:2}
-.f-logo-w{display:flex;align-items:center;gap:1.5mm}
-.f-logo{width:9mm;height:9mm;border-radius:2mm;overflow:hidden;border:0.3mm solid #2E7D32;box-shadow:0 1px 3px rgba(0,0,0,.15);flex-shrink:0;background:white}
+.f-top{display:flex;align-items:center;justify-content:space-between;padding:1.5mm 2.5mm 1.3mm;background:linear-gradient(135deg,#f0faf0 0%,#e8f5e9 50%,#E3F2FD 100%);border-bottom:0.35mm solid #2E7D32;position:relative;z-index:2}
+.f-logo-w{display:flex;align-items:center;gap:1.8mm}
+.f-logo{width:11.5mm;height:11.5mm;border-radius:2.5mm;overflow:hidden;border:0.3mm solid #2E7D32;box-shadow:0 1px 3px rgba(0,0,0,.15);flex-shrink:0;background:white}
 .f-logo img{width:100%;height:100%;object-fit:cover}
 .f-school{display:flex;flex-direction:column}
-.f-school-n{font-family:'Baloo 2',cursive;font-size:4.8pt;font-weight:800;color:#0D2C54;line-height:1.1}
-.f-school-s{font-family:'Baloo 2',cursive;font-size:3.2pt;font-weight:700;color:#2E7D32;line-height:1}
+.f-school-n{font-family:'Baloo 2',cursive;font-size:5pt;font-weight:800;color:#0D2C54;line-height:1.1}
+.f-school-s{font-family:'Baloo 2',cursive;font-size:3.5pt;font-weight:700;color:#2E7D32;line-height:1}
 .f-year{font-family:'Baloo 2',cursive;font-size:4.5pt;font-weight:800;color:white;background:linear-gradient(135deg,#1565C0,#0D2C54);padding:0.8mm 2mm;border-radius:1.8mm;line-height:1;box-shadow:0 1px 3px rgba(21,101,192,.3)}
-.f-body{display:flex;height:calc(100% - 13mm);position:relative;z-index:1}
+.f-body{display:flex;height:calc(100% - 15mm);position:relative;z-index:1}
 .f-qr{width:38%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1.2mm 0.8mm;position:relative;background:linear-gradient(180deg,rgba(46,125,50,.03) 0%,rgba(255,255,255,0) 100%)}
 .f-qr-box{width:25mm;height:25mm;background:white;border:0.5mm solid #2E7D32;border-radius:2.5mm;padding:1.5mm;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(46,125,50,.15);position:relative}
 .f-qr-box img{width:100%;height:100%;display:block}
@@ -648,11 +694,11 @@ body{font-family:'Nunito',sans-serif;background:#e8ecf1;-webkit-print-color-adju
 .f-sec{font-size:2.6pt;font-weight:800;color:rgba(255,255,255,.9);letter-spacing:0.12pt;text-transform:uppercase}
 .f-motto{font-size:2.4pt;font-weight:700;color:rgba(255,255,255,.6);font-style:italic}
 .f-motto .heart{color:#FB8C00}
-.b-top{display:flex;align-items:center;justify-content:center;padding:2mm 3mm 1.5mm;background:linear-gradient(135deg,#f0faf0 0%,#e8f5e9 50%,#FFF3E0 100%);border-bottom:0.3mm solid #2E7D32;position:relative;z-index:2}
-.b-logo{width:17mm;height:17mm;border-radius:3.5mm;overflow:hidden;border:0.4mm solid #2E7D32;box-shadow:0 2px 8px rgba(0,0,0,.12);background:white}
+.b-top{display:flex;align-items:center;justify-content:center;padding:1.8mm 3mm 1.5mm;background:linear-gradient(135deg,#f0faf0 0%,#e8f5e9 50%,#FFF3E0 100%);border-bottom:0.3mm solid #2E7D32;position:relative;z-index:2}
+.b-logo{width:21mm;height:21mm;border-radius:4mm;overflow:hidden;border:0.4mm solid #2E7D32;box-shadow:0 2px 8px rgba(0,0,0,.12);background:white}
 .b-logo img{width:100%;height:100%;object-fit:cover}
-.b-title{font-family:'Baloo 2',cursive;font-size:5pt;font-weight:800;color:#0D2C54;text-align:center;margin-top:0.8mm;line-height:1.1}
-.b-sub{font-size:3.2pt;font-weight:600;color:#718096;text-align:center;line-height:1.1;margin-top:0.3mm}
+.b-title{font-family:'Baloo 2',cursive;font-size:5.5pt;font-weight:800;color:#0D2C54;text-align:center;margin-top:0.8mm;line-height:1.1}
+.b-sub{font-size:3.5pt;font-weight:600;color:#718096;text-align:center;line-height:1.1;margin-top:0.3mm}
 .b-body{padding:1.5mm 3.5mm;display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;position:relative;z-index:1}
 .b-notice{font-size:3.2pt;font-weight:600;color:#546E7A;text-align:center;line-height:1.4;padding:1.2mm 2mm;background:#F5F5F5;border-radius:1.5mm;border-left:0.4mm solid #FB8C00;margin-bottom:1mm}
 .b-contact{display:flex;flex-wrap:wrap;justify-content:center;gap:0.8mm 2.5mm;margin-bottom:1mm}
