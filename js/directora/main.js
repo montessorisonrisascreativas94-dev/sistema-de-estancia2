@@ -989,8 +989,10 @@ async function _initDirectorAccessId(profile) {
     const img = container?.querySelector('img')?.src || container?.querySelector('canvas')?.toDataURL();
     if (!img || !code) { Helpers.toast('Genera el QR primero', 'warning'); return; }
     const name = p?.name || 'Directora';
+    const escName = Helpers.escapeHTML(name);
+    const escCode = Helpers.escapeHTML(code);
     const win = window.open('', '_blank');
-    win.document.write(`<!DOCTYPE html><html><head><title>Carnet ${name}</title><style>body{font-family:Arial,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;}.card{border:4px solid #7c3aed;border-radius:20px;padding:24px;text-align:center;max-width:260px;}.hdr{background:#7c3aed;color:white;margin:-24px -24px 16px;padding:12px;border-radius:16px 16px 0 0;font-weight:900;font-size:12px;text-transform:uppercase;}img{width:160px;height:160px;border-radius:8px;}.name{font-size:16px;font-weight:900;color:#1e293b;margin-top:12px;}.code{font-size:10px;color:#64748b;font-weight:700;margin-top:4px;}</style></head><body><div class="card"><div class="hdr">DIRECTORA • COLEGIO MONTESSORI SONRISAS CREATIVAS</div><img src="${img}"><div class="name">${name}</div><div class="code">ID: ${code}</div></div><script>window.onload=()=>window.print()<\/script></body></html>`);
+    win.document.write(`<!DOCTYPE html><html><head><title>Carnet ${escName}</title><style>body{font-family:Arial,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;}.card{border:4px solid #7c3aed;border-radius:20px;padding:24px;text-align:center;max-width:260px;}.hdr{background:#7c3aed;color:white;margin:-24px -24px 16px;padding:12px;border-radius:16px 16px 0 0;font-weight:900;font-size:12px;text-transform:uppercase;}img{width:160px;height:160px;border-radius:8px;}.name{font-size:16px;font-weight:900;color:#1e293b;margin-top:12px;}.code{font-size:10px;color:#64748b;font-weight:700;margin-top:4px;}</style></head><body><div class="card"><div class="hdr">DIRECTORA • COLEGIO MONTESSORI SONRISAS CREATIVAS</div><img src="${img}"><div class="name">${escName}</div><div class="code">ID: ${escCode}</div></div><script>window.onload=()=>window.print()<\/script></body></html>`);
     win.document.close();
   };
 

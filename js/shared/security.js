@@ -105,6 +105,87 @@ export const Security = {
   },
 
   /**
+   * Valida un atributo HTML y su valor antes de insertarlo en la plantilla.
+   * Devuelve null si el nombre no es permitido o el valor es peligroso.
+   */
+  safeAttr(name = '', value = '') {
+    const ALLOWED = new Set(['alt', 'title', 'aria-label', 'class', 'id', 'data-role', 'data-status', 'target', 'rel', 'placeholder']);
+    const v = String(value ?? '');
+    if (!ALLOWED.has(name)) return null;
+    if (/[\u0000-\u001f\u007f"'>]/u.test(v)) return null;
+    return v.slice(0, 500);
+  },
+
+  /**
+   * Detecta intentos de DOM clobbering: elementos con id/name que
+   * "secuestran" propiedades globales (window.id, window.name, etc).
+   */
+  isDomClobbered(el) {
+    if (!el || typeof el !== 'object') return false;
+    const DANGEROUS_NAMES = ['location', 'status', 'frames', 'name', 'self', 'top', 'parent', 'opener', 'length', 'close', 'open', 'alert', 'fetch', 'token'];
+    const id = (el.id || '').toString();
+    const name = (el.getAttribute && el.getAttribute('name')) || '';
+    return DANGEROUS_NAMES.includes(id) || DANGEROUS_NAMES.includes(name);
+  },
+
+  /**
+   * Escanea y neutraliza elementos que intentan secuestrar el DOM global.
+   * Llamar tras cargar contenido dinámico (innerHTML, insertAdjacentHTML).
+   */
+  scrubDomClobbering(root = document) {
+    if (!root || !root.querySelectorAll) return;
+    root.querySelectorAll('[id], [name]').forEach((el) => {
+      if (this.isDomClobbered(el)) {
+        el.removeAttribute('id');
+        el.removeAttribute('name');
+      }
+    });
+  },
+
+  /**
+   * Bloquea prototipo-políticas en payloads (evita __proto__ pollution).
+   * Retorna un objeto "limpio" o el payload original si no es objeto.
+   */
+  dePollute(obj) {
+    if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return obj;
+    const out = {};
+    for (const k of Object.keys(obj)) {
+      if (k === '__proto__' || k === 'constructor' || k === 'prototype') continue;
+      const v = obj[k];
+      out[k] = v && typeof v === 'object' ? this.dePollute(v) : v;
+    }
+    return out;
+  },
+
+  /**
+   * Limita la longitud de un string (anti payloads gigantes).
+   */
+  limitLength(str = '', max = 500) {
+    const s = String(str ?? '');
+    return s.length > max ? s.slice(0, max) : s;
+  },
+
+  /**
+   * Valida un ID numérico (bigint safe). Devuelve null si no es válido.
+   */
+  safeInteger(input, { min = 1, max = Number.MAX_SAFE_INTEGER } = {}) {
+    const n = Number(input);
+    if (!Number.isFinite(n) || !Number.isInteger(n)) return null;
+    if (n < min || n > max) return null;
+    return n;
+  },
+
+  /**
+   * Detecta y neutraliza `data:`/`blob:` URLs en atributos de recursos.
+   */
+  safeResourceUrl(url = '') {
+    const lower = url.toLowerCase().trim();
+    if (/^(javascript|vbscript|file|data):/.test(lower)) return '';
+    if (lower.startsWith('blob:')) return url; // blob permitido (uploads)
+    return this.safeUrl(url);
+  },
+
+  /**
    * Inicializa protecciones globales en el documento.
    * Llamar una vez al cargar cada panel.
    */
@@ -170,6 +251,26 @@ export const Security = {
         e.preventDefault();
       }
     }, true);
+
+    // 5. Vigilar contenido dinámico (innerHTML de terceros) contra DOM clobbering
+    this.scrubDomClobbering(document);
+    const mo = new MutationObserver((mutations) => {
+      for (const m of mutations) {
+        for (const node of m.addedNodes || []) {
+          if (node && node.querySelectorAll) {
+            this.scrubDomClobbering(node);
+          } else if (node && node.id && this.isDomClobbered(node)) {
+            node.removeAttribute('id');
+          }
+        }
+      }
+    });
+    if (window.MutationObserver) {
+      mo.observe(document.body || document.documentElement, { childList: true, subtree: true });
+    }
+
+    // 6. Protección débil de prototipo para payloads globales (si expuesto)
+    window.__karpus_dePollute = this.dePollute.bind(this);
 
   }
 };

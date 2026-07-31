@@ -401,7 +401,10 @@ export const TeachersModule = {
       if (!qrImg) { Helpers.toast('Genera el QR primero', 'warning'); return; }
 
       const win = window.open('', '_blank');
-      win.document.write(`<!DOCTYPE html><html><head><title>Carnet Personal - ${name}</title>
+      const escName = Helpers.escapeHTML(name || 'Personal');
+      const escRole = Helpers.escapeHTML(role || 'Maestra');
+      const escMat = Helpers.escapeHTML(matricula || '');
+      win.document.write(`<!DOCTYPE html><html><head><title>Carnet Personal - ${escName}</title>
         <style>
           body { font-family: Arial, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; background: #fff; }
           .card { border: 4px solid #4f46e5; border-radius: 24px; padding: 30px; text-align: center; max-width: 300px; position: relative; }
@@ -415,9 +418,9 @@ export const TeachersModule = {
         <div class="card">
           <div class="header">STAFF • COLEGIO MONTESSORI SONRISAS CREATIVAS</div>
           <img src="${qrImg}" alt="QR">
-          <div class="name">${name || 'Personal'}</div>
-          <div class="role">${role || 'Maestra'}</div>
-          <div class="id">ID: ${matricula}</div>
+          <div class="name">${escName}</div>
+          <div class="role">${escRole}</div>
+          <div class="id">ID: ${escMat}</div>
         </div>
         <script>window.onload=()=>{window.print();}<\/script>
       </body></html>`);

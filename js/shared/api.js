@@ -1,17 +1,56 @@
 import { supabase } from './supabase.js';
 import { TABLES, ROLES } from './constants.js';
+import { withLoading } from './loading-feedback.js';
 
 /**
  * 🔥 Helper PRO
  */
+const FRIENDLY_DB_ERRORS = {
+  'database connection': 'Estamos trabajando contigo: hubo un problema de conexión.',
+  'network': 'Parece que no hay conexión. Revisa tu internet e inténtalo de nuevo.',
+  'fetch failed': 'No pudimos comunicarnos con el servidor. Inténtalo de nuevo.',
+  'timeout': 'La solicitud tardó demasiado. Estamos contigo, intenta de nuevo.',
+  'permission denied': 'No tienes permiso para realizar esta acción.',
+  'row level security': 'No tienes permiso para acceder a esa información.',
+  'jwt': 'Tu sesión venció. Inicia sesión nuevamente.',
+  'already exists': 'Ese registro ya existe. Verifícalo e inténtalo de nuevo.',
+  'not found': 'No encontramos lo que buscas.'
+};
+
+function friendlyDbError(msg = '') {
+  const lower = msg.toLowerCase();
+  for (const [key, friendly] of Object.entries(FRIENDLY_DB_ERRORS)) {
+    if (lower.includes(key)) return friendly;
+  }
+  return msg;
+}
+
 async function handle(queryPromise, context = 'API') {
   const { data, error } = await queryPromise;
 
   if (error) {
-    throw new Error(error.message);
+    const friendly = friendlyDbError(error.message);
+    if (friendly !== error.message && typeof window !== 'undefined' && window.Helpers?.toast) {
+      window.Helpers.toast(friendly, 'error', 6000);
+    }
+    const wrapped = new Error(friendly);
+    wrapped.originalMessage = error.message;
+    wrapped.code = error.code;
+    throw wrapped;
   }
 
   return data;
+}
+
+/**
+ * Versión con feedback empático: muestra mensaje si la consulta tarda.
+ */
+function handleSlow(queryPromise, context = 'API', opts = {}) {
+  return withLoading(`Cargando datos${context ? ' de ' + context : ''}...`, () => handle(queryPromise, context), {
+    containerId: opts.containerId || null,
+    minMs: opts.minMs || 800,
+    patienceMs: opts.patienceMs || 2500
+  });
 }
 
 /**

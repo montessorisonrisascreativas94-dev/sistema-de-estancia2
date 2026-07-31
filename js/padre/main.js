@@ -57,12 +57,14 @@ window.App = {
     const canvas = container?.querySelector('canvas');
     if (!canvas || !student) return;
     const imgData = canvas.toDataURL('image/png');
+    const sName = Helpers.escapeHTML(String(student.name || ''));
+    const sMat = Helpers.escapeHTML(String(student.matricula || ''));
     const win = window.open('', '_blank');
-    win.document.write(`<!DOCTYPE html><html><head><title>QR ${student.name}</title>
+    win.document.write(`<!DOCTYPE html><html><head><title>QR ${sName}</title>
       <style>body{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;font-family:sans-serif;padding:2rem;}
       img{width:200px;height:200px;border:2px solid #e2e8f0;border-radius:12px;padding:8px;}
       h2{margin:1rem 0 .25rem;font-size:1.2rem;color:#1e293b;}p{color:#64748b;font-size:.9rem;}</style></head>
-      <body><img src="${imgData}"><h2>${student.name}</h2><p>Matrícula: ${student.matricula}</p><script>window.onload=()=>window.print();<\/script></body></html>`);
+      <body><img src="${imgData}"><h2>${sName}</h2><p>Matrícula: ${sMat}</p><script>window.onload=()=>window.print();<\/script></body></html>`);
     win.document.close();
   }
 };
@@ -1172,7 +1174,9 @@ async function _initPadreQR(student) {
     if (!img) return;
     const win = window.open('', '_blank');
     if (!win) return;
-    win.document.write(`<!DOCTYPE html><html><head><title>QR - ${matricula}</title>
+    const sName = Helpers.escapeHTML(String(name || ''));
+    const sMat = Helpers.escapeHTML(String(matricula || ''));
+    win.document.write(`<!DOCTYPE html><html><head><title>QR - ${sMat}</title>
       <style>body{font-family:Arial,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;}
       .card{border:2px solid #e2e8f0;border-radius:16px;padding:24px;text-align:center;max-width:280px;}
       .logo{font-size:12px;font-weight:900;color:#10B981;text-transform:uppercase;letter-spacing:2px;margin-bottom:12px;}
@@ -1181,8 +1185,8 @@ async function _initPadreQR(student) {
     </head><body><div class="card">
       <div class="logo">🎓 Colegio Montessori Sonrisas Creativas</div>
       <img src="${img}" alt="QR">
-      <div class="name">${name}</div>
-      <div class="mat">${matricula}</div>
+      <div class="name">${sName}</div>
+      <div class="mat">${sMat}</div>
       <div class="hint">Escanea para registrar entrada/salida</div>
     </div><script>window.onload=()=>{window.print();}<\/script></body></html>`);
     win.document.close();

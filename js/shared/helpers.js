@@ -156,7 +156,7 @@ export const Helpers = {
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>Carnet ${mat}</title>
+<title>Carnet ${Helpers.escapeHTML(mat)}</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Baloo+2:wght@400;600;700;800&display=swap');
 *{margin:0;padding:0;box-sizing:border-box}
@@ -326,7 +326,7 @@ body{font-family:'Nunito',sans-serif;background:#e8ecf1;-webkit-print-color-adju
       <!-- INFO ZONE -->
       <div class="f-info">
         <div class="f-name">${Helpers.escapeHTML((Helpers.titleCase(name) || 'Estudiante').substring(0, 30))}</div>
-        <div class="f-mat">${mat}${d.studentId ? ` · ID: ${Helpers.escapeHTML(d.studentId)}` : ''}</div>
+        <div class="f-mat">${Helpers.escapeHTML(mat)}${d.studentId ? ` · ID: ${Helpers.escapeHTML(d.studentId)}` : ''}</div>
         <div class="f-fields">
           <div class="f-field"><div class="f-fi grn">&#127891;</div><div class="f-ft"><span class="f-fl">Nivel</span><span class="f-fv">${d.nivel ? Helpers.escapeHTML(d.nivel) : '-'}</span></div></div>
           <div class="f-field"><div class="f-fi blu">&#127979;</div><div class="f-ft"><span class="f-fl">Aula</span><span class="f-fv">${d.classroom ? Helpers.escapeHTML(d.classroom) : '-'}</span></div></div>
@@ -568,7 +568,7 @@ body{font-family:'Nunito',sans-serif;background:#e8ecf1;-webkit-print-color-adju
           <div class="f-divider"></div>
           <div class="f-info">
             <div class="f-name">${Helpers.escapeHTML((Helpers.titleCase(st.name) || 'Estudiante').substring(0, 30))}</div>
-            <div class="f-mat">${st.mat}${d.studentId ? ` · ID: ${Helpers.escapeHTML(d.studentId)}` : ''}</div>
+            <div class="f-mat">${Helpers.escapeHTML(st.mat)}${d.studentId ? ` · ID: ${Helpers.escapeHTML(d.studentId)}` : ''}</div>
             <div class="f-fields">
               <div class="f-field"><div class="f-fi grn">&#127891;</div><div class="f-ft"><span class="f-fl">Nivel</span><span class="f-fv">${d.nivel ? Helpers.escapeHTML(d.nivel) : '-'}</span></div></div>
               <div class="f-field"><div class="f-fi blu">&#127979;</div><div class="f-ft"><span class="f-fl">Aula</span><span class="f-fv">${d.classroom ? Helpers.escapeHTML(d.classroom) : '-'}</span></div></div>

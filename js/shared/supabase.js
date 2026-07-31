@@ -1,4 +1,5 @@
 import { logError } from './db-utils.js';
+import { showOverlay, closeOverlay } from './loading-feedback.js';
 
 // Supabase JS — cargado localmente (js/shared/supabase-js.min.js via script tag en HTML)
 // El UMD expone window.supabase.createClient
@@ -69,7 +70,26 @@ const _OPTIONAL_ENDPOINTS = [
 window.fetch = async function(...args) {
   const url = typeof args[0] === 'string' ? args[0] : args[0]?.url;
   const isSupabase = url && url.includes(SUPABASE_URL);
-  
+
+  // ── Feedback empático en cargas lentas (peticiones Supabase > 3s) ──────────
+  let slowTimer = null;
+  let slowWarned = false;
+  if (isSupabase) {
+    slowTimer = setTimeout(() => {
+      slowWarned = true;
+      showOverlay({
+        title: 'Estamos trabajando contigo...',
+        message: 'Gracias por tu paciencia, la información está casi lista.',
+        autoCloseMs: 8000
+      });
+    }, 3000);
+  }
+
+  const finishSlowTimer = () => {
+    if (slowTimer) { clearTimeout(slowTimer); slowTimer = null; }
+    if (slowWarned) closeOverlay();
+  };
+
   if (isSupabase) {
     const options = args[1] || {};
     options.headers = options.headers || {};
@@ -91,6 +111,7 @@ window.fetch = async function(...args) {
   }
 
   const res = await _originalFetch.apply(this, args);
+  finishSlowTimer();
 
   // Suppress 404 console noise for optional/not-yet-deployed RPC endpoints.
   // These are intentionally handled by fallback logic in the calling code.

@@ -605,8 +605,11 @@ async function initProfile() {
     const container = document.getElementById('profileQrContainer');
     const img = container?.querySelector('img')?.src || container?.querySelector('canvas')?.toDataURL();
     if (!img || !c) { Helpers.toast('Genera el QR primero', 'warning'); return; }
+    const escName = Helpers.escapeHTML(p.name || 'Personal');
+    const escRole = Helpers.escapeHTML(p.role || 'Asistente');
+    const escCode = Helpers.escapeHTML(c);
     const win = window.open('', '_blank');
-    win.document.write(`<!DOCTYPE html><html><head><title>Carnet ${p.name}</title>
+    win.document.write(`<!DOCTYPE html><html><head><title>Carnet ${escName}</title>
       <style>body{font-family:Arial,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;}
       .card{border:4px solid #0d9488;border-radius:20px;padding:24px;text-align:center;max-width:260px;}
       .hdr{background:#0d9488;color:white;margin:-24px -24px 16px;padding:12px;border-radius:16px 16px 0 0;font-weight:900;font-size:12px;text-transform:uppercase;}
@@ -616,9 +619,9 @@ async function initProfile() {
     </head><body><div class="card">
       <div class="hdr">STAFF • COLEGIO MONTESSORI SONRISAS CREATIVAS</div>
       <img src="${img}">
-      <div class="name">${p.name || 'Personal'}</div>
-      <div class="role">${p.role || 'Asistente'}</div>
-      <div class="code">ID: ${c}</div>
+      <div class="name">${escName}</div>
+      <div class="role">${escRole}</div>
+      <div class="code">ID: ${escCode}</div>
     </div><script>window.onload=()=>window.print()<\/script></body></html>`);
     win.document.close();
   };

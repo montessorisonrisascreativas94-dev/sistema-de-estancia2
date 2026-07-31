@@ -1392,8 +1392,10 @@ export const CajaCobroV2 = {
     }
     const printWin = window.open('', '_blank', 'width=420,height=700');
     if (!printWin) { Helpers.toast('Permitir ventanas emergentes para imprimir','warning'); return; }
-    printWin.document.write(`<!DOCTYPE html><html><head><title>${receiptNo}</title>
-      <style>@page{margin:8mm}body{font-family:'Courier New',monospace;font-size:11px;margin:0;padding:10px;white-space:pre;line-height:1.35;background:white}@media print{body{padding:0}}</style></head><body>${asciiReceipt}</body></html>`);
+    const escReceiptNo = Helpers.escapeHTML(String(receiptNo || ''));
+    const escAscii = Helpers.escapeHTML(String(asciiReceipt || ''));
+    printWin.document.write(`<!DOCTYPE html><html><head><title>${escReceiptNo}</title>
+      <style>@page{margin:8mm}body{font-family:'Courier New',monospace;font-size:11px;margin:0;padding:10px;white-space:pre;line-height:1.35;background:white}@media print{body{padding:0}}</style></head><body>${escAscii}</body></html>`);
     printWin.document.close();
     printWin.focus();
     setTimeout(() => { printWin.print(); }, 400);

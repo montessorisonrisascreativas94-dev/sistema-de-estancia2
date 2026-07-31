@@ -40,16 +40,22 @@ function isBlockedPath(p) {
   return SENSITIVE.some(re => re.test(norm));
 }
 
-// ── Rate limiting (por IP) ───────────────────────────────────────
+// ── Rate limiting: token bucket por IP ───────────────────────────
 const buckets = new Map();
 function rateLimit({ windowMs = 60_000, max = 300 } = {}) {
   return (req, res, next) => {
     const ip = req.socket.remoteAddress || 'unknown';
     const now = Date.now();
     let b = buckets.get(ip);
-    if (!b || now > b.resetAt) { b = { hits: 0, resetAt: now + windowMs }; buckets.set(ip, b); }
-    b.hits += 1;
-    if (b.hits > max) return res.status(429).send('Demasiadas solicitudes');
+    if (!b || now > b.resetAt) { b = { tokens: max, resetAt: now + windowMs, lastRefill: now }; buckets.set(ip, b); }
+    const elapsed = now - b.lastRefill;
+    const refill = Math.floor((elapsed / windowMs) * max);
+    if (refill > 0) { b.tokens = Math.min(max, b.tokens + refill); b.lastRefill = now; }
+    if (b.tokens <= 0) {
+      res.setHeader('Retry-After', String(Math.max(1, Math.ceil((b.resetAt - now) / 1000))));
+      return res.status(429).send('Demasiadas solicitudes');
+    }
+    b.tokens -= 1;
     next();
   };
 }
@@ -58,18 +64,33 @@ setInterval(() => {
   for (const [k, b] of buckets) if (now > b.resetAt) buckets.delete(k);
 }, 60_000).unref();
 
+// ── Timeout global: evita conexiones colgadas (DoS) ──────────────
+const REQUEST_TIMEOUT_MS = 30_000;
+
 const app = express();
 app.disable('x-powered-by');
 app.disable('etag');
+
+// ── Timeout global: evita conexiones colgadas (DoS) ──────────────
+app.use((req, res, next) => {
+  const timer = setTimeout(() => {
+    if (!res.headersSent) res.status(408).end('La solicitud tardó demasiado');
+    else res.end();
+  }, REQUEST_TIMEOUT_MS);
+  res.on('close', () => clearTimeout(timer));
+  next();
+});
 
 // ── Security headers completos ───────────────────────────────────
 app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('Referrer-Policy', 'no-referrer');
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
   res.setHeader('Permissions-Policy', 'camera=(), geolocation=(), microphone=(), payment=(), usb=()');
   res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
   res.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
+  res.setHeader('X-XSS-Protection', '0');
   res.setHeader('Content-Security-Policy',
     "default-src 'self'; " +
     "script-src 'self' 'wasm-unsafe-eval' https://cdn.jsdelivr.net https://cdn.tailwindcss.com https://unpkg.com; " +

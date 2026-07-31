@@ -26,6 +26,9 @@ const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '')
 const STAFF_ROLES = ['directora', 'asistente', 'admin', 'encargada'];
 const DIRECTIVE_ROLES = ['directora', 'admin'];
 
+const MAX_BODY_BYTES = 100 * 1024; // 100kb límite de cuerpo
+const RESPONSE_TIMEOUT_MS = 20_000; // timeout global por solicitud
+
 const app = express();
 app.disable('x-powered-by');
 app.set('trust proxy', false);
@@ -36,6 +39,32 @@ app.use((req, res, next) => {
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('Referrer-Policy', 'no-referrer');
   res.setHeader('Cache-Control', 'no-store');
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=()');
+  next();
+});
+
+// ── Timeout global: evita solicitudes colgadas (DoS) ─────────────
+app.use((req, res, next) => {
+  const timer = setTimeout(() => {
+    if (!res.headersSent) {
+      res.status(408).json({ error: 'La solicitud tardó demasiado. Intente de nuevo.' });
+    } else {
+      res.end();
+    }
+  }, RESPONSE_TIMEOUT_MS);
+  res.on('close', () => clearTimeout(timer));
+  next();
+});
+
+// ── Validación de Content-Type en cuerpos ────────────────────────
+app.use((req, res, next) => {
+  if (['POST', 'PUT', 'PATCH'].includes(req.method)) {
+    const ct = (req.headers['content-type'] || '').toLowerCase();
+    if (ct && !ct.startsWith('application/json')) {
+      return res.status(415).json({ error: 'Content-Type no soportado' });
+    }
+  }
   next();
 });
 
@@ -53,7 +82,7 @@ app.use(cors({
 
 app.use(express.json({ limit: '100kb' }));
 
-// ── Rate limiting (por IP + ruta) ────────────────────────────────
+// ── Rate limiting: token bucket por IP + ruta ────────────────────
 const buckets = new Map();
 function rateLimit({ windowMs = 60_000, max = 60 } = {}) {
   return (req, res, next) => {
@@ -62,13 +91,22 @@ function rateLimit({ windowMs = 60_000, max = 60 } = {}) {
     const now = Date.now();
     let b = buckets.get(key);
     if (!b || now > b.resetAt) {
-      b = { hits: 0, resetAt: now + windowMs };
+      b = { tokens: max, resetAt: now + windowMs, lastRefill: now };
       buckets.set(key, b);
     }
-    b.hits += 1;
-    if (b.hits > max) {
+    // Refill continuo (token bucket real)
+    const elapsed = now - b.lastRefill;
+    const refill = Math.floor((elapsed / windowMs) * max);
+    if (refill > 0) {
+      b.tokens = Math.min(max, b.tokens + refill);
+      b.lastRefill = now;
+    }
+    if (b.tokens <= 0) {
+      const retryAfter = Math.max(1, Math.ceil((b.resetAt - now) / 1000));
+      res.setHeader('Retry-After', String(retryAfter));
       return res.status(429).json({ error: 'Demasiadas solicitudes. Intente más tarde.' });
     }
+    b.tokens -= 1;
     next();
   };
 }
@@ -171,6 +209,14 @@ function sendResendEmail({ to, subject, html, text }) {
 
 const sanitizeOut = o => (o && typeof o === 'object' ? JSON.parse(JSON.stringify(o)) : o);
 
+// ── Validación de entrada ────────────────────────────────────────
+function cleanStr(v, maxLen = 500) {
+  return typeof v === 'string' ? v.trim().slice(0, maxLen) : v;
+}
+function badPayload(res, msg) {
+  return res.status(400).json({ error: msg || 'Datos inválidos' });
+}
+
 // ── Health check (público, sin datos) ────────────────────────────
 app.get('/api/health', (req, res) => {
   res.json({ ok: true, mode: useSupabase ? 'supabase' : 'sqlite' });
@@ -198,8 +244,9 @@ app.get('/api/classrooms', rateLimit({ max: 120 }), authRequired, async (req, re
 
 app.post('/api/classrooms', rateLimit({ max: 30 }), authRequired, requireRole(STAFF_ROLES), async (req, res) => {
   try {
-    const { name, level } = req.body || {};
-    if (!name || !level) return res.status(400).json({ error: 'name y level requeridos' });
+    const name = cleanStr(req.body && req.body.name, 100);
+    const level = cleanStr(req.body && req.body.level, 30);
+    if (!name || !level) return badPayload(res, 'name y level requeridos');
     if (useSupabase) {
       const { error } = await sb(req).from('classrooms').insert({ name, level });
       if (error) return res.status(400).json({ error: 'Error al crear aula' });
@@ -546,9 +593,13 @@ app.get('/api/students', rateLimit({ max: 120 }), authRequired, async (req, res)
 app.post('/api/students', rateLimit({ max: 30 }), authRequired, requireRole(STAFF_ROLES), async (req, res) => {
   try {
     const { first_name, last_name, classroom_id, avatar_url } = req.body || {};
-    if (!first_name) return res.status(400).json({ error: 'first_name requerido' });
+    const fname = cleanStr(first_name, 120);
+    if (!fname) return badPayload(res, 'first_name requerido');
+    if (avatar_url && (typeof avatar_url !== 'string' || !/^https?:\/\//.test(avatar_url))) {
+      return badPayload(res, 'avatar_url inválido');
+    }
     if (useSupabase) {
-      const { error } = await sb(req).from('students').insert({ first_name, last_name, classroom_id, avatar_url });
+      const { error } = await sb(req).from('students').insert({ first_name: fname, last_name: cleanStr(last_name, 120), classroom_id, avatar_url });
       if (error) return res.status(400).json({ error: 'Error al crear estudiante' });
       return res.json({ ok: true });
     }
@@ -589,9 +640,9 @@ app.post('/api/payments', rateLimit({ max: 30 }), authRequired, requireRole(STAF
     const validStatus = ['pending', 'paid', 'overdue', 'cancelled'];
     if (status && !validStatus.includes(status)) return res.status(400).json({ error: 'status inválido' });
     const amt = Number(amount);
-    if (!Number.isFinite(amt) || amt < 0) return res.status(400).json({ error: 'amount inválido' });
+    if (!Number.isFinite(amt) || amt < 0 || amt > 10_000_000) return badPayload(res, 'amount inválido');
     if (useSupabase) {
-      const { error } = await sb(req).from('payments').insert({ student_id, amount: amt, status, due_date, concept });
+      const { error } = await sb(req).from('payments').insert({ student_id, amount: amt, status, due_date, concept: cleanStr(concept, 200) });
       if (error) return res.status(400).json({ error: 'Error al crear pago' });
       return res.json({ ok: true });
     }

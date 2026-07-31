@@ -6,6 +6,8 @@
   <meta name="robots" content="noindex, nofollow"/>
   <meta http-equiv="X-Content-Type-Options" content="nosniff"/>
   <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin"/>
+  <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=(), interest-cohort=()">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://*.supabase.co wss://*.supabase.co; script-src 'self' 'unsafe-inline' https://cdn.onesignal.com https://onesignal.com https://api.onesignal.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://onesignal.com https://cdn.onesignal.com; font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://cdn.onesignal.com https://onesignal.com https://api.onesignal.com https://fonts.googleapis.com https://fonts.gstatic.com; frame-src 'none'; object-src 'none'; base-uri 'self';">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <title>Acceso Portal · Colegio Montessori Sonrisas Creativas</title>
   <meta name="description" content="Portal de acceso seguro para padres, maestros y personal del Colegio Montessori Sonrisas Creativas en Santo Domingo."/>
@@ -1006,6 +1008,7 @@
             aria-required="true"
             aria-describedby="email-hint"
             spellcheck="false"
+            maxlength="320"
             required>
         </div>
         <span id="email-hint" class="sr-only">Ingresa tu correo electrónico institucional</span>
@@ -1020,6 +1023,7 @@
             autocomplete="current-password"
             aria-required="true"
             aria-describedby="pw-hint"
+            maxlength="200"
             required>
           <button type="button" id="toggle-pw" class="eye-btn" aria-label="Mostrar contraseña" aria-pressed="false">
             <i class="bi bi-eye-fill" id="eye-icon" aria-hidden="true"></i>

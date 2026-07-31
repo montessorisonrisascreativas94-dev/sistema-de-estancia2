@@ -5,6 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Recuperar Contraseña — Colegio Montessori Sonrisas Creativas</title>
   <meta name="robots" content="noindex, nofollow">
+  <meta http-equiv="X-Content-Type-Options" content="nosniff">
+  <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
+  <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=(), interest-cohort=()">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self';">
   <link rel="stylesheet" href="css/karpus-tailwind.css">
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
   <style>
@@ -74,22 +78,22 @@
         <form id="directResetForm" class="space-y-4">
           <div>
             <label class="block text-xs font-black text-slate-500 uppercase tracking-wider mb-1.5">Correo electrónico</label>
-            <input id="email" type="email" placeholder="tu@correo.com" required
+            <input id="email" type="email" placeholder="tu@correo.com" required maxlength="320"
               class="w-full px-4 py-3 rounded-[1.25rem] border-2 border-slate-100 bg-slate-50 text-slate-800 font-bold text-sm focus:outline-none focus:border-green-400 focus:bg-white focus:ring-4 focus:ring-green-50 transition-all">
           </div>
           <div>
             <label class="block text-xs font-black text-slate-500 uppercase tracking-wider mb-1.5">Contraseña anterior</label>
-            <input id="oldPassword" type="password" placeholder="Tu contraseña actual" required
+            <input id="oldPassword" type="password" placeholder="Tu contraseña actual" required autocomplete="current-password" maxlength="200"
               class="w-full px-4 py-3 rounded-[1.25rem] border-2 border-slate-100 bg-slate-50 text-slate-800 font-bold text-sm focus:outline-none focus:border-green-400 focus:bg-white focus:ring-4 focus:ring-green-50 transition-all">
           </div>
           <div class="pt-2 border-t border-slate-100">
             <label class="block text-xs font-black text-slate-500 uppercase tracking-wider mb-1.5">Nueva contraseña</label>
-            <input id="newPasswordDirect" type="password" placeholder="Mínimo 8 caracteres" required minlength="8"
+            <input id="newPasswordDirect" type="password" placeholder="Mínimo 8 caracteres" required minlength="8" autocomplete="new-password" maxlength="200"
               class="w-full px-4 py-3 rounded-[1.25rem] border-2 border-slate-100 bg-slate-50 text-slate-800 font-bold text-sm focus:outline-none focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-50 transition-all">
           </div>
           <div>
             <label class="block text-xs font-black text-slate-500 uppercase tracking-wider mb-1.5">Confirmar nueva contraseña</label>
-            <input id="confirmPasswordDirect" type="password" placeholder="Repite la nueva clave" required
+            <input id="confirmPasswordDirect" type="password" placeholder="Repite la nueva clave" required autocomplete="new-password" maxlength="200"
               class="w-full px-4 py-3 rounded-[1.25rem] border-2 border-slate-100 bg-slate-50 text-slate-800 font-bold text-sm focus:outline-none focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-50 transition-all">
           </div>
 
@@ -115,12 +119,12 @@
         <form id="resetForm" class="space-y-4">
           <div>
             <label class="block text-xs font-black text-slate-500 uppercase tracking-wider mb-1.5">Nueva contraseña</label>
-            <input id="newPassword" type="password" placeholder="Mínimo 8 caracteres" required minlength="8"
+            <input id="newPassword" type="password" placeholder="Mínimo 8 caracteres" required minlength="8" autocomplete="new-password" maxlength="200"
               class="w-full px-4 py-3 rounded-[1.25rem] border-2 border-slate-100 bg-slate-50 text-slate-800 font-bold text-sm focus:outline-none focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-50 transition-all">
           </div>
           <div>
             <label class="block text-xs font-black text-slate-500 uppercase tracking-wider mb-1.5">Confirmar contraseña</label>
-            <input id="confirmPassword" type="password" placeholder="Repite la contraseña" required
+            <input id="confirmPassword" type="password" placeholder="Repite la contraseña" required autocomplete="new-password" maxlength="200"
               class="w-full px-4 py-3 rounded-[1.25rem] border-2 border-slate-100 bg-slate-50 text-slate-800 font-bold text-sm focus:outline-none focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-50 transition-all">
           </div>
 
