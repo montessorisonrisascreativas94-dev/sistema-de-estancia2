@@ -65,6 +65,9 @@ const _OPTIONAL_ENDPOINTS = [
   '/rpc/get_active_period',
   '/rpc/get_direct_message',
   '/rpc/get_student_history',
+  '/functions/v1/generate-invoice',
+  '/functions/v1/process-event',
+  '/functions/v1/send-push',
 ];
 
 window.fetch = async function(...args) {

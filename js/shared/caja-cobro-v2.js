@@ -1257,8 +1257,7 @@ export const CajaCobroV2 = {
               total: total,
               status: 'paid',
               payment_method: _method,
-              bank: payBank || null,
-              payment_reference: payRef || null,
+              payment_reference: payBank ? (payRef ? `${payBank} - ${payRef}` : payBank) : (payRef || null),
               payment_date: now,
               issued_date: now,
               notes: notes || null,
@@ -1911,7 +1910,23 @@ async function _loadDbConcepts() {
       .select('*')
       .order('name');
     if (error) throw error;
-    _dbConcepts = data || [];
+
+    // ── Deduplicar por nombre normalizado (ignora mayúsculas/acentos) ────────
+    // La BD puede contener filas heredadas del seed original duplicadas con el
+    // catálogo real (p.ej. "Inscripcion" 500 + "Inscripción" 5000). Se conserva
+    // la de mayor monto (la versión curada) y se descartan las repetidas.
+    const norm = (s = '') => String(s).toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/\s+/g, ' ').trim();
+    const seen = new Map(); // normName -> row (keep highest amount)
+    (data || []).forEach(c => {
+      const key = norm(c.name);
+      if (!key) return;
+      const prev = seen.get(key);
+      if (!prev || Number(c.amount) > Number(prev.amount)) seen.set(key, c);
+    });
+    _dbConcepts = [...seen.values()].sort((a, b) => String(a.name).localeCompare(String(b.name), 'es'));
+
     // Save to localStorage as cache
     if (_dbConcepts.length > 0) {
       saveCatalog(_dbConcepts.map(c => ({

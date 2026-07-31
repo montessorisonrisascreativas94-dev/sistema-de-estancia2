@@ -386,3 +386,40 @@ ALTER TABLE public.data_snapshots ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.login_attempts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.door_punches ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.school_settings ENABLE ROW LEVEL SECURITY;
+
+-- ============================================================
+-- 12. LIMPIEZA DE CONCEPTOS DUPLICADOS (payment_concepts)
+-- ------------------------------------------------------------
+-- El seed original (schema.sql) insertó conceptos legados SIN
+-- acentos y con montos de "demo" (Inscripcion $500, Uniforme $300,
+-- Libros $250, Materiales $150, Actividades Extra $100) que se
+-- superponen con el catálogo curado (Inscripción $5000, etc.).
+-- Resultado: el modal de cobro mostraba cada concepto dos veces.
+--
+-- 12a. Deduplicar por nombre normalizado (ignora mayúsculas y
+--      acentos) conservando la fila con el monto MÁS ALTO (la
+--      versión curada). Solo afecta filas realmente repetidas.
+-- ============================================================
+WITH ranked AS (
+  SELECT id,
+         lower(translate(name, 'áéíóúüñÁÉÍÓÚÜÑ', 'aeiouunAEIOUUN')) AS norm_name,
+         row_number() OVER (
+           PARTITION BY lower(translate(name, 'áéíóúüñÁÉÍÓÚÜÑ', 'aeiouunAEIOUUN'))
+           ORDER BY amount DESC, id ASC
+         ) AS rn
+  FROM public.payment_concepts
+)
+DELETE FROM public.payment_concepts pc
+USING ranked r
+WHERE pc.id = r.id AND r.rn > 1;
+
+-- 12b. Eliminar filas legadas del seed original si conservan su
+--      valor exacto (si alguien las editó, NO se tocan).
+DELETE FROM public.payment_concepts
+WHERE (
+    (name = 'Inscripcion'   AND amount = 500)
+    OR (name = 'Uniforme'   AND amount = 300)
+    OR (name = 'Libros'     AND amount = 250)
+    OR (name = 'Materiales' AND amount = 150)
+    OR (name = 'Actividades Extra' AND amount = 100)
+  );
