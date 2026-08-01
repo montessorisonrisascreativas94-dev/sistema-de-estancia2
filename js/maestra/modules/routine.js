@@ -7,6 +7,7 @@ import { AppState } from '../state.js';
 import { UI, safeToast, safeEscapeHTML, safeUrl } from './ui.js';
 import { MaestraApi } from '../api.js';
 import { supabase } from '../../shared/supabase.js';
+import { RoutineCatalog } from '../../shared/routine-catalog.js';
 
 let _logsMap = {};
 let _sleepMap = {};
@@ -21,6 +22,7 @@ let _timelineActive = localStorage.getItem('sonrisas_tl_active') !== '0';
 let _attendanceTaken = false;
 
 const SCHEDULE_STORAGE_KEY = 'sonrisas_schedule_config';
+const SCHEDULE_DB_SEED_KEY = 'sonrisas_schedule_db_seed';
 const DAILY_OVERRIDES_KEY = 'sonrisas_daily_overrides';
 const SCHEDULE_VERSION = 5;
 
@@ -148,6 +150,65 @@ function _saveScheduleConfig() {
     localStorage.setItem(SCHEDULE_STORAGE_KEY, JSON.stringify({ _version: SCHEDULE_VERSION, events: _scheduleConfig }));
   } catch {}
 }
+
+/**
+ * Cronología V8: si la BD tiene bloques para el aula (classroom_schedule_blocks),
+ * los usa como fuente para sembrar el schedule por primera vez. Después de
+ * sembrar (flag en localStorage) las ediciones locales de la maestra se
+ * conservan. Si la BD no tiene bloques o falla, no toca nada (fallback a
+ * DEFAULT_SCHEDULE / config previa).
+ */
+async function _seedScheduleFromCatalog(classroomId) {
+  if (!classroomId) return;
+  try {
+    if (localStorage.getItem(SCHEDULE_DB_SEED_KEY)) return;
+    const blocks = await RoutineCatalog.getScheduleBlocks(classroomId);
+    if (!blocks || blocks.length === 0) return;
+
+    const byLabel = new Map(blocks.map(b => [b.label, b]));
+    const rebuilt = DEFAULT_SCHEDULE.map(base => {
+      const db = byLabel.get(base.label);
+      if (!db) return { ...base, sort_order: base.sort_order ?? 100 };
+      return {
+        ...base,
+        startTime: String(db.start_time).slice(0, 5),
+        duration: db.duration_min,
+        emoji: db.emoji,
+        color: db.color,
+        days: db.days,
+        active: db.is_active,
+        sort_order: db.sort_order
+      };
+    });
+
+    blocks.forEach(db => {
+      if (!DEFAULT_SCHEDULE.some(b => b.label === db.label)) {
+        rebuilt.push({
+          id: 'block-' + db.id,
+          emoji: db.emoji,
+          label: db.label,
+          color: db.color,
+          startTime: String(db.start_time).slice(0, 5),
+          duration: db.duration_min,
+          type: 'colectivo',
+          auto: false,
+          needsConfirm: false,
+          visibleParents: true,
+          visibleDirector: true,
+          days: db.days,
+          active: db.is_active,
+          sort_order: db.sort_order
+        });
+      }
+    });
+
+    rebuilt.sort((a, z) => a.sort_order - z.sort_order);
+    _scheduleConfig = rebuilt;
+    _saveScheduleConfig();
+    localStorage.setItem(SCHEDULE_DB_SEED_KEY, '1');
+  } catch {}
+}
+
 function _getSchedule() {
   if (!_scheduleConfig) _loadScheduleConfig();
   const omitted = _getDailyOmittedEvents();
@@ -610,6 +671,8 @@ export async function initRoutine() {
   const todayLabel = now.toLocaleDateString('es-DO', { weekday: 'long', day: 'numeric', month: 'long' });
   const timeLabel = _fmtTime(now);
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
+
+  await _seedScheduleFromCatalog(classroom.id);
   const schedule = _getSchedule();
 
   const attendance = await MaestraApi.getAttendance(classroom.id, today);
@@ -939,6 +1002,7 @@ export function openScheduleConfig() {
 }
 
 export function resetScheduleConfig() {
+  localStorage.removeItem(SCHEDULE_DB_SEED_KEY);
   _scheduleConfig = DEFAULT_SCHEDULE.map(e => ({ ...e }));
   _saveScheduleConfig();
   UI.Modal.close('scheduleConfigModal');
@@ -1030,6 +1094,15 @@ export async function routineQuickGroup(eventId) {
   const ev = EVENT_MAP[eventId];
   if (!ev) return;
 
+  const catalogEvent = await RoutineCatalog.findEvent({ legacyKey: _legacyKeyForEvent(ev) });
+  const occurrenceId = crypto.randomUUID?.() || Math.random().toString(36).substr(2, 12);
+  const enrich = (base) => ({
+    ...base,
+    origin: 'colectivo',
+    occurrence_id: occurrenceId,
+    ...(catalogEvent ? { event_id: catalogEvent.id } : {})
+  });
+
   try {
     for (const s of students) {
       if (_isDuplicate(s.id, eventId)) continue;
@@ -1040,9 +1113,9 @@ export async function routineQuickGroup(eventId) {
         currentFood[ev.foodKey] = ev.value;
         payload.food = JSON.stringify(currentFood);
       } else if (ev.field === '_sleep') {
-        payload.infant_event = { type: 'sleep', label: ev.value === 'end' ? 'Terminar siesta' : 'Iniciar siesta', start_time: new Date().toISOString(), end_time: ev.value === 'end' ? new Date().toISOString() : null };
+        payload.infant_event = enrich({ type: 'sleep', label: ev.value === 'end' ? 'Terminar siesta' : 'Iniciar siesta', start_time: new Date().toISOString(), end_time: ev.value === 'end' ? new Date().toISOString() : null });
       } else if (ev.field === '_group') {
-        payload.infant_event = { type: ev.value, subtype: ev.subtype, label: ev.label };
+        payload.infant_event = enrich({ type: ev.value, subtype: ev.subtype, label: ev.label });
       }
       await MaestraApi.upsertDailyLog(payload);
     }
@@ -1051,6 +1124,20 @@ export async function routineQuickGroup(eventId) {
   } catch (err) {
     safeToast('Error al registrar evento grupal', 'error');
   }
+}
+
+function _legacyKeyForEvent(ev) {
+  if (ev.field === '_sleep') return ev.value === 'end' ? 'infant:sleep_end' : 'infant:sleep';
+  const map = {
+    handwash: 'infant:handwash',
+    toothbrush: 'infant:toothbrush',
+    activity: 'infant:activity',
+    playground: 'infant:playground',
+    bath: 'infant:bath',
+    diaper: ev.subtype === 'soiled' ? 'infant:diaper:soiled' : 'infant:diaper:wet',
+    milk: 'infant:milk'
+  };
+  return map[ev.value];
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

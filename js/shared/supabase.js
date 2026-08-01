@@ -562,8 +562,8 @@ async function _initOneSignalAsync(currentUser) {
         await OneSignal.init({
           appId: ONESIGNAL_APP_ID,
           allowLocalhostAsSecureOrigin: false,
-          serviceWorkerParam: { scope: '/' },
-          serviceWorkerPath: 'sw.js',
+          serviceWorkerPath: '/push/onesignal/OneSignalSDKWorker.js',
+          serviceWorkerParam: { scope: '/push/onesignal/' },
           notifyButton: { enable: false },
           welcomeNotification: { disable: false }
         });

@@ -415,6 +415,7 @@ function renderDailySummary(log) {
       milk:   (e) => ({ icon:'🍼', label:'Biberón',       detail: e.oz ? e.oz + ' oz' : '' }),
       sleep:  (e) => ({ icon:'😴', label: e.label || 'Durmió',        detail: e.end_time ? ('hasta ' + fmtTime(e.end_time)) : 'En siesta...' }),
       diaper: (e) => ({ icon: e.subtype==='wet'?'💧':'💩', label: e.subtype==='wet'?'Pañal mojado':'Pañal sucio', detail: '' }),
+      diaper_change: (_) => ({ icon:'🧻', label:'Cambio de pañal', detail: '' }),
       food:   (e) => ({ icon:'🍽️', label: e.meal||'Comida', detail: e.amount||'' }),
       temp:   (e) => ({ icon:'🌡️', label:'Temperatura',   detail: e.value ? e.value + '°C' : '' }),
       med:    (e) => ({ icon:'💊', label:'Medicamento',   detail: e.name||'' }),
@@ -439,6 +440,11 @@ function renderDailySummary(log) {
           if (catLabels && e.data[e.category]) detail = catLabels[e.data[e.category]] || '';
         }
         return { icon:'🤝', label: e.label || 'Comportamiento', detail };
+      },
+      health: (e) => ({ icon: e.subtype==='vomit'?'🤮':'😷', label: e.label || 'Salud', detail: e.description || '' }),
+      incident: (e) => {
+        const icons = { hit:'🤕', fever:'🤒', accident:'🩹', parent_call:'📞', other:'📌' };
+        return { icon: icons[e.subtype] || '📌', label: e.label || 'Incidente', detail: e.description || '' };
       },
     };
     rawEvents.forEach(e => {

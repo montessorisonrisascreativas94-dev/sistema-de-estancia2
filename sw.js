@@ -1,17 +1,17 @@
 /**
  * Colegio Montessori Sonrisas Creativas — Service Worker PWA
- * Importa OneSignalSDKWorker.js para manejar notificaciones push en el mismo scope.
+ * Las notificaciones push de OneSignal se manejan en un service worker
+ * dedicado (push/onesignal/OneSignalSDKWorker.js, scope /push/onesignal/)
+ * para evitar conflictos de handlers con este worker.
  */
 
-const CACHE_NAME = 'karpus-pwa-v8';
+const CACHE_NAME = 'karpus-pwa-v9';
 
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
   }
 });
-
-importScripts('./OneSignalSDKWorker.js');
 
 const ASSETS = [
   './',
@@ -91,5 +91,3 @@ self.addEventListener('fetch', e => {
     );
   }
 });
-
-// OneSignalSDKWorker.js se importa arriba para manejar notificaciones push.

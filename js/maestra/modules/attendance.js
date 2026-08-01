@@ -12,6 +12,23 @@ OfflineQueue.startAutoSync(({ synced }) => {
   safeToast(`✅ ${synced} registro(s) de asistencia sincronizados`, 'success');
 });
 
+// Cache del período/año escolar activos (60s) para vincular la asistencia
+let _activePeriodCache = { key: null, id: null, yearId: null, ts: 0 };
+async function _resolveActivePeriod(classroomId) {
+  if (_activePeriodCache.key === classroomId && Date.now() - _activePeriodCache.ts < 60000) {
+    return _activePeriodCache;
+  }
+  try {
+    const { data, error } = await supabase.rpc('get_active_period', { p_classroom_id: classroomId });
+    _activePeriodCache = error || !data?.found
+      ? { key: classroomId, id: null, yearId: null, ts: Date.now() }
+      : { key: classroomId, id: data.id ?? null, yearId: data.school_year_id ?? null, ts: Date.now() };
+  } catch (_) {
+    _activePeriodCache = { key: classroomId, id: null, yearId: null, ts: Date.now() };
+  }
+  return _activePeriodCache;
+}
+
 /**
  * 📅 Asistencia — carga el panel y las solicitudes de ausencia pendientes
  */
@@ -318,7 +335,15 @@ export async function registerAttendance(studentId, status) {
     let statusLiteral = status === 'present' ? 'Presente' : status === 'late' ? 'Tarde' : 'Ausente';
 
     if (shouldUpsert) {
-      const attRecord = { student_id: studentId, classroom_id: classroom.id, date: today, status };
+      const periodInfo = await _resolveActivePeriod(classroom.id);
+      const attRecord = {
+        student_id: studentId,
+        classroom_id: classroom.id,
+        date: today,
+        status,
+        period_id: periodInfo.id,
+        school_year_id: periodInfo.yearId
+      };
       if (navigator.onLine) {
         await MaestraApi.upsertAttendance(attRecord);
       } else {

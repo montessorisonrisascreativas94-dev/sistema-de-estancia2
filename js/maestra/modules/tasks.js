@@ -252,13 +252,16 @@ export async function openNewTaskModal(taskToEdit = null) {
         fileUrl = urlData.publicUrl;
       }
 
+      const periodInfo = await _resolveActivePeriod(classroom.id);
       const payload = {
         classroom_id: classroom.id,
         title,
         description,
         due_date: dueDate,
         file_url: fileUrl,
-        teacher_id: AppState.get('user').id
+        teacher_id: AppState.get('user').id,
+        period_id: periodInfo.period?.id ?? null,
+        school_year_id: periodInfo.yearId
       };
       
       if (isEditing) {
@@ -312,6 +315,17 @@ async function _getPeriodStatus(classroomId) {
     return { open: data.status === 'open', period: data };
   } catch (_) {
     return { open: true, period: null };
+  }
+}
+
+//  Helper: resolver período + año escolar activos para vincular la tarea
+async function _resolveActivePeriod(classroomId) {
+  try {
+    const { data, error } = await supabase.rpc('get_active_period', { p_classroom_id: classroomId });
+    if (error || !data?.found) return { period: null, yearId: null };
+    return { period: data, yearId: data.school_year_id ?? null };
+  } catch (_) {
+    return { period: null, yearId: null };
   }
 }
 
