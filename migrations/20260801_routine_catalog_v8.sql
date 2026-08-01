@@ -92,7 +92,7 @@ CREATE INDEX IF NOT EXISTS idx_routine_events_active ON public.routine_events(is
 
 -- Seed — Ánimo
 INSERT INTO public.routine_events (category_id, name, emoji, color, kind, legacy_key, sort_order)
-SELECT c.id, v.name, v.emoji, v.color, 'toggle', v.legacy_key, v.sort_order
+SELECT c.id, v.name, v.emoji, c.color, 'toggle', v.legacy_key, v.sort_order
 FROM public.routine_categories c
 CROSS JOIN (VALUES
   ('Feliz',           '😊', 0, 'mood:feliz'),
@@ -118,7 +118,7 @@ ON CONFLICT (name, category_id) DO NOTHING;
 
 -- Seed — Salud
 INSERT INTO public.routine_events (category_id, name, emoji, color, kind, legacy_key, requires_comment, requires_temp, notify_parents, sort_order)
-SELECT c.id, v.name, v.emoji, v.color, v.kind, v.legacy_key, v.requires_comment, v.requires_temp, v.notify_parents, v.sort_order
+SELECT c.id, v.name, v.emoji, c.color, v.kind, v.legacy_key, v.requires_comment, v.requires_temp, v.notify_parents, v.sort_order
 FROM public.routine_categories c
 CROSS JOIN (VALUES
   ('Temperatura',   '🌡️', 'temp',    'infant:temp',            false, true,  false, 0),
@@ -139,7 +139,7 @@ ON CONFLICT (name, category_id) DO NOTHING;
 
 -- Seed — Alimentación
 INSERT INTO public.routine_events (category_id, name, emoji, color, kind, value_options, legacy_key, requires_quantity, sort_order)
-SELECT c.id, v.name, v.emoji, v.color, v.kind, v.value_options, v.legacy_key, v.requires_quantity, v.sort_order
+SELECT c.id, v.name, v.emoji, c.color, v.kind, v.value_options, v.legacy_key, v.requires_quantity, v.sort_order
 FROM public.routine_categories c
 CROSS JOIN (VALUES
   ('Desayuno',    '🍞', 'value',    '["Todo","Poco","No quiso","Ayuda"]'::jsonb, 'food:breakfast', false, 0),
@@ -161,7 +161,7 @@ ON CONFLICT (name, category_id) DO NOTHING;
 
 -- Seed — Descanso
 INSERT INTO public.routine_events (category_id, name, emoji, color, kind, legacy_key, sort_order)
-SELECT c.id, v.name, v.emoji, v.color, 'toggle', v.legacy_key, v.sort_order
+SELECT c.id, v.name, v.emoji, c.color, 'toggle', v.legacy_key, v.sort_order
 FROM public.routine_categories c
 CROSS JOIN (VALUES
   ('Siesta',            '😴', 'infant:sleep',     0),
@@ -178,7 +178,7 @@ ON CONFLICT (name, category_id) DO NOTHING;
 
 -- Seed — Higiene
 INSERT INTO public.routine_events (category_id, name, emoji, color, kind, legacy_key, sort_order)
-SELECT c.id, v.name, v.emoji, v.color, 'toggle', v.legacy_key, v.sort_order
+SELECT c.id, v.name, v.emoji, c.color, 'toggle', v.legacy_key, v.sort_order
 FROM public.routine_categories c
 CROSS JOIN (VALUES
   ('Lavado manos', '🧼', 'infant:handwash',       0),
@@ -195,7 +195,7 @@ ON CONFLICT (name, category_id) DO NOTHING;
 
 -- Seed — Actividades
 INSERT INTO public.routine_events (category_id, name, emoji, color, kind, legacy_key, sort_order)
-SELECT c.id, v.name, v.emoji, v.color, 'toggle', v.legacy_key, v.sort_order
+SELECT c.id, v.name, v.emoji, c.color, 'toggle', v.legacy_key, v.sort_order
 FROM public.routine_categories c
 CROSS JOIN (VALUES
   ('Actividad educativa','🎨', 'infant:activity',    0),
@@ -218,7 +218,7 @@ ON CONFLICT (name, category_id) DO NOTHING;
 
 -- Seed — Arte
 INSERT INTO public.routine_events (category_id, name, emoji, color, kind, sort_order)
-SELECT c.id, v.name, v.emoji, v.color, 'toggle', v.sort_order
+SELECT c.id, v.name, v.emoji, c.color, 'toggle', v.sort_order
 FROM public.routine_categories c
 CROSS JOIN (VALUES
   ('Canto',       '🎤', 0),
@@ -233,7 +233,7 @@ ON CONFLICT (name, category_id) DO NOTHING;
 
 -- Seed — Aprendizaje
 INSERT INTO public.routine_events (category_id, name, emoji, color, kind, sort_order)
-SELECT c.id, v.name, v.emoji, v.color, 'toggle', v.sort_order
+SELECT c.id, v.name, v.emoji, c.color, 'toggle', v.sort_order
 FROM public.routine_categories c
 CROSS JOIN (VALUES
   ('Reconoció colores','🎨', 0),
@@ -250,7 +250,7 @@ ON CONFLICT (name, category_id) DO NOTHING;
 
 -- Seed — Social
 INSERT INTO public.routine_events (category_id, name, emoji, color, kind, sort_order)
-SELECT c.id, v.name, v.emoji, v.color, 'toggle', v.sort_order
+SELECT c.id, v.name, v.emoji, c.color, 'toggle', v.sort_order
 FROM public.routine_categories c
 CROSS JOIN (VALUES
   ('Compartió',              '🤝', 0),
@@ -265,7 +265,7 @@ ON CONFLICT (name, category_id) DO NOTHING;
 
 -- Seed — Juego
 INSERT INTO public.routine_events (category_id, name, emoji, color, kind, legacy_key, sort_order)
-SELECT c.id, v.name, v.emoji, v.color, 'toggle', v.legacy_key, v.sort_order
+SELECT c.id, v.name, v.emoji, c.color, 'toggle', v.legacy_key, v.sort_order
 FROM public.routine_categories c
 CROSS JOIN (VALUES
   ('Juego libre',     '🎮', NULL,        0),
@@ -283,7 +283,7 @@ ON CONFLICT (name, category_id) DO NOTHING;
 
 -- Seed — Exterior
 INSERT INTO public.routine_events (category_id, name, emoji, color, kind, legacy_key, sort_order)
-SELECT c.id, v.name, v.emoji, v.color, 'toggle', v.legacy_key, v.sort_order
+SELECT c.id, v.name, v.emoji, c.color, 'toggle', v.legacy_key, v.sort_order
 FROM public.routine_categories c
 CROSS JOIN (VALUES
   ('Patio',                '🌳', 'infant:playground', 0),
@@ -298,7 +298,7 @@ ON CONFLICT (name, category_id) DO NOTHING;
 
 -- Seed — Momentos
 INSERT INTO public.routine_events (category_id, name, emoji, color, kind, legacy_key, requires_photo, sort_order)
-SELECT c.id, v.name, v.emoji, v.color, v.kind, v.legacy_key, v.requires_photo, v.sort_order
+SELECT c.id, v.name, v.emoji, c.color, v.kind, v.legacy_key, v.requires_photo, v.sort_order
 FROM public.routine_categories c
 CROSS JOIN (VALUES
   ('Llegada',         '🖐️', 'toggle', 'group:welcome',      false, 0),
@@ -312,7 +312,7 @@ ON CONFLICT (name, category_id) DO NOTHING;
 
 -- Seed — Incidentes (siempre notifican a padres)
 INSERT INTO public.routine_events (category_id, name, emoji, color, kind, legacy_key, requires_comment, notify_parents, notify_email, sort_order)
-SELECT c.id, v.name, v.emoji, v.color, 'comment', v.legacy_key, true, true, v.notify_email, v.sort_order
+SELECT c.id, v.name, v.emoji, c.color, 'comment', v.legacy_key, true, true, v.notify_email, v.sort_order
 FROM public.routine_categories c
 CROSS JOIN (VALUES
   ('Caída',          '🤕', 'incident:hit',           false, 0),
@@ -328,7 +328,7 @@ ON CONFLICT (name, category_id) DO NOTHING;
 
 -- Seed — Personalizados (la escuela puede agregar más)
 INSERT INTO public.routine_events (category_id, name, emoji, color, kind, sort_order)
-SELECT c.id, v.name, v.emoji, v.color, 'toggle', v.sort_order
+SELECT c.id, v.name, v.emoji, c.color, 'toggle', v.sort_order
 FROM public.routine_categories c
 CROSS JOIN (VALUES
   ('Festival Patrio',    '🎆', 0),
