@@ -459,10 +459,8 @@ CREATE TRIGGER trg_seed_classroom_routine_settings
 -- ============================================================
 -- 8. BACKFILL para aulas existentes (idempotente)
 -- ============================================================
-DO $$
-BEGIN
-  -- 8.1 settings
-  INSERT INTO public.classroom_routine_settings (classroom_id, event_id, sort_order)
+-- 8.1 settings
+INSERT INTO public.classroom_routine_settings (classroom_id, event_id, sort_order)
   SELECT c.id, e.id, e.sort_order
   FROM public.classrooms c
   CROSS JOIN public.routine_events e
@@ -538,4 +536,3 @@ BEGIN
   WHERE e.is_active = true
   ON CONFLICT (classroom_id, event_id)
   DO UPDATE SET is_active = true;
-END $$;
