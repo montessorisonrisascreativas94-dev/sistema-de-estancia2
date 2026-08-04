@@ -21,6 +21,7 @@ import { VideoCallUI } from '../shared/videocall-ui.js';
 import { ParentRatingModule } from './parent_rating.js';
 import { WizardPayment } from './payment-wizard.js';
 import { RecentActivityModule } from './recent-activity.js';
+import { ClassroomSchedule } from './classroom-schedule.js';
 
 window.App = {
   feed: FeedModule, payments: PaymentsModule, tasks: TasksModule,
@@ -185,6 +186,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (currentStudent?.classroom_id) {
       initLiveClassListener(currentStudent.classroom_id);
     }
+
+    // Cronología del aula (plan de la maestra) en tiempo real
+    ClassroomSchedule.init();
 
     // Logout — ambos botones (móvil y desktop)
     const logoutHandler = async () => {
@@ -1023,6 +1027,7 @@ async function switchStudent(studentId) {
     // 4. Reiniciar Realtime para el nuevo hijo
     _initDailyLogRealtime(selected.id);
     if (selected.classroom_id) initLiveClassListener(selected.classroom_id);
+    ClassroomSchedule.init();
 
     // 5. Recargar Dashboard y UI
     updateHeaderProfile(AppState.get('profile'), selected, all);

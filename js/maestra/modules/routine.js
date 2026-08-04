@@ -20,12 +20,15 @@ let _presentIds = new Set();
 let _scheduleConfig = null;
 let _timelineCollapsed = localStorage.getItem('sonrisas_tl_collapsed') === '1';
 let _timelineActive = localStorage.getItem('sonrisas_tl_active') !== '0';
-let _attendanceTaken = false;
 let _visibilityBound = false;
+let _scBuildMode = 'library';
+let _buildDraft = null;
+let _buildStartTime = '07:30';
 
 const SCHEDULE_STORAGE_KEY = 'sonrisas_schedule_config';
 const SCHEDULE_DB_SEED_KEY = 'sonrisas_schedule_db_seed';
 const DAILY_OVERRIDES_KEY = 'sonrisas_daily_overrides';
+const SCHEDULE_TEMPLATE_KEY = 'sonrisas_schedule_template';
 const SCHEDULE_VERSION = 5;
 
 const DEFAULT_SCHEDULE = [
@@ -91,6 +94,138 @@ const COLLECTIVE_QUICK_EVENTS = [
   { id: 'milk_gr',   emoji: '🍼', label: 'Biberón',     color: '#0B63C7', groupEventId: 'milk_gr',   type: '_group',  eventType: 'milk',     active: true }
 ];
 
+// ───────────────────────────────────────────────────────────────────────────────
+// CATÁLOGO DE EVENTOS — biblioteca ampliada que la maestra puede agregar a su
+// cronología. Agrupados por categoría para mostrarse en el modal de Configurar
+// Horario. groupEventId marca los eventos que se registran como acción colectiva.
+// ───────────────────────────────────────────────────────────────────────────────
+const SCHEDULE_CATALOG = {
+  base: { label: '📌 Rutina base', color: '#0B63C7', items: [
+    { id: 'welcome',       emoji: '🖐️', label: 'Bienvenida',        color: '#FF8A00', duration: 15 },
+    { id: 'roll_call',     emoji: '📋', label: 'Pase de Lista',     color: '#0B63C7', duration: 15 },
+    { id: 'departure',     emoji: '👋', label: 'Entrega de niños',  color: '#EF4444', duration: 60 },
+    { id: 'sleep_start',   emoji: '😴', label: 'Siesta',            color: '#8B5CF6', duration: 120, groupEventId: 'sleep_start' },
+    { id: 'sleep_end',     emoji: '😊', label: 'Despertar',         color: '#FFD43B', duration: 15,  groupEventId: 'sleep_end' }
+  ]},
+  hygiene: { label: '🧼 Higiene y cuidado', color: '#0EA5E9', items: [
+    { id: 'bath_full',      emoji: '🛁', label: 'Baño completo',     color: '#0EA5E9', duration: 30, groupEventId: 'bath' },
+    { id: 'diaper_change',  emoji: '🧷', label: 'Cambio de pañal',   color: '#94A3B8', duration: 15, groupEventId: 'diaper_change' },
+    { id: 'handwash',       emoji: '🧼', label: 'Lavado de manos',   color: '#0B63C7', duration: 10, groupEventId: 'handwash' },
+    { id: 'toothbrush',     emoji: '🪥', label: 'Cepillado',         color: '#06B6D4', duration: 15, groupEventId: 'toothbrush' }
+  ]},
+  food: { label: '🍎 Alimentación', color: '#FF8A00', items: [
+    { id: 'breakfast',     emoji: '🍞', label: 'Desayuno',           color: '#FF8A00', duration: 30, groupEventId: 'breakfast' },
+    { id: 'papilla',       emoji: '🥣', label: 'Papilla',            color: '#F59E0B', duration: 20, groupEventId: 'snack' },
+    { id: 'hydration',     emoji: '💧', label: 'Hidratación',        color: '#0B63C7', duration: 15, groupEventId: 'water' },
+    { id: 'fruit',         emoji: '🍎', label: 'Fruta',              color: '#28B54D', duration: 20, groupEventId: 'snack' },
+    { id: 'snack',         emoji: '🍿', label: 'Refrigerio',         color: '#28B54D', duration: 30, groupEventId: 'snack' },
+    { id: 'lunch',         emoji: '🍽️', label: 'Almuerzo',           color: '#28B54D', duration: 30, groupEventId: 'lunch' },
+    { id: 'snack2',        emoji: '🍪', label: 'Merienda',           color: '#F59E0B', duration: 30, groupEventId: 'snack' }
+  ]},
+  stimulation: { label: '🧸 Estimulación y juego', color: '#7C3AED', items: [
+    { id: 'early_stimulation', emoji: '🧸', label: 'Estimulación temprana', color: '#7C3AED', duration: 30 },
+    { id: 'crawling',          emoji: '👶', label: 'Gateo',                   color: '#EC4899', duration: 25 },
+    { id: 'sensorial_games',   emoji: '🪀', label: 'Juegos sensoriales',      color: '#6366F1', duration: 30 },
+    { id: 'symbolic_play',     emoji: '🧸', label: 'Juego simbólico',         color: '#D946EF', duration: 30 },
+    { id: 'blocks',            emoji: '🚂', label: 'Bloques',                 color: '#F97316', duration: 25 },
+    { id: 'group_game',        emoji: '🪅', label: 'Juego grupal',            color: '#F59E0B', duration: 30 }
+  ]},
+  socioemotional: { label: '🤗 Social-emocional', color: '#EF4444', items: [
+    { id: 'group_hug',         emoji: '🤗', label: 'Abrazo grupal',          color: '#EF4444', duration: 10 },
+    { id: 'emotional_ed',      emoji: '❤️', label: 'Educación emocional',    color: '#F43F5E', duration: 20 },
+    { id: 'identify_emotions', emoji: '😀', label: 'Identificar emociones',  color: '#FBBF24', duration: 20 }
+  ]},
+  motor: { label: '🤸 Motricidad', color: '#16A34A', items: [
+    { id: 'ball_play',    emoji: '🏀', label: 'Juego con pelota', color: '#16A34A', duration: 30 },
+    { id: 'coordination', emoji: '🎯', label: 'Coordinación',      color: '#0B63C7', duration: 30 },
+    { id: 'exercises',    emoji: '🏃', label: 'Ejercicios',        color: '#22C55E', duration: 20 }
+  ]},
+  cognitive: { label: '🧠 Cognitivo y aprendizaje', color: '#8B5CF6', items: [
+    { id: 'cognitive_stim',  emoji: '🧠', label: 'Estimulación cognitiva', color: '#8B5CF6', duration: 30 },
+    { id: 'experiment',      emoji: '🔬', label: 'Experimento',            color: '#6366F1', duration: 30 },
+    { id: 'oral_expression', emoji: '🎤', label: 'Expresión oral',         color: '#EC4899', duration: 20 },
+    { id: 'activity',        emoji: '🎨', label: 'Actividad educativa',    color: '#7C3AED', duration: 45, groupEventId: 'activity' },
+    { id: 'sensorial',       emoji: '🔬', label: 'Actividad sensorial',    color: '#6366F1', duration: 45 }
+  ]},
+  art: { label: '🎨 Arte y creatividad', color: '#EC4899', items: [
+    { id: 'coloring', emoji: '🖍', label: 'Colorear',  color: '#F472B6', duration: 25 },
+    { id: 'art',      emoji: '🎨', label: 'Arte',      color: '#EC4899', duration: 30 },
+    { id: 'music',    emoji: '🎵', label: 'Música',    color: '#8B5CF6', duration: 25 }
+  ]},
+  language: { label: '📖 Lenguaje y lectura', color: '#2563EB', items: [
+    { id: 'reading',      emoji: '📖', label: 'Lectura',       color: '#0B63C7', duration: 20 },
+    { id: 'storytelling', emoji: '📚', label: 'Cuentacuentos', color: '#2563EB', duration: 25 }
+  ]},
+  recreation: { label: '⚽ Recreación y deportes', color: '#16A34A', items: [
+    { id: 'recreational_games', emoji: '🪁', label: 'Juegos recreativos', color: '#F59E0B', duration: 30 },
+    { id: 'sports',             emoji: '⚽', label: 'Deportes',           color: '#16A34A', duration: 30 },
+    { id: 'playground',         emoji: '🌳', label: 'Salida al Patio',   color: '#16A34A', duration: 30, groupEventId: 'playground' },
+    { id: 'free_play',          emoji: '🎮', label: 'Juego libre',        color: '#EC4899', duration: 30 }
+  ]}
+};
+
+const _CATALOG_BY_ID = (() => {
+  const map = {};
+  Object.values(SCHEDULE_CATALOG).forEach(cat => cat.items.forEach(it => { map[it.id] = it; }));
+  return map;
+})();
+
+// ───────────────────────────────────────────────────────────────────────────────
+// PLANTILLAS DE RUTINA POR EDAD — la maestra aplica una plantilla y después
+// ajusta horas, duraciones, activar/desactivar y agregar/quitar eventos.
+// Cada entrada: [catId, horaInicio, duración, idPropio?] (id propio para repetir
+// un mismo evento de la biblioteca varias veces en el día).
+// ───────────────────────────────────────────────────────────────────────────────
+const ROUTINE_TEMPLATES = {
+  infantes: {
+    id: 'infantes', emoji: '🍼', name: 'Infantes', subtitle: '0 a 12 meses', color: '#0EA5E9',
+    events: [
+      ['welcome', '07:30', 15], ['roll_call', '07:45', 15], ['papilla', '08:00', 20],
+      ['diaper_change', '08:20', 15], ['early_stimulation', '08:45', 30], ['crawling', '09:15', 25],
+      ['sensorial_games', '09:40', 30], ['fruit', '10:10', 20], ['hydration', '10:30', 15],
+      ['symbolic_play', '10:50', 30], ['group_hug', '11:20', 10], ['diaper_change', '11:40', 15, 'inf_diaper2'],
+      ['papilla', '12:00', 20, 'inf_papilla2'], ['toothbrush', '12:25', 10], ['sleep_start', '12:40', 120],
+      ['sleep_end', '14:40', 15], ['fruit', '15:00', 20, 'inf_fruit2'], ['music', '15:25', 20],
+      ['reading', '15:50', 15], ['departure', '16:00', 60]
+    ]
+  },
+  caminadores: {
+    id: 'caminadores', emoji: '🚼', name: 'Caminadores', subtitle: '1 a 2 años', color: '#7C3AED',
+    events: [
+      ['welcome', '07:30', 15], ['roll_call', '07:45', 15], ['breakfast', '08:00', 30],
+      ['handwash', '08:30', 10], ['early_stimulation', '08:45', 30], ['ball_play', '09:15', 30],
+      ['sensorial_games', '09:45', 30], ['snack', '10:15', 30], ['coordination', '10:45', 30],
+      ['symbolic_play', '11:15', 30], ['lunch', '11:45', 30], ['toothbrush', '12:15', 15],
+      ['sleep_start', '12:30', 120], ['sleep_end', '14:30', 15], ['snack2', '14:50', 30],
+      ['music', '15:20', 25], ['storytelling', '15:45', 25], ['departure', '16:00', 60]
+    ]
+  },
+  parvulos: {
+    id: 'parvulos', emoji: '🧒', name: 'Párvulos', subtitle: '2 a 3 años', color: '#F59E0B',
+    events: [
+      ['welcome', '07:30', 15], ['roll_call', '07:45', 15], ['breakfast', '08:00', 30],
+      ['handwash', '08:30', 10], ['identify_emotions', '08:45', 20], ['exercises', '09:10', 20],
+      ['art', '09:30', 30], ['snack', '10:00', 30], ['group_game', '10:30', 30],
+      ['emotional_ed', '11:00', 20], ['blocks', '11:25', 25], ['lunch', '11:55', 30],
+      ['toothbrush', '12:25', 15], ['sleep_start', '12:40', 110], ['sleep_end', '14:30', 15],
+      ['snack2', '14:50', 30], ['oral_expression', '15:20', 20], ['recreational_games', '15:40', 30],
+      ['departure', '16:00', 60]
+    ]
+  },
+  preescolar: {
+    id: 'preescolar', emoji: '🎒', name: 'Preescolar', subtitle: '3 a 5 años', color: '#16A34A',
+    events: [
+      ['welcome', '07:30', 15], ['roll_call', '07:45', 15], ['breakfast', '08:00', 30],
+      ['handwash', '08:30', 10], ['cognitive_stim', '08:45', 30], ['oral_expression', '09:15', 20],
+      ['reading', '09:40', 20], ['snack', '10:00', 30], ['coloring', '10:30', 25],
+      ['experiment', '11:00', 30], ['sports', '11:30', 30], ['lunch', '12:05', 30],
+      ['toothbrush', '12:35', 15], ['sleep_start', '12:50', 90], ['sleep_end', '14:20', 15],
+      ['snack2', '14:40', 30], ['recreational_games', '15:10', 30], ['art', '15:40', 30],
+      ['departure', '16:00', 60]
+    ]
+  }
+};
+
 function _today() { return AppState.today(); }
 function _fmtTime(d) {
   return new Date(d).toLocaleTimeString('es-DO', { hour: '2-digit', minute: '2-digit', hour12: true });
@@ -136,14 +271,30 @@ function _getDayOfWeek() { return new Date().getDay(); }
 function _getNowMinutes() { const n = new Date(); return n.getHours() * 60 + n.getMinutes(); }
 
 function _loadScheduleConfig() {
+  const defaults = DEFAULT_SCHEDULE.map(e => ({ ...e }));
   try {
     const stored = localStorage.getItem(SCHEDULE_STORAGE_KEY);
     if (stored) {
       const parsed = JSON.parse(stored);
-      if (parsed._version === SCHEDULE_VERSION) { _scheduleConfig = parsed.events; return _scheduleConfig; }
+      if (parsed._version === SCHEDULE_VERSION && Array.isArray(parsed.events) && parsed.events.length > 0) {
+        const tplId = localStorage.getItem(SCHEDULE_TEMPLATE_KEY);
+        if (tplId && ROUTINE_TEMPLATES[tplId]) {
+          // Modo plantilla: la plantilla define exactamente qué eventos aparecen.
+          _scheduleConfig = parsed.events.map(e => ({ ...e }));
+        } else {
+          const savedMap = new Map(parsed.events.map(e => [e.id, e]));
+          const merged = defaults.map(def => savedMap.has(def.id) ? { ...def, ...savedMap.get(def.id) } : def);
+          parsed.events.forEach(ev => {
+            if (!DEFAULT_SCHEDULE.some(d => d.id === ev.id) && !merged.some(m => m.id === ev.id)) merged.push(ev);
+          });
+          _scheduleConfig = merged;
+        }
+        _saveScheduleConfig();
+        return _scheduleConfig;
+      }
     }
   } catch {}
-  _scheduleConfig = DEFAULT_SCHEDULE.map(e => ({ ...e }));
+  _scheduleConfig = defaults;
   _saveScheduleConfig();
   return _scheduleConfig;
 }
@@ -151,6 +302,33 @@ function _saveScheduleConfig() {
   try {
     localStorage.setItem(SCHEDULE_STORAGE_KEY, JSON.stringify({ _version: SCHEDULE_VERSION, events: _scheduleConfig }));
   } catch {}
+  _syncScheduleToDb();
+}
+
+// ───────────────────────────────────────────────────────────────────────────────
+// SINCROMAZÓN A LA BD — la cronología del día se persiste en
+// classroom_daily_schedule para que el panel de padres la muestre en tiempo
+// real (el plan que ve la maestra es el mismo que ven los padres).
+// ───────────────────────────────────────────────────────────────────────────────
+let _scheduleSyncTimer = null;
+
+function _syncScheduleToDb() {
+  const classroom = AppState.get('classroom');
+  if (!classroom?.id) return;
+  if (_scheduleSyncTimer) clearTimeout(_scheduleSyncTimer);
+  _scheduleSyncTimer = setTimeout(async () => {
+    _scheduleSyncTimer = null;
+    try {
+      const events = _getSchedule();
+      const { error } = await supabase
+        .from('classroom_daily_schedule')
+        .upsert(
+          { classroom_id: classroom.id, schedule_date: _today(), events },
+          { onConflict: 'classroom_id,schedule_date' }
+        );
+      if (error) console.warn('[schedule] sync error:', error.message);
+    } catch {}
+  }, 500);
 }
 
 function _getScheduleConfig() {
@@ -217,9 +395,19 @@ async function _seedScheduleFromCatalog(classroomId) {
 }
 
 function _getSchedule() {
-  if (!_scheduleConfig) _loadScheduleConfig();
+  if (!_scheduleConfig || _scheduleConfig.length === 0) {
+    _scheduleConfig = DEFAULT_SCHEDULE.map(e => ({ ...e }));
+    _saveScheduleConfig();
+  }
   const omitted = _getDailyOmittedEvents();
-  return _scheduleConfig.filter(e => e.active && e.days.includes(_getDayOfWeek()) && !omitted.includes(e.id));
+  let filtered = _scheduleConfig.filter(e => e.active && e.days.includes(_getDayOfWeek()) && !omitted.includes(e.id));
+  const templateMode = localStorage.getItem(SCHEDULE_TEMPLATE_KEY) && ROUTINE_TEMPLATES[localStorage.getItem(SCHEDULE_TEMPLATE_KEY)];
+  if (filtered.length === 0 && !omitted.length && !templateMode) {
+    _scheduleConfig = DEFAULT_SCHEDULE.map(e => ({ ...e }));
+    _saveScheduleConfig();
+    filtered = _scheduleConfig.filter(e => e.active && e.days.includes(_getDayOfWeek()) && !omitted.includes(e.id));
+  }
+  return filtered;
 }
 
 function _getEventStatus(event, nowMinutes) {
@@ -272,59 +460,90 @@ function _getEventProgress(event, students, logsMap) {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const TL_STYLES = `
-  .tl-wrap::-webkit-scrollbar{display:none}
-  .tl-expanded{display:flex;align-items:flex-start;gap:0;min-width:max-content;padding:8px 4px;position:relative}
-  .tl-expanded::before{content:'';position:absolute;top:26px;left:30px;right:30px;height:3px;background:linear-gradient(90deg,#e2e8f0,#cbd5e1);border-radius:2px;z-index:0}
-  .tl-ev{display:flex;flex-direction:column;align-items:center;min-width:80px;max-width:90px;cursor:pointer;position:relative;z-index:1;padding:4px;transition:all .2s;border-radius:16px}
-  .tl-ev:active{transform:scale(.92)}
-  .tl-ev:hover{background:rgba(0,0,0,.03)}
-  .tl-dot{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.4rem;border:3px solid #e2e8f0;background:white;transition:all .3s;position:relative;flex-shrink:0}
-  .tl-dot.pending{border-color:#e2e8f0;background:#f8fafc}
-  .tl-dot.in_progress{border-color:var(--ev-color,#FF8A00);background:var(--ev-color,#FF8A00);animation:tl-pulse 1.5s infinite;box-shadow:0 0 0 4px color-mix(in srgb,var(--ev-color,#FF8A00) 20%,transparent)}
-  .tl-dot.completed{border-color:#28B54D;background:#28B54D}
-  @keyframes tl-pulse{0%,100%{box-shadow:0 0 0 4px color-mix(in srgb,var(--ev-color,#FF8A00) 20%,transparent)}50%{box-shadow:0 0 0 8px color-mix(in srgb,var(--ev-color,#FF8A00) 10%,transparent)}}
-  .tl-ev-label{font-size:.6rem;font-weight:900;text-transform:uppercase;letter-spacing:.04em;color:#94a3b8;text-align:center;line-height:1.2;margin-top:6px;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .tl-ev.active .tl-ev-label{color:var(--ev-color,#FF8A00);font-weight:900}
-  .tl-ev.done .tl-ev-label{color:#28B54D}
-  .tl-ev-time{font-size:.55rem;font-weight:700;color:#cbd5e1;margin-top:2px}
-  .tl-ev.active .tl-ev-time{color:var(--ev-color,#FF8A00)}
-  .tl-ev-count{font-size:.5rem;font-weight:900;color:#28B54D;margin-top:1px;background:#f0fdf4;border-radius:8px;padding:1px 6px}
-  .tl-conn{width:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0;padding-top:22px}
-  .tl-conn-line{width:100%;height:3px;border-radius:2px;background:#e2e8f0}
-  .tl-conn.done .tl-conn-line{background:linear-gradient(90deg,#86efac,#28B54D)}
-  .tl-collapsed-bar::-webkit-scrollbar{display:none}
-  .tl-collapsed{display:flex;align-items:center;gap:2px;min-width:max-content;padding:0 8px}
-  .tl-c-dot{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1rem;border:2px solid #e2e8f0;background:white;cursor:pointer;transition:all .2s;flex-shrink:0;position:relative}
-  .tl-c-dot:active{transform:scale(.85)}
-  .tl-c-dot.current{border-color:var(--ev-color);background:var(--ev-color);box-shadow:0 0 0 3px color-mix(in srgb,var(--ev-color) 25%,transparent)}
-  .tl-c-dot.done{border-color:#28B54D;background:#28B54D;color:white}
-  .tl-c-dot.done::after{content:'✓';position:absolute;font-size:.5rem;font-weight:900;color:white}
-  .tl-c-line{width:12px;height:2px;background:#e2e8f0;flex-shrink:0;border-radius:1px}
-  .tl-c-line.done{background:#28B54D}
+  .tl-chips-wrap{overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  .tl-chips{display:flex;align-items:stretch;gap:8px;min-width:max-content;padding:4px 2px}
+  .tl-chip{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-width:70px;padding:10px 8px;border-radius:18px;cursor:pointer;transition:transform .15s,box-shadow .15s;flex-shrink:0;position:relative;border:2px solid #f1f5f9;background:#fff}
+  .tl-chip:active{transform:scale(.9)}
+  .tl-chip:hover{transform:translateY(-3px);box-shadow:0 8px 18px rgba(15,23,42,.10)}
+  .tl-chip .tl-chip-emoji{font-size:1.4rem;line-height:1}
+  .tl-chip .tl-chip-time{font-size:.5rem;font-weight:800;letter-spacing:.04em;color:#94a3b8;text-transform:uppercase}
+  .tl-chip .tl-chip-name{font-size:.5rem;font-weight:900;color:#475569;max-width:64px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .tl-chip.done{border-color:#86efac;background:linear-gradient(180deg,#f0fdf4,#dcfce7)}
+  .tl-chip.done .tl-chip-emoji{filter:grayscale(.35)}
+  .tl-chip.done .tl-chip-name{color:#16a34a}
+  .tl-chip.done::after{content:'✓';position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;background:#28B54D;color:#fff;font-size:.55rem;font-weight:900;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(40,181,77,.4);animation:chip-pop .3s}
+  @keyframes chip-pop{0%{transform:scale(0)}80%{transform:scale(1.25)}100%{transform:scale(1)}}
+  .tl-chip.current{border-color:var(--ev-color,#FF8A00);background:linear-gradient(180deg,#fff7ed,#ffedd5);box-shadow:0 0 0 4px color-mix(in srgb,var(--ev-color,#FF8A00) 18%,transparent);animation:chip-bounce 1.6s infinite}
+  .tl-chip.current .tl-chip-emoji{animation:chip-wiggle 1.6s infinite}
+  .tl-chip.current .tl-chip-time{color:var(--ev-color,#FF8A00)}
+  .tl-chip.current .tl-chip-name{color:var(--ev-color,#FF8A00)}
+  @keyframes chip-bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+  @keyframes chip-wiggle{0%,100%{transform:rotate(-8deg)}50%{transform:rotate(8deg)}}
+
+  .vt-list-wrap{max-height:460px;overflow-y:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  .vt-list{display:flex;flex-direction:column;position:relative;padding:6px 2px}
+  .vt-list::before{content:'';position:absolute;left:19px;top:6px;bottom:6px;width:3px;background:linear-gradient(180deg,#e2e8f0,#cbd5e1);border-radius:2px}
+  .vt-item{display:flex;gap:14px;position:relative;padding-bottom:2px}
+  .vt-dot{width:40px;height:40px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;background:#fff;border:3px solid #e2e8f0;position:relative;z-index:1;transition:transform .2s;box-shadow:0 2px 6px rgba(15,23,42,.06)}
+  .vt-item:hover .vt-dot{transform:scale(1.1) rotate(-5deg)}
+  .vt-dot.done{background:var(--ev-color,#FF8A00);border-color:var(--ev-color,#FF8A00)}
+  .vt-dot.done::after{content:'✓';position:absolute;bottom:-5px;right:-5px;width:18px;height:18px;border-radius:50%;background:#28B54D;color:#fff;font-size:.55rem;font-weight:900;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(40,181,77,.45);animation:chip-pop .3s}
+  .vt-dot.current{border-color:var(--ev-color,#FF8A00);box-shadow:0 0 0 5px color-mix(in srgb,var(--ev-color,#FF8A00) 20%,transparent);animation:vt-pulse 1.6s infinite}
+  .vt-dot.current .vt-emoji{animation:chip-wiggle 1.6s infinite}
+  @keyframes vt-pulse{0%,100%{box-shadow:0 0 0 5px color-mix(in srgb,var(--ev-color,#FF8A00) 20%,transparent)}50%{box-shadow:0 0 0 10px color-mix(in srgb,var(--ev-color,#FF8A00) 8%,transparent)}}
+  .vt-body{flex:1;background:#fff;border:2px solid #f1f5f9;border-radius:16px;padding:10px 12px;margin-bottom:14px;transition:all .2s;position:relative;z-index:1;cursor:pointer}
+  .vt-body:hover{border-color:#e2e8f0;box-shadow:0 8px 20px rgba(15,23,42,.08);transform:translateX(2px)}
+  .vt-body.done{background:#f8fafc}
+  .vt-top{display:flex;align-items:center;gap:8px}
+  .vt-name{font-size:.72rem;font-weight:900;color:#334155;flex:1}
+  .vt-item.current .vt-name{color:var(--ev-color,#FF8A00)}
+  .vt-item.done .vt-name{color:#94a3b8}
+  .vt-status{font-size:.5rem;font-weight:900;text-transform:uppercase;letter-spacing:.05em;padding:3px 8px;border-radius:999px;flex-shrink:0}
+  .vt-status.pending{background:#f1f5f9;color:#94a3b8}
+  .vt-status.current{background:color-mix(in srgb,var(--ev-color,#FF8A00) 15%,#fff);color:var(--ev-color,#FF8A00)}
+  .vt-status.done{background:#dcfce7;color:#16a34a}
+  .vt-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:5px;font-size:.55rem;font-weight:700;color:#94a3b8}
+  .vt-meta .pill{display:inline-flex;align-items:center;gap:4px;background:#f8fafc;border:1px solid #f1f5f9;border-radius:999px;padding:2px 8px}
+  .vt-progress{margin-top:8px;height:8px;border-radius:999px;background:#f1f5f9;overflow:hidden;position:relative}
+  .vt-progress>div{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--ev-color,#FF8A00),#fbbf24);transition:width .4s;position:relative;overflow:hidden}
+  .vt-progress>div::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.4),transparent);animation:vt-shine 1.8s infinite}
+  @keyframes vt-shine{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+  .vt-progress-label{display:flex;justify-content:space-between;margin-top:4px;font-size:.5rem;font-weight:900;color:#94a3b8}
+  .vt-progress-label b{color:var(--ev-color,#FF8A00)}
 `;
 
 function _renderTimelineExpanded(schedule, nowMinutes, logsMap, students) {
   return `
-    <div class="tl-wrap" style="overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch">
+    <div class="vt-list-wrap">
       <style>${TL_STYLES}</style>
-      <div class="tl-expanded">
-        ${schedule.map((ev, i) => {
+      <div class="vt-list">
+        ${schedule.map((ev) => {
           const status = _getEventStatus(ev, nowMinutes);
           const isActive = status === 'in_progress';
           const isDone = status === 'completed';
-          const dotClass = isDone ? 'completed' : isActive ? 'in_progress' : 'pending';
-          const evClass = isActive ? 'active' : isDone ? 'done' : '';
-          const checkMark = isDone ? '✓' : '';
-          let connClass = '';
-          if (i > 0 && _getEventStatus(schedule[i - 1], nowMinutes) === 'completed') connClass = 'done';
+          const badge = isDone ? 'done' : isActive ? 'current' : 'pending';
+          const badgeTxt = isDone ? '✓ Hecho' : isActive ? 'En curso' : 'Pendiente';
+          const timeLabel = ev.endTime ? `${_fmtTimeShort(ev.startTime)} – ${_fmtTimeShort(ev.endTime)}` : `Inicia ${_fmtTimeShort(ev.startTime)}`;
           const progress = ev.groupEventId ? _getEventProgress(ev, students, logsMap) : null;
           return `
-            ${i > 0 ? `<div class="tl-conn ${connClass}"><div class="tl-conn-line"></div></div>` : ''}
-            <div class="tl-ev ${evClass}" onclick="App.expandTimelineEvent('${ev.id}')" style="--ev-color:${ev.color}">
-              <div class="tl-dot ${dotClass}" style="--ev-color:${ev.color}">${checkMark || ev.emoji}</div>
-              <span class="tl-ev-label">${safeEscapeHTML(ev.label)}</span>
-              <span class="tl-ev-time">${_fmtTimeShort(ev.startTime)}</span>
-              ${progress && progress.total > 0 ? `<span class="tl-ev-count">${progress.done}/${progress.total}</span>` : ''}
+            <div class="vt-item ${isActive ? 'current' : isDone ? 'done' : ''}" style="--ev-color:${ev.color}" onclick="App.expandTimelineEvent('${ev.id}')">
+              <div class="vt-dot ${badge}" style="--ev-color:${ev.color}">
+                <span class="vt-emoji">${isDone ? '✅' : ev.emoji}</span>
+              </div>
+              <div class="vt-body ${isDone ? 'done' : ''}">
+                <div class="vt-top">
+                  <span class="vt-name">${safeEscapeHTML(ev.label)}</span>
+                  <span class="vt-status ${badge}" style="--ev-color:${ev.color}">${badgeTxt}</span>
+                </div>
+                <div class="vt-meta">
+                  <span class="pill">🕐 ${timeLabel}</span>
+                  ${ev.groupEventId ? '<span class="pill">👥 Colectivo</span>' : ''}
+                </div>
+                ${progress && progress.total > 0 ? `
+                  <div class="vt-progress"><div style="width:${progress.pct}%;--ev-color:${ev.color}"></div></div>
+                  <div class="vt-progress-label"><span>${progress.done}/${progress.total} registrados</span><b>${progress.pct}%</b></div>
+                ` : ''}
+              </div>
             </div>
           `;
         }).join('')}
@@ -335,19 +554,20 @@ function _renderTimelineExpanded(schedule, nowMinutes, logsMap, students) {
 
 function _renderTimelineCollapsed(schedule, nowMinutes) {
   return `
-    <div class="tl-collapsed-bar" style="overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding:4px 0">
+    <div class="tl-chips-wrap">
       <style>${TL_STYLES}</style>
-      <div class="tl-collapsed">
-        ${schedule.map((ev, i) => {
+      <div class="tl-chips">
+        ${schedule.map((ev) => {
           const status = _getEventStatus(ev, nowMinutes);
           const isCurrent = status === 'in_progress';
           const isDone = status === 'completed';
-          let lineClass = '';
-          if (i > 0 && _getEventStatus(schedule[i - 1], nowMinutes) === 'completed') lineClass = 'done';
-          const dotClass = isDone ? 'done' : isCurrent ? 'current' : '';
+          const cls = isDone ? 'done' : isCurrent ? 'current' : '';
           return `
-            ${i > 0 ? `<div class="tl-c-line ${lineClass}"></div>` : ''}
-            <div class="tl-c-dot ${dotClass}" style="--ev-color:${ev.color}" onclick="App.expandTimelineEvent('${ev.id}')" title="${safeEscapeHTML(ev.label)} ${_fmtTimeShort(ev.startTime)}">${ev.emoji}</div>
+            <div class="tl-chip ${cls}" style="--ev-color:${ev.color}" onclick="App.expandTimelineEvent('${ev.id}')" title="${safeEscapeHTML(ev.label)} ${_fmtTimeShort(ev.startTime)}">
+              <span class="tl-chip-emoji">${ev.emoji}</span>
+              <span class="tl-chip-time">${_fmtTimeShort(ev.startTime)}</span>
+              <span class="tl-chip-name">${safeEscapeHTML(ev.label)}</span>
+            </div>
           `;
         }).join('')}
       </div>
@@ -360,10 +580,14 @@ function _renderTimelineCollapsed(schedule, nowMinutes) {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 function _renderCollectiveActions(schedule, students, logsMap, nowMinutes) {
+  const fullConfig = _getScheduleConfig() || [];
   const allCollective = [
-    ...schedule.filter(e => e.groupEventId),
-    ...COLLECTIVE_QUICK_EVENTS.filter(qe => !schedule.some(e => e.groupEventId === qe.groupEventId))
+    ...fullConfig.filter(e => e.groupEventId && e.active),
+    ...COLLECTIVE_QUICK_EVENTS.filter(qe => !fullConfig.some(e => e.groupEventId === qe.groupEventId))
   ];
+  const unique = [];
+  const seen = new Set();
+  allCollective.forEach(e => { if (!seen.has(e.groupEventId)) { seen.add(e.groupEventId); unique.push(e); } });
 
   return `
     <div class="routine-card">
@@ -391,7 +615,7 @@ function _renderCollectiveActions(schedule, students, logsMap, nowMinutes) {
         .ra-check{font-size:.7rem;font-weight:900;color:#22c55e}
       </style>
       <div class="ra-grid">
-        ${allCollective.map(ev => {
+        ${unique.map(ev => {
           const status = ev.startTime ? _getEventStatus(ev, nowMinutes) : null;
           const progress = ev.groupEventId ? _getEventProgress(ev, students, logsMap) : null;
           const isDone = status === 'completed';
@@ -554,7 +778,7 @@ function _routineDivider(icon) {
   return `<div class="routine-divider"><span>${icon}</span></div>`;
 }
 
-function _buildUI(students, schedule, nowMinutes, todayLabel, timeLabel) {
+function _buildUI(students, schedule, nowMinutes) {
   const currentEvent = schedule.find(e => _getEventStatus(e, nowMinutes) === 'in_progress');
   const nextEvent = schedule.find(e => _getEventStatus(e, nowMinutes) === 'pending');
   const openSleeps = Object.keys(_sleepMap).length;
@@ -564,24 +788,6 @@ function _buildUI(students, schedule, nowMinutes, todayLabel, timeLabel) {
   return `
     <div class="space-y-3 pb-28" id="routineView">
       <style>${ROUTINE_UI_STYLES}</style>
-
-      <!-- STICKY HEADER — Línea de Tiempo del Día -->
-      <div style="position:sticky;top:0;z-index:40;background:white;border-bottom:2px solid #f1f5f9;padding:10px 0;margin-bottom:2px">
-        <div class="flex items-center justify-between mb-1 px-1">
-          <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-2xl flex items-center justify-center text-lg" style="background:${_attendanceTaken ? '#dcfce7' : '#fff7ed'};color:${_attendanceTaken ? '#16a34a' : '#FF8A00'};border:2px solid ${_attendanceTaken ? '#bbf7d0' : '#ffedd5'}">
-              ${_attendanceTaken ? '📋' : '⏳'}
-            </div>
-            <div>
-              <h3 class="text-base font-black text-slate-800">Línea de Tiempo del Día</h3>
-              <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">${todayLabel} · ${timeLabel}</p>
-            </div>
-          </div>
-          <button onclick="App.initRoutine()" class="p-2 rounded-xl bg-slate-100 text-slate-500 active:scale-90 transition-all" title="Actualizar">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 12a9 9 0 11-6.219-8.56"/><path d="M21 3v5h-5"/></svg>
-          </button>
-        </div>
-      </div>
 
       <!-- CURRENT/NEXT EVENT BANNER -->
       ${currentEvent ? `
@@ -621,18 +827,18 @@ function _buildUI(students, schedule, nowMinutes, todayLabel, timeLabel) {
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <!-- LEVEL 1: TIMELINE DEL DÍA -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
-      <div class="routine-card">
-        <div class="routine-card-head">
-          <span class="routine-card-icon" style="background:${isTimelineActive ? '#dcfce7' : '#f1f5f9'};color:${isTimelineActive ? '#16a34a' : '#94a3b8'}">🕐</span>
+      <div class="routine-card" style="border-radius:22px;overflow:hidden">
+        <div class="routine-card-head" style="background:linear-gradient(135deg,#eef2ff,#fdf2f8);border-bottom:2px dashed #e0e7ff">
+          <span class="routine-card-icon" style="background:linear-gradient(135deg,#6366f1,#d946ef);color:#fff;box-shadow:0 4px 14px rgba(99,102,241,.35)">🕐</span>
           <div class="flex-1">
-            <div class="routine-card-title">Cronología del día</div>
+            <div class="routine-card-title" style="color:#4f46e5">Cronología del día</div>
             <div class="routine-card-sub">${students.length} alumno(s) · ${schedule.length} eventos</div>
           </div>
           <button onclick="App.toggleTimelineActive()" class="text-[10px] font-black uppercase tracking-wide flex items-center gap-1 px-2.5 py-1 rounded-lg ${isTimelineActive ? 'bg-green-50 text-green-600' : 'bg-slate-100 text-slate-400'}">
             ${isTimelineActive ? 'Activa' : 'Inactiva'}
           </button>
-          <button onclick="App.toggleTimeline()" class="text-[10px] font-black uppercase tracking-wide flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 text-slate-500">
-            ${isCollapsed ? '▼' : '▲'}
+          <button onclick="App.toggleTimeline()" class="text-[10px] font-black uppercase tracking-wide flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 text-slate-500" title="${isCollapsed ? 'Mostrar en vertical' : 'Ver en horizontal'}">
+            ${isCollapsed ? '▼ Abrir' : '▲ Plegar'}
           </button>
           <button onclick="App.openScheduleConfig()" class="text-[10px] font-black text-blue-500 uppercase tracking-wide flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-blue-50">⚙️</button>
         </div>
@@ -689,8 +895,6 @@ export async function initRoutine() {
   const allStudents = AppState.get('students') || [];
   const today = _today();
   const now = new Date();
-  const todayLabel = now.toLocaleDateString('es-DO', { weekday: 'long', day: 'numeric', month: 'long' });
-  const timeLabel = _fmtTime(now);
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
 
   await _seedScheduleFromCatalog(classroom.id);
@@ -702,7 +906,6 @@ export async function initRoutine() {
   );
   const students = allStudents.filter(s => presentStudentIds.has(s.id));
   _presentIds = presentStudentIds;
-  _attendanceTaken = presentStudentIds.size > 0;
 
   const logs = await MaestraApi.getDailyRoutine(classroom.id, today);
   _logsMap = {};
@@ -714,7 +917,7 @@ export async function initRoutine() {
     if (ev) _sleepMap[log.student_id] = ev;
   });
 
-  container.innerHTML = _buildUI(students, schedule, nowMinutes, todayLabel, timeLabel);
+  container.innerHTML = _buildUI(students, schedule, nowMinutes);
 
   if (_expandedEvent) {
     const panel = document.getElementById('expandedEventPanel');
@@ -908,8 +1111,12 @@ export function openEventConfig(eventId) {
         <div class="flex items-center justify-between p-3 rounded-xl bg-slate-50">
           <span class="text-sm font-bold text-slate-700">Activo</span>
           <label class="relative inline-flex items-center cursor-pointer">
-            <input type="checkbox" id="cfgActive" ${ev.active ? 'checked' : ''} class="sr-only peer">
-            <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
+            <input type="checkbox" id="cfgActive" ${ev.active ? 'checked' : ''} class="sr-only"
+              onchange="var track=this.parentElement.querySelector('.cfg-track');var knob=this.parentElement.querySelector('.cfg-knob');if(this.checked){track.style.background='#22c55e';knob.style.left='22px';}else{track.style.background='#cbd5e1';knob.style.left='2px';}var l=document.getElementById('cfgActiveLabel');l.textContent=this.checked?'Activo':'Inactivo';l.className='ml-2 text-[10px] font-black uppercase tracking-wide px-2.5 py-1 rounded-lg '+(this.checked?'bg-green-100 text-green-700':'bg-slate-200 text-slate-500');">
+            <div class="cfg-track w-11 h-6 rounded-full transition-all" style="background:${ev.active ? '#22c55e' : '#cbd5e1'};position:relative">
+              <div class="cfg-knob w-5 h-5 rounded-full bg-white transition-all" style="position:absolute;top:2px;${ev.active ? 'left:22px' : 'left:2px'}"></div>
+            </div>
+            <span id="cfgActiveLabel" class="ml-2 text-[10px] font-black uppercase tracking-wide px-2.5 py-1 rounded-lg ${ev.active ? 'bg-green-100 text-green-700' : 'bg-slate-200 text-slate-500'}">${ev.active ? 'Activo' : 'Inactivo'}</span>
           </label>
         </div>
         <div class="flex items-center gap-2 p-3 rounded-xl bg-blue-50">
@@ -974,6 +1181,7 @@ export function addScheduleEvent() {
   _getScheduleConfig().push(newEv);
   _saveScheduleConfig();
   openScheduleConfig();
+  initRoutine();
   safeToast('Nuevo evento agregado — configúralo', 'success');
 }
 
@@ -1000,59 +1208,208 @@ export function _moveScheduleEvent(fromIdx, toIdx) {
 let _dragEvIdx = null;
 
 export function openScheduleConfig() {
-  const schedule = _scheduleConfig || DEFAULT_SCHEDULE;
+  const schedule = _getScheduleConfig();
   const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+  const buildMode = _scBuildMode === 'build';
+  if (buildMode && !_buildDraft) _initBuildDraft();
 
   const omitted = _getDailyOmittedEvents();
+  const activeTpl = localStorage.getItem(SCHEDULE_TEMPLATE_KEY) || '';
   let scheduleHtml = '';
-  schedule.forEach((ev, i) => {
-    const isDefault = DEFAULT_SCHEDULE.some(d => d.id === ev.id);
-    const isOmittedToday = omitted.includes(ev.id);
+  if (!buildMode) {
+    schedule.forEach((ev, i) => {
+      const isDefault = DEFAULT_SCHEDULE.some(d => d.id === ev.id);
+      const isOmittedToday = omitted.includes(ev.id);
+      scheduleHtml += `
+        <div class="flex items-center justify-center" style="margin:-4px 0">
+          <button onclick="App.insertEventAt(${i})" class="w-7 h-7 rounded-full border-2 border-dashed border-blue-200 bg-white flex items-center justify-center text-blue-400 hover:bg-blue-50 hover:border-blue-400 transition-all text-xs font-black" title="Insertar evento aquí">+</button>
+        </div>
+        <div draggable="true"
+          data-idx="${i}"
+          class="flex items-center gap-2 p-3 rounded-xl border ${isOmittedToday ? 'border-amber-200 bg-amber-50 opacity-60' : 'border-slate-100 bg-white'} hover:border-blue-200 transition-all cursor-pointer schedule-row"
+          onclick="if(!this.dataset.dragging)App.openEventConfig('${ev.id}')"
+          ondragstart="event.dataTransfer.setData('text/plain','${i}');_dragEvIdx=${i};this.dataset.dragging='1';this.classList.add('opacity-40','border-blue-400')"
+          ondragend="this.classList.remove('opacity-40','border-blue-400');delete this.dataset.dragging;_dragEvIdx=null"
+          ondragover="event.preventDefault();this.parentElement.querySelectorAll('.schedule-row').forEach(r=>r.classList.remove('border-blue-400','bg-blue-50'));this.classList.add('border-blue-400','bg-blue-50')"
+          ondragleave="this.classList.remove('border-blue-400','bg-blue-50')"
+          ondrop="event.preventDefault();this.classList.remove('border-blue-400','bg-blue-50');var from=_dragEvIdx;if(from===null)return;var to=parseInt(this.dataset.idx);if(from===to)return;App._moveScheduleEvent(from,to);App.openScheduleConfig()">
+          <span class="text-slate-300 cursor-grab active:cursor-grabbing select-none text-sm" title="Arrastrar para reordenar">☰</span>
+          <span class="text-xl">${ev.emoji}</span>
+          <div class="flex-1 min-w-0">
+            <div class="text-sm font-black text-slate-800 truncate">${safeEscapeHTML(ev.label)}</div>
+            <div class="text-[10px] font-bold text-slate-400">${_fmtTimeShort(ev.startTime)} · ${ev.duration}min${isOmittedToday ? ' · <span class="text-amber-500">Omitido hoy</span>' : ''}</div>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="w-3 h-3 rounded-full" style="background:${ev.color}"></span>
+            <span class="text-[10px] font-bold ${ev.active ? 'text-green-600' : 'text-slate-300'}">${ev.active ? 'Activo' : 'Inactivo'}</span>
+            ${!isDefault ? `<button onclick="event.stopPropagation();App.deleteScheduleEvent('${ev.id}')" class="p-1 rounded-lg hover:bg-red-50 text-slate-300 hover:text-red-500 transition-all" title="Eliminar">🗑️</button>` : ''}
+          </div>
+        </div>
+      `;
+    });
     scheduleHtml += `
       <div class="flex items-center justify-center" style="margin:-4px 0">
-        <button onclick="App.insertEventAt(${i})" class="w-7 h-7 rounded-full border-2 border-dashed border-blue-200 bg-white flex items-center justify-center text-blue-400 hover:bg-blue-50 hover:border-blue-400 transition-all text-xs font-black" title="Insertar evento aquí">+</button>
+        <button onclick="App.addScheduleEvent()" class="w-7 h-7 rounded-full border-2 border-dashed border-blue-200 bg-white flex items-center justify-center text-blue-400 hover:bg-blue-50 hover:border-blue-400 transition-all text-xs font-black" title="Agregar al final">+</button>
+      </div>`;
+  }
+
+  const tplChips = `
+    <button onclick="App.clearScheduleTemplate()" class="tpl-chip ${activeTpl === '' ? 'on' : ''}">
+      <span class="text-lg">✍️</span>
+      <span class="tpl-chip-txt"><b>Personalizado</b><i>tú decides</i></span>
+    </button>
+    ${Object.values(ROUTINE_TEMPLATES).map(tpl => `
+      <button onclick="App.applyRoutineTemplate('${tpl.id}')" class="tpl-chip ${activeTpl === tpl.id ? 'on' : ''}">
+        <span class="text-lg">${tpl.emoji}</span>
+        <span class="tpl-chip-txt"><b>${tpl.name}</b><i>${tpl.subtitle}</i></span>
+      </button>`).join('')}`;
+
+  const catalogHtml = Object.entries(SCHEDULE_CATALOG).map(([key, cat]) => `
+    <div class="mt-4">
+      <div class="cat-title"><span class="w-2 h-2 rounded-full inline-block mr-1.5" style="background:${cat.color}"></span>${cat.label}</div>
+      <div class="grid grid-cols-3 gap-2 mt-2">
+        ${cat.items.map(it => {
+          if (buildMode) {
+            const selected = _buildDraft.some(r => r.catId === it.id);
+            return `
+              <button onclick="App.buildModeAdd('${it.id}')" class="cat-chip ${selected ? 'sel' : ''}" title="${safeEscapeHTML(it.label)}">
+                <span class="text-lg leading-none">${it.emoji}</span>
+                <span class="cat-chip-name">${safeEscapeHTML(it.label)}</span>
+                <span class="cat-chip-badge">${selected ? '✓' : '+'}</span>
+              </button>`;
+          }
+          const added = schedule.some(s => s.label === it.label);
+          return `
+            <button onclick="App.addCatalogEvent('${it.id}')" class="cat-chip ${added ? 'added' : ''}" title="${safeEscapeHTML(it.label)}">
+              <span class="text-lg leading-none">${it.emoji}</span>
+              <span class="cat-chip-name">${safeEscapeHTML(it.label)}</span>
+              <span class="cat-chip-badge">${added ? '✓' : '+'}</span>
+            </button>`;
+        }).join('')}
       </div>
-      <div draggable="true"
-        data-idx="${i}"
-        class="flex items-center gap-2 p-3 rounded-xl border ${isOmittedToday ? 'border-amber-200 bg-amber-50 opacity-60' : 'border-slate-100 bg-white'} hover:border-blue-200 transition-all cursor-pointer schedule-row"
-        onclick="if(!this.dataset.dragging)App.openEventConfig('${ev.id}')"
-        ondragstart="event.dataTransfer.setData('text/plain','${i}');_dragEvIdx=${i};this.dataset.dragging='1';this.classList.add('opacity-40','border-blue-400')"
-        ondragend="this.classList.remove('opacity-40','border-blue-400');delete this.dataset.dragging;_dragEvIdx=null"
-        ondragover="event.preventDefault();this.parentElement.querySelectorAll('.schedule-row').forEach(r=>r.classList.remove('border-blue-400','bg-blue-50'));this.classList.add('border-blue-400','bg-blue-50')"
-        ondragleave="this.classList.remove('border-blue-400','bg-blue-50')"
-        ondrop="event.preventDefault();this.classList.remove('border-blue-400','bg-blue-50');var from=_dragEvIdx;if(from===null)return;var to=parseInt(this.dataset.idx);if(from===to)return;App._moveScheduleEvent(from,to);App.openScheduleConfig()">
-        <span class="text-slate-300 cursor-grab active:cursor-grabbing select-none text-sm" title="Arrastrar para reordenar">☰</span>
-        <span class="text-xl">${ev.emoji}</span>
-        <div class="flex-1 min-w-0">
-          <div class="text-sm font-black text-slate-800 truncate">${safeEscapeHTML(ev.label)}</div>
-          <div class="text-[10px] font-bold text-slate-400">${_fmtTimeShort(ev.startTime)} · ${ev.duration}min${isOmittedToday ? ' · <span class="text-amber-500">Omitido hoy</span>' : ''}</div>
-        </div>
-        <div class="flex items-center gap-2">
-          <span class="w-3 h-3 rounded-full" style="background:${ev.color}"></span>
-          <span class="text-[10px] font-bold ${ev.active ? 'text-green-600' : 'text-slate-300'}">${ev.active ? 'Activo' : 'Inactivo'}</span>
-          ${!isDefault ? `<button onclick="event.stopPropagation();App.deleteScheduleEvent('${ev.id}')" class="p-1 rounded-lg hover:bg-red-50 text-slate-300 hover:text-red-500 transition-all" title="Eliminar">🗑️</button>` : ''}
-        </div>
+    </div>`).join('');
+
+  const builderSection = `
+    <div class="rounded-2xl p-3 mb-3" style="background:linear-gradient(135deg,#fdf2f8,#eff6ff);border:2px solid #fbcfe8">
+      <div class="flex items-center justify-between mb-2">
+        <span class="text-xs font-black text-pink-600 uppercase tracking-wider">📝 Tu cronología personal</span>
+        <span class="bd-count">${(_buildDraft || []).length} evento(s)</span>
       </div>
-    `;
-  });
-  scheduleHtml += `
-    <div class="flex items-center justify-center" style="margin:-4px 0">
-      <button onclick="App.addScheduleEvent()" class="w-7 h-7 rounded-full border-2 border-dashed border-blue-200 bg-white flex items-center justify-center text-blue-400 hover:bg-blue-50 hover:border-blue-400 transition-all text-xs font-black" title="Agregar al final">+</button>
+      <div class="flex gap-1.5 flex-wrap mb-2">
+        <label class="bd-start"><span>Inicio</span><input type="time" value="${_buildStartTime}" onchange="App.buildModeSetStart(this.value)"></label>
+        <button onclick="App.buildModeStack()" class="bd-act" title="Encadena las horas según la duración de cada evento">⏱️ Auto-ordenar</button>
+        <button onclick="App.buildModeClear()" class="bd-act bd-act-red">🧹 Vaciar</button>
+        <button onclick="App.buildModeApply()" class="bd-act bd-act-green">✔ Aplicar cronología</button>
+      </div>
+      ${(_buildDraft || []).length
+        ? `<div class="bd-list">${_buildDraft.map((r, i) => {
+            const cat = r.catId ? _CATALOG_BY_ID[r.catId] : null;
+            const emoji = cat ? cat.emoji : (r.emoji || '📌');
+            const label = cat ? cat.label : (r.label || 'Evento');
+            const color = cat ? cat.color : (r.color || '#0B63C7');
+            return `
+              <div class="bd-row" style="--c:${color}">
+                <span class="bd-emoji">${emoji}</span>
+                <div class="flex-1 min-w-0"><div class="bd-name">${safeEscapeHTML(label)}</div></div>
+                <input type="time" value="${r.time}" class="bd-in" onchange="App.buildModeSetTime(${i},this.value)" title="Hora de inicio">
+                <div class="bd-dur-wrap"><input type="number" value="${r.dur}" min="5" step="5" class="bd-in bd-dur" onchange="App.buildModeSetDur(${i},this.value)" title="Duración (min)"><span class="bd-dur-t">min</span></div>
+                <button onclick="App.buildModeMove(${i},-1)" class="bd-btn" title="Subir">▲</button>
+                <button onclick="App.buildModeMove(${i},1)" class="bd-btn" title="Bajar">▼</button>
+                <button onclick="App.buildModeRemove(${i})" class="bd-btn bd-del" title="Quitar">✕</button>
+              </div>`;
+          }).join('')}</div>`
+        : `<div class="bd-empty">👆 Toca los eventos de abajo y se irán agregando aquí en orden</div>`}
     </div>`;
 
   UI.Modal.open('scheduleConfigModal', `
-    <div class="bg-white overflow-hidden" style="border-radius:32px;max-height:85vh;display:flex;flex-direction:column">
-      <div class="p-6 flex-shrink-0" style="background:linear-gradient(135deg,#0B63C7,#28B54D)">
+    <style>
+      .tpl-row{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:2px}
+      .tpl-chip{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:16px;border:2px solid rgba(255,255,255,.35);background:rgba(255,255,255,.15);flex-shrink:0;cursor:pointer;transition:all .15s;text-align:left}
+      .tpl-chip:active{transform:scale(.95)}
+      .tpl-chip:hover{background:rgba(255,255,255,.25)}
+      .tpl-chip.on{border-color:#fff;background:#fff;box-shadow:0 4px 14px rgba(0,0,0,.18)}
+      .tpl-chip-txt{display:flex;flex-direction:column;line-height:1.1}
+      .tpl-chip-txt b{font-size:.62rem;font-weight:900;color:#fff}
+      .tpl-chip-txt i{font-size:.5rem;font-weight:700;color:rgba(255,255,255,.75);font-style:normal}
+      .tpl-chip.on .tpl-chip-txt b{color:#0B63C7}
+      .tpl-chip.on .tpl-chip-txt i{color:#94a3b8}
+      .cat-title{font-size:.6rem;font-weight:900;text-transform:uppercase;letter-spacing:.06em;color:#475569;display:flex;align-items:center}
+      .cat-chip{position:relative;display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 4px;border-radius:16px;border:2px solid #f1f5f9;background:#fff;cursor:pointer;transition:all .15s}
+      .cat-chip:active{transform:scale(.92)}
+      .cat-chip:hover{border-color:#93c5fd;background:#f8fafc}
+      .cat-chip.added{border-color:#86efac;background:#f0fdf4}
+      .cat-chip.sel{border-color:#f9a8d4;background:#fdf2f8}
+      .cat-chip.sel .cat-chip-name{color:#db2777}
+      .cat-chip.sel .cat-chip-badge{background:#db2777}
+      .cat-chip-name{font-size:.5rem;font-weight:800;color:#64748b;text-align:center;line-height:1.15;max-width:100%;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+      .cat-chip.added .cat-chip-name{color:#16a34a}
+      .cat-chip-badge{position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.6rem;font-weight:900;color:#fff}
+      .cat-chip:not(.added):not(.sel) .cat-chip-badge{background:#0B63C7}
+      .cat-chip.added .cat-chip-badge{background:#28B54D}
+      .sc-search{width:100%;margin-top:8px;padding:10px 14px;border:2px solid #e2e8f0;border-radius:14px;font-size:.72rem;font-weight:700;color:#334155;outline:none}
+      .sc-search:focus{border-color:#0B63C7}
+      .sc-mode-btn{font-size:.6rem;font-weight:900;text-transform:uppercase;letter-spacing:.05em;padding:10px 8px;border-radius:14px;border:2px solid #e2e8f0;background:#fff;color:#64748b;transition:all .15s}
+      .sc-mode-btn:active{transform:scale(.96)}
+      .sc-mode-btn.on{border-color:#0B63C7;background:#eff6ff;color:#0B63C7;box-shadow:0 0 0 3px rgba(11,99,199,.12)}
+      .bd-count{font-size:.55rem;font-weight:900;color:#db2777;background:#fce7f3;padding:2px 8px;border-radius:999px}
+      .bd-start{display:inline-flex;align-items:center;gap:6px;font-size:.55rem;font-weight:800;color:#64748b;background:#fff;border:2px solid #f1f5f9;padding:6px 10px;border-radius:12px}
+      .bd-start input{border:none;outline:none;font-weight:900;color:#0B63C7;font-size:.62rem}
+      .bd-act{font-size:.55rem;font-weight:900;color:#64748b;background:#fff;border:2px solid #f1f5f9;padding:6px 10px;border-radius:12px;text-transform:uppercase;letter-spacing:.03em}
+      .bd-act:active{transform:scale(.95)}
+      .bd-act-green{color:#fff;background:#28B54D;border-color:#28B54D}
+      .bd-act-red{color:#ef4444;border-color:#fecaca;background:#fef2f2}
+      .bd-list{max-height:38vh;overflow-y:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+      .bd-row{display:flex;align-items:center;gap:6px;padding:8px 10px;border-radius:14px;border:2px solid #f1f5f9;background:#fff;margin-bottom:6px}
+      .bd-row:last-child{margin-bottom:0}
+      .bd-emoji{font-size:1.1rem;flex-shrink:0}
+      .bd-name{font-size:.62rem;font-weight:900;color:#334155;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border-left:3px solid var(--c,#0B63C7);padding-left:6px}
+      .bd-in{width:68px;padding:5px 6px;border:2px solid #e2e8f0;border-radius:10px;font-size:.62rem;font-weight:800;color:#334155;outline:none;text-align:center;flex-shrink:0}
+      .bd-in:focus{border-color:#0B63C7}
+      .bd-dur-wrap{position:relative;flex-shrink:0}
+      .bd-dur{width:52px;padding-right:20px}
+      .bd-dur-t{position:absolute;right:6px;top:50%;transform:translateY(-50%);font-size:.45rem;font-weight:800;color:#94a3b8}
+      .bd-btn{width:24px;height:24px;border-radius:8px;border:1px solid #e2e8f0;background:#f8fafc;color:#64748b;font-size:.5rem;font-weight:900;flex-shrink:0}
+      .bd-btn:active{transform:scale(.9)}
+      .bd-del{color:#ef4444;border-color:#fecaca;background:#fef2f2}
+      .bd-empty{padding:14px;text-align:center;font-size:.62rem;font-weight:800;color:#94a3b8;border:2px dashed #e2e8f0;border-radius:14px;background:#fff}
+    </style>
+    <div class="bg-white overflow-hidden" style="border-radius:32px;max-height:88vh;display:flex;flex-direction:column">
+      <div class="p-5 flex-shrink-0" style="background:linear-gradient(135deg,#0B63C7,#28B54D)">
         <div class="flex items-center justify-between">
           <div><h3 class="text-xl font-black text-white">Configurar Horario</h3><p class="text-sm font-bold text-white/80">Arrastra ☰ — toca para configurar — + para insertar</p></div>
           <button onclick="UI.Modal.close('scheduleConfigModal')" class="p-2 rounded-xl bg-white/20 text-white"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
         </div>
+        <div class="mt-4">
+          <div class="text-[10px] font-black text-white/70 uppercase tracking-widest mb-2">Plantilla de rutina por edad</div>
+          <div class="tpl-row">${tplChips}</div>
+        </div>
       </div>
       <div class="p-4 overflow-y-auto flex-1" id="sc-list">
-        ${scheduleHtml}
+        <div class="grid grid-cols-2 gap-2 mb-3">
+          <button onclick="App.setScheduleConfigMode('library')" class="sc-mode-btn ${!buildMode ? 'on' : ''}">📚 Biblioteca</button>
+          <button onclick="App.setScheduleConfigMode('build')" class="sc-mode-btn ${buildMode ? 'on' : ''}">🔨 Construir cronología</button>
+        </div>
+        ${buildMode ? builderSection : ''}
+        <div class="rounded-2xl p-3" style="background:linear-gradient(135deg,#eff6ff,#fdf4ff);border:2px dashed #bfdbfe">
+          ${buildMode ? `
+            <input class="sc-search" placeholder="🔍 Buscar evento..." oninput="var q=this.value.toLowerCase();document.querySelectorAll('#sc-catalog-b .cat-chip').forEach(function(c){c.style.display=c.textContent.toLowerCase().includes(q)?'':'none'})">
+            <div id="sc-catalog-b">${catalogHtml}</div>
+          ` : `
+            <button onclick="var c=document.getElementById('sc-catalog');var t=this.querySelector('.sc-ic');c.classList.toggle('hidden');t.textContent=c.classList.contains('hidden')?'▼':'▲'" class="w-full flex items-center justify-between">
+              <span class="text-xs font-black text-blue-600 uppercase tracking-wider">📚 Biblioteca de eventos</span>
+              <span class="sc-ic">▼</span>
+            </button>
+            <div id="sc-catalog" class="hidden">
+              <input class="sc-search" placeholder="🔍 Buscar evento..." oninput="var q=this.value.toLowerCase();document.querySelectorAll('#sc-catalog .cat-chip').forEach(function(c){c.style.display=c.textContent.toLowerCase().includes(q)?'':'none'})">
+              ${catalogHtml}
+            </div>
+            <div class="mt-4">${scheduleHtml}</div>
+          `}
+        </div>
       </div>
       <div class="p-4 border-t border-slate-100 flex-shrink-0 space-y-2">
         <button onclick="App.resetScheduleConfig()" class="w-full py-3 rounded-xl border-2 border-red-200 font-black text-xs uppercase text-red-500 hover:bg-red-50 transition-all">Restaurar Horario Predeterminado</button>
+        <p class="text-center text-[9px] font-bold text-slate-300">Consejo: aplica una plantilla por edad o construye la tuya y ajusta la hora de cada evento</p>
       </div>
     </div>
   `);
@@ -1060,11 +1417,200 @@ export function openScheduleConfig() {
 
 export function resetScheduleConfig() {
   localStorage.removeItem(SCHEDULE_DB_SEED_KEY);
+  localStorage.removeItem(SCHEDULE_TEMPLATE_KEY);
   _scheduleConfig = DEFAULT_SCHEDULE.map(e => ({ ...e }));
+  _buildDraft = null;
   _saveScheduleConfig();
   UI.Modal.close('scheduleConfigModal');
   safeToast('Horario restaurado', 'success');
   initRoutine();
+}
+
+// ───────────────────────────────────────────────────────────────────────────────
+// PLANTILLAS Y BIBLIOTECA DE EVENTOS
+// ───────────────────────────────────────────────────────────────────────────────
+
+function _catalogScheduleEvent(catId, startTime, duration, customId) {
+  const cat = _CATALOG_BY_ID[catId];
+  if (!cat) return null;
+  return {
+    id: customId || catId,
+    emoji: cat.emoji,
+    label: cat.label,
+    color: cat.color,
+    startTime,
+    duration: duration || cat.duration,
+    type: 'colectivo',
+    auto: false,
+    needsConfirm: false,
+    visibleParents: true,
+    visibleDirector: true,
+    days: [1, 2, 3, 4, 5, 6],
+    active: true,
+    ...(cat.groupEventId ? { groupEventId: cat.groupEventId } : {})
+  };
+}
+
+export function applyRoutineTemplate(tplId) {
+  const tpl = ROUTINE_TEMPLATES[tplId];
+  if (!tpl) return;
+  const events = tpl.events
+    .map(([catId, time, dur, customId]) => _catalogScheduleEvent(catId, time, dur, customId))
+    .filter(Boolean);
+  if (events.length === 0) return;
+  _scheduleConfig = events;
+  localStorage.setItem(SCHEDULE_TEMPLATE_KEY, tplId);
+  localStorage.setItem(SCHEDULE_DB_SEED_KEY, '1');
+  _buildDraft = null;
+  _saveScheduleConfig();
+  UI.Modal.close('scheduleConfigModal');
+  openScheduleConfig();
+  initRoutine();
+  safeToast(`Plantilla "${tpl.name}" (${tpl.subtitle}) aplicada`, 'success');
+}
+
+export function addCatalogEvent(catId) {
+  const cat = _CATALOG_BY_ID[catId];
+  if (!cat) return;
+  const id = catId + '_' + Date.now().toString(36);
+  const newEv = _catalogScheduleEvent(catId, '08:00', cat.duration, id);
+  if (!newEv) return;
+  _getScheduleConfig().push(newEv);
+  localStorage.setItem(SCHEDULE_DB_SEED_KEY, '1');
+  _buildDraft = null;
+  _saveScheduleConfig();
+  openScheduleConfig();
+  initRoutine();
+  safeToast(`"${cat.label}" agregado al horario — configúralo`, 'success');
+}
+
+export function clearScheduleTemplate() {
+  localStorage.removeItem(SCHEDULE_TEMPLATE_KEY);
+  safeToast('Horario personalizado activado', 'info');
+}
+
+// ───────────────────────────────────────────────────────────────────────────────
+// MODO CONSTRUIR CRONOLOGÍA — la maestra selecciona eventos del catálogo y al
+// hacerlo se va armando su cronología personal en orden, con horarios que se
+// encadenan solos. Puede reordenar, quitar y ajustar horas/duración antes de
+// aplicarla.
+// ───────────────────────────────────────────────────────────────────────────────
+
+function _initBuildDraft() {
+  _buildDraft = (_getScheduleConfig() || []).map(ev => {
+    const cat = _CATALOG_BY_ID[ev.id];
+    return cat
+      ? { uid: ev.id, catId: cat.id, time: ev.startTime, dur: ev.duration || cat.duration }
+      : { uid: ev.id, catId: null, emoji: ev.emoji || '📌', label: ev.label || 'Evento', color: ev.color || '#64748B', time: ev.startTime, dur: ev.duration || 30 };
+  });
+}
+
+function _nextDraftTime() {
+  if (!_buildDraft.length) return _buildStartTime || '07:30';
+  const last = _buildDraft[_buildDraft.length - 1];
+  return _minutesToTime(_timeToMinutes(last.time) + last.dur);
+}
+
+export function setScheduleConfigMode(mode) {
+  _scBuildMode = mode === 'build' ? 'build' : 'library';
+  if (mode === 'build' && !_buildDraft) _initBuildDraft();
+  openScheduleConfig();
+}
+
+export function buildModeAdd(catId) {
+  if (!_buildDraft) _initBuildDraft();
+  const cat = _CATALOG_BY_ID[catId];
+  if (!cat) return;
+  const idx = _buildDraft.findIndex(r => r.catId === catId);
+  if (idx > -1) {
+    _buildDraft.splice(idx, 1);
+  } else {
+    _buildDraft.push({ uid: catId + '_' + Date.now().toString(36), catId, time: _nextDraftTime(), dur: cat.duration });
+  }
+  openScheduleConfig();
+}
+
+export function buildModeRemove(index) {
+  if (!_buildDraft) _initBuildDraft();
+  if (index < 0 || index >= _buildDraft.length) return;
+  _buildDraft.splice(index, 1);
+  openScheduleConfig();
+}
+
+export function buildModeMove(index, delta) {
+  if (!_buildDraft) _initBuildDraft();
+  const to = index + delta;
+  if (to < 0 || to >= _buildDraft.length) return;
+  const [item] = _buildDraft.splice(index, 1);
+  _buildDraft.splice(to, 0, item);
+  openScheduleConfig();
+}
+
+export function buildModeSetTime(index, value) {
+  if (!_buildDraft) _initBuildDraft();
+  if (_buildDraft[index]) _buildDraft[index].time = value;
+}
+
+export function buildModeSetDur(index, value) {
+  if (!_buildDraft) _initBuildDraft();
+  const d = parseInt(value);
+  if (_buildDraft[index] && d && d >= 5) _buildDraft[index].dur = d;
+}
+
+export function buildModeSetStart(value) {
+  _buildStartTime = value || '07:30';
+}
+
+export function buildModeStack() {
+  if (!_buildDraft) _initBuildDraft();
+  let t = _buildStartTime || '07:30';
+  _buildDraft.forEach(r => {
+    r.time = t;
+    t = _minutesToTime(_timeToMinutes(t) + r.dur);
+  });
+  openScheduleConfig();
+}
+
+export function buildModeClear() {
+  if (!_buildDraft) _initBuildDraft();
+  _buildDraft = [];
+  openScheduleConfig();
+}
+
+export function buildModeApply() {
+  if (!_buildDraft.length) {
+    safeToast('Agrega al menos un evento para aplicar tu cronología', 'error');
+    return;
+  }
+  const events = _buildDraft.map((r, i) => {
+    const cat = r.catId ? _CATALOG_BY_ID[r.catId] : null;
+    const id = (r.catId || 'custom') + '_' + Date.now().toString(36) + '_' + i;
+    return {
+      id,
+      emoji: cat ? cat.emoji : (r.emoji || '📌'),
+      label: cat ? cat.label : (r.label || 'Evento'),
+      color: cat ? cat.color : (r.color || '#64748B'),
+      startTime: r.time,
+      duration: r.dur || 30,
+      type: 'colectivo',
+      auto: false,
+      needsConfirm: false,
+      visibleParents: true,
+      visibleDirector: true,
+      days: [1, 2, 3, 4, 5, 6],
+      active: true,
+      ...(cat && cat.groupEventId ? { groupEventId: cat.groupEventId } : {})
+    };
+  });
+  _scheduleConfig = events;
+  localStorage.removeItem(SCHEDULE_TEMPLATE_KEY);
+  localStorage.setItem(SCHEDULE_DB_SEED_KEY, '1');
+  _buildDraft = null;
+  _saveScheduleConfig();
+  UI.Modal.close('scheduleConfigModal');
+  openScheduleConfig();
+  initRoutine();
+  safeToast('¡Tu cronología personalizada fue aplicada!', 'success');
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1096,6 +1642,7 @@ export function toggleOmitToday(eventId) {
   if (idx > -1) { all[key].omitted.splice(idx, 1); safeToast('Evento visible hoy', 'success'); }
   else { all[key].omitted.push(eventId); safeToast('Evento omitido hoy', 'success'); }
   _saveDailyOverrides(all);
+  _syncScheduleToDb();
   initRoutine();
 }
 
@@ -1110,6 +1657,7 @@ export function insertEventAt(index) {
   _getScheduleConfig().splice(index, 0, newEv);
   _saveScheduleConfig();
   openScheduleConfig();
+  initRoutine();
   safeToast('Evento insertado — configúralo', 'success');
 }
 
@@ -1117,6 +1665,7 @@ export function clearDailyOverrides() {
   const all = _loadDailyOverrides();
   delete all[_getDailyKey()];
   _saveDailyOverrides(all);
+  _syncScheduleToDb();
   initRoutine();
   safeToast('Rutina de hoy restaurada', 'success');
 }
@@ -1416,7 +1965,7 @@ export async function _confirmTemp(studentId) {
 export function openStudentRoutine(studentId) {
   try { studentId = decodeURIComponent(studentId); } catch {}
   const students = AppState.get('students') || [];
-  const student = students.find(s => s.id === studentId);
+  const student = students.find(s => String(s.id) === String(studentId));
   if (!student) { safeToast('No se encontró el estudiante', 'error'); return; }
   const log = _logsMap[studentId];
   let currentFood = {};
