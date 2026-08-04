@@ -33,7 +33,7 @@ const _lastLoad = {};
 // Los onclick inline en HTML dinámico necesitan window.Modal disponible de inmediato
 window.Modal = Modal;
 const { initAttendance, markAllPresent, registerAttendance } = Attendance;
-const { initRoutine, openStudentRoutine, openBulkRoutineModal, _toggleViewModeFn } = Routine;
+const { initRoutine, openStudentRoutine, openBulkRoutineModal } = Routine;
 const { initTasks, openEditTaskModal, deleteTask, openNewTaskModal, viewTaskSubmissions, submitGrade } = Tasks;
 const { openStudentProfile, registerIncidentModal } = Students;
 const { initChat, selectChatContact } = ChatApp;
@@ -97,7 +97,6 @@ window.App = {
     clearDailyOverrides:      Routine.clearDailyOverrides,
     toggleTimeline:           Routine.toggleTimeline,
     toggleTimelineActive:     Routine.toggleTimelineActive,
-    _toggleViewMode:          Routine._toggleViewModeFn,
 
   // Tasks
   initTasks: Tasks.initTasks,
@@ -1329,6 +1328,29 @@ function _initMaestraQR(profile, user) {
   
   // Usar una API de QR externa o librería si está disponible
   container.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrData)}" class="mx-auto border-4 border-white shadow-lg rounded-2xl" alt="QR Maestra">`;
+
+  window.App.printMaestraQR = () => {
+    const img = container.querySelector('img')?.src;
+    if (!img) return;
+    const win = window.open('', '_blank');
+    if (!win) return;
+    const name = Helpers.escapeHTML(String(profile?.name || 'Maestra'));
+    const mat = Helpers.escapeHTML(String(user.id || ''));
+    win.document.write(`<!DOCTYPE html><html><head><title>QR - ${mat}</title>
+      <style>body{font-family:Arial,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;}
+      .card{border:2px solid #e2e8f0;border-radius:16px;padding:24px;text-align:center;max-width:280px;}
+      .logo{font-size:12px;font-weight:900;color:#10B981;text-transform:uppercase;letter-spacing:2px;margin-bottom:12px;}
+      img{width:192px;height:192px;}.name{font-size:16px;font-weight:900;color:#1e293b;margin-top:12px;}
+      .mat{font-size:11px;color:#64748b;font-weight:700;margin-top:4px;}.hint{font-size:9px;color:#94a3b8;margin-top:8px;}</style>
+    </head><body><div class="card">
+      <div class="logo">🎓 Colegio Montessori Sonrisas Creativas</div>
+      <img src="${img}" alt="QR">
+      <div class="name">${name}</div>
+      <div class="mat">${mat}</div>
+      <div class="hint">Escanea para identificar a la maestra</div>
+    </div><script>window.onload=()=>{window.print();}<\/script></body></html>`);
+    win.document.close();
+  };
 }
 
 // Grades now handled by modules/grades.js (MaestraGrades)

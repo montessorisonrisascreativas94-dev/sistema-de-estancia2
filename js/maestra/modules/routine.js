@@ -5,7 +5,7 @@
  */
 import { AppState } from '../state.js';
 import { UI, safeToast, safeEscapeHTML, safeUrl } from './ui.js';
-import { MaestraApi } from '../api.js';
+import { MaestraApi, invalidateCache } from '../api.js';
 import { supabase } from '../../shared/supabase.js';
 import { RoutineCatalog } from '../../shared/routine-catalog.js';
 
@@ -15,11 +15,13 @@ let _lastEvent = {};
 let _expandedEvent = null;
 let _autoRefreshTimer = null;
 let _attendanceChannel = null;
+let _routineChannel = null;
+let _presentIds = new Set();
 let _scheduleConfig = null;
-let _viewMode = localStorage.getItem('sonrisas_view_mode') || 'horizontal';
 let _timelineCollapsed = localStorage.getItem('sonrisas_tl_collapsed') === '1';
 let _timelineActive = localStorage.getItem('sonrisas_tl_active') !== '0';
 let _attendanceTaken = false;
+let _visibilityBound = false;
 
 const SCHEDULE_STORAGE_KEY = 'sonrisas_schedule_config';
 const SCHEDULE_DB_SEED_KEY = 'sonrisas_schedule_db_seed';
@@ -151,6 +153,11 @@ function _saveScheduleConfig() {
   } catch {}
 }
 
+function _getScheduleConfig() {
+  if (!_scheduleConfig) _loadScheduleConfig();
+  return _scheduleConfig;
+}
+
 /**
  * Cronología V8: si la BD tiene bloques para el aula (classroom_schedule_blocks),
  * los usa como fuente para sembrar el schedule por primera vez. Después de
@@ -216,6 +223,7 @@ function _getSchedule() {
 }
 
 function _getEventStatus(event, nowMinutes) {
+  if (!event || !event.startTime) return 'pending';
   const startMin = _timeToMinutes(event.startTime);
   const endMin = startMin + (event.duration || 30);
 
@@ -234,7 +242,8 @@ function _getEventProgress(event, students, logsMap) {
     breakfast: { field: 'food', key: 'breakfast' }, lunch: { field: 'food', key: 'lunch' }, snack: { field: 'food', key: 'snack' },
     handwash: { field: '_group', type: 'handwash' }, toothbrush: { field: '_group', type: 'toothbrush' },
     activity: { field: '_group', type: 'activity' }, playground: { field: '_group', type: 'playground' },
-    sleep_start: { field: '_sleep', type: 'sleep' }, sleep_end: { field: '_sleep_end', type: 'sleep' }
+    sleep_start: { field: '_sleep', type: 'sleep' }, sleep_end: { field: '_sleep_end', type: 'sleep' },
+    bathroom: { field: '_group', type: 'bath' }, poop_gr: { field: '_group', type: 'diaper' }, milk_gr: { field: '_group', type: 'milk' }
   };
   const mapping = GROUP_MAP[gid];
   if (!mapping) return { done: 0, total: students.length, pct: 0 };
@@ -357,13 +366,17 @@ function _renderCollectiveActions(schedule, students, logsMap, nowMinutes) {
   ];
 
   return `
-    <div class="ra-section">
+    <div class="routine-card">
+      <div class="routine-card-head">
+        <span class="routine-card-icon" style="background:#fff7ed;color:#FF8A00">🧑‍🏫</span>
+        <div>
+          <div class="routine-card-title">Acciones del Aula</div>
+          <div class="routine-card-sub">Toca para registrar ${students.length > 0 ? `· ${students.length} alumnos` : ''}</div>
+        </div>
+      </div>
+      <div class="routine-card-body">
       <style>
-        .ra-section{margin-top:4px}
-        .ra-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;padding:0 4px}
-        .ra-title{font-size:.65rem;font-weight:900;color:#94a3b8;text-transform:uppercase;letter-spacing:.08em}
-        .ra-subtitle{font-size:.55rem;font-weight:700;color:#cbd5e1}
-        .ra-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:8px;padding:0 4px}
+        .ra-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:8px}
         .ra-btn{display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 6px;border-radius:16px;border:2px solid #f1f5f9;background:white;cursor:pointer;transition:all .15s;touch-action:manipulation;position:relative;overflow:hidden}
         .ra-btn:active{transform:scale(.93);background:#f8fafc}
         .ra-btn.done{border-color:#bbf7d0;background:#f0fdf4}
@@ -377,12 +390,6 @@ function _renderCollectiveActions(schedule, students, logsMap, nowMinutes) {
         .ra-btn.done .ra-count{color:#22c55e}
         .ra-check{font-size:.7rem;font-weight:900;color:#22c55e}
       </style>
-      <div class="ra-header">
-        <div>
-          <div class="ra-title">Acciones del Aula</div>
-          <div class="ra-subtitle">Toca para registrar ${students.length > 0 ? `· ${students.length} alumnos` : ''}</div>
-        </div>
-      </div>
       <div class="ra-grid">
         ${allCollective.map(ev => {
           const status = ev.startTime ? _getEventStatus(ev, nowMinutes) : null;
@@ -400,6 +407,7 @@ function _renderCollectiveActions(schedule, students, logsMap, nowMinutes) {
             </div>
           `;
         }).join('')}
+      </div>
       </div>
     </div>
   `;
@@ -449,12 +457,18 @@ function _studentCardMini(s, log) {
 
 function _renderStudentCards(students, logsMap) {
   return `
-    <div class="sc-section">
+    <div class="routine-card">
+      <div class="routine-card-head">
+        <span class="routine-card-icon" style="background:#eff6ff;color:#0B63C7">📋</span>
+        <div class="flex-1">
+          <div class="routine-card-title">Reportes Individuales</div>
+          <div class="routine-card-sub">${students.length} alumno(s) hoy · toca una tarjeta</div>
+        </div>
+        <button onclick="App.openBulkRoutineModal()" class="text-[10px] font-black text-blue-600 uppercase tracking-wide px-2 py-1 rounded-lg hover:bg-blue-50 transition-all">Reporte masivo</button>
+      </div>
+      <div class="routine-card-body">
       <style>
-        .sc-section{margin-top:4px}
-        .sc-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;padding:0 4px}
-        .sc-title{font-size:.65rem;font-weight:900;color:#94a3b8;text-transform:uppercase;letter-spacing:.08em}
-        .sc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px;padding:0 4px}
+        .sc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px}
         .sc-card{border-radius:16px;padding:10px 6px;border:2px solid #e2e8f0;background:white;cursor:pointer;touch-action:manipulation;transition:all .15s;display:flex;flex-direction:column;align-items:center;text-align:center;gap:3px;position:relative;min-height:100px}
         .sc-card:active{transform:scale(.94);box-shadow:0 4px 16px rgba(0,0,0,.08)}
         .sc-badge{position:absolute;top:4px;font-size:.5rem;border-radius:6px;padding:1px 5px;font-weight:900;z-index:2}
@@ -466,12 +480,9 @@ function _renderStudentCards(students, logsMap) {
         .sc-prog{height:3px;border-radius:2px;background:#f1f5f9;overflow:hidden;width:100%}
         .sc-prog-fill{height:100%;border-radius:2px;transition:width .5s}
       </style>
-      <div class="sc-header">
-        <div class="sc-title">Reportes Individuales</div>
-        <button onclick="App.openBulkRoutineModal()" class="text-[10px] font-black text-blue-600 uppercase tracking-wide">Reporte masivo</button>
-      </div>
       <div class="sc-grid">
         ${students.map(s => _studentCardMini(s, logsMap[s.id])).join('')}
+      </div>
       </div>
     </div>
   `;
@@ -526,9 +537,24 @@ function _renderExpandedEvent(event, students, logsMap, nowMinutes) {
 // MAIN UI BUILDER — 4 LEVELS
 // ═══════════════════════════════════════════════════════════════════════════════
 
-function _buildUI(students, schedule, nowMinutes, todayLabel, timeLabel, complete) {
-  const totalStu = students.length;
-  const progressPct = totalStu > 0 ? Math.round((complete / totalStu) * 100) : 0;
+const ROUTINE_UI_STYLES = `
+  .routine-card{background:#fff;border-radius:22px;border:2px solid #f1f5f9;box-shadow:0 4px 18px rgba(15,23,42,.05);overflow:hidden}
+  .routine-card-head{display:flex;align-items:center;gap:10px;padding:13px 14px;border-bottom:2px solid #f8fafc}
+  .routine-card-icon{width:36px;height:36px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+  .routine-card-title{font-size:.68rem;font-weight:900;color:#334155;text-transform:uppercase;letter-spacing:.08em}
+  .routine-card-sub{font-size:.55rem;font-weight:700;color:#94a3b8}
+  .routine-card-body{padding:13px}
+  .routine-divider{display:flex;align-items:center;gap:10px;margin:16px 2px}
+  .routine-divider::before,.routine-divider::after{content:'';flex:1;height:2px;border-radius:2px;background:linear-gradient(90deg,transparent,#dbeafe)}
+  .routine-divider::after{background:linear-gradient(90deg,#dbeafe,transparent)}
+  .routine-divider span{width:28px;height:28px;border-radius:50%;background:#fff;border:2px solid #dbeafe;display:flex;align-items:center;justify-content:center;font-size:12px;box-shadow:0 2px 10px rgba(37,99,235,.12);flex-shrink:0}
+`;
+
+function _routineDivider(icon) {
+  return `<div class="routine-divider"><span>${icon}</span></div>`;
+}
+
+function _buildUI(students, schedule, nowMinutes, todayLabel, timeLabel) {
   const currentEvent = schedule.find(e => _getEventStatus(e, nowMinutes) === 'in_progress');
   const nextEvent = schedule.find(e => _getEventStatus(e, nowMinutes) === 'pending');
   const openSleeps = Object.keys(_sleepMap).length;
@@ -536,13 +562,14 @@ function _buildUI(students, schedule, nowMinutes, todayLabel, timeLabel, complet
   const isTimelineActive = _timelineActive;
 
   return `
-    <div class="space-y-4 pb-28" id="routineView">
+    <div class="space-y-3 pb-28" id="routineView">
+      <style>${ROUTINE_UI_STYLES}</style>
 
       <!-- STICKY HEADER — Línea de Tiempo del Día -->
-      <div style="position:sticky;top:0;z-index:40;background:white;border-bottom:2px solid #f1f5f9;padding:10px 0;margin-bottom:4px">
-        <div class="flex items-center justify-between mb-2 px-1">
+      <div style="position:sticky;top:0;z-index:40;background:white;border-bottom:2px solid #f1f5f9;padding:10px 0;margin-bottom:2px">
+        <div class="flex items-center justify-between mb-1 px-1">
           <div class="flex items-center gap-3">
-            <div class="w-9 h-9 rounded-xl flex items-center justify-center text-lg" style="background:${_attendanceTaken ? '#dcfce7' : '#f1f5f9'};color:${_attendanceTaken ? '#16a34a' : '#94a3b8'}">
+            <div class="w-10 h-10 rounded-2xl flex items-center justify-center text-lg" style="background:${_attendanceTaken ? '#dcfce7' : '#fff7ed'};color:${_attendanceTaken ? '#16a34a' : '#FF8A00'};border:2px solid ${_attendanceTaken ? '#bbf7d0' : '#ffedd5'}">
               ${_attendanceTaken ? '📋' : '⏳'}
             </div>
             <div>
@@ -550,18 +577,9 @@ function _buildUI(students, schedule, nowMinutes, todayLabel, timeLabel, complet
               <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">${todayLabel} · ${timeLabel}</p>
             </div>
           </div>
-          <div class="flex gap-2 items-center">
-            <div class="text-right">
-              <div class="text-xs font-black text-slate-700">${complete}/${totalStu}</div>
-              <div class="text-[9px] font-bold text-slate-400 uppercase">Completos</div>
-            </div>
-            <button onclick="App.initRoutine()" class="p-2 rounded-xl bg-slate-100 text-slate-500" title="Actualizar">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 12a9 9 0 11-6.219-8.56"/><path d="M21 3v5h-5"/></svg>
-            </button>
-          </div>
-        </div>
-        <div class="mx-1" style="height:5px;border-radius:3px;background:#e2e8f0;overflow:hidden">
-          <div style="height:100%;border-radius:3px;background:${progressPct >= 80 ? '#28B54D' : progressPct >= 50 ? '#FF8A00' : '#EF4444'};width:${progressPct}%;transition:width .5s"></div>
+          <button onclick="App.initRoutine()" class="p-2 rounded-xl bg-slate-100 text-slate-500 active:scale-90 transition-all" title="Actualizar">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 12a9 9 0 11-6.219-8.56"/><path d="M21 3v5h-5"/></svg>
+          </button>
         </div>
       </div>
 
@@ -603,44 +621,47 @@ function _buildUI(students, schedule, nowMinutes, todayLabel, timeLabel, complet
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <!-- LEVEL 1: TIMELINE DEL DÍA -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
-      <div class="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
-        <div class="flex items-center justify-between mb-3">
-          <div class="flex items-center gap-2">
-            <span class="w-7 h-7 rounded-lg flex items-center justify-center text-sm" style="background:${isTimelineActive ? '#dcfce7' : '#f1f5f9'};color:${isTimelineActive ? '#16a34a' : '#94a3b8'}">
-              ${isTimelineActive ? '🟢' : '⚪'}
-            </span>
-            <p class="text-[11px] font-black text-slate-500 uppercase tracking-widest">Cronología del día</p>
+      <div class="routine-card">
+        <div class="routine-card-head">
+          <span class="routine-card-icon" style="background:${isTimelineActive ? '#dcfce7' : '#f1f5f9'};color:${isTimelineActive ? '#16a34a' : '#94a3b8'}">🕐</span>
+          <div class="flex-1">
+            <div class="routine-card-title">Cronología del día</div>
+            <div class="routine-card-sub">${students.length} alumno(s) · ${schedule.length} eventos</div>
           </div>
-          <div class="flex items-center gap-1.5">
-            <button onclick="App.toggleTimelineActive()" class="text-[10px] font-black uppercase tracking-wide flex items-center gap-1 px-2.5 py-1 rounded-lg ${isTimelineActive ? 'bg-green-50 text-green-600' : 'bg-slate-100 text-slate-400'}">
-              ${isTimelineActive ? 'Activa' : 'Inactiva'}
-            </button>
-            <button onclick="App.toggleTimeline()" class="text-[10px] font-black uppercase tracking-wide flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 text-slate-500">
-              ${isCollapsed ? '▼' : '▲'}
-            </button>
-            <button onclick="App.openScheduleConfig()" class="text-[10px] font-black text-blue-500 uppercase tracking-wide flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-blue-50">⚙️</button>
-          </div>
-        </div>
-        ${isCollapsed ? _renderTimelineCollapsed(schedule, nowMinutes) : _renderTimelineExpanded(schedule, nowMinutes, _logsMap, students)}
-        ${_getDailyOmittedEvents().length > 0 ? `
-        <div class="flex gap-2 mt-3">
-          <button onclick="App.clearDailyOverrides()" class="flex-1 py-2 rounded-xl border-2 border-amber-200 font-black text-[10px] uppercase text-amber-600 flex items-center justify-center gap-1 hover:bg-amber-50 transition-all">
-            ↩ Restaurar eventos omitidos
+          <button onclick="App.toggleTimelineActive()" class="text-[10px] font-black uppercase tracking-wide flex items-center gap-1 px-2.5 py-1 rounded-lg ${isTimelineActive ? 'bg-green-50 text-green-600' : 'bg-slate-100 text-slate-400'}">
+            ${isTimelineActive ? 'Activa' : 'Inactiva'}
           </button>
-        </div>` : ''}
-        <button onclick="App.openQuickAddModal()"
-          class="mt-3 w-full py-2.5 rounded-xl border-2 border-dashed border-blue-200 font-black text-xs uppercase text-blue-500 flex items-center justify-center gap-2 hover:bg-blue-50 transition-all">
-          <span class="text-lg">➕</span> Agregar evento (baño, popó, biberón, etc.)
-        </button>
+          <button onclick="App.toggleTimeline()" class="text-[10px] font-black uppercase tracking-wide flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 text-slate-500">
+            ${isCollapsed ? '▼' : '▲'}
+          </button>
+          <button onclick="App.openScheduleConfig()" class="text-[10px] font-black text-blue-500 uppercase tracking-wide flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-blue-50">⚙️</button>
+        </div>
+        <div class="routine-card-body">
+          ${isCollapsed ? _renderTimelineCollapsed(schedule, nowMinutes) : _renderTimelineExpanded(schedule, nowMinutes, _logsMap, students)}
+          ${_getDailyOmittedEvents().length > 0 ? `
+          <div class="flex gap-2 mt-3">
+            <button onclick="App.clearDailyOverrides()" class="flex-1 py-2 rounded-xl border-2 border-amber-200 font-black text-[10px] uppercase text-amber-600 flex items-center justify-center gap-1 hover:bg-amber-50 transition-all">
+              ↩ Restaurar eventos omitidos
+            </button>
+          </div>` : ''}
+          <button onclick="App.openQuickAddModal()"
+            class="mt-3 w-full py-2.5 rounded-xl border-2 border-dashed border-blue-200 font-black text-xs uppercase text-blue-500 flex items-center justify-center gap-2 hover:bg-blue-50 transition-all">
+            <span class="text-lg">➕</span> Agregar evento (baño, popó, biberón, etc.)
+          </button>
+        </div>
       </div>
 
       <!-- EXPANDED EVENT PANEL -->
       <div id="expandedEventPanel"></div>
 
+      ${_routineDivider('🧑‍🏫')}
+
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <!-- LEVEL 2: ACCIONES COLECTIVAS DEL AULA -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
       ${_renderCollectiveActions(schedule, students, _logsMap, nowMinutes)}
+
+      ${_routineDivider('📊')}
 
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <!-- LEVEL 3: TARJETAS DE LOS ALUMNOS -->
@@ -680,6 +701,7 @@ export async function initRoutine() {
     attendance.filter(a => ['present', 'late'].includes(a.status)).map(a => a.student_id)
   );
   const students = allStudents.filter(s => presentStudentIds.has(s.id));
+  _presentIds = presentStudentIds;
   _attendanceTaken = presentStudentIds.size > 0;
 
   const logs = await MaestraApi.getDailyRoutine(classroom.id, today);
@@ -692,8 +714,7 @@ export async function initRoutine() {
     if (ev) _sleepMap[log.student_id] = ev;
   });
 
-  const complete = students.filter(s => _calcProgress(_logsMap[s.id]) >= 80).length;
-  container.innerHTML = _buildUI(students, schedule, nowMinutes, todayLabel, timeLabel, complete);
+  container.innerHTML = _buildUI(students, schedule, nowMinutes, todayLabel, timeLabel);
 
   if (_expandedEvent) {
     const panel = document.getElementById('expandedEventPanel');
@@ -719,30 +740,71 @@ export async function initRoutine() {
     if (c && !c.classList.contains('hidden')) initRoutine();
   }, 60000);
 
-  _subscribeAttendanceRealtime(classroom.id, today);
+  _ensureRoutineRealtime(classroom.id);
+  _bindVisibilityRefresh();
 }
 
 function _clearAutoRefresh() {
   if (_autoRefreshTimer) { clearInterval(_autoRefreshTimer); _autoRefreshTimer = null; }
 }
 
-function _clearAttendanceChannel() {
+function _clearRoutineChannels() {
   if (_attendanceChannel) {
     supabase.removeChannel(_attendanceChannel);
     _attendanceChannel = null;
   }
+  if (_routineChannel) {
+    supabase.removeChannel(_routineChannel);
+    _routineChannel = null;
+  }
+  _realtimeClassroomId = null;
 }
 
-function _subscribeAttendanceRealtime(classroomId, date) {
-  _clearAttendanceChannel();
+let _realtimePending = null;
+let _realtimeClassroomId = null;
+
+function _scheduleRealtimeRefresh() {
+  if (_realtimePending) return;
+  _realtimePending = setTimeout(() => {
+    _realtimePending = null;
+    const c = document.getElementById('tab-daily-routine');
+    if (c && !c.classList.contains('hidden')) initRoutine();
+  }, 300);
+}
+
+function _ensureRoutineRealtime(classroomId) {
+  if (!classroomId) return;
+  if (_realtimeClassroomId === classroomId && (_attendanceChannel || _routineChannel)) return;
+  _clearRoutineChannels();
+  _realtimeClassroomId = classroomId;
   _attendanceChannel = supabase
     .channel(`routine-attendance-${classroomId}`)
     .on(
       'postgres_changes',
       { event: '*', schema: 'public', table: 'attendance', filter: `classroom_id=eq.${classroomId}` },
-      () => { initRoutine(); }
+      () => { _scheduleRealtimeRefresh(); }
     )
     .subscribe();
+  _routineChannel = supabase
+    .channel(`routine-live-${classroomId}`)
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'daily_logs', filter: `classroom_id=eq.${classroomId}` },
+      () => { _scheduleRealtimeRefresh(); }
+    )
+    .subscribe();
+}
+
+function _bindVisibilityRefresh() {
+  if (_visibilityBound) return;
+  _visibilityBound = true;
+  const refreshIfVisible = () => {
+    const c = document.getElementById('tab-daily-routine');
+    if (c && !c.classList.contains('hidden')) initRoutine();
+  };
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshIfVisible(); });
+  window.addEventListener('pageshow', refreshIfVisible);
+  window.addEventListener('focus', refreshIfVisible);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -766,12 +828,6 @@ export function toggleTimelineActive() {
   initRoutine();
 }
 
-export function _toggleViewModeFn() {
-  _viewMode = _viewMode === 'horizontal' ? 'vertical' : 'horizontal';
-  localStorage.setItem('sonrisas_view_mode', _viewMode);
-  initRoutine();
-}
-
 // ═══════════════════════════════════════════════════════════════════════════════
 // EXPAND / COLLAPSE EVENT
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -786,7 +842,8 @@ export function expandTimelineEvent(eventId) {
   if (!ev) return;
   const now = new Date();
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
-  const students = AppState.get('students') || [];
+  const allStudents = AppState.get('students') || [];
+  const students = _presentIds.size > 0 ? allStudents.filter(s => _presentIds.has(s.id)) : allStudents;
   panel.innerHTML = _renderExpandedEvent(ev, students, _logsMap, nowMinutes);
   panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
@@ -914,7 +971,7 @@ export function addScheduleEvent() {
     needsConfirm: false, visibleParents: true, visibleDirector: true,
     days: [1,2,3,4,5,6], active: true
   };
-  _scheduleConfig.push(newEv);
+  _getScheduleConfig().push(newEv);
   _saveScheduleConfig();
   openScheduleConfig();
   safeToast('Nuevo evento agregado — configúralo', 'success');
@@ -1050,7 +1107,7 @@ export function insertEventAt(index) {
     needsConfirm: false, visibleParents: true, visibleDirector: true,
     days: [1,2,3,4,5,6], active: true
   };
-  _scheduleConfig.splice(index, 0, newEv);
+  _getScheduleConfig().splice(index, 0, newEv);
   _saveScheduleConfig();
   openScheduleConfig();
   safeToast('Evento insertado — configúralo', 'success');
@@ -1333,7 +1390,7 @@ function _renderTempModal(studentId) {
   `;
 }
 
-function _openTempModal(studentId) {
+export function _openTempModal(studentId) {
   UI.Modal.open('tempModal', _renderTempModal(studentId));
 }
 
@@ -1752,6 +1809,7 @@ export async function deleteInfantEvent(studentId, eventId) {
     const filtered = log.infant_data.filter(e => e.id !== eventId);
     if (filtered.length === log.infant_data.length) return;
     await supabase.from('daily_logs').update({ infant_data: filtered }).eq('id', log.id);
+    invalidateCache('getDailyRoutine');
     safeToast('Evento eliminado', 'success');
     await initRoutine();
     openStudentRoutine(studentId);

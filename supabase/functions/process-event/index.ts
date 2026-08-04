@@ -33,7 +33,7 @@ Deno.serve(async (req) => {
     const supabase = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } });
     const resend   = RESEND_KEY ? new Resend(RESEND_KEY) : null;
 
-    const { type, data } = body;
+    const { type, data = {} } = body;
     if (!type) return json({ error: 'Missing event type' }, 400, origin);
 
     console.log('[process-event] type:', type, '| data keys:', Object.keys(data || {}));
@@ -227,15 +227,19 @@ Deno.serve(async (req) => {
       }
 
       case 'payment.receipt_uploaded': {
-        const { student_id, amount, month, student_name } = data;
+        const { student_id, amount, month, student_name, months, concept } = data;
+        const monthLabel = month
+          || (Array.isArray(months) ? months.join(', ') : '')
+          || concept
+          || 'Periodo';
         const { data: staff } = await supabase.from('profiles').select('email,name').in('role', ['directora', 'asistente']);
         const staffEmails = (staff ?? []).map((s: { email: string }) => s.email).filter(Boolean) as string[];
         if (resend && staffEmails.length) {
           await resend.emails.send({
             from: FROM_EMAIL,
             to:   staffEmails,
-            subject: 'Nuevo comprobante - ' + (student_name || 'Estudiante') + ' - ' + month,
-            html: emailWrap('<h2 style="color:#1d4ed8;margin:0 0 12px">Nuevo Comprobante de Pago</h2><p style="color:#374151">El padre/madre de <b>' + (student_name || 'un estudiante') + '</b> subio un comprobante de pago.</p><div style="background:#eff6ff;border-radius:8px;padding:16px;margin:16px 0;border:1px solid #bfdbfe"><table style="width:100%;border-collapse:collapse;font-size:14px"><tr><td style="padding:6px 0;color:#6b7280">Estudiante:</td><td style="padding:6px 0;font-weight:700;text-align:right">' + (student_name || '-') + '</td></tr><tr style="background:#dbeafe"><td style="padding:6px 0;color:#6b7280">Monto:</td><td style="padding:6px 0;font-weight:700;text-align:right">' + amount + '</td></tr><tr><td style="padding:6px 0;color:#6b7280">Mes:</td><td style="padding:6px 0;font-weight:700;text-align:right">' + month + '</td></tr></table></div><a href="https://montessorisonrisascreativas.com/panel_directora.html" style="display:inline-block;padding:12px 24px;background:#1d4ed8;color:white;text-decoration:none;border-radius:8px;font-weight:bold">Revisar y Aprobar</a>')
+            subject: 'Nuevo comprobante - ' + (student_name || 'Estudiante') + ' - ' + monthLabel,
+            html: emailWrap('<h2 style="color:#1d4ed8;margin:0 0 12px">Nuevo Comprobante de Pago</h2><p style="color:#374151">El padre/madre de <b>' + (student_name || 'un estudiante') + '</b> subio un comprobante de pago.</p><div style="background:#eff6ff;border-radius:8px;padding:16px;margin:16px 0;border:1px solid #bfdbfe"><table style="width:100%;border-collapse:collapse;font-size:14px"><tr><td style="padding:6px 0;color:#6b7280">Estudiante:</td><td style="padding:6px 0;font-weight:700;text-align:right">' + (student_name || '-') + '</td></tr><tr style="background:#dbeafe"><td style="padding:6px 0;color:#6b7280">Monto:</td><td style="padding:6px 0;font-weight:700;text-align:right">' + amount + '</td></tr><tr><td style="padding:6px 0;color:#6b7280">Mes:</td><td style="padding:6px 0;font-weight:700;text-align:right">' + monthLabel + '</td></tr></table></div><a href="https://montessorisonrisascreativas.com/panel_directora.html" style="display:inline-block;padding:12px 24px;background:#1d4ed8;color:white;text-decoration:none;border-radius:8px;font-weight:bold">Revisar y Aprobar</a>')
           });
         }
         result = { notified: staffEmails.length };
