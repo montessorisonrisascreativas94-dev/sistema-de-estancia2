@@ -70,16 +70,40 @@ function localToday() {
     String(now.getDate()).padStart(2, '0');
 }
 
-// Helper to calculate duration between two ISO times
-function calculateDuration(start, end) {
-  if (!start) return { hours: 0, minutes: 0, totalMs: 0 };
-  const startDate = new Date(start);
-  if (isNaN(startDate.getTime())) return { hours: 0, minutes: 0, totalMs: 0 };
-  const endDate = end ? new Date(end) : new Date();
-  const diffMs = Math.max(0, endDate - startDate);
-  const hours = Math.floor(diffMs / (1000 * 60 * 60));
-  const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-  return { hours, minutes, totalMs: diffMs };
+// Suma el tiempo dormido de un día emparejando los eventos 'sleep' de inicio y fin.
+// La maestra guarda la siesta como DOS eventos separados:
+//   { type:'sleep', start_time, end_time:null }  → iniciar siesta
+//   { type:'sleep', end_time }                   → terminar siesta (sin start_time)
+// Este helper los empareja cronológicamente y también soporta el formato legacy
+// de un solo evento con ambas horas. Si hay una siesta sin terminar (hoy),
+// cuenta hasta `nowIso`.
+function _sleepMs(events, nowIso) {
+  const bounds = [];
+  (events || []).forEach(e => {
+    if (e.type !== 'sleep') return;
+    if (e.start_time) {
+      const t = new Date(e.start_time).getTime();
+      if (!isNaN(t)) bounds.push({ t, kind: 'start' });
+    }
+    if (e.end_time) {
+      const t = new Date(e.end_time).getTime();
+      if (!isNaN(t)) bounds.push({ t, kind: 'end' });
+    }
+  });
+  bounds.sort((a, b) => a.t - b.t);
+  let total = 0, start = null;
+  bounds.forEach(b => {
+    if (b.kind === 'start') {
+      if (start === null) start = b.t;
+    } else {
+      if (start !== null) { total += Math.max(0, b.t - start); start = null; }
+    }
+  });
+  if (start !== null && nowIso) {
+    const nowT = new Date(nowIso).getTime();
+    if (!isNaN(nowT)) total += Math.max(0, nowT - start);
+  }
+  return total;
 }
 
 export const DailyReportModule = {
@@ -149,23 +173,18 @@ export const DailyReportModule = {
       const processLogs = (logs) => {
         let totalSleepMs = 0, totalDiaperWet = 0, totalDiaperSoiled = 0, totalMilkOz = 0, totalMilkFeeds = 0;
         let totalFoodAcceptance = 0, foodDays = 0;
-        const sleepTimes = [];
         const foodPreferences = {};
 
         logs.forEach(log => {
+          totalSleepMs += _sleepMs(log.infant_data, null);
           (log.infant_data || []).forEach(ev => {
-            if (ev.type === 'sleep' && ev.end_time) {
-              const dur = calculateDuration(ev.start_time, ev.end_time);
-              totalSleepMs += dur.totalMs;
-              sleepTimes.push({ start: ev.start_time, end: ev.end_time });
-            }
             if (ev.type === 'diaper') {
               if (ev.subtype === 'wet') totalDiaperWet++;
               if (ev.subtype === 'soiled') totalDiaperSoiled++;
             }
-            if (ev.type === 'milk' && ev.oz) {
-              totalMilkOz += Number(ev.oz);
+            if (ev.type === 'milk') {
               totalMilkFeeds++;
+              totalMilkOz += Number(ev.oz || 0);
             }
           });
           // Parsear food - soportar JSON estructurado y string legacy
@@ -183,7 +202,7 @@ export const DailyReportModule = {
             }
           }
         });
-        return { totalSleepMs, totalDiaperWet, totalDiaperSoiled, totalMilkOz, totalMilkFeeds, foodDays, avgFoodAcceptance: foodDays > 0 ? Math.round(totalFoodAcceptance / foodDays) : 0, sleepTimes };
+        return { totalSleepMs, totalDiaperWet, totalDiaperSoiled, totalMilkOz, totalMilkFeeds, foodDays, avgFoodAcceptance: foodDays > 0 ? Math.round(totalFoodAcceptance / foodDays) : 0 };
       };
 
       const weeklyStats = processLogs(weeklyLogs);
@@ -204,12 +223,9 @@ export const DailyReportModule = {
       let todaySleep = 0, todayMilk = 0, todayMilkFeeds = 0, todayDiapers = 0;
       let todayBreakfast = null, todayLunch = null, todaySnack = null, todayMood = null, todayTemp = null, todayNote = null;
       if (todayLog) {
+        todaySleep = _sleepMs(todayLog.infant_data, new Date().toISOString());
         todayLog.infant_data?.forEach(ev => {
-          if (ev.type === 'sleep' && ev.end_time) {
-            const dur = calculateDuration(ev.start_time, ev.end_time);
-            todaySleep += dur.totalMs;
-          }
-          if (ev.type === 'milk' && ev.oz) { todayMilk += Number(ev.oz); todayMilkFeeds++; }
+          if (ev.type === 'milk') { todayMilk += Number(ev.oz || 0); todayMilkFeeds++; }
           if (ev.type === 'diaper') todayDiapers++;
           if (ev.type === 'temp') todayTemp = ev.value;
           if (ev.type === 'note' && !todayNote) todayNote = ev.text;
@@ -461,9 +477,9 @@ export const DailyReportModule = {
     const updTime = log.created_at ? fmtTime(log.created_at) : '';
 
     let todaySleepMs = 0, todayMilkOz = 0, todayDiaperWet = 0, todayDiaperSoiled = 0;
+    todaySleepMs = _sleepMs(log.infant_data, new Date().toISOString());
     (log.infant_data || []).forEach(ev => {
-      if (ev.type === 'sleep' && ev.end_time) { todaySleepMs += calculateDuration(ev.start_time, ev.end_time).totalMs; }
-      if (ev.type === 'milk' && ev.oz) todayMilkOz += Number(ev.oz);
+      if (ev.type === 'milk') todayMilkOz += Number(ev.oz || 0);
       if (ev.type === 'diaper' && ev.subtype === 'wet') todayDiaperWet++;
       if (ev.type === 'diaper' && ev.subtype === 'soiled') todayDiaperSoiled++;
     });

@@ -904,7 +904,11 @@ export async function initRoutine() {
   const presentStudentIds = new Set(
     attendance.filter(a => ['present', 'late'].includes(a.status)).map(a => a.student_id)
   );
-  const students = allStudents.filter(s => presentStudentIds.has(s.id));
+  // Si aún no se tomó asistencia hoy, no excluir a nadie del registro de rutina:
+  // en caso contrario los padres verían "sin reporte" aunque la maestra sí registre.
+  const students = attendance.length === 0
+    ? allStudents
+    : allStudents.filter(s => presentStudentIds.has(s.id));
   _presentIds = presentStudentIds;
 
   const logs = await MaestraApi.getDailyRoutine(classroom.id, today);
