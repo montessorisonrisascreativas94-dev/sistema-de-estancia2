@@ -48,8 +48,14 @@ self.addEventListener('fetch', e => {
     e.respondWith(
       caches.match(e.request).then(cached => {
         const fetchPromise = fetch(e.request).then(networkResponse => {
+          // ✅ FIX: clonar dentro de try/catch — el navegador puede entregar el
+          // mismo Response para dos fetch del mismo URL, y un segundo clone()
+          // lanzaría "Response body is already used".
           if (networkResponse.ok && networkResponse.status === 200) {
-            caches.open(CACHE_NAME).then(cache => cache.put(e.request, networkResponse.clone()));
+            try {
+              const copy = networkResponse.clone();
+              caches.open(CACHE_NAME).then(cache => cache.put(e.request, copy)).catch(() => {});
+            } catch (_) { /* cuerpo ya consumido — omitir caché */ }
           }
           return networkResponse;
         });

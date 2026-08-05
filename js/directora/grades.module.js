@@ -94,6 +94,9 @@ export const GradesModule = {
     document.getElementById('btnClosePeriod')?.addEventListener('click', () => this._closePeriod());
     document.getElementById('btnNewPeriod')?.addEventListener('click', () => this._openPeriodModal());
     document.getElementById('btnExportGrades')?.addEventListener('click', () => this._exportGrades());
+    document.getElementById('btnGradesCenter')?.addEventListener('click', () => {
+      import('./grades-center.module.js').then(m => m.GradesCenter.open());
+    });
 
     document.querySelectorAll('.grades-tab').forEach(tab => {
       tab.addEventListener('click', () => {

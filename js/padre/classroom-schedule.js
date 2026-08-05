@@ -1,9 +1,9 @@
 /**
  * Cronología del Aula — Panel de Padres
- * Muestra el plan del día configurado por la maestra
- * (classroom_daily_schedule) y marca en tiempo real el evento
- * que está en curso, con aviso (toast + sonido + vibración)
- * cuando un evento nuevo se activa.
+ * Muestra cómo se va desarrollando el día del hijo SIN revelar
+ * la plantilla planificada: los eventos aparecen uno a uno según
+ * empiezan a ocurrir (en curso / ya ocurridos), con aviso
+ * (toast + sonido + vibración) cuando un evento nuevo se activa.
  */
 import { supabase } from '../shared/supabase.js';
 import { Helpers } from '../shared/helpers.js';
@@ -92,9 +92,14 @@ function _render() {
     return;
   }
 
-  const list = _events.map(ev => ({ ...ev, status: _statusOf(ev, nowMin) }));
+  // Solo se muestran los eventos que ya ocurrieron o están en curso:
+  // los pendientes (plantilla futura) permanecen ocultos para que el
+  // día se vea como eventos que se van dando uno a uno.
+  const list = _events
+    .map(ev => ({ ...ev, status: _statusOf(ev, nowMin) }))
+    .filter(ev => ev.status !== 'pending');
+
   const active = list.find(e => e.status === 'in_progress');
-  const next = list.find(e => e.status === 'pending');
 
   const newActiveId = active?.id || null;
   if (newActiveId && newActiveId !== _lastActiveId && _lastActiveId !== null) {
@@ -102,47 +107,57 @@ function _render() {
   }
   _lastActiveId = newActiveId;
 
+  const header = `
+    <div class="flex items-center gap-3">
+      <span class="w-10 h-10 rounded-xl bg-gradient-to-br from-[#6366F1] to-[#D946EF] text-white flex items-center justify-center text-lg shadow-lg shadow-indigo-200">🕐</span>
+      <div>
+        <h3 class="font-black text-xl text-[#1A2340]">Cronología del Aula</h3>
+        <p class="text-[10px] font-black text-[#64748B] uppercase tracking-[0.15em]">Hoy · ${new Date().toLocaleDateString('es-DO', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+      </div>
+    </div>`;
+
+  if (!list.length) {
+    el.innerHTML = `
+      <div class="flex items-center justify-between mb-3">${header}</div>
+      <div class="flex items-center gap-3 p-4 rounded-2xl bg-slate-50 border border-slate-100">
+        <span class="text-2xl animate-bounce">🔔</span>
+        <div>
+          <p class="font-black text-sm text-[#334155]">Las actividades aún no han comenzado</p>
+          <p class="text-xs font-bold text-[#94A3B8]">Te contaremos aquí cómo se va desarrollando el día de tu pequeño.</p>
+        </div>
+      </div>`;
+    return;
+  }
+
   const rows = list.map(ev => {
     const s = ev.status;
     const dot = s === 'in_progress'
       ? 'bg-[#28B54D] ring-4 ring-[#28B54D]/25 animate-pulse'
-      : s === 'completed' ? 'bg-[#28B54D]' : 'bg-slate-300';
+      : 'bg-[#28B54D] opacity-70';
     return `
-      <div class="flex items-center gap-3 px-3 py-2.5 rounded-2xl transition-all ${s === 'in_progress' ? 'bg-[#E8FFF0] border border-[#28B54D]/40 shadow-md' : s === 'completed' ? 'bg-[#F0FDF4] opacity-60' : 'bg-slate-50 border border-slate-100'}">
+      <div class="flex items-center gap-3 px-3 py-2.5 rounded-2xl transition-all ${s === 'in_progress' ? 'bg-[#E8FFF0] border border-[#28B54D]/40 shadow-md' : 'bg-[#F8FAFC] border border-slate-100 opacity-75'}">
         <div class="w-2.5 h-2.5 rounded-full ${dot} shrink-0"></div>
         <span class="text-xl leading-none w-8 text-center shrink-0">${ev.emoji || '📌'}</span>
         <div class="flex-1 min-w-0">
-          <p class="font-black text-sm ${s === 'completed' ? 'text-slate-400 line-through' : 'text-[#1A2340]'} truncate">${Helpers.escapeHTML(ev.label || 'Evento')}</p>
+          <p class="font-black text-sm ${s === 'completed' ? 'text-slate-500' : 'text-[#1A2340]'} truncate">${Helpers.escapeHTML(ev.label || 'Evento')}</p>
         </div>
         <span class="text-[10px] font-black px-2 py-1 rounded-lg shrink-0 ${s === 'in_progress' ? 'bg-[#28B54D] text-white' : 'bg-white border border-slate-200 text-slate-500'}">${_fmtTime(ev.startTime)}${ev.duration ? ` · ${ev.duration}min` : ''}</span>
       </div>`;
   }).join('');
 
-  const nextBanner = next ? `
-    <div class="flex items-center gap-2 px-3 py-2 rounded-2xl bg-[#E8F2FF] border border-[#0B63C7]/10">
-      <span class="text-lg">⏭️</span>
-      <p class="text-[11px] font-black text-[#0B63C7]">Siguiente: ${Helpers.escapeHTML(next.label)} — ${_fmtTime(next.startTime)}</p>
+  const activeBanner = active ? `
+    <div class="flex items-center gap-3 p-3 mb-3 rounded-2xl" style="background:${active.color}15;border:2px solid ${active.color}30">
+      <span class="text-3xl animate-bounce">${active.emoji || '🔔'}</span>
+      <div class="flex-1 min-w-0">
+        <div class="text-[9px] font-black uppercase tracking-widest" style="color:${active.color}">🔔 En curso ahora</div>
+        <div class="text-sm font-black text-[#1A2340] truncate">${Helpers.escapeHTML(active.label || 'Evento')}</div>
+      </div>
+      <span class="text-[10px] font-black text-white px-2 py-1 rounded-lg shrink-0" style="background:${active.color}">${_fmtTime(active.startTime)}</span>
     </div>` : '';
 
   el.innerHTML = `
-    <div class="flex items-center justify-between mb-3">
-      <div class="flex items-center gap-3">
-        <span class="w-10 h-10 rounded-xl bg-gradient-to-br from-[#6366F1] to-[#D946EF] text-white flex items-center justify-center text-lg shadow-lg shadow-indigo-200">🕐</span>
-        <div>
-          <h3 class="font-black text-xl text-[#1A2340]">Cronología del Aula</h3>
-          <p class="text-[10px] font-black text-[#64748B] uppercase tracking-[0.15em]">Hoy · ${new Date().toLocaleDateString('es-DO', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
-        </div>
-      </div>
-    </div>
-    ${active ? `
-      <div class="flex items-center gap-3 p-3 mb-3 rounded-2xl" style="background:${active.color}15;border:2px solid ${active.color}30">
-        <span class="text-3xl animate-bounce">${active.emoji || '🔔'}</span>
-        <div class="flex-1 min-w-0">
-          <div class="text-[9px] font-black uppercase tracking-widest" style="color:${active.color}">🔔 En curso ahora</div>
-          <div class="text-sm font-black text-[#1A2340] truncate">${Helpers.escapeHTML(active.label || 'Evento')}</div>
-        </div>
-        <span class="text-[10px] font-black text-white px-2 py-1 rounded-lg shrink-0" style="background:${active.color}">${_fmtTime(active.startTime)}</span>
-      </div>` : nextBanner}
+    <div class="flex items-center justify-between mb-3">${header}</div>
+    ${activeBanner}
     <div class="space-y-2 mb-3">${rows}</div>
     <button onclick="App.navigateTo('rutina-diaria')" class="w-full py-2.5 rounded-xl border-2 border-dashed border-[#0B63C7]/30 font-black text-[10px] uppercase tracking-widest text-[#0B63C7] hover:bg-[#E8F2FF] transition-all">
       Ver rutina completa del día →

@@ -28,6 +28,33 @@ const logError = (context, err) => {
   return { data: null, error: err.message || err };
 };
 
+// Refresca el token si está próximo a expirar o ya expiró. Evita 401 en
+// consultas que corren mucho después de que ensureRole validara la sesión.
+async function _freshSession() {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) return false;
+    const expiresAt = session.expires_at || 0;
+    if (expiresAt - Math.floor(Date.now() / 1000) < 60) {
+      const { error } = await supabase.auth.refreshSession();
+      if (error) return false;
+    }
+    return true;
+  } catch (_) { return false; }
+}
+
+// Ejecuta la consulta con sesión fresca; si el servidor responde 401
+// (token vencido/revocado a mitad de sesión), refresca y reintenta una vez.
+async function _withSessionRetry(queryFn) {
+  await _freshSession();
+  let res = await queryFn();
+  if (res?.error?.status === 401 || res?.error?.code === 'PGRST301') {
+    await _freshSession();
+    res = await queryFn();
+  }
+  return res;
+}
+
 export const DirectorApi = {
   // --- PERIODS ---
   async getPeriods() {
@@ -410,23 +437,25 @@ export const DirectorApi = {
 
   // --- ESTUDIANTES ---
   async getStudents(filters = {}, range = null) {
-    let q = supabase
-      .from(TABLES.STUDENTS)
-      .select('id, name, avatar_url, matricula, age, age_type, classroom_id, is_active', { count: 'exact' })
-      .order('name');
+    const { data, error, count } = await _withSessionRetry(async () => {
+      let q = supabase
+        .from(TABLES.STUDENTS)
+        .select('id, name, avatar_url, matricula, age, age_type, classroom_id, is_active', { count: 'exact' })
+        .order('name');
 
-    if (filters.search) q = q.ilike('name', `%${filters.search}%`);
-    if (filters.classroom_id) q = q.eq('classroom_id', filters.classroom_id);
-    if (filters.status === 'active') q = q.eq('is_active', true);
-    if (filters.status === 'inactive') q = q.eq('is_active', false);
-    
-    if (range) {
-      q = q.range(range.from, range.to);
-    } else {
-      q = q.limit(100); // Default safety limit
-    }
+      if (filters.search) q = q.ilike('name', `%${filters.search}%`);
+      if (filters.classroom_id) q = q.eq('classroom_id', filters.classroom_id);
+      if (filters.status === 'active') q = q.eq('is_active', true);
+      if (filters.status === 'inactive') q = q.eq('is_active', false);
 
-    const { data, error, count } = await q;
+      if (range) {
+        q = q.range(range.from, range.to);
+      } else {
+        q = q.limit(100); // Default safety limit
+      }
+
+      return q;
+    });
     
     if (error) return { data, error, count };
     
@@ -560,10 +589,17 @@ export const DirectorApi = {
   },
 
   async getClassrooms() {
-    return QueryCache.get('dir_classrooms', async () =>
-      supabase.from(TABLES.CLASSROOMS).select('id, name, level, capacity, teacher:teacher_id(name)').order('name'),
-      5 * 60_000
-    );
+    try {
+      return await QueryCache.get('dir_classrooms', async () => {
+        const res = await _withSessionRetry(() =>
+          supabase.from(TABLES.CLASSROOMS).select('id, name, level, capacity, teacher:teacher_id(name)').order('name')
+        );
+        if (res?.error) throw res.error; // no cachear errores (evita 401 persistente 5 min)
+        return res;
+      }, 5 * 60_000);
+    } catch (e) {
+      return { data: null, error: e };
+    }
   },
 
   async generateMonthlyCharges(month, year) {
