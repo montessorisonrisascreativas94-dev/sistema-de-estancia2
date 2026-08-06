@@ -19,7 +19,6 @@ import { SCHOOL_SETTINGS_ID } from '../shared/constants.js';
 import { openGlobalModal, closeGlobalModal } from '../shared/modal.js';
 
 import { GradesModule } from './grades.module.js';
-import { ConstructorModule } from './constructor.module.js';
 import { PermitsModule } from './permits.module.js';
 import { InquiriesModule } from './inquiries.module.js';
 import { ChatModule } from './chat.module.js';
@@ -60,7 +59,6 @@ window.App = {
   accounting: AccountingModule,
   attendance: AttendanceModule,
   grades: GradesModule,
-  evalBuilder: ConstructorModule,
   ui: { ...UIHelpers, ...DirectorUI },
   inquiries: InquiriesModule,
   permits: PermitsModule,
@@ -156,9 +154,6 @@ export function goToSection(sectionId) {
         break;
       case 'calificaciones':
         import('./grades.module.js').then(m => m.GradesModule.init());
-        break;
-      case 'constructor-evaluaciones':
-        import('./constructor.module.js').then(m => m.ConstructorModule.init());
         break;
       case 'videoconferencia': {
         const profile = AppState.get('profile');

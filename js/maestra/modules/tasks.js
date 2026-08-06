@@ -7,6 +7,83 @@ import { Helpers } from '../../shared/helpers.js';
 
 const { safeToast, safeEscapeHTML, Modal } = UI;
 
+// Estructura del Boletín (áreas → períodos → módulos → actividades) para
+// vincular tareas: al calificar, la nota se duplica en eval_scores.
+let _evalLink = null;
+
+async function _loadEvalLink() {
+  if (_evalLink) return _evalLink;
+  try {
+    const { data: evals } = await supabase
+      .from('eval_evaluations').select('id')
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false })
+      .limit(1);
+    const evalId = evals?.[0]?.id;
+    if (!evalId) { _evalLink = { areas: [], periods: [], modules: [], activities: [] }; return _evalLink; }
+
+    try { await supabase.rpc('boletin_ensure_structure', { p_evaluation_id: evalId }); } catch (_) {}
+
+    const [aRes, pRes] = await Promise.all([
+      supabase.from('eval_areas').select('id, name').eq('evaluation_id', evalId).is('deleted_at', null).order('sort_order').order('created_at'),
+      supabase.from('eval_periods').select('id, name').eq('evaluation_id', evalId).is('deleted_at', null).order('sort_order').order('created_at')
+    ]);
+    const areas = aRes.data || [];
+    const periods = pRes.data || [];
+    const periodIds = periods.map(p => p.id);
+    const { data: mods } = periodIds.length
+      ? await supabase.from('eval_modules').select('id, name, area_id, period_id').in('period_id', periodIds).is('deleted_at', null).order('sort_order').order('created_at')
+      : { data: [] };
+    const modules = mods || [];
+    const moduleIds = modules.map(m => m.id);
+    const { data: acts } = moduleIds.length
+      ? await supabase.from('eval_activities').select('id, name, module_id').in('module_id', moduleIds).is('deleted_at', null).order('sort_order').order('created_at')
+      : { data: [] };
+    _evalLink = { areas, periods, modules, activities: acts || [] };
+  } catch (_) {
+    _evalLink = { areas: [], periods: [], modules: [], activities: [] };
+  }
+  return _evalLink;
+}
+
+// Llena los selects Área/Actividad del modal y restaura la selección al editar.
+async function _initTaskEvalLink(taskToEdit = null) {
+  const areaSel = document.getElementById('taskEvalArea');
+  const actSel = document.getElementById('taskEvalActivity');
+  if (!areaSel || !actSel) return;
+
+  const link = await _loadEvalLink();
+  areaSel.innerHTML = '<option value="">— Sin área —</option>' +
+    link.areas.map(a => `<option value="${a.id}">${Helpers.escapeHTML(a.name)}</option>`).join('');
+
+  const fillActs = () => {
+    const areaId = Number(areaSel.value) || null;
+    const acts = link.activities.filter(act => {
+      const m = link.modules.find(x => x.id === act.module_id);
+      return m && (!areaId || m.area_id === areaId);
+    });
+    actSel.innerHTML = '<option value="">— Sin actividad —</option>' +
+      acts.map(act => {
+        const m = link.modules.find(x => x.id === act.module_id);
+        const per = link.periods.find(p => p.id === m?.period_id);
+        const label = [per?.name, act.name].filter(Boolean).join(' · ');
+        return `<option value="${act.id}" data-module="${m?.id || ''}">${Helpers.escapeHTML(label)}</option>`;
+      }).join('');
+    actSel.disabled = !areaId;
+  };
+
+  if (taskToEdit) {
+    const mod = link.modules.find(m => String(m.id) === String(taskToEdit.eval_module_id));
+    if (mod) areaSel.value = String(mod.area_id);
+    fillActs();
+    if (taskToEdit.eval_activity_id) actSel.value = String(taskToEdit.eval_activity_id);
+  } else {
+    fillActs();
+  }
+
+  areaSel.onchange = () => { actSel.value = ''; fillActs(); };
+}
+
 export async function initTasks() {
   const classroom = AppState.get('classroom');
   const container = document.getElementById('tab-tasks');
@@ -97,7 +174,7 @@ export async function initTasks() {
 
 export async function openEditTaskModal(taskId) {
   try {
-    const { data: task, error } = await supabase.from('tasks').select('id, title, description, due_date, grading_system, file_url, classroom_id').eq('id', taskId).single();
+    const { data: task, error } = await supabase.from('tasks').select('id, title, description, due_date, grading_system, file_url, classroom_id, eval_module_id, eval_activity_id').eq('id', taskId).single();
     if (error) throw error;
     openNewTaskModal(task);
   } catch (err) {
@@ -160,6 +237,18 @@ export async function openNewTaskModal(taskToEdit = null) {
               <input type="date" id="taskDueDate" class="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold focus:border-green-500 outline-none transition-colors" required>
             </div>
             <div>
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Vincular al Boletín (Opcional)</label>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <select id="taskEvalArea" class="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold focus:border-green-500 outline-none transition-colors">
+                  <option value="">— Sin área —</option>
+                </select>
+                <select id="taskEvalActivity" class="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm font-bold focus:border-green-500 outline-none transition-colors" disabled>
+                  <option value="">— Sin actividad —</option>
+                </select>
+              </div>
+              <p class="text-[10px] text-slate-400 mt-1.5 font-bold">Al calificar esta tarea, la nota se registrará automáticamente en la actividad elegida del boletín.</p>
+            </div>
+            <div>
               <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Adjuntar Archivo (Opcional)</label>
               <div class="relative">
                 <input type="file" id="taskFileInput" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" accept="image/*,video/*,.pdf,.doc,.docx">
@@ -185,6 +274,8 @@ export async function openNewTaskModal(taskToEdit = null) {
     </div>
   `;
   Modal.open(modalId, content);
+
+  _initTaskEvalLink(taskToEdit);
 
   if (isEditing) {
     document.getElementById('taskTitle').value = taskToEdit.title;
@@ -253,6 +344,17 @@ export async function openNewTaskModal(taskToEdit = null) {
       }
 
       const periodInfo = await _resolveActivePeriod(classroom.id);
+
+      const evalActVal = document.getElementById('taskEvalActivity')?.value;
+      const evalAreaVal = document.getElementById('taskEvalArea')?.value;
+      let evalModuleId = null;
+      let evalActivityId = null;
+      if (evalActVal) {
+        const opt = document.querySelector('#taskEvalActivity option[value="' + evalActVal + '"]');
+        evalModuleId = opt ? Number(opt.dataset.module) || null : null;
+        evalActivityId = Number(evalActVal) || null;
+      }
+
       const payload = {
         classroom_id: classroom.id,
         title,
@@ -261,7 +363,9 @@ export async function openNewTaskModal(taskToEdit = null) {
         file_url: fileUrl,
         teacher_id: AppState.get('user').id,
         period_id: periodInfo.period?.id ?? null,
-        school_year_id: periodInfo.yearId
+        school_year_id: periodInfo.yearId,
+        eval_module_id: evalModuleId,
+        eval_activity_id: evalActivityId
       };
       
       if (isEditing) {
@@ -463,7 +567,26 @@ export async function submitGrade(taskId, studentId) {
 
   try {
     await MaestraApi.gradeTask(taskId, studentId, null, null, feedback, numericScore);
-    
+
+    // Doble escritura: si la tarea está vinculada a una actividad del
+    // boletín, replicar la nota en eval_scores (alimenta el promedio).
+    try {
+      const { data: task } = await supabase
+        .from('tasks').select('eval_module_id, eval_activity_id')
+        .eq('id', taskId).maybeSingle();
+      if (task?.eval_module_id && task?.eval_activity_id) {
+        const { data: authData } = await supabase.auth.getUser();
+        await supabase.from('eval_scores').upsert({
+          module_id: task.eval_module_id,
+          activity_id: task.eval_activity_id,
+          student_id: studentId,
+          value: numericScore,
+          evaluated_by: authData?.user?.id ?? null,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'activity_id,student_id' });
+      }
+    } catch (_) { /* el vínculo es opcional: no bloquear la calificación */ }
+
     const student = (AppState.get('students') || []).find(s => s.id === studentId);
     if (student?.parent_id) {
       sendPush({

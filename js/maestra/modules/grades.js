@@ -1,8 +1,8 @@
 /**
- * Teacher Grade Center — Gradebook + Formal Grades + Evaluación (Constructor)
+ * Teacher Grade Center — Boletín Inteligente + Gradebook + Activities.
  * Replaces the "Proximamente" placeholder.
- * Shows per-classroom grid: students × tasks with numeric score inputs (0-100),
- * formal exam grades per subject, and the evaluation constructor as sub-tab.
+ * Student list opens the unified report card (BoletinUI) per student; a
+ * task gradebook grid (0-100) and an activities tab feed the report card.
  */
 import { supabase } from '../../shared/supabase.js';
 import { Helpers } from '../../shared/helpers.js';
@@ -10,14 +10,10 @@ import { MaestraApi } from '../api.js';
 import { Modal } from './ui.js';
 import {
   renderEvalInput, readEvalInputs, initEvalControls,
-  buildScoresMap, buildBoletaData, normalizeScore,
+  buildScoresMap, normalizeScore,
   gradeColor, gradeToLevel, avgOf, moduleAvg
 } from '../../shared/eval-utils.js';
-
-const SUBJECTS = [
-  'Matemáticas', 'Español', 'Ciencias', 'Sociales', 'Inglés',
-  'Educación Física', 'Arte', 'Música', 'Religión', 'Tecnología'
-];
+import { BoletinUI } from '../../shared/boletin.module.js';
 
 const ACTIVITY_TYPES = [
   { value: 'actividad',  label: 'Actividad',    icon: 'sparkles' },
@@ -38,7 +34,6 @@ const GREEN = '#28B54D';
 const GREEN_DARK = '#1A8035';
 const ORANGE = '#FF8A00';
 const ORANGE_DARK = '#D96500';
-const INDIGO = '#6366F1';
 const VIOLET = '#A855F7';
 const VIOLET_DARK = '#7E22CE';
 
@@ -47,8 +42,8 @@ let _periodInfo = null;
 let _students = [];
 let _tasks = [];
 let _evidenceMap = {};  // { studentId_taskId: { numeric_score, ... } }
-let _formalGrades = {}; // { studentId_subject: { id, numeric_score } }
-let _tab = 'tasks';
+let _boletinOpen = false;
+let _tab = 'boletines';
 
 // Estado de la pestaña "Actividades" (Módulo 2/3/4 del diseño)
 let _evals = [];
@@ -102,11 +97,24 @@ export async function initGradesCenter() {
   }
 
   _currentClassroomId = classrooms[0].id;
-  _tab = 'tasks';
+  _tab = 'boletines';
+  _boletinOpen = false;
   container.innerHTML = _buildLayout(classrooms);
   _bindEvents();
 
-  await _loadGradebook();
+  await _loadEvalBase();
+  await _loadBoletines();
+}
+
+async function _loadEvalBase() {
+  const { data: evals } = await supabase
+    .from('eval_evaluations').select('*').is('deleted_at', null)
+    .order('created_at', { ascending: false });
+  _evals = evals || [];
+  if (!_evals.length) return;
+  _actEvalId = _evals[0].id;
+  try { await supabase.rpc('boletin_ensure_structure', { p_evaluation_id: _actEvalId }); } catch (_) {}
+  await _loadEvalChildren();
 }
 
 function _buildLayout(classrooms) {
@@ -116,19 +124,18 @@ function _buildLayout(classrooms) {
 
   return `
     <style>
-      .t-grade-input:focus, .t-formal-input:focus {
+      .t-grade-input:focus {
         outline: none;
         border-color: ${GREEN};
         box-shadow: 0 0 0 3px rgba(40,181,77,0.15);
       }
-      .t-formal-input:focus { border-color: ${ORANGE}; box-shadow: 0 0 0 3px rgba(255,138,0,0.15); }
     </style>
     <header class="mb-6">
       <h1 class="text-2xl md:text-3xl font-black text-slate-800 flex items-center gap-3">
         <span class="p-2 rounded-2xl text-white shadow-lg" style="background:linear-gradient(135deg,${GREEN},${GREEN_DARK})"><i data-lucide="graduation-cap" class="w-6 h-6"></i></span>
         Centro de Calificaciones
       </h1>
-      <p class="text-slate-500 font-medium">Califica tareas, exámenes formales y evalúa por módulos y actividades</p>
+      <p class="text-slate-500 font-medium">Genera el boletín de tus estudiantes y califica tareas y actividades</p>
     </header>
 
     <!-- Toolbar -->
@@ -141,10 +148,9 @@ function _buildLayout(classrooms) {
 
         <!-- Tab toggle -->
         <div class="flex bg-slate-100 rounded-2xl p-1 ml-2">
-          <button id="tGradeTabTasks" class="tg-tab px-4 py-1.5 rounded-xl text-xs font-black transition-all" style="background:${GREEN};color:#fff">Tareas</button>
-          <button id="tGradeTabFormal" class="tg-tab px-4 py-1.5 rounded-xl text-xs font-black text-slate-500 transition-all">Exámenes Formales</button>
+          <button id="tGradeTabBoletines" class="tg-tab px-4 py-1.5 rounded-xl text-xs font-black transition-all" style="background:${ORANGE};color:#fff">Boletines</button>
+          <button id="tGradeTabTasks" class="tg-tab px-4 py-1.5 rounded-xl text-xs font-black text-slate-500 transition-all">Tareas</button>
           <button id="tGradeTabActs" class="tg-tab px-4 py-1.5 rounded-xl text-xs font-black text-slate-500 transition-all">Actividades</button>
-          <button id="tGradeTabEval" class="tg-tab px-4 py-1.5 rounded-xl text-xs font-black text-slate-500 transition-all">Evaluación</button>
         </div>
 
         <div id="tGradePeriodBadge" class="ml-auto"></div>
@@ -156,16 +162,19 @@ function _buildLayout(classrooms) {
     <div id="tGradeContent" class="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden">
       <div class="p-8 text-center text-slate-400 font-medium">Cargando...</div>
     </div>
-
-    <!-- Constructor de Evaluaciones (sub-pestaña) -->
-    <div id="tGradeEvalPanel" class="hidden"></div>
   `;
 }
 
 function _bindEvents() {
   document.getElementById('tGradeClassroom')?.addEventListener('change', (e) => {
     _currentClassroomId = parseInt(e.target.value);
-    _loadGradebook();
+    _boletinOpen = false;
+    _loadBoletines();
+  });
+
+  document.getElementById('tGradeTabBoletines')?.addEventListener('click', () => {
+    _setTab('boletines');
+    _loadBoletines();
   });
 
   document.getElementById('tGradeTabTasks')?.addEventListener('click', () => {
@@ -173,29 +182,19 @@ function _bindEvents() {
     _loadGradebook();
   });
 
-  document.getElementById('tGradeTabFormal')?.addEventListener('click', () => {
-    _setTab('formal');
-    _loadFormalGrades();
-  });
-
   document.getElementById('tGradeTabActs')?.addEventListener('click', () => {
     _setTab('acts');
     _loadActivities();
-  });
-
-  document.getElementById('tGradeTabEval')?.addEventListener('click', () => {
-    _setTab('eval');
-    _initEvalTab();
   });
 }
 
 function _setTab(tab) {
   _tab = tab;
+  _boletinOpen = false;
   const map = {
-    tasks:   { btn: 'tGradeTabTasks',   bg: GREEN,  name: 'Tareas' },
-    formal:  { btn: 'tGradeTabFormal',  bg: ORANGE, name: 'Exámenes Formales' },
-    acts:    { btn: 'tGradeTabActs',    bg: VIOLET, name: 'Actividades' },
-    eval:    { btn: 'tGradeTabEval',    bg: INDIGO, name: 'Evaluación' }
+    boletines: { btn: 'tGradeTabBoletines', bg: ORANGE, name: 'Boletines' },
+    tasks:     { btn: 'tGradeTabTasks',    bg: GREEN,  name: 'Tareas' },
+    acts:      { btn: 'tGradeTabActs',     bg: VIOLET, name: 'Actividades' }
   };
   Object.keys(map).forEach(k => {
     const btn = document.getElementById(map[k].btn);
@@ -209,28 +208,6 @@ function _setTab(tab) {
       btn.className = 'tg-tab px-4 py-1.5 rounded-xl text-xs font-black text-slate-500 transition-all';
     }
   });
-
-  const content = document.getElementById('tGradeContent');
-  const evalPanel = document.getElementById('tGradeEvalPanel');
-  if (tab === 'eval') {
-    if (content) content.classList.add('hidden');
-    if (evalPanel) evalPanel.classList.remove('hidden');
-  } else {
-    if (evalPanel) evalPanel.classList.add('hidden');
-    if (content) content.classList.remove('hidden');
-  }
-}
-
-async function _initEvalTab() {
-  const panel = document.getElementById('tGradeEvalPanel');
-  if (!panel) return;
-  try {
-    const { MaestraConstructor } = await import('./constructor.js');
-    await MaestraConstructor.init({ container: 'tGradeEvalPanel' });
-  } catch (err) {
-    panel.innerHTML = Helpers.errorState('Error al cargar el Constructor de Evaluaciones');
-    console.error(err);
-  }
 }
 
 // ── TASK GRADEBOOK ───────────────────────────────────────────────────
@@ -247,17 +224,11 @@ async function _loadGradebook() {
   _renderLockBanner();
 
   // Load students
-  const { data: students } = await supabase
-    .from('students').select('id, name, matricula')
-    .eq('classroom_id', _currentClassroomId)
-    .eq('is_active', true)
-    .order('name');
-
-  _students = students || [];
+  await _loadStudents();
 
   // Load tasks for this classroom (recent, within period dates or all if no period)
   let taskQuery = supabase
-    .from('tasks').select('id, title, due_date, created_at, grading_system')
+    .from('tasks').select('id, title, due_date, created_at, grading_system, eval_module_id, eval_activity_id')
     .eq('classroom_id', _currentClassroomId)
     .order('created_at', { ascending: false })
     .limit(20);
@@ -418,13 +389,59 @@ async function saveAll() {
     Helpers.toast(`${saves.length} calificacione(s) guardada(s)`, 'success');
     // Re-mark all as saved
     inputs.forEach(i => { i.style.borderColor = '#E2E8F0'; });
+    // Doble escritura: replicar en eval_scores las tareas vinculadas al boletín
+    await _syncEvalScoresFromTasks();
   } catch (err) {
     Helpers.toast('Error al guardar: ' + (err.message || ''), 'error');
   }
 }
 
-// ── FORMAL GRADES ────────────────────────────────────────────────────
-async function _loadFormalGrades() {
+// Replica las notas del gradebook en eval_scores para tareas vinculadas.
+async function _syncEvalScoresFromTasks() {
+  const linked = _tasks.filter(t => t.eval_module_id && t.eval_activity_id);
+  if (!linked.length || !_students.length) return;
+  const studentIds = _students.map(s => s.id);
+  const taskIds = linked.map(t => t.id);
+
+  const { data: evidences } = await supabase
+    .from('task_evidences')
+    .select('task_id, student_id, numeric_score')
+    .in('task_id', taskIds)
+    .in('student_id', studentIds);
+
+  const { data: authData } = await supabase.auth.getUser();
+  const uid = authData?.user?.id ?? null;
+  const upserts = (evidences || [])
+    .filter(e => e.numeric_score != null)
+    .map(e => {
+      const t = linked.find(x => x.id === e.task_id);
+      return {
+        module_id: t.eval_module_id,
+        activity_id: t.eval_activity_id,
+        student_id: e.student_id,
+        value: e.numeric_score,
+        evaluated_by: uid,
+        updated_at: new Date().toISOString()
+      };
+    });
+
+  if (!upserts.length) return;
+  try {
+    await supabase.from('eval_scores').upsert(upserts, { onConflict: 'activity_id,student_id' });
+  } catch (_) {}
+}
+
+// ── BOLETINES (Boletín Inteligente por estudiante) ──────────────────
+async function _loadStudents() {
+  const { data: students } = await supabase
+    .from('students').select('id, name, matricula')
+    .eq('classroom_id', _currentClassroomId)
+    .eq('is_active', true)
+    .order('name');
+  _students = students || [];
+}
+
+async function _loadBoletines() {
   if (!_currentClassroomId) return;
   const content = document.getElementById('tGradeContent');
   if (!content) return;
@@ -432,139 +449,133 @@ async function _loadFormalGrades() {
   _periodInfo = await _getPeriodStatus(_currentClassroomId);
   _renderPeriodBadge();
   _renderLockBanner();
+  await _loadStudents();
 
-  // Load students
-  const { data: students } = await supabase
-    .from('students').select('id, name, matricula')
-    .eq('classroom_id', _currentClassroomId)
-    .eq('is_active', true)
-    .order('name');
+  content.innerHTML = '<div class="p-8 text-center"><div class="inline-block w-8 h-8 border-4 border-orange-400 border-t-transparent rounded-full animate-spin"></div><p class="mt-3 text-sm text-slate-400 font-medium">Cargando estudiantes...</p></div>';
 
-  _students = students || [];
-
-  // Load existing formal grades for this period
-  _formalGrades = {};
-  if (_students.length && _periodInfo?.period?.id) {
-    const { data: grades } = await supabase
-      .from('grades')
-      .select('id, student_id, subject, numeric_score')
-      .eq('classroom_id', _currentClassroomId)
-      .eq('period_id', _periodInfo.period.id);
-
-    (grades || []).forEach(g => {
-      _formalGrades[`${g.student_id}_${g.subject}`] = g;
-    });
-  }
-
-  _renderFormalGrades();
+  _renderBoletines();
 }
 
-function _renderFormalGrades() {
+function _overallFor(studentId) {
+  const areaAvgs = _evalAreas.map(area => {
+    const areaMods = _evalModules
+      .filter(m => m.area_id === area.id)
+      .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+    const cells = areaMods.map(m =>
+      moduleAvg(m, _evalActivities.filter(a => a.module_id === m.id), studentId, _evalScoresMap)
+    );
+    return avgOf(cells);
+  });
+  const weighted = areaAvgs.reduce((acc, avg, i) => {
+    const w = Number(_evalAreas[i]?.weight) || 0;
+    if (avg == null || w <= 0) return acc;
+    acc.sum += avg * w;
+    acc.w += w;
+    return acc;
+  }, { sum: 0, w: 0 });
+  if (weighted.w > 0) return Math.round((weighted.sum / weighted.w) * 100) / 100;
+  const evaluated = areaAvgs.filter(a => a != null);
+  return evaluated.length ? avgOf(evaluated) : null;
+}
+
+function _renderBoletines() {
   const content = document.getElementById('tGradeContent');
   if (!content) return;
-
   if (!_students.length) {
     content.innerHTML = _emptyState('No hay alumnos en esta aula', '👨‍🎓');
     return;
   }
 
-  const locked = _periodInfo && !_periodInfo.open;
-  const periodId = _periodInfo?.period?.id;
-
-  const rows = _students.map(s => {
-    const subjectInputs = SUBJECTS.map(sub => {
-      const key = `${s.id}_${sub}`;
-      const existing = _formalGrades[key];
-      const val = existing?.numeric_score ?? '';
-
-      return `
-        <td class="px-2 py-2 text-center">
-          <input type="number" min="0" max="100"
-            data-student="${s.id}" data-subject="${sub}" data-grade-id="${existing?.id || ''}" data-period="${periodId || ''}"
-            value="${val}"
-            ${locked ? 'disabled' : ''}
-            class="t-formal-input w-16 px-2 py-1.5 text-center text-xs font-bold border-2 border-slate-200 rounded-xl ${locked ? 'bg-slate-50 text-slate-400 cursor-not-allowed' : 'bg-white text-slate-800'}"
-            placeholder="—">
-        </td>
-      `;
-    }).join('');
-
+  const rows = _students.map(st => {
+    const avg = _overallFor(st.id);
+    const level = avg != null ? gradeToLevel(avg) : null;
     return `
-      <tr class="border-b border-slate-50 hover:bg-orange-50 transition-colors">
-        <td class="px-4 py-3 sticky left-0 bg-white z-10">
+      <tr class="border-b border-slate-50 hover:bg-orange-50/40 transition-colors cursor-pointer" onclick="MaestraGrades.openBoletin(${st.id})">
+        <td class="px-4 py-3">
           <div class="flex items-center gap-3">
-            <div class="w-8 h-8 rounded-xl font-black text-xs flex items-center justify-center" style="background:#FFF7ED;color:${ORANGE_DARK}">${esc(s.name).charAt(0)}</div>
-            <div class="font-black text-slate-800 text-xs">${esc(s.name)}</div>
+            <div class="w-9 h-9 rounded-xl font-black text-xs flex items-center justify-center" style="background:#FFF7ED;color:${ORANGE_DARK}">${esc(st.name).charAt(0)}</div>
+            <div>
+              <div class="font-black text-slate-800 text-sm">${esc(st.name)}</div>
+              <div class="text-[10px] text-slate-400 font-bold uppercase">${esc(st.matricula || '')}</div>
+            </div>
           </div>
         </td>
-        ${subjectInputs}
-      </tr>
-    `;
+        <td class="px-4 py-3 text-center">
+          <span class="font-black text-lg ${avg != null ? gradeColor(avg) : 'text-slate-300'}">${avg != null ? avg.toFixed(1) : '—'}</span>
+        </td>
+        <td class="px-4 py-3 text-center">
+          ${level
+            ? `<span class="px-3 py-1 rounded-full text-[10px] font-black uppercase shadow-sm ${level.cls}">${level.label}</span>`
+            : '<span class="text-slate-300 font-bold text-xs">Sin evaluar</span>'}
+        </td>
+        <td class="px-4 py-3 text-center">
+          <button onclick="event.stopPropagation();MaestraGrades.openBoletin(${st.id})"
+            class="px-3 py-1.5 rounded-xl text-white text-[10px] font-black flex items-center gap-1.5 mx-auto transition-all active:scale-95" style="background:${ORANGE};box-shadow:0 4px 12px rgba(255,138,0,.25)">
+            <i data-lucide="file-text" class="w-3.5 h-3.5"></i> Boletín
+          </button>
+        </td>
+      </tr>`;
   }).join('');
 
   content.innerHTML = `
-    <div class="overflow-x-auto">
-      <table class="t-formal-table w-full text-sm">
-        <thead class="border-b border-slate-200 sticky top-0 z-20" style="background:#FFF7ED">
-          <tr>
-            <th class="px-4 py-3 text-left text-[10px] font-black text-slate-500 uppercase tracking-wider sticky left-0 z-30" style="background:#FFF7ED">Alumno</th>
-            ${SUBJECTS.map(sub => `<th class="px-2 py-3 text-center text-[9px] font-black text-slate-500 uppercase tracking-wider min-w-[70px]">${sub}</th>`).join('')}
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-slate-50">${rows}</tbody>
-      </table>
-    </div>
-    ${locked ? '' : `
-    <div class="p-4 flex items-center justify-between" style="background:#F8FAFC;border-top:1px solid #f1f5f9">
-      <p class="text-[10px] text-slate-400 font-bold">Notas formales por materia (0-100)</p>
-      <button onclick="MaestraGrades.saveFormal()" class="px-6 py-2.5 text-white rounded-2xl font-black text-xs transition-all shadow-lg" style="background:${ORANGE};box-shadow:0 4px 14px rgba(255,138,0,0.3)">
-        <i data-lucide="save" class="w-3.5 h-3.5 inline mr-1"></i> Guardar Formales
-      </button>
-    </div>`}
-  `;
+    <div class="p-4 md:p-5">
+      <div class="flex items-center justify-between gap-3 mb-4">
+        <div>
+          <h3 class="text-sm font-black text-slate-800 flex items-center gap-2">
+            <span class="p-1.5 rounded-xl text-white" style="background:linear-gradient(135deg,${ORANGE},${ORANGE_DARK})"><i data-lucide="book-open-check" class="w-4 h-4"></i></span>
+            Boletín Inteligente
+          </h3>
+          <p class="text-[11px] text-slate-400 mt-0.5">Selecciona un estudiante para generar, imprimir y enviar su boletín por correo.</p>
+        </div>
+      </div>
+      <div class="overflow-x-auto rounded-2xl border border-slate-200">
+        <table class="w-full text-sm">
+          <thead class="border-b border-slate-200" style="background:#FFF7ED">
+            <tr class="text-left text-[9px] font-black text-slate-500 uppercase tracking-wider">
+              <th class="px-4 py-2.5">Estudiante</th>
+              <th class="px-4 py-2.5 text-center">Promedio</th>
+              <th class="px-4 py-2.5 text-center">Nivel</th>
+              <th class="px-4 py-2.5 text-center">Acción</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-50">${rows}</tbody>
+        </table>
+      </div>
+    </div>`;
 
   if (window.lucide) lucide.createIcons();
 }
 
-async function saveFormal() {
+async function openBoletin(studentId) {
+  if (!_evals.length || !_actEvalId) return Helpers.toast('No hay un boletín configurado. Contacta a la directora.', 'warning');
   const content = document.getElementById('tGradeContent');
-  const inputs = content ? content.querySelectorAll('.t-formal-input') : [];
-  const uid = await _currentUserId();
-  const saves = [];
+  if (!content) return;
 
-  // Recolectar de forma síncrona para que `saves.length` sea fiable
-  inputs.forEach(input => {
-    const studentId = parseInt(input.dataset.student);
-    const subject = input.dataset.subject;
-    const gradeId = input.dataset.gradeId || null;
-    const periodId = input.dataset.period ? parseInt(input.dataset.period) : null;
-    let val = parseFloat(input.value);
-    if (isNaN(val)) return;
+  _boletinOpen = true;
+  content.innerHTML = '<div class="p-8 text-center"><div class="inline-block w-8 h-8 border-4 border-orange-400 border-t-transparent rounded-full animate-spin"></div><p class="mt-3 text-sm text-slate-400 font-medium">Preparando boletín...</p></div>';
 
-    const payload = {
-      student_id: studentId,
-      classroom_id: _currentClassroomId,
-      period_id: periodId,
-      school_year_id: _periodInfo?.period?.school_year_id || null,
-      subject,
-      numeric_score: Math.min(100, Math.max(0, val)),
-      teacher_id: uid,
-    };
-
-    if (gradeId) {
-      saves.push(supabase.from('grades').update({ numeric_score: payload.numeric_score }).eq('id', gradeId));
-    } else {
-      saves.push(supabase.from('grades').insert(payload));
-    }
-  });
-
-  if (!saves.length) return Helpers.toast('No hay notas para guardar', 'info');
+  const viewer = document.createElement('div');
+  viewer.id = 'tGradeBoletinViewer';
+  content.appendChild(viewer);
 
   try {
-    await Promise.all(saves);
-    Helpers.toast(`${saves.length} nota(s) formal(es) guardada(s)`, 'success');
-  } catch (err) {
-    Helpers.toast('Error al guardar: ' + (err.message || ''), 'error');
+    await BoletinUI.init({
+      container: viewer,
+      evaluationId: _actEvalId,
+      periodId: null,
+      studentId: Number(studentId),
+      classroomId: _currentClassroomId,
+      role: 'maestra',
+      onClose: () => {
+        _boletinOpen = false;
+        _renderBoletines();
+      }
+    });
+  } catch (e) {
+    console.error('[Grades] boletin', e);
+    Helpers.toast('Error al abrir el boletín', 'error');
+    _boletinOpen = false;
+    _renderBoletines();
   }
 }
 
@@ -588,7 +599,7 @@ async function _loadActivities() {
   _evals = evals || [];
 
   if (!_evals.length) {
-    content.innerHTML = _emptyState('No hay evaluaciones configuradas. Créalas en la pestaña Evaluación.', '🧩');
+    content.innerHTML = _emptyState('No hay evaluaciones configuradas. Contacta a la directora.', '🧩');
     return;
   }
 
@@ -842,7 +853,7 @@ async function _openNewActivityModal() {
         <div>
           <label class="block text-xs font-black text-slate-600 uppercase mb-1">Módulo *</label>
           <select id="tgActModule" class="w-full px-3 py-2.5 border-2 border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-[#A855F7] bg-white">
-            ${moduleOpts || '<option value="">Sin módulos — créalos en la pestaña Evaluación</option>'}
+            ${moduleOpts || '<option value="">Sin módulos disponibles para el período/área seleccionado</option>'}
           </select>
         </div>
         ${supportsExtras ? `
@@ -877,7 +888,7 @@ async function _openNewActivityModal() {
     const opts = _evalModules
       .filter(m => (!periodId || m.period_id === periodId) && (!areaId || m.area_id === areaId))
       .map(m => `<option value="${m.id}">${esc(m.period?.name || '')} · ${esc(m.name)}</option>`).join('');
-    moduleSel.innerHTML = opts || '<option value="">Sin módulos — créalos en la pestaña Evaluación</option>';
+    moduleSel.innerHTML = opts || '<option value="">Sin módulos disponibles para el período/área seleccionado</option>';
   };
   document.getElementById('tgActPeriod')?.addEventListener('change', filterModules);
   document.getElementById('tgActArea')?.addEventListener('change', filterModules);
@@ -1084,5 +1095,6 @@ function _emptyState(msg, icon) {
 export const MaestraGrades = {
   init: initGradesCenter,
   saveAll,
-  saveFormal,
+  openBoletin,
 };
+window.MaestraGrades = MaestraGrades;
