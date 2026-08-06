@@ -4,9 +4,11 @@
  */
 import { supabase } from '../shared/supabase.js';
 import { AppState } from './state.js';
+import { buildScoresMap, moduleAvg, avgOf, gradeColor, gradeToLevel } from '../shared/eval-utils.js';
 
 const fmt = n => 'RD$' + Number(n||0).toLocaleString('es-DO',{minimumFractionDigits:2});
 const today = () => new Date().toISOString().split('T')[0];
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
 let _charts = {};
 
@@ -63,6 +65,9 @@ export async function renderDashboardV2(data) {
     .gte('paid_date',yr+'-01-01T00:00:00').lte('paid_date',yr+'-12-31T23:59:59').limit(3000);
   const monthly = new Array(12).fill(0);
   (monthlyPays||[]).forEach(p=>{ const m=new Date(p.paid_date).getMonth(); monthly[m]+=Number(p.amount||0); });
+
+  let academic = { totalClassrooms: 0, evaluations: 0, activities: 0, scores: 0, overall: null, rows: [] };
+  try { academic = await _loadAcademicStats(); } catch (err) { console.error('[Dashboard] Académico', err); }
 
   container.innerHTML = `
   <style>
@@ -173,6 +178,75 @@ export async function renderDashboardV2(data) {
     </div>
   </div>
 
+  <!-- KPIs FILA 3: Académico -->
+  <div>
+    <div class="dash-section-title"><i data-lucide="graduation-cap" class="w-3.5 h-3.5"></i> Académico · Evaluaciones y Promedios</div>
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+      <div class="kpi2" style="border-left:3px solid #8B5CF6">
+        <div class="kpi-icon" style="background:#F3E8FF"><i data-lucide="layers" class="w-4 h-4" style="color:#7C3AED"></i></div>
+        <div class="kpi-val" style="color:#7C3AED">${academic.evaluations}</div>
+        <div class="kpi-lbl">Evaluaciones</div>
+      </div>
+      <div class="kpi2">
+        <div class="kpi-icon" style="background:#F3E8FF"><i data-lucide="folder-kanban" class="w-4 h-4" style="color:#7C3AED"></i></div>
+        <div class="kpi-val">${academic.activities}</div>
+        <div class="kpi-lbl">Actividades</div>
+      </div>
+      <div class="kpi2">
+        <div class="kpi-icon" style="background:#F3E8FF"><i data-lucide="check-square" class="w-4 h-4" style="color:#7C3AED"></i></div>
+        <div class="kpi-val">${academic.scores}</div>
+        <div class="kpi-lbl">Notas Registradas</div>
+      </div>
+      <div class="kpi2" style="border-left:3px solid #28B54D">
+        <div class="kpi-icon" style="background:#E8FFF0"><i data-lucide="trending-up" class="w-4 h-4" style="color:#1A8035"></i></div>
+        <div class="kpi-val" style="color:#1A8035">${academic.overall != null ? academic.overall.toFixed(1) : '—'}</div>
+        <div class="kpi-lbl">Promedio General</div>
+      </div>
+      <div class="kpi2" style="border-left:3px solid #F59E0B">
+        <div class="kpi-icon" style="background:#FFFBEB"><i data-lucide="school" class="w-4 h-4" style="color:#D97706"></i></div>
+        <div class="kpi-val" style="color:#D97706">${academic.rows.length}</div>
+        <div class="kpi-lbl">Aulas con Notas</div>
+        <div class="kpi-sub">de ${academic.totalClassrooms} aulas activas</div>
+      </div>
+    </div>
+    ${academic.rows.length ? `
+    <div class="mt-4 bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+      <div class="flex items-center justify-between px-4 py-3 border-b border-slate-100">
+        <h3 class="font-black text-slate-700 text-sm">Promedio por Aula</h3>
+        <span class="text-[10px] text-slate-400 font-bold">Se calcula con las actividades evaluadas de la estructura 5×5</span>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-slate-50 border-b border-slate-200">
+            <tr class="text-left text-[10px] font-black text-slate-500 uppercase tracking-wider">
+              <th class="px-4 py-2.5">Aula</th>
+              <th class="px-3 py-2.5 text-center">Alumnos</th>
+              <th class="px-3 py-2.5 text-center">Evaluados</th>
+              <th class="px-3 py-2.5 text-center">Promedio</th>
+              <th class="px-3 py-2.5 text-center">Nivel</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-50">
+            ${academic.rows.map(r => `
+              <tr class="hover:bg-purple-50/40 transition-colors">
+                <td class="px-4 py-2.5">
+                  <div class="font-black text-slate-800 text-xs">${esc(r.name)}</div>
+                  ${r.level ? `<div class="text-[9px] text-slate-400 font-bold">${esc(r.level)}</div>` : ''}
+                </td>
+                <td class="px-3 py-2.5 text-center text-xs font-bold text-slate-500">${r.students}</td>
+                <td class="px-3 py-2.5 text-center text-xs font-bold text-slate-500">${r.graded}</td>
+                <td class="px-3 py-2.5 text-center font-black text-sm ${gradeColor(r.avg)}">${r.avg != null ? r.avg.toFixed(1) : '—'}</td>
+                <td class="px-3 py-2.5 text-center"><span class="px-2 py-0.5 rounded-lg text-[9px] font-black ${gradeToLevel(r.avg).cls}">${gradeToLevel(r.avg).label}</span></td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>` : `
+    <div class="mt-4 p-8 text-center rounded-2xl border-2 border-dashed border-purple-200 bg-purple-50/30">
+      <p class="text-sm font-bold text-slate-500">Aún no hay calificaciones de evaluación. Genera la estructura y califica desde el Centro de Calificaciones.</p>
+    </div>`}
+  </div>
+
   <!-- GRÁFICOS -->
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
     <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
@@ -233,6 +307,68 @@ function _renderChart(canvasId, opts) {
       }
     }
   });
+}
+
+async function _loadAcademicStats() {
+  const safe = r => r.status === 'fulfilled' ? r.value : { data: [] };
+  const [classRes, studRes, evalRes, modRes, actRes, scoreRes] = await Promise.allSettled([
+    supabase.from('classrooms').select('id,name,level').is('deleted_at', null).order('name').limit(200),
+    supabase.from('students').select('id,name,classroom_id,is_active').is('deleted_at', null).limit(2000),
+    supabase.from('eval_evaluations').select('id,name').is('deleted_at', null).limit(100),
+    supabase.from('eval_modules').select('id,area_id,period_id,name,eval_type,config').is('deleted_at', null).limit(2000),
+    supabase.from('eval_activities').select('id,module_id,name').is('deleted_at', null).limit(5000),
+    supabase.from('eval_scores').select('module_id,activity_id,student_id,value,stars,level,yesno,checklist,rubric').limit(20000)
+  ]);
+
+  const classrooms = safe(classRes).data || [];
+  const students = safe(studRes).data || [];
+  const evaluations = safe(evalRes).data || [];
+  const modules = safe(modRes).data || [];
+  const activities = safe(actRes).data || [];
+  const scores = safe(scoreRes).data || [];
+
+  const actsByModule = new Map();
+  activities.forEach(a => {
+    if (!actsByModule.has(a.module_id)) actsByModule.set(a.module_id, []);
+    actsByModule.get(a.module_id).push(a);
+  });
+
+  const studentsByClass = new Map();
+  students.filter(s => s.classroom_id != null).forEach(s => {
+    if (!studentsByClass.has(s.classroom_id)) studentsByClass.set(s.classroom_id, []);
+    studentsByClass.get(s.classroom_id).push(s);
+  });
+
+  const scoreMap = buildScoresMap(scores, activities);
+  const studAvg = {};
+  students.forEach(st => {
+    const vals = [];
+    modules.forEach(m => {
+      const ma = moduleAvg(m, actsByModule.get(m.id) || [], st.id, scoreMap);
+      if (ma != null) vals.push(ma);
+    });
+    if (vals.length) studAvg[st.id] = avgOf(vals);
+  });
+
+  const rows = classrooms.map(c => {
+    const sts = studentsByClass.get(c.id) || [];
+    const avgs = sts.map(s => studAvg[s.id]).filter(v => v != null);
+    return {
+      id: c.id, name: c.name, level: c.level,
+      students: sts.length,
+      graded: avgs.length,
+      avg: avgs.length ? avgOf(avgs) : null
+    };
+  }).filter(r => r.graded > 0);
+
+  return {
+    totalClassrooms: classrooms.length,
+    evaluations: evaluations.length,
+    activities: activities.length,
+    scores: scores.length,
+    overall: rows.length ? avgOf(rows.map(r => r.avg)) : null,
+    rows
+  };
 }
 
 async function _renderAttendanceChart() {

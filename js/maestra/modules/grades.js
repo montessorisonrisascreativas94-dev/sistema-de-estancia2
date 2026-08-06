@@ -7,17 +7,40 @@
 import { supabase } from '../../shared/supabase.js';
 import { Helpers } from '../../shared/helpers.js';
 import { MaestraApi } from '../api.js';
+import { Modal } from './ui.js';
+import {
+  renderEvalInput, readEvalInputs, initEvalControls,
+  buildScoresMap, buildBoletaData, normalizeScore,
+  gradeColor, gradeToLevel, avgOf, moduleAvg
+} from '../../shared/eval-utils.js';
 
 const SUBJECTS = [
   'Matemáticas', 'Español', 'Ciencias', 'Sociales', 'Inglés',
   'Educación Física', 'Arte', 'Música', 'Religión', 'Tecnología'
 ];
 
+const ACTIVITY_TYPES = [
+  { value: 'actividad',  label: 'Actividad',    icon: 'sparkles' },
+  { value: 'evaluacion', label: 'Evaluación',   icon: 'clipboard-check' },
+  { value: 'trabajo',    label: 'Trabajo',      icon: 'briefcase' },
+  { value: 'proyecto',   label: 'Proyecto',     icon: 'folder-kanban' },
+  { value: 'otro',       label: 'Otro',         icon: 'plus-circle' }
+];
+const ACTIVITY_TYPE_COLORS = {
+  actividad:  { bg: '#E8FFF0', color: '#1A8035' },
+  evaluacion: { bg: '#EFF6FF', color: '#1D4ED8' },
+  trabajo:    { bg: '#FFF7ED', color: '#C2410C' },
+  proyecto:   { bg: '#F5F3FF', color: '#6D28D9' },
+  otro:       { bg: '#F1F5F9', color: '#475569' }
+};
+
 const GREEN = '#28B54D';
 const GREEN_DARK = '#1A8035';
 const ORANGE = '#FF8A00';
 const ORANGE_DARK = '#D96500';
 const INDIGO = '#6366F1';
+const VIOLET = '#A855F7';
+const VIOLET_DARK = '#7E22CE';
 
 let _currentClassroomId = null;
 let _periodInfo = null;
@@ -27,7 +50,32 @@ let _evidenceMap = {};  // { studentId_taskId: { numeric_score, ... } }
 let _formalGrades = {}; // { studentId_subject: { id, numeric_score } }
 let _tab = 'tasks';
 
+// Estado de la pestaña "Actividades" (Módulo 2/3/4 del diseño)
+let _evals = [];
+let _curEvalId = null;
+let _evalAreas = [];
+let _evalPeriods = [];
+let _evalModules = [];
+let _evalActivities = [];
+let _evalScoresMap = {};
+let _actEvalId = null;
+let _actPeriodId = null;
+let _actAreaId = null;
+let _actModuleId = null;
+let _showAverages = false;
+let _activityExtrasSupport = null;
+
 function esc(s) { return Helpers.escapeHTML(String(s || '')); }
+
+// ¿La base soporta los campos enriquecidos de actividad (migración 20260805)?
+async function _activityExtrasOk() {
+  if (_activityExtrasSupport !== null) return _activityExtrasSupport;
+  try {
+    const { error } = await supabase.from('eval_activities').select('activity_date').limit(1);
+    _activityExtrasSupport = !error;
+  } catch (_) { _activityExtrasSupport = false; }
+  return _activityExtrasSupport;
+}
 
 // ── INIT ─────────────────────────────────────────────────────────────
 async function _currentUserId() {
@@ -95,6 +143,7 @@ function _buildLayout(classrooms) {
         <div class="flex bg-slate-100 rounded-2xl p-1 ml-2">
           <button id="tGradeTabTasks" class="tg-tab px-4 py-1.5 rounded-xl text-xs font-black transition-all" style="background:${GREEN};color:#fff">Tareas</button>
           <button id="tGradeTabFormal" class="tg-tab px-4 py-1.5 rounded-xl text-xs font-black text-slate-500 transition-all">Exámenes Formales</button>
+          <button id="tGradeTabActs" class="tg-tab px-4 py-1.5 rounded-xl text-xs font-black text-slate-500 transition-all">Actividades</button>
           <button id="tGradeTabEval" class="tg-tab px-4 py-1.5 rounded-xl text-xs font-black text-slate-500 transition-all">Evaluación</button>
         </div>
 
@@ -129,6 +178,11 @@ function _bindEvents() {
     _loadFormalGrades();
   });
 
+  document.getElementById('tGradeTabActs')?.addEventListener('click', () => {
+    _setTab('acts');
+    _loadActivities();
+  });
+
   document.getElementById('tGradeTabEval')?.addEventListener('click', () => {
     _setTab('eval');
     _initEvalTab();
@@ -140,6 +194,7 @@ function _setTab(tab) {
   const map = {
     tasks:   { btn: 'tGradeTabTasks',   bg: GREEN,  name: 'Tareas' },
     formal:  { btn: 'tGradeTabFormal',  bg: ORANGE, name: 'Exámenes Formales' },
+    acts:    { btn: 'tGradeTabActs',    bg: VIOLET, name: 'Actividades' },
     eval:    { btn: 'tGradeTabEval',    bg: INDIGO, name: 'Evaluación' }
   };
   Object.keys(map).forEach(k => {
@@ -511,6 +566,469 @@ async function saveFormal() {
   } catch (err) {
     Helpers.toast('Error al guardar: ' + (err.message || ''), 'error');
   }
+}
+
+// ── ACTIVIDADES + HISTORIAL (Módulos 2/3/4 del diseño) ──────────────
+async function _loadActivities() {
+  const content = document.getElementById('tGradeContent');
+  if (!content) return;
+  content.innerHTML = '<div class="p-8 text-center"><div class="inline-block w-8 h-8 border-4 border-purple-400 border-t-transparent rounded-full animate-spin"></div><p class="mt-3 text-sm text-slate-400 font-medium">Cargando actividades...</p></div>';
+
+  if (!_students.length) {
+    const { data: students } = await supabase
+      .from('students').select('id, name, matricula')
+      .eq('classroom_id', _currentClassroomId)
+      .eq('is_active', true).order('name');
+    _students = students || [];
+  }
+
+  const { data: evals } = await supabase
+    .from('eval_evaluations').select('*').is('deleted_at', null)
+    .order('created_at', { ascending: false });
+  _evals = evals || [];
+
+  if (!_evals.length) {
+    content.innerHTML = _emptyState('No hay evaluaciones configuradas. Créalas en la pestaña Evaluación.', '🧩');
+    return;
+  }
+
+  if (!_actEvalId || !_evals.find(e => e.id === _actEvalId)) _actEvalId = _evals[0].id;
+  await _loadEvalChildren();
+  _renderActivities();
+}
+
+async function _loadEvalChildren() {
+  const evalId = _actEvalId;
+  const [areas, periods] = await Promise.all([
+    supabase.from('eval_areas').select('*').eq('evaluation_id', evalId).is('deleted_at', null).order('sort_order').order('created_at'),
+    supabase.from('eval_periods').select('*').eq('evaluation_id', evalId).is('deleted_at', null).order('sort_order').order('created_at')
+  ]);
+  _evalAreas = areas.data || [];
+  _evalPeriods = periods.data || [];
+
+  const periodIds = _evalPeriods.map(p => p.id);
+  const { data: modules } = periodIds.length
+    ? await supabase.from('eval_modules').select('*, area:eval_areas(name), period:eval_periods(name)')
+        .in('period_id', periodIds).is('deleted_at', null).order('sort_order').order('created_at')
+    : { data: [] };
+  _evalModules = modules || [];
+
+  const moduleIds = _evalModules.map(m => m.id);
+  const { data: activities } = moduleIds.length
+    ? await supabase.from('eval_activities').select('*')
+        .in('module_id', moduleIds).is('deleted_at', null).order('sort_order').order('created_at')
+    : { data: [] };
+  _evalActivities = activities || [];
+
+  const actIds = _evalActivities.map(a => a.id);
+  const { data: scores } = actIds.length
+    ? await supabase.from('eval_scores').select('*').in('activity_id', actIds)
+    : { data: [] };
+  _evalScoresMap = buildScoresMap(scores || [], _evalActivities);
+
+  if (_actPeriodId && !_evalPeriods.find(p => p.id === _actPeriodId)) _actPeriodId = null;
+  if (!_actPeriodId) _actPeriodId = _evalPeriods[0]?.id || null;
+  if (_actAreaId && !_evalAreas.find(a => a.id === _actAreaId)) _actAreaId = null;
+  if (_actModuleId && !_evalModules.find(m => m.id === _actModuleId)) _actModuleId = null;
+}
+
+function _renderActivities() {
+  const content = document.getElementById('tGradeContent');
+  if (!content) return;
+  if (!_students.length) { content.innerHTML = _emptyState('No hay alumnos en esta aula', '👨‍🎓'); return; }
+
+  const evalOpts = _evals.map(e => `<option value="${e.id}" ${_actEvalId === e.id ? 'selected' : ''}>${esc(e.name)}</option>`).join('');
+  const periodOpts = _evalPeriods.map(p => `<option value="${p.id}" ${_actPeriodId === p.id ? 'selected' : ''}>${esc(p.name)}</option>`).join('');
+  const areaOpts = '<option value="">Todas las áreas</option>' + _evalAreas.map(a => `<option value="${a.id}" ${_actAreaId === a.id ? 'selected' : ''}>${esc(a.name)}</option>`).join('');
+  const moduleOpts = '<option value="">Todos los módulos</option>' + _evalModules.map(m => `<option value="${m.id}" ${_actModuleId === m.id ? 'selected' : ''}>${esc(m.period?.name || '')} · ${esc(m.name)}</option>`).join('');
+
+  const acts = _evalActivities.filter(a => {
+    const m = _evalModules.find(x => x.id === a.module_id);
+    if (!m) return false;
+    if (_actPeriodId && m.period_id !== _actPeriodId) return false;
+    if (_actAreaId && m.area_id !== _actAreaId) return false;
+    if (_actModuleId && a.module_id !== _actModuleId) return false;
+    return true;
+  }).sort((a, b) => String(b.activity_date || b.created_at || '').localeCompare(String(a.activity_date || a.created_at || '')));
+
+  const actRows = acts.map(a => {
+    const m = _evalModules.find(x => x.id === a.module_id);
+    const area = _evalAreas.find(x => x.id === m?.area_id);
+    const type = ACTIVITY_TYPES.find(t => t.value === (a.activity_type || 'actividad')) || ACTIVITY_TYPES[0];
+    const typeColor = ACTIVITY_TYPE_COLORS[a.activity_type] || ACTIVITY_TYPE_COLORS.actividad;
+    const dateStr = a.activity_date || (a.created_at ? String(a.created_at).slice(0, 10) : '');
+    const graded = _students.map(st => normalizeScore(m, _evalScoresMap[`${a.module_id}:${a.id}:${st.id}`]));
+    const gradedCount = graded.filter(v => v != null).length;
+    const avg = avgOf(graded);
+    return `
+      <tr class="border-b border-slate-50 hover:bg-purple-50/40 transition-colors">
+        <td class="px-3 py-2">
+          <div class="font-bold text-slate-700 text-xs">${esc(a.name)}</div>
+          ${a.description ? `<div class="text-[10px] text-slate-400 truncate max-w-[220px]">${esc(a.description)}</div>` : ''}
+        </td>
+        <td class="px-2 py-2 text-xs font-bold text-slate-500 whitespace-nowrap">${esc(area?.name || '—')}</td>
+        <td class="px-2 py-2 text-xs font-semibold text-slate-500 whitespace-nowrap">${esc(m?.name || '—')}</td>
+        <td class="px-2 py-2 text-center"><span class="px-2 py-0.5 rounded-lg text-[9px] font-black whitespace-nowrap" style="background:${typeColor.bg};color:${typeColor.color}">${type.label}</span></td>
+        <td class="px-2 py-2 text-center text-xs font-black text-slate-600">${a.max_value != null ? a.max_value : 100}</td>
+        <td class="px-2 py-2 text-center text-xs font-bold text-slate-500 whitespace-nowrap">${dateStr ? new Date(dateStr).toLocaleDateString('es-DO', { day: '2-digit', month: 'short' }) : '—'}</td>
+        <td class="px-2 py-2 text-center text-xs font-bold text-slate-500">${gradedCount}/${_students.length}</td>
+        <td class="px-2 py-2 text-center font-black ${gradeColor(avg)}">${avg != null ? avg.toFixed(1) : '—'}</td>
+        <td class="px-2 py-2 text-center">
+          <button data-act-calificar="${a.id}" class="px-3 py-1.5 rounded-xl text-white text-[10px] font-black transition-all active:scale-95" style="background:${VIOLET}">Calificar</button>
+        </td>
+      </tr>`;
+  }).join('');
+
+  content.innerHTML = `
+    <div class="p-4 md:p-5">
+      <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <div>
+          <h3 class="text-sm font-black text-slate-800 flex items-center gap-2">
+            <span class="p-1.5 rounded-xl text-white" style="background:linear-gradient(135deg,${VIOLET},${VIOLET_DARK})"><i data-lucide="folder-kanban" class="w-4 h-4"></i></span>
+            Actividades de Evaluación
+          </h3>
+          <p class="text-[11px] text-slate-400 mt-0.5">Crea actividades, califícalas y consulta el historial con promedios automáticos.</p>
+        </div>
+        <button id="tgNewActivity" class="px-4 py-2.5 rounded-xl text-white text-xs font-black flex items-center gap-1.5 shadow-lg active:scale-95 transition-all" style="background:linear-gradient(90deg,${VIOLET},${VIOLET_DARK});box-shadow:0 4px 14px rgba(168,85,247,0.35)"><i data-lucide="plus" class="w-4 h-4"></i> Nueva Actividad</button>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2 mb-4">
+        <select id="tgFilterEval" class="px-3 py-2 border-2 border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-[#A855F7] bg-white">${evalOpts}</select>
+        <select id="tgFilterPeriod" class="px-3 py-2 border-2 border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-[#A855F7] bg-white">${periodOpts || '<option value="">Sin períodos</option>'}</select>
+        <select id="tgFilterArea" class="px-3 py-2 border-2 border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-[#A855F7] bg-white">${areaOpts}</select>
+        <select id="tgFilterModule" class="px-3 py-2 border-2 border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-[#A855F7] bg-white">${moduleOpts}</select>
+        <button id="tgToggleAverages" class="px-3 py-2 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all ${_showAverages ? 'text-white' : 'text-slate-500 bg-slate-100 hover:bg-slate-200'}" style="${_showAverages ? `background:${VIOLET}` : ''}"><i data-lucide="calculator" class="w-3.5 h-3.5"></i> Promedios</button>
+      </div>
+
+      ${_showAverages ? _renderAverages(_actPeriodId) : ''}
+
+      ${acts.length ? `
+      <div class="overflow-x-auto rounded-2xl border border-slate-200">
+        <table class="w-full text-sm">
+          <thead class="border-b border-slate-200 bg-purple-50">
+            <tr class="text-left text-[9px] font-black text-slate-500 uppercase tracking-wider">
+              <th class="px-3 py-2.5">Actividad</th>
+              <th class="px-2 py-2.5">Área</th>
+              <th class="px-2 py-2.5">Módulo</th>
+              <th class="px-2 py-2.5 text-center">Tipo</th>
+              <th class="px-2 py-2.5 text-center">Valor</th>
+              <th class="px-2 py-2.5 text-center">Fecha</th>
+              <th class="px-2 py-2.5 text-center">Calificados</th>
+              <th class="px-2 py-2.5 text-center">Promedio aula</th>
+              <th class="px-2 py-2.5 text-center">Acción</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-50">${actRows}</tbody>
+        </table>
+      </div>` : `
+      <div class="rounded-2xl border-2 border-dashed border-purple-200 p-10 text-center">
+        <div class="w-16 h-16 mx-auto bg-purple-50 text-purple-500 rounded-3xl flex items-center justify-center mb-3"><i data-lucide="folder-kanban" class="w-8 h-8"></i></div>
+        <h4 class="text-sm font-black text-slate-700">Sin actividades con estos filtros</h4>
+        <p class="text-xs text-slate-400 mt-1">Crea tu primera actividad o ajusta los filtros.</p>
+      </div>`}
+    </div>`;
+
+  if (window.lucide) lucide.createIcons();
+  _bindActivitiesEvents();
+}
+
+function _bindActivitiesEvents() {
+  document.getElementById('tgNewActivity')?.addEventListener('click', () => _openNewActivityModal());
+  document.getElementById('tgFilterEval')?.addEventListener('change', async (e) => {
+    _actEvalId = Number(e.target.value);
+    _actPeriodId = null; _actAreaId = null; _actModuleId = null;
+    await _loadEvalChildren();
+    _renderActivities();
+  });
+  document.getElementById('tgFilterPeriod')?.addEventListener('change', (e) => {
+    _actPeriodId = Number(e.target.value) || null;
+    _actModuleId = null;
+    _renderActivities();
+  });
+  document.getElementById('tgFilterArea')?.addEventListener('change', (e) => {
+    _actAreaId = Number(e.target.value) || null;
+    _actModuleId = null;
+    _renderActivities();
+  });
+  document.getElementById('tgFilterModule')?.addEventListener('change', (e) => {
+    _actModuleId = Number(e.target.value) || null;
+    _renderActivities();
+  });
+  document.getElementById('tgToggleAverages')?.addEventListener('click', () => {
+    _showAverages = !_showAverages;
+    _renderActivities();
+  });
+  document.querySelectorAll('[data-act-calificar]').forEach(btn => {
+    btn.addEventListener('click', () => _openActivityGrid(Number(btn.dataset.actCalificar)));
+  });
+}
+
+// M4 — Promedios automáticos por área y general (motor de la boleta)
+function _renderAverages(periodId) {
+  const period = _evalPeriods.find(p => p.id === periodId);
+  if (!period) return '<div class="mb-4 p-6 text-center text-slate-400 text-sm rounded-2xl border-2 border-dashed border-purple-200">Selecciona un período para ver los promedios.</div>';
+  const areaCols = _evalAreas.map(a => ({
+    area: a,
+    modules: _evalModules.filter(m => m.period_id === period.id && m.area_id === a.id)
+  }));
+  const rows = _students.map(st => {
+    const perArea = areaCols.map(({ area, modules }) => ({
+      area,
+      avg: avgOf(modules.map(m => moduleAvg(m, _evalActivities.filter(x => x.module_id === m.id), st.id, _evalScoresMap)))
+    }));
+    return { st, perArea, overall: avgOf(perArea.map(x => x.avg)) };
+  }).map(r => `
+    <tr class="border-b border-slate-50 hover:bg-purple-50/40">
+      <td class="px-3 py-2 font-bold text-slate-700 text-xs whitespace-nowrap">${esc(r.st.name)}</td>
+      ${r.perArea.map(x => `<td class="px-2 py-2 text-center font-black ${gradeColor(x.avg)}">${x.avg != null ? x.avg.toFixed(1) : '—'}</td>`).join('')}
+      <td class="px-3 py-2 text-center font-black ${gradeColor(r.overall)}">${r.overall != null ? r.overall.toFixed(1) : '—'}</td>
+      <td class="px-2 py-2 text-center"><span class="px-2 py-0.5 rounded-lg text-[9px] font-black ${gradeToLevel(r.overall).cls}">${gradeToLevel(r.overall).label}</span></td>
+    </tr>`).join('');
+  return `
+    <div class="rounded-2xl border border-purple-200 overflow-hidden bg-white mb-4">
+      <div class="flex items-center justify-between px-4 py-2.5 bg-purple-50 border-b border-purple-100">
+        <h3 class="text-xs font-black text-slate-700 flex items-center gap-2"><span class="w-2 h-5 bg-[#A855F7] rounded-full"></span> Promedios automáticos · ${esc(period.name)}</h3>
+        <span class="text-[10px] text-slate-400 font-bold">Se recalculan al guardar calificaciones</span>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead><tr class="text-left text-[9px] font-black text-slate-500 uppercase tracking-wider bg-white">
+            <th class="px-3 py-2">Estudiante</th>
+            ${areaCols.map(c => `<th class="px-2 py-2 text-center">${esc(c.area.name)}</th>`).join('')}
+            <th class="px-3 py-2 text-center">General</th><th class="px-2 py-2 text-center">Nivel</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+// M2 — Crear actividad (nombre, área, tipo, valor, fecha, descripción)
+async function _openNewActivityModal() {
+  const supportsExtras = await _activityExtrasOk();
+  const evalOpts = _evals.map(e => `<option value="${e.id}" ${_actEvalId === e.id ? 'selected' : ''}>${esc(e.name)}</option>`).join('');
+  const periodOpts = _evalPeriods.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('');
+  const areaOpts = _evalAreas.map(a => `<option value="${a.id}">${esc(a.name)}</option>`).join('');
+  const moduleOpts = _evalModules.map(m => `<option value="${m.id}">${esc(m.period?.name || '')} · ${esc(m.name)}</option>`).join('');
+  const today = Helpers.getYYYYMMDD ? Helpers.getYYYYMMDD() : new Date().toISOString().slice(0, 10);
+
+  Modal.open('tg-modal', `
+    <div class="bg-white">
+      <div class="px-6 pt-6 pb-2 border-b border-slate-100">
+        <h3 class="text-lg font-black text-slate-800">Nueva Actividad</h3>
+        <p class="text-xs text-slate-400 mt-0.5">Crea una actividad de evaluación y califica a tus estudiantes.</p>
+      </div>
+      <div class="p-6 space-y-3">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-black text-slate-600 uppercase mb-1">Evaluación</label>
+            <select id="tgActEval" class="w-full px-3 py-2.5 border-2 border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-[#A855F7] bg-white">${evalOpts}</select>
+          </div>
+          <div>
+            <label class="block text-xs font-black text-slate-600 uppercase mb-1">Nombre *</label>
+            <input id="tgActName" class="w-full px-3 py-2.5 border-2 border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-[#A855F7]" placeholder="Se pone los zapatos">
+          </div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-black text-slate-600 uppercase mb-1">Período</label>
+            <select id="tgActPeriod" class="w-full px-3 py-2.5 border-2 border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-[#A855F7] bg-white">${periodOpts || '<option value="">Sin períodos</option>'}</select>
+          </div>
+          <div>
+            <label class="block text-xs font-black text-slate-600 uppercase mb-1">Área</label>
+            <select id="tgActArea" class="w-full px-3 py-2.5 border-2 border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-[#A855F7] bg-white">${areaOpts || '<option value="">Sin áreas</option>'}</select>
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-black text-slate-600 uppercase mb-1">Módulo *</label>
+          <select id="tgActModule" class="w-full px-3 py-2.5 border-2 border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-[#A855F7] bg-white">
+            ${moduleOpts || '<option value="">Sin módulos — créalos en la pestaña Evaluación</option>'}
+          </select>
+        </div>
+        ${supportsExtras ? `
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div>
+            <label class="block text-xs font-black text-slate-600 uppercase mb-1">Tipo de actividad</label>
+            <select id="tgActType" class="w-full px-3 py-2.5 border-2 border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-[#A855F7] bg-white">
+              ${ACTIVITY_TYPES.map(t => `<option value="${t.value}">${t.label}</option>`).join('')}
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-black text-slate-600 uppercase mb-1">Valor (0-100)</label>
+            <input id="tgActValue" type="number" min="1" max="100" value="100" class="w-full px-3 py-2.5 border-2 border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-[#A855F7]">
+          </div>
+          <div>
+            <label class="block text-xs font-black text-slate-600 uppercase mb-1">Fecha de realización</label>
+            <input id="tgActDate" type="date" value="${today}" class="w-full px-3 py-2.5 border-2 border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-[#A855F7]">
+          </div>
+        </div>` : ''}
+        <div>
+          <label class="block text-xs font-black text-slate-600 uppercase mb-1">Descripción</label>
+          <textarea id="tgActDesc" rows="2" class="w-full px-3 py-2.5 border-2 border-slate-200 rounded-xl text-sm outline-none focus:border-[#A855F7]" placeholder="Describe la actividad y sus criterios."></textarea>
+        </div>
+        <button id="tgActSave" class="w-full py-3 rounded-2xl text-white font-black text-sm flex items-center justify-center gap-2" style="background:linear-gradient(90deg,#A855F7,#7E22CE);"><i data-lucide="plus" class="w-4 h-4"></i> Guardar Actividad</button>
+      </div>
+    </div>`);
+
+  const moduleSel = document.getElementById('tgActModule');
+  const filterModules = () => {
+    const periodId = Number(document.getElementById('tgActPeriod')?.value);
+    const areaId = Number(document.getElementById('tgActArea')?.value);
+    const opts = _evalModules
+      .filter(m => (!periodId || m.period_id === periodId) && (!areaId || m.area_id === areaId))
+      .map(m => `<option value="${m.id}">${esc(m.period?.name || '')} · ${esc(m.name)}</option>`).join('');
+    moduleSel.innerHTML = opts || '<option value="">Sin módulos — créalos en la pestaña Evaluación</option>';
+  };
+  document.getElementById('tgActPeriod')?.addEventListener('change', filterModules);
+  document.getElementById('tgActArea')?.addEventListener('change', filterModules);
+  document.getElementById('tgActSave')?.addEventListener('click', () => _saveNewActivity());
+}
+
+async function _saveNewActivity() {
+  const name = document.getElementById('tgActName')?.value.trim();
+  const moduleId = Number(document.getElementById('tgActModule')?.value);
+  if (!name) return Helpers.toast('Ingresa el nombre de la actividad', 'error');
+  if (!moduleId) return Helpers.toast('Selecciona un módulo', 'error');
+
+  const supportsExtras = await _activityExtrasOk();
+  const evalId = Number(document.getElementById('tgActEval')?.value) || _actEvalId;
+  const payload = {
+    module_id: moduleId,
+    name,
+    description: document.getElementById('tgActDesc')?.value.trim() || null,
+    sort_order: _evalActivities.filter(a => a.module_id === moduleId).length,
+    created_by: await _currentUserId()
+  };
+  if (supportsExtras) {
+    const type = document.getElementById('tgActType')?.value || 'actividad';
+    const max = Number(document.getElementById('tgActValue')?.value);
+    payload.activity_type = ACTIVITY_TYPES.some(t => t.value === type) ? type : 'actividad';
+    payload.max_value = (max > 0 && max <= 100) ? max : 100;
+    payload.activity_date = document.getElementById('tgActDate')?.value || null;
+  }
+
+  const { error } = await supabase.from('eval_activities').insert(payload);
+  if (error) return Helpers.toast(error.message, 'error');
+  Modal.close('tg-modal');
+  _actEvalId = evalId;
+  await _loadEvalChildren();
+  _renderActivities();
+  Helpers.toast('Actividad creada', 'success');
+}
+
+// Calificar una actividad (grid estudiante × nota con promedio automático)
+async function _openActivityGrid(actId) {
+  const act = _evalActivities.find(a => a.id === actId);
+  if (!act) return;
+  const mod = _evalModules.find(m => m.id === act.module_id);
+  if (!mod) return;
+  initEvalControls();
+
+  Modal.open('tg-modal', `
+    <div class="bg-white">
+      <div class="px-6 pt-6 pb-2 border-b border-slate-100">
+        <div class="flex items-center gap-3">
+          <div class="flex-1 min-w-0">
+            <h3 class="text-lg font-black text-slate-800">${esc(act.name)}</h3>
+            <p class="text-xs text-slate-400 mt-0.5">${esc(mod.period?.name || '')} · ${esc(mod.area?.name || '')} · ${esc(mod.name)}</p>
+          </div>
+          <button onclick="Modal.close('tg-modal')" class="p-2 hover:bg-slate-100 rounded-full transition-colors"><i data-lucide="x" class="w-6 h-6 text-slate-400"></i></button>
+        </div>
+      </div>
+      <div id="tgActGrid" class="p-6"></div>
+    </div>`);
+  await _renderActivityGrid(act);
+}
+
+async function _renderActivityGrid(act) {
+  const wrap = document.getElementById('tgActGrid');
+  if (!wrap) return;
+  const mod = _evalModules.find(m => m.id === act.module_id);
+  const moduleActs = _evalActivities.filter(a => a.module_id === act.module_id);
+  const rows = _students.map(st => {
+    const score = _evalScoresMap[`${act.module_id}:${act.id}:${st.id}`] || null;
+    const mAvg = moduleAvg(mod, moduleActs, st.id, _evalScoresMap);
+    return `
+      <tr class="border-b border-slate-50" data-sid="${st.id}">
+        <td class="px-3 py-2">
+          <div class="font-bold text-slate-700 text-xs">${esc(st.name)}</div>
+          <div class="text-[9px] text-slate-400 font-bold">${esc(st.matricula || '')}</div>
+        </td>
+        <td class="px-2 py-2 eval-cell">${renderEvalInput(mod, score)}</td>
+        <td class="px-3 py-2 text-center font-black ${gradeColor(mAvg)}" data-ma="${st.id}">${mAvg != null ? mAvg.toFixed(1) : '—'}</td>
+      </tr>`;
+  }).join('');
+
+  wrap.innerHTML = `
+    <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+      <span class="text-[11px] text-slate-400">Califica a tus ${_students.length} estudiantes. El promedio del módulo se recalcula automáticamente.</span>
+      <button id="tgSaveScores" class="px-4 py-2 rounded-xl text-white text-xs font-black flex items-center gap-1.5" style="background:${VIOLET};box-shadow:0 4px 14px rgba(168,85,247,0.3)"><i data-lucide="save" class="w-3.5 h-3.5"></i> Guardar</button>
+    </div>
+    <div class="overflow-x-auto rounded-xl border border-slate-200">
+      <table class="w-full text-sm">
+        <thead class="border-b border-slate-200 bg-purple-50">
+          <tr class="text-left text-[9px] font-black text-slate-500 uppercase tracking-wider">
+            <th class="px-3 py-2.5">Estudiante</th>
+            <th class="px-2 py-2.5 text-center">Nota</th>
+            <th class="px-3 py-2.5 text-center">Promedio módulo</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+
+  document.getElementById('tgSaveScores')?.addEventListener('click', () => _saveActivityScores(act));
+  wrap.querySelectorAll('tbody tr').forEach(tr => {
+    tr.querySelector('.eval-cell')?.addEventListener('change', () => _recalcRowAvg(tr, act));
+  });
+}
+
+function _recalcRowAvg(tr, act) {
+  const sid = Number(tr.dataset.sid);
+  const mod = _evalModules.find(m => m.id === act.module_id);
+  const cell = tr.querySelector('.eval-cell');
+  const rec = readEvalInputs(cell, mod.eval_type);
+  const key = `${act.module_id}:${act.id}:${sid}`;
+  if (rec) {
+    const base = _evalScoresMap[key] || {};
+    _evalScoresMap[key] = { ...base, ...rec };
+  } else {
+    delete _evalScoresMap[key];
+  }
+  const mAvg = moduleAvg(mod, _evalActivities.filter(a => a.module_id === act.module_id), sid, _evalScoresMap);
+  const el = tr.querySelector('[data-ma]');
+  if (el) {
+    el.textContent = mAvg != null ? mAvg.toFixed(1) : '—';
+    el.className = `px-3 py-2 text-center font-black ${gradeColor(mAvg)}`;
+  }
+}
+
+async function _saveActivityScores(act) {
+  const grid = document.getElementById('tgActGrid');
+  if (!grid) return;
+  const mod = _evalModules.find(m => m.id === act.module_id);
+  const rows = [];
+  grid.querySelectorAll('tbody tr').forEach((tr, ri) => {
+    const student = _students[ri];
+    if (!student) return;
+    const cell = tr.querySelector('.eval-cell');
+    const record = readEvalInputs(cell, mod.eval_type);
+    if (record) rows.push({ activity_id: act.id, student_id: student.id, record });
+  });
+  if (!rows.length) return Helpers.toast('Ingresa al menos una calificación', 'warning');
+  const uid = await _currentUserId();
+  const payload = rows.map(r => ({
+    module_id: act.module_id,
+    activity_id: r.activity_id,
+    student_id: r.student_id,
+    evaluated_by: uid,
+    ...r.record
+  }));
+  const { error } = await supabase.from('eval_scores').upsert(payload, { onConflict: 'activity_id,student_id' });
+  if (error) return Helpers.toast(error.message, 'error');
+  await _loadEvalChildren();
+  await _renderActivityGrid(act);
+  Helpers.toast('Calificaciones guardadas', 'success');
 }
 
 // ── HELPERS ──────────────────────────────────────────────────────────

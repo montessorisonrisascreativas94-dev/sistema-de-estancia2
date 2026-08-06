@@ -1171,6 +1171,15 @@
 
     <!-- Core App Module -->
     <script src="js/shared/supabase-js.min.js"></script>
+    <script src="js/shared/jspdf.min.js"></script>
+    <script src="js/shared/jspdf-autotable.min.js"></script>
+    <script src="js/shared/qrcode.min.js"></script>
+    <script>
+      // Fallback: si jspdf no carga, definir stub para evitar ReferenceError
+      window.addEventListener('load', () => {
+        if (!window.jspdf) window.jspdf = { jsPDF: function() { return { save: () => {}, text: () => {}, addPage: () => {} }; } };
+      });
+    </script>
     <script src="js/shared/harden-forms.js" defer></script>
     <script type="module" src="js/maestra/main.js"></script>
     <script src="js/shared/lightbox.js" defer></script>

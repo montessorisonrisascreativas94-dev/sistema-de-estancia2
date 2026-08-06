@@ -8,6 +8,7 @@
  */
 import { supabase } from '../shared/supabase.js';
 import { Helpers } from '../shared/helpers.js';
+import { BoletaUI } from '../shared/boleta.module.js';
 
 let _state = {
   container: null,
@@ -17,6 +18,8 @@ let _state = {
   students: [],
   tasks: [],
   evidenceMap: {}, // { studentId_taskId: { numeric_score, file_url, ... } }
+  evaluations: [],
+  selEvalId: null,
   tab: 'tasks'
 };
 
@@ -86,6 +89,7 @@ export const GradesCenter = {
           <div class="flex bg-slate-100 rounded-2xl p-1">
             <button id="gcTabTasks" class="px-4 py-1.5 rounded-xl text-xs font-black bg-indigo-600 text-white shadow-sm transition-all">Tareas</button>
             <button id="gcTabFiles" class="px-4 py-1.5 rounded-xl text-xs font-black text-slate-500 transition-all">Archivos del Padre</button>
+            <button id="gcTabBoletas" class="px-4 py-1.5 rounded-xl text-xs font-black text-slate-500 transition-all">Boletas</button>
           </div>
 
           <div id="gcPeriodBadge" class="ml-auto"></div>
@@ -101,6 +105,7 @@ export const GradesCenter = {
   _bindEvents() {
     _state.container.querySelector('#gcClassroom')?.addEventListener('change', (e) => {
       _state.selClassroomId = parseInt(e.target.value);
+      if (_state.tab === 'boletas') { this._renderBoletasTab(); return; }
       this._loadGradebook();
     });
     _state.container.querySelector('#gcTabTasks')?.addEventListener('click', () => {
@@ -110,6 +115,10 @@ export const GradesCenter = {
     _state.container.querySelector('#gcTabFiles')?.addEventListener('click', () => {
       this._setTab('files');
       this._renderFilesTab();
+    });
+    _state.container.querySelector('#gcTabBoletas')?.addEventListener('click', async () => {
+      this._setTab('boletas');
+      await this._renderBoletasTab();
     });
     this._bindCellDelegates();
   },
@@ -131,16 +140,19 @@ export const GradesCenter = {
 
   _setTab(tab) {
     _state.tab = tab;
-    const tasksBtn = _state.container.querySelector('#gcTabTasks');
-    const filesBtn = _state.container.querySelector('#gcTabFiles');
-    if (!tasksBtn || !filesBtn) return;
-    if (tab === 'tasks') {
-      tasksBtn.className = 'px-4 py-1.5 rounded-xl text-xs font-black bg-indigo-600 text-white shadow-sm transition-all';
-      filesBtn.className = 'px-4 py-1.5 rounded-xl text-xs font-black text-slate-500 transition-all';
-    } else {
-      filesBtn.className = 'px-4 py-1.5 rounded-xl text-xs font-black bg-indigo-600 text-white shadow-sm transition-all';
-      tasksBtn.className = 'px-4 py-1.5 rounded-xl text-xs font-black text-slate-500 transition-all';
-    }
+    const buttons = {
+      tasks: _state.container.querySelector('#gcTabTasks'),
+      files: _state.container.querySelector('#gcTabFiles'),
+      boletas: _state.container.querySelector('#gcTabBoletas')
+    };
+    Object.entries(buttons).forEach(([key, btn]) => {
+      if (!btn) return;
+      if (key === tab) {
+        btn.className = 'px-4 py-1.5 rounded-xl text-xs font-black bg-indigo-600 text-white shadow-sm transition-all';
+      } else {
+        btn.className = 'px-4 py-1.5 rounded-xl text-xs font-black text-slate-500 transition-all';
+      }
+    });
   },
 
   async _getPeriodStatus(classroomId) {
@@ -443,6 +455,62 @@ export const GradesCenter = {
       <div class="mt-4 text-[10px] text-slate-400 font-bold">Archivos subidos por el padre en tareas de este período, listos para revisión.</div>
     `;
     if (window.lucide) lucide.createIcons();
+  },
+
+  /* ── TAB: BOLETAS ───────────────────────────────────────── */
+  async _renderBoletasTab() {
+    const content = _state.container.querySelector('#gcContent');
+    if (!content) return;
+
+    if (!_state.evaluations.length) {
+      const { data } = await supabase
+        .from('eval_evaluations').select('id, name')
+        .is('deleted_at', null)
+        .order('created_at', { ascending: false });
+      _state.evaluations = data || [];
+    }
+    if (!_state.evaluations.length) {
+      content.innerHTML = this._emptyState('No hay evaluaciones configuradas. Crea la estructura desde el Constructor.', '🧩');
+      return;
+    }
+    if (!_state.selEvalId || !_state.evaluations.find(e => e.id === _state.selEvalId)) {
+      _state.selEvalId = _state.evaluations[0].id;
+    }
+
+    const evalOpts = _state.evaluations.map(e =>
+      `<option value="${e.id}" ${e.id === _state.selEvalId ? 'selected' : ''}>${esc(e.name)}</option>`
+    ).join('');
+
+    content.innerHTML = `
+      <div class="p-4 md:p-5">
+        <div class="flex flex-wrap items-center gap-3 mb-4">
+          <div>
+            <h4 class="text-sm font-black text-slate-800 flex items-center gap-2">
+              <span class="p-1.5 rounded-xl text-white" style="background:linear-gradient(135deg,#F97316,#FB923C)"><i data-lucide="file-text" class="w-4 h-4"></i></span>
+              Boletas de Calificaciones
+            </h4>
+            <p class="text-[11px] text-slate-400 mt-0.5">Genera, imprime o descarga en PDF la boleta de cada estudiante del aula.</p>
+          </div>
+          <div class="ml-auto flex items-center gap-2">
+            <label class="text-[10px] font-black text-slate-500 uppercase tracking-wider">Evaluación</label>
+            <select id="gcEvalSel" class="px-3 py-2 border-2 border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-[#F97316] bg-white">${evalOpts}</select>
+          </div>
+        </div>
+        <div id="gcBoletasBody"></div>
+      </div>`;
+
+    content.querySelector('#gcEvalSel')?.addEventListener('change', async (e) => {
+      _state.selEvalId = Number(e.target.value);
+      this._renderBoletasTab();
+    });
+
+    if (window.lucide) lucide.createIcons();
+    await BoletaUI.init({
+      container: document.getElementById('gcBoletasBody'),
+      evaluationId: _state.selEvalId,
+      classroomId: _state.selClassroomId,
+      onClose: null
+    });
   },
 
   _emptyState(msg, icon) {
