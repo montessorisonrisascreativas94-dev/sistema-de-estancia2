@@ -59,6 +59,8 @@ export const StudentRecordModal = {
       </div>
     `;
     gc.style.display = 'block';
+    gc.style.zIndex = '9999';
+    gc.style.position = 'fixed';
 
     this._bindEvents();
     if (window.lucide) lucide.createIcons();

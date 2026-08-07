@@ -10,7 +10,7 @@ const UIHelpers = {
       loader.id = 'ui-loading-overlay';
       loader.className = 'absolute inset-0 bg-white/60 backdrop-blur-[2px] z-[100] flex items-center justify-center rounded-3xl';
       loader.innerHTML = '<div class="flex flex-col items-center gap-3"><div class="w-12 h-12 border-4 border-blue-100 border-t-[#0B63C7] rounded-full animate-spin"></div><span class="text-[10px] font-black text-[#0B63C7] uppercase tracking-widest animate-pulse">Procesando...</span></div>';
-      container.style.position = 'relative';
+      if (getComputedStyle(container).position === 'static') container.style.position = 'relative';
       container.appendChild(loader);
       if (btnSelector) {
         const btn = document.querySelector(btnSelector);
@@ -41,7 +41,7 @@ const DirectorUI = {
    * Renderiza los KPI cards del dashboard
    */
   renderDashboard(data) {
-    if (!data) return; // guard — no renderizar si no hay datos
+    if (!data) return; // guard ï¿½ no renderizar si no hay datos
 
     const set = (id, val) => {
       const el = document.getElementById(id);
@@ -60,7 +60,7 @@ const DirectorUI = {
     // Aulas activas
     set('kpiClassrooms', kpis.classrooms > 0 ? kpis.classrooms : (data?.classrooms?.length ?? 0));
 
-    // Niños presentes hoy
+    // Niï¿½os presentes hoy
     const presentToday = data?.attendance?.today?.present ?? kpis.present ?? kpis.attendance_today ?? 0;
     const totalToday   = data?.attendance?.today?.total ?? studentCount;
     set('kpiAttendance', presentToday);
@@ -90,7 +90,7 @@ const DirectorUI = {
     });
 
     // Lanzar widgets inteligentes en background (no bloquea el render)
-    // Smart widgets — carga lazy si el módulo existe
+    // Smart widgets ï¿½ carga lazy si el mï¿½dulo existe
     import('./automation.js').then(({ AutomationModule }) => {
       AutomationModule.renderSmartWidgets('smartAlertsContainer');
     }).catch(() => {});
