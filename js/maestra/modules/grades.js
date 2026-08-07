@@ -1,7 +1,8 @@
 /**
  * Teacher Grade Center — Boletín Inteligente + Gradebook + Activities.
  * Replaces the "Proximamente" placeholder.
- * Student list opens the unified report card (BoletinUI) per student; a
+ * Student list opens the shared grade grid (GradebookGrid) per student,
+ * editable (Nota + Comentario), with Ver Boletín / Descargar PDF; a
  * task gradebook grid (0-100) and an activities tab feed the report card.
  */
 import { supabase } from '../../shared/supabase.js';
@@ -13,13 +14,13 @@ import {
   buildScoresMap, normalizeScore,
   gradeColor, gradeToLevel, avgOf, moduleAvg
 } from '../../shared/eval-utils.js';
-import { BoletinUI } from '../../shared/boletin.module.js';
+import { GradebookGrid } from '../../shared/gradebook-grid.module.js';
 
 const ACTIVITY_TYPES = [
   { value: 'actividad',  label: 'Actividad',    icon: 'sparkles' },
   { value: 'evaluacion', label: 'Evaluación',   icon: 'clipboard-check' },
   { value: 'trabajo',    label: 'Trabajo',      icon: 'briefcase' },
-  { value: 'proyecto',   label: 'Proyecto',     icon: 'folder-kanban' },
+  { value: 'proyecto',   label: 'Proyecto',     icon: 'folder-open' },
   { value: 'otro',       label: 'Otro',         icon: 'plus-circle' }
 ];
 const ACTIVITY_TYPE_COLORS = {
@@ -38,6 +39,8 @@ const VIOLET = '#A855F7';
 const VIOLET_DARK = '#7E22CE';
 
 let _currentClassroomId = null;
+let _currentClassroom = null;
+let _classrooms = [];
 let _periodInfo = null;
 let _students = [];
 let _tasks = [];
@@ -97,6 +100,8 @@ export async function initGradesCenter() {
   }
 
   _currentClassroomId = classrooms[0].id;
+  _currentClassroom = classrooms[0] || null;
+  _classrooms = classrooms || [];
   _tab = 'boletines';
   _boletinOpen = false;
   container.innerHTML = _buildLayout(classrooms);
@@ -168,6 +173,7 @@ function _buildLayout(classrooms) {
 function _bindEvents() {
   document.getElementById('tGradeClassroom')?.addEventListener('change', (e) => {
     _currentClassroomId = parseInt(e.target.value);
+    _currentClassroom = _classrooms.find(c => c.id === _currentClassroomId) || null;
     _boletinOpen = false;
     _loadBoletines();
   });
@@ -511,7 +517,7 @@ function _renderBoletines() {
         <td class="px-4 py-3 text-center">
           <button onclick="event.stopPropagation();MaestraGrades.openBoletin(${st.id})"
             class="px-3 py-1.5 rounded-xl text-white text-[10px] font-black flex items-center gap-1.5 mx-auto transition-all active:scale-95" style="background:${ORANGE};box-shadow:0 4px 12px rgba(255,138,0,.25)">
-            <i data-lucide="file-text" class="w-3.5 h-3.5"></i> Boletín
+            <i data-lucide="table-2" class="w-3.5 h-3.5"></i> Calificaciones
           </button>
         </td>
       </tr>`;
@@ -525,7 +531,7 @@ function _renderBoletines() {
             <span class="p-1.5 rounded-xl text-white" style="background:linear-gradient(135deg,${ORANGE},${ORANGE_DARK})"><i data-lucide="book-open-check" class="w-4 h-4"></i></span>
             Boletín Inteligente
           </h3>
-          <p class="text-[11px] text-slate-400 mt-0.5">Selecciona un estudiante para generar, imprimir y enviar su boletín por correo.</p>
+          <p class="text-[11px] text-slate-400 mt-0.5">Selecciona un estudiante para editar sus calificaciones (Áreas × Actividades) y generar su boletín.</p>
         </div>
       </div>
       <div class="overflow-x-auto rounded-2xl border border-slate-200">
@@ -548,34 +554,26 @@ function _renderBoletines() {
 
 async function openBoletin(studentId) {
   if (!_evals.length || !_actEvalId) return Helpers.toast('No hay un boletín configurado. Contacta a la directora.', 'warning');
-  const content = document.getElementById('tGradeContent');
-  if (!content) return;
+  const student = _students.find(s => String(s.id) === String(studentId));
+  if (!student) return;
 
   _boletinOpen = true;
-  content.innerHTML = '<div class="p-8 text-center"><div class="inline-block w-8 h-8 border-4 border-orange-400 border-t-transparent rounded-full animate-spin"></div><p class="mt-3 text-sm text-slate-400 font-medium">Preparando boletín...</p></div>';
-
-  const viewer = document.createElement('div');
-  viewer.id = 'tGradeBoletinViewer';
-  content.appendChild(viewer);
-
   try {
-    await BoletinUI.init({
-      container: viewer,
+    await GradebookGrid.open({
+      student,
+      classroom: _currentClassroom || null,
       evaluationId: _actEvalId,
       periodId: null,
-      studentId: Number(studentId),
       classroomId: _currentClassroomId,
       role: 'maestra',
-      onClose: () => {
-        _boletinOpen = false;
-        _renderBoletines();
-      }
+      editable: true,
+      onSaved: () => _renderBoletines()
     });
   } catch (e) {
-    console.error('[Grades] boletin', e);
-    Helpers.toast('Error al abrir el boletín', 'error');
+    console.error('[Grades] cuadrícula', e);
+    Helpers.toast('Error al abrir el Centro de Calificaciones', 'error');
+  } finally {
     _boletinOpen = false;
-    _renderBoletines();
   }
 }
 
@@ -695,7 +693,7 @@ function _renderActivities() {
       <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
         <div>
           <h3 class="text-sm font-black text-slate-800 flex items-center gap-2">
-            <span class="p-1.5 rounded-xl text-white" style="background:linear-gradient(135deg,${VIOLET},${VIOLET_DARK})"><i data-lucide="folder-kanban" class="w-4 h-4"></i></span>
+            <span class="p-1.5 rounded-xl text-white" style="background:linear-gradient(135deg,${VIOLET},${VIOLET_DARK})"><i data-lucide="folder-open" class="w-4 h-4"></i></span>
             Actividades de Evaluación
           </h3>
           <p class="text-[11px] text-slate-400 mt-0.5">Crea actividades, califícalas y consulta el historial con promedios automáticos.</p>
@@ -733,7 +731,7 @@ function _renderActivities() {
         </table>
       </div>` : `
       <div class="rounded-2xl border-2 border-dashed border-purple-200 p-10 text-center">
-        <div class="w-16 h-16 mx-auto bg-purple-50 text-purple-500 rounded-3xl flex items-center justify-center mb-3"><i data-lucide="folder-kanban" class="w-8 h-8"></i></div>
+        <div class="w-16 h-16 mx-auto bg-purple-50 text-purple-500 rounded-3xl flex items-center justify-center mb-3"><i data-lucide="folder-open" class="w-8 h-8"></i></div>
         <h4 class="text-sm font-black text-slate-700">Sin actividades con estos filtros</h4>
         <p class="text-xs text-slate-400 mt-1">Crea tu primera actividad o ajusta los filtros.</p>
       </div>`}

@@ -188,7 +188,7 @@ export async function renderDashboardV2(data) {
         <div class="kpi-lbl">Evaluaciones</div>
       </div>
       <div class="kpi2">
-        <div class="kpi-icon" style="background:#F3E8FF"><i data-lucide="folder-kanban" class="w-4 h-4" style="color:#7C3AED"></i></div>
+        <div class="kpi-icon" style="background:#F3E8FF"><i data-lucide="folder-open" class="w-4 h-4" style="color:#7C3AED"></i></div>
         <div class="kpi-val">${academic.activities}</div>
         <div class="kpi-lbl">Actividades</div>
       </div>

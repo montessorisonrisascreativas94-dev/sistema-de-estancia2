@@ -764,7 +764,7 @@ function _renderFinanzas() {
   const secs = [
     { id:'caja',           icon:'landmark',        label:'Caja',              desc:'Cobros del día y emisión de facturas', color:'#0B63C7' },
     { id:'pagos',          icon:'banknote',         label:'Pagos',             desc:'Control de mensualidades y estados',   color:'#F59E0B' },
-    { id:'contabilidad',   icon:'bar-chart-big',    label:'Contabilidad',      desc:'Reportes financieros y flujo de caja', color:'#0B63C7' },
+    { id:'contabilidad',   icon:'bar-chart-3',    label:'Contabilidad',      desc:'Reportes financieros y flujo de caja', color:'#0B63C7' },
     { id:'cuentas-cobrar', icon:'receipt',          label:'Cuentas por Cobrar',desc:'Deudores, mora y recordatorios',       color:'#EF4444' },
   ];
   _renderHub('finanzas', '💰 Finanzas', 'Motor financiero escolar: caja, pagos, contabilidad y cuentas por cobrar', secs);

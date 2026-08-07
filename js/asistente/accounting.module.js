@@ -71,7 +71,7 @@ export const AssistantAccountingModule = {
       <div class="flex items-center gap-3 mb-5">
         <div class="w-10 h-10 rounded-2xl flex items-center justify-center text-white shrink-0 shadow-lg"
           style="background:linear-gradient(135deg,#28B54D,#1A8035)">
-          <i data-lucide="bar-chart-big" class="w-5 h-5"></i>
+          <i data-lucide="bar-chart-3" class="w-5 h-5"></i>
         </div>
         <div>
           <h1 class="text-2xl font-black text-slate-800">Contabilidad</h1>

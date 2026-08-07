@@ -1,14 +1,15 @@
 /**
  * Centro de Evaluación Académica — Boletín Inteligente (Directora).
- * Lista de estudiantes con promedio por período → clic abre BoletinUI
- * (boletín de presentación unificado con imprimir / PDF / historial /
- * observaciones). Reemplaza al antiguo módulo de competencias.
+ * Lista de estudiantes con promedio por período → clic abre la cuadrícula
+ * compartida GradebookGrid (Áreas × Actividades en lectura + botones
+ * "Ver Boletín" / "Descargar PDF"). Reemplaza al antiguo módulo de
+ * competencias.
  */
 import { Helpers } from '../shared/helpers.js';
 import { supabase } from '../shared/supabase.js';
 import { DirectorApi } from './api.js';
 import { buildScoresMap, normalizeScore, avgOf, gradeColor, gradeToLevel } from '../shared/eval-utils.js';
-import { BoletinUI } from '../shared/boletin.module.js';
+import { GradebookGrid } from '../shared/gradebook-grid.module.js';
 
 const _esc = (s) => Helpers.escapeHTML(String(s ?? ''));
 
@@ -23,7 +24,6 @@ export const GradesModule = {
   _scoresMap: {},
   _selPeriodId: null,
   _selClassroomId: null,
-  _boletinOpen: false,
 
   async init() {
     const container = document.getElementById('gradesTableBody');
@@ -211,7 +211,7 @@ export const GradesModule = {
           <td class="px-4 py-4 text-center">
             <button onclick="event.stopPropagation();App.grades.openStudentDetail(${s.id})"
               class="px-3 py-1.5 rounded-xl text-white text-[10px] font-black shadow-sm flex items-center gap-1.5 mx-auto" style="background:#6366F1">
-              <i data-lucide="file-text" class="w-3.5 h-3.5"></i> Boletín
+              <i data-lucide="table-2" class="w-3.5 h-3.5"></i> Calificaciones
             </button>
           </td>
         </tr>`;
@@ -225,35 +225,26 @@ export const GradesModule = {
     if (!student) return;
     if (!this._evaluation) return Helpers.toast('No hay un boletín configurado. Contacta al administrador.', 'warning');
 
-    const listView = document.getElementById('gradesListView');
-    const viewer = document.getElementById('boletinViewer');
-    if (listView) listView.style.display = 'none';
-    if (viewer) viewer.classList.remove('hidden');
-
-    this._boletinOpen = true;
+    const cls = student.classrooms || {};
+    const room = this._classrooms.find(c => String(c.id) === String(student.classroom_id)) || null;
     try {
-      await BoletinUI.init({
-        container: viewer,
+      await GradebookGrid.open({
+        student,
+        classroom: {
+          id: student.classroom_id,
+          name: cls.name || room?.name || student.classroom_name,
+          level: room?.level || student.classroom_level || ''
+        },
         evaluationId: this._evaluation.id,
         periodId: this._selPeriodId ? Number(this._selPeriodId) : null,
-        studentId: student.id,
         classroomId: student.classroom_id,
         role: 'directora',
-        onClose: () => this._closeBoletin()
+        editable: false
       });
     } catch (e) {
-      console.error('[Grades] boletin', e);
-      Helpers.toast('Error al abrir el boletín', 'error');
-      this._closeBoletin();
+      console.error('[Grades] cuadrícula', e);
+      Helpers.toast('Error al abrir el Centro de Calificaciones', 'error');
     }
-  },
-
-  _closeBoletin() {
-    const listView = document.getElementById('gradesListView');
-    const viewer = document.getElementById('boletinViewer');
-    if (viewer) { viewer.innerHTML = ''; viewer.classList.add('hidden'); }
-    if (listView) listView.style.display = '';
-    this._boletinOpen = false;
   },
 
   _openPeriodModal() {
