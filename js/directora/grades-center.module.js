@@ -158,6 +158,13 @@ export const GradesCenter = {
   async _getPeriodStatus(classroomId) {
     try {
       const { data } = await supabase.rpc('get_active_period', { p_classroom_id: classroomId });
+      if (data && data.found === false) {
+        const { data: current } = await supabase.rpc('get_current_period');
+        if (current && current.found === true) {
+          return { open: current.status === 'open', period: current };
+        }
+        return { open: true, period: null };
+      }
       if (!data) return { open: true, period: null };
       return { open: data.status === 'open', period: data };
     } catch (_) {

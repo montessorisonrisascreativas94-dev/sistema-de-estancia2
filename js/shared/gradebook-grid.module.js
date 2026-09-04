@@ -72,6 +72,15 @@ export const GradebookGrid = {
     if (!S.evaluationId) throw new Error('No hay un boletín configurado');
     if (!S.student?.id) throw new Error('Estudiante no encontrado');
 
+    // Auto-reparación: garantiza períodos, áreas, módulos y actividades
+    // del boletín (eval_periods puede estar vacío si el boletín se creó
+    // antes de que existieran períodos en el año escolar).
+    try {
+      await supabase.rpc('boletin_ensure_structure', { p_evaluation_id: S.evaluationId });
+    } catch (err) {
+      console.warn('[GradebookGrid] boletin_ensure_structure:', err?.message || err);
+    }
+
     const [evalRes, periodsRes, areasRes, studRes] = await Promise.all([
       supabase.from('eval_evaluations').select('*').eq('id', S.evaluationId).maybeSingle(),
       supabase.from('eval_periods').select('*').eq('evaluation_id', S.evaluationId).is('deleted_at', null).order('sort_order').order('created_at'),
@@ -479,7 +488,6 @@ export const GradebookGrid = {
 
   // ── OVERLAYS ──────────────────────────────────────────────────────
   _openOverlay() {
-    this._close();
     const wrap = document.createElement('div');
     wrap.id = 'gbGridModal';
     wrap.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(15,23,42,.55);backdrop-filter:blur(6px);display:flex;align-items:flex-start;justify-content:center;padding:4vh 12px;overflow-y:auto;';

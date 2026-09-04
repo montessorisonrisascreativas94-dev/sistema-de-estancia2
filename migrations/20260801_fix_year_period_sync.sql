@@ -208,16 +208,17 @@ BEGIN
   END IF;
 
   SELECT id INTO v_old_id FROM public.periods WHERE is_active = true LIMIT 1;
-  UPDATE public.periods SET is_active = false WHERE is_active = true;
+  UPDATE public.periods SET is_active = false WHERE id IN (SELECT id FROM public.periods WHERE is_active = true);
   UPDATE public.periods SET is_active = true, status = 'open', is_blocked = false WHERE id = p_period_id;
 
-  UPDATE public.classrooms SET active_period_id = NULL;
+  UPDATE public.classrooms SET active_period_id = NULL WHERE id IN (SELECT id FROM public.classrooms WHERE active_period_id IS NOT NULL);
   IF v_period.classroom_id IS NOT NULL THEN
     UPDATE public.classrooms SET active_period_id = p_period_id WHERE id = v_period.classroom_id;
   END IF;
 
   DELETE FROM public.school_year_processes
-  WHERE school_year_id = v_year_id AND process_type = 'period_open';
+  WHERE id IN (SELECT id FROM public.school_year_processes
+               WHERE school_year_id = v_year_id AND process_type = 'period_open');
   INSERT INTO public.school_year_processes (school_year_id, process_type, label, status, executed_at, executed_by)
   VALUES (v_year_id, 'period_open', 'Periodo activado: ' || v_period.name, 'completed', now(), v_user_id);
 
@@ -353,11 +354,12 @@ BEGIN
 
   UPDATE public.periods SET status = 'closed', is_active = false, is_blocked = true,
     closed_at = now(), closed_by = v_user_id WHERE id = p_period_id;
-  UPDATE public.classrooms SET active_period_id = NULL WHERE active_period_id = p_period_id;
+  UPDATE public.classrooms SET active_period_id = NULL WHERE id IN (SELECT id FROM public.classrooms WHERE active_period_id = p_period_id);
 
   IF v_period.school_year_id IS NOT NULL THEN
     DELETE FROM public.school_year_processes
-    WHERE school_year_id = v_period.school_year_id AND process_type = 'period_close';
+    WHERE id IN (SELECT id FROM public.school_year_processes
+                 WHERE school_year_id = v_period.school_year_id AND process_type = 'period_close');
     INSERT INTO public.school_year_processes (school_year_id, process_type, label, status, executed_at, executed_by)
     VALUES (v_period.school_year_id, 'period_close', 'Periodo cerrado: ' || v_period.name, 'completed', now(), v_user_id);
   END IF;
@@ -696,8 +698,8 @@ BEGIN
   VALUES (p_name, p_start_date, p_end_date, 'active', true, p_period_model, p_num_periods)
   RETURNING id INTO v_new_year_id;
 
-  UPDATE public.periods SET is_active = false WHERE is_active = true;
-  UPDATE public.classrooms SET active_period_id = NULL;
+  UPDATE public.periods SET is_active = false WHERE id IN (SELECT id FROM public.periods WHERE is_active = true);
+  UPDATE public.classrooms SET active_period_id = NULL WHERE id IN (SELECT id FROM public.classrooms WHERE active_period_id IS NOT NULL);
 
   v_total_days := p_end_date - p_start_date;
   v_period_days := v_total_days / p_num_periods;

@@ -86,6 +86,13 @@ export const BoletaUI = {
 
   async _load() {
     const S = this.S;
+    if (S.evaluationId) {
+      try {
+        await supabase.rpc('boletin_ensure_structure', { p_evaluation_id: S.evaluationId });
+      } catch (err) {
+        console.warn('[BoletaUI] boletin_ensure_structure:', err?.message || err);
+      }
+    }
     const [evalRes, classRes, studRes, schoolRes] = await Promise.all([
       supabase.from('eval_evaluations').select('*').eq('id', S.evaluationId).maybeSingle(),
       supabase.from('classrooms').select('*').eq('id', S.classroomId).maybeSingle(),

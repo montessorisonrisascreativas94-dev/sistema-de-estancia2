@@ -62,7 +62,6 @@ const _originalFetch = window.fetch;
 // Las respuestas 404 de estos endpoints se suprimen del log para no confundir.
 const _OPTIONAL_ENDPOINTS = [
   '/rpc/get_tasks_for_period',
-  '/rpc/get_active_period',
   '/rpc/get_direct_message',
   '/rpc/get_student_history',
   '/functions/v1/generate-invoice',
