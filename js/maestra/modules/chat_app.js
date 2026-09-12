@@ -1,26 +1,154 @@
-import { ChatModule } from '../../shared/chat.js';
+/**
+ * Chat Module — Panel Maestra (estilo Messenger profesional)
+ */
+import { ChatModule as SharedChatModule,
+  ChatUI,
+  fmtMsgTime,
+  fmtLastMsgTime,
+  truncateLastMsg,
+} from '../../shared/chat.js';
 import { ScrollModule } from '../../shared/scroll.module.js';
 import { AppState } from '../state.js';
-import { safeToast, safeEscapeHTML, safeUrl, safeJS } from './ui.js';
+import { safeToast, safeEscapeHTML, safeUrl } from './ui.js';
 
-let activeChatUserId = null;
+let activeContact = null;
 let activeConversationId = null;
 let _topScrollDestroy = null;
+let _typingTimeout = null;
+let _chatChannel = null;
+let _anyMsgUnsubscribe = null;
+let _currentUserId = null;
+let _currentUserProfile = null;
+let _replyTo = null;
+let _editingId = null;
+let _pendingAttachment = null;
+let _quoteMap = {};
 
 export async function initChat() {
-  const container = document.getElementById('chatContactsList');
-  if (!container) return;
+  const grid = document.getElementById('chatShell');
+  if (!grid) return;
+
+  grid.classList.add('is-view-list');
+
+  // Input send
+  const sendBtn = document.getElementById('mChatSendBtn');
+  const input = document.getElementById('mChatInput');
+  if (sendBtn && !sendBtn._bound) {
+    sendBtn._bound = true;
+    sendBtn.addEventListener('click', () => sendChatMessage());
+    if (input) {
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          sendChatMessage();
+        }
+      });
+      input.addEventListener('input', () => {
+        input.style.height = 'auto';
+        input.style.height = Math.min(input.scrollHeight, 140) + 'px';
+      });
+    }
+  }
+
+  // Back móvil
+  const backBtn = document.getElementById('mChatBackBtn');
+  if (backBtn && !backBtn._bound) {
+    backBtn._bound = true;
+    backBtn.addEventListener('click', () => {
+      grid.classList.remove('is-view-chat');
+      grid.classList.add('is-view-list');
+    });
+  }
+
+  // Search
+  const search = document.getElementById('mChatSearch');
+  if (search && !search._bound) {
+    search._bound = true;
+    search.addEventListener('input', ScrollModule.debounce(() => renderContacts(), 200));
+  }
+
+  // Click delegado
+  const list = document.getElementById('mChatList');
+  if (list && !list._bound) {
+    list._bound = true;
+    list.addEventListener('click', (e) => {
+      const el = e.target.closest('[data-contact-id]');
+      if (el) selectChatContact(el.dataset.contactId);
+    });
+  }
+
+  // Datos del usuario actual
+  const user = AppState.get('user');
+  _currentUserId = user?.id || null;
+  _currentUserProfile = AppState.get('profile') || user || {};
+
+  // Expose para compatibilidad con App wrappers
+  window.selectMaestraChat = async (contactId) => selectChatContact(contactId);
+
+  // Delegación de eventos en las burbujas (reacciones / menú / picker)
+  const scroll = document.getElementById('mChatScroll');
+  if (scroll && !scroll._chatBubblesBound) {
+    ChatUI.bindBubbleEvents(scroll, {
+      pickerHTML: (msgId) => ChatUI.pickerHTML(msgId),
+      reactOnMessage: (msgId, emoji) => toggleReaction(msgId, emoji),
+      onMenu: (action, msgId) => onBubbleMenu(action, msgId),
+      onBubbleTap: (msgId) => toggleReaction(msgId, '👍'),
+      canEditAll: false,
+    });
+  }
+
+  // Adjuntos (multimedia)
+  const attachBtn = document.getElementById('mChatAttachBtn');
+  if (attachBtn && !attachBtn._bound) {
+    attachBtn._bound = true;
+    attachBtn.addEventListener('click', () => {
+      document.getElementById('mChatFileInput')?.click();
+    });
+  }
+  const fileInput = document.getElementById('mChatFileInput');
+  if (fileInput && !fileInput._bound) {
+    fileInput._bound = true;
+    fileInput.addEventListener('change', async (e) => {
+      const file = e.target.files?.[0];
+      e.target.value = '';
+      if (!file) return;
+      try {
+        safeToast('Subiendo archivo…');
+        const att = await SharedChatModule.uploadAttachment(file, `${_currentUserId}/${Date.now()}-${file.name}`);
+        _pendingAttachment = att;
+        safeToast('Archivo adjunto listo para enviar');
+      } catch (_) { safeToast('No se pudo subir el archivo', 'error'); }
+    });
+  }
+
+  // Suscripción global a mensajes para reordenar lista + badge
+  if (_anyMsgUnsubscribe) _anyMsgUnsubscribe.unsubscribe();
+  _anyMsgUnsubscribe = SharedChatModule.onAnyNewMessage(() => {
+    loadChatContacts(true);
+    window._updateGlobalChatBadge?.();
+  });
+
+  await loadChatContacts();
+  // Badge inicial
+  window._updateGlobalChatBadge?.();
+}
+
+let allContacts = [];
+
+async function loadChatContacts(quiet = false) {
+  const list = document.getElementById('mChatList');
+  if (!list) return;
+  if (!quiet) list.innerHTML = Array.from({ length: 4 }, () =>
+    `<div class="m-conv-item"><div class="m-conv-item__avatar bg-slate-100 animate-pulse"></div><div class="m-conv-item__body"><div class="m-conv-item__top"><div class="m-conv-item__name bg-slate-100 animate-pulse h-4 w-1/2 rounded"></div><div class="m-conv-item__time bg-slate-100 animate-pulse h-3 w-10 rounded"></div></div><div class="m-conv-item__last bg-slate-100 animate-pulse h-3 w-4/5 rounded mt-1"></div></div></div>`
+  ).join('');
 
   try {
-    // Carga paralela de datos iniciales
     const [unreadMap, user] = await Promise.all([
-      ChatModule.getUnreadCounts(),
+      SharedChatModule.getUnreadCounts(),
       AppState.get('user')
     ]);
 
     let students = AppState.get('students') || [];
-
-    // Si no hay estudiantes en AppState, cargarlos directamente
     if (!students.length) {
       const classroom = AppState.get('classroom');
       if (classroom?.id) {
@@ -32,11 +160,9 @@ export async function initChat() {
       }
     }
 
-    // Build parent contacts from students — fetch parent names from profiles
+    // Padres
     const parentsMap = new Map();
     const parentIds = students.filter(s => s.parent_id).map(s => s.parent_id);
-
-    // Fetch parent profile names if we have parent_ids
     let parentProfiles = {};
     if (parentIds.length > 0) {
       try {
@@ -49,29 +175,22 @@ export async function initChat() {
       } catch (_) {}
     }
 
-    // Also fetch parents by p1_email for students without parent_id
-    const studentsWithoutParent = students.filter(s => !s.parent_id && s.p1_email);
-    if (studentsWithoutParent.length > 0) {
+    // Padres por email
+    const swParents = students.filter(s => !s.parent_id && s.p1_email);
+    if (swParents.length > 0) {
       try {
         const { supabase: sb } = await import('../../shared/supabase.js');
-        const emails = studentsWithoutParent.map(s => s.p1_email).filter(Boolean);
+        const emails = swParents.map(s => s.p1_email).filter(Boolean);
         const { data: profilesByEmail } = await sb
           .from('profiles')
           .select('id, name, avatar_url, email')
           .in('email', emails);
-        
-        // Map email → profile for lookup
         const emailMap = {};
-        (profilesByEmail || []).forEach(p => { 
-          if (p.email) emailMap[p.email.toLowerCase()] = p; 
-        });
-
-        // Add these as virtual parent_id entries on the student objects
-        studentsWithoutParent.forEach(s => {
+        (profilesByEmail || []).forEach(p => { if (p.email) emailMap[p.email.toLowerCase()] = p; });
+        swParents.forEach(s => {
           const prof = emailMap[s.p1_email.toLowerCase()];
           if (prof) {
             s._resolvedParentId = prof.id;
-            // Guardar en parentProfiles para el loop principal
             parentProfiles[prof.id] = prof;
           }
         });
@@ -86,33 +205,32 @@ export async function initChat() {
         if (!parentsMap.has(pid)) {
           parentsMap.set(pid, {
             id: pid,
-            name: displayName,
+            name: s.name,
+            parentName: displayName,
             childName: s.name,
-            avatar: profile?.avatar_url || null,
-            roleLabel: 'Padre/Madre'
+            avatar_url: profile?.avatar_url || null,
+            roleLabel: `Padre — ${displayName}`,
+            unlinked: false,
           });
         } else {
           const p = parentsMap.get(pid);
-          if (!p.childName.includes(s.name)) {
-            p.childName += `, ${s.name}`;
-          }
+          if (!p.childName.includes(s.name)) p.childName += `, ${s.name}`;
         }
       } else if (s.p1_name) {
-        // Estudiante con nombre de padre pero sin cuenta de perfil vinculada aún
-        // Lo mostramos para que la maestra sepa quién es, aunque el chat sea limitado
         const virtualId = `unlinked_${s.id}`;
         parentsMap.set(virtualId, {
-          id: null, // No se puede chatear sin ID de perfil
-          name: s.p1_name,
+          id: null,
+          name: s.name,
+          parentName: s.p1_name,
           childName: s.name,
-          avatar: null,
+          avatar_url: null,
           roleLabel: 'Padre (Sin Cuenta)',
-          unlinked: true
+          unlinked: true,
         });
       }
     });
 
-    // Load directora and asistente profiles
+    // Directora + asistente
     const { data: staff } = await import('../../shared/supabase.js').then(m =>
       m.supabase.from('profiles')
         .select('id, name, avatar_url, role')
@@ -120,310 +238,616 @@ export async function initChat() {
         .neq('id', user?.id || '')
         .order('name')
     );
-
     const staffContacts = (staff || []).map(s => ({
-      id: s.id, name: s.name || s.role, childName: null,
-      avatar: s.avatar_url || null,
-      roleLabel: s.role === 'directora' ? 'Directora' : 'Asistente'
+      id: s.id,
+      name: s.name || s.role,
+      parentName: null,
+      childName: null,
+      avatar_url: s.avatar_url || null,
+      roleLabel: s.role === 'directora' ? 'Directora' : 'Asistente',
+      role: s.role,
+      unlinked: false,
     }));
 
-    const allContacts = [...staffContacts, ...Array.from(parentsMap.values())];
+    const rawContacts = [...staffContacts, ...Array.from(parentsMap.values())];
+    allContacts = await SharedChatModule.enrichContactsWithLastMessage(rawContacts);
+    renderContacts();
+  } catch (err) {
+    console.error(err);
+  }
+}
 
-    if (!allContacts.length) {
-      container.innerHTML = '<div class="p-4 text-center text-slate-400 text-sm">No hay contactos disponibles.</div>';
-      return;
+function renderContacts() {
+  const list = document.getElementById('mChatList');
+  if (!list) return;
+  const q = (document.getElementById('mChatSearch')?.value || '').toLowerCase().trim();
+
+  const items = allContacts.filter(c => {
+    if (!q) return true;
+    return (
+      (c.name || '').toLowerCase().includes(q) ||
+      (c.parentName || '').toLowerCase().includes(q) ||
+      (c.roleLabel || '').toLowerCase().includes(q) ||
+      (c.lastMessage || '').toLowerCase().includes(q)
+    );
+  });
+
+  if (!items.length) {
+    list.innerHTML = `<div class="p-6 text-center text-sm text-slate-400 font-bold">Sin resultados</div>`;
+    return;
+  }
+
+  list.innerHTML = items.map(c => {
+    const isActive = activeContact?.id === c.id;
+    const isNew = c.unread > 0 && !c.unlinked;
+    const displayName = c.childName ? c.childName : c.name;
+
+    let lastPreview = c.unlinked
+      ? 'Este padre aún no ha creado su cuenta'
+      : truncateLastMsg(c.lastMessage || 'Sin mensajes');
+    if (!c.unlinked && c.lastMessageIsMine) {
+      const checks = c.lastMessageIsRead ? '✓✓' : '✓';
+      lastPreview = `<span class="checks text-slate-400">${checks} </span>` + lastPreview;
+    }
+    if (!c.unlinked && !c.lastMessage) {
+      lastPreview = '<span class="italic opacity-70">Comienza la conversación</span>';
     }
 
-    container.innerHTML = allContacts.map(c => {
-      const unread = unreadMap[c.id] || 0;
-      // Para padres: título = nombre del estudiante, subtítulo = nombre del padre
-      const displayName = c.childName ? c.childName : (c.name || 'Usuario');
-      const parentLine  = c.childName ? ` ${safeEscapeHTML(c.name)}` : null;
-      const label       = c.childName ? `${c.roleLabel}  ${safeEscapeHTML(c.name)}` : c.roleLabel;
-      const bgColor = c.roleLabel === 'Directora' ? 'bg-indigo-100 text-indigo-600' :
-                      c.roleLabel === 'Asistente' ? 'bg-teal-100 text-teal-600' :
-                      c.unlinked ? 'bg-slate-100 text-slate-400' :
-                      'bg-orange-100 text-orange-600';
-      
-      const onClickAction = c.unlinked 
-        ? `safeToast('Este padre aún no ha creado su cuenta de acceso', 'warning')`
-        : `App.selectChatContact('${c.id}', '${safeJS(displayName)}', '${safeJS(label)}')`;
+    const avatarBg = (c.role === 'directora')
+      ? 'from-indigo-400 to-indigo-600'
+      : (c.role === 'asistente')
+        ? 'from-teal-400 to-teal-600'
+        : c.unlinked
+          ? 'from-slate-300 to-slate-400'
+          : 'from-orange-400 to-orange-600';
 
-      return `
-      <div onclick="${onClickAction}"
-           class="p-3 hover:bg-slate-50 rounded-xl cursor-pointer transition-colors flex items-center gap-3 border-b border-slate-50 last:border-0 relative ${c.unlinked ? 'opacity-60' : ''}">
-        <div class="relative">
-          <div class="w-10 h-10 rounded-full ${bgColor} flex items-center justify-center font-bold overflow-hidden">
-            ${c.avatar ? `<img src="${safeUrl(c.avatar)}" class="w-full h-full object-cover" loading="lazy">` : displayName.charAt(0)}
+    return `
+      <div data-contact-id="${c.id || ''}"
+           class="m-conv-item ${isActive ? 'is-active' : ''} ${isNew ? 'is-new' : ''} ${c.unlinked ? 'opacity-60' : ''}"
+           ${c.unlinked ? 'onclick="window.safeToast(\'Este padre aún no ha creado su cuenta de acceso\', \'warning\')"' : ''}>
+        <div class="m-conv-item__avatar bg-gradient-to-br ${avatarBg}">
+          ${c.avatar_url
+            ? `<img src="${safeUrl(c.avatar_url)}" loading="lazy">`
+            : safeEscapeHTML(displayName.charAt(0))}
+        </div>
+        ${isNew && !isActive ? `<div class="m-conv-item__unread">${c.unread > 9 ? '9+' : c.unread}</div>` : ''}
+        <div class="m-conv-item__body">
+          <div class="m-conv-item__top">
+            <div class="m-conv-item__name">${safeEscapeHTML(displayName)}</div>
+            <div class="m-conv-item__time">${fmtLastMsgTime(c.lastMessageTime)}</div>
           </div>
-          ${unread > 0 ? `<div class="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-sm animate-pulse">${unread}</div>` : ''}
+          <div class="m-conv-item__bottom">
+            <div class="m-conv-item__last">${lastPreview}</div>
+            ${isNew ? '<div class="m-conv-item__dot"></div>' : ''}
+          </div>
+          <div class="m-conv-item__meta">${safeEscapeHTML(c.roleLabel || '')}</div>
         </div>
-        <div class="min-w-0 flex-1">
-          <div class="font-bold text-slate-700 text-sm truncate">${safeEscapeHTML(displayName)}</div>
-          ${parentLine ? `<div class="text-[10px] ${c.unlinked ? 'text-slate-400' : 'text-orange-600'} font-bold truncate">${parentLine}</div>` : ''}
-          <div class="text-[10px] text-slate-400 truncate">${c.childName ? c.roleLabel : label}</div>
-        </div>
-        ${c.unlinked ? `<i data-lucide="user-minus" class="w-3.5 h-3.5 text-slate-300"></i>` : `<i data-lucide="chevron-right" class="w-3.5 h-3.5 text-slate-200"></i>`}
       </div>`;
-    }).join('');
-
-    // Buscador con debounce via ScrollModule
-    const searchInput = document.getElementById('chatSearchInput');
-    if (searchInput && !searchInput._chatBound) {
-      searchInput._chatBound = true;
-      const handler = ScrollModule.debounce((e) => {
-        const q = e.target.value.toLowerCase().trim();
-        container.querySelectorAll('[onclick*="selectChatContact"]').forEach(el => {
-          const name = el.querySelector('.font-bold')?.textContent?.toLowerCase() || '';
-          const meta = el.querySelector('.text-\\[10px\\]')?.textContent?.toLowerCase() || '';
-          el.style.display = (!q || name.includes(q) || meta.includes(q)) ? '' : 'none';
-        });
-      }, 250);
-      searchInput.addEventListener('input', handler);
-    }
-
-    // Wire send button — clone to remove old listeners
-    const btnSend = document.getElementById('btnSendChatMessage');
-    const inputMsg = document.getElementById('chatMessageInput');
-    if (btnSend && inputMsg) {
-      const newBtn = btnSend.cloneNode(true);
-      btnSend.parentNode.replaceChild(newBtn, btnSend);
-      newBtn.addEventListener('click', () => sendChatMessage());
-      inputMsg.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChatMessage(); }
-      });
-    }
-
-  } catch (_) {
-    /* silencioso */
-  }
+  }).join('');
 }
 
-export async function selectChatContact(userId, name, meta) {
-  activeChatUserId = userId;
+export async function selectChatContact(contactId) {
+  const c = allContacts.find(x => x.id === contactId);
+  if (!c || c.unlinked) return;
+
+  activeContact = c;
   activeConversationId = null;
-
-  // Destruir top-scroll anterior
   _topScrollDestroy?.();
-  _topScrollDestroy = null;
+  SharedChatModule.resetPagination(null);
 
-  // Reset paginación para este contacto
-  ChatModule.resetPagination(null); // se reseteará al cargar
+  // Vista móvil
+  const grid = document.getElementById('chatShell');
+  grid?.classList.remove('is-view-list');
+  grid?.classList.add('is-view-chat');
 
-  // Mobile: hide list, show conversation
-  const listPanel = document.getElementById('chatListPanel');
-  const convPanel = document.getElementById('chatConversationPanel');
-  if (listPanel && convPanel) {
-    listPanel.classList.add('chat-hidden');
-    convPanel.classList.remove('chat-hidden');
-    convPanel.classList.add('flex');
+  // Header
+  const headerAvatar = document.getElementById('mChatActiveAvatar');
+  const headerName = document.getElementById('mChatActiveName');
+  const headerMeta = document.getElementById('mChatActiveMeta');
+  const displayName = c.childName ? c.childName : c.name;
+  if (headerAvatar) {
+    headerAvatar.classList.add('bg-gradient-to-br',
+      (c.role === 'directora') ? 'from-indigo-400 to-indigo-600'
+        : (c.role === 'asistente') ? 'from-teal-400 to-teal-600'
+          : 'from-orange-400 to-orange-600');
+    headerAvatar.innerHTML = c.avatar_url
+      ? `<img src="${safeUrl(c.avatar_url)}">`
+      : safeEscapeHTML(displayName.charAt(0));
+  }
+  if (headerName) headerName.textContent = displayName;
+  if (headerMeta) {
+    headerMeta.dataset.original = c.roleLabel || '';
+    headerMeta.textContent = c.roleLabel || '';
   }
 
-  const header = document.getElementById('chatActiveHeader');
-  if (header) { header.classList.remove('hidden'); header.classList.add('flex'); }
+  // Info panel
+  renderInfoPanel(c);
 
-  const nameEl = document.getElementById('chatActiveName');
-  if (nameEl) nameEl.textContent = name;
-  const metaEl = document.getElementById('chatActiveMeta');
-  if (metaEl) metaEl.textContent = meta;
-  const avatarEl = document.getElementById('chatActiveAvatar');
-  if (avatarEl) avatarEl.innerHTML = name.charAt(0);
+  // Lista
+  c.unread = 0;
+  renderContacts();
+  window._updateGlobalChatBadge?.();
 
-  const inputArea = document.getElementById('chatInputArea');
-  if (inputArea) inputArea.classList.remove('hidden');
-
-  const messagesContainer = document.getElementById('chatMessagesContainer');
-  if (messagesContainer) {
-    messagesContainer.innerHTML = '<div class="flex justify-center p-4"><div class="animate-spin w-6 h-6 border-2 border-orange-500 rounded-full border-t-transparent"></div></div>';
-  }
-
-  await loadChatMessages(userId, false);
-
-  // Back button
-  const backBtn = document.getElementById('chatBackBtn');
-  if (backBtn) {
-    const newBackBtn = backBtn.cloneNode(true);
-    backBtn.parentNode.replaceChild(newBackBtn, backBtn);
-    newBackBtn.addEventListener('click', () => {
-      if (listPanel && convPanel) {
-        convPanel.classList.add('chat-hidden');
-        convPanel.classList.remove('flex');
-        listPanel.classList.remove('chat-hidden');
-      }
-    });
-  }
+  await loadChatMessages(false);
+  subscribeToChat();
 }
 
-/**
- * Carga mensajes — primera carga o "cargar más" (scroll arriba)
- */
-async function loadChatMessages(otherUserId, loadMore = false) {
+function renderInfoPanel(c) {
+  const info = document.getElementById('mChatInfo');
+  if (!info) return;
+  const displayName = c.childName ? c.childName : c.name;
+  info.innerHTML = `
+    <div class="m-info-profile">
+      <div class="m-info-profile__avatar">
+        ${c.avatar_url ? `<img src="${safeUrl(c.avatar_url)}">` : safeEscapeHTML(displayName.charAt(0))}
+      </div>
+      <div class="m-info-profile__name">${safeEscapeHTML(displayName)}</div>
+      <div class="m-info-profile__role">${safeEscapeHTML(c.roleLabel || '')}</div>
+    </div>
+    ${c.parentName || c.childName ? `
+    <div class="m-info-card">
+      <div class="m-info-card__title">Detalles</div>
+      <div class="m-info-profile__meta">
+        ${c.childName ? `<div><span>Estudiante</span><span>${safeEscapeHTML(c.childName)}</span></div>` : ''}
+        ${c.parentName ? `<div><span>Padre/Madre</span><span>${safeEscapeHTML(c.parentName)}</span></div>` : ''}
+        <div><span>Estado</span><span class="text-green-600">Activo</span></div>
+      </div>
+    </div>` : ''}
+    <div class="m-info-card">
+      <div class="m-info-card__title">Estadísticas</div>
+      <div class="m-info-statrow">
+        <div class="m-info-stat">
+          <div class="m-info-stat__num">${c.lastMessageTime ? '…' : '0'}</div>
+          <div class="m-info-stat__lbl">Mensajes</div>
+        </div>
+        <div class="m-info-stat">
+          <div class="m-info-stat__num">${c.unread || 0}</div>
+          <div class="m-info-stat__lbl">No leídos</div>
+        </div>
+        <div class="m-info-stat">
+          <div class="m-info-stat__num">100%</div>
+          <div class="m-info-stat__lbl">Entregados</div>
+        </div>
+      </div>
+    </div>
+    <div class="m-info-card">
+      <div class="m-info-card__title">Acciones rápidas</div>
+      <div style="display:flex;flex-direction:column;gap:.35rem;">
+        <div class="m-info-listitem"><div class="m-info-listitem__icon"><i data-lucide="phone" class="w-4 h-4"></i></div><div class="m-info-listitem__body"><div class="m-info-listitem__label">Llamar</div><div class="m-info-listitem__sub">Necesita permiso</div></div></div>
+        <div class="m-info-listitem"><div class="m-info-listitem__icon"><i data-lucide="search" class="w-4 h-4"></i></div><div class="m-info-listitem__body"><div class="m-info-listitem__label">Buscar en chat</div><div class="m-info-listitem__sub">Palabras clave</div></div></div>
+      </div>
+    </div>`;
+  if (window.lucide) lucide.createIcons();
+}
+
+async function loadChatMessages(loadMore = false) {
   const user = AppState.get('user');
-  const container = document.getElementById('chatMessagesContainer');
+  const container = document.getElementById('mChatScroll');
   if (!container) return;
 
-  try {
-    const { messages, conversationId, hasMore } = await ChatModule.loadConversation(
-      otherUserId,
-      activeConversationId,
-      loadMore
-    );
+  if (!loadMore) {
+    container.innerHTML = `
+      <div class="m-empty">
+        <div class="m-empty__icon"><i data-lucide="loader-2" class="w-8 h-8 animate-spin"></i></div>
+      </div>`;
+    if (window.lucide) lucide.createIcons();
+  }
 
+  try {
+    const { messages, conversationId, hasMore } = await SharedChatModule.loadConversation(
+      activeContact.id, activeConversationId, loadMore
+    );
     if (!activeConversationId && conversationId) {
       activeConversationId = conversationId;
-      subscribeToChat(activeConversationId);
-      ChatModule.markAsRead(activeConversationId);
+      subscribeToChat();
     }
-
-    if (!messages.length && !loadMore) {
-      container.innerHTML = '<div class="text-center text-xs text-slate-400 mt-4 italic">Inicio de la conversación. Di hola 👋</div>';
-      return;
-    }
-
-    if (loadMore) {
-      // Insertar mensajes anteriores al principio
-      _prependMessages(messages, user.id, container);
-    } else {
+    if (!loadMore) {
+      if (!messages.length) {
+        container.innerHTML = `
+          <div class="m-empty">
+            <div class="m-empty__icon"><i data-lucide="message-circle-heart" class="w-8 h-8"></i></div>
+            <div class="m-empty__title">Inicia la conversación</div>
+            <div class="m-empty__text">Saluda a ${safeEscapeHTML(activeContact.parentName || activeContact.name)} y mantente en contacto.</div>
+          </div>`;
+        if (window.lucide) lucide.createIcons();
+        return;
+      }
       renderMessages(messages, user.id, container);
       ScrollModule.scrollToBottom(container);
-      // Activar top-scroll para cargar más
+      if (_topScrollDestroy) _topScrollDestroy();
       if (hasMore !== false) {
         const { destroy } = ScrollModule.topScroll({
-          container,
-          loadFn: () => loadChatMessages(otherUserId, true)
+          container, loadFn: () => loadChatMessages(true)
         });
         _topScrollDestroy = destroy;
       }
+      SharedChatModule.markAsRead(activeConversationId);
+    } else {
+      const scrollBefore = container.scrollTop;
+      const heightBefore = container.scrollHeight;
+      appendOlder(messages, user.id, container);
+      container.scrollTop = container.scrollHeight - heightBefore + scrollBefore;
     }
-
-    subscribeToChat(activeConversationId);
-
-  } catch (_) {
-    if (!loadMore) container.innerHTML = '<div class="text-center text-xs text-red-400 mt-4">Error cargando mensajes.</div>';
+  } catch (e) {
+    if (!loadMore) container.innerHTML = `<div class="m-empty"><div class="m-empty__icon"><i data-lucide="alert-circle" class="w-8 h-8 text-red-400"></i></div><div class="m-empty__title text-red-500">Error</div><div class="m-empty__text">No se pudieron cargar los mensajes.</div></div>`;
   }
 }
 
-function _msgBubble(m, myId) {
-  const isMe = m.sender_id === myId;
-  return `<div class="flex ${isMe ? 'justify-end' : 'justify-start'} mb-2">
-    <div class="max-w-[80%] px-4 py-2.5 rounded-2xl text-sm ${isMe
-      ? 'bg-orange-600 text-white rounded-br-none shadow-md shadow-orange-100'
-      : 'bg-white border border-slate-100 text-slate-700 rounded-bl-none shadow-sm'}">
-      ${safeEscapeHTML(m.content)}
-    </div>
-  </div>`;
-}
-
-function _updatePresenceIndicator(presenceState, myId) {
-  const metaEl = document.getElementById('chatActiveMeta');
-  if (!metaEl) return;
-  const currentMeta = metaEl.dataset.original || metaEl.textContent;
-  if (!metaEl.dataset.original) metaEl.dataset.original = currentMeta;
-
-  const onlineUserIds = new Set();
-  for (const [key, presences] of Object.entries(presenceState)) {
-    for (const p of presences) {
-      if (p.user_id && p.user_id !== myId) onlineUserIds.add(p.user_id);
-    }
-  }
-
-  if (onlineUserIds.size > 0) {
-    metaEl.innerHTML = `${safeEscapeHTML(metaEl.dataset.original)} <span class="inline-flex items-center gap-1 text-green-600 font-bold"><span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>En línea</span>`;
-  } else {
-    metaEl.textContent = metaEl.dataset.original;
-  }
+function _bubbleCtx() {
+  return {
+    myId: _currentUserId,
+    myProfile: _currentUserProfile,
+    contact: activeContact,
+    contactLabel: activeContact?.childName || activeContact?.name,
+    quoteMap: _quoteMap,
+  };
 }
 
 function renderMessages(messages, myId, container) {
-  if (!messages.length) return;
-  container.innerHTML = messages.map(m => _msgBubble(m, myId)).join('');
+  _quoteMap = {};
+  (messages || []).forEach(m => {
+    if (m.id) _quoteMap[m.id] = (m.deleted_at ? 'Este mensaje fue eliminado' : m.content || '');
+  });
+  container.innerHTML = ChatUI.rowsHTML(ChatUI.buildRows(messages, myId), _bubbleCtx());
+  if (window.lucide) lucide.createIcons();
 }
 
-function _prependMessages(messages, myId, container) {
-  if (!messages.length) return;
+function appendOlder(messages, myId, container) {
+  (messages || []).forEach(m => {
+    if (m.id) _quoteMap[m.id] = (m.deleted_at ? 'Este mensaje fue eliminado' : m.content || '');
+  });
+  const rows = ChatUI.buildRows(messages, myId);
+  const tmp = document.createElement('div');
+  tmp.innerHTML = ChatUI.rowsHTML(rows, _bubbleCtx());
   const frag = document.createDocumentFragment();
-  const wrapper = document.createElement('div');
-  wrapper.innerHTML = messages.map(m => _msgBubble(m, myId)).join('');
-  while (wrapper.firstChild) frag.appendChild(wrapper.firstChild);
+  while (tmp.firstChild) frag.appendChild(tmp.firstChild);
   container.insertBefore(frag, container.firstChild);
+  if (window.lucide) lucide.createIcons();
 }
 
 async function sendChatMessage() {
-  if (!activeChatUserId) return;
-  const input = document.getElementById('chatMessageInput');
+  if (!activeContact) return;
+  const input = document.getElementById('mChatInput');
   const text = input?.value.trim();
-  if (!text) return;
+  if (!text && !_pendingAttachment) return;
 
   const user = AppState.get('user');
-  input.value = '';
-  input.disabled = true;
+  const profile = AppState.get('profile') || user;
+  const scroll = document.getElementById('mChatScroll');
+  if (!scroll) return;
 
-  // Optimistic append
-  const container = document.getElementById('chatMessagesContainer');
-  if (container) {
-    container.insertAdjacentHTML('beforeend', _msgBubble({ sender_id: user.id, content: text }, user.id));
-    ScrollModule.scrollToBottom(container, true);
+  // Modo edición
+  if (_editingId) {
+    const editingId = _editingId;
+    input.value = '';
+    input.style.height = 'auto';
+    input.disabled = true;
+    try {
+      await SharedChatModule.editMessage(editingId, text);
+      applyEdit(editingId, text);
+      _quoteMap[editingId] = text;
+      cancelEdit();
+      loadChatContacts(true);
+    } catch (_) { safeToast('Error al editar', 'error'); }
+    finally { input.disabled = false; input.focus(); }
+    return;
   }
 
+  const replyTo = _replyTo;
+  _replyTo = null;
+  _editingId = null;
+  renderReplyBar();
+  const attachments = _pendingAttachment ? [_pendingAttachment] : [];
+  _pendingAttachment = null;
+
+  // Optimistic UI
+  const optimisticMsg = {
+    id: '__opt_' + Date.now(),
+    content: text || (attachments[0]?.file_name || '📎 Adjunto'),
+    sender_id: user.id,
+    created_at: new Date().toISOString(),
+    is_read: false,
+    read_at: null,
+    reply_to_id: replyTo?.id || null,
+    message_attachments: attachments,
+  };
+  const groupCtx = _bubbleCtx();
+  const wrap = document.createElement('div');
+  wrap.innerHTML = ChatUI.buildGroupBubble({ sender_id: user.id, isMine: true, items: [optimisticMsg] }, groupCtx);
+  const wrapEl = wrap.firstElementChild;
+  if (scroll.querySelector('.m-empty')) scroll.innerHTML = '';
+  scroll.appendChild(wrapEl);
+  ScrollModule.scrollToBottom(scroll, true);
+  if (window.lucide) lucide.createIcons();
+
+  // Limpiar input + typing broadcast
+  input.value = '';
+  input.style.height = 'auto';
+  input.disabled = true;
+  if (activeConversationId) {
+    SharedChatModule.broadcastTyping(activeConversationId, profile?.name || 'Maestra', false);
+  }
+  clearTimeout(_typingTimeout);
+
   try {
-    const { conversationId } = await ChatModule.sendMessage(
-      user.id, activeChatUserId, text, activeConversationId
+    const { message, conversationId } = await SharedChatModule.sendMessage(
+      user.id, activeContact.id, text, activeConversationId,
+      { replyToId: replyTo?.id || null, attachments }
     );
     if (!activeConversationId && conversationId) {
       activeConversationId = conversationId;
-      subscribeToChat(activeConversationId);
+      AppState.set('activeConversationId', conversationId);
+      subscribeToChat();
     }
+    if (message?.id) {
+      const realEl = document.querySelector(`[data-msg-id="${optimisticMsg.id}"]`);
+      if (realEl) {
+        realEl.setAttribute('data-msg-id', message.id);
+        const meta = realEl.querySelector('.m-bubble__meta');
+        if (meta) {
+          meta.innerHTML = `${fmtMsgTime(message.created_at)}${ChatUI.readMark(message)} <button class="m-bubble__menu" data-msg-menu="${message.id || ''}" title="Más opciones"><i data-lucide="more-horizontal" class="w-3.5 h-3.5"></i></button>`;
+        }
+        if (window.lucide) lucide.createIcons();
+      }
+    }
+    loadChatContacts(true);
+    window._updateGlobalChatBadge?.();
   } catch (err) {
-    
     safeToast('Error al enviar mensaje', 'error');
-    // Revertir optimistic
-    container?.lastElementChild?.remove();
+    document.querySelector(`[data-msg-id="${optimisticMsg.id}"]`)?.closest('.m-msg-group')?.remove();
   } finally {
     input.disabled = false;
     input.focus();
   }
 }
 
-function subscribeToChat(conversationId) {
-  if (!conversationId) return;
+function subscribeToChat() {
+  if (_chatChannel) { try { window.supabase.removeChannel(_chatChannel); } catch(_){} _chatChannel = null; }
+  if (!activeConversationId) return;
   const user = AppState.get('user');
-  
-  ChatModule.subscribeToConversation(conversationId, 
-    (newMsg) => {
-      if (newMsg.sender_id === user?.id) return;
-      const container = document.getElementById('chatMessagesContainer');
-      if (container) {
-        container.insertAdjacentHTML('beforeend', _msgBubble(newMsg, user?.id));
-        ScrollModule.scrollToBottom(container, true);
-      }
-    },
-    (typingData) => {
-      const typingEl = document.getElementById('chatTypingIndicator');
-      if (!typingEl) return;
-      
-      if (typingData.isTyping && typingData.userName !== user.name) {
-        typingEl.textContent = `${typingData.userName} está escribiendo...`;
-        typingEl.classList.remove('hidden');
-      } else {
-        typingEl.classList.add('hidden');
-      }
-    },
-    (presenceState) => {
-      _updatePresenceIndicator(presenceState, user?.id);
-    }
-  );
+  const profile = AppState.get('profile') || user;
 
-  // Escuchar input para broadcast (with guard to prevent stacking)
-  const input = document.getElementById('chatMessageInput');
+  // Typing broadcast
+  const input = document.getElementById('mChatInput');
   if (input && !input._typingBound) {
     input._typingBound = true;
-    let typingTimeout;
     input.addEventListener('input', () => {
-      ChatModule.broadcastTyping(conversationId, user.name, true);
-      clearTimeout(typingTimeout);
-      typingTimeout = setTimeout(() => {
-        ChatModule.broadcastTyping(conversationId, user.name, false);
-      }, 3000);
+      if (!activeConversationId) return;
+      SharedChatModule.broadcastTyping(activeConversationId, profile?.name || 'Maestra', true);
+      clearTimeout(_typingTimeout);
+      _typingTimeout = setTimeout(() => {
+        SharedChatModule.broadcastTyping(activeConversationId, profile?.name || 'Maestra', false);
+      }, 2500);
     });
+  }
+
+  _chatChannel = SharedChatModule.subscribeToConversation(
+    activeConversationId,
+    (newMsg) => {
+      if (newMsg.sender_id === user?.id) return;
+      const scroll = document.getElementById('mChatScroll');
+      if (!scroll) return;
+      removeTyping();
+      if (scroll.querySelector('.m-empty')) scroll.innerHTML = '';
+      if (newMsg.id != null) _quoteMap[newMsg.id] = (newMsg.deleted_at ? 'Este mensaje fue eliminado' : newMsg.content || '');
+
+      const group = { sender_id: newMsg.sender_id, isMine: false, items: [newMsg] };
+      const wrapper = document.createElement('div');
+      wrapper.innerHTML = ChatUI.buildGroupBubble(group, _bubbleCtx());
+      const newBubble = wrapper.querySelector('.m-bubble');
+
+      const lastGroup = scroll.querySelector('.m-msg-group:not(.is-me):last-of-type');
+      const lastContainer = lastGroup?.querySelector('.m-msg-group__bubbles');
+      if (lastGroup && lastContainer) {
+        lastContainer.querySelectorAll('.m-bubble').forEach(b => b.classList.remove('is-only', 'is-last', 'is-first'));
+        const existing = lastContainer.querySelectorAll('.m-bubble');
+        if (existing.length === 1) existing[0].classList.add('is-first');
+        else {
+          existing[0].classList.add('is-first');
+          existing[existing.length - 1].classList.add('is-last');
+        }
+        newBubble.classList.remove('is-first', 'is-only');
+        newBubble.classList.add('is-last');
+        lastContainer.appendChild(newBubble);
+      } else {
+        scroll.appendChild(wrapper.firstElementChild);
+      }
+      if (window.lucide) lucide.createIcons();
+      ScrollModule.scrollToBottom(scroll, true);
+      SharedChatModule.markAsRead(activeConversationId);
+      if (activeContact) activeContact.unread = 0;
+      loadChatContacts(true);
+      window._updateGlobalChatBadge?.();
+    },
+    ({ userName, isTyping, userId }) => {
+      if (userId === user?.id) return;
+      if (isTyping) showTyping(userName);
+      else removeTyping();
+    },
+    (presenceState) => {
+      const metaEl = document.getElementById('mChatActiveMeta');
+      if (!metaEl) return;
+      const orig = metaEl.dataset.original || metaEl.textContent;
+      const others = new Set();
+      for (const [, arr] of Object.entries(presenceState || {})) arr.forEach(p => { if (p.user_id && p.user_id !== user?.id) others.add(p.user_id); });
+      if (others.size > 0) {
+        metaEl.innerHTML = `${safeEscapeHTML(orig)} <span class="inline-flex items-center gap-1 text-green-600 font-bold"><span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>En línea</span>`;
+      } else {
+        metaEl.textContent = orig;
+      }
+    },
+    (receipt) => {
+      if (!receipt?.id) return;
+      const bubble = document.querySelector(`[data-msg-id="${receipt.id}"]`);
+      const read = bubble?.querySelector('.m-read');
+      if (!read) return;
+      if (receipt.is_read || receipt.read_at) read.textContent = '✓✓';
+      if (receipt.read_at) read.classList.add('is-read');
+    }
+  );
+}
+
+function showTyping(userName) {
+  removeTyping();
+  const scroll = document.getElementById('mChatScroll');
+  if (!scroll) return;
+  const el = document.createElement('div');
+  el.id = 'mTypingIndicator';
+  el.className = 'm-typing';
+  el.innerHTML = `<div class="m-typing__bubble">
+    <div class="m-typing__dots"><span></span><span></span><span></span></div>
+    <div class="m-typing__text">${safeEscapeHTML(userName)} está escribiendo…</div>
+  </div>`;
+  scroll.appendChild(el);
+  ScrollModule.scrollToBottom(scroll, true);
+}
+function removeTyping() {
+  document.getElementById('mTypingIndicator')?.remove();
+}
+
+/* ----------------------------------------------------------- */
+/*            FEATURES: RESPONDER / REACCIONES / MENÚ ⋮        */
+/* ----------------------------------------------------------- */
+
+function beginReply(msg) {
+  _replyTo = msg;
+  _editingId = null;
+  renderReplyBar();
+  document.getElementById('mChatInput')?.focus();
+}
+
+function cancelReply() {
+  _replyTo = null;
+  renderReplyBar();
+}
+
+function beginEdit(msg) {
+  _editingId = msg.id;
+  _replyTo = null;
+  const input = document.getElementById('mChatInput');
+  if (input) {
+    input.value = msg.content === 'Este mensaje fue eliminado' ? '' : (msg.content || '');
+    input.style.height = 'auto';
+    input.style.height = Math.min(input.scrollHeight, 140) + 'px';
+    input.focus();
+  }
+  renderReplyBar();
+}
+
+function cancelEdit() {
+  _editingId = null;
+  renderReplyBar();
+}
+
+function renderReplyBar() {
+  const inputArea = document.getElementById('mChatInput')?.closest('.m-chat-input');
+  if (!inputArea) return;
+  let bar = inputArea.querySelector('.m-chat-reply-bar, .m-chat-edit-bar');
+  if (bar) bar.remove();
+
+  if (_replyTo) {
+    bar = document.createElement('div');
+    const q = ChatUI._replyBlock(_replyTo, _bubbleCtx());
+    bar.className = 'm-chat-reply-bar';
+    bar.innerHTML = (q || `<span>Respondiendo…</span>`) + `<button class="m-chat-reply-bar__close" type="button" title="Cancelar">✕</button>`;
+    bar.querySelector('.m-chat-reply-bar__close')?.addEventListener('click', cancelReply);
+    inputArea.prepend(bar);
+  } else if (_editingId) {
+    bar = document.createElement('div');
+    bar.className = 'm-chat-edit-bar';
+    bar.innerHTML = `<span>Editando mensaje…</span><button class="m-chat-edit-bar__close" type="button" title="Cancelar">✕</button>`;
+    bar.querySelector('.m-chat-edit-bar__close')?.addEventListener('click', cancelEdit);
+    inputArea.prepend(bar);
+  }
+}
+
+async function onBubbleMenu(action, msgId) {
+  if (!msgId) return;
+  const bubble = document.querySelector(`.m-bubble[data-msg-id="${msgId}"]`);
+  const contentEl = bubble?.querySelector('.m-bubble__content');
+  switch (action) {
+    case 'reply': {
+      beginReply({
+        id: msgId,
+        content: contentEl?.textContent || '',
+        deleted_at: !!bubble?.querySelector('.is-deleted'),
+      });
+      break;
+    }
+    case 'copy': {
+      const txt = contentEl?.textContent || '';
+      try {
+        await navigator.clipboard.writeText(txt);
+        safeToast('Mensaje copiado');
+      } catch (_) { safeToast('No se pudo copiar', 'error'); }
+      break;
+    }
+    case 'edit': {
+      beginEdit({ id: msgId, content: contentEl?.textContent || '', deleted_at: !!bubble?.querySelector('.is-deleted') });
+      break;
+    }
+    case 'delete': {
+      if (!confirm('¿Eliminar este mensaje para todos?')) return;
+      try {
+        await SharedChatModule.softDeleteMessage(msgId);
+        applySoftDelete(msgId);
+        loadChatContacts(true);
+      } catch (_) { safeToast('Error al eliminar', 'error'); }
+      break;
+    }
+    case 'report':
+      safeToast('Se ha reportado este mensaje');
+      break;
+  }
+}
+
+async function toggleReaction(msgId, emoji) {
+  if (!msgId) return;
+  const scroll = document.getElementById('mChatScroll');
+  const chip = scroll?.querySelector(`[data-msg-react="${msgId}"][data-emoji="${emoji}"]`);
+  const wasMine = chip?.classList.contains('is-mine');
+  try {
+    if (wasMine) await SharedChatModule.unreact(msgId, _currentUserId);
+    else await SharedChatModule.reactToMessage(msgId, _currentUserId, emoji);
+    await refreshReactions(msgId);
+  } catch (_) { safeToast('Error al reaccionar', 'error'); }
+}
+
+async function refreshReactions(msgId) {
+  const bubble = document.querySelector(`.m-bubble[data-msg-id="${msgId}"]`);
+  if (!bubble) return;
+  const { data } = await window.supabase.from('messages')
+    .select('message_reactions(emoji, user_id)')
+    .eq('id', msgId)
+    .single()
+    .catch(() => ({ data: null }));
+  const old = bubble.querySelector('.m-bubble__reactions');
+  if (old) old.remove();
+  const html = ChatUI.reactionsBar({ id: msgId, message_reactions: data?.message_reactions || [] }, _currentUserId);
+  if (html) bubble.insertAdjacentHTML('beforeend', html);
+}
+
+function applySoftDelete(msgId) {
+  const bubble = document.querySelector(`.m-bubble[data-msg-id="${msgId}"]`);
+  if (!bubble) return;
+  const content = bubble.querySelector('.m-bubble__content');
+  if (content) {
+    content.innerHTML = `<i data-lucide="ban" class="w-3.5 h-3.5"></i> Este mensaje fue eliminado`;
+    content.classList.add('is-deleted');
+  }
+  bubble.querySelector('.m-bubble__reactions')?.remove();
+  const meta = bubble.querySelector('.m-bubble__meta');
+  if (meta) meta.innerHTML = meta.innerHTML.replace(/<span class="m-read[^>]*>.*<\/span>/, '');
+  if (window.lucide) lucide.createIcons();
+}
+
+function applyEdit(msgId, content) {
+  const bubble = document.querySelector(`.m-bubble[data-msg-id="${msgId}"]`);
+  if (!bubble) return;
+  const contentEl = bubble.querySelector('.m-bubble__content');
+  if (contentEl) contentEl.textContent = content;
+  const meta = bubble.querySelector('.m-bubble__meta');
+  if (meta && !meta.querySelector('.m-bubble__edited')) {
+    meta.insertAdjacentHTML('beforeend', ' <span class="m-bubble__edited" title="Editado">editado</span>');
   }
 }

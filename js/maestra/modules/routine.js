@@ -1,7 +1,6 @@
 /**
- * Rutina Express v7 — Sonrisas Creativas
- * 4 niveles: Timeline del Día · Acciones Colectivas · Tarjetas · Modal Individual
- * Auto-timeline activation · Enhanced biberón/medication/emotion · Premium UX
+ * Rutina Express — Sonrisas Creativas
+ * Acciones Colectivas · Tarjetas · Modal Individual · Premium UX
  */
 import { AppState } from '../state.js';
 import { UI, safeToast, safeEscapeHTML, safeUrl } from './ui.js';
@@ -12,14 +11,11 @@ import { RoutineCatalog } from '../../shared/routine-catalog.js';
 let _logsMap = {};
 let _sleepMap = {};
 let _lastEvent = {};
-let _expandedEvent = null;
 let _autoRefreshTimer = null;
 let _attendanceChannel = null;
 let _routineChannel = null;
 let _presentIds = new Set();
 let _scheduleConfig = null;
-let _timelineCollapsed = localStorage.getItem('sonrisas_tl_collapsed') === '1';
-let _timelineActive = localStorage.getItem('sonrisas_tl_active') !== '0';
 let _visibilityBound = false;
 let _scBuildMode = 'library';
 let _buildDraft = null;
@@ -28,7 +24,6 @@ let _buildStartTime = '07:30';
 const SCHEDULE_STORAGE_KEY = 'sonrisas_schedule_config';
 const SCHEDULE_DB_SEED_KEY = 'sonrisas_schedule_db_seed';
 const DAILY_OVERRIDES_KEY = 'sonrisas_daily_overrides';
-const SCHEDULE_TEMPLATE_KEY = 'sonrisas_schedule_template';
 const SCHEDULE_VERSION = 5;
 
 const DEFAULT_SCHEDULE = [
@@ -171,61 +166,10 @@ const _CATALOG_BY_ID = (() => {
 })();
 
 // ───────────────────────────────────────────────────────────────────────────────
-// PLANTILLAS DE RUTINA POR EDAD — la maestra aplica una plantilla y después
-// ajusta horas, duraciones, activar/desactivar y agregar/quitar eventos.
-// Cada entrada: [catId, horaInicio, duración, idPropio?] (id propio para repetir
-// un mismo evento de la biblioteca varias veces en el día).
+// CATÁLOGO DE EVENTOS — biblioteca ampliada que la maestra puede agregar a su
+// cronología. Agrupados por categoría para mostrarse en el modal de Configurar
+// Horario. groupEventId marca los eventos que se registran como acción colectiva.
 // ───────────────────────────────────────────────────────────────────────────────
-const ROUTINE_TEMPLATES = {
-  infantes: {
-    id: 'infantes', emoji: '🍼', name: 'Infantes', subtitle: '0 a 12 meses', color: '#0EA5E9',
-    events: [
-      ['welcome', '07:30', 15], ['roll_call', '07:45', 15], ['papilla', '08:00', 20],
-      ['diaper_change', '08:20', 15], ['early_stimulation', '08:45', 30], ['crawling', '09:15', 25],
-      ['sensorial_games', '09:40', 30], ['fruit', '10:10', 20], ['hydration', '10:30', 15],
-      ['symbolic_play', '10:50', 30], ['group_hug', '11:20', 10], ['diaper_change', '11:40', 15, 'inf_diaper2'],
-      ['papilla', '12:00', 20, 'inf_papilla2'], ['toothbrush', '12:25', 10], ['sleep_start', '12:40', 120],
-      ['sleep_end', '14:40', 15], ['fruit', '15:00', 20, 'inf_fruit2'], ['music', '15:25', 20],
-      ['reading', '15:50', 15], ['departure', '16:00', 60]
-    ]
-  },
-  caminadores: {
-    id: 'caminadores', emoji: '🚼', name: 'Caminadores', subtitle: '1 a 2 años', color: '#7C3AED',
-    events: [
-      ['welcome', '07:30', 15], ['roll_call', '07:45', 15], ['breakfast', '08:00', 30],
-      ['handwash', '08:30', 10], ['early_stimulation', '08:45', 30], ['ball_play', '09:15', 30],
-      ['sensorial_games', '09:45', 30], ['snack', '10:15', 30], ['coordination', '10:45', 30],
-      ['symbolic_play', '11:15', 30], ['lunch', '11:45', 30], ['toothbrush', '12:15', 15],
-      ['sleep_start', '12:30', 120], ['sleep_end', '14:30', 15], ['snack2', '14:50', 30],
-      ['music', '15:20', 25], ['storytelling', '15:45', 25], ['departure', '16:00', 60]
-    ]
-  },
-  parvulos: {
-    id: 'parvulos', emoji: '🧒', name: 'Párvulos', subtitle: '2 a 3 años', color: '#F59E0B',
-    events: [
-      ['welcome', '07:30', 15], ['roll_call', '07:45', 15], ['breakfast', '08:00', 30],
-      ['handwash', '08:30', 10], ['identify_emotions', '08:45', 20], ['exercises', '09:10', 20],
-      ['art', '09:30', 30], ['snack', '10:00', 30], ['group_game', '10:30', 30],
-      ['emotional_ed', '11:00', 20], ['blocks', '11:25', 25], ['lunch', '11:55', 30],
-      ['toothbrush', '12:25', 15], ['sleep_start', '12:40', 110], ['sleep_end', '14:30', 15],
-      ['snack2', '14:50', 30], ['oral_expression', '15:20', 20], ['recreational_games', '15:40', 30],
-      ['departure', '16:00', 60]
-    ]
-  },
-  preescolar: {
-    id: 'preescolar', emoji: '🎒', name: 'Preescolar', subtitle: '3 a 5 años', color: '#16A34A',
-    events: [
-      ['welcome', '07:30', 15], ['roll_call', '07:45', 15], ['breakfast', '08:00', 30],
-      ['handwash', '08:30', 10], ['cognitive_stim', '08:45', 30], ['oral_expression', '09:15', 20],
-      ['reading', '09:40', 20], ['snack', '10:00', 30], ['coloring', '10:30', 25],
-      ['experiment', '11:00', 30], ['sports', '11:30', 30], ['lunch', '12:05', 30],
-      ['toothbrush', '12:35', 15], ['sleep_start', '12:50', 90], ['sleep_end', '14:20', 15],
-      ['snack2', '14:40', 30], ['recreational_games', '15:10', 30], ['art', '15:40', 30],
-      ['departure', '16:00', 60]
-    ]
-  }
-};
-
 function _today() { return AppState.today(); }
 function _fmtTime(d) {
   return new Date(d).toLocaleTimeString('es-DO', { hour: '2-digit', minute: '2-digit', hour12: true });
@@ -277,18 +221,12 @@ function _loadScheduleConfig() {
     if (stored) {
       const parsed = JSON.parse(stored);
       if (parsed._version === SCHEDULE_VERSION && Array.isArray(parsed.events) && parsed.events.length > 0) {
-        const tplId = localStorage.getItem(SCHEDULE_TEMPLATE_KEY);
-        if (tplId && ROUTINE_TEMPLATES[tplId]) {
-          // Modo plantilla: la plantilla define exactamente qué eventos aparecen.
-          _scheduleConfig = parsed.events.map(e => ({ ...e }));
-        } else {
-          const savedMap = new Map(parsed.events.map(e => [e.id, e]));
-          const merged = defaults.map(def => savedMap.has(def.id) ? { ...def, ...savedMap.get(def.id) } : def);
-          parsed.events.forEach(ev => {
-            if (!DEFAULT_SCHEDULE.some(d => d.id === ev.id) && !merged.some(m => m.id === ev.id)) merged.push(ev);
-          });
-          _scheduleConfig = merged;
-        }
+        const savedMap = new Map(parsed.events.map(e => [e.id, e]));
+        const merged = defaults.map(def => savedMap.has(def.id) ? { ...def, ...savedMap.get(def.id) } : def);
+        parsed.events.forEach(ev => {
+          if (!DEFAULT_SCHEDULE.some(d => d.id === ev.id) && !merged.some(m => m.id === ev.id)) merged.push(ev);
+        });
+        _scheduleConfig = merged;
         _saveScheduleConfig();
         return _scheduleConfig;
       }
@@ -401,8 +339,7 @@ function _getSchedule() {
   }
   const omitted = _getDailyOmittedEvents();
   let filtered = _scheduleConfig.filter(e => e.active && e.days.includes(_getDayOfWeek()) && !omitted.includes(e.id));
-  const templateMode = localStorage.getItem(SCHEDULE_TEMPLATE_KEY) && ROUTINE_TEMPLATES[localStorage.getItem(SCHEDULE_TEMPLATE_KEY)];
-  if (filtered.length === 0 && !omitted.length && !templateMode) {
+  if (filtered.length === 0 && !omitted.length) {
     _scheduleConfig = DEFAULT_SCHEDULE.map(e => ({ ...e }));
     _saveScheduleConfig();
     filtered = _scheduleConfig.filter(e => e.active && e.days.includes(_getDayOfWeek()) && !omitted.includes(e.id));
@@ -414,8 +351,6 @@ function _getEventStatus(event, nowMinutes) {
   if (!event || !event.startTime) return 'pending';
   const startMin = _timeToMinutes(event.startTime);
   const endMin = startMin + (event.duration || 30);
-
-  if (!_timelineActive) return 'pending';
 
   if (nowMinutes < startMin) return 'pending';
   if (nowMinutes >= startMin && nowMinutes < endMin) return 'in_progress';
@@ -453,126 +388,6 @@ function _getEventProgress(event, students, logsMap) {
     if (counted) markedStudents.push(s.name);
   }
   return { done, total: students.length, pct: Math.round((done / students.length) * 100), markedStudents };
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// LEVEL 1 — TIMELINE DEL DÍA (COLLAPSABLE + AUTO-ACTIVATION)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-const TL_STYLES = `
-  .tl-chips-wrap{overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
-  .tl-chips{display:flex;align-items:stretch;gap:8px;min-width:max-content;padding:4px 2px}
-  .tl-chip{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-width:70px;padding:10px 8px;border-radius:18px;cursor:pointer;transition:transform .15s,box-shadow .15s;flex-shrink:0;position:relative;border:2px solid #f1f5f9;background:#fff}
-  .tl-chip:active{transform:scale(.9)}
-  .tl-chip:hover{transform:translateY(-3px);box-shadow:0 8px 18px rgba(15,23,42,.10)}
-  .tl-chip .tl-chip-emoji{font-size:1.4rem;line-height:1}
-  .tl-chip .tl-chip-time{font-size:.5rem;font-weight:800;letter-spacing:.04em;color:#94a3b8;text-transform:uppercase}
-  .tl-chip .tl-chip-name{font-size:.5rem;font-weight:900;color:#475569;max-width:64px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .tl-chip.done{border-color:#86efac;background:linear-gradient(180deg,#f0fdf4,#dcfce7)}
-  .tl-chip.done .tl-chip-emoji{filter:grayscale(.35)}
-  .tl-chip.done .tl-chip-name{color:#16a34a}
-  .tl-chip.done::after{content:'✓';position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;background:#28B54D;color:#fff;font-size:.55rem;font-weight:900;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(40,181,77,.4);animation:chip-pop .3s}
-  @keyframes chip-pop{0%{transform:scale(0)}80%{transform:scale(1.25)}100%{transform:scale(1)}}
-  .tl-chip.current{border-color:var(--ev-color,#FF8A00);background:linear-gradient(180deg,#fff7ed,#ffedd5);box-shadow:0 0 0 4px color-mix(in srgb,var(--ev-color,#FF8A00) 18%,transparent);animation:chip-bounce 1.6s infinite}
-  .tl-chip.current .tl-chip-emoji{animation:chip-wiggle 1.6s infinite}
-  .tl-chip.current .tl-chip-time{color:var(--ev-color,#FF8A00)}
-  .tl-chip.current .tl-chip-name{color:var(--ev-color,#FF8A00)}
-  @keyframes chip-bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
-  @keyframes chip-wiggle{0%,100%{transform:rotate(-8deg)}50%{transform:rotate(8deg)}}
-
-  .vt-list-wrap{max-height:460px;overflow-y:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
-  .vt-list{display:flex;flex-direction:column;position:relative;padding:6px 2px}
-  .vt-list::before{content:'';position:absolute;left:19px;top:6px;bottom:6px;width:3px;background:linear-gradient(180deg,#e2e8f0,#cbd5e1);border-radius:2px}
-  .vt-item{display:flex;gap:14px;position:relative;padding-bottom:2px}
-  .vt-dot{width:40px;height:40px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;background:#fff;border:3px solid #e2e8f0;position:relative;z-index:1;transition:transform .2s;box-shadow:0 2px 6px rgba(15,23,42,.06)}
-  .vt-item:hover .vt-dot{transform:scale(1.1) rotate(-5deg)}
-  .vt-dot.done{background:var(--ev-color,#FF8A00);border-color:var(--ev-color,#FF8A00)}
-  .vt-dot.done::after{content:'✓';position:absolute;bottom:-5px;right:-5px;width:18px;height:18px;border-radius:50%;background:#28B54D;color:#fff;font-size:.55rem;font-weight:900;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(40,181,77,.45);animation:chip-pop .3s}
-  .vt-dot.current{border-color:var(--ev-color,#FF8A00);box-shadow:0 0 0 5px color-mix(in srgb,var(--ev-color,#FF8A00) 20%,transparent);animation:vt-pulse 1.6s infinite}
-  .vt-dot.current .vt-emoji{animation:chip-wiggle 1.6s infinite}
-  @keyframes vt-pulse{0%,100%{box-shadow:0 0 0 5px color-mix(in srgb,var(--ev-color,#FF8A00) 20%,transparent)}50%{box-shadow:0 0 0 10px color-mix(in srgb,var(--ev-color,#FF8A00) 8%,transparent)}}
-  .vt-body{flex:1;background:#fff;border:2px solid #f1f5f9;border-radius:16px;padding:10px 12px;margin-bottom:14px;transition:all .2s;position:relative;z-index:1;cursor:pointer}
-  .vt-body:hover{border-color:#e2e8f0;box-shadow:0 8px 20px rgba(15,23,42,.08);transform:translateX(2px)}
-  .vt-body.done{background:#f8fafc}
-  .vt-top{display:flex;align-items:center;gap:8px}
-  .vt-name{font-size:.72rem;font-weight:900;color:#334155;flex:1}
-  .vt-item.current .vt-name{color:var(--ev-color,#FF8A00)}
-  .vt-item.done .vt-name{color:#94a3b8}
-  .vt-status{font-size:.5rem;font-weight:900;text-transform:uppercase;letter-spacing:.05em;padding:3px 8px;border-radius:999px;flex-shrink:0}
-  .vt-status.pending{background:#f1f5f9;color:#94a3b8}
-  .vt-status.current{background:color-mix(in srgb,var(--ev-color,#FF8A00) 15%,#fff);color:var(--ev-color,#FF8A00)}
-  .vt-status.done{background:#dcfce7;color:#16a34a}
-  .vt-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:5px;font-size:.55rem;font-weight:700;color:#94a3b8}
-  .vt-meta .pill{display:inline-flex;align-items:center;gap:4px;background:#f8fafc;border:1px solid #f1f5f9;border-radius:999px;padding:2px 8px}
-  .vt-progress{margin-top:8px;height:8px;border-radius:999px;background:#f1f5f9;overflow:hidden;position:relative}
-  .vt-progress>div{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--ev-color,#FF8A00),#fbbf24);transition:width .4s;position:relative;overflow:hidden}
-  .vt-progress>div::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.4),transparent);animation:vt-shine 1.8s infinite}
-  @keyframes vt-shine{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
-  .vt-progress-label{display:flex;justify-content:space-between;margin-top:4px;font-size:.5rem;font-weight:900;color:#94a3b8}
-  .vt-progress-label b{color:var(--ev-color,#FF8A00)}
-`;
-
-function _renderTimelineExpanded(schedule, nowMinutes, logsMap, students) {
-  return `
-    <div class="vt-list-wrap">
-      <style>${TL_STYLES}</style>
-      <div class="vt-list">
-        ${schedule.map((ev) => {
-          const status = _getEventStatus(ev, nowMinutes);
-          const isActive = status === 'in_progress';
-          const isDone = status === 'completed';
-          const badge = isDone ? 'done' : isActive ? 'current' : 'pending';
-          const badgeTxt = isDone ? '✓ Hecho' : isActive ? 'En curso' : 'Pendiente';
-          const timeLabel = ev.endTime ? `${_fmtTimeShort(ev.startTime)} – ${_fmtTimeShort(ev.endTime)}` : `Inicia ${_fmtTimeShort(ev.startTime)}`;
-          const progress = ev.groupEventId ? _getEventProgress(ev, students, logsMap) : null;
-          return `
-            <div class="vt-item ${isActive ? 'current' : isDone ? 'done' : ''}" style="--ev-color:${ev.color}" onclick="App.expandTimelineEvent('${ev.id}')">
-              <div class="vt-dot ${badge}" style="--ev-color:${ev.color}">
-                <span class="vt-emoji">${isDone ? '✅' : ev.emoji}</span>
-              </div>
-              <div class="vt-body ${isDone ? 'done' : ''}">
-                <div class="vt-top">
-                  <span class="vt-name">${safeEscapeHTML(ev.label)}</span>
-                  <span class="vt-status ${badge}" style="--ev-color:${ev.color}">${badgeTxt}</span>
-                </div>
-                <div class="vt-meta">
-                  <span class="pill">🕐 ${timeLabel}</span>
-                  ${ev.groupEventId ? '<span class="pill">👥 Colectivo</span>' : ''}
-                </div>
-                ${progress && progress.total > 0 ? `
-                  <div class="vt-progress"><div style="width:${progress.pct}%;--ev-color:${ev.color}"></div></div>
-                  <div class="vt-progress-label"><span>${progress.done}/${progress.total} registrados</span><b>${progress.pct}%</b></div>
-                ` : ''}
-              </div>
-            </div>
-          `;
-        }).join('')}
-      </div>
-    </div>
-  `;
-}
-
-function _renderTimelineCollapsed(schedule, nowMinutes) {
-  return `
-    <div class="tl-chips-wrap">
-      <style>${TL_STYLES}</style>
-      <div class="tl-chips">
-        ${schedule.map((ev) => {
-          const status = _getEventStatus(ev, nowMinutes);
-          const isCurrent = status === 'in_progress';
-          const isDone = status === 'completed';
-          const cls = isDone ? 'done' : isCurrent ? 'current' : '';
-          return `
-            <div class="tl-chip ${cls}" style="--ev-color:${ev.color}" onclick="App.expandTimelineEvent('${ev.id}')" title="${safeEscapeHTML(ev.label)} ${_fmtTimeShort(ev.startTime)}">
-              <span class="tl-chip-emoji">${ev.emoji}</span>
-              <span class="tl-chip-time">${_fmtTimeShort(ev.startTime)}</span>
-              <span class="tl-chip-name">${safeEscapeHTML(ev.label)}</span>
-            </div>
-          `;
-        }).join('')}
-      </div>
-    </div>
-  `;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -713,52 +528,7 @@ function _renderStudentCards(students, logsMap) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// EXPANDED EVENT PANEL (Level 1 click)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-function _renderExpandedEvent(event, students, logsMap, nowMinutes) {
-  const progress = _getEventProgress(event, students, logsMap);
-  const startMin = _timeToMinutes(event.startTime);
-  const endMin = startMin + (event.duration || 30);
-  const isOmittedToday = _getDailyOmittedEvents().includes(event.id);
-  return `
-    <div class="rounded-2xl border-2 overflow-hidden mb-3" style="border-color:${event.color}30;background:white;animation:evSlideIn .25s ease">
-      <style>@keyframes evSlideIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}</style>
-      <div class="p-4 flex items-center gap-3" style="background:${event.color}10">
-        <span class="text-2xl">${event.emoji}</span>
-        <div class="flex-1 min-w-0">
-          <h4 class="font-black text-sm" style="color:${event.color}">${safeEscapeHTML(event.label)}</h4>
-          <div class="text-[10px] font-bold text-slate-400">${_fmtTimeShort(event.startTime)} – ${_fmtTimeShort(_minutesToTime(endMin))} · ${event.duration}min${isOmittedToday ? ' · <span class="text-amber-500">Omitido hoy</span>' : ''}</div>
-        </div>
-        <button onclick="App.collapseTimelineEvent();event.stopPropagation()" class="p-1.5 rounded-lg bg-white/60 hover:bg-white text-slate-400">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M18 6L6 18M6 6l12 12"/></svg>
-        </button>
-      </div>
-      ${event.groupEventId ? `
-      <div class="px-4 py-3 border-b border-slate-100">
-        <div class="flex items-center justify-between mb-1.5">
-          <span class="text-[10px] font-bold text-slate-600">${progress.done} de ${progress.total} registrados</span>
-          <span class="text-[10px] font-black" style="color:${event.color}">${progress.pct}%</span>
-        </div>
-        <div class="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-          <div class="h-full rounded-full transition-all duration-500" style="width:${progress.pct}%;background:${event.color}"></div>
-        </div>
-        ${progress.markedStudents?.length > 0 ? `
-        <div class="flex flex-wrap gap-1 mt-2">
-          ${progress.markedStudents.map(name => `<span class="text-[8px] font-bold px-2 py-0.5 rounded-full bg-green-50 text-green-700">✓ ${safeEscapeHTML((name || '').split(' ')[0])}</span>`).join('')}
-        </div>` : ''}
-      </div>` : ''}
-      <div class="p-3 flex gap-2">
-        ${event.groupEventId ? `<button onclick="App.routineQuickGroup('${event.groupEventId}');event.stopPropagation()" class="flex-1 py-2.5 rounded-xl font-black text-[10px] uppercase text-white tracking-wider" style="background:${event.color}">Registrar Ahora</button>` : ''}
-        <button onclick="App.toggleOmitToday('${event.id}');event.stopPropagation()" class="flex-1 py-2.5 rounded-xl border-2 font-black text-[10px] uppercase tracking-wider ${isOmittedToday ? 'border-amber-300 text-amber-600 bg-amber-50' : 'border-slate-200 text-slate-500'}">${isOmittedToday ? '↩ Restaurar' : '⊘ Omitir hoy'}</button>
-        <button onclick="App.openEventConfig('${event.id}');event.stopPropagation()" class="px-3 py-2.5 rounded-xl border-2 border-slate-200 font-black text-[10px] uppercase text-slate-500">⚙️</button>
-      </div>
-    </div>
-  `;
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// MAIN UI BUILDER — 4 LEVELS
+// MAIN UI BUILDER
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const ROUTINE_UI_STYLES = `
@@ -779,36 +549,11 @@ function _routineDivider(icon) {
 }
 
 function _buildUI(students, schedule, nowMinutes) {
-  const currentEvent = schedule.find(e => _getEventStatus(e, nowMinutes) === 'in_progress');
-  const nextEvent = schedule.find(e => _getEventStatus(e, nowMinutes) === 'pending');
   const openSleeps = Object.keys(_sleepMap).length;
-  const isCollapsed = _timelineCollapsed;
-  const isTimelineActive = _timelineActive;
 
   return `
     <div class="space-y-3 pb-28" id="routineView">
       <style>${ROUTINE_UI_STYLES}</style>
-
-      <!-- CURRENT/NEXT EVENT BANNER -->
-      ${currentEvent ? `
-        <div class="rounded-2xl p-4 flex items-center gap-3" style="background:${currentEvent.color}10;border:2px solid ${currentEvent.color}30">
-          <span class="text-3xl">${currentEvent.emoji}</span>
-          <div class="flex-1">
-            <div class="text-[9px] font-black uppercase tracking-widest" style="color:${currentEvent.color}">En curso ahora</div>
-            <div class="text-sm font-black text-slate-800">${safeEscapeHTML(currentEvent.label)}</div>
-          </div>
-          <button onclick="App.expandTimelineEvent('${currentEvent.id}')" class="px-3 py-2 rounded-xl font-black text-[10px] text-white uppercase" style="background:${currentEvent.color}">Ver</button>
-        </div>
-      ` : nextEvent ? `
-        <div class="rounded-2xl p-4 flex items-center gap-3 bg-slate-50 border-2 border-slate-100">
-          <span class="text-3xl opacity-50">${nextEvent.emoji}</span>
-          <div class="flex-1">
-            <div class="text-[9px] font-black uppercase tracking-widest text-slate-400">Próximo evento</div>
-            <div class="text-sm font-black text-slate-600">${safeEscapeHTML(nextEvent.label)}</div>
-            <div class="text-[10px] font-bold text-slate-400">Inicia a las ${_fmtTimeShort(nextEvent.startTime)}</div>
-          </div>
-        </div>
-      ` : ''}
 
       <!-- OPEN SLEEP ALERT -->
       ${openSleeps > 0 ? `
@@ -824,54 +569,16 @@ function _buildUI(students, schedule, nowMinutes) {
         </button>
       ` : ''}
 
-      <!-- ═══════════════════════════════════════════════════════════════ -->
-      <!-- LEVEL 1: TIMELINE DEL DÍA -->
-      <!-- ═══════════════════════════════════════════════════════════════ -->
-      <div class="routine-card" style="border-radius:22px;overflow:hidden">
-        <div class="routine-card-head" style="background:linear-gradient(135deg,#eef2ff,#fdf2f8);border-bottom:2px dashed #e0e7ff">
-          <span class="routine-card-icon" style="background:linear-gradient(135deg,#6366f1,#d946ef);color:#fff;box-shadow:0 4px 14px rgba(99,102,241,.35)">🕐</span>
-          <div class="flex-1">
-            <div class="routine-card-title" style="color:#4f46e5">Cronología del día</div>
-            <div class="routine-card-sub">${students.length} alumno(s) · ${schedule.length} eventos</div>
-          </div>
-          <button onclick="App.toggleTimelineActive()" class="text-[10px] font-black uppercase tracking-wide flex items-center gap-1 px-2.5 py-1 rounded-lg ${isTimelineActive ? 'bg-green-50 text-green-600' : 'bg-slate-100 text-slate-400'}">
-            ${isTimelineActive ? 'Activa' : 'Inactiva'}
-          </button>
-          <button onclick="App.toggleTimeline()" class="text-[10px] font-black uppercase tracking-wide flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 text-slate-500" title="${isCollapsed ? 'Mostrar en vertical' : 'Ver en horizontal'}">
-            ${isCollapsed ? '▼ Abrir' : '▲ Plegar'}
-          </button>
-          <button onclick="App.openScheduleConfig()" class="text-[10px] font-black text-blue-500 uppercase tracking-wide flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-blue-50">⚙️</button>
-        </div>
-        <div class="routine-card-body">
-          ${isCollapsed ? _renderTimelineCollapsed(schedule, nowMinutes) : _renderTimelineExpanded(schedule, nowMinutes, _logsMap, students)}
-          ${_getDailyOmittedEvents().length > 0 ? `
-          <div class="flex gap-2 mt-3">
-            <button onclick="App.clearDailyOverrides()" class="flex-1 py-2 rounded-xl border-2 border-amber-200 font-black text-[10px] uppercase text-amber-600 flex items-center justify-center gap-1 hover:bg-amber-50 transition-all">
-              ↩ Restaurar eventos omitidos
-            </button>
-          </div>` : ''}
-          <button onclick="App.openQuickAddModal()"
-            class="mt-3 w-full py-2.5 rounded-xl border-2 border-dashed border-blue-200 font-black text-xs uppercase text-blue-500 flex items-center justify-center gap-2 hover:bg-blue-50 transition-all">
-            <span class="text-lg">➕</span> Agregar evento (baño, popó, biberón, etc.)
-          </button>
-        </div>
-      </div>
-
-      <!-- EXPANDED EVENT PANEL -->
-      <div id="expandedEventPanel"></div>
-
       ${_routineDivider('🧑‍🏫')}
 
       <!-- ═══════════════════════════════════════════════════════════════ -->
-      <!-- LEVEL 2: ACCIONES COLECTIVAS DEL AULA -->
-      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <!-- ACCIONES COLECTIVAS DEL AULA -->
       ${_renderCollectiveActions(schedule, students, _logsMap, nowMinutes)}
 
       ${_routineDivider('📊')}
 
       <!-- ═══════════════════════════════════════════════════════════════ -->
-      <!-- LEVEL 3: TARJETAS DE LOS ALUMNOS -->
-      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <!-- TARJETAS DE LOS ALUMNOS -->
       ${_renderStudentCards(students, _logsMap)}
     </div>
   `;
@@ -923,23 +630,7 @@ export async function initRoutine() {
 
   container.innerHTML = _buildUI(students, schedule, nowMinutes);
 
-  if (_expandedEvent) {
-    const panel = document.getElementById('expandedEventPanel');
-    if (panel) {
-      const ev = schedule.find(e => e.id === _expandedEvent);
-      if (ev) panel.innerHTML = _renderExpandedEvent(ev, students, _logsMap, nowMinutes);
-    }
-  }
-
   if (window.lucide) lucide.createIcons();
-
-  setTimeout(() => {
-    const bar = document.querySelector('.tl-collapsed-bar, .tl-wrap');
-    if (bar) {
-      const activeEl = bar.querySelector('.tl-c-dot.current, .tl-ev.active');
-      if (activeEl) activeEl.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
-    }
-  }, 200);
 
   _clearAutoRefresh();
   _autoRefreshTimer = setInterval(() => {
@@ -1012,53 +703,6 @@ function _bindVisibilityRefresh() {
   document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshIfVisible(); });
   window.addEventListener('pageshow', refreshIfVisible);
   window.addEventListener('focus', refreshIfVisible);
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TIMELINE TOGGLE
-// ═══════════════════════════════════════════════════════════════════════════════
-
-export function toggleTimeline() {
-  _timelineCollapsed = !_timelineCollapsed;
-  localStorage.setItem('sonrisas_tl_collapsed', _timelineCollapsed ? '1' : '0');
-  initRoutine();
-}
-
-export function toggleTimelineActive() {
-  _timelineActive = !_timelineActive;
-  localStorage.setItem('sonrisas_tl_active', _timelineActive ? '1' : '0');
-  if (_timelineActive) {
-    safeToast('Timeline activada — los eventos se activarán según la hora configurada', 'success');
-  } else {
-    safeToast('Timeline desactivada', 'info');
-  }
-  initRoutine();
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// EXPAND / COLLAPSE EVENT
-// ═══════════════════════════════════════════════════════════════════════════════
-
-export function expandTimelineEvent(eventId) {
-  _expandedEvent = _expandedEvent === eventId ? null : eventId;
-  const panel = document.getElementById('expandedEventPanel');
-  if (!panel) return;
-  if (!_expandedEvent) { panel.innerHTML = ''; return; }
-  const schedule = _getSchedule();
-  const ev = schedule.find(e => e.id === eventId);
-  if (!ev) return;
-  const now = new Date();
-  const nowMinutes = now.getHours() * 60 + now.getMinutes();
-  const allStudents = AppState.get('students') || [];
-  const students = _presentIds.size > 0 ? allStudents.filter(s => _presentIds.has(s.id)) : allStudents;
-  panel.innerHTML = _renderExpandedEvent(ev, students, _logsMap, nowMinutes);
-  panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-}
-
-export function collapseTimelineEvent() {
-  _expandedEvent = null;
-  const panel = document.getElementById('expandedEventPanel');
-  if (panel) panel.innerHTML = '';
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1218,7 +862,6 @@ export function openScheduleConfig() {
   if (buildMode && !_buildDraft) _initBuildDraft();
 
   const omitted = _getDailyOmittedEvents();
-  const activeTpl = localStorage.getItem(SCHEDULE_TEMPLATE_KEY) || '';
   let scheduleHtml = '';
   if (!buildMode) {
     schedule.forEach((ev, i) => {
@@ -1256,17 +899,6 @@ export function openScheduleConfig() {
         <button onclick="App.addScheduleEvent()" class="w-7 h-7 rounded-full border-2 border-dashed border-blue-200 bg-white flex items-center justify-center text-blue-400 hover:bg-blue-50 hover:border-blue-400 transition-all text-xs font-black" title="Agregar al final">+</button>
       </div>`;
   }
-
-  const tplChips = `
-    <button onclick="App.clearScheduleTemplate()" class="tpl-chip ${activeTpl === '' ? 'on' : ''}">
-      <span class="text-lg">✍️</span>
-      <span class="tpl-chip-txt"><b>Personalizado</b><i>tú decides</i></span>
-    </button>
-    ${Object.values(ROUTINE_TEMPLATES).map(tpl => `
-      <button onclick="App.applyRoutineTemplate('${tpl.id}')" class="tpl-chip ${activeTpl === tpl.id ? 'on' : ''}">
-        <span class="text-lg">${tpl.emoji}</span>
-        <span class="tpl-chip-txt"><b>${tpl.name}</b><i>${tpl.subtitle}</i></span>
-      </button>`).join('')}`;
 
   const catalogHtml = Object.entries(SCHEDULE_CATALOG).map(([key, cat]) => `
     <div class="mt-4">
@@ -1327,16 +959,6 @@ export function openScheduleConfig() {
 
   UI.Modal.open('scheduleConfigModal', `
     <style>
-      .tpl-row{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:2px}
-      .tpl-chip{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:16px;border:2px solid rgba(255,255,255,.35);background:rgba(255,255,255,.15);flex-shrink:0;cursor:pointer;transition:all .15s;text-align:left}
-      .tpl-chip:active{transform:scale(.95)}
-      .tpl-chip:hover{background:rgba(255,255,255,.25)}
-      .tpl-chip.on{border-color:#fff;background:#fff;box-shadow:0 4px 14px rgba(0,0,0,.18)}
-      .tpl-chip-txt{display:flex;flex-direction:column;line-height:1.1}
-      .tpl-chip-txt b{font-size:.62rem;font-weight:900;color:#fff}
-      .tpl-chip-txt i{font-size:.5rem;font-weight:700;color:rgba(255,255,255,.75);font-style:normal}
-      .tpl-chip.on .tpl-chip-txt b{color:#0B63C7}
-      .tpl-chip.on .tpl-chip-txt i{color:#94a3b8}
       .cat-title{font-size:.6rem;font-weight:900;text-transform:uppercase;letter-spacing:.06em;color:#475569;display:flex;align-items:center}
       .cat-chip{position:relative;display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 4px;border-radius:16px;border:2px solid #f1f5f9;background:#fff;cursor:pointer;transition:all .15s}
       .cat-chip:active{transform:scale(.92)}
@@ -1383,10 +1005,6 @@ export function openScheduleConfig() {
           <div><h3 class="text-xl font-black text-white">Configurar Horario</h3><p class="text-sm font-bold text-white/80">Arrastra ☰ — toca para configurar — + para insertar</p></div>
           <button onclick="UI.Modal.close('scheduleConfigModal')" class="p-2 rounded-xl bg-white/20 text-white"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
         </div>
-        <div class="mt-4">
-          <div class="text-[10px] font-black text-white/70 uppercase tracking-widest mb-2">Plantilla de rutina por edad</div>
-          <div class="tpl-row">${tplChips}</div>
-        </div>
       </div>
       <div class="p-4 overflow-y-auto flex-1" id="sc-list">
         <div class="grid grid-cols-2 gap-2 mb-3">
@@ -1413,7 +1031,7 @@ export function openScheduleConfig() {
       </div>
       <div class="p-4 border-t border-slate-100 flex-shrink-0 space-y-2">
         <button onclick="App.resetScheduleConfig()" class="w-full py-3 rounded-xl border-2 border-red-200 font-black text-xs uppercase text-red-500 hover:bg-red-50 transition-all">Restaurar Horario Predeterminado</button>
-        <p class="text-center text-[9px] font-bold text-slate-300">Consejo: aplica una plantilla por edad o construye la tuya y ajusta la hora de cada evento</p>
+        <p class="text-center text-[9px] font-bold text-slate-300">Consejo: construye tu cronología y ajusta la hora de cada evento</p>
       </div>
     </div>
   `);
@@ -1421,7 +1039,6 @@ export function openScheduleConfig() {
 
 export function resetScheduleConfig() {
   localStorage.removeItem(SCHEDULE_DB_SEED_KEY);
-  localStorage.removeItem(SCHEDULE_TEMPLATE_KEY);
   _scheduleConfig = DEFAULT_SCHEDULE.map(e => ({ ...e }));
   _buildDraft = null;
   _saveScheduleConfig();
@@ -1431,7 +1048,7 @@ export function resetScheduleConfig() {
 }
 
 // ───────────────────────────────────────────────────────────────────────────────
-// PLANTILLAS Y BIBLIOTECA DE EVENTOS
+// BIBLIOTECA DE EVENTOS
 // ───────────────────────────────────────────────────────────────────────────────
 
 function _catalogScheduleEvent(catId, startTime, duration, customId) {
@@ -1455,24 +1072,6 @@ function _catalogScheduleEvent(catId, startTime, duration, customId) {
   };
 }
 
-export function applyRoutineTemplate(tplId) {
-  const tpl = ROUTINE_TEMPLATES[tplId];
-  if (!tpl) return;
-  const events = tpl.events
-    .map(([catId, time, dur, customId]) => _catalogScheduleEvent(catId, time, dur, customId))
-    .filter(Boolean);
-  if (events.length === 0) return;
-  _scheduleConfig = events;
-  localStorage.setItem(SCHEDULE_TEMPLATE_KEY, tplId);
-  localStorage.setItem(SCHEDULE_DB_SEED_KEY, '1');
-  _buildDraft = null;
-  _saveScheduleConfig();
-  UI.Modal.close('scheduleConfigModal');
-  openScheduleConfig();
-  initRoutine();
-  safeToast(`Plantilla "${tpl.name}" (${tpl.subtitle}) aplicada`, 'success');
-}
-
 export function addCatalogEvent(catId) {
   const cat = _CATALOG_BY_ID[catId];
   if (!cat) return;
@@ -1486,11 +1085,6 @@ export function addCatalogEvent(catId) {
   openScheduleConfig();
   initRoutine();
   safeToast(`"${cat.label}" agregado al horario — configúralo`, 'success');
-}
-
-export function clearScheduleTemplate() {
-  localStorage.removeItem(SCHEDULE_TEMPLATE_KEY);
-  safeToast('Horario personalizado activado', 'info');
 }
 
 // ───────────────────────────────────────────────────────────────────────────────
@@ -1607,7 +1201,6 @@ export function buildModeApply() {
     };
   });
   _scheduleConfig = events;
-  localStorage.removeItem(SCHEDULE_TEMPLATE_KEY);
   localStorage.setItem(SCHEDULE_DB_SEED_KEY, '1');
   _buildDraft = null;
   _saveScheduleConfig();
@@ -2009,32 +1602,6 @@ export function openStudentRoutine(studentId) {
   if (hasEvent('behavior')) registeredBadges.push({ emoji: '🤝', label: 'Conducta', color: '#F59E0B' });
   if (log?.notes) registeredBadges.push({ emoji: '📝', label: 'Nota', color: '#64748B' });
 
-  // ── Timeline events ──
-  const EVENT_ICONS = { sleep: '😴', milk: '🍼', diaper: e => e.subtype === 'wet' ? '💧' : '💩', bath: '🚽', temp: '🌡️', med: '💊', behavior: '🤝', handwash: '🧼', toothbrush: '🪥', activity: '🏫', playground: '🌳', health: e => e.subtype === 'vomit' ? '🤮' : '😷', incident: '🤕', note: '📝' };
-  const EVENT_LABELS = { handwash: 'Lavado de manos', toothbrush: 'Cepillado dental', activity: 'Actividad', playground: 'Patio', sensorial: 'Sensorial', sleep: 'Siesta', milk: 'Biberón', diaper: 'Pañal', bath: 'Baño', temp: 'Temperatura', med: 'Medicamento', note: 'Nota', behavior: 'Comportamiento' };
-  const sortedEvents = [...events].sort((a, b) => new Date(a.created_at||0) - new Date(b.created_at||0));
-  const timelineHtml = sortedEvents.length > 0 ? sortedEvents.map(evt => {
-    const time = evt.created_at ? _fmtTime(evt.created_at) : (evt.start_time ? _fmtTime(evt.start_time) : '');
-    const label = evt.label || EVENT_LABELS[evt.type] || evt.type;
-    const getIcon = EVENT_ICONS[evt.type];
-    const icon = typeof getIcon === 'function' ? getIcon(evt) : (getIcon || '📌');
-    const detail = evt.type === 'sleep' ? (evt.end_time ? 'Despertó ' + _fmtTime(evt.end_time) : 'En siesta...') : evt.type === 'milk' ? (evt.oz ? evt.oz + ' oz' + (evt.temp ? ' · ' + (TEMP_OPTIONS.find(t => t.val === evt.temp)?.label || evt.temp) : '') : '') : evt.type === 'temp' ? (evt.value ? evt.value + '°C' : '') : evt.type === 'med' ? (evt.name || '') : evt.type === 'incident' ? (evt.description || '') : '';
-    return `
-      <div class="flex items-center gap-2 p-2 rounded-lg hover:bg-slate-50 group" style="${!evt.id ? 'opacity:0.5' : ''}">
-        <div class="w-8 h-8 rounded-lg flex items-center justify-center text-sm flex-shrink-0" style="background:#f1f5f9">${icon}</div>
-        <div class="flex-1 min-w-0">
-          <div class="text-xs font-bold text-slate-700">${safeEscapeHTML(label)}</div>
-          ${detail ? `<div class="text-[10px] text-slate-400">${safeEscapeHTML(detail)}</div>` : ''}
-        </div>
-        <span class="text-[10px] font-bold text-slate-400">${time}</span>
-        ${evt.id ? `
-        <button onclick="event.stopPropagation();if(confirm('¿Eliminar este evento?'))App.deleteInfantEvent('${studentId}','${evt.id}')" class="opacity-0 group-hover:opacity-100 p-1 rounded-lg hover:bg-red-50 text-slate-300 hover:text-red-500 transition-all" title="Eliminar evento">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
-        </button>` : '<div class="w-6"></div>'}
-      </div>
-    `;
-  }).join('') : '<p class="text-center text-slate-400 text-xs py-4">Sin eventos aún</p>';
-
   // ── Helper: section header ──
   const section = (title, content) => `
     <div class="pt-1">
@@ -2336,13 +1903,6 @@ export function openStudentRoutine(studentId) {
             class="mt-2 w-full p-3 rounded-xl text-white font-black text-xs uppercase" style="background:#28B54D">Guardar Nota</button>
         `)}
 
-        <div class="border-b border-slate-100"></div>
-
-        <!-- ═══ TIMELINE ═══ -->
-        ${section('🕐 Línea de tiempo del día', `
-          <div class="space-y-1 max-h-48 overflow-y-auto">${timelineHtml}</div>
-        `)}
-
       </div>
     </div>
   `;
@@ -2565,7 +2125,7 @@ export async function _confirmExtraEvent(studentId) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// QUICK ADD EVENT FROM TIMELINE
+// QUICK ADD EVENT
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const QUICK_EVENTS = [

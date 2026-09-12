@@ -23,14 +23,11 @@ export async function renderDashboardV2(data) {
 
   const [
     studentsRes, teachersRes, attendanceRes,
-    paymentsRes, pendingRes, messagesRes,
-    cycleRes
+    messagesRes, cycleRes
   ] = await Promise.allSettled([
     supabase.from('students').select('id,is_active,name').limit(2000),
     supabase.from('profiles').select('id,role').in('role',['maestra','asistente','admin']).limit(200),
     supabase.from('attendance').select('status').eq('date',todayStr).limit(1000),
-    supabase.from('payments').select('amount,method').eq('status','paid').gte('paid_date',todayStr+'T00:00:00').lte('paid_date',todayStr+'T23:59:59').limit(500),
-    supabase.from('payments').select('amount').in('status',['pending','overdue']).limit(2000),
     supabase.from('messages').select('id',{count:'exact',head:true}).eq('is_read',false),
     supabase.from('school_years').select('name,is_current').order('start_date',{ascending:false}).limit(5),
   ]);
@@ -39,8 +36,6 @@ export async function renderDashboardV2(data) {
   const students   = safe(studentsRes).data||[];
   const teachers   = safe(teachersRes).data||[];
   const attendance = safe(attendanceRes).data||[];
-  const todayPay   = safe(paymentsRes).data||[];
-  const pending    = safe(pendingRes).data||[];
   const unread     = safe(messagesRes).count||0;
   
   // Filtrar cumpleaños del día (ahora usando solo la tabla students y campos que existan)
@@ -54,17 +49,7 @@ export async function renderDashboardV2(data) {
   const activeStu  = students.filter(s=>s.is_active).length;
   const present    = attendance.filter(a=>['present','late'].includes(a.status?.toLowerCase())).length;
   const absent     = attendance.filter(a=>a.status?.toLowerCase()==='absent').length;
-  const todayIncome= todayPay.reduce((s,p)=>s+Number(p.amount||0),0);
-  const pendingAmt = pending.reduce((s,p)=>s+Number(p.amount||0),0);
   const currentCycle = cycles.find(c=>c.is_current)?.name || cycles[0]?.name || '—';
-
-  // Monthly income chart data
-  const yr = String(now.getFullYear());
-  const { data: monthlyPays } = await supabase.from('payments')
-    .select('amount,paid_date').eq('status','paid')
-    .gte('paid_date',yr+'-01-01T00:00:00').lte('paid_date',yr+'-12-31T23:59:59').limit(3000);
-  const monthly = new Array(12).fill(0);
-  (monthlyPays||[]).forEach(p=>{ const m=new Date(p.paid_date).getMonth(); monthly[m]+=Number(p.amount||0); });
 
   let academic = { totalClassrooms: 0, evaluations: 0, activities: 0, scores: 0, overall: null, rows: [] };
   try { academic = await _loadAcademicStats(); } catch (err) { console.error('[Dashboard] Académico', err); }
@@ -92,7 +77,6 @@ export async function renderDashboardV2(data) {
       <p class="text-sm text-slate-400 font-bold">Ciclo activo: <span class="text-emerald-600">${currentCycle}</span> · ${now.toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'})}</p>
     </div>
     <div class="flex gap-2 flex-wrap">
-      <button onclick="App.navigation?.goTo?.('caja')" class="px-4 py-2 text-white text-xs font-black uppercase rounded-xl shadow-md transition-all hover:opacity-90 active:scale-95" style="background:#0B63C7">+ Registrar Cobro</button>
       <button onclick="App.navigation?.goTo?.('ciclo-escolar')" class="px-4 py-2 text-white text-xs font-black uppercase rounded-xl shadow-md transition-all hover:opacity-90 active:scale-95" style="background:#0850A0">Ciclo Escolar</button>
     </div>
   </div>
@@ -144,44 +128,10 @@ export async function renderDashboardV2(data) {
     </div>
   </div>
 
-  <!-- KPIs FILA 2: Finanzas -->
-  <div>
-    <div class="dash-section-title"><i data-lucide="banknote" class="w-3.5 h-3.5"></i> Finanzas del Día</div>
-    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-      <div class="kpi2" style="border-left:3px solid #047857">
-        <div class="kpi-icon" style="background:#ecfdf5"><i data-lucide="trending-up" class="w-4 h-4" style="color:#047857"></i></div>
-        <div class="kpi-val" style="color:#047857">${fmt(todayIncome)}</div>
-        <div class="kpi-lbl">Cobrado Hoy</div>
-        <div class="kpi-sub">${todayPay.length} transacciones</div>
-      </div>
-      <div class="kpi2" style="border-left:3px solid #d97706">
-        <div class="kpi-icon" style="background:#FFF3E0"><i data-lucide="clock" class="w-4 h-4" style="color:#d97706"></i></div>
-        <div class="kpi-val" style="color:#d97706">${fmt(pendingAmt)}</div>
-        <div class="kpi-lbl">Por Cobrar</div>
-        <div class="kpi-sub">${pending.length} cuotas</div>
-      </div>
-      <div class="kpi2">
-        <div class="kpi-icon" style="background:#ecfdf5"><i data-lucide="wallet" class="w-4 h-4" style="color:#047857"></i></div>
-        <div class="kpi-val">${fmt(monthly[now.getMonth()])}</div>
-        <div class="kpi-lbl">Ingresos del Mes</div>
-      </div>
-      <div class="kpi2" style="border-left:3px solid #8B5CF6;cursor:pointer" onclick="App.navigation?.goTo?.('comunicacion')">
-        <div class="kpi-icon" style="background:#F3E8FF"><i data-lucide="message-circle" class="w-4 h-4" style="color:#8B5CF6"></i></div>
-        <div class="kpi-val" style="color:#8B5CF6">${unread}</div>
-        <div class="kpi-lbl">Mensajes Sin Leer</div>
-      </div>
-      <div class="kpi2">
-        <div class="kpi-icon" style="background:#ecfdf5"><i data-lucide="receipt" class="w-4 h-4" style="color:#047857"></i></div>
-        <div class="kpi-val">${todayPay.length}</div>
-        <div class="kpi-lbl">Facturas Hoy</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- KPIs FILA 3: Académico -->
+  <!-- KPIs FILA 2: Académico y Comunicación -->
   <div>
     <div class="dash-section-title"><i data-lucide="graduation-cap" class="w-3.5 h-3.5"></i> Académico · Evaluaciones y Promedios</div>
-    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
       <div class="kpi2" style="border-left:3px solid #8B5CF6">
         <div class="kpi-icon" style="background:#F3E8FF"><i data-lucide="layers" class="w-4 h-4" style="color:#7C3AED"></i></div>
         <div class="kpi-val" style="color:#7C3AED">${academic.evaluations}</div>
@@ -207,6 +157,11 @@ export async function renderDashboardV2(data) {
         <div class="kpi-val" style="color:#D97706">${academic.rows.length}</div>
         <div class="kpi-lbl">Aulas con Notas</div>
         <div class="kpi-sub">de ${academic.totalClassrooms} aulas activas</div>
+      </div>
+      <div class="kpi2" style="border-left:3px solid #8B5CF6;cursor:pointer" onclick="App.navigation?.goTo?.('comunicacion')">
+        <div class="kpi-icon" style="background:#F3E8FF"><i data-lucide="message-circle" class="w-4 h-4" style="color:#8B5CF6"></i></div>
+        <div class="kpi-val" style="color:#8B5CF6">${unread}</div>
+        <div class="kpi-lbl">Mensajes Sin Leer</div>
       </div>
     </div>
     ${academic.rows.length ? `
@@ -248,34 +203,18 @@ export async function renderDashboardV2(data) {
   </div>
 
   <!-- GRÁFICOS -->
-  <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
-    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-      <div class="flex items-center justify-between mb-4">
-        <h3 class="font-black text-slate-700 text-sm">Ingresos Mensuales ${yr}</h3>
-        <span class="text-xs text-slate-400 font-bold uppercase">RD$</span>
-      </div>
-      <div style="height:200px"><canvas id="dashIncomeChart"></canvas></div>
-    </div>
+  <div class="grid grid-cols-1 gap-5">
     <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
       <div class="flex items-center justify-between mb-4">
         <h3 class="font-black text-slate-700 text-sm">Asistencia Esta Semana</h3>
       </div>
-      <div style="height:200px"><canvas id="dashAttendanceChart"></canvas></div>
+      <div style="height:220px"><canvas id="dashAttendanceChart"></canvas></div>
     </div>
   </div>
 
   `;
 
   if (window.lucide) lucide.createIcons();
-
-  // Render income chart
-  _renderChart('dashIncomeChart', {
-    type:'bar',
-    labels:['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'],
-    data: monthly,
-    color: '#28B54D',
-    label: 'Ingresos RD$'
-  });
 
   // Render attendance chart (last 7 days)
   await _renderAttendanceChart();

@@ -4,12 +4,16 @@ import { Security } from '../shared/security.js';
 import { UIHelpers } from './ui.module.js';
 import { supabase } from '../shared/supabase.js';
 import { auditLog } from '../shared/db-utils.js';
+import { requireReauth } from '../shared/reauth.js';
 import { RealtimeManager } from '../shared/realtime-manager.js';
 import { InvoicingModule } from './invoicing.module.js';
 import { InvoiceModule } from '../shared/invoice.js';
 import { processTransferReceipt } from '../shared/ocr-service.js';
+import { createTokenBucket } from '../shared/token-bucket.js';
 
 const MES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+
+const paymentSaveBucket = createTokenBucket({ capacity: 5, rate: 0.15, label: 'registrar pagos' });
 const MES_LABEL = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
 export const PaymentsModule = {
@@ -412,6 +416,7 @@ export const PaymentsModule = {
     const pd  = sta === 'paid' ? new Date().toISOString() : null;
     if (!sid) return Helpers.toast('Selecciona un estudiante', 'warning');
     if (!amt || amt <= 0) return Helpers.toast('Ingresa un monto valido', 'warning');
+    if (!paymentSaveBucket.take()) return paymentSaveBucket.waitMessage();
     const saveBtn = document.getElementById('btnSavePaymentAction');
     if (saveBtn) saveBtn.disabled = true;
     UIHelpers.setLoading(true, '#modalPayment');
@@ -453,8 +458,15 @@ export const PaymentsModule = {
     }
 
     if (!confirm('Aprobar este pago?')) return;
+
+    if (Number(p?.amount || 0) >= 10000) {
+      const reauth = await requireReauth({ message: 'aprobar este pago' });
+      if (!reauth) return;
+    }
+
     try {
       await supabase.from('payments').update({ status: 'paid', paid_date: new Date().toISOString() }).eq('id', id);
+      await auditLog('payment.approve', { payment_id: id, amount: p?.amount || null }).catch(() => {});
       Helpers.toast('Pago aprobado', 'success');
       this.loadPayments(); this.loadStats();
       this._generateInvoiceAfterApproval(id);
@@ -693,8 +705,13 @@ export const PaymentsModule = {
 
   async delete(id) {
     if (!confirm('Eliminar este registro?')) return;
+
+    const reauth = await requireReauth({ message: 'eliminar este registro de pago' });
+    if (!reauth) return;
+
     try {
       await supabase.from('payments').delete().eq('id', id);
+      await auditLog('payment.delete', { payment_id: id }).catch(() => {});
       Helpers.toast('Pago eliminado', 'success');
       await this.loadPayments();
     } catch (_) { Helpers.toast('Error al eliminar', 'error'); }

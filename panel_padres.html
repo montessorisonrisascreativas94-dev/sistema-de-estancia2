@@ -57,6 +57,8 @@
   <link rel="stylesheet" href="css/karpus-modern.css" />
   <link rel="stylesheet" href="css/layout.css" />
   <link rel="stylesheet" href="css/montessori-modern.css" />
+  <link rel="stylesheet" href="css/messenger-chat.css" />
+    <link rel="stylesheet" href="css/wall-social.css" />
   <script src="js/shared/chart.min.js"></script>
   <link rel="icon" href="logo/favicon.ico" type="image/x-icon">
   <link rel="stylesheet" href="css/montessori-tailwind.css">
@@ -574,11 +576,12 @@
           <span class="flex-1 text-left">Asistencia</span>
         </button>
         
-        <!-- Finanzas -->
+        <!-- Finanzas (módulo deshabilitado)
         <button type="button" data-target="payments" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 font-bold text-sm" aria-label="Finanzas">
           <i data-lucide="wallet" class="w-5 h-5 shrink-0"></i>
           <span class="flex-1 text-left">Finanzas</span>
         </button>
+        -->
         
         <!-- Comunicación -->
         <button type="button" data-target="notifications" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 font-bold text-sm" aria-label="Comunicación">
@@ -956,7 +959,7 @@
           </section>
 
           <!-- PAGOS -->
-          <section id="payments" class="section hidden">
+          <section id="payments" class="section hidden" style="display:none" aria-hidden="true">
             <div class="flex flex-col gap-6">
               <!-- Header -->
               <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -1344,54 +1347,85 @@
                 Centro de Comunicación
               </h3>
 
-              <!-- Chat Layout -->
-              <div class="chat-shell" style="min-height:70vh;">
+              <!-- Chat Layout — Messenger Pro (3 columnas) -->
+              <div id="chatShell" class="m-chat-shell m-chat-grid">
 
-                <!-- Lista de Contactos -->
-                <div id="chatListPanel" class="chat-list-col">
-                  <div class="p-4 border-b border-[#E2E8F0]">
-                    <div class="relative">
-                      <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#64748B]"></i>
-                      <input id="chatSearchInput" type="text" class="w-full pl-9 pr-4 py-2 rounded-xl border border-[#E2E8F0] bg-white text-sm focus:ring-2 focus:ring-[#0B63C7] focus:border-[#0B63C7] outline-none transition-all" placeholder="Buscar contacto...">
+                <!-- 1) LISTA DE CONVERSACIONES -->
+                <aside class="m-chat-list">
+                  <div class="m-chat-list__header">
+                    <div class="m-chat-list__title">💬 Mensajes</div>
+                    <div class="m-chat-list__search">
+                      <i data-lucide="search"></i>
+                      <input id="mChatSearch" type="text" placeholder="Buscar conversación…">
                     </div>
                   </div>
-                  <div id="chatContactsList" class="flex-1 overflow-y-auto p-2 space-y-1">
-                    <div class="p-4 text-center text-[#64748B] text-sm">Cargando contactos...</div>
+                  <div id="mChatList" class="m-chat-list__content">
+                    <div class="p-4 text-center text-[#64748B] text-sm font-bold">Cargando contactos…</div>
                   </div>
-                </div>
+                </aside>
 
-                <!-- Conversación -->
-                <div id="chatConversationPanel" class="chat-conv-col chat-hidden md:flex bg-white rounded-2xl border border-[#E2E8F0] overflow-hidden">
+                <!-- 2) CONVERSACIÓN PRINCIPAL -->
+                <section class="m-chat-main">
                   <!-- Header -->
-                  <div id="chatActiveHeader" class="p-4 border-b border-[#E2E8F0] flex items-center gap-3 bg-white shrink-0 hidden">
-                    <button id="chatBackBtn" class="md:hidden p-2 rounded-xl bg-[#E2E8F0] text-[#64748B] hover:bg-[#E8F2FF] hover:text-[#0B63C7] transition-colors shrink-0">
+                  <div class="m-chat-header">
+                    <button id="mChatBackBtn" class="m-chat-header__back">
                       <i data-lucide="arrow-left" class="w-4 h-4"></i>
                     </button>
-                    <div id="chatActiveAvatar" class="w-12 h-12 rounded-full bg-[#E8F2FF] text-[#0B63C7] flex items-center justify-center font-bold overflow-hidden border-2 border-white shrink-0 shadow-sm aspect-square"></div>
-                    <div class="min-w-0 flex-1">
-                      <div id="chatActiveName" class="font-bold text-[#1A2340] truncate"></div>
-                      <div id="chatActiveMeta" class="text-[10px] text-[#64748B] truncate"></div>
+                    <div class="m-chat-header__avatar" id="mChatActiveAvatar">
+                      <span>👤</span>
+                    </div>
+                    <div class="m-chat-header__body">
+                      <div class="m-chat-header__name" id="mChatActiveName">Selecciona un contacto</div>
+                      <div class="m-chat-header__meta" id="mChatActiveMeta">Elige a quién escribirle</div>
+                    </div>
+                    <div class="m-chat-header__actions">
+                      <button class="m-chat-header__btn" title="Llamar"><i data-lucide="phone" class="w-4 h-4"></i></button>
+                      <button class="m-chat-header__btn" title="Videollamada"><i data-lucide="video" class="w-4 h-4"></i></button>
+                      <button class="m-chat-header__btn" title="Más opciones"><i data-lucide="more-vertical" class="w-4 h-4"></i></button>
                     </div>
                   </div>
 
-                  <!-- Mensajes -->
-                  <div id="chatMessages" class="chat-messages-scroll relative flex-1">
-                    <div class="flex-1 flex flex-col items-center justify-center text-[#64748B] opacity-60 py-12">
-                      <i data-lucide="messages-square" class="w-16 h-16 mb-4"></i>
-                      <p class="font-medium">Selecciona un contacto para comenzar</p>
+                  <!-- Scroll mensajes -->
+                  <div id="mChatScroll" class="m-chat-scroll">
+                    <div class="m-empty">
+                      <div class="m-empty__icon"><i data-lucide="message-circle-heart" class="w-8 h-8"></i></div>
+                      <div class="m-empty__title">Centro de Comunicación</div>
+                      <div class="m-empty__text">Selecciona una conversación del panel izquierdo para ver los mensajes.</div>
                     </div>
                   </div>
 
-                  <!-- Área de Input -->
-                  <div class="chat-input-sticky p-4 border-t border-[#E2E8F0] bg-white">
-                    <div class="flex gap-3 items-end">
-                      <textarea id="messageInput" rows="1" class="flex-1 bg-[#F8FAFC] border border-[#E2E8F0] rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#0B63C7] focus:border-[#0B63C7] outline-none resize-none transition-all" placeholder="Escribe un mensaje..."></textarea>
-                      <button id="btnSendChatMessage" class="text-white p-3.5 rounded-2xl active:scale-95 transition-all shadow-lg shrink-0">
-                        <i data-lucide="send" class="w-5 h-5"></i>
-                      </button>
+                  <!-- Input -->
+                  <div class="m-chat-input">
+                    <div class="m-chat-input__tools">
+                      <button class="m-chat-input__tool" title="Adjuntar imagen" type="button"><i data-lucide="image" class="w-4 h-4"></i></button>
+                      <button class="m-chat-input__tool" title="Adjuntar archivo" type="button"><i data-lucide="paperclip" class="w-4 h-4"></i></button>
+                    </div>
+                    <div class="m-chat-input__wrap">
+                      <textarea id="mChatInput" rows="1" placeholder="Escribe un mensaje…"></textarea>
+                      <button class="m-chat-input__emoji" type="button" title="Emoji">😊</button>
+                    </div>
+                    <button id="mChatSendBtn" class="m-chat-input__send" type="button">
+                      <i data-lucide="send" class="w-4 h-4"></i>
+                    </button>
+                  </div>
+                </section>
+
+                <!-- 3) PANEL DE INFORMACIÓN -->
+                <aside id="mChatInfo" class="m-chat-info">
+                  <div class="m-info-profile">
+                    <div class="m-info-profile__avatar">👤</div>
+                    <div class="m-info-profile__name">Panel de info</div>
+                    <div class="m-info-profile__role">Detalles del contacto</div>
+                  </div>
+                  <div class="m-info-card">
+                    <div class="m-info-card__title">Acerca</div>
+                    <div class="m-info-profile__meta">
+                      <div><span>Selecciona</span><span>—</span></div>
+                      <div><span>una</span><span>—</span></div>
+                      <div><span>conversación</span><span>—</span></div>
                     </div>
                   </div>
-                </div>
+                </aside>
 
               </div>
             </div>

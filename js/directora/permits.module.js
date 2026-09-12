@@ -1,6 +1,8 @@
 import { supabase } from '../shared/supabase.js';
 import { TABLES } from '../shared/constants.js';
 import { Helpers } from '../shared/helpers.js';
+import { auditLog } from '../shared/db-utils.js';
+import { requireReauth } from '../shared/reauth.js';
 
 export const PermitsModule = {
   _listenersBound: false,
@@ -104,6 +106,9 @@ export const PermitsModule = {
     const confirm = await Helpers.confirm(`\u00bfSeguro que desea marcar esta solicitud como ${newStatus}?`);
     if (!confirm) return;
 
+    const reauth = await requireReauth({ message: 'actualizar esta solicitud' });
+    if (!reauth) return;
+
     try {
       const { error } = await supabase
         .from(TABLES.STAFF_PERMITS)
@@ -111,6 +116,8 @@ export const PermitsModule = {
         .eq('id', id);
 
       if (error) throw error;
+      const { data: usr } = await supabase.auth.getUser();
+      await auditLog('staff_permit.status_update', { id, newStatus, approved_by: usr?.user?.id }).catch(() => {});
       Helpers.toast('Estado actualizado correctamente', 'success');
       this.loadHistory();
       this.loadStats();

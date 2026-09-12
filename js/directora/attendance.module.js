@@ -33,7 +33,7 @@ export const AttendanceModule = {
       return channel.on('postgres_changes', {
         event: '*', schema: 'public', table: 'attendance'
       }, () => {
-        // Solo recargar si estamos en modo día y es hoy
+        // Solo recargar si estamos en modo dÃ­a y es hoy
         const today = Helpers.getYYYYMMDD();
         const dateEl = document.getElementById('attDateSingle');
         if (this._mode === 'day' && (!dateEl || dateEl.value === today)) {
@@ -179,7 +179,7 @@ export const AttendanceModule = {
     if (window.lucide) lucide.createIcons();
   },
 
-  /** Vista por día — una fila por registro (comportamiento original) */
+  /** Vista por dÃ­a â€” una fila por registro (comportamiento original) */
   _renderTableFlat(tbody, rows) {
     // Restaurar headers para vista plana
     const head = document.getElementById('attTableHead');
@@ -195,8 +195,8 @@ export const AttendanceModule = {
     tbody.innerHTML = rows.map(r => {
       const s   = STATUS[norm(r.status)] || STATUS.absent;
       const ini = r.student?.name?.charAt(0)?.toUpperCase() || '?';
-      const checkIn  = r.check_in  ? new Date(r.check_in).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—';
-      const checkOut = r.check_out ? new Date(r.check_out).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—';
+      const checkIn  = r.check_in  ? new Date(r.check_in).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'â€”';
+      const checkOut = r.check_out ? new Date(r.check_out).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'â€”';
       const dateStr  = new Date(r.date + 'T00:00:00').toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' });
 
       return `<tr class="hover:bg-slate-50 border-b border-slate-100 transition-colors">
@@ -206,8 +206,8 @@ export const AttendanceModule = {
               ${r.student?.avatar_url ? `<img src="${r.student.avatar_url}" class="w-full h-full object-cover">` : ini}
             </div>
             <div>
-              <div class="font-bold text-slate-800 text-sm">${Helpers.escapeHTML(r.student?.name || '—')}</div>
-              <div class="text-[10px] text-slate-400 font-bold uppercase">${Helpers.escapeHTML(r.classroom?.name || '—')}</div>
+              <div class="font-bold text-slate-800 text-sm">${Helpers.escapeHTML(r.student?.name || 'â€”')}</div>
+              <div class="text-[10px] text-slate-400 font-bold uppercase">${Helpers.escapeHTML(r.classroom?.name || 'â€”')}</div>
             </div>
           </div>
         </td>
@@ -223,7 +223,7 @@ export const AttendanceModule = {
     }).join('');
   },
 
-  /** Vista por periodo — UNA fila por estudiante con conteos de presentes/ausentes/tardanzas */
+  /** Vista por periodo â€” UNA fila por estudiante con conteos de presentes/ausentes/tardanzas */
   _renderTableGrouped(tbody, rows) {
     // Actualizar headers para vista agrupada
     const head = document.getElementById('attTableHead');
@@ -233,7 +233,7 @@ export const AttendanceModule = {
         <th class="px-5 py-3 text-center text-[10px] font-black text-slate-400 uppercase tracking-wider">Presentes</th>
         <th class="px-5 py-3 text-center text-[10px] font-black text-slate-400 uppercase tracking-wider">Ausencias / Tardanzas</th>
         <th class="px-5 py-3 text-center text-[10px] font-black text-slate-400 uppercase tracking-wider">Asistencia %</th>
-        <th class="px-5 py-3 text-center text-[10px] font-black text-slate-400 uppercase tracking-wider">Último registro</th>
+        <th class="px-5 py-3 text-center text-[10px] font-black text-slate-400 uppercase tracking-wider">Ãšltimo registro</th>
       </tr>`;
     }
     const map = new Map();
@@ -257,13 +257,13 @@ export const AttendanceModule = {
     });
 
     const grouped = Array.from(map.values())
-      .sort((a, b) => b.present - a.present); // ordenar por más presentes
+      .sort((a, b) => b.present - a.present); // ordenar por mÃ¡s presentes
 
     tbody.innerHTML = grouped.map(g => {
       const ini  = g.student?.name?.charAt(0)?.toUpperCase() || '?';
       const rate = g.total > 0 ? Math.round((g.present / g.total) * 100) : 0;
       const barColor = rate >= 80 ? 'bg-emerald-500' : rate >= 60 ? 'bg-amber-500' : 'bg-rose-500';
-      const lastStr  = g.lastDate ? new Date(g.lastDate + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }) : '—';
+      const lastStr  = g.lastDate ? new Date(g.lastDate + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }) : 'â€”';
 
       return `<tr class="hover:bg-slate-50 border-b border-slate-100 transition-colors">
         <td class="px-5 py-3.5">
@@ -272,8 +272,8 @@ export const AttendanceModule = {
               ${g.student?.avatar_url ? `<img src="${g.student.avatar_url}" class="w-full h-full object-cover">` : ini}
             </div>
             <div>
-              <div class="font-bold text-slate-800 text-sm">${Helpers.escapeHTML(g.student?.name || '—')}</div>
-              <div class="text-[10px] text-slate-400 font-bold uppercase">${Helpers.escapeHTML(g.classroom?.name || '—')}</div>
+              <div class="font-bold text-slate-800 text-sm">${Helpers.escapeHTML(g.student?.name || 'â€”')}</div>
+              <div class="text-[10px] text-slate-400 font-bold uppercase">${Helpers.escapeHTML(g.classroom?.name || 'â€”')}</div>
             </div>
           </div>
         </td>

@@ -81,10 +81,22 @@ export const ImageLoader = {
   },
 
   _loadVideo(el) {
-    const src = el.dataset.src;
-    if (!src) return;
+    const raw = el.dataset.src;
+    if (!raw) return;
     if (el.dataset.poster) el.poster = el.dataset.poster;
-    el.src = src; el.load();
+
+    // 🎬 FOTOGRAMA INTELIGENTE: descargar SOLO metadatos + 1 keyframe inicial.
+    // El fragmento #t=0.7 hace que el navegador pida un rango pequeño del archivo
+    // y muestre un fotograma del video (como poster de Instagram) sin descargarlo.
+    const baseSrc = raw.replace(/#t=[\d.]+/, '');
+    el.dataset.baseSrc = baseSrc;
+    el.preload = 'metadata';          // pre-carga mínima: duración + fotograma
+    if (el.dataset.fotograma !== 'off') {
+      el.src = baseSrc + '#t=0.7';
+    } else {
+      el.src = baseSrc;
+    }
+    el.load();
     el.dataset.loaded = '1'; el.classList.add('karpus-img-loaded');
   },
 
@@ -109,8 +121,8 @@ export const ImageLoader = {
   },
 
   video(src, poster = '', opts = {}) {
-    const { cls = 'w-full max-h-[500px] mx-auto', controls = true } = opts;
-    return `<video data-src="${src}" ${poster ? `data-poster="${poster}"` : ''} class="karpus-img karpus-img-loading ${cls}" ${controls ? 'controls' : ''} playsinline preload="none"></video>`;
+    const { cls = 'w-full max-h-[500px] mx-auto', controls = true, fotograma = true } = opts;
+    return `<video data-src="${src}" ${poster ? `data-poster="${poster}"` : ''}${fotograma ? ' data-fotograma="on"' : ''} class="karpus-img karpus-img-loading ${cls}" ${controls ? 'controls' : ''} playsinline preload="none"></video>`;
   },
 
   skeleton(cls = 'w-full h-48') {

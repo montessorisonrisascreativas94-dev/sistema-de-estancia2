@@ -31,13 +31,19 @@ export const BadgeSystem = {
     this._counts = {};
   },
 
-  // Detecta el panel activo por elementos unicos en el DOM
+  // Detecta el panel activo por la clase única del <body> (fuente confiable)
   _detectRole() {
+    const bodyCls = document.body?.className || '';
+    if (bodyCls.includes('panel-padre-body'))      return 'padre';
+    if (bodyCls.includes('panel-directora-body'))  return 'directora';
+    if (bodyCls.includes('panel-maestra-body'))    return 'maestra';
+    if (bodyCls.includes('panel-asistente-body'))  return 'asistente';
+    if (bodyCls.includes('panel-encargada-body'))  return 'encargada';
+    // Fallback por elementos únicos
     if (document.getElementById('badge-class'))   return 'padre';
     if (document.getElementById('badge-t-chat'))  return 'maestra';
-    // Asistente tiene badge-muro, directora no
-    if (document.getElementById('badge-muro'))    return 'asistente';
-    if (document.getElementById('badge-pagos'))   return 'directora';
+    if (document.getElementById('badge-asis-finanzas') || document.getElementById('group-asis-finanzas')) return 'asistente';
+    if (document.getElementById('group-finanzas')) return 'directora';
     return 'unknown';
   },
 

@@ -5,7 +5,7 @@
  * para evitar conflictos de handlers con este worker.
  */
 
-const CACHE_NAME = 'karpus-pwa-v9';
+const CACHE_NAME = 'karpus-pwa-v10';
 
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
@@ -38,6 +38,19 @@ self.addEventListener('activate', e => {
   );
 });
 
+// ✅ FIX: nunca pasar `undefined` a respondWith() — eso lanza
+// "Failed to convert value to 'Response'". Siempre devolvemos un Response real.
+function _safeRespond(promise) {
+  return Promise.resolve(promise).then(res => {
+    if (res && typeof res.status === 'number') return res;
+    // Fallback si la caché no tiene nada
+    return new Response('<!doctype html><meta charset="utf-8"><title>Sin conexión</title><body style="font-family:sans-serif;display:grid;place-items:center;height:100vh;margin:0"><div style="text-align:center"><h2>&#128421;&#65039; Sin conexión</h2><p style="color:#64748b">Revisa tu conexión e inténtalo de nuevo.</p></div></body>', {
+      status: 200,
+      headers: { 'Content-Type': 'text/html; charset=utf-8' }
+    });
+  });
+}
+
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
 
@@ -45,23 +58,20 @@ self.addEventListener('fetch', e => {
 
   // ✅ CACHÉ DE FUENTES Y CDN (Stale-while-revalidate)
   if (url.hostname.includes('fonts.googleapis.com') || url.hostname.includes('fonts.gstatic.com')) {
-    e.respondWith(
+    e.respondWith(_safeRespond(
       caches.match(e.request).then(cached => {
         const fetchPromise = fetch(e.request).then(networkResponse => {
-          // ✅ FIX: clonar dentro de try/catch — el navegador puede entregar el
-          // mismo Response para dos fetch del mismo URL, y un segundo clone()
-          // lanzaría "Response body is already used".
-          if (networkResponse.ok && networkResponse.status === 200) {
+          if (networkResponse && networkResponse.ok && networkResponse.status === 200) {
             try {
               const copy = networkResponse.clone();
               caches.open(CACHE_NAME).then(cache => cache.put(e.request, copy)).catch(() => {});
             } catch (_) { /* cuerpo ya consumido — omitir caché */ }
           }
           return networkResponse;
-        });
+        }).catch(() => cached);
         return cached || fetchPromise;
       })
-    );
+    ));
     return;
   }
 
@@ -76,14 +86,14 @@ self.addEventListener('fetch', e => {
   }
 
   // ✅ CACHÉ DE ASSETS ESTÁTICOS CORE
-  const isCoreAsset = url.pathname.endsWith('.css') || 
-                     url.pathname.endsWith('.js') || 
-                     url.pathname.endsWith('.png') || 
+  const isCoreAsset = url.pathname.endsWith('.css') ||
+                     url.pathname.endsWith('.js') ||
+                     url.pathname.endsWith('.png') ||
                      url.pathname.endsWith('.jpg') ||
                      url.pathname.endsWith('.svg');
 
   if (isCoreAsset || url.origin === self.location.origin) {
-    e.respondWith(
+    e.respondWith(_safeRespond(
       caches.match(e.request).then(cached => {
         if (cached) return cached;
         return fetch(e.request).then(res => {
@@ -94,6 +104,6 @@ self.addEventListener('fetch', e => {
           return res;
         }).catch(() => caches.match('login.html'));
       })
-    );
+    ));
   }
 });

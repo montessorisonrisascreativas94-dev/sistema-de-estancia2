@@ -2622,14 +2622,20 @@ CREATE POLICY "posts_auth_delete" ON storage.objects FOR DELETE USING (bucket_id
 -- ============================================================
 
 -- Insertar/actualizar perfil de administrador
+-- FIX 21000: ambos UNIQUE (id y email) existen; usar (id) con DO UPDATE que
+-- reescribe email provocaba "cannot affect row a second time". Arbiter = email
+-- y NO se reasigna email en el update → idempotente sin colisiones.
+-- Pre-limpieza: evita 23505 (PK) si un run viejo dejó el id con otro email.
+DELETE FROM public.profiles WHERE id = '5b6e8359-1a65-4d26-aba4-ca48b6b66409' AND email IS DISTINCT FROM 'impulsodigital@gmail.com';
 INSERT INTO public.profiles (id, email, name, role, accepted_terms, created_at)
 VALUES ('5b6e8359-1a65-4d26-aba4-ca48b6b66409', 'impulsodigital@gmail.com', 'Administrador', 'admin', true, now())
-ON CONFLICT (id) DO UPDATE SET role = 'admin', email = 'impulsodigital@gmail.com', accepted_terms = true;
+ON CONFLICT (email) DO UPDATE SET role = 'admin', name = 'Administrador', accepted_terms = true;
 
 -- Insertar/actualizar perfil de directora
+DELETE FROM public.profiles WHERE id = '3ce39f30-0447-4b3a-a639-20e9a34e5fb8' AND email IS DISTINCT FROM 'directora@sonrisacreativas.com';
 INSERT INTO public.profiles (id, email, name, role, accepted_terms, created_at)
 VALUES ('3ce39f30-0447-4b3a-a639-20e9a34e5fb8', 'directora@sonrisacreativas.com', 'Directora', 'directora', true, now())
-ON CONFLICT (id) DO UPDATE SET role = 'directora', email = 'directora@sonrisacreativas.com', accepted_terms = true;
+ON CONFLICT (email) DO UPDATE SET role = 'directora', name = 'Directora', accepted_terms = true;
 
 -- ============================================================
 -- FIN DEL SCHEMA CONSOLIDADO

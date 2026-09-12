@@ -1,14 +1,12 @@
 /**
- * Chat Module — Panel Directora (estilo Messenger profesional)
+ * Chat Module — Panel Asistente (estilo Messenger profesional)
  *
- * Mantiene compatibilidad hacia atrás:
- *   - export ChatModule.init()  (mismo API que antes)
- *   - window._chatSelect(id)    (para onclick inline)
- *   - filtro chatRoleFilter     (select para filtrar por rol)
+ * Replica el patrón del módulo de Directora sobre el shell mChat*
+ * (idéntico a panel_maestra y panel_directora).
  */
-import { DirectorApi } from './api.js';
 import { Helpers, escapeHtml } from '../shared/helpers.js';
 import { supabase, sendPush } from '../shared/supabase.js';
+import { AppState } from './state.js';
 import {
   ChatModule as SharedChatModule,
   ChatUI,
@@ -19,8 +17,8 @@ import {
 import { ScrollModule } from '../shared/scroll.module.js';
 
 const ROLE_ICONS = {
-  maestra: '👩‍🏫',
-  asistente: '🧑‍💼',
+  maestra: '👩🏫',
+  asistente: '🧑💼',
   padre: '👨‍👩‍👧',
   directora: '👩‍💼',
 };
@@ -34,7 +32,7 @@ const ROLE_LABELS = {
   'padre_o_madre': 'Padre/Madre',
 };
 
-export const ChatModule = {
+export const AssistantChatApp = {
   _contacts: [],
   _activeContact: null,
   _conversationId: null,
@@ -43,10 +41,9 @@ export const ChatModule = {
   _currentUserId: null,
   _currentUserProfile: null,
   _anyMsgUnsubscribe: null,
-  _replyTo: null,
-  _editingId: null,
-  _pendingAttachment: null,
-  _quoteMap: {},
+  _replyTo: null,         // mensaje al que se está respondiendo
+  _editingId: null,       // id del mensaje que se está editando
+  _quoteMap: {},          // { msgId: content } para respuestas
 
   /* ----------------------------------------------------------- */
   /*                           INIT                              */
@@ -55,19 +52,16 @@ export const ChatModule = {
     const grid = document.getElementById('chatShell');
     if (!grid) return;
 
-    // Datos del usuario actual
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
     this._currentUserId = user.id;
     const { data: profile } = await supabase.from('profiles')
-      .select('name, avatar_url').eq('id', user.id).single()
+      .select('name, avatar_url, role').eq('id', user.id).single()
       .catch(() => ({ data: null }));
     this._currentUserProfile = profile || {};
 
-    // Responsive inicial: en móvil mostramos la lista
     grid.classList.add('is-view-list');
 
-    // Bindear una sola vez
     const sendBtn = document.getElementById('mChatSendBtn');
     const input = document.getElementById('mChatInput');
     if (sendBtn && !sendBtn._bound) {
@@ -87,7 +81,6 @@ export const ChatModule = {
       }
     }
 
-    // Botón atrás móvil
     const backBtn = document.getElementById('mChatBackBtn');
     if (backBtn && !backBtn._bound) {
       backBtn._bound = true;
@@ -98,28 +91,12 @@ export const ChatModule = {
       });
     }
 
-    // Buscador
     const search = document.getElementById('mChatSearch');
     if (search && !search._bound) {
       search._bound = true;
       search.addEventListener('input', ScrollModule.debounce(() => this._renderContacts(), 200));
     }
-    // Compatibilidad: buscador antiguo
-    const legacySearch = document.getElementById('chatSearchInput');
-    if (legacySearch && !legacySearch._bound) {
-      legacySearch._bound = true;
-      legacySearch.addEventListener(
-        'input',
-        ScrollModule.debounce(() => this._renderContacts(), 250)
-      );
-    }
 
-    // Filtro de roles (compatibilidad)
-    document.getElementById('chatRoleFilter')?.addEventListener('change', () => {
-      this.loadContacts(true);
-    });
-
-    // Click en contacto (delegación)
     const list = document.getElementById('mChatList');
     if (list && !list._bound) {
       list._bound = true;
@@ -127,58 +104,22 @@ export const ChatModule = {
         this.selectChat(el.dataset.contactId);
       });
     }
-    // Compatibilidad: lista antigua
-    const legacyList = document.getElementById('chatContactsList');
-    if (legacyList && !legacyList._bound) {
-      legacyList._bound = true;
-      Helpers.delegate(legacyList, '[data-contact-id]', 'click', (_e, el) => {
-        this.selectChat(el.dataset.contactId);
-      });
-    }
 
-    // Localizar y clonar el input para gestión de adjuntos (multimedia)
-    const attachBtn = document.getElementById('mChatAttachBtn');
-    if (attachBtn && !attachBtn._bound) {
-      attachBtn._bound = true;
-      attachBtn.addEventListener('click', () => {
-        const hidden = document.getElementById('mChatFileInput');
-        if (hidden) hidden.click();
-      });
-    }
-    const fileInput = document.getElementById('mChatFileInput');
-    if (fileInput && !fileInput._bound) {
-      fileInput._bound = true;
-      fileInput.addEventListener('change', async (e) => {
-        const file = e.target.files?.[0];
-        e.target.value = '';
-        if (!file) return;
-        try {
-          Helpers.toast('Subiendo archivo…');
-          const att = await SharedChatModule.uploadAttachment(file, `${this._currentUserId}/${Date.now()}-${file.name}`);
-          this._pendingAttachment = att;
-          Helpers.toast('Archivo adjunto listo para enviar');
-        } catch (_) {
-          Helpers.toast('No se pudo subir el archivo', 'error');
-        }
-      });
-    }
-
-    // Delegación de eventos en las burbujas (reacciones / menú / picker)
+    // Delegación de burbujas: reacciones (tap/long-press), menú ⋮, etc.
     const scroll = document.getElementById('mChatScroll');
-    if (scroll && !scroll._chatBubblesBound) {
+    if (scroll) {
       ChatUI.bindBubbleEvents(scroll, {
         pickerHTML: (msgId) => ChatUI.pickerHTML(msgId),
         reactOnMessage: (msgId, emoji) => this.toggleReaction(msgId, emoji),
         onMenu: (action, msgId) => this._onMenu(action, msgId),
+        canEditAll: this._currentUserProfile?.role === 'directora',
         onBubbleTap: (msgId) => this.toggleReaction(msgId, '👍'),
-        canEditAll: true,
       });
     }
 
-    // Expose para onclick inline
-    window._chatSelect = (id) => this.selectChat(id);
+    // Compatibilidad: onclick inline legacy
+    window.selectAssistantChat = async (userId) => this.selectChatById(userId);
 
-    // Suscripción global a CUALQUIER mensaje nuevo — ordena la lista + badge global
     if (this._anyMsgUnsubscribe) this._anyMsgUnsubscribe.unsubscribe();
     this._anyMsgUnsubscribe = SharedChatModule.onAnyNewMessage(() => {
       this.loadContacts(true);
@@ -197,19 +138,24 @@ export const ChatModule = {
     if (!quiet) list.innerHTML = Helpers.skeleton(4, 'h-20');
 
     try {
-      const roleVal = document.getElementById('chatRoleFilter')?.value || '';
-      const [usersRes, unreadData] = await Promise.all([
-        DirectorApi.getChatUsers(this._currentUserId, roleVal || null),
-        SharedChatModule.getUnreadCounts().catch(() => ({})),
-      ]);
-      const { data: users, error } = usersRes;
+      const { data: profiles, error } = await supabase
+        .from('profiles')
+        .select('id, name, avatar_url, role')
+        .neq('id', this._currentUserId)
+        .is('deleted_at', null)
+        .not('name', 'is', null)
+        .order('name');
       if (error) throw error;
 
-      const parentIds = (users || []).filter(u => u.role === 'padre').map(u => u.id);
+      const parentIds = (profiles || []).filter(p => p.role === 'padre').map(p => p.id);
       let studentMap = {};
       if (parentIds.length) {
-        const { data: students } = await DirectorApi.getStudentsByParentIds(parentIds)
-          .catch(() => ({ data: [] }));
+        const { data: students } = await supabase
+          .from('students')
+          .select('parent_id, name, classrooms(name)')
+          .in('parent_id', parentIds)
+          .is('deleted_at', null)
+          .eq('is_active', true);
         (students || []).forEach(s => {
           if (!studentMap[s.parent_id]) {
             studentMap[s.parent_id] = {
@@ -220,7 +166,11 @@ export const ChatModule = {
         });
       }
 
-      const contactsRaw = (users || []).map(u => {
+      const contactsRaw = (profiles || []).filter(p => {
+        if (!p.name || p.name.trim().length === 0) return false;
+        if (p.role === 'padre' && !studentMap[p.id]) return false;
+        return true;
+      }).map(u => {
         const si = studentMap[u.id] || {};
         const parentName = u.name || 'Sin nombre';
         const studentName = si?.studentName || null;
@@ -247,7 +197,7 @@ export const ChatModule = {
           roleIcon,
           avatar: u.avatar_url,
           meta,
-          unread: 0, // será overwritten por enrichContacts
+          unread: 0,
           lastMessage: null,
           lastMessageTime: null,
         };
@@ -265,12 +215,7 @@ export const ChatModule = {
     const list = document.getElementById('mChatList');
     if (!list) return;
 
-    // Tomar valor del buscador nuevo o del legacy
-    const q = (
-      document.getElementById('mChatSearch')?.value ||
-      document.getElementById('chatSearchInput')?.value ||
-      ''
-    ).toLowerCase().trim();
+    const q = (document.getElementById('mChatSearch')?.value || '').toLowerCase().trim();
 
     const items = this._contacts.filter(c => {
       if (!q) return true;
@@ -336,6 +281,18 @@ export const ChatModule = {
   /* ----------------------------------------------------------- */
   /*                   SELECCIONAR CONTACTO                      */
   /* ----------------------------------------------------------- */
+  async selectChatById(contactId) {
+    if (!this._currentUserId) await this.init();
+    const contact = this._contacts.find(c => c.id === contactId);
+    if (!contact) {
+      await this.loadContacts(true);
+      const retry = this._contacts.find(c => c.id === contactId);
+      if (!retry) return;
+      return this.selectChat(retry.id);
+    }
+    return this.selectChat(contact.id);
+  },
+
   async selectChat(contactId) {
     const contact = this._contacts.find(c => c.id === contactId);
     if (!contact) return;
@@ -346,14 +303,16 @@ export const ChatModule = {
     contact.unread = 0;
     this._renderContacts();
 
-    // Responsive: mostrar conversación en móvil
     const grid = document.getElementById('chatShell');
     if (grid) {
       grid.classList.remove('is-view-list');
       grid.classList.add('is-view-chat');
     }
-    // Compatibilidad: clase antigua
-    document.getElementById('chatAppContainer')?.classList.add('show-chat');
+
+    // Estado compartido para compatibilidad (badges / videollamadas etc.)
+    AppState.set('activeChatUserId', contactId);
+    AppState.set('activeChatName', contact.name);
+    AppState.set('activeChatRole', contact.role);
 
     this._renderHeader();
     this._renderInfoPanel();
@@ -409,7 +368,7 @@ export const ChatModule = {
         conversationId = null;
       }
       this._conversationId = conversationId;
-      if (window.AppState) AppState.set('activeConversationId', conversationId);
+      AppState.set('activeConversationId', conversationId);
 
       if (!messages.length) {
         const c = this._activeContact;
@@ -429,7 +388,6 @@ export const ChatModule = {
       this._renderMessages(messages);
       this._scrollToBottom(false);
 
-      // Top scroll (cargar más antiguos)
       if (this._topScrollDestroy) this._topScrollDestroy();
       const { destroy } = ScrollModule.topScroll({
         container: scroll,
@@ -478,7 +436,6 @@ export const ChatModule = {
       if (m.id) this._quoteMap[m.id] = (m.deleted_at ? 'Este mensaje fue eliminado' : m.content || '');
     });
     scroll.innerHTML = ChatUI.rowsHTML(ChatUI.buildRows(messages, this._currentUserId), this._bubbleCtx());
-    if (window.lucide) lucide.createIcons();
   },
 
   _scrollToBottom(smooth = true) {
@@ -491,6 +448,7 @@ export const ChatModule = {
   /*            FEATURES: RESPONDER / REACCIONES / MENÚ ⋮        */
   /* ----------------------------------------------------------- */
 
+  /** Marca el mensaje para responder y muestra la barra "respondiendo a…" */
   _beginReply(msg) {
     this._replyTo = msg;
     this._editingId = null;
@@ -504,6 +462,7 @@ export const ChatModule = {
     this._renderReplyBar();
   },
 
+  /** Marca el mensaje para editar y muestra la barra "editando…" */
   _beginEdit(msg) {
     this._editingId = msg.id;
     this._replyTo = null;
@@ -522,6 +481,7 @@ export const ChatModule = {
     this._renderReplyBar();
   },
 
+  /** Renderiza/elimina la barra contextual sobre el input */
   _renderReplyBar() {
     const inputArea = document.getElementById('mChatInput')?.closest('.m-chat-input');
     if (!inputArea) return;
@@ -544,6 +504,7 @@ export const ChatModule = {
     }
   },
 
+  /** Acciones del menú ⋮ */
   async _onMenu(action, msgId) {
     if (!msgId) return;
     const bubble = document.querySelector(`.m-bubble[data-msg-id="${msgId}"]`);
@@ -587,6 +548,7 @@ export const ChatModule = {
     }
   },
 
+  /** Alterna la reacción del usuario sobre un mensaje */
   async toggleReaction(msgId, emoji) {
     if (!msgId) return;
     const scroll = document.getElementById('mChatScroll');
@@ -599,6 +561,7 @@ export const ChatModule = {
     } catch (_) { Helpers.toast('Error al reaccionar', 'error'); }
   },
 
+  /** Recarga las reacciones de un mensaje y actualiza su DOM */
   async _refreshReactions(msgId) {
     const bubble = document.querySelector(`.m-bubble[data-msg-id="${msgId}"]`);
     if (!bubble) return;
@@ -611,9 +574,12 @@ export const ChatModule = {
     if (old) old.remove();
     const m = { id: msgId, message_reactions: data?.message_reactions || [] };
     const html = ChatUI.reactionsBar(m, this._currentUserId);
-    if (html) bubble.insertAdjacentHTML('beforeend', html);
+    if (html) {
+      bubble.insertAdjacentHTML('beforeend', html);
+    }
   },
 
+  /** Aplica borrado lógico visual sin recargar todo */
   _applySoftDelete(msgId) {
     const bubble = document.querySelector(`.m-bubble[data-msg-id="${msgId}"]`);
     if (!bubble) return;
@@ -629,6 +595,7 @@ export const ChatModule = {
     if (window.lucide) lucide.createIcons();
   },
 
+  /** Aplica edición visual */
   _applyEdit(msgId, content) {
     const bubble = document.querySelector(`.m-bubble[data-msg-id="${msgId}"]`);
     if (!bubble) return;
@@ -638,6 +605,12 @@ export const ChatModule = {
     if (meta && !meta.querySelector('.m-bubble__edited')) {
       meta.insertAdjacentHTML('beforeend', ' <span class="m-bubble__edited" title="Editado">editado</span>');
     }
+  },
+
+  _scrollToBottom(smooth = true) {
+    const scroll = document.getElementById('mChatScroll');
+    if (!scroll) return;
+    ScrollModule.scrollToBottom(scroll, smooth);
   },
 
   /* ----------------------------------------------------------- */
@@ -675,7 +648,6 @@ export const ChatModule = {
     input.style.height = 'auto';
     input.disabled = true;
 
-    // Optimistic UI: armamos grupo y renderizamos al instante
     const optimistMsg = {
       content: text || (attachments[0]?.file_name || '📎 Adjunto'),
       sender_id: this._currentUserId,
@@ -698,24 +670,22 @@ export const ChatModule = {
         { replyToId: replyTo?.id || null, attachments }
       );
 
-      // Sustituir el mensaje optimista por el real
       this._replaceOptimistic(optimistMsg.id, message || { ...optimistMsg, id: null });
 
       if (!this._conversationId && conversationId) {
         this._conversationId = conversationId;
-        if (window.AppState) AppState.set('activeConversationId', conversationId);
+        AppState.set('activeConversationId', conversationId);
         this._subscribeRealtime();
       }
 
-      // Push notification
       sendPush({
         user_id: this._activeContact.id,
-        title: 'Nuevo mensaje de Dirección',
+        title: 'Nuevo mensaje de Asistencia',
         message: text || (attachments[0]?.file_name || '📎 Adjunto'),
         type: 'chat',
       }).catch(() => {});
 
-      // Refrescar lista para actualizar "último mensaje"
+      if (window.lucide) lucide.createIcons();
       this.loadContacts(true);
     } catch (e) {
       console.error('Error enviando mensaje:', e);
@@ -736,7 +706,6 @@ export const ChatModule = {
   _appendOptimistic(msg) {
     const scroll = document.getElementById('mChatScroll');
     if (!scroll) return;
-    // Si está el mensaje "sin chat" lo quitamos
     const emptyEl = scroll.querySelector('.m-empty');
     if (emptyEl) emptyEl.remove();
 
@@ -836,9 +805,8 @@ export const ChatModule = {
       }
     );
 
-    // Broadcast typing
     const input = document.getElementById('mChatInput');
-    const myName = this._currentUserProfile?.name || 'Dirección';
+    const myName = this._currentUserProfile?.name || 'Asistente';
     let typingTimeout;
     if (input && !input._typingBound) {
       input._typingBound = true;
@@ -862,16 +830,13 @@ export const ChatModule = {
       this._topScrollDestroy();
       this._topScrollDestroy = null;
     }
-    if (window.AppState) AppState.set('activeConversationId', null);
+    AppState.set('activeConversationId', null);
   },
 
   _addIncomingMessage(msg) {
     const scroll = document.getElementById('mChatScroll');
     if (!scroll) return;
-    // Quitar mensaje vacío si existe
     scroll.querySelector('.m-empty')?.remove();
-
-    if (msg.id !== null && msg.id !== undefined) this._quoteMap[msg.id] = (msg.deleted_at ? 'Este mensaje fue eliminado' : msg.content || '');
 
     const lastGroup = scroll.querySelector('.m-msg-group:last-of-type');
     let appended = false;
@@ -882,7 +847,6 @@ export const ChatModule = {
         const wrapper = document.createElement('div');
         wrapper.innerHTML = ChatUI.buildGroupBubble(group, this._bubbleCtx());
         const newBubbles = wrapper.querySelector('.m-msg-group__bubbles');
-        // Quitar clases "is-only/is-first/is-last" de la última burbuja existente y convertirla
         const allExisting = container.querySelectorAll('.m-bubble');
         allExisting.forEach(b => b.classList.remove('is-only', 'is-last', 'is-first'));
         if (allExisting.length === 1) allExisting[0].classList.add('is-first');
@@ -890,7 +854,6 @@ export const ChatModule = {
           allExisting[0].classList.add('is-first');
           allExisting[allExisting.length - 1].classList.add('is-last');
         }
-        // Añadir la nueva como is-last
         const newBubble = newBubbles.querySelector('.m-bubble');
         newBubble.classList.remove('is-first', 'is-only');
         newBubble.classList.add('is-last');
@@ -936,7 +899,6 @@ export const ChatModule = {
 
   _showTypingIndicator(typingData) {
     let typingEl = document.getElementById('chatTypingIndicator');
-    // Si no existe el antiguo, lo buscamos dentro de mChatScroll o lo creamos
     if (!typingEl) {
       const scroll = document.getElementById('mChatScroll');
       if (!scroll) return;
@@ -954,7 +916,6 @@ export const ChatModule = {
       }
       typingEl = created;
     } else {
-      // Convertir el antiguo a la clase nueva
       typingEl.className = 'm-typing';
     }
     const textEl = typingEl.querySelector('.m-typing__text');

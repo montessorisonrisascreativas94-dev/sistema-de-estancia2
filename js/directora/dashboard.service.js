@@ -25,16 +25,15 @@ export const DashboardService = {
       const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
       // Queries directas en paralelo — no dependen de RPC
-      const [studentsRes, teachersRes, classroomsRes, attendanceRes, pendingPaymentsData] = await Promise.allSettled([
+      const [studentsRes, teachersRes, classroomsRes, attendanceRes] = await Promise.allSettled([
         supabase.from('students').select('id').limit(2000),
         supabase.from('profiles').select('id').in('role', ['maestra', 'asistente', 'admin']).limit(200),
         supabase.from('classrooms').select('id').limit(200),
-        supabase.from('attendance').select('status').eq('date', today).limit(1000),
-        supabase.from('payments').select('amount, status').in('status', ['pending', 'overdue', 'review']).limit(1000)
+        supabase.from('attendance').select('status').eq('date', today).limit(1000)
       ]);
 
       const safe = (r) => r.status === 'fulfilled' ? r.value : { count: 0, data: [] };
-      const [stu, tea, cls, att, pay] = [studentsRes, teachersRes, classroomsRes, attendanceRes, pendingPaymentsData].map(safe);
+      const [stu, tea, cls, att] = [studentsRes, teachersRes, classroomsRes, attendanceRes].map(safe);
 
       const stuCount = (stu.data?.length) ?? stu.count ?? 0;
       const teaCount = (tea.data?.length) ?? tea.count ?? 0;
@@ -42,7 +41,7 @@ export const DashboardService = {
 
       const attData = att.data || [];
       const presentCount = attData.filter(a => ['present','presente','late','tarde'].includes((a.status||'').toLowerCase())).length;
-      const totalPending  = (pay.data || []).reduce((s, p) => s + Number(p.amount || 0), 0);
+      const totalPending = 0;
 
       // Intentar RPC como enriquecimiento opcional (no bloquea)
       let rpcKpis = {};

@@ -6,11 +6,11 @@ import { SafeAppState } from '../shared/state.js';
  */
 function createInitialState() {
   return {
-    // ?? AutenticaciÛn
+    // ?? Autenticaci√≥n
     user: null,
     profile: null,
 
-    // ?? NavegaciÛn
+    // ?? Navegaci√≥n
     currentSection: 'dashboard',
 
     // ?? DASHBOARD
@@ -62,7 +62,7 @@ function createInitialState() {
       }
     },
 
-    // ?? ESTADÕSTICAS
+    // ?? ESTAD√çSTICAS
     stats: {},
 
     // ????? ESTUDIANTES
@@ -93,7 +93,7 @@ function createInitialState() {
       all: [],
       filters: {
         status: 'all',
-        year: new Date().getFullYear(), // OK aquÌ (factory)
+        year: new Date().getFullYear(), // OK aqu√≠ (factory)
         search: ''
       },
       selected: null
@@ -102,7 +102,7 @@ function createInitialState() {
     // ?? ASISTENCIA
     attendance: {
       entries: [],
-      selectedDate: new Date().toISOString().split('T')[0], // OK aquÌ
+      selectedDate: new Date().toISOString().split('T')[0], // OK aqu√≠
       stats: {
         present: 0,
         absent: 0,
@@ -131,7 +131,7 @@ function createInitialState() {
     wall: {
       posts: [],
       page: 1,
-      hasMore: true // ?? ˙til para paginaciÛn real
+      hasMore: true // ?? √∫til para paginaci√≥n real
     }
   };
 }

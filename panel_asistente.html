@@ -23,7 +23,9 @@
   <link rel="stylesheet" href="css/montessori-modern.css" />
   <link rel="stylesheet" href="css/montessori-tailwind.css">
   <link rel="stylesheet" href="css/premium-mobile.css">
+    <link rel="stylesheet" href="css/wall-social.css">
   <link rel="stylesheet" href="css/student-record-modal.css">
+  <link rel="stylesheet" href="css/messenger-chat.css">
   <script src="js/shared/chart.min.js"></script>
   <style>
     /* =========================================
@@ -279,29 +281,12 @@
           </div>
         </div>
 
-        <!-- ─── GESTIÓN FINANCIERA ─── -->
+        <!-- ─── GESTIÓN FINANCIERA (módulo oculto/deshabilitado) ─── -->
+        <!--
         <div class="kk-nav-group">
-          <button class="kk-nav-item kk-nav-group-toggle w-full" data-group="asis-finanzas" data-tooltip="Gestión Financiera">
-            <i data-lucide="banknote" class="text-yellow-200 shrink-0"></i>
-            <span class="label flex-1 text-left">💰 Gestión Financiera</span>
-            <i data-lucide="chevron-down" class="kk-nav-chevron w-3.5 h-3.5 label opacity-60 shrink-0"></i>
-            <span id="badge-pagos" class="hidden kk-badge">0</span>
-          </button>
-          <div class="kk-nav-sub" id="group-asis-finanzas" style="display:none">
-            <button data-section="pagos" class="kk-nav-sub-item">
-              <i data-lucide="credit-card" class="w-3.5 h-3.5 text-yellow-200 shrink-0"></i>
-              <span>Cobros</span>
-            </button>
-            <button data-section="contabilidad" class="kk-nav-sub-item">
-              <i data-lucide="bar-chart-3" class="w-3.5 h-3.5 text-emerald-200 shrink-0"></i>
-              <span>Contabilidad</span>
-            </button>
-            <button data-section="catalogo" class="kk-nav-sub-item">
-              <i data-lucide="tag" class="w-3.5 h-3.5 text-pink-200 shrink-0"></i>
-              <span>Catálogo</span>
-            </button>
-          </div>
+          ...
         </div>
+        -->
 
         <!-- Perfil (flat) -->
         <button data-section="perfil" class="nav-btn kk-nav-item" data-tooltip="Mi Perfil">
@@ -368,11 +353,6 @@
             <h1 class="text-2xl font-black text-slate-800 tracking-tight">Hola, <span id="welcomeName">Asistente</span> 👋</h1>
             <p class="text-sm text-slate-400 font-medium mt-0.5" id="dashboardDate"></p>
           </div>
-          <div class="flex gap-2">
-            <button data-section="pagos" class="flex items-center gap-2 px-4 py-2.5 bg-[#0d9488] hover:bg-[#077a70] text-white rounded-xl font-black text-xs uppercase tracking-wider shadow-sm transition-all active:scale-95">
-              <i data-lucide="plus-circle" class="w-4 h-4"></i> Registrar Pago
-            </button>
-          </div>
         </div>
 
         <!-- Alertas urgentes -->
@@ -404,49 +384,55 @@
             <i data-lucide="calendar-check" class="absolute -bottom-4 -right-4 w-20 h-20 text-white/10 rotate-12 group-hover:scale-110 transition-transform duration-500"></i>
           </div>
 
-          <div class="bg-gradient-to-br from-orange-400 to-red-500 p-5 rounded-2xl shadow-md text-white relative overflow-hidden group cursor-pointer" data-section="pagos">
+          <div class="bg-gradient-to-br from-purple-500 to-indigo-600 p-5 rounded-2xl shadow-md text-white relative overflow-hidden group cursor-pointer" data-section="aulas">
             <div class="relative z-10">
               <div class="flex items-center gap-2 mb-2">
-                <div class="p-1.5 bg-white/20 rounded-lg"><i data-lucide="alert-circle" class="w-4 h-4"></i></div>
-                <span class="text-[10px] font-black text-orange-100 uppercase tracking-wider">Por Cobrar</span>
+                <div class="p-1.5 bg-white/20 rounded-lg"><i data-lucide="school" class="w-4 h-4"></i></div>
+                <span class="text-[10px] font-black text-purple-100 uppercase tracking-wider">Aulas</span>
               </div>
-              <p class="text-3xl font-black" id="statPayments">-</p>
-              <p class="text-xs text-orange-100 mt-0.5">Pagos pendientes</p>
+              <p class="text-3xl font-black" id="statClassrooms">-</p>
+              <p class="text-xs text-purple-100 mt-0.5">Aulas activas</p>
             </div>
-            <i data-lucide="wallet" class="absolute -bottom-4 -right-4 w-20 h-20 text-white/10 rotate-12 group-hover:scale-110 transition-transform duration-500"></i>
+            <i data-lucide="school" class="absolute -bottom-4 -right-4 w-20 h-20 text-white/10 rotate-12 group-hover:scale-110 transition-transform duration-500"></i>
           </div>
 
-          <div class="bg-gradient-to-br from-[#0B63C7] to-[#0850A0] p-5 rounded-2xl shadow-md text-white relative overflow-hidden group cursor-pointer" data-section="pagos">
+          <div class="bg-gradient-to-br from-[#0B63C7] to-[#0850A0] p-5 rounded-2xl shadow-md text-white relative overflow-hidden group cursor-pointer" data-section="maestros">
             <div class="relative z-10">
               <div class="flex items-center gap-2 mb-2">
-                <div class="p-1.5 bg-white/20 rounded-lg"><i data-lucide="trending-up" class="w-4 h-4"></i></div>
-                <span class="text-[10px] font-black text-blue-100 uppercase tracking-wider">Ingresos Mes</span>
+                <div class="p-1.5 bg-white/20 rounded-lg"><i data-lucide="user-cog" class="w-4 h-4"></i></div>
+                <span class="text-[10px] font-black text-blue-100 uppercase tracking-wider">Maestras</span>
               </div>
-              <p class="text-xl font-black" id="statIncome">-</p>
-              <p class="text-xs text-violet-100 mt-0.5">Pagos aprobados</p>
+              <p class="text-3xl font-black" id="statTeachers">-</p>
+              <p class="text-xs text-blue-100 mt-0.5">Docentes</p>
             </div>
-            <i data-lucide="dollar-sign" class="absolute -bottom-4 -right-4 w-20 h-20 text-white/10 rotate-12 group-hover:scale-110 transition-transform duration-500"></i>
+            <i data-lucide="user-cog" class="absolute -bottom-4 -right-4 w-20 h-20 text-white/10 rotate-12 group-hover:scale-110 transition-transform duration-500"></i>
           </div>
         </div>
 
-        <!-- Recent payments + chart -->
+        <!-- Actividad escolar + Comunicación -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
           <div class="lg:col-span-2 bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
             <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100">
               <h3 class="text-sm font-black text-slate-700 flex items-center gap-2">
-                <span class="w-2 h-5 bg-teal-500 rounded-full"></span> Pagos Recientes
+                <span class="w-2 h-5 bg-teal-500 rounded-full"></span> Actividad Escolar Reciente
               </h3>
-              <button data-section="pagos" class="text-xs font-black text-teal-600 hover:text-teal-800 uppercase tracking-wider transition-colors">Ver todos →</button>
+              <button onclick="window.App.navigateTo('muro')" class="text-xs font-black text-teal-600 hover:text-teal-800 uppercase tracking-wider transition-colors">Ver muro →</button>
             </div>
             <div id="dashRecentPayments" class="divide-y divide-slate-50">
               <div class="px-5 py-8 text-center text-slate-400 text-sm">Cargando...</div>
             </div>
           </div>
-          <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-            <h3 class="text-sm font-black text-slate-700 mb-4 flex items-center gap-2">
-              <span class="w-2 h-5 bg-violet-500 rounded-full"></span> Ingresos del Año
-            </h3>
-            <div class="h-48"><canvas id="incomeChart"></canvas></div>
+          <div class="bg-gradient-to-br from-[#0B63C7] to-[#7C3AED] rounded-2xl border border-slate-100 shadow-sm p-5 text-white overflow-hidden relative">
+            <div class="relative z-10">
+              <div class="flex items-center gap-2 mb-3">
+                <div class="p-1.5 bg-white/20 rounded-lg"><i data-lucide="message-circle" class="w-4 h-4"></i></div>
+                <h3 class="text-sm font-black">Mensajes Sin Leer</h3>
+              </div>
+              <p class="text-4xl font-black unread-wrap" id="dashUnreadMessagesWrap"><span id="dashUnreadMessages">-</span></p>
+              <p class="text-xs text-white/70 mt-1 font-bold">Conversaciones pendientes</p>
+              <button onclick="window.App.navigateTo('chat')" class="mt-4 w-full py-2.5 bg-white/20 hover:bg-white/30 rounded-xl font-black text-xs uppercase tracking-wider transition-all active:scale-95">Ir al Chat →</button>
+            </div>
+            <i data-lucide="messages-square" class="absolute -bottom-6 -right-6 w-32 h-32 text-white/10 rotate-12"></i>
           </div>
         </div>
 
@@ -780,8 +766,6 @@
         </div>
       </div>
 
-      </section>
-
       <!-- PERMISOS Y FALTAS -->
       <section id="staff-permits" class="section">
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
@@ -859,67 +843,72 @@
           <p class="text-slate-400 text-sm font-medium mt-0.5">Habla con padres, maestras y dirección</p>
         </header>
 
-        <!-- Layout WhatsApp: lista ↔ conversación -->
-        <div class="chat-shell">
-
-          <!-- Panel lista de contactos -->
-          <div id="chatListPanel" class="chat-list-col">
-            <div class="p-3 border-b border-slate-200 shrink-0">
-              <div class="relative">
-                <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"></i>
-                <input id="chatSearchInput" type="text" placeholder="Buscar contacto..."
-                  class="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-teal-400 transition-all">
+        <div id="chatShell" class="m-chat-shell m-chat-grid">
+          <!-- 1) LISTA DE CONVERSACIONES -->
+          <aside class="m-chat-list">
+            <div class="m-chat-list__header">
+              <div class="m-chat-list__title">💬 Mensajes</div>
+              <div class="m-chat-list__search">
+                <i data-lucide="search"></i>
+                <input id="mChatSearch" type="text" placeholder="Buscar conversación…">
               </div>
             </div>
-            <div id="chatContactsList" class="flex-1 overflow-y-auto p-2">
-              <div class="p-4 text-center text-slate-400 text-sm">Cargando contactos...</div>
+            <div id="mChatList" class="m-chat-list__content">
+              <div class="p-4 text-center text-[#64748B] text-sm font-bold">Cargando contactos…</div>
             </div>
-          </div>
+          </aside>
 
-          <!-- Panel conversación — oculto en móvil hasta seleccionar -->
-          <div id="chatConversationPanel" class="chat-conv-col chat-hidden md:flex">
-            <!-- Header con botón volver (móvil) -->
-            <div id="chatActiveHeader" class="p-4 border-b border-slate-100 flex items-center gap-3 bg-white shrink-0 hidden">
-              <button id="chatBackBtn"
-                class="md:hidden p-2 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors shrink-0"
-                aria-label="Volver a contactos">
+          <!-- 2) CONVERSACIÓN PRINCIPAL -->
+          <section class="m-chat-main">
+            <div class="m-chat-header">
+              <button id="mChatBackBtn" class="m-chat-header__back">
                 <i data-lucide="arrow-left" class="w-4 h-4"></i>
               </button>
-              <div id="chatActiveAvatar" class="w-10 h-10 rounded-full bg-teal-100 text-teal-600 flex items-center justify-center font-bold overflow-hidden shrink-0"></div>
-              <div class="flex-1 min-w-0">
-                <div id="chatActiveName" class="font-bold text-slate-800 text-sm truncate"></div>
-                <div id="chatActiveMeta" class="text-[10px] font-bold uppercase tracking-wider text-slate-400 truncate"></div>
+              <div class="m-chat-header__avatar" id="mChatActiveAvatar">
+                <span>👤</span>
               </div>
-              <div id="chatHeaderActions" class="flex items-center gap-1"></div>
-            </div>
-
-            <!-- Mensajes -->
-            <div id="chatMessagesContainer" class="chat-messages-scroll relative">
-              <div class="flex-1 flex flex-col items-center justify-center text-slate-400 opacity-40 py-12">
-                <i data-lucide="messages-square" class="w-14 h-14 mb-3"></i>
-                <p class="font-medium text-sm">Selecciona un contacto</p>
+              <div class="m-chat-header__body">
+                <div class="m-chat-header__name" id="mChatActiveName">Selecciona un contacto</div>
+                <div class="m-chat-header__meta" id="mChatActiveMeta">Elige a quién escribirle</div>
+              </div>
+              <div class="m-chat-header__actions">
+                <button class="m-chat-header__btn" title="Llamar"><i data-lucide="phone" class="w-4 h-4"></i></button>
+                <button class="m-chat-header__btn" title="Videollamada"><i data-lucide="video" class="w-4 h-4"></i></button>
+                <button class="m-chat-header__btn" title="Más opciones"><i data-lucide="more-vertical" class="w-4 h-4"></i></button>
               </div>
             </div>
 
-            <!-- Typing Indicator -->
-            <div id="chatTypingIndicator" class="hidden absolute bottom-[80px] left-6 right-6 px-4 py-2 bg-white/90 backdrop-blur-sm border border-teal-100 rounded-xl text-[10px] font-black text-teal-600 shadow-lg animate-bounce-subtle z-20">
-              Alguien está escribiendo...
-            </div>
-
-            <!-- Input fijo abajo -->
-            <div id="chatInputArea" class="chat-input-sticky hidden">
-              <div class="flex gap-3 items-end">
-                <textarea id="chatMessageInput" rows="1"
-                  class="flex-1 bg-slate-100 rounded-2xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-teal-400 resize-none transition-all"
-                  placeholder="Escribe un mensaje..."></textarea>
-                <button id="btnSendChatMessage"
-                  class="bg-teal-600 text-white p-3.5 rounded-2xl hover:bg-teal-700 transition-all shadow-sm active:scale-95 shrink-0">
-                  <i data-lucide="send" class="w-5 h-5"></i>
-                </button>
+            <div id="mChatScroll" class="m-chat-scroll">
+              <div class="m-empty">
+                <div class="m-empty__icon"><i data-lucide="message-circle-heart" class="w-8 h-8"></i></div>
+                <div class="m-empty__title">Centro de Comunicación</div>
+                <div class="m-empty__text">Selecciona una conversación del panel izquierdo para ver los mensajes.</div>
               </div>
             </div>
-          </div>
 
+            <div class="m-chat-input">
+              <div class="m-chat-input__tools">
+                <button class="m-chat-input__tool" title="Adjuntar imagen" type="button"><i data-lucide="image" class="w-4 h-4"></i></button>
+                <button class="m-chat-input__tool" title="Adjuntar archivo" type="button"><i data-lucide="paperclip" class="w-4 h-4"></i></button>
+              </div>
+              <div class="m-chat-input__wrap">
+                <textarea id="mChatInput" rows="1" placeholder="Escribe un mensaje…"></textarea>
+                <button class="m-chat-input__emoji" type="button" title="Emoji">😊</button>
+              </div>
+              <button id="mChatSendBtn" class="m-chat-input__send" type="button">
+                <i data-lucide="send" class="w-4 h-4"></i>
+              </button>
+            </div>
+          </section>
+
+          <!-- 3) PANEL DE INFORMACIÓN -->
+          <aside id="mChatInfo" class="m-chat-info">
+            <div class="m-info-profile">
+              <div class="m-info-profile__avatar">👤</div>
+              <div class="m-info-profile__name">Panel de info</div>
+              <div class="m-info-profile__role">Detalles del contacto</div>
+            </div>
+          </aside>
         </div>
       </section>
 
@@ -945,6 +934,22 @@
         </header>
 
         <div class="max-w-4xl mx-auto">
+          <!-- Composer: ¿Qué quieres compartir? -->
+          <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-3 sm:p-4 flex items-center gap-3 wall-composer cursor-pointer transition-all mb-6" onclick="App.openNewPostModal()">
+            <div class="w-10 h-10 rounded-full bg-teal-100 flex items-center justify-center font-black text-teal-600 border-2 border-teal-50 shrink-0 overflow-hidden" id="wallComposerAvatar">
+              <i data-lucide="user" class="w-5 h-5"></i>
+            </div>
+            <div class="flex-1 min-w-0 text-sm font-bold text-slate-400">¿Qué quieres compartir?</div>
+            <div class="hidden sm:flex items-center gap-2 shrink-0">
+              <span class="wall-composer-chip"><i data-lucide="image" class="w-3.5 h-3.5 text-emerald-500"></i> Foto</span>
+              <span class="wall-composer-chip"><i data-lucide="video" class="w-3.5 h-3.5 text-blue-500"></i> Video</span>
+              <span class="wall-composer-chip"><i data-lucide="file-text" class="w-3.5 h-3.5 text-amber-500"></i> Aviso</span>
+            </div>
+            <button class="sm:hidden shrink-0 px-4 py-2.5 rounded-full bg-teal-600 text-white text-xs font-black shadow-md">
+              <i data-lucide="plus" class="w-4 h-4"></i>
+            </button>
+          </div>
+
           <div id="muroPostsContainer" class="space-y-6">
             <!-- Cargado por JS -->
             <div class="py-12 text-center text-slate-400">Cargando publicaciones...</div>

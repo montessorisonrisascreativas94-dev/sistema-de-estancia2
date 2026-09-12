@@ -1,4 +1,5 @@
 import { supabase, ensureRole, initOneSignal } from '../shared/supabase.js';
+import { Security } from '../shared/security.js';
 import { Api } from './api.js';
 import { Helpers } from '../shared/helpers.js';
 import { AppState } from './appState.js';
@@ -362,29 +363,9 @@ async function refreshDashboard() {
 // ── Banner de deuda vencida ───────────────────────────────────────────────────
 function _updateDebtBanner(finance) {
   const banner  = document.getElementById('debtBanner');
-  const msgEl   = document.getElementById('debtBannerMsg');
   if (!banner) return;
-
-  const debt    = finance?.debt?.total || 0;
-  const items   = finance?.debt?.items || [];
-  const overdue = items.filter(p => {
-    const s = (p.status || '').toLowerCase();
-    return s === 'overdue' || s === 'vencido';
-  });
-
-  if (overdue.length > 0 || debt > 0) {
-    banner.classList.remove('hidden');
-    const total = Helpers.formatCurrency(debt);
-    if (msgEl) {
-      if (overdue.length > 0) {
-        msgEl.innerHTML = `<span class="text-rose-200">🚨 Pago Vencido:</span> Tienes ${overdue.length} mensualidad(es) atrasada(s). Total a pagar: <span class="text-white underline">${total}</span>`;
-      } else {
-        msgEl.innerHTML = `<span class="text-amber-200">⏳ Saldo Pendiente:</span> Tu balance actual es <span class="text-white font-black">${total}</span>. Recuerda pagar antes del día 5 para evitar recargos.`;
-      }
-    }
-  } else {
-    banner.classList.add('hidden');
-  }
+  // Módulo financiero deshabilitado: el banner de deuda se mantiene oculto
+  banner.classList.add('hidden');
 }
 
 // ── Reporte Diario ────────────────────────────────────────────────────────────
@@ -530,6 +511,11 @@ function renderLatestPosts(posts) {
 // ── Navegación ────────────────────────────────────────────────────────────────
 export async function navigateTo(targetId) {
   if (!targetId) return;
+
+  // Módulo financiero deshabilitado: redirigir al inicio
+  if (targetId === 'payments') {
+    targetId = 'home';
+  }
   Helpers.vibrate?.('light');
 
   // ✅ LIMPIEZA DE REALTIME: Eliminar canales al cambiar de sección

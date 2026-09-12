@@ -1,4 +1,5 @@
 import { ensureRole, supabase, initOneSignal, emitEvent, sendPush } from '../shared/supabase.js';
+import { Security } from '../shared/security.js';
 import { RealtimeManager } from '../shared/realtime-manager.js';
 import { AppState } from './state.js';
 
@@ -58,7 +59,7 @@ window.App = {
   handleAttendancePointerDown: Attendance.handleAttendancePointerDown,
   handleAttendancePointerUp: Attendance.handleAttendancePointerUp,
 
-  // Routine Express v5 — Timeline inteligente horizontal/vertical
+  // Routine Express — Acciones Colectivas · Reportes Individuales · Modal Individual
     initRoutine:              Routine.initRoutine,
     openStudentRoutine:       Routine.openStudentRoutine,
     openBulkRoutineModal:     Routine.openBulkRoutineModal,
@@ -81,15 +82,11 @@ window.App = {
     _confirmMed:              Routine._confirmMed,
     _confirmExtraEvent:       Routine._confirmExtraEvent,
     publishDailyLogs:         Routine.publishDailyLogs,
-    expandTimelineEvent:      Routine.expandTimelineEvent,
-    collapseTimelineEvent:    Routine.collapseTimelineEvent,
     openEventConfig:          Routine.openEventConfig,
     saveEventConfig:          Routine.saveEventConfig,
     openScheduleConfig:       Routine.openScheduleConfig,
     resetScheduleConfig:      Routine.resetScheduleConfig,
-    applyRoutineTemplate:     Routine.applyRoutineTemplate,
     addCatalogEvent:          Routine.addCatalogEvent,
-    clearScheduleTemplate:    Routine.clearScheduleTemplate,
     setScheduleConfigMode:    Routine.setScheduleConfigMode,
     buildModeAdd:             Routine.buildModeAdd,
     buildModeRemove:          Routine.buildModeRemove,
@@ -108,8 +105,6 @@ window.App = {
     toggleOmitToday:          Routine.toggleOmitToday,
     insertEventAt:            Routine.insertEventAt,
     clearDailyOverrides:      Routine.clearDailyOverrides,
-    toggleTimeline:           Routine.toggleTimeline,
-    toggleTimelineActive:     Routine.toggleTimelineActive,
 
   // Tasks
   initTasks: Tasks.initTasks,

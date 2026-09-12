@@ -38,24 +38,21 @@ export const SchoolYearModule = {
     const yearId = this.state.currentYear?.id;
     if (!yearId) return;
     try {
-      const [enr, cls, tea, pay, per] = await Promise.all([
+      const [enr, cls, tea, per] = await Promise.all([
         supabase.from('student_enrollments').select('id', { count: 'exact', head: true }).eq('school_year_id', yearId).in('status', ['activo','inscrito','admitido','reinscrito']),
         supabase.from('classrooms').select('id', { count: 'exact', head: true }),
         supabase.from('classrooms').select('teacher_id').not('teacher_id', 'is', null),
-        supabase.from('payments').select('id, amount, status').eq('school_year_id', yearId),
         supabase.from('periods').select('status').eq('school_year_id', yearId)
       ]);
       const kpi = this.state.dashboard.kpi;
       kpi.enrollments = enr.count || 0;
       kpi.classrooms = cls.count || 0;
       kpi.teachers = new Set((tea.data || []).map(r => r.teacher_id)).size;
-      const payments = pay.data || [];
-      kpi.pending_payments = payments.filter(p => p.status === 'pending').length;
-      kpi.total_income = payments.filter(p => p.status === 'paid').reduce((s, p) => s + (p.amount || 0), 0);
-      kpi.pending_income = payments.filter(p => p.status === 'pending').reduce((s, p) => s + (p.amount || 0), 0);
       const periods = per.data || [];
       kpi.active_periods = periods.filter(p => p.status === 'open').length;
       kpi.closed_periods = periods.filter(p => p.status === 'closed').length;
+      kpi.pending_payments = 0;
+      kpi.total_income = 0;
     } catch (_) {}
   },
 
@@ -208,7 +205,7 @@ export const SchoolYearModule = {
               </div>
             ` : ''}
           </div>
-          <div class="grid grid-cols-3 gap-3">
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div class="bg-white/10 rounded-xl p-3 text-center backdrop-blur-sm">
               <div class="text-2xl font-black">${kpi?.enrollments || 0}</div>
               <div class="text-[10px] font-bold opacity-80 uppercase mt-1">Estudiantes</div>
@@ -224,14 +221,6 @@ export const SchoolYearModule = {
             <div class="bg-white/10 rounded-xl p-3 text-center backdrop-blur-sm">
               <div class="text-2xl font-black">${kpi?.attendance_pct || 0}%</div>
               <div class="text-[10px] font-bold opacity-80 uppercase mt-1">Asistencia</div>
-            </div>
-            <div class="bg-white/10 rounded-xl p-3 text-center backdrop-blur-sm">
-              <div class="text-2xl font-black">RD$${this._formatNum(kpi?.total_income || 0)}</div>
-              <div class="text-[10px] font-bold opacity-80 uppercase mt-1">Cobrado</div>
-            </div>
-            <div class="bg-white/10 rounded-xl p-3 text-center backdrop-blur-sm">
-              <div class="text-2xl font-black">${kpi?.pending_payments || 0}</div>
-              <div class="text-[10px] font-bold opacity-80 uppercase mt-1">Pendientes</div>
             </div>
           </div>
         </div>
@@ -334,14 +323,14 @@ export const SchoolYearModule = {
         </div>
         <div class="bg-white rounded-2xl border border-slate-100 p-4 hover:shadow-md transition-all">
           <div class="flex items-center gap-3">
-            <div class="w-12 h-12 rounded-xl flex items-center justify-center bg-emerald-50"><i data-lucide="credit-card" class="w-6 h-6 text-emerald-600"></i></div>
-            <div><div class="text-2xl font-black text-emerald-600">RD$${this._formatNum(kpi?.total_income || 0)}</div><div class="text-xs font-bold text-slate-400">Total Cobrado</div></div>
+            <div class="w-12 h-12 rounded-xl flex items-center justify-center bg-emerald-50"><i data-lucide="school" class="w-6 h-6 text-emerald-600"></i></div>
+            <div><div class="text-2xl font-black text-emerald-600">${kpi?.classrooms || 0}</div><div class="text-xs font-bold text-slate-400">Aulas</div></div>
           </div>
         </div>
         <div class="bg-white rounded-2xl border border-slate-100 p-4 hover:shadow-md transition-all">
           <div class="flex items-center gap-3">
-            <div class="w-12 h-12 rounded-xl flex items-center justify-center bg-amber-50"><i data-lucide="alert-triangle" class="w-6 h-6 text-amber-600"></i></div>
-            <div><div class="text-2xl font-black text-amber-600">RD$${this._formatNum(kpi?.pending_income || 0)}</div><div class="text-xs font-bold text-slate-400">Pendiente por Cobrar</div></div>
+            <div class="w-12 h-12 rounded-xl flex items-center justify-center bg-amber-50"><i data-lucide="user-cog" class="w-6 h-6 text-amber-600"></i></div>
+            <div><div class="text-2xl font-black text-amber-600">${kpi?.teachers || 0}</div><div class="text-xs font-bold text-slate-400">Maestras</div></div>
           </div>
         </div>
         <div class="bg-white rounded-2xl border border-slate-100 p-4 hover:shadow-md transition-all">

@@ -1,4 +1,5 @@
 import { ensureRole, supabase, initOneSignal } from '../shared/supabase.js';
+import { Security } from '../shared/security.js';
 import { AppState } from './state.js';
 import { AssistantApi } from './api.js';
 import { PaymentsModule } from './payments.js';
@@ -6,7 +7,6 @@ import { AccessModule } from './access.js';
 import { TeachersModule } from './teachers.js';
 import { Helpers } from '../shared/helpers.js';
 import { WallModule } from '../shared/wall.js';
-import { ChatModule } from '../shared/chat.js';
 import { StudentsModule } from './modules/students.js';
 import { initCajaCobro, CajaCobroV2 } from '../shared/caja-cobro-v2.js';
 import { RoomsModule } from './modules/rooms.js';
@@ -20,6 +20,7 @@ import { InscripcionesModule } from '../directora/inscripciones.module.js';
 import { CatalogoModule } from '../shared/catalogo-conceptos.module.js';
 import { openGlobalModal, closeGlobalModal } from '../shared/modal.js';
 import { InvoiceModule } from '../shared/invoice.js';
+import { AssistantChatApp } from './chat_app.js';
 
 // Exponer globalmente para onclick en HTML
 window.InscripcionesModule = InscripcionesModule;
@@ -316,11 +317,17 @@ async function submitNewPost() {
  */
 const loadedSections = new Set();
 
+const ASIS_FINANCIAL_SECTIONS = new Set(['pagos', 'contabilidad', 'catalogo', 'finanzas', 'caja', 'nomina', 'dgii']);
+
 function initNavigation() {
   const navLinks = document.querySelectorAll('[data-section]');
   const sections = document.querySelectorAll('section[id]');
 
   const showSection = async (target) => {
+    // Módulo financiero deshabilitado: redirigir al dashboard
+    if (ASIS_FINANCIAL_SECTIONS.has(target)) {
+      target = 'dashboard';
+    }
     Helpers.vibrate?.('light');
 
     // ✅ LIMPIEZA DE REALTIME: Eliminar canales al cambiar de sección
@@ -477,6 +484,9 @@ function initNavigation() {
       showSection(link.dataset.section);
     });
   });
+
+  // Exponer navegación para onclicks del dashboard
+  window.App.navigateTo = showSection;
 
   // Carga inicial del dashboard
   DashboardModule.init().then(() => loadedSections.add('dashboard'));
@@ -672,367 +682,12 @@ async function initProfile() {
 }
 
 // --- Funciones Globales de Ventana ---
-window.selectAssistantChat = async (userId, name, role, avatarUrl = null) => {
-  const chatList = document.getElementById('chatListPanel');
-  const chatConv = document.getElementById('chatConvPanel');
-  const user = AppState.get('user');
-  
-  if (window.innerWidth < 768) {
-    chatList?.classList.add('chat-hidden');
-    chatConv?.classList.remove('chat-hidden');
-    chatConv?.classList.add('flex');
-  }
-
-  // UI Header
-  const nameEl = document.getElementById('chatActiveName');
-  const metaEl = document.getElementById('chatActiveMeta');
-  const avatarEl = document.getElementById('chatActiveAvatar');
-  const inputArea = document.getElementById('chatInputArea');
-  
-  // ✅ ENRIQUECIMIENTO DE CONTEXTO: Título con nombre del Estudiante (solo activos)
-  const { data: student } = await supabase
-    .from('students')
-    .select('name')
-    .eq('parent_id', userId)
-    .is('deleted_at', null)
-    .eq('is_active', true)
-    .order('name')
-    .limit(1)
-    .maybeSingle();
-  if (nameEl) nameEl.textContent = student ? `Estudiante: ${student.name}` : name;
-  if (metaEl) metaEl.textContent = student ? `Padre: ${name}` : (role || 'Usuario');
-  
-  // ✅ BOTONES DE ACCESO RÁPIDO (Directora/Asistente)
-  const headerActions = document.getElementById('chatHeaderActions');
-  if (headerActions) {
-    headerActions.innerHTML = student ? `
-      <button onclick="window.App._openStudentModal('${student.id}')" class="p-2 text-teal-600 hover:bg-teal-50 rounded-xl transition-all" title="Ver Ficha">
-        <i data-lucide="user-square" class="w-5 h-5"></i>
-      </button>
-      <button onclick="window.goToSection('pagos')" class="p-2 text-teal-600 hover:bg-teal-50 rounded-xl transition-all" title="Ver Pagos">
-        <i data-lucide="credit-card" class="w-5 h-5"></i>
-      </button>
-    ` : '';
-    if (window.lucide) lucide.createIcons();
-  }
-  
-  if (avatarEl) {
-    if (avatarUrl && avatarUrl !== 'null') {
-      avatarEl.innerHTML = `<img src="${avatarUrl}" class="w-full h-full object-cover">`;
-    } else {
-      avatarEl.innerHTML = (name || '?').charAt(0);
-    }
-  }
-  inputArea?.classList.remove('hidden');
-
-    // ✅ Reset UI al cambiar de chat
-    AppState.set('activeChatUserId', userId);
-    AppState.set('activeChatName', name);
-    AppState.set('activeChatRole', role);
-
-    const container = document.getElementById('chatMessagesContainer');
-  if (container) container.innerHTML = '<div class="p-8 text-center"><div class="animate-spin w-6 h-6 border-2 border-teal-500 border-t-transparent rounded-full mx-auto"></div></div>';
-
-  try {
-    let messages = [], conversationId = null;
-    try {
-      const res = await ChatModule.loadConversation(userId);
-      messages = res.messages || [];
-      conversationId = res.conversationId || null;
-    } catch (_) {
-      // Si get_direct_messages falla (función no existe aún), mostrar chat vacío
-      messages = [];
-      conversationId = null;
-    }
-    AppState.set('activeConversationId', conversationId);
-
-    // Marcar como leídos al abrir
-    if (conversationId) ChatModule.markAsRead(conversationId);
-
-    // Clear badge on selected contact
-    const chatListEl = document.getElementById('chatContactsList');
-    const contactEl = chatListEl?.querySelector(`[data-user-id="${userId}"]`);
-    if (contactEl) {
-      const badge = contactEl.querySelector('span.bg-rose-500');
-      if (badge) badge.remove();
-      const dot = Array.from(contactEl.querySelectorAll('div')).find(d => d.classList.contains('bg-rose-500'));
-      if (dot) dot.remove();
-    }
-
-    if (container) {
-      container.innerHTML = messages.length 
-        ? messages.map(m => _msgBubble(m, user.id)).join('')
-        : '<div class="p-8 text-center text-slate-400 text-xs font-bold uppercase tracking-widest">No hay mensajes previos</div>';
-      ScrollModule.scrollToBottom(container, false);
-
-      // ✅ TOP-SCROLL: Cargar mensajes históricos
-      if (conversationId) {
-        if (window._chatTopScroll) window._chatTopScroll.destroy();
-        window._chatTopScroll = ScrollModule.topScroll({
-          container: container,
-          loadFn: async () => {
-            const { messages: moreMsg, hasMore } = await ChatModule.loadConversation(userId, conversationId, true);
-            if (moreMsg.length > 0) {
-              const html = moreMsg.map(m => _msgBubble(m, user.id)).join('');
-              container.insertAdjacentHTML('afterbegin', html);
-            }
-          }
-        });
-      }
-    }
-
-    // Subscribe Realtime
-    if (conversationId) {
-      ChatModule.subscribeToConversation(conversationId, 
-        (newMsg) => {
-          if (newMsg.sender_id === user.id) return;
-          if (container) {
-            container.insertAdjacentHTML('beforeend', _msgBubble(newMsg, user.id));
-            ScrollModule.scrollToBottom(container, true);
-          }
-        },
-        (typing) => {
-          const indicator = document.getElementById('chatTypingIndicator');
-          if (!indicator) return;
-          if (typing.isTyping && typing.userName !== user.name) {
-            indicator.textContent = `${typing.userName} está escribiendo...`;
-            indicator.classList.remove('hidden');
-          } else {
-            indicator.classList.add('hidden');
-          }
-        },
-        (presence) => {
-          // Presence handler: actualizar círculos verdes en la lista
-          _updatePresenceUI(presence);
-        },
-        (receipt) => {
-          // Read receipt handler (✓✓)
-          const msgEl = document.getElementById(`msg-${receipt.id}`);
-          if (msgEl && receipt.is_read) {
-            const checks = msgEl.querySelector('.read-status');
-            if (checks) checks.innerHTML = '✓✓';
-          }
-        }
-      );
-    }
-  } catch (err) {
-    Helpers.toast('Error al cargar chat', 'error');
-  }
+window.selectAssistantChat = async (userId) => {
+  await AssistantChatApp.selectChatById(userId);
 };
 
 async function initAssistantChat() {
-  const list = document.getElementById('chatContactsList');
-  if (!list) return;
-  
-  list.innerHTML = Helpers.skeleton(4, 'h-16 mb-2');
-  const user = AppState.get('user');
-
-  // Guard: si no hay usuario autenticado, no continuar
-  if (!user?.id) {
-    list.innerHTML = Helpers.errorState('Sesión no disponible. Recarga la página.');
-    return;
-  }
-
-  try {
-    // Cargar contactos — solo perfiles activos con nombre válido
-    const { data: profiles, error } = await supabase
-      .from('profiles')
-      .select('id, name, avatar_url, role')
-      .neq('id', user.id)
-      .is('deleted_at', null)
-      .not('name', 'is', null)
-      .order('name');
-
-    if (error) throw error;
-
-    // Obtener nombres de estudiantes para padres en query separada
-    const parentIds = (profiles || []).filter(p => p.role === 'padre').map(p => p.id);
-    let studentMap = {};
-    let activeParentIds = [];
-    if (parentIds.length > 0) {
-      const { data: students } = await supabase
-        .from('students')
-        .select('parent_id, name')
-        .in('parent_id', parentIds)
-        .is('deleted_at', null)
-        .eq('is_active', true);
-      (students || []).forEach(s => {
-        if (!studentMap[s.parent_id]) studentMap[s.parent_id] = s.name;
-        if (!activeParentIds.includes(s.parent_id)) activeParentIds.push(s.parent_id);
-      });
-    }
-
-    // Filtro final: solo perfiles con nombre válido y padres con al menos un estudiante activo
-    const activeProfiles = (profiles || []).filter(p => {
-      if (!p.name || p.name.trim().length === 0) return false;
-      if (p.role === 'padre' && !activeParentIds.includes(p.id)) return false;
-      return true;
-    });
-
-    if (!activeProfiles.length) {
-      list.innerHTML = Helpers.emptyState('No hay contactos disponibles');
-      return;
-    }
-
-    const unreadCounts = await ChatModule.getUnreadCounts().then(r => r.counts || {}).catch(() => ({}));
-
-    list.innerHTML = activeProfiles.map(p => {
-      const studentName = p.role === 'padre' ? (studentMap[p.id] || null) : null;
-      const mainTitle = studentName ? `Estudiante: ${studentName}` : (p.name || 'Sin nombre');
-      const subTitle = studentName ? `Padre: ${p.name || 'Sin nombre'}` : (p.role || 'Usuario');
-      const unread = unreadCounts[p.id] || 0;
-
-      return `
-      <div onclick="window.selectAssistantChat('${p.id}', '${Helpers.escapeHTML(p.name)}', '${p.role}', '${p.avatar_url || ''}')" 
-           data-user-id="${p.id}"
-           class="flex items-center gap-3 p-3 rounded-2xl hover:bg-white hover:shadow-sm cursor-pointer transition-all border border-transparent hover:border-slate-100 group mb-1 relative">
-        <div class="relative shrink-0">
-          <div class="w-12 h-12 rounded-full bg-teal-100 text-teal-700 flex items-center justify-center font-bold overflow-hidden border-2 border-teal-50 shrink-0 shadow-sm">
-            ${p.avatar_url ? `<img src="${p.avatar_url}" class="w-full h-full object-cover">` : (p.name || '?').charAt(0)}
-          </div>
-          ${unread > 0 ? `<span class="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-rose-500 text-white text-[9px] font-black rounded-full flex items-center justify-center px-1 shadow animate-pulse">${unread > 9 ? '9+' : unread}</span>` : ''}
-        </div>
-        <div class="absolute bottom-3 left-11 w-3.5 h-3.5 bg-slate-300 border-2 border-white rounded-full presence-indicator"></div>
-        <div class="min-w-0 flex-1">
-          <div class="font-bold text-slate-700 text-sm truncate group-hover:text-teal-700">${Helpers.escapeHTML(mainTitle)}</div>
-          <div class="text-[10px] text-slate-400 font-bold uppercase truncate">${Helpers.escapeHTML(subTitle)}</div>
-        </div>
-        ${unread > 0 ? `<div class="w-2 h-2 bg-rose-500 rounded-full shrink-0 animate-pulse"></div>` : ''}
-      </div>
-    `}).join('');
-
-    // Listeners para envío
-    const sendBtn = document.getElementById('btnSendChatMessage');
-    const input = document.getElementById('chatMessageInput');
-    
-    if (sendBtn && !sendBtn._bound) {
-      sendBtn._bound = true;
-      const sendMsg = async () => {
-        const text = input.value.trim();
-        const destId = AppState.get('activeChatUserId');
-        const convId = AppState.get('activeConversationId');
-        if (!text || !destId) return;
-
-        input.value = '';
-        const container = document.getElementById('chatMessagesContainer');
-        container?.insertAdjacentHTML('beforeend', _msgBubble({ sender_id: user.id, content: text }, user.id));
-        ScrollModule.scrollToBottom(container, true);
-
-        try {
-          const res = await ChatModule.sendMessage(user.id, destId, text, convId);
-          if (!convId && res.conversationId) {
-            AppState.set('activeConversationId', res.conversationId);
-            window.selectAssistantChat(destId, AppState.get('activeChatName'), AppState.get('activeChatRole'));
-          }
-        } catch (_) { Helpers.toast('Error al enviar', 'error'); }
-      };
-
-      sendBtn.onclick = sendMsg;
-      input.onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(); } };
-      
-      // ✅ INTERFAZ OPTIMISTA: Envío inmediato y sincronización
-      const _optimisticSend = async () => {
-        const text = input.value.trim();
-        const destId = AppState.get('activeChatUserId');
-        const convId = AppState.get('activeConversationId');
-        if (!text || !destId) return;
-
-        input.value = '';
-        const tempId = `temp-${Date.now()}`;
-        const container = document.getElementById('chatMessagesContainer');
-        container?.insertAdjacentHTML('beforeend', _msgBubble({ id: tempId, sender_id: user.id, content: text }, user.id));
-        ScrollModule.scrollToBottom(container, true);
-
-        try {
-          const res = await ChatModule.sendMessage(user.id, destId, text, convId);
-          // Actualizar ID temporal con el real de Supabase
-          const tempMsg = document.getElementById(`msg-${tempId}`);
-          if (tempMsg && res.id) {
-            tempMsg.id = `msg-${res.id}`;
-            const timeSpan = tempMsg.querySelector('span:first-child');
-            if (timeSpan) timeSpan.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-          }
-          if (!convId && res.conversationId) {
-            AppState.set('activeConversationId', res.conversationId);
-          }
-        } catch (_) { 
-          const tempMsg = document.getElementById(`msg-${tempId}`);
-          if (tempMsg) tempMsg.style.opacity = '0.5';
-          Helpers.toast('Error al enviar', 'error'); 
-        }
-      };
-
-      sendBtn.onclick = _optimisticSend;
-      input.onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); _optimisticSend(); } };
-      
-      // Typing broadcast
-      let t;
-      input.oninput = () => {
-        const cid = AppState.get('activeConversationId');
-        if (!cid) return;
-        ChatModule.broadcastTyping(cid, user.name, true);
-        clearTimeout(t);
-        t = setTimeout(() => ChatModule.broadcastTyping(cid, user.name, false), 2000);
-      };
-    }
-
-  } catch (err) {
-    list.innerHTML = Helpers.errorState('Error al cargar contactos: ' + (err?.message || 'Intenta recargar'));
-  }
-}
-
-/**
- * Actualiza los indicadores de presencia en la lista de contactos
- */
-function _updatePresenceUI(presenceState) {
-  const onlineUsers = new Set();
-  Object.values(presenceState).forEach(p => {
-    p.forEach(presence => onlineUsers.add(presence.user_id));
-  });
-
-  document.querySelectorAll('#chatContactsList [data-user-id]').forEach(el => {
-    const userId = el.dataset.userId;
-    const indicator = el.querySelector('.presence-indicator');
-    if (indicator) {
-      if (onlineUsers.has(userId)) {
-        indicator.classList.remove('bg-slate-300');
-        indicator.classList.add('bg-emerald-500');
-      } else {
-        indicator.classList.remove('bg-emerald-500');
-        indicator.classList.add('bg-slate-300');
-      }
-    }
-  });
-}
-
-function _msgBubble(m, myId) {
-  const isMe = m.sender_id === myId;
-  const isRead = m.is_read || false;
-  const msgId = m.id || `temp-${Date.now()}`;
-
-  // Get avatar for sender
-  const profile = AppState.get('profile');
-  const senderName = isMe ? (profile?.name || '') : (m.sender_name || '');
-  const avatarUrl = isMe ? (profile?.avatar_url || null) : (m.sender_avatar || null);
-
-  // Build avatar HTML
-  const avatarHtml = avatarUrl 
-    ? `<img src="${avatarUrl}" class="w-full h-full object-cover">` 
-    : `<span class="text-sm font-bold">${senderName.charAt(0) || ''}</span>`;
-
-  return `
-    <div id="msg-${msgId}" class="flex ${isMe ? 'justify-end flex-row-reverse' : 'justify-start'} mb-3 gap-2 animate-slideInUp">
-      <div class="w-8 h-8 rounded-full bg-teal-100 text-teal-700 flex items-center justify-center font-bold overflow-hidden shrink-0">
-        ${avatarHtml}
-      </div>
-      <div class="max-w-[80%] px-4 py-2.5 rounded-2xl text-sm shadow-sm ${isMe ? 'bg-teal-600 text-white rounded-tr-none' : 'bg-white text-slate-700 rounded-tl-none border border-slate-100'}">
-        <p class="leading-relaxed">${Helpers.escapeHTML(m.content)}</p>
-        <div class="flex items-center justify-end gap-1 text-[9px] mt-1 opacity-60 font-bold uppercase tracking-tighter">
-          <span>${m.created_at ? new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Enviando...'}</span>
-          ${isMe ? `<span class="read-status text-[11px] leading-none">${isRead ? '✓✓' : '✓'}</span>` : ''}
-        </div>
-      </div>
-    </div>`;
+  await AssistantChatApp.init();
 }
 
 window.App.runEmergencyCycle = async function() {

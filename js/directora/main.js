@@ -1,4 +1,5 @@
 import { ensureRole, supabase, initOneSignal } from '../shared/supabase.js';
+import { Security } from '../shared/security.js';
 import { AppState } from './state.js';
 import { Helpers } from '../shared/helpers.js';
 import { UIPremium } from '../shared/ui-premium.js';
@@ -85,8 +86,15 @@ if (window.App?.ui) window.App.ui.closeModal = closeGlobalModal;
 /**
  * ?? Navegaci�n Global
  */
+const FINANCIAL_SECTIONS = new Set(['finanzas', 'pagos', 'caja', 'contabilidad', 'cuentas-cobrar', 'catalogo', 'nomina', 'dgii']);
+
 export function goToSection(sectionId) {
   if (!sectionId) return;
+
+  // Módulo financiero deshabilitado: redirigir al dashboard
+  if (FINANCIAL_SECTIONS.has(sectionId)) {
+    sectionId = 'dashboard';
+  }
 
   Helpers.vibrate?.('light');
 
@@ -466,7 +474,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupSearch('searchTeacher', 'teachers');
     setupSearch('searchStudent', 'students');
     setupSearch('searchGradeStudent', 'grades');
-    setupSearch('searchPaymentStudent', 'payments');
     setupSearch('wallSearch', 'wall');
     setupSearch('chatSearchInput', 'chat');
 

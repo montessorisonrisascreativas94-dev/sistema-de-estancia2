@@ -894,10 +894,10 @@ export const PaymentsModule = {
     const list = AppState.get('paymentsData') || [];
     const p = list.find(x => String(x.id) === String(id));
     if (p) InvoiceModule.downloadSingle(p);
-    else Helpers.toast('No se encontró el registro', 'warning');
+    else Helpers.toast('No se encontrÃ³ el registro', 'warning');
   },
 
-  // -- Modal de exportación batch ------------------------------------
+  // -- Modal de exportaciÃ³n batch ------------------------------------
   _openExportModal() {
     const list = AppState.get('paymentsData') || [];
     const counts = { all: 0, paid: 0, pending: 0, review: 0, overdue: 0, mora: 0 };
@@ -921,14 +921,14 @@ export const PaymentsModule = {
     window.openGlobalModal(
       '<div class="bg-gradient-to-r from-violet-600 to-purple-600 text-white p-6 rounded-t-3xl flex items-center gap-3">' +
         '<div class="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center text-2xl">??</div>' +
-        '<div><h3 class="text-xl font-black">Exportar Facturas</h3><p class="text-xs text-white/70 font-bold uppercase tracking-widest">Descarga electrónica CSV</p></div>' +
+        '<div><h3 class="text-xl font-black">Exportar Facturas</h3><p class="text-xs text-white/70 font-bold uppercase tracking-widest">Descarga electrÃ³nica CSV</p></div>' +
       '</div>' +
       '<div class="p-6 space-y-2">' +
         '<p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Selecciona el filtro a exportar:</p>' +
         row('all',     'Todas las facturas',    '#6366f1', counts.all) +
         row('paid',    'Aprobadas / Pagadas',   '#16a34a', counts.paid) +
         row('pending', 'Pendientes de pago',    '#d97706', counts.pending) +
-        row('review',  'En revisión',           '#2563eb', counts.review) +
+        row('review',  'En revisiÃ³n',           '#2563eb', counts.review) +
         row('overdue', 'Vencidas',              '#dc2626', counts.overdue) +
         row('mora',    'Con mora aplicada',     '#b91c1c', counts.mora) +
       '</div>' +

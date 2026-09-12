@@ -196,12 +196,16 @@
   <div class="nav-section">Ciclo Escolar</div>
   <button class="nav-item" onclick="goTo('preinscripciones')"><i class="bi bi-person-add"></i> Preinscripciones <span class="nav-badge" id="badge-preins" style="background:#3b82f6;">0</span></button>
   <button class="nav-item" onclick="goTo('inscripciones')"><i class="bi bi-clipboard-check-fill"></i> Inscripciones</button>
+  <!-- Cargos/Planes de Pago (módulo financiero deshabilitado)
   <button class="nav-item" onclick="goTo('cargos')"><i class="bi bi-cash-coin"></i> Cargos</button>
   <button class="nav-item" onclick="goTo('planes')"><i class="bi bi-receipt-cutoff"></i> Planes de Pago</button>
+  -->
   <button class="nav-item" onclick="goTo('school-years')"><i class="bi bi-calendar-range-fill"></i> Años Escolares</button>
 
   <div class="nav-section">Operaciones</div>
+  <!-- Pagos (módulo financiero deshabilitado)
   <button class="nav-item" onclick="goTo('pagos')"><i class="bi bi-credit-card-fill"></i> Pagos</button>
+  -->
   <button class="nav-item" onclick="goTo('asistencia')"><i class="bi bi-calendar-check-fill"></i> Asistencia</button>
   <button class="nav-item" onclick="goTo('errores')"><i class="bi bi-bug-fill"></i> Errores del Sistema</button>
 
@@ -249,17 +253,10 @@
     <div class="section active" id="sec-dashboard">
       <!-- KPIs -->
       <div class="kpi-grid" id="kpiGrid">
-        <div id="paymentHealthWidget" class="kpi k-blue">
-          <div class="kpi-lbl">Salud del Ciclo</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:4px;">Cargando estado...</div>
-          <i class="bi bi-activity kpi-icon"></i>
-        </div>
         <div class="kpi k-indigo"><div class="kpi-val" id="kpi-users">0</div><div class="kpi-lbl">Usuarios totales</div><i class="bi bi-people-fill kpi-icon"></i></div>
         <div class="kpi k-green"><div class="kpi-val" id="kpi-students">—</div><div class="kpi-lbl">Estudiantes activos</div><i class="bi bi-mortarboard-fill kpi-icon"></i></div>
-        <div class="kpi k-orange"><div class="kpi-val" id="kpi-payments">—</div><div class="kpi-lbl">Pagos este mes</div><i class="bi bi-credit-card-fill kpi-icon"></i></div>
         <div class="kpi k-blue"><div class="kpi-val" id="kpi-attendance">—</div><div class="kpi-lbl">Asistencias hoy</div><i class="bi bi-calendar-check-fill kpi-icon"></i></div>
         <div class="kpi k-red"><div class="kpi-val" id="kpi-alerts">—</div><div class="kpi-lbl">Alertas activas</div><i class="bi bi-exclamation-triangle-fill kpi-icon"></i></div>
-        <div class="kpi k-yellow"><div class="kpi-val" id="kpi-revenue">—</div><div class="kpi-lbl">Ingresos mes (RD$)</div><i class="bi bi-cash-stack kpi-icon"></i></div>
       </div>
 
       <!-- Charts row -->
@@ -394,7 +391,7 @@
     <!-- ══════════════════════════════════════════════════════
          PAGOS
     ══════════════════════════════════════════════════════ -->
-    <div class="section" id="sec-pagos">
+    <div class="section" id="sec-pagos" style="display:none" aria-hidden="true">
       <div class="kpi-grid" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr));margin-bottom:16px;">
         <div class="kpi k-green"><div class="kpi-val" id="pay-approved">—</div><div class="kpi-lbl">Aprobados</div></div>
         <div class="kpi k-yellow"><div class="kpi-val" id="pay-pending">—</div><div class="kpi-lbl">Pendientes</div></div>
@@ -602,7 +599,7 @@
     <!-- ══════════════════════════════════════════════════════
          CARGOS
     ══════════════════════════════════════════════════════ -->
-    <div class="section" id="sec-cargos">
+    <div class="section" id="sec-cargos" style="display:none" aria-hidden="true">
       <div class="kpi-grid" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr));margin-bottom:16px;">
         <div class="kpi k-green"><div class="kpi-val" id="kpi-cargos-pagados">—</div><div class="kpi-lbl">Pagados</div></div>
         <div class="kpi k-yellow"><div class="kpi-val" id="kpi-cargos-pendientes">—</div><div class="kpi-lbl">Pendientes</div></div>
@@ -625,7 +622,7 @@
     <!-- ══════════════════════════════════════════════════════
          PLANES DE PAGO
     ══════════════════════════════════════════════════════ -->
-    <div class="section" id="sec-planes">
+    <div class="section" id="sec-planes" style="display:none" aria-hidden="true">
       <div class="panel">
         <div class="panel-hdr">
           <h3><i class="bi bi-receipt-cutoff" style="color:#6366f1;margin-right:6px;"></i>Planes de Pago Activos</h3>

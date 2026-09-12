@@ -4,6 +4,7 @@ import { UI } from './ui.module.js';
 import { AppState } from './state.js';
 import { supabase } from '../shared/supabase.js';
 import { auditLog } from '../shared/db-utils.js';
+import { requireReauth } from '../shared/reauth.js';
 import { QueryCache } from '../shared/query-cache.js';
 
 export const TeachersModule = {
@@ -93,6 +94,9 @@ export const TeachersModule = {
     
     const ok = window.confirm(`¿Eliminar a "${name}" (${role})?\n\nEsta acción no se puede deshacer. El usuario perderá acceso al sistema inmediatamente.`);
     if (!ok) return;
+
+    const reauth = await requireReauth({ message: 'eliminar esta cuenta de personal' });
+    if (!reauth) return;
 
     UI.setLoading(true);
     try {

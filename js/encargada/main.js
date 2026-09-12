@@ -1,12 +1,30 @@
-import { ensureRole, supabase, initOneSignal } from '../shared/supabase.js';
+import { ensureRole, supabase, initOneSignal, sendPush } from '../shared/supabase.js';
+import { Security } from '../shared/security.js';
 import { AppState } from './state.js';
-import { Helpers } from '../shared/helpers.js';
+import { Helpers, escapeHtml } from '../shared/helpers.js';
 import { UIPremium } from '../shared/ui-premium.js';
 import { BadgeSystem } from '../shared/badges.js';
 import { RealtimeManager } from '../shared/realtime-manager.js';
 import { QueryCache } from '../shared/query-cache.js';
 import { TeacherEfficiencyModule } from './modules/teacher_efficiency.module.js';
 import { openGlobalModal, closeGlobalModal } from '../shared/modal.js';
+import { EncargadaChatApp } from './chat_app.js';
+import {
+  ChatModule as SharedChatModule,
+  fmtMsgTime,
+  fmtLastMsgTime,
+  truncateLastMsg,
+  groupMessages,
+  withDaySeparators,
+} from '../shared/chat.js';
+import { ScrollModule } from '../shared/scroll.module.js';
+import { WALL_REACTIONS } from '../shared/wall.js';
+const MURO_REACTION_ORDER = ['like', 'love', 'bravo', 'adore', 'party'];
+const MURO_COMMENTS_SHOWN = 3;
+const muroReactions = {};
+const muroCommentsCache = {};
+const muroCommentShown = {};
+let muroActivePopover = null;
 
 const debounce = (fn, delay) => {
   let timeout;
@@ -476,299 +494,81 @@ async function loadChat() {
   const el = document.getElementById('chatContent');
   if (!el) return;
   el.innerHTML = '<div class="text-slate-400">Cargando...</div>';
-  
+
   try {
     el.innerHTML = `
-      <div id="chatAppContainer" class="chat-app">
-        <div class="chat-list">
-          <div class="p-4 border-b border-slate-100">
-            <h3 class="text-lg font-black text-slate-800 mb-3">Chat con Maestras</h3>
-            <input id="chatSearchInput" type="text" placeholder="Buscar maestra..." class="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm font-bold focus:border-blue-400 focus:ring-4 focus:ring-blue-50 outline-none">
+      <div id="chatShell" class="m-chat-shell m-chat-grid">
+        <aside class="m-chat-list">
+          <div class="m-chat-list__header">
+            <div class="m-chat-list__title">💬 Mensajes</div>
+            <div class="m-chat-list__search">
+              <i data-lucide="search"></i>
+              <input id="mChatSearch" type="text" placeholder="Buscar conversación…">
+            </div>
           </div>
-          <div id="chatContactsList" class="flex-1 overflow-y-auto p-4 space-y-2"></div>
-        </div>
-        <div class="chat-conversation flex flex-col">
-          <div id="chatActiveHeader" class="p-4 border-b border-slate-100 flex items-center gap-3 hidden">
-            <button id="chatBackBtn" class="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 md:hidden">
-              <i data-lucide="arrow-left" class="w-5 h-5 text-slate-600"></i>
+          <div id="mChatList" class="m-chat-list__content">
+            <div class="p-4 text-center text-[#64748B] text-sm font-bold">Cargando contactos…</div>
+          </div>
+        </aside>
+
+        <section class="m-chat-main">
+          <div class="m-chat-header">
+            <button id="mChatBackBtn" class="m-chat-header__back">
+              <i data-lucide="arrow-left" class="w-4 h-4"></i>
             </button>
-            <div class="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center font-bold text-slate-500" id="chatActiveAvatar"></div>
-            <div class="flex-1">
-              <div id="chatActiveName" class="font-black text-slate-800"></div>
-              <div id="chatActiveMeta" class="text-xs text-slate-400 font-bold"></div>
+            <div class="m-chat-header__avatar" id="mChatActiveAvatar">
+              <span>👤</span>
+            </div>
+            <div class="m-chat-header__body">
+              <div class="m-chat-header__name" id="mChatActiveName">Selecciona una maestra</div>
+              <div class="m-chat-header__meta" id="mChatActiveMeta">Elige a quién escribirle</div>
+            </div>
+            <div class="m-chat-header__actions">
+              <button class="m-chat-header__btn" title="Llamar"><i data-lucide="phone" class="w-4 h-4"></i></button>
+              <button class="m-chat-header__btn" title="Videollamada"><i data-lucide="video" class="w-4 h-4"></i></button>
+              <button class="m-chat-header__btn" title="Más opciones"><i data-lucide="more-vertical" class="w-4 h-4"></i></button>
             </div>
           </div>
-          <div id="chatMessagesContainer" class="flex-1 overflow-y-auto p-4"></div>
-          <div id="chatInputArea" class="p-4 border-t border-slate-100 hidden">
-            <div class="flex gap-2">
-              <input id="chatMessageInput" type="text" placeholder="Escribe un mensaje..." class="flex-1 px-4 py-3 rounded-xl border border-slate-200 focus:border-blue-400 focus:ring-4 focus:ring-blue-50 outline-none font-bold">
-              <button id="btnSendChatMessage" class="px-6 py-3 bg-blue-600 text-white rounded-xl font-black hover:bg-blue-700 transition-all">
-                <i data-lucide="send" class="w-5 h-5"></i>
-              </button>
+
+          <div id="mChatScroll" class="m-chat-scroll">
+            <div class="m-empty">
+              <div class="m-empty__icon"><i data-lucide="message-circle-heart" class="w-8 h-8"></i></div>
+              <div class="m-empty__title">Chat Institucional</div>
+              <div class="m-empty__text">Selecciona una conversación del panel izquierdo para ver los mensajes.</div>
             </div>
           </div>
-        </div>
+
+          <div class="m-chat-input">
+            <div class="m-chat-input__tools">
+              <button class="m-chat-input__tool" title="Adjuntar imagen" type="button"><i data-lucide="image" class="w-4 h-4"></i></button>
+              <button class="m-chat-input__tool" title="Adjuntar archivo" type="button"><i data-lucide="paperclip" class="w-4 h-4"></i></button>
+            </div>
+            <div class="m-chat-input__wrap">
+              <textarea id="mChatInput" rows="1" placeholder="Escribe un mensaje…"></textarea>
+              <button class="m-chat-input__emoji" type="button" title="Emoji">😊</button>
+            </div>
+            <button id="mChatSendBtn" class="m-chat-input__send" type="button">
+              <i data-lucide="send" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </section>
+
+        <aside id="mChatInfo" class="m-chat-info">
+          <div class="m-info-profile">
+            <div class="m-info-profile__avatar">👤</div>
+            <div class="m-info-profile__name">Panel de info</div>
+            <div class="m-info-profile__role">Detalles del contacto</div>
+          </div>
+        </aside>
       </div>
     `;
-    
+
     if (window.lucide) lucide.createIcons();
-    
-    // Initialize chat module
-    await initEncargadaChat();
+
+    await EncargadaChatApp.init();
   } catch (e) {
     console.error('[Chat] Error:', e);
     el.innerHTML = `<p class="text-rose-500">Error al cargar: ${e.message}</p>`;
-  }
-}
-
-let _chatState = {
-  currentUserId: null,
-  activeContactId: null,
-  conversationId: null,
-  channel: null,
-  allContacts: [],
-  currentUserProfile: {}
-};
-
-async function initEncargadaChat() {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return;
-  _chatState.currentUserId = user.id;
-
-  // Get current user profile
-  const { data: profile } = await supabase.from('profiles').select('name, avatar_url').eq('id', user.id).single();
-  _chatState.currentUserProfile = profile || {};
-
-  // Bind send button + enter key
-  const sendBtn = document.getElementById('btnSendChatMessage');
-  const input = document.getElementById('chatMessageInput');
-  if (sendBtn && !sendBtn._bound) {
-    sendBtn._bound = true;
-    sendBtn.addEventListener('click', () => sendChatMessage());
-    input?.addEventListener('keydown', e => {
-      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChatMessage(); }
-    });
-  }
-
-  // Bind search
-  document.getElementById('chatSearchInput')?.addEventListener(
-    'input',
-    Helpers.debounce(() => renderChatContacts(), 250)
-  );
-  
-  // Bind back button
-  document.getElementById('chatBackBtn')?.addEventListener('click', () => {
-    document.getElementById('chatAppContainer')?.classList.remove('show-chat');
-  });
-
-  // Load contacts (only teachers)
-  await loadChatContacts();
-}
-
-async function loadChatContacts() {
-  const list = document.getElementById('chatContactsList');
-  if (!list) return;
-  list.innerHTML = Helpers.skeleton(4);
-
-  try {
-    // Get all teachers
-    const { data: users } = await supabase.from('profiles').select('*').eq('role', 'maestra');
-    
-    // Get unread counts (if available)
-    let unreadData = {};
-    try {
-      const { data } = await supabase.rpc('get_unread_counts');
-      unreadData = data || {};
-    } catch (_) {}
-
-    _chatState.allContacts = (users || []).map(u => ({
-      id: u.id,
-      name: u.name || 'Maestra',
-      avatar: u.avatar_url,
-      roleLabel: 'Maestra',
-      meta: u.classroom?.name || 'Sin aula',
-      unread: Number((unreadData && unreadData[u.id]) || 0)
-    }));
-
-    renderChatContacts();
-  } catch (e) {
-    console.error('Error loading chat contacts:', e);
-    list.innerHTML = Helpers.emptyState('Error al cargar contactos');
-  }
-}
-
-function renderChatContacts() {
-  const list = document.getElementById('chatContactsList');
-  if (!list) return;
-  const q = (document.getElementById('chatSearchInput')?.value || '').toLowerCase();
-  const filtered = _chatState.allContacts.filter(c =>
-    (c.name || '').toLowerCase().includes(q) || (c.meta || '').toLowerCase().includes(q)
-  );
-
-  if (!filtered.length) { list.innerHTML = Helpers.emptyState('Sin contactos'); return; }
-
-  list.innerHTML = filtered.map(c => `
-    <div data-contact-id="${c.id}" class="flex items-center gap-3 p-3 rounded-2xl hover:bg-slate-100 cursor-pointer transition-all group relative">
-      <div class="relative shrink-0">
-        <div class="w-11 h-11 rounded-full bg-slate-200 flex items-center justify-center font-bold text-slate-500 overflow-hidden">
-          ${c.avatar ? `<img src="${c.avatar}" class="w-full h-full object-cover">` : (c.name || '?').charAt(0)}
-        </div>
-        ${c.unread > 0 ? `<span class="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-rose-500 text-white text-[9px] font-black rounded-full flex items-center justify-center px-1 shadow animate-pulse">${c.unread > 9 ? '9+' : c.unread}</span>` : ''}
-      </div>
-      <div class="min-w-0 flex-1">
-        <div class="font-bold text-slate-800 text-sm truncate ${c.unread > 0 ? 'text-slate-900' : ''}">${Helpers.escapeHTML(c.name || 'Sin nombre')}</div>
-        <div class="text-[10px] text-slate-400 font-bold uppercase truncate">${c.roleLabel} - ${Helpers.escapeHTML(c.meta)}</div>
-      </div>
-      ${c.unread > 0 ? `<div class="w-2 h-2 bg-rose-500 rounded-full shrink-0"></div>` : ''}
-    </div>`
-  ).join('');
-
-  if (!list._bound) {
-    list._bound = true;
-    list.addEventListener('click', e => {
-      const el = e.target.closest('[data-contact-id]');
-      if (el) selectChat(el.dataset.contactId);
-    });
-  }
-}
-
-async function selectChat(contactId) {
-  const contact = _chatState.allContacts.find(c => c.id === contactId);
-  if (!contact) return;
-
-  _chatState.activeContactId = contactId;
-  _chatState.conversationId = null;
-
-  // Clear badge
-  contact.unread = 0;
-  renderChatContacts();
-
-  // Mobile: show chat
-  document.getElementById('chatAppContainer')?.classList.add('show-chat');
-
-  // Update header
-  const nameEl = document.getElementById('chatActiveName');
-  const metaEl = document.getElementById('chatActiveMeta');
-  const avatarEl = document.getElementById('chatActiveAvatar');
-  const headerEl = document.getElementById('chatActiveHeader');
-  const inputEl = document.getElementById('chatInputArea');
-
-  if (nameEl) nameEl.textContent = contact.name;
-  if (metaEl) metaEl.textContent = `${contact.roleLabel} - ${contact.meta}`;
-  if (avatarEl) avatarEl.innerHTML = contact.avatar
-    ? `<img src="${contact.avatar}" class="w-full h-full object-cover">`
-    : (contact.name || '?').charAt(0);
-  headerEl?.classList.remove('hidden');
-  inputEl?.classList.remove('hidden');
-
-  await loadChatMessages();
-}
-
-async function loadChatMessages() {
-  const container = document.getElementById('chatMessagesContainer');
-  if (!container) return;
-  container.innerHTML = '<div class="flex-1 flex items-center justify-center"><div class="w-8 h-8 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div></div>';
-
-  try {
-    // Try to use shared chat module if available
-    let messages = [];
-    let conversationId = null;
-    
-    try {
-      // First, check if we have a messages table
-      const { data: conv } = await supabase
-        .from('messages')
-        .select('*')
-        .or(`and(sender_id.eq.${_chatState.currentUserId},receiver_id.eq.${_chatState.activeContactId}),and(sender_id.eq.${_chatState.activeContactId},receiver_id.eq.${_chatState.currentUserId})`)
-        .order('created_at', { ascending: true });
-      
-      messages = conv || [];
-    } catch (_) {
-      // If no messages table yet, show empty
-      messages = [];
-    }
-
-    container.innerHTML = '';
-    if (!messages.length) {
-      container.innerHTML = '<div class="flex-1 flex flex-col items-center justify-center text-slate-400 opacity-60 gap-2"><i data-lucide="message-circle" class="w-10 h-10 text-blue-300"></i><p class="text-sm">Inicia la conversación</p></div>';
-      if (window.lucide) lucide.createIcons();
-      return;
-    }
-
-    messages.forEach(m => appendChatMessage(m));
-    scrollChatToBottom();
-  } catch (e) {
-    if (container) container.innerHTML = '<div class="p-4 text-center">' + Helpers.errorState('Error al cargar mensajes') + '</div>';
-    if (window.lucide) lucide.createIcons();
-  }
-}
-
-function buildChatBubble(msg) {
-  const isMine = msg.sender_id === _chatState.currentUserId;
-  const time = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  
-  const sender = isMine 
-    ? _chatState.currentUserProfile 
-    : _chatState.allContacts.find(c => c.id === msg.sender_id);
-  
-  const avatarUrl = isMine ? (sender?.avatar_url || null) : (sender?.avatar || null);
-  const name = isMine ? (sender?.name || '') : (sender?.name || '');
-  
-  const avatarHtml = avatarUrl 
-    ? `<img src="${avatarUrl}" class="w-full h-full object-cover">` 
-    : `<span class="text-sm font-bold">${name.charAt(0) || ''}</span>`;
-  
-  return `<div class="flex ${isMine ? 'justify-end flex-row-reverse' : 'justify-start'} mb-3 gap-2">
-    <div class="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center font-bold text-slate-500 overflow-hidden shrink-0">
-      ${avatarHtml}
-    </div>
-    <div class="msg-bubble ${isMine ? 'msg-me' : 'msg-them'} max-w-[80%]">
-      <div class="whitespace-pre-wrap break-words">${Helpers.escapeHTML(msg.content || '')}</div>
-      <div class="text-[9px] ${isMine ? 'text-blue-100' : 'text-slate-400'} mt-1 text-right opacity-80">${time}</div>
-    </div>
-  </div>`;
-}
-
-function appendChatMessage(msg) {
-  const container = document.getElementById('chatMessagesContainer');
-  if (!container) return;
-  container.insertAdjacentHTML('beforeend', buildChatBubble(msg));
-}
-
-async function sendChatMessage() {
-  const input = document.getElementById('chatMessageInput');
-  const text = input?.value.trim();
-  if (!text || !_chatState.activeContactId || !_chatState.currentUserId) return;
-
-  input.value = '';
-  input.disabled = true;
-
-  // Optimistic append
-  appendChatMessage({ content: text, sender_id: _chatState.currentUserId, created_at: new Date().toISOString() });
-  scrollChatToBottom();
-
-  try {
-    // Try to save message
-    const { error } = await supabase.from('messages').insert({
-      sender_id: _chatState.currentUserId,
-      receiver_id: _chatState.activeContactId,
-      content: text
-    });
-    
-    if (error) throw error;
-  } catch (e) {
-    console.error('Error sending message:', e);
-    Helpers.toast('Error al enviar mensaje', 'error');
-  } finally {
-    input.disabled = false;
-    input.focus();
-  }
-}
-
-function scrollChatToBottom() {
-  const container = document.getElementById('chatMessagesContainer');
-  if (container) {
-    container.scrollTop = container.scrollHeight;
   }
 }
 
@@ -1427,11 +1227,52 @@ async function loadMuroEscolar() {
 
     let posts = [];
     try {
-      const { data } = await supabase.from('posts')
-        .select('*, profiles:teacher_id(name, avatar_url)')
-        .order('created_at', { ascending: false })
-        .limit(50);
-      posts = data || [];
+      const base = () => supabase.from('posts')
+        .select('*, profiles:teacher_id(name, avatar_url)');
+      let res = await base().order('is_pinned', { ascending: false }).order('created_at', { ascending: false }).limit(50);
+      if (res.error) {
+        res = await base().order('created_at', { ascending: false }).limit(50);
+        res.data = (res.data || []).map(p => ({ ...p, is_pinned: false, is_important: false }));
+      }
+      const postIds = (res.data || []).map(p => p.id);
+      let likesMap = {}, commentsMap = {};
+      if (postIds.length) {
+        const [lRes, cRes] = await Promise.allSettled([
+          supabase.from('likes').select('id, post_id, user_id, reaction_type').in('post_id', postIds),
+          supabase.from('comments').select('post_id, id, content, user_name, user_id, created_at, parent_id').in('post_id', postIds)
+        ]);
+        if (lRes.status === 'fulfilled' && lRes.value.data) {
+          for (const l of lRes.value.data) { (likesMap[l.post_id] ??= []).push(l); }
+        }
+        if (cRes.status === 'fulfilled' && cRes.value.data) {
+          for (const c of cRes.value.data) { (commentsMap[c.post_id] ??= []).push(c); }
+        }
+      }
+      posts = (res.data || []).map(p => ({
+        ...p,
+        likes:    likesMap[p.id]    || [],
+        comments: (commentsMap[p.id] || []).sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+      }));
+
+      // Estado de reacciones y comentarios por post
+      const myId = AppState.get('user')?.id;
+      posts.forEach(p => {
+        const breakdown = {};
+        let total = 0;
+        (p.likes || []).forEach(l => {
+          const t = WALL_REACTIONS[l.reaction_type] ? l.reaction_type : 'like';
+          breakdown[t] = (breakdown[t] || 0) + 1;
+          total++;
+        });
+        const mine = (p.likes || []).find(l => l.user_id === myId);
+        muroReactions[p.id] = {
+          breakdown,
+          total,
+          my: mine ? (WALL_REACTIONS[mine.reaction_type] ? mine.reaction_type : 'like') : null
+        };
+        muroCommentsCache[p.id] = p.comments || [];
+        muroCommentShown[p.id] = MURO_COMMENTS_SHOWN;
+      });
     } catch (_) {}
 
     const authorName = (p) => p?.profiles?.name || 'Encargada';
@@ -1471,8 +1312,23 @@ async function loadMuroEscolar() {
       </div>
       <div id="muroPostsList" class="space-y-4">
         ${posts.length === 0 ? '<div class="text-center py-12 text-slate-400"><i data-lucide="megaphone" class="w-12 h-12 mx-auto mb-3 text-slate-300"></i><p class="font-bold">No hay publicaciones aún</p><p class="text-xs mt-1">Crea la primera publicación del muro escolar</p></div>' : ''}
-        ${posts.map(p => `
-          <div class="bg-white rounded-2xl border border-slate-100 p-4 hover:shadow-md transition-all">
+        ${posts.map(p => {
+          const react = muroReactions[p.id] || { breakdown: {}, total: 0, my: null };
+          const commN = (p.comments || []).filter(c => !c.parent_id).length;
+          const summaryEmojis = MURO_REACTION_ORDER.filter(t => (react.breakdown[t] || 0) > 0).slice(0, 3)
+            .map(t => `<span class="text-sm">${WALL_REACTIONS[t].emoji}</span>`).join('');
+          return `
+          <div class="bg-white rounded-2xl border border-slate-100 p-4 hover:shadow-md transition-all ${p.is_pinned ? 'ring-2 ring-amber-200' : ''}">
+            ${p.is_important ? `
+              <div class="wall-important-banner -mx-4 -mt-4 px-4 py-2 rounded-t-2xl flex items-center gap-2 mb-3">
+                <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-600 shrink-0"></i>
+                <span class="text-[10px] font-black text-amber-700 uppercase tracking-widest">Aviso importante</span>
+              </div>` : ''}
+            ${p.is_pinned ? `
+              <div class="flex items-center gap-2 -mx-4 -mt-4 px-4 py-2 rounded-t-2xl bg-amber-50 border-b border-amber-100 mb-3">
+                <i data-lucide="pin" class="w-3.5 h-3.5 text-amber-500"></i>
+                <span class="text-[9px] font-black text-amber-600 uppercase tracking-widest">Publicación fijada</span>
+              </div>` : ''}
             <div class="flex items-center gap-3 mb-3">
               <img src="${authorAvatar(p)}" class="w-10 h-10 rounded-full object-cover border-2 border-indigo-100">
               <div>
@@ -1482,11 +1338,38 @@ async function loadMuroEscolar() {
             </div>
             <p class="text-sm text-slate-700 whitespace-pre-wrap">${Helpers.escapeHTML(p.content || '')}</p>
             ${p.media_url ? `<img src="${p.media_url}" class="mt-3 rounded-xl max-h-64 object-cover border border-slate-100">` : ''}
+            ${react.total > 0 ? `
+              <div class="flex items-center justify-between pt-3 mt-3 border-t border-slate-50">
+                <div class="flex items-center gap-1.5 text-xs font-bold text-slate-500">
+                  <span class="flex items-center -space-x-1 wall-emoji-summary">${summaryEmojis}</span>
+                  <span class="ml-0.5 tabular-nums text-purple-700 wall-summary-total">${react.total}</span>
+                </div>
+              </div>` : ''}
+            <div class="flex items-stretch gap-4 pt-3 mt-3 border-t border-slate-50">
+              ${muroReactButton(p.id)}
+              <button data-action="muro-comment" data-post-id="${p.id}" class="flex-1 flex items-center justify-center gap-1.5 text-[11px] font-black text-slate-400 hover:text-purple-600 transition-all">
+                <i data-lucide="message-circle" class="w-4 h-4"></i>
+                <span class="hidden sm:inline">Comentarios</span>
+                <span id="muro-comment-count-${p.id}" class="tabular-nums">${commN}</span>
+              </button>
+            </div>
+            <div id="muro-comments-${p.id}" class="hidden mt-3 pt-3 border-t border-slate-50 bg-slate-50/60 -mx-4 px-4 rounded-b-2xl">
+              <div id="muro-comments-list-${p.id}" class="space-y-2 mb-2 max-h-64 overflow-y-auto kk-scroll py-2">
+                ${muroCommentList(p.id)}
+              </div>
+              <div class="sticky bottom-0 flex gap-2 py-2 bg-slate-50/90">
+                <input type="text" id="muro-comment-input-${p.id}" class="flex-1 px-3 py-2.5 text-xs border border-slate-200 rounded-full focus:ring-2 focus:ring-purple-300 outline-none shadow-sm" placeholder="Escribe un comentario...">
+                <button data-action="muro-send-comment" data-post-id="${p.id}" class="shrink-0 p-2.5 bg-purple-600 text-white rounded-full hover:bg-purple-700 transition-colors shadow-md"><i data-lucide="send" class="w-4 h-4"></i></button>
+              </div>
+            </div>
           </div>
-        `).join('')}
+        `;
+        }).join('')}
       </div>
     `;
     if (window.lucide) lucide.createIcons();
+    _bindMuroEvents();
+    initMuroRealtime();
 
     document.getElementById('muroFile')?.addEventListener('change', (e) => {
       const file = e.target.files[0];
@@ -1536,6 +1419,459 @@ async function loadMuroEscolar() {
   } catch (e) {
     el.innerHTML = `<p class="text-rose-500">Error al cargar: ${e.message}</p>`;
   }
+}
+
+/** Botón de reacción (modelo Facebook) del muro de encargada */
+function muroReactButton(postId) {
+  const react = muroReactions[postId] || { total: 0, my: null };
+  const r = react.my ? WALL_REACTIONS[react.my] : null;
+  if (r) {
+    return `
+      <button data-action="muro-react" data-post-id="${postId}" title="${r.label} (toca para quitar, mantén presionado para elegir)" aria-label="Reaccionar"
+         class="wall-react-btn flex-1 flex items-center justify-center gap-1.5 text-[11px] font-black text-purple-700 hover:scale-105 transition-all">
+        <span class="text-base leading-none">${r.emoji}</span>
+        <span class="hidden sm:inline">${r.label}</span>
+        <span class="tabular-nums">${react.total}</span>
+      </button>`;
+  }
+  return `
+      <button data-action="muro-react" data-post-id="${postId}" title="Toca para dar Me gusta, mantén presionado para elegir" aria-label="Reaccionar"
+         class="wall-react-btn flex-1 flex items-center justify-center gap-1.5 text-[11px] font-black text-slate-400 hover:scale-105 transition-all">
+        <i data-lucide="thumbs-up" class="w-4 h-4"></i>
+        <span class="hidden sm:inline">Me gusta</span>
+        <span class="tabular-nums">${react.total}</span>
+      </button>`;
+}
+
+/** Lista de comentarios principales con "Ver más" y respuestas anidadas */
+function muroCommentList(postId) {
+  const all = muroCommentsCache[postId] || [];
+  const topLevel = all.filter(c => !c.parent_id);
+  const shownCount = Math.min(muroCommentShown[postId] ?? MURO_COMMENTS_SHOWN, topLevel.length);
+  if (topLevel.length === 0) {
+    return '<p class="text-center text-[10px] text-slate-400 italic py-1">Sé el primero en comentar.</p>';
+  }
+  const shown = topLevel.slice(0, shownCount);
+  const rest = topLevel.length - shownCount;
+  return `
+    ${shown.map(c => muroCommentCard(c, all)).join('')}
+    ${rest > 0 ? `
+      <button type="button" class="wall-more-comments" data-action="muro-more-comments" data-post-id="${postId}">
+        Ver ${rest} comentarios más
+      </button>` : ''}`;
+}
+
+/** Tarjeta HTML de un comentario principal + sus respuestas + campo "Responder" */
+function muroCommentCard(c, allComments) {
+  const cName = c.user_name || 'Usuario';
+  const color = ['bg-purple-100 text-purple-700', 'bg-amber-100 text-amber-600', 'bg-emerald-100 text-emerald-600', 'bg-rose-100 text-rose-600', 'bg-blue-100 text-blue-600'][cName.length % 5];
+  const replies = (allComments || []).filter(x => String(x.parent_id) === String(c.id));
+  const squash = Helpers.escapeHTML(cName).slice(0, 16);
+  return `
+    <div class="flex gap-2 text-xs">
+      <div class="w-7 h-7 rounded-full ${color} flex items-center justify-center font-bold text-[9px] shrink-0 mt-0.5">${Helpers.escapeHTML(cName.charAt(0).toUpperCase())}</div>
+      <div class="flex-1 min-w-0">
+        <div class="bg-white p-2.5 rounded-xl rounded-tl-none border border-slate-100 shadow-sm inline-block max-w-full">
+          <div class="flex items-center gap-2 mb-0.5">
+            <span class="font-bold text-slate-700 text-[10px]">${Helpers.escapeHTML(cName)}</span>
+            <span class="text-[9px] text-slate-400">${new Date(c.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+          </div>
+          <p class="text-slate-600 mt-0.5">${Helpers.escapeHTML(c.content)}</p>
+        </div>
+        <div class="flex items-center gap-3 px-2 py-1">
+          <button type="button" data-action="muro-reply-toggle" data-post-id="${c.post_id}" data-comment="${c.id}" class="text-[10px] font-black text-slate-400 hover:text-purple-500 transition-colors">Responder</button>
+        </div>
+        ${replies.length
+          ? `<div class="pl-2 ml-1 border-l-2 border-slate-200 space-y-2 mt-0.5" id="muro-replies-${c.id}">${replies.map(r => muroReplyCard(r)).join('')}</div>`
+          : `<div class="pl-2 ml-1 border-l-2 border-slate-100 space-y-2 mt-0.5 hidden" id="muro-replies-${c.id}"></div>`}
+        <div class="hidden mt-1 flex items-center gap-2 pl-1 pr-2" id="muro-reply-wrap-${c.id}" data-post-id="${c.post_id}">
+          <input type="text" id="muro-reply-input-${c.id}" class="flex-1 min-w-0 px-3 py-2 text-xs border border-slate-200 rounded-full focus:ring-2 focus:ring-purple-300 outline-none shadow-sm" placeholder="Responder a ${squash}...">
+          <button type="button" data-action="muro-send-reply" data-post-id="${c.post_id}" data-comment="${c.id}" aria-label="Enviar respuesta"
+            class="shrink-0 w-8 h-8 rounded-full bg-purple-600 hover:bg-purple-700 text-white flex items-center justify-center shadow transition-all active:scale-90">
+            <i data-lucide="send" class="w-3 h-3"></i>
+          </button>
+        </div>
+      </div>
+    </div>`;
+}
+
+/** Tarjeta HTML de una respuesta anidada */
+function muroReplyCard(r) {
+  const rName = r.user_name || 'Usuario';
+  const rcolor = ['bg-purple-100 text-purple-700', 'bg-amber-100 text-amber-600', 'bg-emerald-100 text-emerald-600', 'bg-rose-100 text-rose-600', 'bg-blue-100 text-blue-600'][rName.length % 5];
+  return `
+    <div class="flex gap-2 text-xs">
+      <div class="w-6 h-6 rounded-full ${rcolor} flex items-center justify-center font-bold text-[9px] shrink-0">${Helpers.escapeHTML(rName.charAt(0).toUpperCase())}</div>
+      <div class="bg-slate-100/80 p-2 rounded-xl rounded-tl-none border border-slate-100 flex-1">
+        <div class="flex items-center gap-2 mb-0.5">
+          <span class="font-bold text-slate-600 text-[10px]">${Helpers.escapeHTML(rName)}</span>
+          <span class="text-[9px] text-slate-400">${new Date(r.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+        </div>
+        <p class="text-slate-600">${Helpers.escapeHTML(r.content)}</p>
+      </div>
+    </div>`;
+}
+
+function _bindMuroEvents() {
+  const container = document.getElementById('muroContent');
+  if (!container || container._muroBound) return;
+  container._muroBound = true;
+
+  container.addEventListener('contextmenu', (e) => {
+    if (e.target.closest('[data-action="muro-react"]')) e.preventDefault();
+  });
+
+  container.addEventListener('pointerdown', (e) => {
+    const reactBtn = e.target.closest('[data-action="muro-react"]');
+    if (!reactBtn) return;
+    clearTimeout(muroReactTimer);
+    muroReactTimer = setTimeout(() => {
+      openMuroReactionPicker(reactBtn.dataset.postId, e);
+    }, 380);
+  });
+  container.addEventListener('pointerup', () => clearTimeout(muroReactTimer));
+  container.addEventListener('pointerleave', () => clearTimeout(muroReactTimer));
+  container.addEventListener('pointercancel', () => clearTimeout(muroReactTimer));
+
+  container.addEventListener('click', async (e) => {
+    const reactBtn = e.target.closest('[data-action="muro-react"]');
+    if (reactBtn) {
+      const postId = reactBtn.dataset.postId;
+      clearTimeout(muroReactTimer);
+      await reactToMuro(postId, muroReactions[postId]?.my || 'like');
+      return;
+    }
+    const pickerOpt = e.target.closest('[data-muro-reaction]');
+    if (pickerOpt) {
+      await reactToMuro(pickerOpt.dataset.postId, pickerOpt.dataset.muroReaction);
+      closeMuroPopover();
+      return;
+    }
+
+    const commentBtn = e.target.closest('[data-action="muro-comment"]');
+    if (commentBtn) { toggleMuroComments(commentBtn.dataset.postId); return; }
+
+    const sendBtn = e.target.closest('[data-action="muro-send-comment"]');
+    if (sendBtn) { await sendMuroComment(sendBtn.dataset.postId); return; }
+
+    const replyToggle = e.target.closest('[data-action="muro-reply-toggle"]');
+    if (replyToggle) {
+      const wrap = document.getElementById(`muro-reply-wrap-${replyToggle.dataset.comment}`);
+      if (wrap) {
+        wrap.classList.toggle('hidden');
+        const input = wrap.querySelector('input');
+        if (input && !wrap.classList.contains('hidden')) {
+          input.focus({ preventScroll: true });
+          input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }
+      return;
+    }
+
+    const replySend = e.target.closest('[data-action="muro-send-reply"]');
+    if (replySend) { await sendMuroReply(replySend.dataset.postId, replySend.dataset.comment); return; }
+
+    const moreBtn = e.target.closest('[data-action="muro-more-comments"]');
+    if (moreBtn) { muroMoreComments(moreBtn.dataset.postId); return; }
+  });
+
+  container.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey && e.target.id?.startsWith('muro-comment-input-')) {
+      e.preventDefault();
+      sendMuroComment(e.target.id.replace('muro-comment-input-', ''));
+      return;
+    }
+    if (e.key === 'Enter' && !e.shiftKey && e.target.id?.startsWith('muro-reply-input-')) {
+      e.preventDefault();
+      sendMuroReply(e.target.closest('[data-post-id]')?.dataset.postId, e.target.id.replace('muro-reply-input-', ''));
+    }
+  });
+}
+let muroReactTimer = null;
+
+/** Reacciona a un post del muro (tap = like / cambiar / quitar) */
+async function reactToMuro(postId, type) {
+  const user = AppState.get('user');
+  if (!user || !WALL_REACTIONS[type]) return;
+
+  const prev = muroReactions[postId]?.my || null;
+  const next = prev === type ? null : type;
+  const st = muroReactions[postId] || { breakdown: {}, total: 0, my: null };
+
+  if (prev) { st.breakdown[prev] = Math.max(0, (st.breakdown[prev] || 0) - 1); st.total = Math.max(0, st.total - 1); }
+  if (next) { st.breakdown[next] = (st.breakdown[next] || 0) + 1; st.total = st.total + 1; }
+  st.my = next;
+  muroReactions[postId] = st;
+  applyMuroReaction(postId);
+
+  if (navigator.vibrate) navigator.vibrate(12);
+
+  try {
+    if (prev === type) {
+      await supabase.from('likes').delete().eq('post_id', postId).eq('user_id', user.id);
+    } else if (!prev) {
+      await supabase.from('likes').insert({ post_id: postId, user_id: user.id, reaction_type: type });
+    } else {
+      await supabase.from('likes').update({ reaction_type: type }).eq('post_id', postId).eq('user_id', user.id);
+    }
+  } catch (_) {
+    if (next) { st.breakdown[next] = Math.max(0, (st.breakdown[next] || 0) - 1); st.total = Math.max(0, st.total - 1); }
+    if (prev) { st.breakdown[prev] = (st.breakdown[prev] || 0) + 1; st.total = st.total + 1; }
+    st.my = prev;
+    applyMuroReaction(postId);
+    Helpers.toast('No se pudo actualizar la reacción', 'error');
+  }
+}
+
+/** Re-render del botón de reacción y del resumen de emojis del post */
+function applyMuroReaction(postId) {
+  const btn = document.querySelector(`[data-action="muro-react"][data-post-id="${postId}"]`);
+  if (btn) btn.outerHTML = muroReactButton(postId);
+
+  const card = document.querySelector(`[data-action="muro-react"][data-post-id="${postId}"]`)?.closest('.rounded-2xl');
+  if (!card) return;
+  const react = muroReactions[postId] || { breakdown: {}, total: 0, my: null };
+  const summary = card.querySelector('.wall-emoji-summary');
+  const totalEl = card.querySelector('.wall-summary-total');
+  const emojis = MURO_REACTION_ORDER.filter(t => (react.breakdown[t] || 0) > 0).slice(0, 3)
+    .map(t => `<span class="text-sm">${WALL_REACTIONS[t].emoji}</span>`).join('');
+  if (summary) {
+    summary.innerHTML = emojis;
+    if (totalEl) totalEl.textContent = String(react.total);
+  } else if (react.total > 0) {
+    const actionRow = card.querySelector('.border-t.border-slate-50');
+    if (actionRow) actionRow.insertAdjacentHTML('beforebegin', `
+      <div class="flex items-center justify-between pt-3 mt-3 border-t border-slate-50">
+        <div class="flex items-center gap-1.5 text-xs font-bold text-slate-500 wall-summary-wrap">
+          <span class="flex items-center -space-x-1 wall-emoji-summary">${emojis}</span>
+          <span class="ml-0.5 tabular-nums text-purple-700 wall-summary-total">${react.total}</span>
+        </div>
+      </div>`);
+  }
+  if (window.lucide) lucide.createIcons();
+}
+
+/** Selector de reacciones (mantener presionado) */
+function openMuroReactionPicker(postId, ev) {
+  closeMuroPopover();
+  const btn = document.querySelector(`[data-action="muro-react"][data-post-id="${postId}"]`);
+  if (!btn) return;
+
+  const rect = btn.getBoundingClientRect();
+  const card = document.createElement('div');
+  card.className = 'wall-picker-card';
+  card.style.left = `${Math.max(8, rect.left + rect.width / 2 - 110)}px`;
+  card.style.top = `${Math.max(8, rect.top - 64)}px`;
+  card.dataset.postId = postId;
+
+  const selected = muroReactions[postId]?.my || null;
+  card.innerHTML = MURO_REACTION_ORDER.map(t => `
+    <button type="button" class="wall-emoji-btn${selected === t ? ' wall-picker-selected' : ''}" data-muro-reaction="${t}" title="${WALL_REACTIONS[t].label}">
+      ${WALL_REACTIONS[t].emoji}
+    </button>`).join('');
+
+  document.body.appendChild(card);
+  card.addEventListener('click', async (e) => {
+    const opt = e.target.closest('[data-muro-reaction]');
+    if (!opt) return;
+    await reactToMuro(postId, opt.dataset.muroReaction);
+    closeMuroPopover();
+  });
+  muroActivePopover = card;
+}
+
+function closeMuroPopover() {
+  if (muroActivePopover) { muroActivePopover.remove(); muroActivePopover = null; }
+}
+document.addEventListener('click', (e) => {
+  if (muroActivePopover && !e.target.closest('.wall-picker-card')) closeMuroPopover();
+});
+
+/** Alias de compatibilidad */
+async function toggleMuroLike(postId) {
+  await reactToMuro(postId, muroReactions[postId]?.my || 'like');
+}
+
+function toggleMuroComments(postId) {
+  const section = document.getElementById(`muro-comments-${postId}`);
+  if (!section) return;
+  section.classList.toggle('hidden');
+  if (!section.classList.contains('hidden')) {
+    const input = document.getElementById(`muro-comment-input-${postId}`);
+    if (input) setTimeout(() => input.focus(), 150);
+  }
+}
+
+async function sendMuroComment(postId) {
+  const input = document.getElementById(`muro-comment-input-${postId}`);
+  const content = input?.value.trim();
+  if (!content) return;
+
+  const user    = AppState.get('user');
+  const profile = AppState.get('profile');
+  if (!user) return;
+  const authorName = profile?.name || 'Encargada';
+
+  const list = document.getElementById(`muro-comments-list-${postId}`);
+  const tempId = `muro-temp-${Date.now()}`;
+  if (list) {
+    const placeholder = list.querySelector('.italic');
+    if (placeholder) placeholder.remove();
+    const tempEl = document.createElement('div');
+    tempEl.id = tempId;
+    tempEl.className = 'flex gap-2 text-xs opacity-60';
+    tempEl.innerHTML = `
+      <div class="w-6 h-6 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center font-bold text-[9px] shrink-0">${Helpers.escapeHTML(authorName.charAt(0).toUpperCase())}</div>
+      <div class="bg-white p-2 rounded-xl rounded-tl-none border border-slate-100 flex-1">
+        <span class="font-bold text-slate-700 text-[10px]">${Helpers.escapeHTML(authorName)}</span>
+        <p class="text-slate-600 mt-0.5">${Helpers.escapeHTML(content)}</p>
+      </div>`;
+    list.appendChild(tempEl);
+    list.scrollTop = list.scrollHeight;
+  }
+  input.value = '';
+
+  try {
+    const { data: newComment, error } = await supabase.from('comments').insert({
+      post_id: postId, user_id: user.id, user_name: authorName, content, parent_id: null
+    }).select('id, content, user_name, user_id, created_at, parent_id').single();
+    if (error) throw error;
+    const tempEl = document.getElementById(tempId);
+    if (tempEl) tempEl.classList.remove('opacity-60');
+    const countSpan = document.getElementById(`muro-comment-count-${postId}`);
+    if (countSpan) countSpan.textContent = String((parseInt(countSpan.textContent) || 0) + 1);
+    if (newComment) {
+      const cache = muroCommentsCache[postId] || [];
+      muroCommentsCache[postId] = [...cache, newComment];
+      muroCommentShown[postId] = (muroCommentShown[postId] || MURO_COMMENTS_SHOWN) + 1;
+    }
+  } catch (err) {
+    document.getElementById(tempId)?.remove();
+    input.value = content;
+    Helpers.toast('Error al enviar comentario', 'error');
+  }
+}
+
+/** "Ver más comentarios" del muro de encargada (cliente) */
+function muroMoreComments(postId) {
+  muroCommentShown[postId] = (muroCommentShown[postId] || MURO_COMMENTS_SHOWN) + MURO_COMMENTS_SHOWN;
+  const list = document.getElementById(`muro-comments-list-${postId}`);
+  if (list) list.innerHTML = muroCommentList(postId);
+  if (window.lucide) lucide.createIcons();
+}
+
+/** Envía una respuesta anidada a un comentario del muro */
+async function sendMuroReply(postId, parentId) {
+  const input          = document.getElementById(`muro-reply-input-${parentId}`);
+  const content        = input?.value.trim();
+  if (!content) return;
+
+  const user    = AppState.get('user');
+  const profile = AppState.get('profile');
+  if (!user) return;
+  const authorName = profile?.name || 'Encargada';
+
+  const wrap = document.getElementById(`muro-replies-${parentId}`);
+  if (wrap) {
+    if (wrap.classList.contains('hidden')) wrap.classList.remove('hidden');
+    const tempEl = document.createElement('div');
+    tempEl.innerHTML = muroReplyCard({ user_name: authorName, content, created_at: new Date().toISOString() });
+    wrap.appendChild(tempEl);
+    wrap.scrollTop = wrap.scrollHeight;
+  }
+  input.value = '';
+
+  try {
+    const { data: newReply, error } = await supabase.from('comments').insert({
+      post_id: postId, user_id: user.id, user_name: authorName, content, parent_id: parentId
+    }).select('id, content, user_name, user_id, created_at, parent_id').single();
+    if (error) throw error;
+    if (newReply) {
+      const cache = muroCommentsCache[postId] || [];
+      muroCommentsCache[postId] = [...cache, newReply];
+    }
+  } catch (_) {
+    // Revertir optimista
+    if (wrap) { const last = wrap.lastElementChild; if (last) last.remove(); }
+    input.value = content;
+    Helpers.toast('Error al enviar la respuesta', 'error');
+  }
+}
+
+/** Actualiza conteos de reacciones/comentarios de un post del muro (encargada) */
+async function _refreshMuroPost(postId, refreshComments = false) {
+  const likeBtn = document.querySelector(`[data-action="muro-react"][data-post-id="${postId}"]`);
+  const commSpan = document.getElementById(`muro-comment-count-${postId}`);
+  if (!likeBtn && !commSpan) return;
+
+  const [lRes, cRes] = await Promise.allSettled([
+    supabase.from('likes').select('id, post_id, user_id, reaction_type').eq('post_id', postId),
+    supabase.from('comments')
+      .select('id, content, user_name, user_id, created_at, parent_id')
+      .eq('post_id', postId)
+      .order('created_at', { ascending: true })
+  ]);
+
+  if (lRes.status === 'fulfilled' && lRes.value.data) {
+    const user = AppState.get('user');
+    const breakdown = {};
+    let total = 0;
+    (lRes.value.data).forEach(l => {
+      const t = WALL_REACTIONS[l.reaction_type] ? l.reaction_type : 'like';
+      breakdown[t] = (breakdown[t] || 0) + 1;
+      total++;
+    });
+    const mine = (lRes.value.data).find(l => l.user_id === user?.id);
+    muroReactions[postId] = {
+      breakdown,
+      total,
+      my: mine ? (WALL_REACTIONS[mine.reaction_type] ? mine.reaction_type : 'like') : null
+    };
+    applyMuroReaction(postId);
+  }
+
+  if (cRes.status === 'fulfilled') {
+    const all = (cRes.value.data || []).sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+    muroCommentsCache[postId] = all;
+    const topLevelCount = all.filter(c => !c.parent_id).length;
+    if (commSpan) commSpan.textContent = String(topLevelCount);
+  }
+
+  if (refreshComments) {
+    const section = document.getElementById(`muro-comments-${postId}`);
+    const list    = document.getElementById(`muro-comments-list-${postId}`);
+    if (section && list && !section.classList.contains('hidden')) {
+      list.innerHTML = muroCommentList(postId);
+      if (window.lucide) lucide.createIcons();
+    }
+  }
+}
+
+let muroChannel = null;
+let muroRealtimeReady = false;
+/** Realtime del muro (encargada): nuevos posts + likes/comentarios sin recarga */
+function initMuroRealtime() {
+  if (muroRealtimeReady && muroChannel) return;
+  muroRealtimeReady = true;
+
+  muroChannel = supabase
+    .channel(`encargada_muro_${Date.now()}`)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, (payload) => {
+      if (AppState.get('currentSection') !== 'muro') return;
+      if (payload.new?.teacher_id === AppState.get('user')?.id) return;
+      loadMuroEscolar();
+    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'likes' }, (payload) => {
+      const postId = payload.new?.post_id || payload.old?.post_id;
+      if (!document.querySelector(`[data-action="muro-react"][data-post-id="${postId}"]`)) return;
+      _refreshMuroPost(postId);
+    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'comments' }, (payload) => {
+      const postId = payload.new?.post_id || payload.old?.post_id;
+      if (!document.getElementById(`muro-comment-count-${postId}`)) return;
+      _refreshMuroPost(postId, true);
+    })
+    .subscribe();
 }
 
 async function loadInscripciones() {
