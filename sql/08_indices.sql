@@ -265,6 +265,27 @@ CREATE INDEX IF NOT EXISTS idx_payments_pending_evidence ON public.payments(stat
 -- Fecha: 2026-09-12 21:41
 -- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
+-- Los índices consolidados usan columnas que se crean en 10_fixes.sql (que se
+-- ejecuta DESPUÉS de este archivo). Se declaran aquí si faltan para que los
+-- CREATE INDEX no fallen con 42703 (column does not exist).
+ALTER TABLE public.notifications ADD COLUMN IF NOT EXISTS priority text DEFAULT 'informative';
+ALTER TABLE public.notifications ADD COLUMN IF NOT EXISTS is_pinned boolean DEFAULT false;
+ALTER TABLE public.notifications ADD COLUMN IF NOT EXISTS student_id bigint REFERENCES public.students(id) ON DELETE CASCADE;
+ALTER TABLE public.tasks ADD COLUMN IF NOT EXISTS area_id bigint REFERENCES public.academic_areas(id);
+ALTER TABLE public.tasks ADD COLUMN IF NOT EXISTS competency_id bigint REFERENCES public.competencies(id);
+ALTER TABLE public.tasks ADD COLUMN IF NOT EXISTS task_type text DEFAULT 'tarea' CHECK (task_type IN ('tarea','evaluacion','proyecto','observacion'));
+ALTER TABLE public.report_cards ADD COLUMN IF NOT EXISTS areas_summary jsonb DEFAULT '{}'::jsonb;
+ALTER TABLE public.payments ADD COLUMN IF NOT EXISTS school_year_id bigint REFERENCES public.school_years(id) ON DELETE SET NULL;
+ALTER TABLE public.payments ADD COLUMN IF NOT EXISTS period_id bigint REFERENCES public.periods(id) ON DELETE SET NULL;
+ALTER TABLE public.invoices ADD COLUMN IF NOT EXISTS school_year_id bigint REFERENCES public.school_years(id) ON DELETE SET NULL;
+ALTER TABLE public.student_preregistrations ADD COLUMN IF NOT EXISTS school_year_id bigint REFERENCES public.school_years(id) ON DELETE SET NULL;
+ALTER TABLE public.messages ADD COLUMN IF NOT EXISTS message_type text NOT NULL DEFAULT 'text' CHECK (message_type IN ('text','image','file','system'));
+ALTER TABLE public.messages ADD COLUMN IF NOT EXISTS reply_to_id bigint REFERENCES public.messages(id) ON DELETE SET NULL;
+ALTER TABLE public.messages ADD COLUMN IF NOT EXISTS deleted_at timestamp with time zone;
+ALTER TABLE public.conversation_participants ADD COLUMN IF NOT EXISTS last_read_at timestamp with time zone;
+ALTER TABLE public.posts ADD COLUMN IF NOT EXISTS is_pinned boolean NOT NULL DEFAULT false;
+ALTER TABLE public.comments ADD COLUMN IF NOT EXISTS parent_id bigint REFERENCES public.comments(id) ON DELETE CASCADE;
+
 CREATE INDEX IF NOT EXISTS idx_notifications_user_read ON public.notifications(user_id, is_read);
 
 CREATE INDEX IF NOT EXISTS idx_notifications_priority ON public.notifications(priority) WHERE priority IN ('critical', 'important');
@@ -433,11 +454,11 @@ CREATE INDEX IF NOT EXISTS idx_eval_area_notes_student ON public.eval_area_notes
 
 CREATE INDEX IF NOT EXISTS idx_eval_area_notes_area    ON public.eval_area_notes (area_id);
 
-CREATE INDEX IF NOT EXISTS idx_messages_reply       ON public.messages(reply_to_id) WHERE reply_to_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_messages_reply ON public.messages(reply_to_id) WHERE reply_to_id IS NOT NULL;
 
-CREATE INDEX IF NOT EXISTS idx_messages_active      ON public.messages(conversation_id, created_at DESC) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_messages_active ON public.messages(conversation_id, created_at DESC) WHERE deleted_at IS NULL;
 
-CREATE INDEX IF NOT EXISTS idx_messages_type        ON public.messages(message_type);
+CREATE INDEX IF NOT EXISTS idx_messages_type ON public.messages(message_type);
 
 CREATE INDEX IF NOT EXISTS idx_attachments_msg      ON public.message_attachments(message_id);
 

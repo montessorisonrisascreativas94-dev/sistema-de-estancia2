@@ -1186,7 +1186,7 @@ DO $$ BEGIN
 CREATE POLICY "invoices_padre_select" ON public.invoices FOR SELECT
   USING (
     COALESCE(get_my_role(),'') = 'padre'
-    AND student_id IN (SELECT parent_id FROM public.students WHERE parent_id = auth.uid())
+    AND student_id IN (SELECT id FROM public.students WHERE parent_id = auth.uid())
   );
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;

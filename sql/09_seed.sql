@@ -583,6 +583,8 @@ WHERE status IS NULL;
 UPDATE public.periods SET status = 'open', is_blocked = false
 WHERE is_active = true AND status = 'closed';
 
+ALTER TABLE public.eval_periods ADD COLUMN IF NOT EXISTS updated_at timestamptz DEFAULT now();
+
 UPDATE public.eval_periods ep
 SET status = CASE WHEN gp.status = 'open' THEN 'open' ELSE 'closed' END,
     start_date = gp.start_date,

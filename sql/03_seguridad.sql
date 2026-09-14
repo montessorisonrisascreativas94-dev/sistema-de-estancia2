@@ -5,6 +5,22 @@
 -- ============================================================
 -- 6. HABILITAR ROW LEVEL SECURITY (RLS)
 -- ============================================================
+
+-- Las funciones se crean en 04_funciones.sql, que se ejecuta DESPUÉS de
+-- este archivo. Para evitar el error 42883 ("function ... does not exist"),
+-- los GRANT/REVOKE sobre funciones se hacen de forma condicional.
+CREATE OR REPLACE FUNCTION public._secure_grant(p_sig text, p_roles text, p_revoke boolean DEFAULT false)
+RETURNS void LANGUAGE plpgsql AS $$
+BEGIN
+  IF to_regprocedure('public.' || p_sig) IS NOT NULL THEN
+    IF p_revoke THEN
+      EXECUTE format('REVOKE EXECUTE ON FUNCTION %s FROM %s', p_sig, p_roles);
+    ELSE
+      EXECUTE format('GRANT EXECUTE ON FUNCTION %s TO %s', p_sig, p_roles);
+    END IF;
+  END IF;
+END $$;
+
 ALTER TABLE public.profiles                ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.classrooms              ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.students                ENABLE ROW LEVEL SECURITY;
@@ -65,9 +81,9 @@ ALTER TABLE public.payroll_records         ENABLE ROW LEVEL SECURITY;
 
 ALTER TABLE public.student_preregistrations ENABLE ROW LEVEL SECURITY;
 
-GRANT EXECUTE ON FUNCTION public.generate_invoice_hash(BIGINT) TO authenticated, service_role;
+SELECT public._secure_grant('generate_invoice_hash(bigint)', 'authenticated, service_role');
 
-GRANT EXECUTE ON FUNCTION public.mark_invoice_email_sent(BIGINT) TO authenticated, service_role;
+SELECT public._secure_grant('mark_invoice_email_sent(bigint)', 'authenticated, service_role');
 
 ALTER TABLE caja_sessions ENABLE ROW LEVEL SECURITY;
 
@@ -75,45 +91,45 @@ ALTER TABLE accounting_journal ENABLE ROW LEVEL SECURITY;
 
 ALTER TABLE payroll_records ENABLE ROW LEVEL SECURITY;
 
-GRANT EXECUTE ON FUNCTION public.close_period(bigint) TO authenticated;
+SELECT public._secure_grant('close_period(bigint)', 'authenticated');
 
-GRANT EXECUTE ON FUNCTION public.get_student_history(bigint) TO authenticated;
+SELECT public._secure_grant('get_student_history(bigint)', 'authenticated');
 
-GRANT EXECUTE ON FUNCTION public.create_school_year_with_periods(text, date, date, bigint[], int) TO authenticated;
+SELECT public._secure_grant('create_school_year_with_periods(text, date, date, bigint[], int)', 'authenticated');
 
 ALTER TABLE public.teacher_schedules ENABLE ROW LEVEL SECURITY;
 
 ALTER TABLE public.schedule_event_logs ENABLE ROW LEVEL SECURITY;
 
-GRANT EXECUTE ON FUNCTION public.get_school_year_dashboard(bigint) TO authenticated;
+SELECT public._secure_grant('get_school_year_dashboard(bigint)', 'authenticated');
 
-GRANT EXECUTE ON FUNCTION public.create_new_school_year_with_promotion(text,date,date,text,int,boolean,bigint) TO authenticated;
+SELECT public._secure_grant('create_new_school_year_with_promotion(text, date, date, text, int, boolean, bigint)', 'authenticated');
 
-GRANT EXECUTE ON FUNCTION public.get_pending_transfer_payments() TO authenticated;
+SELECT public._secure_grant('get_pending_transfer_payments()', 'authenticated');
 
-GRANT EXECUTE ON FUNCTION public.review_transfer_payment(bigint,text,text) TO authenticated;
+SELECT public._secure_grant('review_transfer_payment(bigint, text, text)', 'authenticated');
 
-GRANT EXECUTE ON FUNCTION public.get_student_competencies(bigint, bigint) TO authenticated;
+SELECT public._secure_grant('get_student_competencies(bigint, bigint)', 'authenticated');
 
-GRANT EXECUTE ON FUNCTION public.get_classroom_area_averages(bigint, bigint) TO authenticated;
+SELECT public._secure_grant('get_classroom_area_averages(bigint, bigint)', 'authenticated');
 
-GRANT EXECUTE ON FUNCTION public.get_institutional_averages(bigint) TO authenticated;
+SELECT public._secure_grant('get_institutional_averages(bigint)', 'authenticated');
 
-GRANT EXECUTE ON FUNCTION public.get_student_academic_record(bigint) TO authenticated;
+SELECT public._secure_grant('get_student_academic_record(bigint)', 'authenticated');
 
-GRANT EXECUTE ON FUNCTION public.create_new_school_year_with_promotion(text,date,date,boolean,boolean,boolean,int,text) TO authenticated;
+SELECT public._secure_grant('create_new_school_year_with_promotion(text, date, date, boolean, boolean, boolean, int, text)', 'authenticated');
 
-GRANT EXECUTE ON FUNCTION public.close_school_year(bigint) TO authenticated;
+SELECT public._secure_grant('close_school_year(bigint)', 'authenticated');
 
-GRANT EXECUTE ON FUNCTION public.set_active_school_year(bigint) TO authenticated;
+SELECT public._secure_grant('set_active_school_year(bigint)', 'authenticated');
 
-GRANT EXECUTE ON FUNCTION public.get_school_year_history(bigint) TO authenticated;
+SELECT public._secure_grant('get_school_year_history(bigint)', 'authenticated');
 
-GRANT EXECUTE ON FUNCTION public.is_period_writable(bigint) TO authenticated;
+SELECT public._secure_grant('is_period_writable(bigint)', 'authenticated');
 
-GRANT EXECUTE ON FUNCTION public.get_active_period(bigint) TO authenticated;
+SELECT public._secure_grant('get_active_period(bigint)', 'authenticated');
 
-GRANT EXECUTE ON FUNCTION public.get_current_period() TO authenticated;
+SELECT public._secure_grant('get_current_period()', 'authenticated');
 
 ALTER TABLE public.expenses ENABLE ROW LEVEL SECURITY;
 
@@ -121,13 +137,13 @@ ALTER TABLE public.payroll_invoices ENABLE ROW LEVEL SECURITY;
 
 ALTER TABLE meeting_attendance ENABLE ROW LEVEL SECURITY;
 
-GRANT EXECUTE ON FUNCTION public.find_or_create_private_conversation(uuid, uuid) TO authenticated;
+SELECT public._secure_grant('find_or_create_private_conversation(uuid, uuid)', 'authenticated');
 
-GRANT EXECUTE ON FUNCTION public.get_tasks_for_period(bigint, bigint) TO authenticated;
+SELECT public._secure_grant('get_tasks_for_period(bigint, bigint)', 'authenticated');
 
-GRANT EXECUTE ON FUNCTION public.get_posts_for_period(bigint, bigint, int) TO authenticated;
+SELECT public._secure_grant('get_posts_for_period(bigint, bigint, int)', 'authenticated');
 
-GRANT EXECUTE ON FUNCTION public.get_dashboard_kpis() TO authenticated;
+SELECT public._secure_grant('get_dashboard_kpis()', 'authenticated');
 
 REVOKE ALL ON public.profiles, public.students, public.payments, public.audit_logs,
   public.system_errors, public.login_attempts, public.data_snapshots,
@@ -137,39 +153,39 @@ REVOKE ALL ON public.profiles, public.students, public.payments, public.audit_lo
   public.attendance, public.teacher_schedules, public.schedule_event_logs
   FROM anon;
 
-GRANT EXECUTE ON FUNCTION public.generate_receipt_number() TO authenticated;
+SELECT public._secure_grant('generate_receipt_number()', 'authenticated');
 
-GRANT EXECUTE ON FUNCTION public.convert_preregistration(bigint, bigint, bigint, bigint, text) TO authenticated;
+SELECT public._secure_grant('convert_preregistration(bigint, bigint, bigint, bigint, text)', 'authenticated');
 
-REVOKE EXECUTE ON FUNCTION public.convert_preregistration(bigint, bigint, bigint, bigint, text) FROM anon;
+SELECT public._secure_grant('convert_preregistration(bigint, bigint, bigint, bigint, text)', 'anon', true);
 
-GRANT EXECUTE ON FUNCTION public.get_posts_for_parent(bigint) TO authenticated, anon;
+SELECT public._secure_grant('get_posts_for_parent(bigint)', 'authenticated, anon');
 
-GRANT EXECUTE ON FUNCTION public.mark_messages_read(bigint) TO authenticated;
+SELECT public._secure_grant('mark_messages_read(bigint)', 'authenticated');
 
-GRANT EXECUTE ON FUNCTION public.get_direct_messages(uuid) TO authenticated;
+SELECT public._secure_grant('get_direct_messages(uuid)', 'authenticated');
 
-GRANT EXECUTE ON FUNCTION public.check_rate_limit(text, int, int) TO service_role;
+SELECT public._secure_grant('check_rate_limit(text, int, int)', 'service_role');
 
-GRANT EXECUTE ON FUNCTION public.record_login_attempt(text, text, boolean) TO service_role;
+SELECT public._secure_grant('record_login_attempt(text, text, boolean)', 'service_role');
 
-GRANT EXECUTE ON FUNCTION public.prune_login_attempts() TO service_role;
+SELECT public._secure_grant('prune_login_attempts()', 'service_role');
 
-REVOKE EXECUTE ON FUNCTION public.activate_period(bigint) FROM anon;
+SELECT public._secure_grant('activate_period(bigint)', 'anon', true);
 
-REVOKE EXECUTE ON FUNCTION public.close_period(bigint) FROM anon;
+SELECT public._secure_grant('close_period(bigint)', 'anon', true);
 
-REVOKE EXECUTE ON FUNCTION public.generate_receipt_number() FROM anon;
+SELECT public._secure_grant('generate_receipt_number()', 'anon', true);
 
-REVOKE EXECUTE ON FUNCTION public.process_door_punch(text) FROM anon;
+SELECT public._secure_grant('process_door_punch(text)', 'anon', true);
 
-REVOKE EXECUTE ON FUNCTION public.mark_invoice_email_sent(bigint) FROM anon;
+SELECT public._secure_grant('mark_invoice_email_sent(bigint)', 'anon', true);
 
-REVOKE EXECUTE ON FUNCTION public.update_updated_at_column() FROM anon;
+SELECT public._secure_grant('update_updated_at_column()', 'anon', true);
 
-REVOKE EXECUTE ON FUNCTION public.set_event_time() FROM anon;
+SELECT public._secure_grant('set_event_time()', 'anon', true);
 
-REVOKE EXECUTE ON FUNCTION public.calculate_nap_duration() FROM anon;
+SELECT public._secure_grant('calculate_nap_duration()', 'anon', true);
 
 ALTER TABLE public.posts ENABLE ROW LEVEL SECURITY;
 
@@ -197,15 +213,15 @@ ALTER TABLE public.door_punches ENABLE ROW LEVEL SECURITY;
 
 ALTER TABLE public.school_settings ENABLE ROW LEVEL SECURITY;
 
-GRANT EXECUTE ON FUNCTION public.get_active_school_year_id() TO authenticated;
+SELECT public._secure_grant('get_active_school_year_id()', 'authenticated');
 
-GRANT EXECUTE ON FUNCTION public.activate_period(bigint) TO authenticated;
+SELECT public._secure_grant('activate_period(bigint)', 'authenticated');
 
-REVOKE EXECUTE ON FUNCTION public.activate_period(bigint) FROM anon;
+SELECT public._secure_grant('activate_period(bigint)', 'anon', true);
 
-REVOKE EXECUTE ON FUNCTION public.create_school_year_with_periods(text, date, date, bigint[], int) FROM anon;
+SELECT public._secure_grant('create_school_year_with_periods(text, date, date, bigint[], int)', 'anon', true);
 
-REVOKE EXECUTE ON FUNCTION public.create_new_school_year_with_promotion(text,date,date,boolean,boolean,boolean,int,text) FROM anon;
+SELECT public._secure_grant('create_new_school_year_with_promotion(text, date, date, boolean, boolean, boolean, int, text)', 'anon', true);
 
 ALTER TABLE public.routine_categories           ENABLE ROW LEVEL SECURITY;
 
@@ -247,7 +263,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO authentic
 
 ALTER TABLE public.eval_area_notes ENABLE ROW LEVEL SECURITY;
 
-GRANT EXECUTE ON FUNCTION public.boletin_ensure_structure(bigint) TO authenticated;
+SELECT public._secure_grant('boletin_ensure_structure(bigint)', 'authenticated');
 
 ALTER TABLE public.school_year_processes ENABLE ROW LEVEL SECURITY;
 
@@ -255,17 +271,17 @@ GRANT SELECT ON public.school_year_processes TO authenticated;
 
 GRANT INSERT, UPDATE, DELETE ON public.school_year_processes TO service_role;
 
-REVOKE EXECUTE ON FUNCTION public.get_active_period(bigint) FROM anon;
+SELECT public._secure_grant('get_active_period(bigint)', 'anon', true);
 
-REVOKE EXECUTE ON FUNCTION public.get_current_period() FROM anon;
+SELECT public._secure_grant('get_current_period()', 'anon', true);
 
-GRANT EXECUTE ON FUNCTION public.get_unread_counts() TO authenticated;
+SELECT public._secure_grant('get_unread_counts()', 'authenticated');
 
 ALTER TABLE public.message_attachments ENABLE ROW LEVEL SECURITY;
 
 ALTER TABLE public.message_reactions    ENABLE ROW LEVEL SECURITY;
 
-GRANT EXECUTE ON FUNCTION public.generate_ascii_receipt(BIGINT) TO authenticated;
+SELECT public._secure_grant('generate_ascii_receipt(bigint)', 'authenticated');
 
 ALTER TABLE public.payment_concepts ENABLE ROW LEVEL SECURITY;
 
@@ -311,4 +327,10 @@ ALTER TABLE public.classrooms ENABLE ROW LEVEL SECURITY;
 
 ALTER TABLE public.student_preregistrations ENABLE ROW LEVEL SECURITY;
 
-GRANT EXECUTE ON FUNCTION public.convert_preregistration TO authenticated;
+DO $do$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+             WHERE n.nspname = 'public' AND p.proname = 'convert_preregistration') THEN
+    GRANT EXECUTE ON FUNCTION public.convert_preregistration TO authenticated;
+  END IF;
+END $do$;
