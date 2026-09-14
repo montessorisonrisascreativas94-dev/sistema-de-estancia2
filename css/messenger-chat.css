@@ -62,6 +62,9 @@
 }
 
 .m-chat-list__title {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
   font-weight: 900;
   font-size: 1.15rem;
   color: #0f172a;

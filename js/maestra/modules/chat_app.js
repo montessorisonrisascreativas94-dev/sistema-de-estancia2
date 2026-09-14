@@ -816,14 +816,17 @@ async function toggleReaction(msgId, emoji) {
 async function refreshReactions(msgId) {
   const bubble = document.querySelector(`.m-bubble[data-msg-id="${msgId}"]`);
   if (!bubble) return;
-  const { data } = await window.supabase.from('messages')
-    .select('message_reactions(emoji, user_id)')
-    .eq('id', msgId)
-    .single()
-    .catch(() => ({ data: null }));
+  let reactions = null;
+  try {
+    const { data: reactionsData } = await window.supabase.from('messages')
+      .select('message_reactions(emoji, user_id)')
+      .eq('id', msgId)
+      .single();
+    reactions = reactionsData;
+  } catch (_) {}
   const old = bubble.querySelector('.m-bubble__reactions');
   if (old) old.remove();
-  const html = ChatUI.reactionsBar({ id: msgId, message_reactions: data?.message_reactions || [] }, _currentUserId);
+  const html = ChatUI.reactionsBar({ id: msgId, message_reactions: reactions?.message_reactions || [] }, _currentUserId);
   if (html) bubble.insertAdjacentHTML('beforeend', html);
 }
 

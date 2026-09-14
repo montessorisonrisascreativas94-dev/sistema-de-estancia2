@@ -55,9 +55,12 @@ export const AssistantChatApp = {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
     this._currentUserId = user.id;
-    const { data: profile } = await supabase.from('profiles')
-      .select('name, avatar_url, role').eq('id', user.id).single()
-      .catch(() => ({ data: null }));
+    let profile = null;
+    try {
+      const { data: profileData } = await supabase.from('profiles')
+        .select('name, avatar_url, role').eq('id', user.id).single();
+      profile = profileData;
+    } catch (_) {}
     this._currentUserProfile = profile || {};
 
     grid.classList.add('is-view-list');
@@ -565,14 +568,17 @@ export const AssistantChatApp = {
   async _refreshReactions(msgId) {
     const bubble = document.querySelector(`.m-bubble[data-msg-id="${msgId}"]`);
     if (!bubble) return;
-    const { data } = await supabase.from('messages')
-      .select('message_reactions(emoji, user_id)')
-      .eq('id', msgId)
-      .single()
-      .catch(() => ({ data: null }));
+    let reactions = null;
+    try {
+      const { data: reactionsData } = await supabase.from('messages')
+        .select('message_reactions(emoji, user_id)')
+        .eq('id', msgId)
+        .single();
+      reactions = reactionsData;
+    } catch (_) {}
     const old = bubble.querySelector('.m-bubble__reactions');
     if (old) old.remove();
-    const m = { id: msgId, message_reactions: data?.message_reactions || [] };
+    const m = { id: msgId, message_reactions: reactions?.message_reactions || [] };
     const html = ChatUI.reactionsBar(m, this._currentUserId);
     if (html) {
       bubble.insertAdjacentHTML('beforeend', html);

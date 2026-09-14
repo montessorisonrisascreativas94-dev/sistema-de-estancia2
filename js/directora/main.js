@@ -748,7 +748,7 @@ function _renderGestionAcademica() {
     { id:'calificaciones',  icon:'star',            label:'Calificaciones',    desc:'Boletines, promedios y evaluaciones',color:'#F59E0B'},
     { id:'videoconferencia',icon:'video',           label:'Videoconferencia',  desc:'Clases virtuales y reuniones',      color:'#8B5CF6' },
   ];
-  _renderHub('gestion-academica', '🎓 Gestión Académica', 'Administración del equipo docente, alumnos y procesos educativos', secs);
+  _renderHub('gestion-academica', 'Gestión Académica', 'Administración del equipo docente, alumnos y procesos educativos', secs, 'graduation-cap');
 }
 
 /**
@@ -761,7 +761,7 @@ function _renderCicloEscolar() {
     { id:'staff-permits',       icon:'calendar-off',    label:'Permisos Staff', desc:'Ausencias y permisos del personal', color:'#EC4899' },
     { id:'accesos',             icon:'qr-code',          label:'Accesos QR', desc:'Control de entradas y salidas', color:'#64748B' },
   ];
-  _renderHub('ciclo-escolar', '📅 Ciclo Escolar', 'Gestión del año escolar, inscripciones, reinscripciones y calendarios', secs);
+  _renderHub('ciclo-escolar', 'Ciclo Escolar', 'Gestión del año escolar, inscripciones, reinscripciones y calendarios', secs, 'calendar-range');
 }
 
 /**
@@ -774,13 +774,13 @@ function _renderFinanzas() {
     { id:'contabilidad',   icon:'bar-chart-3',    label:'Contabilidad',      desc:'Reportes financieros y flujo de caja', color:'#0B63C7' },
     { id:'cuentas-cobrar', icon:'receipt',          label:'Cuentas por Cobrar',desc:'Deudores, mora y recordatorios',       color:'#EF4444' },
   ];
-  _renderHub('finanzas', '💰 Finanzas', 'Motor financiero escolar: caja, pagos, contabilidad y cuentas por cobrar', secs);
+  _renderHub('finanzas', 'Finanzas', 'Motor financiero escolar: caja, pagos, contabilidad y cuentas por cobrar', secs, 'banknote');
 }
 
 /**
  * Renderiza un hub de sección con tarjetas de acceso rápido
  */
-function _renderHub(containerId, title, subtitle, sections) {
+function _renderHub(containerId, title, subtitle, sections, titleIcon) {
   const section = document.getElementById(containerId);
   if (!section) return;
   // El hub renderiza directo en la sección o en su primer div
@@ -788,7 +788,12 @@ function _renderHub(containerId, title, subtitle, sections) {
   el.innerHTML = `
     <div class="space-y-6">
       <div>
-        <h2 class="text-2xl font-black text-slate-800">${title}</h2>
+        <div class="flex items-center gap-3">
+          ${titleIcon ? `<div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style="background:rgba(11,99,199,0.12)">
+            <i data-lucide="${titleIcon}" class="w-5 h-5 text-[#0B63C7]"></i>
+          </div>` : ''}
+          <h2 class="text-2xl font-black text-slate-800">${title}</h2>
+        </div>
         <p class="text-slate-400 font-medium mt-1">${subtitle}</p>
       </div>
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">

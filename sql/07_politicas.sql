@@ -387,3 +387,922 @@ DROP POLICY IF EXISTS "payment_concepts_staff" ON public.payment_concepts;
 CREATE POLICY "payment_concepts_staff" ON public.payment_concepts FOR ALL
   USING (COALESCE(get_my_role(), '') IN ('directora','admin','encargada'));
 
+-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+-- CONSOLIDADO DESDE migrations\ (historial) â€” aÃ±adido automÃ¡ticamente
+-- Fecha: 2026-09-12 21:41
+-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+
+DROP POLICY IF EXISTS "Permitir insercion anonima de preinscripciones" ON public.student_preregistrations;
+
+DO $$ BEGIN
+CREATE POLICY "Permitir insercion anonima de preinscripciones"
+  ON public.student_preregistrations
+  FOR INSERT
+  TO anon, authenticated
+  WITH CHECK (true);
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DROP POLICY IF EXISTS "Permitir lectura completa a autenticados" ON public.student_preregistrations;
+
+DO $$ BEGIN
+CREATE POLICY "Permitir lectura completa a autenticados"
+  ON public.student_preregistrations
+  FOR SELECT
+  TO authenticated
+  USING (true);
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DROP POLICY IF EXISTS "Permitir actualizacion a autenticados" ON public.student_preregistrations;
+
+DO $$ BEGIN
+CREATE POLICY "Permitir actualizacion a autenticados"
+  ON public.student_preregistrations
+  FOR UPDATE
+  TO authenticated
+  USING (true)
+  WITH CHECK (true);
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DROP POLICY IF EXISTS "invoices_public_read" ON storage.objects;
+
+DROP POLICY IF EXISTS "invoices_auth_insert" ON storage.objects;
+
+DROP POLICY IF EXISTS "invoices_auth_update" ON storage.objects;
+
+DROP POLICY IF EXISTS "staff_permits_all" ON public.staff_permits;
+
+DO $$ BEGIN
+CREATE POLICY "Directores pueden gestionar caja" ON caja_sessions FOR ALL USING (true);
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+CREATE POLICY "Contabilidad accesible" ON accounting_journal FOR ALL USING (true);
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+CREATE POLICY "Nómina accesible por directores" ON payroll_records FOR ALL USING (true);
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DROP POLICY IF EXISTS "teacher_schedules_staff_all" ON public.teacher_schedules;
+
+DROP POLICY IF EXISTS "schedule_event_logs_staff_all" ON public.schedule_event_logs;
+
+DROP POLICY IF EXISTS "schedule_event_logs_parent_select" ON public.schedule_event_logs;
+
+DO $$ BEGIN
+CREATE POLICY "messages_direct_select" ON public.messages
+  FOR SELECT
+  USING (
+    conversation_id IS NULL
+    AND (sender_id = auth.uid() OR receiver_id = auth.uid())
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+CREATE POLICY "messages_direct_insert" ON public.messages
+  FOR INSERT
+  WITH CHECK (
+    conversation_id IS NULL
+    AND sender_id = auth.uid()
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+CREATE POLICY "messages_direct_update" ON public.messages
+  FOR UPDATE
+  USING (
+    conversation_id IS NULL
+    AND (sender_id = auth.uid() OR receiver_id = auth.uid())
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+CREATE POLICY "payroll_invoices_director" ON public.payroll_invoices FOR ALL
+  USING (COALESCE(get_my_role(), '') IN ('directora','admin','encargada'));
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+CREATE POLICY "Users can view their own attendance"
+  ON meeting_attendance FOR SELECT
+  USING (user_id = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DROP POLICY IF EXISTS "preregistrations_select_auth" ON public.student_preregistrations;
+
+DROP POLICY IF EXISTS "preregistrations_update_auth" ON public.student_preregistrations;
+
+DROP POLICY IF EXISTS "meetings_all" ON public.meetings;
+
+DROP POLICY IF EXISTS "meetings_select" ON public.meetings;
+
+DO $$ BEGIN
+CREATE POLICY "meetings_select" ON public.meetings FOR SELECT
+  TO authenticated USING (
+    COALESCE(get_my_role(), '') IN ('directora','asistente','admin','maestra','encargada')
+    OR host_id = auth.uid()
+    OR (target_id IS NOT NULL AND (
+          is_parent_of_classroom(target_id) OR is_teacher_of_classroom(target_id)
+        ))
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DROP POLICY IF EXISTS "meetings_insert" ON public.meetings;
+
+DO $$ BEGIN
+CREATE POLICY "meetings_insert" ON public.meetings FOR INSERT
+  TO authenticated WITH CHECK (
+    COALESCE(get_my_role(), '') IN ('directora','asistente','admin','maestra','encargada')
+    OR host_id = auth.uid()
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DROP POLICY IF EXISTS "meetings_update" ON public.meetings;
+
+DO $$ BEGIN
+CREATE POLICY "meetings_update" ON public.meetings FOR UPDATE
+  TO authenticated USING (
+    COALESCE(get_my_role(), '') IN ('directora','asistente','admin','encargada')
+    OR host_id = auth.uid()
+  ) WITH CHECK (
+    COALESCE(get_my_role(), '') IN ('directora','asistente','admin','encargada')
+    OR host_id = auth.uid()
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DROP POLICY IF EXISTS "meetings_delete" ON public.meetings;
+
+DO $$ BEGIN
+CREATE POLICY "meetings_delete" ON public.meetings FOR DELETE
+  TO authenticated USING (
+    COALESCE(get_my_role(), '') IN ('directora','asistente','admin','encargada')
+    OR host_id = auth.uid()
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DROP POLICY IF EXISTS "routine_categories_staff_all" ON public.routine_categories;
+
+DO $$ BEGIN
+CREATE POLICY "routine_categories_staff_all" ON public.routine_categories FOR ALL
+  USING (COALESCE(get_my_role(), '') IN ('directora','asistente','admin','maestra','encargada'));
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DROP POLICY IF EXISTS "routine_categories_read" ON public.routine_categories;
+
+DO $$ BEGIN
+CREATE POLICY "routine_categories_read" ON public.routine_categories FOR SELECT
+  USING (auth.role() = 'authenticated');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DROP POLICY IF EXISTS "routine_events_staff_all" ON public.routine_events;
+
+DO $$ BEGIN
+CREATE POLICY "routine_events_staff_all" ON public.routine_events FOR ALL
+  USING (COALESCE(get_my_role(), '') IN ('directora','asistente','admin','maestra','encargada'));
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DROP POLICY IF EXISTS "routine_events_read" ON public.routine_events;
+
+DO $$ BEGIN
+CREATE POLICY "routine_events_read" ON public.routine_events FOR SELECT
+  USING (auth.role() = 'authenticated');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DROP POLICY IF EXISTS "classroom_routine_settings_staff_all" ON public.classroom_routine_settings;
+
+DO $$ BEGIN
+CREATE POLICY "classroom_routine_settings_staff_all" ON public.classroom_routine_settings FOR ALL
+  USING (COALESCE(get_my_role(), '') IN ('directora','asistente','admin','maestra','encargada'));
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DROP POLICY IF EXISTS "classroom_schedule_blocks_staff_all" ON public.classroom_schedule_blocks;
+
+DO $$ BEGIN
+CREATE POLICY "classroom_schedule_blocks_staff_all" ON public.classroom_schedule_blocks FOR ALL
+  USING (COALESCE(get_my_role(), '') IN ('directora','asistente','admin','maestra','encargada'));
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DROP POLICY IF EXISTS "classroom_schedule_block_events_staff_all" ON public.classroom_schedule_block_events;
+
+DO $$ BEGIN
+CREATE POLICY "classroom_schedule_block_events_staff_all" ON public.classroom_schedule_block_events FOR ALL
+  USING (COALESCE(get_my_role(), '') IN ('directora','asistente','admin','maestra','encargada'));
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DROP POLICY IF EXISTS "classroom_daily_schedule_staff_all" ON public.classroom_daily_schedule;
+
+DO $$ BEGIN
+CREATE POLICY "classroom_daily_schedule_staff_all" ON public.classroom_daily_schedule FOR ALL
+  USING (COALESCE(get_my_role(), '') IN ('directora','asistente','admin','maestra','encargada'));
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DROP POLICY IF EXISTS "classroom_daily_schedule_read" ON public.classroom_daily_schedule;
+
+DO $$ BEGIN
+CREATE POLICY "classroom_daily_schedule_read" ON public.classroom_daily_schedule FOR SELECT
+  USING (auth.role() = 'authenticated');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DROP POLICY IF EXISTS school_year_processes_select ON public.school_year_processes;
+
+DO $$ BEGIN
+CREATE POLICY school_year_processes_select ON public.school_year_processes
+  FOR SELECT USING (true);
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DROP POLICY IF EXISTS "attachments_participant" ON public.message_attachments;
+
+DO $$ BEGIN
+CREATE POLICY "attachments_participant" ON public.message_attachments FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.messages m
+      WHERE m.id = message_attachments.message_id
+        AND public.user_is_participant(m.conversation_id, auth.uid())
+    )
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DROP POLICY IF EXISTS "reactions_participant" ON public.message_reactions;
+
+DO $$ BEGIN
+CREATE POLICY "reactions_participant" ON public.message_reactions FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.messages m
+      WHERE m.id = message_reactions.message_id
+        AND public.user_is_participant(m.conversation_id, auth.uid())
+    )
+  )
+  WITH CHECK (
+    auth.uid() = user_id AND
+    EXISTS (
+      SELECT 1 FROM public.messages m
+      WHERE m.id = message_reactions.message_id
+        AND public.user_is_participant(m.conversation_id, auth.uid())
+    )
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DROP POLICY IF EXISTS "messages_participant" ON public.messages;
+
+DROP POLICY IF EXISTS "messages_delete" ON public.messages;
+
+DO $$ BEGIN
+CREATE POLICY "messages_select" ON public.messages FOR SELECT
+  USING (public.user_is_participant(conversation_id, auth.uid()));
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+CREATE POLICY "messages_insert" ON public.messages FOR INSERT
+  WITH CHECK (
+    public.user_is_participant(conversation_id, auth.uid()) AND
+    sender_id = auth.uid()
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+CREATE POLICY "messages_update" ON public.messages FOR UPDATE
+  USING (
+    public.user_is_participant(conversation_id, auth.uid()) AND
+    (auth.uid() = sender_id OR COALESCE(public.get_my_role(), '') IN ('directora','admin'))
+  )
+  WITH CHECK (
+    public.user_is_participant(conversation_id, auth.uid()) AND
+    (auth.uid() = sender_id OR COALESCE(public.get_my_role(), '') IN ('directora','admin'))
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+CREATE POLICY "messages_delete" ON public.messages FOR DELETE
+  USING (
+    public.user_is_participant(conversation_id, auth.uid()) AND
+    (auth.uid() = sender_id OR COALESCE(public.get_my_role(), '') IN ('directora','admin'))
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DROP POLICY IF EXISTS "posts_update" ON public.posts;
+
+DROP POLICY IF EXISTS "posts_delete" ON public.posts;
+
+DROP POLICY IF EXISTS "comments_insert" ON public.comments;
+
+DROP POLICY IF EXISTS "likes_all" ON public.likes;
+
+DROP POLICY IF EXISTS "payment_concepts_read"   ON public.payment_concepts;
+
+DROP POLICY IF EXISTS "payment_concepts_write"  ON public.payment_concepts;
+
+DO $$ BEGIN
+CREATE POLICY "payment_concepts_read" ON public.payment_concepts
+  FOR SELECT USING (true);
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+CREATE POLICY "payment_concepts_write" ON public.payment_concepts
+  FOR ALL USING (
+    EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE id = auth.uid()
+        AND role IN ('directora', 'asistente', 'admin')
+    )
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DROP POLICY IF EXISTS "students_select" ON public.students;
+
+DO $$ BEGIN
+CREATE POLICY "students_select" ON public.students
+  FOR SELECT USING (auth.role() = 'authenticated');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DROP POLICY IF EXISTS "students_insert" ON public.students;
+
+DO $$ BEGIN
+CREATE POLICY "students_insert" ON public.students
+  FOR INSERT WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE id = auth.uid()
+        AND role IN ('directora', 'asistente', 'admin')
+    )
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DROP POLICY IF EXISTS "students_update" ON public.students;
+
+DO $$ BEGIN
+CREATE POLICY "students_update" ON public.students
+  FOR UPDATE USING (
+    EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE id = auth.uid()
+        AND role IN ('directora', 'asistente', 'admin')
+    )
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DROP POLICY IF EXISTS "students_delete" ON public.students;
+
+DO $$ BEGIN
+CREATE POLICY "students_delete" ON public.students
+  FOR DELETE USING (
+    EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE id = auth.uid()
+        AND role IN ('directora', 'admin')
+    )
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DROP POLICY IF EXISTS "profiles_self" ON public.profiles;
+
+DO $$ BEGIN
+CREATE POLICY "profiles_self" ON public.profiles
+  FOR ALL USING (auth.uid() = id);
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DROP POLICY IF EXISTS "profiles_staff_read" ON public.profiles;
+
+DO $$ BEGIN
+CREATE POLICY "profiles_staff_read" ON public.profiles
+  FOR SELECT USING (
+    auth.role() = 'authenticated'
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DROP POLICY IF EXISTS "profiles_staff_upsert" ON public.profiles;
+
+DO $$ BEGIN
+CREATE POLICY "profiles_staff_upsert" ON public.profiles
+  FOR INSERT WITH CHECK (
+    auth.uid() = id
+    OR EXISTS (
+      SELECT 1 FROM public.profiles staff
+      WHERE staff.id = auth.uid()
+        AND staff.role IN ('directora', 'asistente', 'admin')
+    )
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DROP POLICY IF EXISTS "profiles_staff_update" ON public.profiles;
+
+DO $$ BEGIN
+CREATE POLICY "profiles_staff_update" ON public.profiles
+  FOR UPDATE USING (
+    auth.uid() = id
+    OR EXISTS (
+      SELECT 1 FROM public.profiles staff
+      WHERE staff.id = auth.uid()
+        AND staff.role IN ('directora', 'asistente', 'admin')
+    )
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DROP POLICY IF EXISTS "payment_plans_select" ON public.payment_plans;
+
+DO $$ BEGIN
+CREATE POLICY "payment_plans_select" ON public.payment_plans
+  FOR SELECT USING (auth.role() = 'authenticated');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DROP POLICY IF EXISTS "payment_plans_insert" ON public.payment_plans;
+
+DO $$ BEGIN
+CREATE POLICY "payment_plans_insert" ON public.payment_plans
+  FOR INSERT WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE id = auth.uid()
+        AND role IN ('directora', 'asistente', 'admin')
+    )
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DROP POLICY IF EXISTS "payment_plans_update" ON public.payment_plans;
+
+DO $$ BEGIN
+CREATE POLICY "payment_plans_update" ON public.payment_plans
+  FOR UPDATE USING (
+    EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE id = auth.uid()
+        AND role IN ('directora', 'asistente', 'admin')
+    )
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DROP POLICY IF EXISTS "payments_select" ON public.payments;
+
+DO $$ BEGIN
+CREATE POLICY "payments_select" ON public.payments
+  FOR SELECT USING (auth.role() = 'authenticated');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DROP POLICY IF EXISTS "payments_insert" ON public.payments;
+
+DO $$ BEGIN
+CREATE POLICY "payments_insert" ON public.payments
+  FOR INSERT WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE id = auth.uid()
+        AND role IN ('directora', 'asistente', 'admin')
+    )
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DROP POLICY IF EXISTS "payments_update" ON public.payments;
+
+DO $$ BEGIN
+CREATE POLICY "payments_update" ON public.payments
+  FOR UPDATE USING (
+    EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE id = auth.uid()
+        AND role IN ('directora', 'asistente', 'admin', 'padre')
+    )
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DROP POLICY IF EXISTS "prereg_select" ON public.student_preregistrations;
+
+DO $$ BEGIN
+CREATE POLICY "prereg_select" ON public.student_preregistrations
+  FOR SELECT USING (auth.role() = 'authenticated');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DROP POLICY IF EXISTS "prereg_insert" ON public.student_preregistrations;
+
+DO $$ BEGIN
+CREATE POLICY "prereg_insert" ON public.student_preregistrations
+  FOR INSERT WITH CHECK (true);
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DROP POLICY IF EXISTS "prereg_update" ON public.student_preregistrations;
+
+DO $$ BEGIN
+CREATE POLICY "prereg_update" ON public.student_preregistrations
+  FOR UPDATE USING (
+    EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE id = auth.uid()
+        AND role IN ('directora', 'asistente', 'admin')
+    )
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DROP POLICY IF EXISTS "students_staff_all" ON public.students;
+
+DROP POLICY IF EXISTS "school_years_staff_all" ON public.school_years;
+
+DO $$ BEGIN
+CREATE POLICY "school_years_staff_all" ON public.school_years FOR ALL
+  USING (COALESCE(get_my_role(), '') IN ('directora','admin'))
+  WITH CHECK (COALESCE(get_my_role(), '') IN ('directora','admin'));
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DROP POLICY IF EXISTS "payment_plans_staff_all" ON public.payment_plans;
+
+DO $$ BEGIN
+CREATE POLICY "payment_plans_staff_all" ON public.payment_plans FOR ALL
+  USING (COALESCE(get_my_role(), '') IN ('directora','asistente','admin'))
+  WITH CHECK (COALESCE(get_my_role(), '') IN ('directora','asistente','admin'));
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DROP POLICY IF EXISTS "plan_installments_staff_all" ON public.plan_installments;
+
+DO $$ BEGIN
+CREATE POLICY "plan_installments_staff_all" ON public.plan_installments FOR ALL
+  USING (COALESCE(get_my_role(), '') IN ('directora','asistente','admin'))
+  WITH CHECK (COALESCE(get_my_role(), '') IN ('directora','asistente','admin'));
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DROP POLICY IF EXISTS "student_enrollments_staff_all" ON public.student_enrollments;
+
+DO $$ BEGIN
+CREATE POLICY "student_enrollments_staff_all" ON public.student_enrollments FOR ALL
+  USING (COALESCE(get_my_role(), '') IN ('directora','asistente','admin'))
+  WITH CHECK (COALESCE(get_my_role(), '') IN ('directora','asistente','admin'));
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DROP POLICY IF EXISTS "student_charges_staff_all" ON public.student_charges;
+
+DO $$ BEGIN
+CREATE POLICY "student_charges_staff_all" ON public.student_charges FOR ALL
+  USING (COALESCE(get_my_role(), '') IN ('directora','asistente','admin'))
+  WITH CHECK (COALESCE(get_my_role(), '') IN ('directora','asistente','admin'));
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DROP POLICY IF EXISTS "invoices_staff_all" ON public.invoices;
+
+DROP POLICY IF EXISTS "students_staff_all"    ON public.students;
+
+DROP POLICY IF EXISTS "students_padre_select" ON public.students;
+
+DROP POLICY IF EXISTS "students_select"       ON public.students;
+
+DROP POLICY IF EXISTS "students_insert"       ON public.students;
+
+DROP POLICY IF EXISTS "students_update"       ON public.students;
+
+DROP POLICY IF EXISTS "students_delete"       ON public.students;
+
+DO $$ BEGIN
+CREATE POLICY "students_padre_select" ON public.students FOR SELECT
+  USING (COALESCE(get_my_role(),'') = 'padre' AND parent_id = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DROP POLICY IF EXISTS "classrooms_read"          ON public.classrooms;
+
+DROP POLICY IF EXISTS "classrooms_staff_manage"  ON public.classrooms;
+
+DROP POLICY IF EXISTS "classrooms_select"        ON public.classrooms;
+
+DROP POLICY IF EXISTS "classrooms_all"           ON public.classrooms;
+
+DO $$ BEGIN
+CREATE POLICY "classrooms_read" ON public.classrooms
+  FOR SELECT USING (auth.role() = 'authenticated');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+CREATE POLICY "classrooms_staff_manage" ON public.classrooms FOR ALL
+  USING      (COALESCE(get_my_role(),'') IN ('directora','asistente','admin'))
+  WITH CHECK (COALESCE(get_my_role(),'') IN ('directora','asistente','admin'));
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DROP POLICY IF EXISTS "profiles_self"               ON public.profiles;
+
+DROP POLICY IF EXISTS "profiles_staff_select"       ON public.profiles;
+
+DROP POLICY IF EXISTS "profiles_staff_manage"       ON public.profiles;
+
+DROP POLICY IF EXISTS "profiles_authenticated_read" ON public.profiles;
+
+DROP POLICY IF EXISTS "profiles_staff_read"         ON public.profiles;
+
+DROP POLICY IF EXISTS "profiles_all"                ON public.profiles;
+
+DROP POLICY IF EXISTS "profiles_public_read"        ON public.profiles;
+
+DROP POLICY IF EXISTS "profiles_padre_read"         ON public.profiles;
+
+DO $$ BEGIN
+CREATE POLICY "profiles_authenticated_read" ON public.profiles
+  FOR SELECT USING (auth.role() = 'authenticated');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+CREATE POLICY "profiles_self" ON public.profiles FOR ALL
+  USING (auth.uid() = id) WITH CHECK (auth.uid() = id);
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+CREATE POLICY "profiles_staff_manage" ON public.profiles FOR ALL
+  USING      (COALESCE(get_my_role(),'') IN ('directora','asistente','admin'))
+  WITH CHECK (COALESCE(get_my_role(),'') IN ('directora','asistente','admin'));
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DROP POLICY IF EXISTS "payments_staff_all"    ON public.payments;
+
+DROP POLICY IF EXISTS "payments_padre_select" ON public.payments;
+
+DO $$ BEGIN
+CREATE POLICY "payments_staff_all" ON public.payments FOR ALL
+  USING      (COALESCE(get_my_role(),'') IN ('directora','asistente','admin'))
+  WITH CHECK (COALESCE(get_my_role(),'') IN ('directora','asistente','admin'));
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+CREATE POLICY "payments_padre_select" ON public.payments FOR SELECT
+  USING (COALESCE(get_my_role(),'') = 'padre'
+    AND student_id IN (SELECT id FROM public.students WHERE parent_id = auth.uid()));
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DROP POLICY IF EXISTS "payments_padre_insert" ON public.payments;
+
+DO $$ BEGIN
+CREATE POLICY "payments_padre_insert" ON public.payments FOR INSERT
+  WITH CHECK (COALESCE(get_my_role(),'') = 'padre'
+    AND student_id IN (SELECT id FROM public.students WHERE parent_id = auth.uid()));
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DROP POLICY IF EXISTS "payment_plans_staff_all" ON public.payment_plans;
+
+DO $$ BEGIN
+CREATE POLICY "payment_plans_staff_all" ON public.payment_plans FOR ALL
+  USING      (COALESCE(get_my_role(),'') IN ('directora','asistente','admin'))
+  WITH CHECK (COALESCE(get_my_role(),'') IN ('directora','asistente','admin'));
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DROP POLICY IF EXISTS "prereg_public_insert" ON public.student_preregistrations;
+
+DROP POLICY IF EXISTS "prereg_staff_all"     ON public.student_preregistrations;
+
+DROP POLICY IF EXISTS "prereg_update"        ON public.student_preregistrations;
+
+DROP POLICY IF EXISTS "prereg_all"           ON public.student_preregistrations;
+
+DO $$ BEGIN
+CREATE POLICY "prereg_public_insert" ON public.student_preregistrations
+  FOR INSERT WITH CHECK (true);
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+CREATE POLICY "prereg_staff_all" ON public.student_preregistrations FOR ALL
+  USING      (COALESCE(get_my_role(),'') IN ('directora','asistente','admin'))
+  WITH CHECK (COALESCE(get_my_role(),'') IN ('directora','asistente','admin'));
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+CREATE POLICY "payment_concepts_write" ON public.payment_concepts FOR ALL
+  USING      (COALESCE(get_my_role(),'') IN ('directora','asistente','admin'))
+  WITH CHECK (COALESCE(get_my_role(),'') IN ('directora','asistente','admin'));
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DROP POLICY IF EXISTS "parent_ratings_own"        ON public.parent_ratings;
+
+DROP POLICY IF EXISTS "parent_ratings_staff_read" ON public.parent_ratings;
+
+DO $$ BEGIN
+CREATE POLICY "parent_ratings_own" ON public.parent_ratings FOR ALL
+  USING (auth.uid() = parent_id) WITH CHECK (auth.uid() = parent_id);
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+CREATE POLICY "parent_ratings_staff_read" ON public.parent_ratings FOR SELECT
+  USING (COALESCE(get_my_role(),'') IN ('directora','asistente','admin','maestra'));
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DROP POLICY IF EXISTS "school_years_staff_all"  ON public.school_years;
+
+DROP POLICY IF EXISTS "school_years_read"       ON public.school_years;
+
+DO $$ BEGIN
+CREATE POLICY "school_years_read" ON public.school_years
+  FOR SELECT USING (auth.role() = 'authenticated');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+CREATE POLICY "school_years_staff_all" ON public.school_years FOR ALL
+  USING      (COALESCE(get_my_role(),'') IN ('directora','admin'))
+  WITH CHECK (COALESCE(get_my_role(),'') IN ('directora','admin'));
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DROP POLICY IF EXISTS "school_settings_read"      ON public.school_settings;
+
+DROP POLICY IF EXISTS "school_settings_staff_all" ON public.school_settings;
+
+DO $$ BEGIN
+CREATE POLICY "school_settings_read" ON public.school_settings
+  FOR SELECT USING (auth.role() = 'authenticated');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+CREATE POLICY "school_settings_staff_all" ON public.school_settings FOR ALL
+  USING      (COALESCE(get_my_role(),'') IN ('directora','asistente','admin'))
+  WITH CHECK (COALESCE(get_my_role(),'') IN ('directora','asistente','admin'));
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DROP POLICY IF EXISTS "invoices_staff_all"    ON public.invoices;
+
+DROP POLICY IF EXISTS "invoices_padre_select" ON public.invoices;
+
+DO $$ BEGIN
+CREATE POLICY "invoices_padre_select" ON public.invoices FOR SELECT
+  USING (
+    COALESCE(get_my_role(),'') = 'padre'
+    AND student_id IN (SELECT parent_id FROM public.students WHERE parent_id = auth.uid())
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DROP POLICY IF EXISTS "Enable all for staff"  ON public.students;
+
+DROP POLICY IF EXISTS "students_padre_select" ON public.students;
+
+DO $$ BEGIN
+CREATE POLICY "students_padre_select" ON public.students
+  FOR SELECT
+  USING (
+    COALESCE(get_my_role(), '') = 'padre'
+    AND parent_id = auth.uid()
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+CREATE POLICY "profiles_self" ON public.profiles
+  FOR ALL USING (auth.uid() = id) WITH CHECK (auth.uid() = id);
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+CREATE POLICY "profiles_staff_select" ON public.profiles
+  FOR SELECT USING (
+    COALESCE(get_my_role(), '') IN ('directora','asistente','admin','maestra')
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+CREATE POLICY "profiles_staff_manage" ON public.profiles
+  FOR ALL
+  USING      (COALESCE(get_my_role(), '') IN ('directora','asistente','admin'))
+  WITH CHECK (COALESCE(get_my_role(), '') IN ('directora','asistente','admin'));
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+CREATE POLICY "payments_staff_all" ON public.payments
+  FOR ALL
+  USING      (COALESCE(get_my_role(), '') IN ('directora','asistente','admin'))
+  WITH CHECK (COALESCE(get_my_role(), '') IN ('directora','asistente','admin'));
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+CREATE POLICY "payments_padre_select" ON public.payments
+  FOR SELECT
+  USING (
+    COALESCE(get_my_role(), '') = 'padre'
+    AND student_id IN (
+      SELECT id FROM public.students WHERE parent_id = auth.uid()
+    )
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+CREATE POLICY "prereg_public_insert" ON public.student_preregistrations
+  FOR INSERT WITH CHECK (true);
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+CREATE POLICY "prereg_staff_all" ON public.student_preregistrations
+  FOR ALL
+  USING      (COALESCE(get_my_role(), '') IN ('directora','asistente','admin'))
+  WITH CHECK (COALESCE(get_my_role(), '') IN ('directora','asistente','admin'));
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+CREATE POLICY "payment_concepts_write" ON public.payment_concepts
+  FOR ALL
+  USING      (COALESCE(get_my_role(), '') IN ('directora','asistente','admin'))
+  WITH CHECK (COALESCE(get_my_role(), '') IN ('directora','asistente','admin'));
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DROP POLICY IF EXISTS "classrooms_read"  ON public.classrooms;
+
+DO $$ BEGIN
+CREATE POLICY "classrooms_read" ON public.classrooms
+  FOR SELECT USING (auth.role() = 'authenticated');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+CREATE POLICY "classrooms_staff_manage" ON public.classrooms
+  FOR ALL
+  USING      (COALESCE(get_my_role(), '') IN ('directora','asistente','admin'))
+  WITH CHECK (COALESCE(get_my_role(), '') IN ('directora','asistente','admin'));
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+CREATE POLICY "parent_ratings_staff_read" ON public.parent_ratings
+  FOR SELECT USING (
+    COALESCE(get_my_role(), '') IN ('directora','asistente','admin','maestra')
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DROP POLICY IF EXISTS "profiles_padre_read"     ON public.profiles;
+
+DROP POLICY IF EXISTS "profiles_authenticated"  ON public.profiles;
+
+DO $$ BEGIN
+CREATE POLICY "profiles_authenticated_read" ON public.profiles
+  FOR SELECT USING (auth.role() = 'authenticated');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DROP POLICY IF EXISTS "Permitir insercion anonima de preinscripciones" ON public.student_preregistrations;
+
+DROP POLICY IF EXISTS "Permitir lectura completa a autenticados" ON public.student_preregistrations;

@@ -72,3 +72,12 @@ CREATE POLICY "invoices_auth_insert" ON storage.objects FOR INSERT WITH CHECK (b
 DROP POLICY IF EXISTS "invoices_auth_update" ON storage.objects;
 CREATE POLICY "invoices_auth_update" ON storage.objects FOR UPDATE USING (bucket_id = 'invoices' AND auth.role() = 'authenticated');
 
+-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+-- CONSOLIDADO DESDE migrations\ (historial) â€” aÃ±adido automÃ¡ticamente
+-- Fecha: 2026-09-12 21:41
+
+
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES ('invoices', 'invoices', true, 10485760,
+  ARRAY['application/pdf','image/png','image/jpeg'])
+ON CONFLICT (id) DO NOTHING;

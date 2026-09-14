@@ -333,12 +333,14 @@ export async function admitStudent(preregId) {
 
       if (profileErr) {
         // Fallback: try update only (profile may already exist)
-        await supabase.from('profiles').update({
-          name:  profileData.name,
-          email: profileData.email,
-          phone: profileData.phone,
-          role:  'padre',
-        }).eq('id', parentUserId).catch(() => {});
+        try {
+          await supabase.from('profiles').update({
+            name:  profileData.name,
+            email: profileData.email,
+            phone: profileData.phone,
+            role:  'padre',
+          }).eq('id', parentUserId);
+        } catch (_) {}
         console.warn('[Inscripciones] profile upsert fell back to update:', profileErr.message);
       }
       studentPayload.parent_id = parentUserId;
@@ -386,7 +388,11 @@ export async function admitStudent(preregId) {
         const yy = d.getFullYear();
         payments.push({ student_id: studentId, payment_plan: plan.id, amount: monthlyFee, month_paid: `${mm}/${yy}`, due_date: d.toISOString().split('T')[0], status: 'pending' });
       }
-      await supabase.from('payments').insert(payments).catch(e => console.warn('[Inscripciones] payments insert:', e.message));
+      try {
+        await supabase.from('payments').insert(payments);
+      } catch (e) {
+        console.warn('[Inscripciones] payments insert:', e.message);
+      }
     }
 
     // 7. Mark pre-registration as admitted

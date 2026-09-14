@@ -449,7 +449,7 @@ export const PaymentsModule = {
         const { error } = await supabase.from('payments').insert({ student_id: studentId, amount, concept, method, status, month_paid: monthPaid, due_date: dueDate||null, paid_date: paidDate, created_at: new Date().toISOString() });
         if (error) { if (error.code==='23505') throw new Error('Ya existe un registro para este mes.'); throw error; }
       }
-      if (status === 'paid') await supabase.from('students').update({ is_active: true }).eq('id', studentId).catch(() => {});
+      if (status === 'paid') { try { await supabase.from('students').update({ is_active: true }).eq('id', studentId); } catch (_) {} }
       Helpers.toast('Pago registrado correctamente', 'success');
       this.closeModal();
       await Promise.all([this.loadPayments(), this.loadStats(), this.loadIncomeChart()]);

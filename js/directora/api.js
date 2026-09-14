@@ -553,8 +553,9 @@ export const DirectorApi = {
         if (error) throw error;
         const normalized = (data || []).map(t => ({
           ...t,
+          class_ids: (t.classrooms || []).map(c => c ? c.id : null).filter(Boolean),
           classroom_id: t.classrooms?.[0]?.id || t.classrooms?.id || null,
-          classrooms: t.classrooms?.[0] || t.classrooms || null
+          classrooms: t.classrooms || []
         }));
         return { data: normalized, error: null };
       } catch (e) { return logError('getTeachers', e); }
@@ -562,11 +563,16 @@ export const DirectorApi = {
   },
 
   async updateTeacher(id, data) {
-    const { classroom_id, ...profileData } = data;
-    if (classroom_id !== undefined) {
+    const { classroom_ids, classroom_id, ...profileData } = data;
+    let ids = Array.isArray(classroom_ids)
+      ? classroom_ids
+      : (classroom_id !== undefined && classroom_id !== null ? [classroom_id] : undefined);
+    if (ids !== undefined) {
+      // Desasignar TODAS las aulas de la maestra y reasignar las seleccionadas (soporta varios aulas)
       await supabase.from(TABLES.CLASSROOMS).update({ teacher_id: null }).eq('teacher_id', id);
-      if (classroom_id) {
-        await supabase.from(TABLES.CLASSROOMS).update({ teacher_id: id }).eq('id', classroom_id);
+      const target = (ids || []).filter(Boolean).map(String);
+      if (target.length) {
+        await supabase.from(TABLES.CLASSROOMS).update({ teacher_id: id }).in('id', target);
       }
     }
     // Only send columns that exist in profiles table

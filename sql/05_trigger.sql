@@ -118,3 +118,97 @@ DROP TRIGGER IF EXISTS trigger_update_ascii_receipt ON public.invoices;
 CREATE TRIGGER trigger_update_ascii_receipt BEFORE INSERT OR UPDATE ON public.invoices
   FOR EACH ROW EXECUTE FUNCTION public.trigger_update_ascii_receipt();
 
+-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+-- CONSOLIDADO DESDE migrations\ (historial) â€” aÃ±adido automÃ¡ticamente
+-- Fecha: 2026-09-12 21:41
+-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+
+DROP TRIGGER IF EXISTS update_student_preregistrations_updated_at ON public.student_preregistrations;
+
+DROP TRIGGER IF EXISTS trg_single_active_year ON public.school_years;
+
+DROP TRIGGER IF EXISTS trg_enforce_period_attendance ON public.attendance;
+
+DROP TRIGGER IF EXISTS trg_enforce_period_tasks ON public.tasks;
+
+DROP TRIGGER IF EXISTS trg_enforce_period_grades ON public.grades;
+
+DROP TRIGGER IF EXISTS trg_enforce_period_posts ON public.posts;
+
+DROP TRIGGER IF EXISTS trg_enforce_period_comp_scores ON public.competency_scores;
+
+DROP TRIGGER IF EXISTS trg_enforce_period_task_evidences ON public.task_evidences;
+
+DROP TRIGGER IF EXISTS trg_enforce_year_payments ON public.payments;
+
+DROP TRIGGER IF EXISTS trg_enforce_year_tasks ON public.tasks;
+
+DROP TRIGGER IF EXISTS trg_enforce_year_posts ON public.posts;
+
+DROP TRIGGER IF EXISTS trg_enforce_year_grades ON public.grades;
+
+DROP TRIGGER IF EXISTS trg_enforce_year_attendance ON public.attendance;
+
+DROP TRIGGER IF EXISTS trg_enforce_year_incidents ON public.incidents;
+
+DROP TRIGGER IF EXISTS trg_enforce_enrollment_year ON public.student_enrollments;
+
+DROP TRIGGER IF EXISTS trg_enforce_single_enrollment ON public.student_enrollments;
+
+DROP TRIGGER IF EXISTS trg_enforce_enrollment_year_not_null ON public.student_enrollments;
+
+DROP TRIGGER IF EXISTS trg_enforce_inscription_open ON public.student_enrollments;
+
+DROP TRIGGER IF EXISTS trg_profiles_prevent_role_escalation ON public.profiles;
+
+DROP TRIGGER IF EXISTS aaa_trg_scope_year_tasks ON public.tasks;
+
+DROP TRIGGER IF EXISTS aaa_trg_scope_year_attendance ON public.attendance;
+
+DROP TRIGGER IF EXISTS aaa_trg_scope_year_posts ON public.posts;
+
+DROP TRIGGER IF EXISTS aaa_trg_scope_year_grades ON public.grades;
+
+DROP TRIGGER IF EXISTS aaa_trg_scope_year_daily_logs ON public.daily_logs;
+
+DROP TRIGGER IF EXISTS aaa_trg_scope_year_incidents ON public.incidents;
+
+DROP TRIGGER IF EXISTS aaa_trg_scope_year_events ON public.classroom_events;
+
+DROP TRIGGER IF EXISTS aaa_trg_scope_year_naps ON public.nap_sessions;
+
+DROP TRIGGER IF EXISTS aaa_trg_scope_year_task_evidences ON public.task_evidences;
+
+DROP TRIGGER IF EXISTS aaa_trg_scope_period_tasks ON public.tasks;
+
+DROP TRIGGER IF EXISTS aaa_trg_scope_period_attendance ON public.attendance;
+
+DROP TRIGGER IF EXISTS aaa_trg_scope_period_posts ON public.posts;
+
+DROP TRIGGER IF EXISTS aaa_trg_scope_period_grades ON public.grades;
+
+DROP TRIGGER IF EXISTS aaa_trg_scope_period_daily_logs ON public.daily_logs;
+
+DROP TRIGGER IF EXISTS aaa_trg_scope_period_incidents ON public.incidents;
+
+DROP TRIGGER IF EXISTS aaa_trg_scope_period_naps ON public.nap_sessions;
+
+DROP TRIGGER IF EXISTS aaa_trg_scope_period_task_evidences ON public.task_evidences;
+
+DROP TRIGGER IF EXISTS trg_single_active_period ON public.periods;
+
+DROP TRIGGER IF EXISTS trg_enforce_period_dates ON public.periods;
+
+DROP TRIGGER IF EXISTS trg_seed_classroom_routine_settings ON public.classrooms;
+
+DROP TRIGGER IF EXISTS trg_eval_scores_audit ON public.eval_scores;
+
+DROP TRIGGER IF EXISTS trg_messages_updated_at ON public.messages;
+
+DROP TRIGGER IF EXISTS trigger_update_ascii_receipt ON public.invoices;
+
+DROP TRIGGER IF EXISTS trg_payment_concepts_updated_at ON public.payment_concepts;
+
+DROP TRIGGER IF EXISTS trigger_set_event_time ON classroom_events;
+
+DROP TRIGGER IF EXISTS trigger_calculate_nap_duration ON nap_sessions;

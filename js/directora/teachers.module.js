@@ -24,7 +24,7 @@ export const TeachersModule = {
       const total = normalized.length;
       const active = normalized.filter(t => t.is_active !== false).length;
       const assistants = normalized.filter(t => t.role === 'asistente').length;
-      const inClass = normalized.filter(t => t.classrooms).length;
+      const inClass = normalized.filter(t => t.class_ids && t.class_ids.length).length;
 
       const setTxt = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
       setTxt('kpiStaffTotal', total);
@@ -45,7 +45,7 @@ export const TeachersModule = {
           const filtered = allStaff.filter(t => 
             t.name.toLowerCase().includes(term) || 
             t.email.toLowerCase().includes(term) ||
-            (t.classrooms?.name || '').toLowerCase().includes(term)
+            (t.classrooms?.map?.(c => c?.name)?.join(', ') || '').toLowerCase().includes(term)
           );
           this.render(filtered);
         });
@@ -70,7 +70,7 @@ export const TeachersModule = {
         <tr class="hover:bg-slate-50 transition-colors cursor-pointer" ondblclick="App.teachers.openModal('${t.id}')">
           <td class="p-4 font-bold text-slate-700">${Helpers.escapeHTML(t.name)}</td>
           <td class="p-4 text-slate-500">${Helpers.escapeHTML(t.email)}</td>
-          <td class="p-4"><span class="px-3 py-1 bg-slate-100 rounded-full text-[10px] font-black uppercase text-slate-500">${Helpers.escapeHTML(t.classrooms?.name || 'Sin Aula')}</span></td>
+          <td class="p-4"><span class="px-3 py-1 bg-slate-100 rounded-full text-[10px] font-black uppercase text-slate-500">${Helpers.escapeHTML((t.classrooms?.map?.(c => c?.name)?.join(', ') || '').trim() || 'Sin Aula')}</span></td>
           <td class="p-4"><span class="px-3 py-1 bg-[#E8F2FF] text-[#0B63C7] rounded-full text-[10px] font-black uppercase tracking-wider">${Helpers.escapeHTML(t.role)}</span></td>
           <td class="p-4"><span class="px-3 py-1 ${t.is_active !== false ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-500'} rounded-full text-[10px] font-black uppercase tracking-wider">${t.is_active !== false ? 'Activo' : 'Inactivo'}</span></td>
           <td class="p-4 text-right">
@@ -116,12 +116,13 @@ export const TeachersModule = {
 
   async save() {
     const id = document.getElementById('tId')?.value;
-    const classroom_id = document.getElementById('tClassroom')?.value || null;
+    const tSel = document.getElementById('tClassroom');
+    const classroom_ids = tSel ? Array.from(tSel.selectedOptions).map(o => o.value).filter(Boolean) : [];
     const payload = {
       name:      (document.getElementById('tName').value || '').trim(),
       phone:     (document.getElementById('tPhone').value || '').trim(),
       role:      document.getElementById('tRole').value,
-      classroom_id,
+      classroom_ids,
       is_active: document.getElementById('tActive').checked
     };
     // email solo para crear, no para actualizar (Supabase no permite update de email via profiles)
@@ -217,12 +218,12 @@ export const TeachersModule = {
           const { data: verifyOk } = await supabase.from('profiles').select('id').eq('id', authData.user.id).maybeSingle();
           if (!verifyOk) {
             console.error('[Teachers] Profile still missing after all attempts');
-            Helpers.toast('⚠️ Perfil no guardado. Ejecuta migrations/fix_rls_safe.sql en Supabase SQL Editor', 'warning');
+            Helpers.toast('⚠️ Perfil no guardado. Ejecuta sql/10_fixes.sql en Supabase SQL Editor', 'warning');
           }
           
-          // Assign classroom if needed
-          if (payload.classroom_id) {
-            await supabase.from('classrooms').update({ teacher_id: authData.user.id }).eq('id', payload.classroom_id);
+          // Assign classrooms (pueden ser varias)
+          if (classroom_ids.length) {
+            await supabase.from('classrooms').update({ teacher_id: authData.user.id }).in('id', classroom_ids);
           }
           
           res = { data: authData.user, error: null };
@@ -326,8 +327,11 @@ export const TeachersModule = {
             </select>
           </div>
           <div>
-            <label class="${labelClass}">Aula asignada</label>
-            <select id="tClassroom" class="${inputClass}"><option value="">Seleccionar Aula</option></select>
+            <label class="${labelClass}">Aulas asignadas <span class="text-slate-300 normal-case font-normal">(pueden ser varias)</span></label>
+            <select id="tClassroom" multiple size="4" class="${inputClass}">
+              <option value="" disabled>Sin aulas</option>
+            </select>
+            <p class="text-[10px] text-slate-400 mt-1 ml-1 font-bold">Selecciona todas las aulas de la maestra (mantén Ctrl para elegir varias en escritorio).</p>
           </div>
           <div class="col-span-2">
             <label class="flex items-center gap-3 p-3 bg-white border border-slate-100 rounded-xl cursor-pointer">
@@ -467,8 +471,16 @@ export const TeachersModule = {
         // Use access_code first, fallback to notes for legacy
         const code = teacher.access_code || (teacher.notes?.startsWith?.('TEA-') || teacher.notes?.startsWith?.('DIR-') || teacher.notes?.startsWith?.('ASI-') ? teacher.notes : null);
         setVal('tMatricula', code || '');
-        const classId = teacher.classroom_id || teacher.classrooms?.id;
-        setVal('tClassroom', classId);
+        const classIds = teacher.class_ids || (Array.isArray(teacher.classrooms) ? teacher.classrooms.map(c => c?.id).filter(Boolean) : (teacher.classroom_id ? [teacher.classroom_id] : []));
+        if (classIds.length) {
+          const sel = document.getElementById('tClassroom');
+          if (sel) {
+            classIds.forEach(cid => {
+              const opt = sel.querySelector(`option[value="${cid}"]`);
+              if (opt) opt.selected = true;
+            });
+          }
+        }
         const checkActive = document.getElementById('tActive');
         if(checkActive) checkActive.checked = teacher.is_active !== false;
         // Auto-render QR if has code

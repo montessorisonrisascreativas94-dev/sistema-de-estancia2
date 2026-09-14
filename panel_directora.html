@@ -415,16 +415,35 @@
     ----------------------------------------------- */
     .nav-btn, .kk-nav-item {
       display: flex; align-items: center; gap: 12px;
-      padding: 12px 16px; width: 100%; color: #94a3b8;
-      border-radius: 8px; margin-bottom: 4px;
-      text-align: left; transition: all 0.2s ease;
+      padding: 12px 15px; width: 100%; color: rgba(255,255,255,0.9);
+      border-radius: 14px; margin-bottom: 6px;
+      font-size: 16px; font-weight: 800; letter-spacing: 0.01em;
+      text-align: left; transition: all 0.22s cubic-bezier(0.4,0,0.2,1);
       position: relative; cursor: pointer;
+      border: 1px solid rgba(255,255,255,0.22); background: transparent;
       -webkit-tap-highlight-color: transparent;
       touch-action: manipulation;
+      text-decoration: none;
     }
-    .nav-btn [data-lucide], .kk-nav-item [data-lucide] { transition: color 0.2s ease; }
-    .nav-btn:hover, .nav-btn.active, .kk-nav-item:hover, .kk-nav-item.active { background: rgba(255,255,255,0.15); color: white; }
-    .nav-btn .badge, .kk-nav-item .kk-badge { display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 5px;border-radius:50px;background:#FF7A00;color:white;font-size:9px;font-weight:900;line-height:1; }
+    .nav-btn [data-lucide], .kk-nav-item [data-lucide] {
+      width: 22px; height: 22px; flex-shrink: 0;
+      filter: drop-shadow(0 1px 1px rgba(0,0,0,0.12));
+      transition: transform 0.2s, color 0.2s;
+    }
+    .nav-btn:hover, .kk-nav-item:hover {
+      background: rgba(255,255,255,0.14);
+      color: #fff; transform: translateX(4px);
+      border-color: rgba(255,255,255,0.45);
+    }
+    .nav-btn:hover [data-lucide], .kk-nav-item:hover [data-lucide] { transform: scale(1.12); }
+    .nav-btn.active, .nav-btn:active, .kk-nav-item.active, .kk-nav-item:active {
+      background: rgba(255,255,255,0.20);
+      color: #fff;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.15), 0 3px 10px rgba(0,0,0,0.12);
+    }
+    .nav-btn .badge, .kk-nav-item .kk-badge {
+      display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 5px;border-radius:50px;background:#FF7A00;color:white;font-size:9px;font-weight:900;line-height:1;box-shadow:0 2px 6px rgba(255,122,0,0.45);
+    }
 
     /* -----------------------------------------------
        SECCIONES  ocultas por defecto, visibles con .active
@@ -827,44 +846,50 @@
       align-items: center;
       gap: 9px;
       width: 100%;
-      padding: 8px 12px 8px 10px;
-      border-radius: 10px;
-      font-size: 12.5px;
+      padding: 9px 12px 9px 12px;
+      border-radius: 11px;
+      font-size: 15px;
       font-weight: 700;
-      color: rgba(255,255,255,0.78);
+      color: rgba(255,255,255,0.85);
       background: transparent;
-      border: none;
+      border: 1px solid rgba(255,255,255,0.12);
       cursor: pointer;
       text-align: left;
-      margin-bottom: 2px;
+      margin-bottom: 4px;
       transition: all 0.18s ease;
       border-left: 2px solid transparent;
     }
     .kk-nav-sub-item:hover {
-      background: rgba(255,255,255,0.1);
-      color: white;
-      border-left-color: rgba(255,212,59,0.6);
-      padding-left: 14px;
+      background: rgba(255,255,255,0.14);
+      color: #fff;
+      border-left-color: rgba(255,212,59,0.8);
+      border-color: rgba(255,255,255,0.30);
+      padding-left: 16px;
+      transform: translateX(2px);
     }
     .kk-nav-sub-item.active {
-      background: rgba(255,255,255,0.16);
-      color: white;
+      background: linear-gradient(90deg, rgba(255,255,255,0.20), rgba(255,255,255,0.07));
+      color: #fff;
       border-left-color: #FFD43B;
       font-weight: 800;
+      padding-left: 16px;
     }
 
     /* Sidebar nav active (overrides karpus-modern.css) */
     .kk-nav-item.active,
     .kk-nav-item[aria-current="page"] {
-      background:rgba(255,255,255,0.22) !important;
-      border-left:4px solid #FFD43B !important;
-      color:white !important;
-      transform:translateX(5px);
-      box-shadow:0 4px 14px rgba(0,0,0,0.1);
+      background: linear-gradient(135deg, rgba(255,255,255,0.24) 0%, rgba(255,255,255,0.10) 100%) !important;
+      border-left: 4px solid #FFD43B !important;
+      color: #fff !important;
+      transform: translateX(5px);
+      box-shadow: 0 6px 18px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.18);
     }
+    .kk-nav-item.active [data-lucide],
+    .kk-nav-item[aria-current="page"] [data-lucide] { color: #fff !important; }
     .kk-nav-item:hover:not(.active) {
-      background:rgba(255,255,255,0.14) !important;
-      color:white !important;
+      background: rgba(255,255,255,0.13) !important;
+      color: #fff !important;
+      transform: translateX(4px);
     }
 
     /* Modal header icon */
@@ -974,11 +999,6 @@
     
     <!-- SIDEBAR -->
     <aside id="sidebar" class="kk-sidebar bg-gradient-to-b from-[#0B63C7] via-[#0850A0] to-[#1e3a8a] shadow-2xl flex flex-col flex-shrink-0" style="border-right:none;">
-      <!-- Toggle collapse -->
-      <button id="toggleSidebar" class="absolute -right-3 top-8 bg-white rounded-full p-1.5 shadow-lg border border-slate-100 text-slate-500 hover:text-[#0B63C7] hidden md:flex items-center justify-center z-10 transition-all hover:scale-110">
-        <i data-lucide="chevron-left" id="toggleSidebarIcon" class="w-3.5 h-3.5"></i>
-      </button>
-
       <!-- Logo Sonrisas Creativas -->
       <div class="kk-sidebar-logo">
         <div class="kk-sidebar-logo-img">
@@ -990,6 +1010,10 @@
           </div>
           <div class="sub">Panel Directora</div>
         </div>
+        <button id="toggleSidebar" aria-expanded="true" aria-label="Colapsar menú lateral" title="Colapsar menú"
+          class="hidden md:flex items-center justify-center w-9 h-9 rounded-xl bg-white/10 text-white/75 hover:bg-white/25 hover:text-white border border-white/15 transition-all active:scale-90 shrink-0">
+          <i data-lucide="chevron-left" id="toggleSidebarIcon" class="w-4 h-4"></i>
+        </button>
       </div>
 
       <!-- Perfil -->
@@ -1749,7 +1773,7 @@
           <!-- 1) LISTA DE CONVERSACIONES -->
           <aside class="m-chat-list">
             <div class="m-chat-list__header">
-              <div class="m-chat-list__title">💬 Mensajes</div>
+              <div class="m-chat-list__title"><i data-lucide="messages-square" class="w-5 h-5 text-blue-600 shrink-0"></i> Mensajes</div>
               <div class="m-chat-list__search">
                 <i data-lucide="search"></i>
                 <input id="mChatSearch" type="text" placeholder="Buscar conversación…">
@@ -1767,7 +1791,7 @@
                 <i data-lucide="arrow-left" class="w-4 h-4"></i>
               </button>
               <div class="m-chat-header__avatar" id="mChatActiveAvatar">
-                <span>👤</span>
+                <i data-lucide="user" class="w-5 h-5 text-slate-400"></i>
               </div>
               <div class="m-chat-header__body">
                 <div class="m-chat-header__name" id="mChatActiveName">Selecciona un contacto</div>
@@ -1795,7 +1819,7 @@
               </div>
               <div class="m-chat-input__wrap">
                 <textarea id="mChatInput" rows="1" placeholder="Escribe un mensaje…"></textarea>
-                <button class="m-chat-input__emoji" type="button" title="Emoji">😊</button>
+                <button class="m-chat-input__emoji" type="button" title="Emoji"><i data-lucide="smile" class="w-5 h-5"></i></button>
               </div>
               <button id="mChatSendBtn" class="m-chat-input__send" type="button">
                 <i data-lucide="send" class="w-4 h-4"></i>
@@ -1806,7 +1830,7 @@
           <!-- 3) PANEL DE INFORMACIÓN -->
           <aside id="mChatInfo" class="m-chat-info">
             <div class="m-info-profile">
-              <div class="m-info-profile__avatar">👤</div>
+              <div class="m-info-profile__avatar"><i data-lucide="user" class="w-8 h-8 text-blue-600"></i></div>
               <div class="m-info-profile__name">Panel de info</div>
               <div class="m-info-profile__role">Detalles del contacto</div>
             </div>
@@ -1906,7 +1930,7 @@
                   <input id="confDirName" type="text" class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-[#0B63C7] outline-none" placeholder="Cargando...">
                 </div>
                 <div>
-                  <label class="block text-sm font-medium text-slate-700 mb-1">Ttulo / Cargo</label>
+                  <label class="block text-sm font-medium text-slate-700 mb-1">Titulo / Cargo</label>
                   <input id="confDirTitle" type="text" class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-[#0B63C7] outline-none" placeholder="Cargando...">
                 </div>
                 <div class="md:col-span-2">
@@ -2088,7 +2112,7 @@
         </div>
       </section>
 
-\r\n
+
       <!-- CICLO ACADEMICO -->
       <section id="ciclo-academico" class="section">
         <div id="academicCycleContainer" class="p-2 md:p-4"></div>

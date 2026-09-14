@@ -1,0 +1,175 @@
+SKIP [08_indices.sql] 002_alter_preregistrations_add_columns.sql :: Ã­ndice en base: idx_preregistrations_status
+SKIP [08_indices.sql] 002_alter_preregistrations_add_columns.sql :: Ã­ndice en base: idx_preregistrations_created
+SKIP [08_indices.sql] 002_alter_preregistrations_add_columns.sql :: Ã­ndice en base: idx_preregistrations_student_name
+REBUILD polÃ­tica: permitir â† 002_alter_preregistrations_add_columns.sql
+SKIP [04_funciones.sql] 002_alter_preregistrations_add_columns.sql :: funciÃ³n en base: update_updated_at_column(
+SKIP [05_trigger.sql] 002_alter_preregistrations_add_columns.sql :: trigger en base: 
+SKIP [01_base.sql] 20250101000000_add_payment_concepts_and_reenrollment.sql :: tabla en base: payment_concepts
+SKIP [07_politicas.sql] 20250719_add_invoices_storage_and_validation.sql :: polÃ­tica en base: invoices_public_read
+SKIP [07_politicas.sql] 20250719_add_invoices_storage_and_validation.sql :: polÃ­tica en base: invoices_auth_insert
+SKIP [07_politicas.sql] 20250719_add_invoices_storage_and_validation.sql :: polÃ­tica en base: invoices_auth_update
+SKIP [04_funciones.sql] 20250719_add_invoices_storage_and_validation.sql :: funciÃ³n en base: generate_invoice_hash(
+SKIP [04_funciones.sql] 20250719_add_invoices_storage_and_validation.sql :: funciÃ³n en base: mark_invoice_email_sent(
+SKIP [08_indices.sql] 20250719_add_invoices_storage_and_validation.sql :: Ã­ndice en base: idx_invoices_uuid_folio
+SKIP [08_indices.sql] 20250719_add_invoices_storage_and_validation.sql :: Ã­ndice en base: idx_invoices_sha256
+SKIP [08_indices.sql] 20250719_add_invoices_storage_and_validation.sql :: Ã­ndice en base: idx_invoices_pdf_url
+SKIP [07_politicas.sql] 20250719_fix_encargada_permissions.sql :: polÃ­tica en base: staff_permits_all
+SKIP [08_indices.sql] 20260720_exclude_dgii_column.sql :: Ã­ndice en base: idx_payments_exclude_dgii
+SKIP [01_base.sql] 20260720_exclude_dgii_column.sql :: tabla en base: caja_sessions
+SKIP [01_base.sql] 20260720_exclude_dgii_column.sql :: tabla en base: accounting_journal
+SKIP [08_indices.sql] 20260720_exclude_dgii_column.sql :: Ã­ndice en base: idx_journal_fecha
+SKIP [08_indices.sql] 20260720_exclude_dgii_column.sql :: Ã­ndice en base: idx_journal_tipo
+SKIP [01_base.sql] 20260720_exclude_dgii_column.sql :: tabla en base: payroll_records
+SKIP [08_indices.sql] 20260720_exclude_dgii_column.sql :: Ã­ndice en base: idx_payroll_period
+SKIP [08_indices.sql] 20260720_exclude_dgii_column.sql :: Ã­ndice en base: idx_payroll_employee
+SKIP [08_indices.sql] 20260721_grades_schema_upgrade.sql :: Ã­ndice en base: idx_grades_school_year
+SKIP [08_indices.sql] 20260721_grades_schema_upgrade.sql :: Ã­ndice en base: idx_report_cards_school_year
+SKIP [04_funciones.sql] 20260721_grades_schema_upgrade.sql :: funciÃ³n en base: close_period(
+SKIP [04_funciones.sql] 20260721_grades_schema_upgrade.sql :: funciÃ³n en base: get_student_history(
+SKIP [04_funciones.sql] 20260721_grades_schema_upgrade.sql :: funciÃ³n en base: create_school_year_with_periods(
+SKIP [01_base.sql] 20260722_schedule_events_v5.sql :: tabla en base: teacher_schedules
+SKIP [01_base.sql] 20260722_schedule_events_v5.sql :: tabla en base: schedule_event_logs
+SKIP [08_indices.sql] 20260722_schedule_events_v5.sql :: Ã­ndice en base: idx_teacher_schedules_classroom
+SKIP [08_indices.sql] 20260722_schedule_events_v5.sql :: Ã­ndice en base: idx_schedule_event_logs_classroom_date
+SKIP [08_indices.sql] 20260722_schedule_events_v5.sql :: Ã­ndice en base: idx_schedule_event_logs_event_key
+SKIP [07_politicas.sql] 20260722_schedule_events_v5.sql :: polÃ­tica en base: teacher_schedules_staff_all
+SKIP [07_politicas.sql] 20260722_schedule_events_v5.sql :: polÃ­tica en base: schedule_event_logs_staff_all
+SKIP [07_politicas.sql] 20260722_schedule_events_v5.sql :: polÃ­tica en base: schedule_event_logs_parent_select
+SKIP [05_trigger.sql] 20260723_master_rules_and_competencies.sql :: trigger en base: 
+SKIP [05_trigger.sql] 20260723_master_rules_and_competencies.sql :: trigger en base: 
+SKIP [05_trigger.sql] 20260723_master_rules_and_competencies.sql :: trigger en base: 
+SKIP [05_trigger.sql] 20260723_master_rules_and_competencies.sql :: trigger en base: 
+SKIP [05_trigger.sql] 20260723_master_rules_and_competencies.sql :: trigger en base: 
+SKIP [05_trigger.sql] 20260723_master_rules_and_competencies.sql :: trigger en base: 
+SKIP [05_trigger.sql] 20260723_master_rules_and_competencies.sql :: trigger en base: 
+SKIP [05_trigger.sql] 20260723_master_rules_and_competencies.sql :: trigger en base: 
+SKIP [05_trigger.sql] 20260723_master_rules_and_competencies.sql :: trigger en base: 
+SKIP [05_trigger.sql] 20260723_master_rules_and_competencies.sql :: trigger en base: 
+SKIP [05_trigger.sql] 20260723_master_rules_and_competencies.sql :: trigger en base: 
+SKIP [05_trigger.sql] 20260723_master_rules_and_competencies.sql :: trigger en base: 
+SKIP [05_trigger.sql] 20260723_master_rules_and_competencies.sql :: trigger en base: 
+SKIP [05_trigger.sql] 20260723_master_rules_and_competencies.sql :: trigger en base: 
+SKIP [05_trigger.sql] 20260723_master_rules_and_competencies.sql :: trigger en base: 
+SKIP [05_trigger.sql] 20260723_master_rules_and_competencies.sql :: trigger en base: 
+SKIP [05_trigger.sql] 20260723_master_rules_and_competencies.sql :: trigger en base: 
+SKIP [04_funciones.sql] 20260723_master_rules_and_competencies.sql :: funciÃ³n en base: close_period(
+SKIP [08_indices.sql] 20260723_parent_cedula_uploads.sql :: Ã­ndice en base: idx_posts_created_at
+SKIP [08_indices.sql] 20260723_parent_cedula_uploads.sql :: Ã­ndice en base: idx_posts_classroom_id
+SKIP [08_indices.sql] 20260723_school_year_engine.sql :: Ã­ndice en base: idx_grades_school_year
+SKIP [04_funciones.sql] 20260723_school_year_engine.sql :: funciÃ³n en base: get_active_period(
+SKIP [04_funciones.sql] 20260723_school_year_engine.sql :: funciÃ³n en base: get_current_period(
+SKIP [07_politicas.sql] 20260728_create_meeting_attendance.sql :: polÃ­tica ya emitida (primera versiÃ³n): users
+SKIP [07_politicas.sql] 20260728_create_meeting_attendance.sql :: polÃ­tica ya emitida (primera versiÃ³n): users
+SKIP [05_trigger.sql] 20260730_security_hardening.sql :: trigger en base: 
+SKIP [04_funciones.sql] 20260730_security_hardening.sql :: funciÃ³n en base: find_or_create_private_conversation(
+SKIP [07_politicas.sql] 20260730_security_hardening.sql :: polÃ­tica en base: preregistrations_select_auth
+SKIP [07_politicas.sql] 20260730_security_hardening.sql :: polÃ­tica en base: preregistrations_update_auth
+SKIP [04_funciones.sql] 20260730_security_hardening.sql :: funciÃ³n en base: get_tasks_for_period(
+SKIP [04_funciones.sql] 20260730_security_hardening.sql :: funciÃ³n en base: get_posts_for_period(
+SKIP [04_funciones.sql] 20260730_security_hardening.sql :: funciÃ³n en base: get_dashboard_kpis(
+SKIP [08_indices.sql] 20260730_security_hardening.sql :: Ã­ndice en base: idx_payments_student_status
+SKIP [04_funciones.sql] 20260731_security_round2.sql :: funciÃ³n en base: generate_receipt_number(
+SKIP [04_funciones.sql] 20260731_security_round2.sql :: funciÃ³n en base: convert_preregistration(
+SKIP [04_funciones.sql] 20260731_security_round2.sql :: funciÃ³n en base: get_posts_for_parent(
+SKIP [04_funciones.sql] 20260731_security_round2.sql :: funciÃ³n en base: mark_messages_read(
+SKIP [04_funciones.sql] 20260731_security_round2.sql :: funciÃ³n en base: get_direct_messages(
+SKIP [04_funciones.sql] 20260731_security_round2.sql :: funciÃ³n en base: activate_period(
+SKIP [04_funciones.sql] 20260801_fix_year_period_sync.sql :: funciÃ³n en base: get_active_period(
+SKIP [04_funciones.sql] 20260801_fix_year_period_sync.sql :: funciÃ³n en base: get_current_period(
+SKIP [04_funciones.sql] 20260801_fix_year_period_sync.sql :: funciÃ³n en base: activate_period(
+SKIP [04_funciones.sql] 20260801_fix_year_period_sync.sql :: funciÃ³n en base: close_period(
+SKIP [05_trigger.sql] 20260801_fix_year_period_sync.sql :: trigger en base: 
+SKIP [05_trigger.sql] 20260801_fix_year_period_sync.sql :: trigger en base: 
+SKIP [05_trigger.sql] 20260801_fix_year_period_sync.sql :: trigger en base: 
+SKIP [05_trigger.sql] 20260801_fix_year_period_sync.sql :: trigger en base: 
+SKIP [05_trigger.sql] 20260801_fix_year_period_sync.sql :: trigger en base: 
+SKIP [05_trigger.sql] 20260801_fix_year_period_sync.sql :: trigger en base: 
+SKIP [05_trigger.sql] 20260801_fix_year_period_sync.sql :: trigger en base: 
+SKIP [05_trigger.sql] 20260801_fix_year_period_sync.sql :: trigger en base: 
+SKIP [05_trigger.sql] 20260801_fix_year_period_sync.sql :: trigger en base: 
+SKIP [05_trigger.sql] 20260801_fix_year_period_sync.sql :: trigger en base: 
+SKIP [05_trigger.sql] 20260801_fix_year_period_sync.sql :: trigger en base: 
+SKIP [05_trigger.sql] 20260801_fix_year_period_sync.sql :: trigger en base: 
+SKIP [05_trigger.sql] 20260801_fix_year_period_sync.sql :: trigger en base: 
+SKIP [05_trigger.sql] 20260801_fix_year_period_sync.sql :: trigger en base: 
+SKIP [05_trigger.sql] 20260801_fix_year_period_sync.sql :: trigger en base: 
+SKIP [05_trigger.sql] 20260801_fix_year_period_sync.sql :: trigger en base: 
+SKIP [05_trigger.sql] 20260801_fix_year_period_sync.sql :: trigger en base: 
+SKIP [05_trigger.sql] 20260801_fix_year_period_sync.sql :: trigger en base: 
+SKIP [05_trigger.sql] 20260801_fix_year_period_sync.sql :: trigger en base: 
+SKIP [04_funciones.sql] 20260801_fix_year_period_sync.sql :: funciÃ³n en base: create_school_year_with_periods(
+SKIP [05_trigger.sql] 20260801_routine_catalog_v8.sql :: trigger en base: 
+SKIP [05_trigger.sql] 20260805_boleta_engine.sql :: trigger en base: 
+SKIP [01_base.sql] 20260806_fix_activate_period.sql :: tabla ya emitida: school_year_processes
+SKIP [04_funciones.sql] 20260806_fix_activate_period.sql :: funciÃ³n en base: activate_period(
+SKIP [08_indices.sql] 20260807_sync_periodo_ano_escolar.sql :: Ã­ndice ya emitido: idx_periods_active_year
+SKIP [08_indices.sql] 20260807_sync_periodo_ano_escolar.sql :: Ã­ndice en base: idx_school_years_is_current
+SKIP [01_base.sql] 20260807_sync_periodo_ano_escolar.sql :: tabla ya emitida: school_year_processes
+SKIP [04_funciones.sql] 20260807_sync_periodo_ano_escolar.sql :: funciÃ³n en base: get_active_period(
+SKIP [04_funciones.sql] 20260807_sync_periodo_ano_escolar.sql :: funciÃ³n en base: get_current_period(
+SKIP [04_funciones.sql] 20260807_sync_periodo_ano_escolar.sql :: funciÃ³n en base: activate_period(
+SKIP [05_trigger.sql] 20260912_chat_social_upgrade.sql :: trigger en base: 
+SKIP [04_funciones.sql] 20260912_chat_social_upgrade.sql :: funciÃ³n en base: mark_messages_read(
+SKIP [04_funciones.sql] 20260912_chat_social_upgrade.sql :: funciÃ³n en base: get_unread_counts(
+SKIP [07_politicas.sql] 20260912_muro_social_upgrade.sql :: polÃ­tica en base: posts_update
+SKIP [07_politicas.sql] 20260912_muro_social_upgrade.sql :: polÃ­tica en base: posts_delete
+SKIP [07_politicas.sql] 20260912_muro_social_upgrade.sql :: polÃ­tica en base: comments_insert
+SKIP [07_politicas.sql] 20260912_muro_social_upgrade.sql :: polÃ­tica en base: likes_all
+SKIP [01_base.sql] add_invoice_system.sql :: tabla en base: invoice_items
+SKIP [04_funciones.sql] add_invoice_system.sql :: funciÃ³n en base: generate_receipt_number(
+SKIP [04_funciones.sql] add_invoice_system.sql :: funciÃ³n en base: generate_ascii_receipt(
+SKIP [04_funciones.sql] add_invoice_system.sql :: funciÃ³n en base: trigger_update_ascii_receipt(
+SKIP [05_trigger.sql] add_invoice_system.sql :: trigger en base: 
+SKIP [01_base.sql] add_payment_concepts_table.sql :: tabla en base: payment_concepts
+SKIP [08_indices.sql] fix_migration.sql :: Ã­ndice en base: idx_products_category
+SKIP [08_indices.sql] fix_migration.sql :: Ã­ndice en base: idx_products_active
+SKIP [08_indices.sql] fix_migration.sql :: Ã­ndice en base: idx_products_code
+SKIP [01_base.sql] fix_migration.sql :: tabla en base: payment_concepts
+SKIP [08_indices.sql] fix_migration.sql :: Ã­ndice en base: idx_payment_concepts_active
+SKIP [05_trigger.sql] fix_migration.sql :: trigger en base: 
+SKIP [07_politicas.sql] fix_rls_and_school_years.sql :: polÃ­tica en base: students_staff_all
+SKIP [07_politicas.sql] fix_rls_and_school_years.sql :: polÃ­tica en base: invoices_staff_all
+SKIP [04_funciones.sql] fix_rls_safe.sql :: funciÃ³n en base: get_my_role(
+SKIP [07_politicas.sql] fix_rls_safe.sql :: polÃ­tica en base: students_staff_all
+REBUILD polÃ­tica: profiles_self â† fix_rls_safe.sql
+REBUILD polÃ­tica: payment_plans_staff_all â† fix_rls_safe.sql
+REBUILD polÃ­tica: payment_concepts_write â† fix_rls_safe.sql
+SKIP [01_base.sql] fix_rls_safe.sql :: tabla en base: parent_ratings
+SKIP [01_base.sql] fix_rls_safe.sql :: tabla en base: payment_concepts
+REBUILD polÃ­tica: school_years_staff_all â† fix_rls_safe.sql
+SKIP [01_base.sql] fix_rls_safe.sql :: tabla en base: invoices
+SKIP [07_politicas.sql] fix_rls_safe.sql :: polÃ­tica en base: invoices_staff_all
+SKIP [04_funciones.sql] fix_school_settings_columns.sql :: funciÃ³n en base: generate_ascii_receipt(
+SKIP [04_funciones.sql] fix_students_rls.sql :: funciÃ³n en base: get_my_role(
+SKIP [07_politicas.sql] fix_students_rls.sql :: polÃ­tica en base: students_staff_all
+REBUILD polÃ­tica: students_padre_select â† fix_students_rls.sql
+REBUILD polÃ­tica: profiles_staff_manage â† fix_students_rls.sql
+REBUILD polÃ­tica: payments_staff_all â† fix_students_rls.sql
+REBUILD polÃ­tica: payments_padre_select â† fix_students_rls.sql
+REBUILD polÃ­tica: prereg_public_insert â† fix_students_rls.sql
+REBUILD polÃ­tica: prereg_staff_all â† fix_students_rls.sql
+REBUILD polÃ­tica: classrooms_read â† fix_students_rls.sql
+REBUILD polÃ­tica: classrooms_staff_manage â† fix_students_rls.sql
+SKIP [01_base.sql] fix_students_rls.sql :: tabla en base: parent_ratings
+REBUILD polÃ­tica: parent_ratings_staff_read â† fix_students_rls.sql
+REBUILD polÃ­tica: profiles_authenticated_read â† fix_students_rls.sql
+SKIP [01_base.sql] migracion_eventos_rapidos.sql :: tabla en base: classroom_events
+SKIP [08_indices.sql] migracion_eventos_rapidos.sql :: Ã­ndice en base: idx_classroom_events_classroom
+SKIP [08_indices.sql] migracion_eventos_rapidos.sql :: Ã­ndice en base: idx_classroom_events_date
+SKIP [08_indices.sql] migracion_eventos_rapidos.sql :: Ã­ndice en base: idx_classroom_events_type
+SKIP [01_base.sql] migracion_eventos_rapidos.sql :: tabla en base: event_participants
+SKIP [08_indices.sql] migracion_eventos_rapidos.sql :: Ã­ndice en base: idx_event_participants_event
+SKIP [08_indices.sql] migracion_eventos_rapidos.sql :: Ã­ndice en base: idx_event_participants_student
+SKIP [01_base.sql] migracion_eventos_rapidos.sql :: tabla en base: classroom_routines
+SKIP [01_base.sql] migracion_eventos_rapidos.sql :: tabla en base: nap_sessions
+SKIP [08_indices.sql] migracion_eventos_rapidos.sql :: Ã­ndice en base: idx_nap_sessions_student
+SKIP [08_indices.sql] migracion_eventos_rapidos.sql :: Ã­ndice en base: idx_nap_sessions_open
+SKIP [04_funciones.sql] migracion_eventos_rapidos.sql :: funciÃ³n en base: set_event_time(
+SKIP [05_trigger.sql] migracion_eventos_rapidos.sql :: trigger en base: 
+SKIP [04_funciones.sql] migracion_eventos_rapidos.sql :: funciÃ³n en base: calculate_nap_duration(
+SKIP [05_trigger.sql] migracion_eventos_rapidos.sql :: trigger en base: 
+SKIP [01_base.sql] migracion_preinscripciones.sql :: tabla en base: student_preregistrations
+SKIP [08_indices.sql] migracion_preinscripciones.sql :: Ã­ndice en base: idx_preregistrations_status
+SKIP [08_indices.sql] migracion_preinscripciones.sql :: Ã­ndice en base: idx_preregistrations_level
+SKIP [04_funciones.sql] migracion_preinscripciones.sql :: funciÃ³n en base: update_updated_at_column(
+SKIP [04_funciones.sql] migracion_preinscripciones.sql :: funciÃ³n en base: convert_preregistration(

@@ -260,3 +260,202 @@ CREATE INDEX IF NOT EXISTS idx_payments_student_status ON public.payments(studen
 -- payments (indice para la cola de validacion)
 CREATE INDEX IF NOT EXISTS idx_payments_pending_evidence ON public.payments(status, created_at DESC) WHERE evidence_url IS NOT NULL AND status IN ('pending','pendiente','review');
 
+-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+-- CONSOLIDADO DESDE migrations\ (historial) â€” aÃ±adido automÃ¡ticamente
+-- Fecha: 2026-09-12 21:41
+-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+
+CREATE INDEX IF NOT EXISTS idx_notifications_user_read ON public.notifications(user_id, is_read);
+
+CREATE INDEX IF NOT EXISTS idx_notifications_priority ON public.notifications(priority) WHERE priority IN ('critical', 'important');
+
+CREATE INDEX IF NOT EXISTS idx_notifications_pinned ON public.notifications(is_pinned) WHERE is_pinned = true;
+
+CREATE INDEX IF NOT EXISTS idx_notifications_student ON public.notifications(student_id);
+
+CREATE INDEX IF NOT EXISTS idx_competencies_area ON public.competencies(area_id);
+
+CREATE INDEX IF NOT EXISTS idx_comp_scores_student ON public.competency_scores(student_id);
+
+CREATE INDEX IF NOT EXISTS idx_comp_scores_period ON public.competency_scores(period_id);
+
+CREATE INDEX IF NOT EXISTS idx_comp_scores_year ON public.competency_scores(school_year_id);
+
+CREATE INDEX IF NOT EXISTS idx_comp_scores_classroom ON public.competency_scores(classroom_id);
+
+CREATE INDEX IF NOT EXISTS idx_tasks_area ON public.tasks(area_id) WHERE area_id IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_tasks_competency ON public.tasks(competency_id) WHERE competency_id IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_tasks_type ON public.tasks(task_type);
+
+CREATE INDEX IF NOT EXISTS idx_report_cards_areas ON public.report_cards USING gin(areas_summary);
+
+CREATE INDEX IF NOT EXISTS idx_student_preregistrations_status ON student_preregistrations (status);
+
+CREATE INDEX IF NOT EXISTS idx_student_preregistrations_created_at ON student_preregistrations (created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_processes_school_year ON public.school_year_processes(school_year_id);
+
+CREATE INDEX IF NOT EXISTS idx_processes_type ON public.school_year_processes(process_type);
+
+CREATE INDEX IF NOT EXISTS idx_promotions_student ON public.student_promotions(student_id);
+
+CREATE INDEX IF NOT EXISTS idx_promotions_from_year ON public.student_promotions(from_school_year_id);
+
+CREATE INDEX IF NOT EXISTS idx_promotions_to_year ON public.student_promotions(to_school_year_id);
+
+CREATE INDEX IF NOT EXISTS idx_archive_year ON public.school_year_archive(school_year_id);
+
+CREATE INDEX IF NOT EXISTS idx_payments_school_year ON public.payments(school_year_id) WHERE school_year_id IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_payments_period ON public.payments(period_id) WHERE period_id IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_attendance_school_year ON public.attendance(school_year_id) WHERE school_year_id IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_attendance_period ON public.attendance(period_id) WHERE period_id IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_tasks_school_year ON public.tasks(school_year_id) WHERE school_year_id IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_posts_school_year ON public.posts(school_year_id) WHERE school_year_id IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_daily_logs_school_year ON public.daily_logs(school_year_id) WHERE school_year_id IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_incidents_school_year ON public.incidents(school_year_id) WHERE school_year_id IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_invoices_school_year ON public.invoices(school_year_id) WHERE school_year_id IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_preregistrations_school_year ON public.student_preregistrations(school_year_id) WHERE school_year_id IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_enrollments_level ON public.student_enrollments(level_at_enrollment) WHERE level_at_enrollment IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_expenses_date ON public.expenses(date);
+
+CREATE INDEX IF NOT EXISTS idx_expenses_status ON public.expenses(status);
+
+CREATE INDEX IF NOT EXISTS idx_expenses_category ON public.expenses(category);
+
+CREATE INDEX IF NOT EXISTS idx_payroll_invoices_payroll ON public.payroll_invoices(payroll_id);
+
+CREATE INDEX IF NOT EXISTS idx_payroll_invoices_employee ON public.payroll_invoices(employee_id);
+
+CREATE INDEX IF NOT EXISTS idx_payroll_invoices_period ON public.payroll_invoices(period);
+
+CREATE INDEX IF NOT EXISTS idx_comments_post_created ON public.comments(post_id, created_at);
+
+CREATE INDEX IF NOT EXISTS idx_likes_post_user ON public.likes(post_id, user_id);
+
+CREATE INDEX IF NOT EXISTS idx_conv_participants_user ON public.conversation_participants(user_id);
+
+CREATE INDEX IF NOT EXISTS idx_conv_participants_conv ON public.conversation_participants(conversation_id);
+
+CREATE INDEX IF NOT EXISTS idx_grades_student_period ON public.grades(student_id, period_id);
+
+CREATE INDEX IF NOT EXISTS idx_report_cards_student_period ON public.report_cards(student_id, period_id);
+
+CREATE INDEX IF NOT EXISTS idx_notifications_user_read_created ON public.notifications(user_id, is_read, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_messages_sender_id ON public.messages(sender_id);
+
+CREATE INDEX IF NOT EXISTS idx_invoices_payment_status ON public.invoices(payment_id, status);
+
+CREATE INDEX IF NOT EXISTS idx_terms_acceptance_user ON public.terms_acceptance(user_id);
+
+CREATE INDEX IF NOT EXISTS idx_caja_sessions_date_status ON public.caja_sessions(date, status);
+
+CREATE INDEX IF NOT EXISTS idx_teacher_schedules_active ON public.teacher_schedules(classroom_id, is_active);
+
+CREATE INDEX IF NOT EXISTS idx_login_attempts_lookup ON public.login_attempts (email, ip_hash, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_login_attempts_created ON public.login_attempts (created_at);
+
+CREATE INDEX IF NOT EXISTS idx_attendance_year_period ON public.attendance(school_year_id, period_id) WHERE period_id IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_task_evidences_year_period ON public.task_evidences(school_year_id, period_id) WHERE period_id IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_periods_active_year ON public.periods(school_year_id, is_active)
+  WHERE is_active = true;
+
+CREATE INDEX IF NOT EXISTS idx_periods_open_dates ON public.periods(school_year_id, start_date, end_date)
+  WHERE status = 'open';
+
+CREATE INDEX IF NOT EXISTS idx_routine_events_category ON public.routine_events(category_id);
+
+CREATE INDEX IF NOT EXISTS idx_routine_events_legacy_key ON public.routine_events(legacy_key);
+
+CREATE INDEX IF NOT EXISTS idx_routine_events_active ON public.routine_events(is_active, sort_order);
+
+CREATE INDEX IF NOT EXISTS idx_classroom_routine_settings_classroom
+  ON public.classroom_routine_settings(classroom_id, is_active);
+
+CREATE INDEX IF NOT EXISTS idx_classroom_schedule_blocks_classroom
+  ON public.classroom_schedule_blocks(classroom_id, sort_order);
+
+CREATE INDEX IF NOT EXISTS idx_classroom_schedule_block_events_block
+  ON public.classroom_schedule_block_events(block_id);
+
+CREATE INDEX IF NOT EXISTS idx_classroom_daily_schedule_classroom_date
+  ON public.classroom_daily_schedule(classroom_id, schedule_date);
+
+CREATE INDEX IF NOT EXISTS idx_eval_notes_student ON public.eval_boleta_notes (student_id, period_id);
+
+CREATE INDEX IF NOT EXISTS idx_eval_hist_score    ON public.eval_score_history (score_id);
+
+CREATE INDEX IF NOT EXISTS idx_eval_hist_student  ON public.eval_score_history (student_id);
+
+CREATE INDEX IF NOT EXISTS idx_eval_hist_created  ON public.eval_score_history (created_at);
+
+CREATE INDEX IF NOT EXISTS idx_eval_activities_date ON public.eval_activities (activity_date);
+
+CREATE INDEX IF NOT EXISTS idx_eval_areas_eval      ON public.eval_areas (evaluation_id);
+
+CREATE INDEX IF NOT EXISTS idx_eval_comp_area       ON public.eval_competencies (area_id);
+
+CREATE INDEX IF NOT EXISTS idx_eval_periods_eval    ON public.eval_periods (evaluation_id);
+
+CREATE INDEX IF NOT EXISTS idx_eval_modules_period  ON public.eval_modules (period_id);
+
+CREATE INDEX IF NOT EXISTS idx_eval_modules_area    ON public.eval_modules (area_id);
+
+CREATE INDEX IF NOT EXISTS idx_eval_act_module      ON public.eval_activities (module_id);
+
+CREATE INDEX IF NOT EXISTS idx_eval_evid_activity   ON public.eval_evidences (activity_id);
+
+CREATE INDEX IF NOT EXISTS idx_eval_scores_activity ON public.eval_scores (activity_id);
+
+CREATE INDEX IF NOT EXISTS idx_eval_scores_student  ON public.eval_scores (student_id);
+
+CREATE INDEX IF NOT EXISTS idx_eval_scores_module   ON public.eval_scores (module_id);
+
+CREATE INDEX IF NOT EXISTS idx_eval_formulas_eval   ON public.eval_formulas (evaluation_id);
+
+CREATE INDEX IF NOT EXISTS idx_eval_area_notes_student ON public.eval_area_notes (student_id, period_id);
+
+CREATE INDEX IF NOT EXISTS idx_eval_area_notes_area    ON public.eval_area_notes (area_id);
+
+CREATE INDEX IF NOT EXISTS idx_messages_reply       ON public.messages(reply_to_id) WHERE reply_to_id IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_messages_active      ON public.messages(conversation_id, created_at DESC) WHERE deleted_at IS NULL;
+
+CREATE INDEX IF NOT EXISTS idx_messages_type        ON public.messages(message_type);
+
+CREATE INDEX IF NOT EXISTS idx_attachments_msg      ON public.message_attachments(message_id);
+
+CREATE INDEX IF NOT EXISTS idx_reactions_msg        ON public.message_reactions(message_id);
+
+CREATE INDEX IF NOT EXISTS idx_reactions_user       ON public.message_reactions(user_id);
+
+CREATE INDEX IF NOT EXISTS idx_conv_participants_lr ON public.conversation_participants(conversation_id, last_read_at);
+
+CREATE INDEX IF NOT EXISTS idx_posts_pinned_created ON public.posts (is_pinned DESC, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_comments_post_parent  ON public.comments (post_id, parent_id);
+
+CREATE INDEX IF NOT EXISTS idx_likes_post_type       ON public.likes (post_id, reaction_type);
+
+CREATE INDEX IF NOT EXISTS idx_products_deleted_at ON public.products(deleted_at) WHERE deleted_at IS NULL;
+
+CREATE INDEX IF NOT EXISTS idx_payment_concepts_category ON public.payment_concepts(category);
+
+CREATE UNIQUE INDEX IF NOT EXISTS parent_ratings_parent_month_idx
+  ON public.parent_ratings(parent_id, month);

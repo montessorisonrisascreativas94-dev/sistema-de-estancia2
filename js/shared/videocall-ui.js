@@ -292,10 +292,12 @@ export const VideoCallUI = {
       supabase.from('meetings').select('id').eq('room_name', roomName).maybeSingle()
         .then(({ data: meeting }) => {
           if (!meeting?.id) return;
-          supabase.from('meeting_attendance').upsert(
-            { meeting_id: meeting.id, user_id: user.id, joined_at: new Date().toISOString() },
-            { onConflict: 'meeting_id,user_id' }
-          ).catch(() => {});
+          try {
+            supabase.from('meeting_attendance').upsert(
+              { meeting_id: meeting.id, user_id: user.id, joined_at: new Date().toISOString() },
+              { onConflict: 'meeting_id,user_id' }
+            );
+          } catch (_) {}
         }).catch(() => {});
     }).catch(() => {});
 

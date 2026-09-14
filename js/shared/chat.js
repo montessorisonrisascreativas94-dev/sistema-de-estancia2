@@ -304,10 +304,12 @@ export const ChatModule = {
 
           if (newConv?.id) {
             convId = newConv.id;
-            await supabase.from('conversation_participants').insert([
-              { conversation_id: convId, user_id: senderId },
-              { conversation_id: convId, user_id: receiverId }
-            ]).catch(() => {});
+            try {
+              await supabase.from('conversation_participants').insert([
+                { conversation_id: convId, user_id: senderId },
+                { conversation_id: convId, user_id: receiverId }
+              ]);
+            } catch (_) {}
           }
         }
 

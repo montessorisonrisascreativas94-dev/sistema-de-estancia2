@@ -893,3 +893,1795 @@ $$;
 GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO authenticated;
 GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO service_role;
 
+-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+-- CONSOLIDADO DESDE migrations\ (historial) â€” aÃ±adido automÃ¡ticamente
+-- Fecha: 2026-09-12 21:41
+-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+
+CREATE OR REPLACE FUNCTION public.add_column_if_not_exists(
+  p_table text, p_column text, p_type text, p_default text DEFAULT NULL
+) RETURNS void LANGUAGE plpgsql AS $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = p_table AND column_name = p_column
+  ) THEN
+    IF p_default IS NOT NULL THEN
+      EXECUTE format('ALTER TABLE public.%I ADD COLUMN %I %s DEFAULT %s', p_table, p_column, p_type, p_default);
+    ELSE
+      EXECUTE format('ALTER TABLE public.%I ADD COLUMN %I %s', p_table, p_column, p_type);
+    END IF;
+    RAISE NOTICE 'Added column: %', p_column;
+  ELSE
+    RAISE NOTICE 'Column already exists: %', p_column;
+  END IF;
+END;
+$$;
+
+DROP FUNCTION IF EXISTS public.add_column_if_not_exists(text, text, text, text);
+
+CREATE OR REPLACE FUNCTION public.get_school_year_dashboard(p_school_year_id bigint DEFAULT NULL)
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  v_user_id uuid; v_role text; v_year_id bigint;
+  v_year record; v_enrollments int; v_classrooms int; v_teachers int;
+  v_pending_payments int; v_total_income numeric; v_pending_income numeric;
+  v_attendance_pct numeric; v_active_periods int; v_closed_periods int;
+  v_current_period record; v_total_days int; v_elapsed_days int;
+  v_processes jsonb;
+BEGIN
+  v_user_id := auth.uid();
+  SELECT role INTO v_role FROM public.profiles WHERE id = v_user_id;
+  IF v_role NOT IN ('directora','admin','encargada','asistente') THEN
+    RETURN jsonb_build_object('error', 'No autorizado');
+  END IF;
+
+  IF p_school_year_id IS NOT NULL THEN
+    v_year_id := p_school_year_id;
+  ELSE
+    SELECT id INTO v_year_id FROM public.school_years WHERE is_current = true LIMIT 1;
+    IF v_year_id IS NULL THEN
+      SELECT id INTO v_year_id FROM public.school_years WHERE status = 'active' ORDER BY start_date DESC LIMIT 1;
+    END IF;
+  END IF;
+  IF v_year_id IS NULL THEN RETURN jsonb_build_object('error', 'No hay ano escolar activo'); END IF;
+
+  SELECT * INTO v_year FROM public.school_years WHERE id = v_year_id;
+
+  SELECT count(*) INTO v_enrollments FROM public.student_enrollments WHERE school_year_id = v_year_id AND status IN ('activo','inscrito','admitido','reinscrito');
+  SELECT count(*) INTO v_classrooms FROM public.classrooms;
+  SELECT count(DISTINCT teacher_id) INTO v_teachers FROM public.classrooms WHERE teacher_id IS NOT NULL;
+
+  BEGIN
+    SELECT count(*), COALESCE(sum(amount), 0) INTO v_pending_payments, v_pending_income
+    FROM public.payments WHERE school_year_id = v_year_id AND status = 'pending' AND deleted_at IS NULL;
+  EXCEPTION WHEN undefined_column THEN
+    SELECT count(*), COALESCE(sum(amount), 0) INTO v_pending_payments, v_pending_income
+    FROM public.payments WHERE school_year_id = v_year_id AND status = 'pending';
+  END;
+
+  BEGIN
+    SELECT COALESCE(sum(amount), 0) INTO v_total_income
+    FROM public.payments WHERE school_year_id = v_year_id AND status = 'paid' AND deleted_at IS NULL;
+  EXCEPTION WHEN undefined_column THEN
+    SELECT COALESCE(sum(amount), 0) INTO v_total_income
+    FROM public.payments WHERE school_year_id = v_year_id AND status = 'paid';
+  END;
+
+  SELECT count(*) INTO v_active_periods FROM public.periods WHERE school_year_id = v_year_id AND status = 'open';
+  SELECT count(*) INTO v_closed_periods FROM public.periods WHERE school_year_id = v_year_id AND status = 'closed';
+
+  SELECT id, name, start_date, end_date INTO v_current_period
+  FROM public.periods WHERE school_year_id = v_year_id AND is_active = true LIMIT 1;
+
+  v_total_days := v_year.end_date - v_year.start_date;
+  v_elapsed_days := greatest(0, least(v_total_days, current_date - v_year.start_date));
+
+  BEGIN
+    SELECT COALESCE(
+      ROUND(
+        (SELECT count(*)::numeric FROM public.attendance a
+         WHERE a.school_year_id = v_year_id AND a.status = 'present'
+         AND a.date >= current_date - INTERVAL '30 days') /
+        NULLIF(
+          (SELECT count(*)::numeric FROM public.attendance a
+           WHERE a.school_year_id = v_year_id
+           AND a.date >= current_date - INTERVAL '30 days'), 0
+        ) * 100, 1
+      ), 0
+    ) INTO v_attendance_pct;
+  EXCEPTION WHEN undefined_column THEN
+    v_attendance_pct := 0;
+  END;
+
+  BEGIN
+    SELECT COALESCE(jsonb_agg(jsonb_build_object(
+      'type', process_type, 'label', label, 'status', status, 'executed_at', executed_at
+    ) ORDER BY created_at), '[]'::jsonb) INTO v_processes
+    FROM public.school_year_processes WHERE school_year_id = v_year_id;
+  EXCEPTION WHEN undefined_table THEN
+    v_processes := '[]'::jsonb;
+  END;
+
+  RETURN jsonb_build_object(
+    'found', true,
+    'year', jsonb_build_object(
+      'id', v_year.id, 'name', v_year.name, 'start_date', v_year.start_date,
+      'end_date', v_year.end_date, 'status', v_year.status, 'is_current', v_year.is_current,
+      'period_model', v_year.period_model, 'num_periods', v_year.num_periods,
+      'enrollment_open', v_year.enrollment_open, 'reenrollment_open', v_year.reenrollment_open,
+      'total_days', v_total_days, 'elapsed_days', v_elapsed_days
+    ),
+    'kpi', jsonb_build_object(
+      'enrollments', v_enrollments, 'classrooms', v_classrooms, 'teachers', v_teachers,
+      'pending_payments', v_pending_payments,
+      'total_income', v_total_income, 'pending_income', v_pending_income,
+      'attendance_pct', v_attendance_pct,
+      'active_periods', v_active_periods, 'closed_periods', v_closed_periods
+    ),
+    'current_period', CASE WHEN v_current_period.id IS NOT NULL THEN
+      jsonb_build_object('id', v_current_period.id, 'name', v_current_period.name, 'start_date', v_current_period.start_date, 'end_date', v_current_period.end_date)
+    ELSE null END,
+    'processes', COALESCE(v_processes, '[]'::jsonb)
+  );
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.create_new_school_year_with_promotion(
+  p_name text,
+  p_start_date date,
+  p_end_date date,
+  p_period_model text DEFAULT 'trimestre',
+  p_num_periods int DEFAULT 3,
+  p_copy_classrooms boolean DEFAULT true,
+  p_old_year_id bigint DEFAULT NULL
+)
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  v_user_id uuid; v_role text; v_new_year_id bigint;
+  v_old_year bigint; v_copied_classrooms int := 0;
+  v_created_periods int := 0;
+  v_classroom record; v_plan record; r record;
+  v_period_start date; v_period_end date;
+  v_period_name text; v_days_per_period int;
+  v_new_enrollment_id bigint;
+BEGIN
+  v_user_id := auth.uid();
+  SELECT role INTO v_role FROM public.profiles WHERE id = v_user_id;
+  IF v_role NOT IN ('directora','admin') THEN
+    RETURN jsonb_build_object('error', 'Solo la directora puede crear anos escolares');
+  END IF;
+
+  IF p_old_year_id IS NOT NULL THEN
+    v_old_year := p_old_year_id;
+  ELSE
+    SELECT id INTO v_old_year FROM public.school_years WHERE is_current = true LIMIT 1;
+  END IF;
+
+  UPDATE public.school_years SET is_current = false WHERE is_current = true;
+
+  INSERT INTO public.school_years (name, start_date, end_date, status, is_current, period_model, num_periods, created_at)
+  VALUES (p_name, p_start_date, p_end_date, 'active', true, p_period_model, p_num_periods, now())
+  RETURNING id INTO v_new_year_id;
+
+  v_days_per_period := (p_end_date - p_start_date) / p_num_periods;
+  FOR i IN 1..p_num_periods LOOP
+    v_period_start := p_start_date + ((i - 1) * v_days_per_period);
+    v_period_end := CASE WHEN i = p_num_periods THEN p_end_date ELSE p_start_date + (i * v_days_per_period) - 1 END;
+    v_period_name := CASE p_period_model
+      WHEN 'trimestre' THEN i || 'er Trimestre'
+      WHEN 'cuatrimestre' THEN i || 'er Cuatrimestre'
+      WHEN 'bimestre' THEN i || 'er Bimestre'
+      WHEN 'mes' THEN to_char(v_period_start, 'Month')
+      ELSE i || 'er Periodo'
+    END;
+
+    INSERT INTO public.periods (name, start_date, end_date, status, is_active, school_year_id, sort_order, created_at)
+    VALUES (v_period_name, v_period_start, v_period_end, 'open', (i = 1), v_new_year_id, i, now());
+    v_created_periods := v_created_periods + 1;
+  END LOOP;
+
+  IF p_copy_classrooms AND v_old_year IS NOT NULL THEN
+    FOR v_classroom IN SELECT * FROM public.classrooms LOOP
+      INSERT INTO public.classrooms (name, level, capacity, teacher_id, is_live)
+      VALUES (v_classroom.name, v_classroom.level, v_classroom.capacity, v_classroom.teacher_id, false);
+      v_copied_classrooms := v_copied_classrooms + 1;
+    END LOOP;
+  END IF;
+
+  IF v_old_year IS NOT NULL THEN
+    BEGIN
+      FOR v_plan IN SELECT * FROM public.payment_plans WHERE school_year_id = v_old_year AND is_active = true LOOP
+        INSERT INTO public.payment_plans (name, description, amount, installments, is_active, school_year_id, created_at)
+        VALUES (v_plan.name, v_plan.description, v_plan.amount, v_plan.installments, true, v_new_year_id, now());
+      END LOOP;
+    EXCEPTION WHEN undefined_column THEN NULL;
+    END;
+  END IF;
+
+  BEGIN
+    IF v_old_year IS NOT NULL THEN
+      FOR r IN SELECT se.*, s.name AS student_name
+        FROM public.student_enrollments se
+        JOIN public.students s ON s.id = se.student_id
+        WHERE se.school_year_id = v_old_year AND se.status IN ('activo','inscrito','reinscrito')
+      LOOP
+        INSERT INTO public.student_enrollments (student_id, school_year_id, classroom_id, status, registration_date, created_at)
+        VALUES (r.student_id, v_new_year_id, r.classroom_id, 'inscrito', now(), now())
+        ON CONFLICT DO NOTHING
+        RETURNING id INTO v_new_enrollment_id;
+      END LOOP;
+    END IF;
+  EXCEPTION WHEN undefined_column THEN NULL;
+  END;
+
+  INSERT INTO public.school_year_processes (school_year_id, process_type, label, status, executed_at, executed_by)
+  VALUES (v_new_year_id, 'year_created', 'Ano escolar creado', 'completed', now(), v_user_id);
+
+  RETURN jsonb_build_object(
+    'success', true,
+    'year_id', v_new_year_id,
+    'periods_created', v_created_periods,
+    'classrooms_copied', v_copied_classrooms
+  );
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.get_pending_transfer_payments()
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  v_user_id uuid; v_role text;
+  v_payments jsonb;
+BEGIN
+  v_user_id := auth.uid();
+  SELECT role INTO v_role FROM public.profiles WHERE id = v_user_id;
+  IF v_role NOT IN ('directora','admin','encargada','asistente') THEN
+    RETURN jsonb_build_object('error', 'No autorizado');
+  END IF;
+
+  SELECT COALESCE(jsonb_agg(jsonb_build_object(
+    'id', p.id, 'amount', p.amount, 'concept', p.concept, 'status', p.status,
+    'method', p.method, 'bank', p.bank, 'reference', p.reference,
+    'transfer_date', p.transfer_date, 'month_paid', p.month_paid,
+    'proof_url', p.proof_url, 'evidence_url', p.evidence_url,
+    'created_at', p.created_at, 'notes', p.notes,
+    'student_id', p.student_id, 'student_name', s.name,
+    'student_matricula', s.matricula, 'student_level', s.nivel,
+    'classroom_name', c.name,
+    'parent_name', s.p1_name, 'parent_phone', s.p1_phone
+  ) ORDER BY p.created_at DESC), '[]'::jsonb) INTO v_payments
+  FROM public.payments p
+  JOIN public.students s ON s.id = p.student_id
+  LEFT JOIN public.classrooms c ON c.id = s.classroom_id
+  WHERE p.status = 'pending'
+  AND (p.method = 'transferencia' OR p.proof_url IS NOT NULL OR p.evidence_url IS NOT NULL);
+
+  RETURN jsonb_build_object('payments', v_payments, 'count', jsonb_array_length(v_payments));
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.review_transfer_payment(
+  p_payment_id bigint,
+  p_action text,
+  p_notes text DEFAULT NULL
+)
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  v_user_id uuid; v_role text; v_payment record;
+BEGIN
+  v_user_id := auth.uid();
+  SELECT role INTO v_role FROM public.profiles WHERE id = v_user_id;
+  IF v_role NOT IN ('directora','admin','encargada','asistente') THEN
+    RETURN jsonb_build_object('error', 'No autorizado');
+  END IF;
+
+  SELECT * INTO v_payment FROM public.payments WHERE id = p_payment_id;
+  IF NOT FOUND THEN RETURN jsonb_build_object('error', 'Pago no encontrado'); END IF;
+
+  IF p_action = 'approve' THEN
+    UPDATE public.payments SET status = 'paid', paid_date = now(), notes = COALESCE(p_notes, notes) WHERE id = p_payment_id;
+    UPDATE public.students SET is_active = true WHERE id = v_payment.student_id;
+    INSERT INTO public.audit_logs (user_id, action, payload, created_at)
+    VALUES (v_user_id, 'payment.transfer_approved', jsonb_build_object('payment_id', p_payment_id, 'amount', v_payment.amount), now());
+    RETURN jsonb_build_object('success', true, 'action', 'approved');
+
+  ELSIF p_action = 'reject' THEN
+    UPDATE public.payments SET status = 'rejected', notes = COALESCE(p_notes, notes) WHERE id = p_payment_id;
+    INSERT INTO public.audit_logs (user_id, action, payload, created_at)
+    VALUES (v_user_id, 'payment.transfer_rejected', jsonb_build_object('payment_id', p_payment_id, 'amount', v_payment.amount), now());
+    RETURN jsonb_build_object('success', true, 'action', 'rejected');
+
+  ELSE
+    RETURN jsonb_build_object('error', 'Accion no valida. Use approve o reject');
+  END IF;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.enforce_single_active_year()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+  IF NEW.is_current = true THEN
+    UPDATE public.school_years SET is_current = false WHERE id != NEW.id AND is_current = true;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.enforce_period_not_closed()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE v_period record; v_year record; v_user_role text;
+BEGIN
+  v_user_role := (SELECT role FROM public.profiles WHERE id = auth.uid());
+
+  IF v_user_role IN ('directora', 'admin') THEN RETURN NEW; END IF;
+
+  IF TG_TABLE_NAME = 'attendance' AND NEW.period_id IS NOT NULL THEN
+    SELECT * INTO v_period FROM public.periods WHERE id = NEW.period_id;
+    IF FOUND AND (v_period.status = 'closed' OR COALESCE(v_period.is_blocked, false) = true) THEN
+      RAISE EXCEPTION 'REGRA #12: No se puede registrar asistencia en un período cerrado.';
+    END IF;
+  END IF;
+
+  IF TG_TABLE_NAME IN ('tasks', 'task_evidences') THEN
+    IF NEW.period_id IS NOT NULL THEN
+      SELECT * INTO v_period FROM public.periods WHERE id = NEW.period_id;
+      IF FOUND AND (v_period.status = 'closed' OR COALESCE(v_period.is_blocked, false) = true) THEN
+        RAISE EXCEPTION 'REGRA #12: No se puede crear/modificar tareas en un período cerrado.';
+      END IF;
+    END IF;
+  END IF;
+
+  IF TG_TABLE_NAME IN ('grades', 'competency_scores') THEN
+    IF NEW.period_id IS NOT NULL THEN
+      SELECT * INTO v_period FROM public.periods WHERE id = NEW.period_id;
+      IF FOUND AND (v_period.status = 'closed' OR COALESCE(v_period.is_blocked, false) = true) THEN
+        RAISE EXCEPTION 'REGRA #13: No se pueden modificar calificaciones de un período cerrado.';
+      END IF;
+    END IF;
+  END IF;
+
+  IF TG_TABLE_NAME = 'posts' THEN
+    IF NEW.period_id IS NOT NULL THEN
+      SELECT * INTO v_period FROM public.periods WHERE id = NEW.period_id;
+      IF FOUND AND (v_period.status = 'closed' OR COALESCE(v_period.is_blocked, false) = true) THEN
+        RAISE EXCEPTION 'REGRA #20: No se puede publicar en un período cerrado.';
+      END IF;
+    END IF;
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.enforce_year_not_closed()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE v_year record; v_user_role text;
+BEGIN
+  v_user_role := (SELECT role FROM public.profiles WHERE id = auth.uid());
+  IF v_user_role IN ('directora', 'admin') THEN RETURN NEW; END IF;
+
+  IF NEW.school_year_id IS NOT NULL THEN
+    SELECT * INTO v_year FROM public.school_years WHERE id = NEW.school_year_id;
+    IF FOUND AND v_year.status = 'closed' THEN
+      RAISE EXCEPTION 'REGRA #3: No se puede registrar datos en un Año Escolar cerrado.';
+    END IF;
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.enforce_enrollment_year_open()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE v_year record;
+BEGIN
+  SELECT * INTO v_year FROM public.school_years WHERE id = NEW.school_year_id;
+  IF FOUND AND v_year.status = 'closed' THEN
+    RAISE EXCEPTION 'REGRA #8: No se pueden matricular estudiantes en un Año Escolar cerrado.';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.enforce_single_enrollment_per_year()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE v_count int;
+BEGIN
+  SELECT count(*) INTO v_count
+  FROM public.student_enrollments
+  WHERE student_id = NEW.student_id
+  AND school_year_id = NEW.school_year_id
+  AND status IN ('activo','inscrito','admitido','reinscrito')
+  AND id IS DISTINCT FROM NEW.id;
+  IF v_count > 0 THEN
+    RAISE EXCEPTION 'REGRA #26: Ya existe una matrícula activa para este estudiante en este año escolar.';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.enforce_enrollment_has_year()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+  IF NEW.school_year_id IS NULL THEN
+    RAISE EXCEPTION 'REGRA #9: Toda matrícula debe pertenecer a un Año Escolar.';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.enforce_inscription_open()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE v_year record; v_user_role text;
+BEGIN
+  v_user_role := (SELECT role FROM public.profiles WHERE id = auth.uid());
+  IF v_user_role IN ('directora', 'admin') THEN RETURN NEW; END IF;
+
+  SELECT * INTO v_year FROM public.school_years WHERE id = NEW.school_year_id;
+  IF FOUND AND COALESCE(v_year.enrollment_open, false) = false THEN
+    RAISE EXCEPTION 'REGRA #21: Las inscripciones están cerradas para este año escolar.';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.get_student_competencies(
+  p_student_id bigint,
+  p_period_id bigint
+)
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE v_result jsonb;
+BEGIN
+  SELECT jsonb_agg(jsonb_build_object(
+    'area_name', aa.name, 'area_icon', aa.icon,
+    'competency_name', c.name, 'competency_description', c.description,
+    'stars', cs.stars, 'level', cs.level, 'numeric_score', cs.numeric_score,
+    'observation', cs.observation, 'competency_id', cs.competency_id
+  ) ORDER BY aa.sort_order, c.level_order) INTO v_result
+  FROM public.competency_scores cs
+  JOIN public.competencies c ON c.id = cs.competency_id
+  JOIN public.academic_areas aa ON aa.id = c.area_id
+  WHERE cs.student_id = p_student_id AND cs.period_id = p_period_id;
+  RETURN COALESCE(v_result, '[]'::jsonb);
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.get_classroom_area_averages(
+  p_classroom_id bigint,
+  p_period_id bigint
+)
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE v_result jsonb;
+BEGIN
+  SELECT jsonb_agg(jsonb_build_object(
+    'area_id', aa.id, 'area_name', aa.name, 'area_icon', aa.icon,
+    'avg_stars', ROUND(AVG(cs.stars), 1),
+    'avg_score', ROUND(AVG(cs.numeric_score), 1),
+    'student_count', count(DISTINCT cs.student_id),
+    'competency_count', count(DISTINCT cs.competency_id)
+  ) ORDER BY aa.sort_order) INTO v_result
+  FROM public.competency_scores cs
+  JOIN public.competencies c ON c.id = cs.competency_id
+  JOIN public.academic_areas aa ON aa.id = c.area_id
+  WHERE cs.classroom_id = p_classroom_id AND cs.period_id = p_period_id;
+  RETURN COALESCE(v_result, '[]'::jsonb);
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.get_institutional_averages(p_period_id bigint)
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE v_result jsonb;
+BEGIN
+  SELECT jsonb_build_object(
+    'areas', jsonb_agg(jsonb_build_object(
+      'area_name', aa.name, 'area_icon', aa.icon,
+      'avg_stars', ROUND(AVG(cs.stars), 1),
+      'avg_score', ROUND(AVG(cs.numeric_score), 1),
+      'evaluated', count(DISTINCT cs.student_id)
+    ) ORDER BY aa.sort_order),
+    'total_evaluated', (SELECT count(DISTINCT student_id) FROM public.competency_scores WHERE period_id = p_period_id),
+    'total_students', (SELECT count(*) FROM public.students s
+      JOIN public.student_enrollments se ON se.student_id = s.id
+      WHERE se.status IN ('activo','inscrito','reinscrito')),
+    'global_avg_stars', (SELECT ROUND(AVG(stars), 1) FROM public.competency_scores WHERE period_id = p_period_id),
+    'global_avg_score', (SELECT ROUND(AVG(numeric_score), 1) FROM public.competency_scores WHERE period_id = p_period_id)
+  ) INTO v_result
+  FROM public.competency_scores cs
+  JOIN public.competencies c ON c.id = cs.competency_id
+  JOIN public.academic_areas aa ON aa.id = c.area_id
+  WHERE cs.period_id = p_period_id;
+
+  RETURN COALESCE(v_result, '{}'::jsonb);
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.get_student_academic_record(p_student_id bigint)
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE v_result jsonb;
+BEGIN
+  SELECT jsonb_agg(jsonb_build_object(
+    'period_id', rc.period_id, 'period_name', p.name,
+    'school_year_id', rc.school_year_id, 'school_year_name', sy.name,
+    'classroom_name', c.name,
+    'task_avg', rc.task_avg, 'formal_avg', rc.formal_avg,
+    'final_score', rc.final_score, 'level', rc.level,
+    'teacher_comment', rc.teacher_comment,
+    'competency_summary', rc.competency_summary,
+    'areas_summary', rc.areas_summary,
+    'teacher_observations', rc.teacher_observations,
+    'generated_at', rc.generated_at
+  ) ORDER BY sy.start_date DESC, p.start_date DESC) INTO v_result
+  FROM public.report_cards rc
+  JOIN public.periods p ON p.id = rc.period_id
+  JOIN public.school_years sy ON sy.id = rc.school_year_id
+  LEFT JOIN public.classrooms c ON c.id = rc.classroom_id
+  WHERE rc.student_id = p_student_id;
+
+  RETURN jsonb_build_object('student_id', p_student_id, 'records', COALESCE(v_result, '[]'::jsonb));
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.get_school_year_dashboard(p_school_year_id bigint DEFAULT NULL)
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  v_user_id uuid; v_role text; v_year_id bigint;
+  v_year record; v_enrollments int; v_classrooms int; v_teachers int;
+  v_pending_payments int; v_total_income numeric; v_pending_income numeric;
+  v_attendance_pct numeric; v_active_periods int; v_closed_periods int;
+  v_current_period record; v_total_days int; v_elapsed_days int;
+  v_processes jsonb;
+BEGIN
+  v_user_id := auth.uid();
+  SELECT role INTO v_role FROM public.profiles WHERE id = v_user_id;
+  IF v_role NOT IN ('directora','admin','encargada') THEN
+    RETURN jsonb_build_object('error', 'No autorizado');
+  END IF;
+
+  IF p_school_year_id IS NOT NULL THEN
+    v_year_id := p_school_year_id;
+  ELSE
+    SELECT id INTO v_year_id FROM public.school_years WHERE is_current = true LIMIT 1;
+    IF v_year_id IS NULL THEN
+      SELECT id INTO v_year_id FROM public.school_years WHERE status = 'active' ORDER BY start_date DESC LIMIT 1;
+    END IF;
+  END IF;
+  IF v_year_id IS NULL THEN RETURN jsonb_build_object('error', 'No hay año escolar activo'); END IF;
+
+  SELECT * INTO v_year FROM public.school_years WHERE id = v_year_id;
+
+  SELECT count(*) INTO v_enrollments FROM public.student_enrollments WHERE school_year_id = v_year_id AND status IN ('activo','inscrito','admitido','reinscrito');
+  SELECT count(*) INTO v_classrooms FROM public.classrooms WHERE deleted_at IS NULL;
+  SELECT count(DISTINCT teacher_id) INTO v_teachers FROM public.classrooms WHERE teacher_id IS NOT NULL AND deleted_at IS NULL;
+
+  SELECT count(*), COALESCE(sum(amount), 0) INTO v_pending_payments, v_pending_income
+  FROM public.payments WHERE school_year_id = v_year_id AND status = 'pending' AND deleted_at IS NULL;
+  SELECT COALESCE(sum(amount), 0) INTO v_total_income
+  FROM public.payments WHERE school_year_id = v_year_id AND status = 'paid' AND deleted_at IS NULL;
+
+  SELECT count(*) INTO v_active_periods FROM public.periods WHERE school_year_id = v_year_id AND status = 'open';
+  SELECT count(*) INTO v_closed_periods FROM public.periods WHERE school_year_id = v_year_id AND status = 'closed';
+
+  SELECT id, name, start_date, end_date INTO v_current_period
+  FROM public.periods WHERE school_year_id = v_year_id AND is_active = true LIMIT 1;
+
+  v_total_days := v_year.end_date - v_year.start_date;
+  v_elapsed_days := greatest(0, least(v_total_days, current_date - v_year.start_date));
+
+  SELECT COALESCE(
+    ROUND(
+      (SELECT count(*)::numeric FROM public.attendance a
+       WHERE a.school_year_id = v_year_id AND a.status = 'present'
+       AND a.date >= current_date - INTERVAL '30 days') /
+      NULLIF(
+        (SELECT count(*)::numeric FROM public.attendance a
+         WHERE a.school_year_id = v_year_id
+         AND a.date >= current_date - INTERVAL '30 days'), 0
+      ) * 100, 1
+    ), 0
+  ) INTO v_attendance_pct;
+
+  SELECT COALESCE(jsonb_agg(jsonb_build_object(
+    'type', process_type, 'label', label, 'status', status, 'executed_at', executed_at
+  ) ORDER BY created_at), '[]'::jsonb) INTO v_processes
+  FROM public.school_year_processes WHERE school_year_id = v_year_id;
+
+  RETURN jsonb_build_object(
+    'found', true,
+    'year', jsonb_build_object(
+      'id', v_year.id, 'name', v_year.name, 'start_date', v_year.start_date,
+      'end_date', v_year.end_date, 'status', v_year.status, 'is_current', v_year.is_current,
+      'period_model', v_year.period_model, 'num_periods', v_year.num_periods,
+      'enrollment_open', v_year.enrollment_open, 'reenrollment_open', v_year.reenrollment_open,
+      'total_days', v_total_days, 'elapsed_days', v_elapsed_days
+    ),
+    'kpi', jsonb_build_object(
+      'enrollments', v_enrollments, 'classrooms', v_classrooms, 'teachers', v_teachers,
+      'pending_payments', v_pending_payments,
+      'total_income', v_total_income, 'pending_income', v_pending_income,
+      'attendance_pct', v_attendance_pct,
+      'active_periods', v_active_periods, 'closed_periods', v_closed_periods
+    ),
+    'current_period', CASE WHEN v_current_period.id IS NOT NULL THEN
+      jsonb_build_object('id', v_current_period.id, 'name', v_current_period.name, 'start_date', v_current_period.start_date, 'end_date', v_current_period.end_date)
+    ELSE null END,
+    'processes', v_processes
+  );
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.create_new_school_year_with_promotion(
+  p_name text,
+  p_start_date date,
+  p_end_date date,
+  p_copy_classrooms boolean DEFAULT true,
+  p_copy_payment_plans boolean DEFAULT true,
+  p_promote_students boolean DEFAULT true,
+  p_num_periods int DEFAULT 3,
+  p_period_model text DEFAULT 'trimestres'
+)
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  v_user_id uuid; v_role text; v_new_year_id bigint;
+  v_old_year_id bigint; v_classroom record; v_plan record;
+  v_student record; v_enrollment record;
+  v_new_classroom_id bigint; v_new_plan_id bigint;
+  v_new_enrollment_id bigint; v_copied_classrooms int := 0;
+  v_copied_plans int := 0; v_promoted_students int := 0;
+  v_period_days int; v_period_start date; v_period_end date;
+  v_period_names text[] := ARRAY['1er Trimestre','2do Trimestre','3er Trimestre','4to Trimestre','5to Trimestre','6to Trimestre'];
+  v_period_name text; v_total_days int; v_created_periods int := 0;
+  v_level_order text[] := ARRAY['Maternal','Infante','Parvulos','Pre-Kinder','Kinder','Preprimaria','1ro Primaria','2do Primaria','3ro Primaria','4to Primaria','5to Primaria','6to Primaria'];
+  v_current_level_idx int; v_next_level text;
+BEGIN
+  v_user_id := auth.uid();
+  SELECT role INTO v_role FROM public.profiles WHERE id = v_user_id;
+  IF v_role NOT IN ('directora','admin') THEN
+    RETURN jsonb_build_object('error', 'Solo la directora puede crear años escolares');
+  END IF;
+
+  SELECT id INTO v_old_year_id FROM public.school_years WHERE is_current = true LIMIT 1;
+  IF v_old_year_id IS NULL THEN
+    SELECT id INTO v_old_year_id FROM public.school_years WHERE status = 'active' ORDER BY start_date DESC LIMIT 1;
+  END IF;
+
+  IF v_old_year_id IS NOT NULL THEN
+    UPDATE public.school_years SET is_current = false WHERE id = v_old_year_id;
+  END IF;
+
+  INSERT INTO public.school_years (name, start_date, end_date, status, is_current, period_model, num_periods)
+  VALUES (p_name, p_start_date, p_end_date, 'active', true, p_period_model, p_num_periods)
+  RETURNING id INTO v_new_year_id;
+
+  v_total_days := p_end_date - p_start_date;
+  v_period_days := v_total_days / p_num_periods;
+  v_period_start := p_start_date;
+  FOR i IN 1..p_num_periods LOOP
+    v_period_end := v_period_start + (v_period_days || ' days')::interval - INTERVAL '1 day';
+    IF i = p_num_periods THEN v_period_end := p_end_date; END IF;
+    v_period_name := COALESCE(v_period_names[i], i || ' Periodo');
+    INSERT INTO public.periods (name, start_date, end_date, status, is_active, school_year_id, sort_order)
+    VALUES (v_period_name, v_period_start, v_period_end, 'open', (i = 1), v_new_year_id, i);
+    v_created_periods := v_created_periods + 1;
+    v_period_start := v_period_end + INTERVAL '1 day';
+  END LOOP;
+
+  IF p_copy_classrooms AND v_old_year_id IS NOT NULL THEN
+    FOR v_classroom IN SELECT * FROM public.classrooms WHERE deleted_at IS NULL LOOP
+      INSERT INTO public.classrooms (name, level, capacity, teacher_id, is_live)
+      VALUES (v_classroom.name, v_classroom.level, v_classroom.capacity, v_classroom.teacher_id, false)
+      RETURNING id INTO v_new_classroom_id;
+      v_copied_classrooms := v_copied_classrooms + 1;
+    END LOOP;
+  END IF;
+
+  IF p_copy_payment_plans AND v_old_year_id IS NOT NULL THEN
+    FOR v_plan IN SELECT * FROM public.payment_plans WHERE school_year_id = v_old_year_id AND is_active = true AND deleted_at IS NULL LOOP
+      INSERT INTO public.payment_plans (school_year_id, level, schedule, name, registration_fee, description, is_active)
+      VALUES (v_new_year_id, v_plan.level, v_plan.schedule, v_plan.name, v_plan.registration_fee, v_plan.description, true)
+      RETURNING id INTO v_new_plan_id;
+      INSERT INTO public.plan_installments (payment_plan_id, type, month_number, month_name, amount, due_day, due_month_offset, is_registration)
+      SELECT v_new_plan_id, type, month_number, month_name, amount, due_day, due_month_offset, is_registration
+      FROM public.plan_installments WHERE payment_plan_id = v_plan.id;
+      v_copied_plans := v_copied_plans + 1;
+    END LOOP;
+  END IF;
+
+  IF p_promote_students AND v_old_year_id IS NOT NULL THEN
+    FOR v_enrollment IN
+      SELECT se.*, s.name AS student_name
+      FROM public.student_enrollments se
+      JOIN public.students s ON s.id = se.student_id
+      WHERE se.school_year_id = v_old_year_id
+      AND se.status IN ('activo','inscrito','reinscrito')
+    LOOP
+      v_current_level_idx := array_position(v_level_order, v_enrollment.level_at_enrollment);
+      IF v_current_level_idx IS NOT NULL AND v_current_level_idx < array_length(v_level_order, 1) THEN
+        v_next_level := v_level_order[v_current_level_idx + 1];
+      ELSE
+        v_next_level := v_enrollment.level_at_enrollment;
+      END IF;
+
+      INSERT INTO public.student_enrollments (
+        student_id, school_year_id, classroom_id, payment_plan_id, status,
+        level_at_enrollment, promoted_from_enrollment_id, registration_date
+      ) VALUES (
+        v_enrollment.student_id, v_new_year_id, NULL, NULL, 'preinscrito',
+        v_next_level, v_enrollment.id, now()
+      ) RETURNING id INTO v_new_enrollment_id;
+
+      INSERT INTO public.student_promotions (
+        student_id, from_school_year_id, to_school_year_id,
+        from_enrollment_id, to_enrollment_id,
+        from_level, to_level, from_classroom_id, status, promoted_by
+      ) VALUES (
+        v_enrollment.student_id, v_old_year_id, v_new_year_id,
+        v_enrollment.id, v_new_enrollment_id,
+        v_enrollment.level_at_enrollment, v_next_level, v_enrollment.classroom_id,
+        'completed', v_user_id
+      );
+
+      v_promoted_students := v_promoted_students + 1;
+    END LOOP;
+  END IF;
+
+  INSERT INTO public.school_year_processes (school_year_id, process_type, label, status, executed_at, executed_by)
+  VALUES
+    (v_new_year_id, 'config', 'Año escolar creado', 'completed', now(), v_user_id),
+    (v_new_year_id, 'periods_created', v_created_periods || ' periodos creados', 'completed', now(), v_user_id),
+    (v_new_year_id, 'new_year_ready', 'Año escolar listo para usar', 'completed', now(), v_user_id);
+
+  INSERT INTO public.audit_logs (user_id, action, payload, created_at) VALUES (v_user_id, 'school_year.created_with_promotion', jsonb_build_object(
+    'new_year_id', v_new_year_id, 'name', p_name,
+    'periods', v_created_periods, 'classrooms_copied', v_copied_classrooms,
+    'plans_copied', v_copied_plans, 'students_promoted', v_promoted_students
+  ), now());
+
+  RETURN jsonb_build_object(
+    'success', true,
+    'school_year_id', v_new_year_id,
+    'name', p_name,
+    'periods_created', v_created_periods,
+    'classrooms_copied', v_copied_classrooms,
+    'plans_copied', v_copied_plans,
+    'students_promoted', v_promoted_students
+  );
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.close_school_year(p_school_year_id bigint)
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  v_user_id uuid; v_role text; v_year record;
+  v_students_closed int := 0;
+BEGIN
+  v_user_id := auth.uid();
+  SELECT role INTO v_role FROM public.profiles WHERE id = v_user_id;
+  IF v_role NOT IN ('directora','admin') THEN
+    RETURN jsonb_build_object('error', 'Solo la directora puede cerrar años escolares');
+  END IF;
+
+  SELECT * INTO v_year FROM public.school_years WHERE id = p_school_year_id;
+  IF NOT FOUND THEN RETURN jsonb_build_object('error', 'Año escolar no encontrado'); END IF;
+  IF v_year.status = 'closed' THEN RETURN jsonb_build_object('error', 'El año ya está cerrado'); END IF;
+
+  UPDATE public.periods SET status = 'closed', is_active = false, is_blocked = true, closed_at = now(), closed_by = v_user_id
+  WHERE school_year_id = p_school_year_id AND status = 'open';
+
+  INSERT INTO public.school_year_archive (school_year_id, snapshot_type, data)
+  SELECT p_school_year_id, 'summary', jsonb_build_object(
+    'name', v_year.name, 'start_date', v_year.start_date, 'end_date', v_year.end_date,
+    'total_enrollments', (SELECT count(*) FROM public.student_enrollments WHERE school_year_id = p_school_year_id),
+    'total_payments', (SELECT COALESCE(sum(amount),0) FROM public.payments WHERE school_year_id = p_school_year_id AND status = 'paid'),
+    'total_pending', (SELECT COALESCE(sum(amount),0) FROM public.payments WHERE school_year_id = p_school_year_id AND status = 'pending'),
+    'total_tasks', (SELECT count(*) FROM public.tasks WHERE school_year_id = p_school_year_id),
+    'total_grades', (SELECT count(*) FROM public.grades WHERE school_year_id = p_school_year_id),
+    'total_incidents', (SELECT count(*) FROM public.incidents WHERE school_year_id = p_school_year_id)
+  );
+
+  UPDATE public.school_years SET is_current = false, status = 'closed', closed_at = now(), closed_by = v_user_id
+  WHERE id = p_school_year_id;
+
+  INSERT INTO public.audit_logs (user_id, action, payload, created_at) VALUES (v_user_id, 'school_year.closed', jsonb_build_object('year_id', p_school_year_id, 'name', v_year.name), now());
+  INSERT INTO public.school_year_processes (school_year_id, process_type, label, status, executed_at, executed_by)
+  VALUES (p_school_year_id, 'year_closed', 'Año escolar cerrado', 'completed', now(), v_user_id);
+
+  RETURN jsonb_build_object('success', true, 'year_id', p_school_year_id, 'name', v_year.name);
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.set_active_school_year(p_school_year_id bigint)
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE v_user_id uuid; v_role text; v_year record;
+BEGIN
+  v_user_id := auth.uid();
+  SELECT role INTO v_role FROM public.profiles WHERE id = v_user_id;
+  IF v_role NOT IN ('directora','admin') THEN
+    RETURN jsonb_build_object('error', 'No autorizado');
+  END IF;
+
+  SELECT * INTO v_year FROM public.school_years WHERE id = p_school_year_id;
+  IF NOT FOUND THEN RETURN jsonb_build_object('error', 'Año escolar no encontrado'); END IF;
+
+  UPDATE public.school_years SET is_current = false;
+  UPDATE public.school_years SET is_current = true WHERE id = p_school_year_id;
+
+  INSERT INTO public.audit_logs (user_id, action, payload, created_at) VALUES (v_user_id, 'school_year.switched', jsonb_build_object('year_id', p_school_year_id, 'name', v_year.name), now());
+
+  RETURN jsonb_build_object('success', true, 'year_id', p_school_year_id, 'name', v_year.name);
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.get_school_year_history(p_school_year_id bigint)
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  v_user_id uuid; v_role text; v_year record;
+  v_enrollments jsonb; v_payments jsonb; v_summary jsonb;
+BEGIN
+  v_user_id := auth.uid();
+  SELECT role INTO v_role FROM public.profiles WHERE id = v_user_id;
+
+  SELECT * INTO v_year FROM public.school_years WHERE id = p_school_year_id;
+  IF NOT FOUND THEN RETURN jsonb_build_object('error', 'Año escolar no encontrado'); END IF;
+
+  SELECT COALESCE(jsonb_agg(jsonb_build_object(
+    'student_id', se.student_id, 'student_name', s.name,
+    'level', se.level_at_enrollment, 'classroom_id', se.classroom_id,
+    'status', se.status, 'matricula', s.matricula
+  )), '[]'::jsonb) INTO v_enrollments
+  FROM public.student_enrollments se
+  JOIN public.students s ON s.id = se.student_id
+  WHERE se.school_year_id = p_school_year_id;
+
+  SELECT jsonb_build_object(
+    'total_paid', COALESCE(sum(amount), 0),
+    'total_pending', (SELECT COALESCE(sum(amount), 0) FROM public.payments WHERE school_year_id = p_school_year_id AND status = 'pending' AND deleted_at IS NULL),
+    'count_paid', count(*) FILTER (WHERE status = 'paid'),
+    'count_pending', count(*) FILTER (WHERE status = 'pending')
+  ) INTO v_payments
+  FROM public.payments WHERE school_year_id = p_school_year_id AND deleted_at IS NULL;
+
+  SELECT jsonb_build_object(
+    'name', v_year.name, 'status', v_year.status,
+    'start_date', v_year.start_date, 'end_date', v_year.end_date,
+    'enrollments', v_enrollments, 'payments', v_payments,
+    'total_tasks', (SELECT count(*) FROM public.tasks WHERE school_year_id = p_school_year_id),
+    'total_grades', (SELECT count(*) FROM public.grades WHERE school_year_id = p_school_year_id),
+    'total_incidents', (SELECT count(*) FROM public.incidents WHERE school_year_id = p_school_year_id),
+    'total_posts', (SELECT count(*) FROM public.posts WHERE school_year_id = p_school_year_id),
+    'total_attendance', (SELECT count(*) FROM public.attendance WHERE school_year_id = p_school_year_id)
+  ) INTO v_summary;
+
+  RETURN v_summary;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.is_period_writable(p_period_id bigint)
+RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE v_status text; v_blocked boolean;
+BEGIN
+  SELECT status, is_blocked INTO v_status, v_blocked FROM public.periods WHERE id = p_period_id;
+  IF NOT FOUND THEN RETURN false; END IF;
+  RETURN v_status = 'open' AND COALESCE(v_blocked, false) = false;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.prevent_profile_role_escalation()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE v_caller_role text;
+BEGIN
+  IF TG_OP = 'UPDATE' AND NEW.role IS DISTINCT FROM OLD.role THEN
+    SELECT COALESCE(role, '') INTO v_caller_role
+    FROM public.profiles WHERE id = auth.uid();
+    IF v_caller_role NOT IN ('directora', 'admin') THEN
+      RAISE EXCEPTION 'No autorizado: solo directora/admin pueden cambiar roles';
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.check_rate_limit(
+  p_key text, p_window_seconds int, p_max_attempts int
+)
+RETURNS boolean LANGUAGE sql SECURITY DEFINER STABLE SET search_path = public AS $$
+  SELECT count(*) < p_max_attempts
+  FROM public.login_attempts
+  WHERE (email = p_key OR ip_hash = p_key)
+    AND created_at > now() - make_interval(secs => p_window_seconds);
+$$;
+
+CREATE OR REPLACE FUNCTION public.record_login_attempt(
+  p_email text, p_ip_hash text, p_success boolean
+)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+  INSERT INTO public.login_attempts (email, ip_hash, success, created_at)
+  VALUES (
+    CASE WHEN p_email IS NOT NULL AND trim(p_email) <> '' THEN LOWER(trim(p_email)) ELSE NULL END,
+    p_ip_hash, p_success, now()
+  );
+EXCEPTION WHEN OTHERS THEN NULL;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.prune_login_attempts()
+RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path = public AS $$
+  DELETE FROM public.login_attempts WHERE created_at < now() - interval '7 days';
+$$;
+
+CREATE OR REPLACE FUNCTION public.get_active_school_year_id()
+RETURNS bigint LANGUAGE sql SECURITY DEFINER STABLE SET search_path = public AS $$
+  SELECT id FROM public.school_years
+  WHERE is_current = true AND deleted_at IS NULL
+  LIMIT 1;
+$$;
+
+CREATE OR REPLACE FUNCTION public.auto_scope_school_year()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+  IF auth.uid() IS NULL THEN RETURN NEW; END IF;
+  IF TG_TABLE_NAME = 'task_evidences' THEN
+    IF NEW.school_year_id IS NULL THEN
+      SELECT school_year_id INTO NEW.school_year_id FROM public.tasks WHERE id = NEW.task_id;
+    END IF;
+    RETURN NEW;
+  END IF;
+  IF NEW.school_year_id IS NULL THEN
+    NEW.school_year_id := public.get_active_school_year_id();
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.auto_scope_period()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  v_period periods%ROWTYPE; v_scope_date date; v_year_id bigint;
+BEGIN
+  IF auth.uid() IS NULL THEN RETURN NEW; END IF;
+  IF NEW.period_id IS NOT NULL THEN RETURN NEW; END IF;
+
+  IF TG_TABLE_NAME = 'task_evidences' THEN
+    SELECT period_id INTO NEW.period_id FROM public.tasks WHERE id = NEW.task_id;
+    RETURN NEW;
+  END IF;
+
+  v_year_id := COALESCE(NEW.school_year_id, public.get_active_school_year_id());
+  IF v_year_id IS NULL THEN RETURN NEW; END IF;
+
+  CASE TG_TABLE_NAME
+    WHEN 'tasks' THEN v_scope_date := COALESCE(NEW.due_date::date, current_date);
+    WHEN 'attendance' THEN v_scope_date := COALESCE(NEW.date, current_date);
+    WHEN 'daily_logs' THEN v_scope_date := COALESCE(NEW.date, current_date);
+    ELSE v_scope_date := current_date;
+  END CASE;
+
+  SELECT * INTO v_period FROM public.periods
+  WHERE school_year_id = v_year_id
+    AND status = 'open'
+    AND COALESCE(is_blocked, false) = false
+    AND v_scope_date BETWEEN start_date AND end_date
+  ORDER BY start_date LIMIT 1;
+
+  IF FOUND THEN
+    NEW.period_id := v_period.id;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.enforce_single_active_period()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+  IF NEW.is_active = true THEN
+    IF EXISTS (
+      SELECT 1 FROM public.periods
+      WHERE is_active = true AND id IS DISTINCT FROM NEW.id
+    ) THEN
+      RAISE EXCEPTION 'REGRA: Solo puede haber un periodo activo a la vez. Desactiva el periodo actual primero.';
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.enforce_period_valid_dates()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE v_year school_years%ROWTYPE;
+BEGIN
+  IF NEW.start_date >= NEW.end_date THEN
+    RAISE EXCEPTION 'REGRA: La fecha de inicio del periodo debe ser anterior a la de fin.';
+  END IF;
+  IF NEW.school_year_id IS NOT NULL THEN
+    SELECT * INTO v_year FROM public.school_years WHERE id = NEW.school_year_id;
+    IF FOUND THEN
+      IF NEW.start_date < v_year.start_date OR NEW.end_date > v_year.end_date THEN
+        RAISE EXCEPTION 'REGRA: Las fechas del periodo deben estar dentro del ano escolar (%)', v_year.name;
+      END IF;
+      IF v_year.status = 'closed' THEN
+        RAISE EXCEPTION 'REGRA: No se pueden crear periodos en un ano escolar cerrado.';
+      END IF;
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.create_new_school_year_with_promotion(
+  p_name text,
+  p_start_date date,
+  p_end_date date,
+  p_copy_classrooms boolean DEFAULT true,
+  p_copy_payment_plans boolean DEFAULT true,
+  p_promote_students boolean DEFAULT true,
+  p_num_periods int DEFAULT 3,
+  p_period_model text DEFAULT 'trimestres'
+)
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  v_user_id uuid; v_role text; v_new_year_id bigint;
+  v_old_year_id bigint; v_classroom record; v_plan record;
+  v_student record; v_enrollment record;
+  v_new_classroom_id bigint; v_new_plan_id bigint;
+  v_new_enrollment_id bigint; v_copied_classrooms int := 0;
+  v_copied_plans int := 0; v_promoted_students int := 0;
+  v_period_days int; v_period_start date; v_period_end date;
+  v_period_names text[] := ARRAY['1er Trimestre','2do Trimestre','3er Trimestre','4to Trimestre','5to Trimestre','6to Trimestre'];
+  v_period_name text; v_total_days int; v_created_periods int := 0;
+  v_level_order text[] := ARRAY['Maternal','Infante','Parvulos','Pre-Kinder','Kinder','Preprimaria','1ro Primaria','2do Primaria','3ro Primaria','4to Primaria','5to Primaria','6to Primaria'];
+  v_current_level_idx int; v_next_level text;
+BEGIN
+  v_user_id := auth.uid();
+  SELECT role INTO v_role FROM public.profiles WHERE id = v_user_id;
+  IF v_role NOT IN ('directora','admin') THEN
+    RETURN jsonb_build_object('error', 'Solo la directora puede crear anos escolares');
+  END IF;
+  IF p_num_periods < 1 OR p_num_periods > 12 THEN
+    RETURN jsonb_build_object('error', 'Numero de periodos debe estar entre 1 y 12');
+  END IF;
+  IF (p_end_date - p_start_date) < p_num_periods THEN
+    RETURN jsonb_build_object('error', 'El ano escolar debe durar al menos 1 dia por periodo');
+  END IF;
+
+  SELECT id INTO v_old_year_id FROM public.school_years WHERE is_current = true LIMIT 1;
+  IF v_old_year_id IS NULL THEN
+    SELECT id INTO v_old_year_id FROM public.school_years WHERE status = 'active' ORDER BY start_date DESC LIMIT 1;
+  END IF;
+
+  IF v_old_year_id IS NOT NULL THEN
+    UPDATE public.school_years SET is_current = false WHERE id = v_old_year_id;
+  END IF;
+
+  INSERT INTO public.school_years (name, start_date, end_date, status, is_current, period_model, num_periods)
+  VALUES (p_name, p_start_date, p_end_date, 'active', true, p_period_model, p_num_periods)
+  RETURNING id INTO v_new_year_id;
+
+  UPDATE public.periods SET is_active = false WHERE id IN (SELECT id FROM public.periods WHERE is_active = true);
+  UPDATE public.classrooms SET active_period_id = NULL WHERE id IN (SELECT id FROM public.classrooms WHERE active_period_id IS NOT NULL);
+
+  v_total_days := p_end_date - p_start_date;
+  v_period_days := v_total_days / p_num_periods;
+  v_period_start := p_start_date;
+  FOR i IN 1..p_num_periods LOOP
+    v_period_end := v_period_start + (v_period_days || ' days')::interval - INTERVAL '1 day';
+    IF i = p_num_periods THEN v_period_end := p_end_date; END IF;
+    v_period_name := CASE
+      WHEN p_period_model = 'mensual' THEN to_char(v_period_start, 'Month')
+      WHEN p_period_model = 'semestres' THEN i || 'er Semestre'
+      ELSE COALESCE(v_period_names[i], i || 'o Periodo')
+    END;
+    INSERT INTO public.periods (name, start_date, end_date, status, is_active, school_year_id, sort_order)
+    VALUES (v_period_name, v_period_start, v_period_end, 'open', (i = 1), v_new_year_id, i);
+    v_created_periods := v_created_periods + 1;
+    v_period_start := v_period_end + INTERVAL '1 day';
+  END LOOP;
+
+  IF p_copy_classrooms AND v_old_year_id IS NOT NULL THEN
+    FOR v_classroom IN SELECT * FROM public.classrooms WHERE deleted_at IS NULL LOOP
+      INSERT INTO public.classrooms (name, level, capacity, teacher_id, is_live)
+      VALUES (v_classroom.name, v_classroom.level, v_classroom.capacity, v_classroom.teacher_id, false)
+      RETURNING id INTO v_new_classroom_id;
+      v_copied_classrooms := v_copied_classrooms + 1;
+    END LOOP;
+  END IF;
+
+  IF p_copy_payment_plans AND v_old_year_id IS NOT NULL THEN
+    FOR v_plan IN SELECT * FROM public.payment_plans WHERE school_year_id = v_old_year_id AND is_active = true AND deleted_at IS NULL LOOP
+      INSERT INTO public.payment_plans (school_year_id, level, schedule, name, registration_fee, description, is_active)
+      VALUES (v_new_year_id, v_plan.level, v_plan.schedule, v_plan.name, v_plan.registration_fee, v_plan.description, true)
+      RETURNING id INTO v_new_plan_id;
+      INSERT INTO public.plan_installments (payment_plan_id, type, month_number, month_name, amount, due_day, due_month_offset, is_registration)
+      SELECT v_new_plan_id, type, month_number, month_name, amount, due_day, due_month_offset, is_registration
+      FROM public.plan_installments WHERE payment_plan_id = v_plan.id;
+      v_copied_plans := v_copied_plans + 1;
+    END LOOP;
+  END IF;
+
+  IF p_promote_students AND v_old_year_id IS NOT NULL THEN
+    FOR v_enrollment IN
+      SELECT se.*, s.name AS student_name
+      FROM public.student_enrollments se
+      JOIN public.students s ON s.id = se.student_id
+      WHERE se.school_year_id = v_old_year_id
+      AND se.status IN ('activo','inscrito','reinscrito')
+    LOOP
+      v_current_level_idx := array_position(v_level_order, v_enrollment.level_at_enrollment);
+      IF v_current_level_idx IS NOT NULL AND v_current_level_idx < array_length(v_level_order, 1) THEN
+        v_next_level := v_level_order[v_current_level_idx + 1];
+      ELSE
+        v_next_level := v_enrollment.level_at_enrollment;
+      END IF;
+
+      INSERT INTO public.student_enrollments (
+        student_id, school_year_id, classroom_id, payment_plan_id, status,
+        level_at_enrollment, promoted_from_enrollment_id, registration_date
+      ) VALUES (
+        v_enrollment.student_id, v_new_year_id, NULL, NULL, 'preinscrito',
+        v_next_level, v_enrollment.id, now()
+      ) RETURNING id INTO v_new_enrollment_id;
+
+      INSERT INTO public.student_promotions (
+        student_id, from_school_year_id, to_school_year_id,
+        from_enrollment_id, to_enrollment_id,
+        from_level, to_level, from_classroom_id, status, promoted_by
+      ) VALUES (
+        v_enrollment.student_id, v_old_year_id, v_new_year_id,
+        v_enrollment.id, v_new_enrollment_id,
+        v_enrollment.level_at_enrollment, v_next_level, v_enrollment.classroom_id,
+        'completed', v_user_id
+      );
+
+      v_promoted_students := v_promoted_students + 1;
+    END LOOP;
+  END IF;
+
+  INSERT INTO public.school_year_processes (school_year_id, process_type, label, status, executed_at, executed_by)
+  VALUES
+    (v_new_year_id, 'config', 'Año escolar creado', 'completed', now(), v_user_id),
+    (v_new_year_id, 'periods_created', v_created_periods || ' periodos creados', 'completed', now(), v_user_id),
+    (v_new_year_id, 'new_year_ready', 'Año escolar listo para usar', 'completed', now(), v_user_id);
+
+  INSERT INTO public.audit_logs (user_id, action, payload, created_at) VALUES (v_user_id, 'school_year.created_with_promotion', jsonb_build_object(
+    'new_year_id', v_new_year_id, 'name', p_name,
+    'periods', v_created_periods, 'classrooms_copied', v_copied_classrooms,
+    'plans_copied', v_copied_plans, 'students_promoted', v_promoted_students
+  ), now());
+
+  RETURN jsonb_build_object(
+    'success', true,
+    'school_year_id', v_new_year_id,
+    'name', p_name,
+    'periods_created', v_created_periods,
+    'classrooms_copied', v_copied_classrooms,
+    'plans_copied', v_copied_plans,
+    'students_promoted', v_promoted_students
+  );
+END;
+$$;
+
+DROP FUNCTION IF EXISTS public.create_new_school_year_with_promotion(text, date, date, text, int, boolean, bigint);
+
+CREATE OR REPLACE FUNCTION public.seed_classroom_routine_settings()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+  INSERT INTO public.classroom_routine_settings (classroom_id, event_id, sort_order)
+  SELECT NEW.id, e.id, e.sort_order
+  FROM public.routine_events e
+  WHERE e.is_active = true
+  ON CONFLICT (classroom_id, event_id) DO NOTHING;
+  RETURN NEW;
+END $$;
+
+CREATE OR REPLACE FUNCTION public.eval_score_audit()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_user uuid := auth.uid();
+BEGIN
+  IF TG_OP = 'INSERT' THEN
+    INSERT INTO public.eval_score_history
+      (score_id, module_id, activity_id, student_id, action, old_value, new_value, changed_by)
+    VALUES
+      (NEW.id, NEW.module_id, NEW.activity_id, NEW.student_id, 'created', NULL,
+       jsonb_build_object('value', NEW.value, 'stars', NEW.stars, 'level', NEW.level,
+                          'yesno', NEW.yesno, 'checklist', NEW.checklist,
+                          'rubric', NEW.rubric, 'observation', NEW.observation),
+       v_user);
+    RETURN NEW;
+  ELSIF TG_OP = 'UPDATE' THEN
+    IF OLD IS DISTINCT FROM NEW THEN
+      INSERT INTO public.eval_score_history
+        (score_id, module_id, activity_id, student_id, action, old_value, new_value, changed_by)
+      VALUES
+        (NEW.id, NEW.module_id, NEW.activity_id, NEW.student_id, 'updated',
+         jsonb_build_object('value', OLD.value, 'stars', OLD.stars, 'level', OLD.level,
+                            'yesno', OLD.yesno, 'checklist', OLD.checklist,
+                            'rubric', OLD.rubric, 'observation', OLD.observation),
+         jsonb_build_object('value', NEW.value, 'stars', NEW.stars, 'level', NEW.level,
+                            'yesno', NEW.yesno, 'checklist', NEW.checklist,
+                            'rubric', NEW.rubric, 'observation', NEW.observation),
+         v_user);
+    END IF;
+    RETURN NEW;
+  ELSIF TG_OP = 'DELETE' THEN
+    INSERT INTO public.eval_score_history
+      (score_id, module_id, activity_id, student_id, action, old_value, new_value, changed_by)
+    VALUES
+      (OLD.id, OLD.module_id, OLD.activity_id, OLD.student_id, 'deleted',
+       jsonb_build_object('value', OLD.value, 'stars', OLD.stars, 'level', OLD.level,
+                          'yesno', OLD.yesno, 'checklist', OLD.checklist,
+                          'rubric', OLD.rubric, 'observation', OLD.observation),
+       NULL, v_user);
+    RETURN OLD;
+  END IF;
+  RETURN NULL;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.boletin_ensure_structure(p_evaluation_id bigint)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_role text := COALESCE(get_my_role(), '');
+  v_eval  record;
+  v_year  record;
+  v_labels jsonb;
+  v_scale  jsonb;
+  v_areas_count int;
+  v_periods_count int;
+  v_default_areas int;
+  v_default_modules int;
+  v_area record;
+  v_period record;
+  v_global_period record;
+  v_modules_count int;
+  v_mod record;
+  v_acts_count int;
+  v_i int;
+  v_label jsonb;
+  v_created_periods int := 0;
+  v_created_areas int := 0;
+  v_created_modules int := 0;
+  v_created_activities int := 0;
+  v_period_type text;
+  v_new_period_id bigint;
+BEGIN
+  IF v_role NOT IN ('directora','admin','asistente','encargada','maestra') THEN
+    RETURN jsonb_build_object('error','No autorizado');
+  END IF;
+
+  SELECT * INTO v_eval FROM public.eval_evaluations WHERE id = p_evaluation_id;
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('error','Evaluación/Boletín no encontrado');
+  END IF;
+
+  SELECT * INTO v_year FROM public.school_years WHERE id = v_eval.school_year_id;
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('error','Año escolar no encontrado');
+  END IF;
+
+  v_labels := COALESCE(v_eval.activity_labels, '[]'::jsonb);
+  IF jsonb_array_length(v_labels) < 1 THEN
+    v_labels := '[{"name":"Actividad 1","max_value":100},{"name":"Actividad 2","max_value":100},{"name":"Actividad 3","max_value":100},{"name":"Actividad 4","max_value":100},{"name":"Actividad 5","max_value":100}]'::jsonb;
+  END IF;
+  v_default_areas   := COALESCE(v_eval.default_areas, 5);
+  v_default_modules := COALESCE(v_eval.default_modules, 5);
+
+  SELECT count(*) INTO v_areas_count FROM public.eval_areas
+    WHERE evaluation_id = p_evaluation_id AND deleted_at IS NULL;
+  IF v_areas_count = 0 THEN
+    INSERT INTO public.eval_areas (evaluation_id, name, description, color, icon, sort_order, weight, created_by) VALUES
+      (p_evaluation_id, 'Lenguaje',         'Comunicación, lenguaje y lectoescritura.', '#0EA5E9', 'message-circle', 1, 20, auth.uid()),
+      (p_evaluation_id, 'Matemática',       'Pensamiento lógico, conteo y nociones.',  '#6366F1', 'calculator',     2, 20, auth.uid()),
+      (p_evaluation_id, 'Motricidad',       'Desarrollo motor fino y grueso.',         '#F97316', 'activity',       3, 20, auth.uid()),
+      (p_evaluation_id, 'Socioemocional',   'Emociones, convivencia y autonomía.',     '#F43F5E', 'heart',          4, 20, auth.uid()),
+      (p_evaluation_id, 'Ciencias',         'Exploración del entorno y la naturaleza.', '#22C55E', 'leaf',           5, 20, auth.uid());
+    v_created_areas := 5;
+  END IF;
+
+  SELECT count(*) INTO v_periods_count FROM public.eval_periods
+    WHERE evaluation_id = p_evaluation_id AND deleted_at IS NULL;
+  IF v_periods_count = 0 THEN
+    FOR v_global_period IN
+      SELECT id, name, start_date, end_date, status, sort_order
+      FROM public.periods
+      WHERE school_year_id = v_eval.school_year_id
+      ORDER BY COALESCE(sort_order, 0), start_date, id
+    LOOP
+      v_period_type := CASE
+        WHEN COALESCE(v_year.period_model,'trimestres') = 'semestres' THEN 'bimestre'
+        WHEN COALESCE(v_year.period_model,'trimestres') = 'mensual' THEN 'mes'
+        ELSE 'periodo'
+      END;
+      INSERT INTO public.eval_periods
+        (evaluation_id, name, period_type, start_date, end_date, weight, status, sort_order, created_by)
+      VALUES
+        (p_evaluation_id, v_global_period.name, v_period_type,
+         v_global_period.start_date, v_global_period.end_date,
+         0,
+         CASE WHEN v_global_period.status = 'open' THEN 'open' ELSE 'closed' END,
+         COALESCE(v_global_period.sort_order, 0), auth.uid())
+      RETURNING id INTO v_new_period_id;
+      v_created_periods := v_created_periods + 1;
+    END LOOP;
+
+    IF v_created_periods = 0 THEN
+      INSERT INTO public.eval_periods (evaluation_id, name, period_type, status, sort_order, created_by) VALUES
+        (p_evaluation_id, 'Primer Período', 'periodo', 'open',  1, auth.uid()),
+        (p_evaluation_id, 'Segundo Período','periodo', 'open',  2, auth.uid()),
+        (p_evaluation_id, 'Tercer Período', 'periodo', 'open',  3, auth.uid());
+      v_created_periods := 3;
+    END IF;
+  ELSE
+    FOR v_global_period IN
+      SELECT name, start_date, end_date, status, sort_order
+      FROM public.periods
+      WHERE school_year_id = v_eval.school_year_id
+        AND NOT EXISTS (
+          SELECT 1 FROM public.eval_periods ep
+          WHERE ep.evaluation_id = p_evaluation_id
+            AND ep.deleted_at IS NULL
+            AND ep.name = public.periods.name
+        )
+      ORDER BY COALESCE(sort_order, 0), start_date, id
+    LOOP
+      v_period_type := CASE
+        WHEN COALESCE(v_year.period_model,'trimestres') = 'semestres' THEN 'bimestre'
+        WHEN COALESCE(v_year.period_model,'trimestres') = 'mensual' THEN 'mes'
+        ELSE 'periodo'
+      END;
+      INSERT INTO public.eval_periods
+        (evaluation_id, name, period_type, start_date, end_date, weight, status, sort_order, created_by)
+      VALUES
+        (p_evaluation_id, v_global_period.name, v_period_type,
+         v_global_period.start_date, v_global_period.end_date,
+         0,
+         CASE WHEN v_global_period.status = 'open' THEN 'open' ELSE 'closed' END,
+         COALESCE(v_global_period.sort_order, 0), auth.uid())
+      RETURNING id INTO v_new_period_id;
+      v_created_periods := v_created_periods + 1;
+    END LOOP;
+  END IF;
+
+  FOR v_area IN
+    SELECT id FROM public.eval_areas
+    WHERE evaluation_id = p_evaluation_id AND deleted_at IS NULL
+    ORDER BY sort_order, id
+  LOOP
+    FOR v_period IN
+      SELECT id FROM public.eval_periods
+      WHERE evaluation_id = p_evaluation_id AND deleted_at IS NULL
+      ORDER BY sort_order, id
+    LOOP
+      SELECT count(*) INTO v_modules_count FROM public.eval_modules
+        WHERE period_id = v_period.id AND area_id = v_area.id AND deleted_at IS NULL;
+
+      FOR v_i IN (v_modules_count + 1)..v_default_modules LOOP
+        v_label := v_labels -> (v_i - 1);
+        INSERT INTO public.eval_modules
+          (period_id, area_id, name, eval_type, config, weight, sort_order, created_by)
+        VALUES
+          (v_period.id, v_area.id,
+           COALESCE(v_label ->> 'name', 'Actividad ' || v_i),
+           'numeric',
+           jsonb_build_object('min', 0, 'max', 100, 'decimals', 0, 'allowDecimal', false),
+           0, v_i, auth.uid())
+        RETURNING id INTO v_mod.id;
+        v_created_modules := v_created_modules + 1;
+
+        INSERT INTO public.eval_activities
+          (module_id, name, max_value, activity_type, activity_date, sort_order, created_by)
+        VALUES
+          (v_mod.id,
+           COALESCE(v_label ->> 'name', 'Actividad ' || v_i),
+           COALESCE((v_label ->> 'max_value')::numeric, 100),
+           'actividad', NULL, 1, auth.uid());
+        v_created_activities := v_created_activities + 1;
+      END LOOP;
+
+      FOR v_mod IN
+        SELECT id FROM public.eval_modules
+        WHERE period_id = v_period.id AND area_id = v_area.id AND deleted_at IS NULL
+        ORDER BY sort_order, id
+      LOOP
+        SELECT count(*) INTO v_acts_count FROM public.eval_activities
+          WHERE module_id = v_mod.id AND deleted_at IS NULL;
+        IF v_acts_count = 0 THEN
+          INSERT INTO public.eval_activities
+            (module_id, name, max_value, activity_type, sort_order, created_by)
+          SELECT v_mod.id, COALESCE(name, 'Actividad'), COALESCE(max_value, 100), 'actividad', 1, auth.uid()
+          FROM jsonb_to_record(v_labels -> 0) AS t(name text, max_value numeric);
+          v_created_activities := v_created_activities + 1;
+        END IF;
+      END LOOP;
+    END LOOP;
+  END LOOP;
+
+  IF v_eval.activity_labels IS NULL THEN
+    UPDATE public.eval_evaluations
+    SET activity_labels = '[
+      {"name":"Actividad 1","max_value":100},
+      {"name":"Actividad 2","max_value":100},
+      {"name":"Actividad 3","max_value":100},
+      {"name":"Actividad 4","max_value":100},
+      {"name":"Actividad 5","max_value":100}
+    ]'::jsonb WHERE id = p_evaluation_id;
+  END IF;
+  IF v_eval.scale_config IS NULL THEN
+    UPDATE public.eval_evaluations
+    SET scale_config = '{
+      "min":0,"max":100,
+      "levels":[
+        {"label":"AD","min":90,"max":100,"color":"#10B981"},
+        {"label":"A","min":80,"max":89,"color":"#22C55E"},
+        {"label":"B","min":70,"max":79,"color":"#F59E0B"},
+        {"label":"C","min":60,"max":69,"color":"#F97316"},
+        {"label":"D","min":0,"max":59,"color":"#EF4444"}
+      ]
+    }'::jsonb WHERE id = p_evaluation_id;
+  END IF;
+
+  RETURN jsonb_build_object(
+    'success', true,
+    'evaluation_id', p_evaluation_id,
+    'periods_created', v_created_periods,
+    'areas_created', v_created_areas,
+    'modules_created', v_created_modules,
+    'activities_created', v_created_activities
+  );
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.boletin_ensure_structure(p_evaluation_id bigint)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_role text := COALESCE(get_my_role(), '');
+  v_eval  record;
+  v_year  record;
+  v_year_id bigint;
+  v_labels jsonb;
+  v_scale  jsonb;
+  v_areas_count int;
+  v_periods_count int;
+  v_default_areas int;
+  v_default_modules int;
+  v_area record;
+  v_period record;
+  v_global_period record;
+  v_modules_count int;
+  v_mod record;
+  v_acts_count int;
+  v_i int;
+  v_label jsonb;
+  v_created_periods int := 0;
+  v_created_areas int := 0;
+  v_created_modules int := 0;
+  v_created_activities int := 0;
+  v_period_type text;
+  v_new_period_id bigint;
+  v_fallback_periods boolean := false;
+BEGIN
+  IF v_role NOT IN ('directora','admin','asistente','encargada','maestra') THEN
+    RETURN jsonb_build_object('error','No autorizado');
+  END IF;
+
+  SELECT * INTO v_eval FROM public.eval_evaluations WHERE id = p_evaluation_id;
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('error','Evaluación/Boletín no encontrado');
+  END IF;
+
+  v_year_id := v_eval.school_year_id;
+  SELECT * INTO v_year FROM public.school_years WHERE id = v_year_id AND deleted_at IS NULL;
+  IF NOT FOUND THEN
+    SELECT id INTO v_year_id FROM public.school_years
+    WHERE is_current = true AND deleted_at IS NULL LIMIT 1;
+    SELECT * INTO v_year FROM public.school_years WHERE id = v_year_id;
+  END IF;
+  IF NOT FOUND THEN
+    SELECT school_year_id INTO v_year_id FROM public.periods
+    WHERE is_active = true AND school_year_id IS NOT NULL
+    ORDER BY created_at DESC, id DESC LIMIT 1;
+    SELECT * INTO v_year FROM public.school_years WHERE id = v_year_id;
+  END IF;
+  IF NOT FOUND THEN
+    SELECT school_year_id INTO v_year_id FROM public.periods
+    WHERE status = 'open' AND school_year_id IS NOT NULL
+    ORDER BY created_at DESC, id DESC LIMIT 1;
+    SELECT * INTO v_year FROM public.school_years WHERE id = v_year_id;
+  END IF;
+
+  IF v_eval.school_year_id IS DISTINCT FROM v_year_id THEN
+    UPDATE public.eval_evaluations
+    SET school_year_id = v_year_id, updated_at = now()
+    WHERE id = p_evaluation_id;
+  END IF;
+
+  v_labels := COALESCE(v_eval.activity_labels, '[]'::jsonb);
+  IF jsonb_array_length(v_labels) < 1 THEN
+    v_labels := '[{"name":"Actividad 1","max_value":100},{"name":"Actividad 2","max_value":100},{"name":"Actividad 3","max_value":100},{"name":"Actividad 4","max_value":100},{"name":"Actividad 5","max_value":100}]'::jsonb;
+  END IF;
+  v_default_areas   := COALESCE(v_eval.default_areas, 5);
+  v_default_modules := COALESCE(v_eval.default_modules, 5);
+
+  SELECT count(*) INTO v_areas_count FROM public.eval_areas
+    WHERE evaluation_id = p_evaluation_id AND deleted_at IS NULL;
+  IF v_areas_count = 0 THEN
+    INSERT INTO public.eval_areas (evaluation_id, name, description, color, icon, sort_order, weight, created_by) VALUES
+      (p_evaluation_id, 'Lenguaje',         'Comunicación, lenguaje y lectoescritura.', '#0EA5E9', 'message-circle', 1, 20, auth.uid()),
+      (p_evaluation_id, 'Matemática',       'Pensamiento lógico, conteo y nociones.',  '#6366F1', 'calculator',     2, 20, auth.uid()),
+      (p_evaluation_id, 'Motricidad',       'Desarrollo motor fino y grueso.',         '#F97316', 'activity',       3, 20, auth.uid()),
+      (p_evaluation_id, 'Socioemocional',   'Emociones, convivencia y autonomía.',     '#F43F5E', 'heart',          4, 20, auth.uid()),
+      (p_evaluation_id, 'Ciencias',         'Exploración del entorno y la naturaleza.', '#22C55E', 'leaf',           5, 20, auth.uid());
+    v_created_areas := 5;
+  END IF;
+
+  SELECT count(*) INTO v_periods_count FROM public.eval_periods
+    WHERE evaluation_id = p_evaluation_id AND deleted_at IS NULL;
+
+  IF v_periods_count = 0 THEN
+    SELECT count(*) INTO v_periods_count FROM public.periods
+    WHERE school_year_id = v_year_id AND deleted_at IS NULL;
+    IF v_periods_count = 0 THEN v_fallback_periods := true; END IF;
+
+    FOR v_global_period IN
+      SELECT id, name, start_date, end_date, status, sort_order
+      FROM public.periods
+      WHERE (v_fallback_periods OR school_year_id = v_year_id)
+        AND deleted_at IS NULL
+      ORDER BY COALESCE(sort_order, 0), start_date, id
+    LOOP
+      v_period_type := CASE
+        WHEN COALESCE(v_year.period_model,'trimestres') = 'semestres' THEN 'bimestre'
+        WHEN COALESCE(v_year.period_model,'trimestres') = 'mensual' THEN 'mes'
+        ELSE 'periodo'
+      END;
+      INSERT INTO public.eval_periods
+        (evaluation_id, name, period_type, start_date, end_date, weight, status, sort_order, created_by)
+      VALUES
+        (p_evaluation_id, v_global_period.name, v_period_type,
+         v_global_period.start_date, v_global_period.end_date,
+         0,
+         CASE WHEN v_global_period.status = 'open' THEN 'open' ELSE 'closed' END,
+         COALESCE(v_global_period.sort_order, 0), auth.uid())
+      RETURNING id INTO v_new_period_id;
+      v_created_periods := v_created_periods + 1;
+    END LOOP;
+
+    IF v_created_periods = 0 THEN
+      INSERT INTO public.eval_periods (evaluation_id, name, period_type, status, sort_order, created_by) VALUES
+        (p_evaluation_id, 'Primer Período', 'periodo', 'open',  1, auth.uid()),
+        (p_evaluation_id, 'Segundo Período','periodo', 'open',  2, auth.uid()),
+        (p_evaluation_id, 'Tercer Período', 'periodo', 'open',  3, auth.uid());
+      v_created_periods := 3;
+    END IF;
+  ELSE
+    FOR v_global_period IN
+      SELECT name, start_date, end_date, status, sort_order
+      FROM public.periods
+      WHERE (v_year_id IS NULL OR school_year_id = v_year_id)
+        AND deleted_at IS NULL
+        AND NOT EXISTS (
+          SELECT 1 FROM public.eval_periods ep
+          WHERE ep.evaluation_id = p_evaluation_id
+            AND ep.deleted_at IS NULL
+            AND ep.name = public.periods.name
+        )
+      ORDER BY COALESCE(sort_order, 0), start_date, id
+    LOOP
+      v_period_type := CASE
+        WHEN COALESCE(v_year.period_model,'trimestres') = 'semestres' THEN 'bimestre'
+        WHEN COALESCE(v_year.period_model,'trimestres') = 'mensual' THEN 'mes'
+        ELSE 'periodo'
+      END;
+      INSERT INTO public.eval_periods
+        (evaluation_id, name, period_type, start_date, end_date, weight, status, sort_order, created_by)
+      VALUES
+        (p_evaluation_id, v_global_period.name, v_period_type,
+         v_global_period.start_date, v_global_period.end_date,
+         0,
+         CASE WHEN v_global_period.status = 'open' THEN 'open' ELSE 'closed' END,
+         COALESCE(v_global_period.sort_order, 0), auth.uid())
+      RETURNING id INTO v_new_period_id;
+      v_created_periods := v_created_periods + 1;
+    END LOOP;
+  END IF;
+
+  UPDATE public.eval_periods ep
+  SET status = CASE WHEN gp.status = 'open' THEN 'open' ELSE 'closed' END,
+      start_date = gp.start_date,
+      end_date = gp.end_date,
+      sort_order = COALESCE(gp.sort_order, ep.sort_order),
+      updated_at = now()
+  FROM public.periods gp
+  WHERE ep.evaluation_id = p_evaluation_id
+    AND ep.deleted_at IS NULL
+    AND ep.name = gp.name
+    AND (ep.status IS DISTINCT FROM (CASE WHEN gp.status = 'open' THEN 'open' ELSE 'closed' END)
+         OR ep.start_date IS DISTINCT FROM gp.start_date
+         OR ep.end_date IS DISTINCT FROM gp.end_date);
+
+  FOR v_area IN
+    SELECT id FROM public.eval_areas
+    WHERE evaluation_id = p_evaluation_id AND deleted_at IS NULL
+    ORDER BY sort_order, id
+  LOOP
+    FOR v_period IN
+      SELECT id FROM public.eval_periods
+      WHERE evaluation_id = p_evaluation_id AND deleted_at IS NULL
+      ORDER BY sort_order, id
+    LOOP
+      SELECT count(*) INTO v_modules_count FROM public.eval_modules
+        WHERE period_id = v_period.id AND area_id = v_area.id AND deleted_at IS NULL;
+
+      FOR v_i IN (v_modules_count + 1)..v_default_modules LOOP
+        v_label := v_labels -> (v_i - 1);
+        INSERT INTO public.eval_modules
+          (period_id, area_id, name, eval_type, config, weight, sort_order, created_by)
+        VALUES
+          (v_period.id, v_area.id,
+           COALESCE(v_label ->> 'name', 'Actividad ' || v_i),
+           'numeric',
+           jsonb_build_object('min', 0, 'max', 100, 'decimals', 0, 'allowDecimal', false),
+           0, v_i, auth.uid())
+        RETURNING id INTO v_mod.id;
+        v_created_modules := v_created_modules + 1;
+
+        INSERT INTO public.eval_activities
+          (module_id, name, max_value, activity_type, activity_date, sort_order, created_by)
+        VALUES
+          (v_mod.id,
+           COALESCE(v_label ->> 'name', 'Actividad ' || v_i),
+           COALESCE((v_label ->> 'max_value')::numeric, 100),
+           'actividad', NULL, 1, auth.uid());
+        v_created_activities := v_created_activities + 1;
+      END LOOP;
+
+      FOR v_mod IN
+        SELECT id FROM public.eval_modules
+        WHERE period_id = v_period.id AND area_id = v_area.id AND deleted_at IS NULL
+        ORDER BY sort_order, id
+      LOOP
+        SELECT count(*) INTO v_acts_count FROM public.eval_activities
+          WHERE module_id = v_mod.id AND deleted_at IS NULL;
+        IF v_acts_count = 0 THEN
+          INSERT INTO public.eval_activities
+            (module_id, name, max_value, activity_type, sort_order, created_by)
+          SELECT v_mod.id, COALESCE(name, 'Actividad'), COALESCE(max_value, 100), 'actividad', 1, auth.uid()
+          FROM jsonb_to_record(v_labels -> 0) AS t(name text, max_value numeric);
+          v_created_activities := v_created_activities + 1;
+        END IF;
+      END LOOP;
+    END LOOP;
+  END LOOP;
+
+  IF v_eval.activity_labels IS NULL THEN
+    UPDATE public.eval_evaluations
+    SET activity_labels = '[
+      {"name":"Actividad 1","max_value":100},
+      {"name":"Actividad 2","max_value":100},
+      {"name":"Actividad 3","max_value":100},
+      {"name":"Actividad 4","max_value":100},
+      {"name":"Actividad 5","max_value":100}
+    ]'::jsonb WHERE id = p_evaluation_id;
+  END IF;
+  IF v_eval.scale_config IS NULL THEN
+    UPDATE public.eval_evaluations
+    SET scale_config = '{
+      "min":0,"max":100,
+      "levels":[
+        {"label":"AD","min":90,"max":100,"color":"#10B981"},
+        {"label":"A","min":80,"max":89,"color":"#22C55E"},
+        {"label":"B","min":70,"max":79,"color":"#F59E0B"},
+        {"label":"C","min":60,"max":69,"color":"#F97316"},
+        {"label":"D","min":0,"max":59,"color":"#EF4444"}
+      ]
+    }'::jsonb WHERE id = p_evaluation_id;
+  END IF;
+
+  RETURN jsonb_build_object(
+    'success', true,
+    'evaluation_id', p_evaluation_id,
+    'periods_created', v_created_periods,
+    'areas_created', v_created_areas,
+    'modules_created', v_created_modules,
+    'activities_created', v_created_activities
+  );
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.get_active_school_year_id()
+RETURNS bigint LANGUAGE sql SECURITY DEFINER STABLE SET search_path = public AS $$
+  SELECT id FROM public.school_years
+  WHERE is_current = true AND deleted_at IS NULL
+  LIMIT 1;
+$$;
+
+DROP FUNCTION IF EXISTS public.get_active_period();
+
+CREATE OR REPLACE FUNCTION public.update_conversation_updated_at()
+RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  UPDATE public.conversations SET updated_at = now() WHERE id = NEW.conversation_id;
+  RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.set_updated_at()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN NEW.updated_at = now(); RETURN NEW; END; $$;
+
+CREATE OR REPLACE FUNCTION public.insert_plan_a(p_level text, p_schedule text, p_amount numeric)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  v_plan_id bigint;
+BEGIN
+  SELECT id INTO v_plan_id FROM public.payment_plans
+    WHERE level = p_level AND schedule = p_schedule AND name LIKE 'Plan A%' AND school_year_id IN (SELECT id FROM public.school_years WHERE name = '2026-2027');
+
+  INSERT INTO public.plan_installments(payment_plan_id, type, month_number, month_name, amount, due_day, due_month_offset, is_registration)
+  VALUES (v_plan_id, 'inscripcion', 1, 'Agosto', p_amount, 5, 0, true)
+  ON CONFLICT DO NOTHING;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.insert_plan_b(p_level text, p_schedule text, p_amount1 numeric, p_amount2 numeric)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  v_plan_id bigint;
+BEGIN
+  SELECT id INTO v_plan_id FROM public.payment_plans
+    WHERE level = p_level AND schedule = p_schedule AND name LIKE 'Plan B%' AND school_year_id IN (SELECT id FROM public.school_years WHERE name = '2026-2027');
+
+  INSERT INTO public.plan_installments(payment_plan_id, type, month_number, month_name, amount, due_day, due_month_offset, is_registration)
+  VALUES
+    (v_plan_id, 'inscripcion', 1, 'Agosto', p_amount1, 5, 0, true),
+    (v_plan_id, 'colegiatura', 2, 'Enero', p_amount2, 5, 5, false)
+  ON CONFLICT DO NOTHING;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.insert_plan_c(p_level text, p_schedule text, p_inscripcion numeric, p_colegiatura numeric)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  v_plan_id bigint;
+BEGIN
+  SELECT id INTO v_plan_id FROM public.payment_plans
+    WHERE level = p_level AND schedule = p_schedule AND name LIKE 'Plan C%' AND school_year_id IN (SELECT id FROM public.school_years WHERE name = '2026-2027');
+
+  INSERT INTO public.plan_installments(payment_plan_id, type, month_number, month_name, amount, due_day, due_month_offset, is_registration)
+  VALUES (v_plan_id, 'inscripcion', 1, 'Agosto', p_inscripcion, 5, 0, true)
+  ON CONFLICT DO NOTHING;
+
+  INSERT INTO public.plan_installments(payment_plan_id, type, month_number, month_name, amount, due_day, due_month_offset, is_registration)
+  SELECT v_plan_id, 'colegiatura', gs.mn, gs.mname, p_colegiatura, 5, gs.mo, false
+  FROM (
+    SELECT 2 as mn, 'Septiembre' as mname, 1 as mo
+    UNION ALL SELECT 3, 'Octubre', 2
+    UNION ALL SELECT 4, 'Noviembre', 3
+    UNION ALL SELECT 5, 'Diciembre', 4
+    UNION ALL SELECT 6, 'Enero', 5
+    UNION ALL SELECT 7, 'Febrero', 6
+    UNION ALL SELECT 8, 'Marzo', 7
+    UNION ALL SELECT 9, 'Abril', 8
+    UNION ALL SELECT 10, 'Mayo', 9
+    UNION ALL SELECT 11, 'Junio', 10
+  ) gs
+  ON CONFLICT DO NOTHING;
+END;
+$$;
+
+DROP FUNCTION IF EXISTS public.insert_plan_a;
+
+DROP FUNCTION IF EXISTS public.insert_plan_b;
+
+DROP FUNCTION IF EXISTS public.insert_plan_c;

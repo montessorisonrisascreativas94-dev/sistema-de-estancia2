@@ -434,7 +434,7 @@ export const PaymentsModule = {
         if (inE) { if (inE.code === '23505') throw new Error('Ya existe un registro para este mes.'); throw inE; }
         pay = ins;
       }
-      if (sta === 'paid') await supabase.from('students').update({ is_active: true }).eq('id', sid).catch(() => {});
+      if (sta === 'paid') { try { await supabase.from('students').update({ is_active: true }).eq('id', sid); } catch (_) {} }
       await auditLog('payment.manual_create', { student_id: sid, amount: amt, month: mp }).catch(() => {});
       Helpers.toast('Pago registrado correctamente', 'success');
       UIHelpers.closeModal();

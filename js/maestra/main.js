@@ -398,21 +398,23 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   try {
-    const { data: classroom, error } = await supabase
+    const { data: classrooms, error } = await supabase
       .from('classrooms')
       .select('id, name, level, capacity, teacher_id, is_live')
       .eq('teacher_id', auth.user.id)
-      .order('name')
-      .limit(1)
-      .maybeSingle();
+      .order('name');
 
     if (error) throw error;
-    if (!classroom) {
+    if (!classrooms?.length) {
       safeToast('No tienes un aula asignada.', 'warning');
       return;
     }
-    
-    AppState.set('classroom', classroom);
+
+    AppState.set('classrooms', classrooms);
+    AppState.set('classroom', classrooms[0]);
+
+    // Switcher de aulas (para maestras con varias aulas)
+    _initClassroomSwitcher(classrooms);
 
     // Inicializar Módulos
     await Promise.all([
@@ -422,11 +424,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       initChat()
     ]);
     
-    initRealtimeUpdates(classroom.id);
+    initRealtimeUpdates(classrooms[0].id);
 
     // Cargar Badges en background
     loadMaestraUnreadBadge(auth.user.id);
-    loadPendingTasksBadge(classroom.id);
+    loadPendingTasksBadge(classrooms[0].id);
 
     // 🔴 Sistema de badges por sección
     BadgeSystem.init(auth.user.id);
@@ -463,7 +465,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     WallModule.init('muroPostsContainer', { 
       accentColor: 'blue',
-      classroomId: classroom.id
+      classroomId: classrooms[0].id
     }, AppState);
 
   } catch (e) {
@@ -472,6 +474,86 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   if (window.lucide) window.lucide.createIcons();
 });
+
+/**
+ * 🏫 Barra selectora de aulas — para maestras con varias aulas.
+ * Inyecta pills sticky bajo el header de la app.
+ */
+function _initClassroomSwitcher(classrooms) {
+  if (!classrooms || classrooms.length < 2) return;
+  const shell = document.getElementById('layoutShell');
+  if (!shell || document.getElementById('teacherClassroomBar')) return;
+
+  if (!document.getElementById('teacherClassroomBarStyles')) {
+    const st = document.createElement('style');
+    st.id = 'teacherClassroomBarStyles';
+    st.textContent = `
+      #teacherClassroomBar{display:flex;align-items:center;gap:6px;overflow-x:auto;scrollbar-width:thin;position:sticky;top:0;z-index:45;background:rgba(255,255,255,.92);backdrop-filter:blur(8px);border-bottom:1px solid #F1F5F9;padding:8px 16px;}
+      #teacherClassroomBar::-webkit-scrollbar{height:4px}
+      #teacherClassroomBar::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:4px}
+      .croom-pill{display:inline-flex;align-items:center;gap:6px;flex-shrink:0;padding:6px 14px;border-radius:999px;font-size:12px;font-weight:800;color:#64748B;background:#F1F5F9;border:1px solid #E2E8F0;transition:all .18s ease;}
+      .croom-pill:hover{background:#E8F2FF;color:#FF7A00;border-color:#FF7A00;}
+      .croom-pill.croom-active{background:#FF7A00;color:#fff;border-color:#FF7A00;box-shadow:0 4px 12px rgba(255,122,0,.3);}
+    `;
+    document.head.appendChild(st);
+  }
+
+  const currentId = String(AppState.get('classroom')?.id);
+  const bar = document.createElement('div');
+  bar.id = 'teacherClassroomBar';
+  bar.innerHTML = (window.safeEscapeHTML ? safeEscapeHTML : (s => s))('') + `
+    <span class="croom-label" style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:#94A3B8;flex-shrink:0;">Mis aulas:</span>
+    ${classrooms.map(c => `
+      <button type="button" data-croom="${c.id}" class="croom-pill ${String(c.id) === currentId ? 'croom-active' : ''}">
+        <i data-lucide="door-open" style="width:13px;height:13px;"></i>
+        <span>${safeEscapeHTML(c.name)}</span>
+      </button>`).join('')}
+  `;
+  shell.insertBefore(bar, shell.firstChild);
+
+  bar.addEventListener('click', (e) => {
+    const pill = e.target.closest('.croom-pill');
+    if (!pill) return;
+    window.App.switchClassroom(pill.dataset.croom);
+  });
+
+  if (window.lucide) window.lucide.createIcons();
+}
+
+/**
+ * 🔄 Cambiar de aula activa (maestra multi-aula).
+ */
+window.App.switchClassroom = async (classroomId) => {
+  const list = AppState.get('classrooms') || [];
+  const target = list.find(c => String(c.id) === String(classroomId));
+  if (!target) return;
+  const current = AppState.get('classroom');
+  if (current && String(current.id) === String(target.id)) return;
+
+  // Limpiar Wall + canal realtime del aula anterior
+  WallModule.destroy?.();
+  if (current) RealtimeManager.unsubscribe(`maestra_room_${current.id}`);
+
+  AppState.set('classroom', target);
+  AppState.set('students', []);
+  localStorage.setItem('maestra_last_classroom', String(target.id));
+
+  // Re-suscribir realtime del nuevo aula y reconectar el muro
+  initRealtimeUpdates(target.id);
+  WallModule.init('muroPostsContainer', { accentColor: 'blue', classroomId: target.id }, AppState);
+
+  // Actualizar pills
+  document.querySelectorAll('.croom-pill').forEach(b => {
+    b.classList.toggle('croom-active', String(b.dataset.croom) === String(target.id));
+  });
+
+  // Recargar la sección activa con el nuevo aula
+  const activeSection = document.querySelector('.section.active')?.id || 't-home';
+  window.App._setActiveSection?.(activeSection, { skipSave: true, force: true });
+
+  loadPendingTasksBadge(target.id);
+  safeToast(`Cambiaste al aula ${safeEscapeHTML(target.name)}`, 'success');
+};
 
 function initRealtimeUpdates(classroomId) {
   const channelName = `maestra_room_${classroomId}`;
@@ -935,7 +1017,7 @@ function initNavigation() {
     // Lógica de refresco inteligente (TTL: 2 minutos)
     const now = Date.now();
     const isFresh = _lastLoad[cleanId] && (now - _lastLoad[cleanId] < 120000);
-    if (isFresh) return;
+    if (isFresh && !options.force) return;
     _lastLoad[cleanId] = now;
 
     // 🧠 SmartLoader — Show humanized loading for fresh sections

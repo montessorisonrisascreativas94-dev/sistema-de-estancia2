@@ -1043,10 +1043,12 @@ export const AccountingModule = {
     const msg = `Arqueo: ${tipo}\nSistema: ${fmt(totalSistema)}\nFísico: ${fmt(fisicoN)}\nDiferencia: ${fmt(Math.abs(diff))}`;
     alert(msg);
     if (diff !== 0) {
-      supabase.from('expenses').insert({
-        date: today(), concept: `${tipo} de Caja`, category: 'Caja',
-        amount: Math.abs(diff), status: diff < 0 ? 'pagado' : 'pendiente'
-      }).catch(()=>{});
+      try {
+        supabase.from('expenses').insert({
+          date: today(), concept: `${tipo} de Caja`, category: 'Caja',
+          amount: Math.abs(diff), status: diff < 0 ? 'pagado' : 'pendiente'
+        });
+      } catch (_) {}
     }
     Helpers.toast('Arqueo registrado', 'success');
   },

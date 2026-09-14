@@ -132,3 +132,37 @@ WHERE la.created_at > now() - interval '24 hours'
 GROUP BY p.id, la.email
 ORDER BY failed_attempts DESC;
 GRANT SELECT ON public.v_brute_force_attempts TO authenticated;
+
+-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+-- CONSOLIDADO DESDE migrations\ (historial) â€” aÃ±adido automÃ¡ticamente
+-- Fecha: 2026-09-12 21:41
+-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+
+CREATE OR REPLACE VIEW daily_routine AS
+WITH routine_times AS (
+  SELECT
+    'desayuno' AS event_type, '08:00' AS ideal_time, '🍞' AS emoji, 'Desayuno' AS title, 'Desayuno' AS subtitle UNION ALL
+  SELECT
+    'merienda' AS event_type, '10:00' AS ideal_time, '🍎' AS emoji, 'Merienda' AS title, 'Merienda' AS subtitle UNION ALL
+  SELECT
+    'dormir' AS event_type, '10:30' AS ideal_time, '😴' AS emoji, 'Siesta' AS title, 'Hora de dormir' AS subtitle UNION ALL
+  SELECT
+    'despertar' AS event_type, '12:00' AS ideal_time, '😊' AS emoji, 'Despertar' AS title, 'Despertó' AS subtitle UNION ALL
+  SELECT
+    'almuerzo' AS event_type, '12:30' AS ideal_time, '🥗' AS emoji, 'Almuerzo' AS title, 'Almuerzo' AS subtitle UNION ALL
+  SELECT
+    'biberon' AS event_type, '14:00' AS ideal_time, '🍼' AS emoji, 'Biberón' AS title, 'Biberón' AS subtitle UNION ALL
+  SELECT
+    'panal' AS event_type, '10:15' AS ideal_time, '🚼' AS emoji, 'Pañal' AS title, 'Cambio de pañal' AS subtitle UNION ALL
+  SELECT
+    'bano' AS event_type, '09:00' AS ideal_time, '🚽' AS emoji, 'Baño' AS title, 'Baño' AS subtitle UNION ALL
+  SELECT
+    'temperatura' AS event_type, '07:45' AS ideal_time, '🌡' AS emoji, 'Temperatura' AS title, 'Tomar temperatura' AS subtitle UNION ALL
+  SELECT
+    'medicamento' AS event_type, NULL AS ideal_time, '💊' AS emoji, 'Medicamento' AS title, 'Medicamento' AS subtitle UNION ALL
+  SELECT
+    'foto' AS event_type, NULL AS ideal_time, '📷' AS emoji, 'Foto' AS title, 'Foto' AS subtitle UNION ALL
+  SELECT
+    'nota' AS event_type, NULL AS ideal_time, '📝' AS emoji, 'Nota' AS title, 'Nota' AS subtitle
+)
+SELECT * FROM routine_times;

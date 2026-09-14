@@ -134,7 +134,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
 
-    const currentStudent = students[0];
+    const lastStudentId = localStorage.getItem('karpus_last_student_id');
+    const restored = lastStudentId ? students.find(s => String(s.id) === String(lastStudentId)) : null;
+    const currentStudent = restored || students[0];
     AppState.set('students', students);
     AppState.set('currentStudent', currentStudent);
 
@@ -152,7 +154,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Re-set state after classroom enrichment so all consumers see the updated data
     AppState.set('students', students);
-    AppState.set('currentStudent', students[0]);
+    AppState.set('currentStudent', currentStudent);
 
     // Actualizar sidebar y header ANTES de cargar datos
     updateHeaderProfile(auth.profile, currentStudent, students);
@@ -1035,32 +1037,52 @@ async function switchStudent(studentId) {
 
 function _showStudentSwitcher(students) {
   const current = AppState.get('currentStudent');
-  const html = `
-    <div class="bg-white rounded-[2.5rem] overflow-hidden shadow-2xl animate-scaleIn w-full max-w-xs">
+  const wrapId = 'studentSwitcherModal';
+  document.getElementById(wrapId)?.remove();
+
+  const wrap = document.createElement('div');
+  wrap.id = wrapId;
+  wrap.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,.55);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:20px;';
+  wrap.innerHTML = `
+    <div class="bg-white rounded-[2.5rem] overflow-hidden shadow-2xl w-full max-w-xs animate-scaleIn">
       <div class="p-6 border-b border-slate-100 bg-slate-50/50">
         <h3 class="font-black text-slate-800 text-center">Cambiar de Estudiante</h3>
+        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center mt-1">Elige el perfil de tu hijo/a</p>
       </div>
       <div class="p-4 space-y-2">
         ${students.map(s => `
-          <button onclick="App.switchStudent('${s.id}'); App.ui.closeModal()" 
-            class="w-full p-4 flex items-center gap-4 rounded-3xl transition-all ${String(s.id) === String(current?.id) ? 'bg-indigo-50 border-2 border-indigo-200' : 'bg-white border border-slate-100 hover:bg-slate-50'}">
+          <button type="button" data-sid="${s.id}"
+            class="w-full p-4 flex items-center gap-4 rounded-3xl transition-all cursor-pointer ${String(s.id) === String(current?.id) ? 'bg-indigo-50 border-2 border-indigo-200' : 'bg-white border border-slate-100 hover:bg-slate-50'}">
             <div class="w-12 h-12 rounded-2xl overflow-hidden bg-slate-100 flex items-center justify-center shrink-0">
-              ${s.avatar_url ? `<img src="${s.avatar_url}" class="w-full h-full object-cover">` : `<span class="font-black text-slate-400">${s.name.charAt(0)}</span>`}
+              ${s.avatar_url ? `<img src="${s.avatar_url}" class="w-full h-full object-cover">` : `<span class="font-black text-slate-400">${Helpers.escapeHTML(s.name).charAt(0)}</span>`}
             </div>
             <div class="text-left flex-1 min-w-0">
               <p class="font-black text-slate-800 text-sm truncate">${Helpers.escapeHTML(s.name)}</p>
               <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">${Helpers.escapeHTML(s.classrooms?.name || 'Sin aula')}</p>
             </div>
-            ${String(s.id) === String(current?.id) ? '<i data-lucide="check" class="w-4 h-4 text-indigo-600"></i>' : ''}
+            ${String(s.id) === String(current?.id) ? '<i data-lucide="check" class="w-4 h-4 text-indigo-600 shrink-0"></i>' : ''}
           </button>
         `).join('')}
       </div>
       <div class="p-4 bg-slate-50 flex justify-center">
-         <button onclick="App.ui.closeModal()" class="text-[10px] font-black text-slate-400 uppercase tracking-widest p-2">Cerrar</button>
+        <button type="button" id="studentSwitcherClose" class="text-[10px] font-black text-slate-400 uppercase tracking-widest p-2 cursor-pointer">Cerrar</button>
       </div>
     </div>
   `;
-  window.openGlobalModal(html);
+
+  wrap.addEventListener('click', (e) => {
+    if (e.target === wrap) wrap.remove();
+  });
+  wrap.querySelector('#studentSwitcherClose').addEventListener('click', () => wrap.remove());
+  wrap.querySelectorAll('button[data-sid]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const sid = btn.dataset.sid;
+      wrap.remove();
+      window.App.switchStudent(sid);
+    });
+  });
+
+  document.body.appendChild(wrap);
   if (window.lucide) lucide.createIcons();
 }
 

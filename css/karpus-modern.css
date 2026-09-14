@@ -729,6 +729,21 @@ body:not(.panel-padre-body) .app {
     pointer-events: auto;
   }
 
+  /* Toggle integrado en el header del logo: oculto en modo colapsado, visible al hover-expand */
+  body.sidebar-collapsed:not(.panel-padre-body) #toggleSidebar {
+    opacity: 0;
+    width: 0;
+    padding: 0;
+    border: none;
+    pointer-events: none;
+    margin-left: 0;
+  }
+  body.sidebar-collapsed:not(.panel-padre-body) #sidebar:hover #toggleSidebar {
+    opacity: 1;
+    width: 2.25rem;
+    pointer-events: auto;
+  }
+
   /* Toggle button icon */
   #toggleSidebar i,
   #toggleSidebarIcon {
