@@ -194,6 +194,69 @@
     .metric-card--slate     .metric-icon { background: #F1F5F9; color: #64748b;           }
     .metric-card--rose      .metric-icon { background: #FFF1F2; color: #e11d48;           }
 
+    /* -----------------------------------------------
+       PULIDO PREMIUM  Directora (diseño optimizado)
+    ----------------------------------------------- */
+    html { scroll-behavior: smooth; }
+
+    /* Secciones: línea de acento superior en gradiente */
+    .section-shell {
+      position: relative;
+      border: 1px solid rgba(191,219,254,0.8);
+    }
+    .section-shell::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 26px; right: 26px;
+      height: 3px;
+      border-radius: 0 0 8px 8px;
+      background: linear-gradient(90deg, #0B63C7 0%, #FF7A00 55%, #FFD43B 100%);
+      opacity: 0.9;
+    }
+
+    /* Encabezado de sección: acento dorado inferior + hover suave */
+    .section-header {
+      position: relative;
+      overflow: hidden;
+      transition: box-shadow 0.25s ease, transform 0.25s ease;
+    }
+    .section-header:hover { box-shadow: 0 8px 22px rgba(11,99,199,0.10); transform: translateY(-1px); }
+    .section-header::after {
+      content: '';
+      position: absolute;
+      left: 0; bottom: 0;
+      width: 100%; height: 3px;
+      background: linear-gradient(90deg, #0B63C7 0%, #FF7A00 60%, #FFD43B 100%);
+      opacity: 0.85;
+    }
+
+    /* Tarjetas métricas: acento superior + borde dorado en hover */
+    .metric-card {
+      border-top: 3px solid rgba(11,99,199,0.18);
+    }
+    .metric-card:hover {
+      border-color: rgba(255,212,59,0.65);
+      border-top-color: var(--primary);
+    }
+    .metric-value {
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -0.01em;
+    }
+
+    /* Acción rápida: overlay dorado sutil al hover */
+    .quick-action-card::after {
+      content: '';
+      position: absolute;
+      top: 0; right: 0;
+      width: 46px; height: 46px;
+      border-radius: 0 0 0 18px;
+      background: radial-gradient(circle at top right, rgba(255,212,59,0.22), transparent 70%);
+      opacity: 0;
+      transition: opacity 0.25s ease;
+      pointer-events: none;
+    }
+    .quick-action-card:hover::after { opacity: 1; }
+
     .metric-icon {
       width: 2.6rem;
       height: 2.6rem;
@@ -443,6 +506,56 @@
     }
     .nav-btn .badge, .kk-nav-item .kk-badge {
       display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 5px;border-radius:50px;background:#FF7A00;color:white;font-size:9px;font-weight:900;line-height:1;box-shadow:0 2px 6px rgba(255,122,0,0.45);
+    }
+
+    /* -----------------------------------------------
+       MEJORAS DIRECTORA: bordes blancos sidebar (desktop)
+    ----------------------------------------------- */
+    @media (min-width: 768px) {
+      .nav-btn, .kk-nav-item {
+        border: 1px solid rgba(255,255,255,0.32);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.16), 0 1px 2px rgba(0,0,0,0.04);
+      }
+      .kk-nav-sub-item {
+        border: 1px solid rgba(255,255,255,0.22);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.12);
+      }
+      .kk-nav-item:hover, .nav-btn:hover {
+        border-color: rgba(255,255,255,0.55);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), 0 2px 8px rgba(0,0,0,0.12);
+      }
+    }
+
+    /* -----------------------------------------------
+       INDICADORES DE EVENTO (badges de sección)
+    ----------------------------------------------- */
+    /* Badge premium: gradiente + anillo blanco + latido dorado */
+    .kk-nav-item .kk-badge, .kk-nav-sub-item .kk-badge {
+      background: linear-gradient(135deg, #FF7A00 0%, #EA580C 100%);
+      box-shadow: 0 0 0 2px rgba(255,255,255,0.38), 0 4px 10px rgba(255,122,0,0.5);
+      animation: directorBadgePulse 1.7s ease-in-out infinite;
+    }
+    .kk-nav-sub-item .kk-badge { box-shadow: 0 0 0 2px rgba(255,255,255,0.30), 0 3px 8px rgba(255,122,0,0.5); }
+    @keyframes directorBadgePulse {
+      0%, 100% { transform: scale(1); }
+      50%      { transform: scale(1.14); }
+    }
+    /* Aro dorado al recibir evento nuevo (BadgeSystem _applyGlow) */
+    .kk-nav-item.animate-glow, .kk-nav-sub-item.animate-glow {
+      animation: directorGoldRing 0.9s ease-in-out 2;
+      border-color: rgba(255,212,59,0.7) !important;
+    }
+    @keyframes directorGoldRing {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(255,212,59,0); background: inherit; }
+      50%      { box-shadow: 0 0 0 5px rgba(255,212,59,0.45); background: rgba(255,212,59,0.14); }
+    }
+    /* Tarjetas del dashboard que recibmn glow */
+    .card-glow-orange, .card-glow-blue, .card-glow-green, .card-glow-red {
+      animation: directorCardGlow 1.4s ease-in-out !important;
+    }
+    @keyframes directorCardGlow {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(11,99,199,0); }
+      50%      { box-shadow: 0 0 0 6px rgba(255,212,59,0.28); }
     }
 
     /* -----------------------------------------------
@@ -1757,7 +1870,7 @@
           </div>
         </div>
       </section>
-\r\n      <!-- COMUNICACION tipo Teams -->
+     <!-- COMUNICACION tipo Teams -->
       <section id="comunicacion" class="section">
         <div class="flex items-center justify-between mb-6">
           <div>
@@ -2008,6 +2121,7 @@
                 </div>
               </div>
             </div>
+-->
 
             <div class="bg-white rounded shadow p-6">
               <h3 class="text-lg font-semibold mb-4 border-b pb-2 flex items-center gap-2"><i data-lucide="image" class="w-5 h-5"></i> Logo de la Institucin</h3>
@@ -2074,18 +2188,6 @@
 
           <!-- Avatar y Acciones -->
           <div class="space-y-6">
-            <div class="bg-white rounded shadow p-6 text-center">
-              <h3 class="text-sm font-semibold mb-4">Foto de Perfil</h3>
-              <div class="relative w-32 h-32 mx-auto mb-4 group">
-                <img id="configProfileAvatar" src="img/monte.jpg" alt="Avatar" class="w-full h-full object-cover rounded-full border-4 border-slate-100 shadow-sm group-hover:opacity-90 transition-opacity">
-                <button onclick="document.getElementById('configAvatarInput').click()" class="absolute bottom-0 right-0 bg-[#0B63C7] text-white p-2 rounded-full shadow hover:bg-[#0850A0] transition-colors" title="Cambiar foto" aria-label="Cambiar foto de perfil">
-                  <i data-lucide="camera" class="w-4 h-4"></i>
-                </button>
-              </div>
-              <input type="file" id="configAvatarInput" accept="image/*" class="hidden">
-              <p class="text-xs text-slate-500 mb-4">JPG, PNG o WEBP. Mx 2MB.</p>
-            </div>
-
             <div class="bg-white rounded shadow p-6">
               <h3 class="text-sm font-semibold mb-4">Acciones</h3>
               <button id="btnSaveMainConfig" class="w-full py-2 bg-[#0B63C7] text-white rounded hover:bg-[#0850A0] mb-3 flex items-center justify-center gap-2 transition-colors">
@@ -2124,7 +2226,7 @@
       </section>
 
       <!-- Contabilidad deshabilitada -->
-\r\n\r\n      <!-- SECTION: INSCRIPCIONES -->
+      <!-- SECTION: INSCRIPCIONES -->
       <section id="inscripciones" class="section">
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
           <div>

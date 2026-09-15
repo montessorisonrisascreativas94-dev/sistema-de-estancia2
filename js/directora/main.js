@@ -16,6 +16,7 @@ import { NewPaymentsModule } from './payments-new.module.js';
 import { InvoicingModule } from './invoicing.module.js';
 import { AccountingModule } from './accounting.module.js';
 import { BadgeSystem } from '../shared/badges.js';
+import { NewsCenter } from '../shared/news-center.js';
 import { SCHOOL_SETTINGS_ID } from '../shared/constants.js';
 import { openGlobalModal, closeGlobalModal } from '../shared/modal.js';
 
@@ -99,8 +100,11 @@ export function goToSection(sectionId) {
   Helpers.vibrate?.('light');
 
   // ✅ LIMPIEZA DE REALTIME: Eliminar canales al cambiar de sección
-  // Excepto notificaciones globales si existieran
-  RealtimeManager.unsubscribeAll(['notifications']);
+  // Conserva los canales globales: notificaciones y Centro de Novedades (campana)
+  const _keepChannels = ['notifications'];
+  const _uid = AppState.get('user')?.id;
+  if (_uid) _keepChannels.push('news-center_' + _uid);
+  RealtimeManager.unsubscribeAll(_keepChannels);
 
   // Desuscribir muro al salir (ahorro de recursos Realtime)
   const prevSection = AppState.get('currentSection');
@@ -484,6 +488,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     loadNewPostsBadge();
 
         BadgeSystem.init(auth.user.id);
+
+    // Centro de Novedades (campana dorada con todos los eventos del panel)
+    NewsCenter.init(auth.user.id);
 
     // Cargar badge de pre-inscripciones pendientes
     const loadPreBadge = async () => {

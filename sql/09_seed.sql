@@ -610,8 +610,8 @@ INSERT INTO payment_concepts (name, amount) VALUES
   ('Certificados', 500),
   ('Otros', 0);
 
-INSERT INTO public.payment_concepts (name, category, amount, description, active)
-SELECT name, category, amount, description, active FROM (VALUES
+INSERT INTO public.payment_concepts (name, category, amount, description, is_active)
+SELECT name, category, amount, description, is_active FROM (VALUES
   ('Colegiatura Mensual',   'colegiatura',   3000.00, 'Mensualidad estándar del período escolar',     true),
   ('Inscripción',           'inscripcion',   5000.00, 'Pago único de inscripción al inicio del ciclo',true),
   ('Reinscripción',         'reinscripcion', 3500.00, 'Renovación de matrícula para el próximo ciclo',true),
@@ -625,11 +625,11 @@ SELECT name, category, amount, description, active FROM (VALUES
   ('Certificados',          'certificados',   500.00, 'Emisión de certificados y constancias',         true),
   ('Transporte',            'transporte',    1500.00, 'Servicio de ruta escolar',                      true),
   ('Otro',                  'otros',            0.00, 'Concepto personalizado (monto variable)',        true)
-) AS v(name, category, amount, description, active)
+) AS v(name, category, amount, description, is_active)
 WHERE NOT EXISTS (SELECT 1 FROM public.payment_concepts LIMIT 1);
 
-INSERT INTO public.payment_concepts (name, category, amount, description, active)
-SELECT name, category, amount, description, active FROM (VALUES
+INSERT INTO public.payment_concepts (name, category, amount, description, is_active)
+SELECT name, category, amount, description, is_active FROM (VALUES
   ('Colegiatura Mensual',   'colegiatura',   3000.00, 'Mensualidad estándar',              true),
   ('Inscripción',           'inscripcion',   5000.00, 'Pago único al inicio del ciclo',    true),
   ('Reinscripción',         'reinscripcion', 3500.00, 'Renovación para el próximo ciclo',  true),
@@ -641,7 +641,7 @@ SELECT name, category, amount, description, active FROM (VALUES
   ('Comedor',               'comedor',       2000.00, 'Servicio de alimentación mensual',  true),
   ('Transporte',            'transporte',    1500.00, 'Servicio de ruta escolar',          true),
   ('Otro',                  'otros',            0.00, 'Monto variable',                    true)
-) AS v(name, category, amount, description, active)
+) AS v(name, category, amount, description, is_active)
 WHERE NOT EXISTS (SELECT 1 FROM public.payment_concepts LIMIT 1);
 
 INSERT INTO public.school_settings (id, school_name, due_day, generation_day)
@@ -661,70 +661,70 @@ ON CONFLICT(name) DO NOTHING;
 
 INSERT INTO public.payment_plans(school_year_id, level, schedule, name, registration_fee, description)
 SELECT id, 'Inicial', '8:00-12:00', 'Plan B (Semestral)', 0, 'Dos pagos semestrales'
-FROM sy
+FROM (SELECT id FROM public.school_years WHERE name = '2026-2027' LIMIT 1) sy
 ON CONFLICT DO NOTHING;
 
 INSERT INTO public.payment_plans(school_year_id, level, schedule, name, registration_fee, description)
 SELECT id, 'Inicial', '8:00-12:00', 'Plan C (Mensual)', 24622.50, '11 pagos mensuales'
-FROM sy
+FROM (SELECT id FROM public.school_years WHERE name = '2026-2027' LIMIT 1) sy
 ON CONFLICT DO NOTHING;
 
 INSERT INTO public.payment_plans(school_year_id, level, schedule, name, registration_fee, description)
 SELECT id, 'Inicial', '8:00-15:00', 'Plan A (Anual)', 139356.00, 'Pago anual completo'
-FROM sy
+FROM (SELECT id FROM public.school_years WHERE name = '2026-2027' LIMIT 1) sy
 ON CONFLICT DO NOTHING;
 
 INSERT INTO public.payment_plans(school_year_id, level, schedule, name, registration_fee, description)
 SELECT id, 'Inicial', '8:00-15:00', 'Plan B (Semestral)', 0, 'Dos pagos semestrales'
-FROM sy
+FROM (SELECT id FROM public.school_years WHERE name = '2026-2027' LIMIT 1) sy
 ON CONFLICT DO NOTHING;
 
 INSERT INTO public.payment_plans(school_year_id, level, schedule, name, registration_fee, description)
 SELECT id, 'Inicial', '8:00-15:00', 'Plan C (Mensual)', 29032.50, '11 pagos mensuales'
-FROM sy
+FROM (SELECT id FROM public.school_years WHERE name = '2026-2027' LIMIT 1) sy
 ON CONFLICT DO NOTHING;
 
 INSERT INTO public.payment_plans(school_year_id, level, schedule, name, registration_fee, description)
 SELECT id, 'Inicial', '8:00-17:00', 'Plan A (Anual)', 169585.50, 'Pago anual completo'
-FROM sy
+FROM (SELECT id FROM public.school_years WHERE name = '2026-2027' LIMIT 1) sy
 ON CONFLICT DO NOTHING;
 
 INSERT INTO public.payment_plans(school_year_id, level, schedule, name, registration_fee, description)
 SELECT id, 'Inicial', '8:00-17:00', 'Plan B (Semestral)', 0, 'Dos pagos semestrales'
-FROM sy
+FROM (SELECT id FROM public.school_years WHERE name = '2026-2027' LIMIT 1) sy
 ON CONFLICT DO NOTHING;
 
 INSERT INTO public.payment_plans(school_year_id, level, schedule, name, registration_fee, description)
 SELECT id, 'Inicial', '8:00-17:00', 'Plan C (Mensual)', 26497.80, '11 pagos mensuales'
-FROM sy
+FROM (SELECT id FROM public.school_years WHERE name = '2026-2027' LIMIT 1) sy
 ON CONFLICT DO NOTHING;
 
 INSERT INTO public.payment_plans(school_year_id, level, schedule, name, registration_fee, description)
 SELECT id, 'Primaria', '8:00-13:30', 'Plan A (Anual)', 132294.75, 'Pago anual completo'
-FROM sy
+FROM (SELECT id FROM public.school_years WHERE name = '2026-2027' LIMIT 1) sy
 ON CONFLICT DO NOTHING;
 
 INSERT INTO public.payment_plans(school_year_id, level, schedule, name, registration_fee, description)
 SELECT id, 'Primaria', '8:00-13:30', 'Plan B (Semestral)', 0, 'Dos pagos semestrales'
-FROM sy
+FROM (SELECT id FROM public.school_years WHERE name = '2026-2027' LIMIT 1) sy
 ON CONFLICT DO NOTHING;
 
 INSERT INTO public.payment_plans(school_year_id, level, schedule, name, registration_fee, description)
 SELECT id, 'Primaria', '8:00-13:30', 'Plan C (Mensual)', 27561.45, '11 pagos mensuales'
-FROM sy
+FROM (SELECT id FROM public.school_years WHERE name = '2026-2027' LIMIT 1) sy
 ON CONFLICT DO NOTHING;
 
 INSERT INTO public.payment_plans(school_year_id, level, schedule, name, registration_fee, description)
 SELECT id, 'Primaria', '8:00-15:00', 'Plan A (Anual)', 139356.00, 'Pago anual completo'
-FROM sy
+FROM (SELECT id FROM public.school_years WHERE name = '2026-2027' LIMIT 1) sy
 ON CONFLICT DO NOTHING;
 
 INSERT INTO public.payment_plans(school_year_id, level, schedule, name, registration_fee, description)
 SELECT id, 'Primaria', '8:00-15:00', 'Plan B (Semestral)', 0, 'Dos pagos semestrales'
-FROM sy
+FROM (SELECT id FROM public.school_years WHERE name = '2026-2027' LIMIT 1) sy
 ON CONFLICT DO NOTHING;
 
 INSERT INTO public.payment_plans(school_year_id, level, schedule, name, registration_fee, description)
 SELECT id, 'Primaria', '8:00-15:00', 'Plan C (Mensual)', 30000.00, '11 pagos mensuales'
-FROM sy
+FROM (SELECT id FROM public.school_years WHERE name = '2026-2027' LIMIT 1) sy
 ON CONFLICT DO NOTHING;

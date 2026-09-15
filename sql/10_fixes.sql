@@ -110,6 +110,23 @@ FOR EACH ROW EXECUTE FUNCTION public.notify_pending_payment();
 -- Fecha: 2026-09-12 21:41
 -- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
+CREATE OR REPLACE FUNCTION public.add_column_if_not_exists(
+  p_table text, p_column text, p_type text, p_default text DEFAULT NULL
+) RETURNS void LANGUAGE plpgsql AS $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = p_table AND column_name = p_column
+  ) THEN
+    IF p_default IS NOT NULL THEN
+      EXECUTE format('ALTER TABLE public.%I ADD COLUMN %I %s DEFAULT %s', p_table, p_column, p_type, p_default);
+    ELSE
+      EXECUTE format('ALTER TABLE public.%I ADD COLUMN %I %s', p_table, p_column, p_type);
+    END IF;
+  END IF;
+END;
+$$;
+
 SELECT public.add_column_if_not_exists('student_preregistrations', 'student_last_name', 'text');
 
 SELECT public.add_column_if_not_exists('student_preregistrations', 'nationality', 'text');
@@ -328,6 +345,10 @@ EXCEPTION WHEN duplicate_column THEN NULL; END $$;
 
 DO $$ BEGIN
   ALTER TABLE public.attendance ADD COLUMN deleted_at timestamp with time zone;
+EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+
+DO $$ BEGIN
+  ALTER TABLE public.periods ADD COLUMN IF NOT EXISTS deleted_at timestamp with time zone;
 EXCEPTION WHEN duplicate_column THEN NULL; END $$;
 
 DO $$ BEGIN
@@ -1163,6 +1184,72 @@ BEGIN
     RAISE EXCEPTION 'La tabla payment_plans no existe. Ejecuta schema.sql primero.';
   END IF;
 END $$;
+
+CREATE OR REPLACE FUNCTION public.insert_plan_a(p_level text, p_schedule text, p_amount numeric)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  v_plan_id bigint;
+BEGIN
+  SELECT id INTO v_plan_id FROM public.payment_plans
+    WHERE level = p_level AND schedule = p_schedule AND name LIKE 'Plan A%' AND school_year_id IN (SELECT id FROM public.school_years WHERE name = '2026-2027');
+
+  IF v_plan_id IS NOT NULL THEN
+    INSERT INTO public.plan_installments(payment_plan_id, type, month_number, month_name, amount, due_day, due_month_offset, is_registration)
+    VALUES (v_plan_id, 'inscripcion', 1, 'Agosto', p_amount, 5, 0, true)
+    ON CONFLICT DO NOTHING;
+  END IF;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.insert_plan_b(p_level text, p_schedule text, p_amount1 numeric, p_amount2 numeric)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  v_plan_id bigint;
+BEGIN
+  SELECT id INTO v_plan_id FROM public.payment_plans
+    WHERE level = p_level AND schedule = p_schedule AND name LIKE 'Plan B%' AND school_year_id IN (SELECT id FROM public.school_years WHERE name = '2026-2027');
+
+  IF v_plan_id IS NOT NULL THEN
+    INSERT INTO public.plan_installments(payment_plan_id, type, month_number, month_name, amount, due_day, due_month_offset, is_registration)
+    VALUES
+      (v_plan_id, 'inscripcion', 1, 'Agosto', p_amount1, 5, 0, true),
+      (v_plan_id, 'colegiatura', 2, 'Enero', p_amount2, 5, 5, false)
+    ON CONFLICT DO NOTHING;
+  END IF;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.insert_plan_c(p_level text, p_schedule text, p_inscripcion numeric, p_colegiatura numeric)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  v_plan_id bigint;
+BEGIN
+  SELECT id INTO v_plan_id FROM public.payment_plans
+    WHERE level = p_level AND schedule = p_schedule AND name LIKE 'Plan C%' AND school_year_id IN (SELECT id FROM public.school_years WHERE name = '2026-2027');
+
+  IF v_plan_id IS NOT NULL THEN
+    INSERT INTO public.plan_installments(payment_plan_id, type, month_number, month_name, amount, due_day, due_month_offset, is_registration)
+    VALUES (v_plan_id, 'inscripcion', 1, 'Agosto', p_inscripcion, 5, 0, true)
+    ON CONFLICT DO NOTHING;
+
+    INSERT INTO public.plan_installments(payment_plan_id, type, month_number, month_name, amount, due_day, due_month_offset, is_registration)
+    SELECT v_plan_id, 'colegiatura', gs.mn, gs.mname, p_colegiatura, 5, gs.mo, false
+    FROM (
+      SELECT 2 as mn, 'Septiembre' as mname, 1 as mo
+      UNION ALL SELECT 3, 'Octubre', 2
+      UNION ALL SELECT 4, 'Noviembre', 3
+      UNION ALL SELECT 5, 'Diciembre', 4
+      UNION ALL SELECT 6, 'Enero', 5
+      UNION ALL SELECT 7, 'Febrero', 6
+      UNION ALL SELECT 8, 'Marzo', 7
+      UNION ALL SELECT 9, 'Abril', 8
+      UNION ALL SELECT 10, 'Mayo', 9
+      UNION ALL SELECT 11, 'Junio', 10
+    ) gs
+    ON CONFLICT DO NOTHING;
+  END IF;
+END;
+$$;
 
 WITH sy AS (SELECT id FROM public.school_years WHERE name = '2026-2027')
 

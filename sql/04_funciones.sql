@@ -918,7 +918,7 @@ BEGIN
 END;
 $$;
 
-DROP FUNCTION IF EXISTS public.add_column_if_not_exists(text, text, text, text);
+DROP FUNCTION IF EXISTS public.add_column_if_not_exists(text, text, text);
 
 CREATE OR REPLACE FUNCTION public.get_school_year_dashboard(p_school_year_id bigint DEFAULT NULL)
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
@@ -2676,12 +2676,6 @@ BEGIN
     UNION ALL SELECT 10, 'Mayo', 9
     UNION ALL SELECT 11, 'Junio', 10
   ) gs
-  ON CONFLICT DO NOTHING;
+ON CONFLICT DO NOTHING;
 END;
 $$;
-
-DROP FUNCTION IF EXISTS public.insert_plan_a;
-
-DROP FUNCTION IF EXISTS public.insert_plan_b;
-
-DROP FUNCTION IF EXISTS public.insert_plan_c;
