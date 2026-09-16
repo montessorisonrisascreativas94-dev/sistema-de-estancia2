@@ -815,7 +815,7 @@ function _renderAccionesAula() {
           .aa-cat{display:flex;align-items:center;gap:8px}
           .aa-nav{width:30px;height:34px;border-radius:12px;border:2px solid #e2e8f0;background:#fff;color:#2563eb;font-size:14px;font-weight:900;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:all .15s;line-height:1}
           .aa-nav:active{transform:scale(.92)}
-          .aa-wrap{flex:1;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;border-radius:14px;touch-action:pan-x}
+          .aa-wrap{flex:1;display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;border-radius:14px;touch-action:pan-x;-webkit-overflow-scrolling:touch}
           .aa-wrap::-webkit-scrollbar{display:none}
           .aa-slide{flex:0 0 100%;min-width:100%;scroll-snap-align:start}
           .aa-cathead{display:flex;align-items:center;gap:8px;margin:2px 0 8px}
