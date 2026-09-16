@@ -23,6 +23,7 @@ import { ParentRatingModule } from './parent_rating.js';
 import { WizardPayment } from './payment-wizard.js';
 import { RecentActivityModule } from './recent-activity.js';
 import { ClassroomSchedule } from './classroom-schedule.js';
+import { NewsCenter } from '../shared/news-center.js';
 
 window.App = {
   feed: FeedModule, payments: PaymentsModule, tasks: TasksModule,
@@ -184,6 +185,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     refreshDashboard().then(() => {
       // Iniciar badges DESPUÉS de que las tarjetas del dashboard existan
       BadgeSystem.init(auth.user.id);
+      // ?? Campanita de novedades (centro de notificaciones)
+      NewsCenter.init(auth.user.id);
     });
 
     if (currentStudent?.classroom_id) {

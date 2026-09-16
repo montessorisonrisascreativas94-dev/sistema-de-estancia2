@@ -1,5 +1,6 @@
 import { supabase, ensureRole } from '../shared/supabase.js';
 import { logError, auditLog } from '../shared/db-utils.js';
+import { NewsCenter } from '../shared/news-center.js';
 
 // Bloquear redirección por SIGNED_OUT desde el primer momento
 // (antes de DOMContentLoaded, para que onAuthStateChange no interrumpa el init)
@@ -239,6 +240,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     await refreshAll();
     startRealtime();
+
+    // 🛎️ Campanita de novedades (centro de notificaciones) — esquina superior
+    if (currentUser?.id) {
+      try { NewsCenter.init(currentUser.id); } catch (_) {}
+    }
 
   } catch (err) {
     clearTimeout(loaderTimeout);

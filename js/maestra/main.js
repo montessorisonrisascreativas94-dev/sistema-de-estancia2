@@ -22,6 +22,7 @@ import { PermitsModule } from './modules/permits.js';
 import { UI } from './modules/ui.js';
 
 import { UIPremium } from '../shared/ui-premium.js';
+import { NewsCenter } from '../shared/news-center.js';
 
 window.safeToast = UI.safeToast;
 window.UI = UI;
@@ -34,7 +35,7 @@ const _lastLoad = {};
 // Los onclick inline en HTML dinámico necesitan window.Modal disponible de inmediato
 window.Modal = Modal;
 const { initAttendance, markAllPresent, registerAttendance } = Attendance;
-const { initRoutine, openStudentRoutine, openBulkRoutineModal } = Routine;
+const { initRoutine, openStudentRoutine, openBulkRoutineModal, markWholeClassRoutine } = Routine;
 const { initTasks, openEditTaskModal, deleteTask, openNewTaskModal, viewTaskSubmissions, submitGrade } = Tasks;
 const { openStudentProfile, registerIncidentModal } = Students;
 const { initChat, selectChatContact } = ChatApp;
@@ -59,11 +60,14 @@ window.App = {
   handleAttendancePointerDown: Attendance.handleAttendancePointerDown,
   handleAttendancePointerUp: Attendance.handleAttendancePointerUp,
 
-  // Routine Express — Acciones Colectivas · Reportes Individuales · Modal Individual
+  // Rutina del Aula — Sistema de Rutina para Todo el Aula (10 reglas)
     initRoutine:              Routine.initRoutine,
     openStudentRoutine:       Routine.openStudentRoutine,
     openBulkRoutineModal:     Routine.openBulkRoutineModal,
     routineQuickGroup:        Routine.routineQuickGroup,
+    markWholeClassRoutine:    Routine.markWholeClassRoutine,
+    aaSearch:                 Routine.aaSearch,
+    aaNav:                    Routine.aaNav,
     routineWakeAll:           Routine.routineWakeAll,
     routineWakeStudent:       Routine.routineWakeStudent,
     setStudentMood:           Routine.setStudentMood,
@@ -82,29 +86,10 @@ window.App = {
     _confirmMed:              Routine._confirmMed,
     _confirmExtraEvent:       Routine._confirmExtraEvent,
     publishDailyLogs:         Routine.publishDailyLogs,
-    openEventConfig:          Routine.openEventConfig,
-    saveEventConfig:          Routine.saveEventConfig,
-    openScheduleConfig:       Routine.openScheduleConfig,
-    resetScheduleConfig:      Routine.resetScheduleConfig,
-    addCatalogEvent:          Routine.addCatalogEvent,
-    setScheduleConfigMode:    Routine.setScheduleConfigMode,
-    buildModeAdd:             Routine.buildModeAdd,
-    buildModeRemove:          Routine.buildModeRemove,
-    buildModeMove:            Routine.buildModeMove,
-    buildModeSetTime:         Routine.buildModeSetTime,
-    buildModeSetDur:          Routine.buildModeSetDur,
-    buildModeSetStart:        Routine.buildModeSetStart,
-    buildModeStack:           Routine.buildModeStack,
-    buildModeClear:           Routine.buildModeClear,
-    buildModeApply:           Routine.buildModeApply,
-    addScheduleEvent:         Routine.addScheduleEvent,
-    deleteScheduleEvent:      Routine.deleteScheduleEvent,
-    _moveScheduleEvent:       Routine._moveScheduleEvent,
-    openQuickAddModal:        Routine.openQuickAddModal,
-    _submitQuickAdd:          Routine._submitQuickAdd,
     toggleOmitToday:          Routine.toggleOmitToday,
     insertEventAt:            Routine.insertEventAt,
     clearDailyOverrides:      Routine.clearDailyOverrides,
+    goToAttendance:           () => window.App.activateTab?.('attendance'),
 
   // Tasks
   initTasks: Tasks.initTasks,
@@ -432,6 +417,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 🔴 Sistema de badges por sección
     BadgeSystem.init(auth.user.id);
+
+    // ?? Campanita de novedades (centro de notificaciones)
+    NewsCenter.init(auth.user.id);
 
     // ── Sidebar Manager (mobile + desktop) ───────────────────────────────────
     import('../shared/sidebar-manager.js')

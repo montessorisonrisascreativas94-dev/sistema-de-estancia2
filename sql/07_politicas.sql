@@ -1306,3 +1306,28 @@ END $$;
 DROP POLICY IF EXISTS "Permitir insercion anonima de preinscripciones" ON public.student_preregistrations;
 
 DROP POLICY IF EXISTS "Permitir lectura completa a autenticados" ON public.student_preregistrations;
+
+-- ============================================================
+-- FIX PERSISTENTE: Lectura de estudiantes por staff
+-- Problema: Más arriba este mismo archivo borra las políticas
+-- "students_staff_all" y "students_select", dejando SOLO
+-- "students_padre_select" (padres). Por eso los paneles de
+-- directora/asistente ven 0 estudiantes aunque existan registros.
+-- Este bloque es idempotente y se ejecuta el ÚLTIMO para ganar.
+-- ============================================================
+DO $$
+BEGIN
+  DROP POLICY IF EXISTS "students_staff_all" ON public.students;
+  CREATE POLICY "students_staff_all" ON public.students FOR ALL
+    TO authenticated
+    USING (COALESCE(get_my_role(),'') IN ('directora','asistente','admin','maestra','encargada'))
+    WITH CHECK (COALESCE(get_my_role(),'') IN ('directora','asistente','admin','maestra','encargada'));
+END $$;
+
+-- Garantizar lectura de perfiles del staff (docentes/asistentes en KPIs)
+DO $$ BEGIN
+  DROP POLICY IF EXISTS "profiles_authenticated_read" ON public.profiles;
+  CREATE POLICY "profiles_authenticated_read" ON public.profiles FOR SELECT
+    TO authenticated USING (auth.role() = 'authenticated');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;

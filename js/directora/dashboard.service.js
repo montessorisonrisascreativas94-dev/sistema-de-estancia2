@@ -17,6 +17,19 @@ export const DashboardService = {
   CACHE_TTL: 5 * 60 * 1000, // 5 minutos de caché
   channels: [], // Para limpiar subscripciones realtime
   listeners: [], // 🔔 Lista de funciones a avisar cuando haya cambios
+  // 🛡️ Tablas/opciones que fallaron con 400/404 irrecuperable en esta sesión
+  // Si una tabla está aquí, NO se vuelve a consultar = 0 peticiones HTTP repetidas
+  _brokenTables: new Set(),
+  _isBroken(table) { return this._brokenTables.has(table); },
+  _markBroken(table) { this._brokenTables.add(table); },
+  _isUnrecoverableDbError(err) {
+    if (!err) return false;
+    const code = String(err.code || err.status || '');
+    const msg = String(err.message || '').toLowerCase();
+    if (['404', '400', '42P01'].includes(code)) return true;
+    if (['does not exist', 'relation', 'column', 'unrecognized'].some(k => msg.includes(k))) return true;
+    return false;
+  },
 
   async getFullData(refresh = false) {
     // Solo reutilizar caché si tiene la forma correcta ({ stats: {...} })
@@ -85,12 +98,17 @@ export const DashboardService = {
         recentInquiries: []
       };
 
-      // Inquiries por separado (no crítico)
-      try {
-        const { data: inq } = await supabase.from('inquiries').select('id,status,title,created_at').eq('status','pending').limit(5);
-        dashboardData.recentInquiries = inq || [];
-        dashboardData.stats.pendingInquiries = inq?.length || rpcKpis.inquiries || 0;
-      } catch (_) {}
+      // Inquiries por separado (no crítico). 🛡️ Guard: si falló una vez, no repetir HTTP.
+      if (!this._isBroken('inquiries')) {
+        try {
+          const { data: inq, error } = await supabase.from('inquiries').select('id,status,subject,created_at').eq('status','pending').limit(5);
+          if (this._isUnrecoverableDbError(error)) { this._markBroken('inquiries'); }
+          dashboardData.recentInquiries = inq || [];
+          dashboardData.stats.pendingInquiries = inq?.length || rpcKpis.inquiries || 0;
+        } catch (err) {
+          if (this._isUnrecoverableDbError(err)) this._markBroken('inquiries');
+        }
+      }
 
       AppState.set('dashboardData', dashboardData);
       return dashboardData;

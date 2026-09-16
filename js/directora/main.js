@@ -492,49 +492,43 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Centro de Novedades (campana dorada con todos los eventos del panel)
     NewsCenter.init(auth.user.id);
 
-    // Cargar badge de pre-inscripciones pendientes (tabla student_preregistrations).
-    // Se desactiva si la tabla no existe en el esquema para evitar 404 en consola.
-    let _preBadgeEnabled = true;
+    // Feature flags de configuración del Panel Directora (producción ready).
+    // Cambiar a true solo cuando la tabla exista en Supabase y se desee reactivar.
+    const APP_CONFIG = Object.freeze({
+      ENABLE_STUDENT_PREREG_TABLE: false, // La tabla `student_preregistrations` NO existe → 0 peticiones HTTP = 0 404
+    });
+
+    // Cargar badge de pre-inscripciones pendientes.
+    // Si APP_CONFIG.ENABLE_STUDENT_PREREG_TABLE === false NO se dispara NINGUNA petición HTTP.
     const loadPreBadge = async () => {
-      if (!_preBadgeEnabled) return;
+      if (!APP_CONFIG.ENABLE_STUDENT_PREREG_TABLE) return;
       try {
-        const res = await supabase.from('student_preregistrations').select('id',{count:'exact',head:true}).eq('status','pending');
-        if (res?.error && (res.error.code === '42P01' || res.error.status === 404 || /does not exist|relation.*does not exist/i.test(res.error.message || ''))) {
-          _preBadgeEnabled = false;
-          return;
-        }
-        const count = res?.count ?? 0;
-        const b=document.getElementById('badge-ciclo');
-        if(b) {
-          if(count>0){
-            b.textContent=count>99?'99+':String(count);
+        const { count = 0 } = await supabase.from('student_preregistrations').select('id',{count:'exact',head:true}).eq('status','pending');
+        const b = document.getElementById('badge-ciclo');
+        if (b) {
+          if (count > 0) {
+            b.textContent = count > 99 ? '99+' : String(count);
             b.classList.remove('hidden');
           } else {
             b.classList.add('hidden');
           }
         }
-      } catch(e){
-        if (/404|does not exist|42P01/i.test(String(e?.message || e))) _preBadgeEnabled = false;
-      }
+      } catch (_) {}
     };
     loadPreBadge();
-    
-    // Suscribirse a cambios en preinscripciones para actualizar badge en tiempo real
+
+    // Suscripción Realtime a preinscripciones (solo si el feature-flag está activo).
     try {
-      if (_preBadgeEnabled) {
+      if (APP_CONFIG.ENABLE_STUDENT_PREREG_TABLE) {
         supabase.channel('preinscripciones-realtime')
           .on('postgres_changes', {
             event: '*',
             schema: 'public',
             table: 'student_preregistrations'
           }, () => loadPreBadge())
-          .subscribe((status) => {
-            if (status === 'closed' || status === 'channel_error') _preBadgeEnabled = false;
-          });
+          .subscribe();
       }
-    } catch(e){
-      _preBadgeEnabled = false;
-    }
+    } catch (_) {}
 
     // 6. Configurar Logout
     document.getElementById('btnLogout')?.addEventListener('click', async () => {

@@ -59,7 +59,7 @@ function timeAgo(dateStr) {
 }
 
 const STYLE = `
-#newsCenterBellWrap{position:fixed;right:18px;bottom:18px;z-index:960;filter:drop-shadow(0 6px 14px rgba(255,150,0,.35))}
+#newsCenterBellWrap{position:fixed;top:calc(16px + env(safe-area-inset-top));right:calc(16px + env(safe-area-inset-right));z-index:960;filter:drop-shadow(0 6px 14px rgba(255,150,0,.35))}
 #newsCenterBell{
   position:relative;width:58px;height:58px;border-radius:50%;cursor:pointer;border:none;outline:none;
   background:radial-gradient(circle at 30% 25%,#FFE873 0%,#FFD43B 45%,#FF9F1C 90%);
@@ -152,7 +152,7 @@ const STYLE = `
 .ncenter-skeleton .sk{background:linear-gradient(90deg,#f1f5f9 25%,#e2e8f0 50%,#f1f5f9 75%);background-size:800px 100%;animation:ncenter-shimmer 1.6s infinite linear;border-radius:8px}
 @keyframes ncenter-shimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}
 @media (max-width:520px){
-  #newsCenterBellWrap{right:14px;bottom:calc(14px + env(safe-area-inset-bottom))}
+  #newsCenterBellWrap{top:calc(12px + env(safe-area-inset-top));right:calc(12px + env(safe-area-inset-right))}
   #newsCenterBell{width:54px;height:54px}
   #newsCenterBell svg{width:24px;height:24px}
   #newsCenterModal{width:100vw;border-radius:22px 22px 0 0}

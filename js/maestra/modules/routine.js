@@ -15,6 +15,7 @@ let _autoRefreshTimer = null;
 let _attendanceChannel = null;
 let _routineChannel = null;
 let _presentIds = new Set();
+let _attendanceCount = 0;
 let _scheduleConfig = null;
 let _visibilityBound = false;
 let _scBuildMode = 'library';
@@ -87,6 +88,23 @@ const COLLECTIVE_QUICK_EVENTS = [
   { id: 'bathroom',  emoji: '🚽', label: 'Baño',        color: '#28B54D', groupEventId: 'bathroom',  type: '_group',  eventType: 'bath',    active: true },
   { id: 'poop_gr',   emoji: '💩', label: 'Popó',        color: '#FF8A00', groupEventId: 'poop_gr',   type: '_group',  eventType: 'diaper',   active: true },
   { id: 'milk_gr',   emoji: '🍼', label: 'Biberón',     color: '#0B63C7', groupEventId: 'milk_gr',   type: '_group',  eventType: 'milk',     active: true }
+];
+
+// ───────────────────────────────────────────────────────────────────────────────
+// REGLAS DEL SISTEMA DE RUTINA PARA TODO EL AULA (10 reglas)
+// Se aplican en initRoutine(), routineQuickGroup() y markWholeClassRoutine().
+// ───────────────────────────────────────────────────────────────────────────────
+const ROUTINE_RULES = [
+  { n: 1,  rule: 'Solo se marcan los alumnos PRESENTES hoy: la maestra pasa asistencia manual o los padres entran por QR en attendance-live.html.' },
+  { n: 2,  rule: 'Si aún no se tomó asistencia del día, la rutina NO marca a nadie: primero se pasa lista.' },
+  { n: 3,  rule: 'Un mismo evento no se registra dos veces al mismo alumno en el mismo día.' },
+  { n: 4,  rule: 'Cada acción se registra con fecha, hora y un identificador de ocurrencia único.' },
+  { n: 5,  rule: 'Las acciones del aula se reflejan en el reporte diario de los padres en tiempo real.' },
+  { n: 6,  rule: 'Solo se permiten marcar rutinas dentro del horario del aula (05:00 a 22:00).' },
+  { n: 7,  rule: 'Las acciones masivas se confirman antes de marcar para evitar toques accidentales.' },
+  { n: 8,  rule: 'Siesta y despertar se sincronizan: al despertar a todos, el banner de siesta desaparece.' },
+  { n: 9,  rule: 'Solo la maestra del aula (rol maestra autorizado) puede marcar rutinas del aula.' },
+  { n: 10, rule: 'Todas las acciones quedan auditadas con origen "colectivo" para trazabilidad.' },
 ];
 
 // ───────────────────────────────────────────────────────────────────────────────
@@ -164,6 +182,165 @@ const _CATALOG_BY_ID = (() => {
   Object.values(SCHEDULE_CATALOG).forEach(cat => cat.items.forEach(it => { map[it.id] = it; }));
   return map;
 })();
+
+// ───────────────────────────────────────────────────────────────────────────────
+// CATÁLOGO DE RUTINAS PARA TODO EL AULA (120+ rutinas bien distribuidas)
+// Cada chip de la sección "Rutinas del Aula" marca la rutina a TODOS los
+// alumnos presentes en un solo toque y cumple las 10 reglas anteriores.
+// ───────────────────────────────────────────────────────────────────────────────
+const WHOLE_CLASS_ROUTINES = [
+  // 🧼 Higiene y cuidado personal
+  { id: 'wh_manos',      emoji: '🧼', label: 'Lavado de manos',            cat: 'Higiene' },
+  { id: 'wh_cara',       emoji: '🚿', label: 'Lavado de cara',             cat: 'Higiene' },
+  { id: 'wh_dientes',    emoji: '🪥', label: 'Cepillado dental',           cat: 'Higiene' },
+  { id: 'wh_bano',       emoji: '🛁', label: 'Baño completo',              cat: 'Higiene' },
+  { id: 'wh_esponja',    emoji: '🫧', label: 'Baño de esponja',            cat: 'Higiene' },
+  { id: 'wh_panal',      emoji: '🧷', label: 'Cambio de pañal',            cat: 'Higiene' },
+  { id: 'wh_bano_uso',   emoji: '🚽', label: 'Uso del baño',               cat: 'Higiene' },
+  { id: 'wh_peinado',    emoji: '💇', label: 'Peinado',                    cat: 'Higiene' },
+  { id: 'wh_pies',       emoji: '🦶', label: 'Lavado de pies',             cat: 'Higiene' },
+  { id: 'wh_unias',      emoji: '✂️', label: 'Higiene de uñas',            cat: 'Higiene' },
+  { id: 'wh_nariz',      emoji: '🤧', label: 'Limpiar la nariz',           cat: 'Higiene' },
+  { id: 'wh_manos_comer',emoji: '🧼', label: 'Lavado antes de comer',      cat: 'Higiene' },
+  { id: 'wh_dientes_pm', emoji: '🪥', label: 'Cepillado tras comer',       cat: 'Higiene' },
+  { id: 'wh_rostro',     emoji: '🧴', label: 'Losión y protección',        cat: 'Higiene' },
+
+  // 🍎 Alimentación
+  { id: 'al_desayuno',   emoji: '🍞', label: 'Desayuno',                   cat: 'Alimentación' },
+  { id: 'al_almuerzo',   emoji: '🍽️', label: 'Almuerzo',                  cat: 'Alimentación' },
+  { id: 'al_merienda',   emoji: '🍪', label: 'Merienda',                   cat: 'Alimentación' },
+  { id: 'al_refrigerio', emoji: '🍎', label: 'Refrigerio',                 cat: 'Alimentación' },
+  { id: 'al_hidratacion',emoji: '💧', label: 'Hidratación',                cat: 'Alimentación' },
+  { id: 'al_agua',       emoji: '🥤', label: 'Agua',                       cat: 'Alimentación' },
+  { id: 'al_fruta',      emoji: '🍌', label: 'Fruta',                      cat: 'Alimentación' },
+  { id: 'al_papilla',    emoji: '🥣', label: 'Papilla',                    cat: 'Alimentación' },
+  { id: 'al_sopa',       emoji: '🍲', label: 'Sopa',                       cat: 'Alimentación' },
+  { id: 'al_verduras',   emoji: '🥦', label: 'Verduras',                   cat: 'Alimentación' },
+  { id: 'al_proteina',   emoji: '🥚', label: 'Proteína',                   cat: 'Alimentación' },
+  { id: 'al_leche',      emoji: '🥛', label: 'Leche',                      cat: 'Alimentación' },
+  { id: 'al_biberon',    emoji: '🍼', label: 'Biberón',                    cat: 'Alimentación' },
+  { id: 'al_postre',     emoji: '🍮', label: 'Postre',                     cat: 'Alimentación' },
+
+  // 🎨 Actividades educativas
+  { id: 'ac_cuento',     emoji: '📖', label: 'Lectura de cuento',          cat: 'Actividades' },
+  { id: 'ac_cantos',     emoji: '🎶', label: 'Cantos y rimas',             cat: 'Actividades' },
+  { id: 'ac_colores',    emoji: '🎨', label: 'Colores',                    cat: 'Actividades' },
+  { id: 'ac_numeros',    emoji: '🔢', label: 'Números',                    cat: 'Actividades' },
+  { id: 'ac_letras',     emoji: '🔤', label: 'Letras',                     cat: 'Actividades' },
+  { id: 'ac_manualidad', emoji: '🧶', label: 'Manualidad',                 cat: 'Actividades' },
+  { id: 'ac_pintura',    emoji: '🖌️', label: 'Pintura',                    cat: 'Actividades' },
+  { id: 'ac_plastilina', emoji: '🧱', label: 'Plastilina',                 cat: 'Actividades' },
+  { id: 'ac_puzzle',     emoji: '🧩', label: 'Rompecabezas',               cat: 'Actividades' },
+  { id: 'ac_bloques',    emoji: '🧊', label: 'Bloques',                    cat: 'Actividades' },
+  { id: 'ac_sensorial',  emoji: '🔬', label: 'Experimento sensorial',      cat: 'Actividades' },
+  { id: 'ac_clasificar', emoji: '🗂️', label: 'Clasificación',              cat: 'Actividades' },
+  { id: 'ac_formas',     emoji: '⬛', label: 'Figuras geométricas',         cat: 'Actividades' },
+  { id: 'ac_seriacion',  emoji: '🔗', label: 'Seriación',                  cat: 'Actividades' },
+
+  // 🎮 Juego
+  { id: 'ju_libre',      emoji: '🎮', label: 'Juego libre',                cat: 'Juego' },
+  { id: 'ju_dirigido',   emoji: '🎯', label: 'Juego dirigido',             cat: 'Juego' },
+  { id: 'ju_roles',      emoji: '🦸', label: 'Juego de roles',             cat: 'Juego' },
+  { id: 'ju_munecas',    emoji: '🪆', label: 'Muñecas',                    cat: 'Juego' },
+  { id: 'ju_carritos',   emoji: '🚗', label: 'Carritos',                   cat: 'Juego' },
+  { id: 'ju_arena',      emoji: '⏳', label: 'Arenero',                    cat: 'Juego' },
+  { id: 'ju_cocina',     emoji: '🍳', label: 'Cocina de juguete',          cat: 'Juego' },
+  { id: 'ju_pelotas',    emoji: '⚽', label: 'Pelotas',                    cat: 'Juego' },
+  { id: 'ju_escondite',  emoji: '🙈', label: 'Escondite',                  cat: 'Juego' },
+  { id: 'ju_casita',     emoji: '🏠', label: 'Casita de juego',            cat: 'Juego' },
+  { id: 'ju_piso_puzzle',emoji: '🧩', label: 'Rompecabezas de piso',       cat: 'Juego' },
+  { id: 'ju_dominos',    emoji: '🁢', label: 'Dominó gigante',              cat: 'Juego' },
+
+  // 🤸 Motricidad
+  { id: 'mo_ejercicios', emoji: '🤸', label: 'Ejercicios matutinos',        cat: 'Motricidad' },
+  { id: 'mo_marcha',     emoji: '🚶', label: 'Marcha',                     cat: 'Motricidad' },
+  { id: 'mo_correr',     emoji: '🏃', label: 'Correr',                     cat: 'Motricidad' },
+  { id: 'mo_saltar',     emoji: '🦘', label: 'Saltar la cuerda',           cat: 'Motricidad' },
+  { id: 'mo_baile',      emoji: '💃', label: 'Baile',                      cat: 'Motricidad' },
+  { id: 'mo_yoga',       emoji: '🧘', label: 'Yoga infantil',              cat: 'Motricidad' },
+  { id: 'mo_equilibrio', emoji: '⚖️', label: 'Equilibrio',                 cat: 'Motricidad' },
+  { id: 'mo_gateo',      emoji: '🐣', label: 'Gateo',                      cat: 'Motricidad' },
+  { id: 'mo_lanzar',     emoji: '🎾', label: 'Lanzar pelota',              cat: 'Motricidad' },
+  { id: 'mo_circuito',   emoji: '🏁', label: 'Circuito motriz',            cat: 'Motricidad' },
+  { id: 'mo_escalar',    emoji: '🧗', label: 'Escalada',                   cat: 'Motricidad' },
+  { id: 'mo_rodar',      emoji: '🛞', label: 'Rodar en colchoneta',        cat: 'Motricidad' },
+
+  // 😴 Descanso
+  { id: 'de_preparar',   emoji: '🛏️', label: 'Preparar la siesta',         cat: 'Descanso' },
+  { id: 'de_siesta',     emoji: '😴', label: 'Siesta',                     cat: 'Descanso' },
+  { id: 'de_despertar',  emoji: '😊', label: 'Despertar',                  cat: 'Descanso' },
+  { id: 'de_relajar',    emoji: '🌿', label: 'Relajación',                 cat: 'Descanso' },
+  { id: 'de_masaje',     emoji: '🤲', label: 'Masaje',                     cat: 'Descanso' },
+  { id: 'de_silencio',   emoji: '🤫', label: 'Momento tranquilo',          cat: 'Descanso' },
+  { id: 'de_musica',     emoji: '🎵', label: 'Música relajante',           cat: 'Descanso' },
+  { id: 'de_ojos',       emoji: '🥱', label: 'Ojos cerrados',              cat: 'Descanso' },
+  { id: 'de_mantas',     emoji: '🛌', label: 'Sacar las mantas',           cat: 'Descanso' },
+  { id: 'de_luz',        emoji: '💡', label: 'Bajar la luz',               cat: 'Descanso' },
+
+  // 🤗 Social y emocional
+  { id: 'so_abrazo',     emoji: '🤗', label: 'Abrazo grupal',              cat: 'Social' },
+  { id: 'so_buenosdias', emoji: '☀️', label: 'Buenos días',                cat: 'Social' },
+  { id: 'so_emociones',  emoji: '😃', label: 'Identificar emociones',      cat: 'Social' },
+  { id: 'so_saludar',    emoji: '👋', label: 'Saludar a los amigos',       cat: 'Social' },
+  { id: 'so_compartir',  emoji: '🤝', label: 'Compartir materiales',       cat: 'Social' },
+  { id: 'so_gracias',    emoji: '🙏', label: 'Decir por favor y gracias',  cat: 'Social' },
+  { id: 'so_esperar',    emoji: '⏸️', label: 'Esperar el turno',           cat: 'Social' },
+  { id: 'so_perdon',     emoji: '💛', label: 'Pedir perdón',               cat: 'Social' },
+  { id: 'so_ayudar',     emoji: '🫶', label: 'Ayudar a un compañero',      cat: 'Social' },
+  { id: 'so_familia',    emoji: '👨‍👩‍👧', label: 'Hablar de la familia',   cat: 'Social' },
+  { id: 'so_normas',     emoji: '📜', label: 'Repasar las normas',         cat: 'Social' },
+  { id: 'so_ronda',      emoji: '⭕', label: 'Ronda de conversación',      cat: 'Social' },
+
+  // 🌤️ Exterior
+  { id: 'ex_sol',        emoji: '🌞', label: 'Juego al sol',               cat: 'Exterior' },
+  { id: 'ex_aire',       emoji: '🌬️', label: 'Aire fresco',                cat: 'Exterior' },
+  { id: 'ex_parque',     emoji: '🌳', label: 'Esparcimiento',              cat: 'Exterior' },
+  { id: 'ex_paseo',      emoji: '🧐', label: 'Paseo de observación',       cat: 'Exterior' },
+  { id: 'ex_naturaleza', emoji: '🪴', label: 'Contacto con la naturaleza', cat: 'Exterior' },
+  { id: 'ex_insectos',   emoji: '🐜', label: 'Observar insectos',          cat: 'Exterior' },
+  { id: 'ex_nubes',      emoji: '☁️', label: 'Mirar las nubes',            cat: 'Exterior' },
+  { id: 'ex_higiene',    emoji: '🌞', label: 'Tomar sol (vitamina D)',     cat: 'Exterior' },
+  { id: 'ex_lluvia',     emoji: '☔', label: 'Observar la lluvia',         cat: 'Exterior' },
+  { id: 'ex_guardia',    emoji: '🧍', label: 'Guardia en la veranda',      cat: 'Exterior' },
+
+  // 🎵 Arte y música
+  { id: 'ar_pintarp',    emoji: '🎨', label: 'Pintar con pincel',          cat: 'Arte y música' },
+  { id: 'ar_pinitos',    emoji: '🖐️', label: 'Pintar con las manos',       cat: 'Arte y música' },
+  { id: 'ar_dibujar',    emoji: '✏️', label: 'Dibujar',                    cat: 'Arte y música' },
+  { id: 'ar_pegar',      emoji: '📎', label: 'Pegar y recortar',           cat: 'Arte y música' },
+  { id: 'ar_moldear',    emoji: '🧱', label: 'Moldear plastilina',         cat: 'Arte y música' },
+  { id: 'ar_papel',      emoji: '📄', label: 'Papel de colores',           cat: 'Arte y música' },
+  { id: 'ar_canciones',  emoji: '🎤', label: 'Cantar',                     cat: 'Arte y música' },
+  { id: 'ar_ritmo',      emoji: '🥁', label: 'Instrumentos de ritmo',      cat: 'Arte y música' },
+  { id: 'ar_musical',    emoji: '🎸', label: 'Juego musical',              cat: 'Arte y música' },
+  { id: 'ar_danza',      emoji: '🪩', label: 'Danza',                      cat: 'Arte y música' },
+  { id: 'ar_titeres',    emoji: '🎭', label: 'Títeres',                    cat: 'Arte y música' },
+  { id: 'ar_runas',      emoji: '🥁', label: 'Percusión corporal',         cat: 'Arte y música' },
+  { id: 'ar_origami',    emoji: '✨', label: 'Plegado de papel',            cat: 'Arte y música' },
+  { id: 'ar_collage',    emoji: '🖼️', label: 'Collage',                    cat: 'Arte y música' },
+
+  // 🔤 Lenguaje y comunicación
+  { id: 'le_cuento',     emoji: '📖', label: 'Cuento con imágenes',        cat: 'Lenguaje' },
+  { id: 'le_cancion',    emoji: '🎵', label: 'Canción infantil',           cat: 'Lenguaje' },
+  { id: 'le_rondas',     emoji: '🪢', label: 'Rondas y juegos de dedos',   cat: 'Lenguaje' },
+  { id: 'le_laminas',    emoji: '🖼️', label: 'Láminas de palabras',        cat: 'Lenguaje' },
+  { id: 'le_vocales',    emoji: '🔠', label: 'Reconocer vocales',          cat: 'Lenguaje' },
+  { id: 'le_nombres',    emoji: '🗣️', label: 'Decir los nombres',          cat: 'Lenguaje' },
+  { id: 'le_opuesto',    emoji: '🔄', label: 'Opuestos',                   cat: 'Lenguaje' },
+  { id: 'le_pregunta',   emoji: '❓', label: 'Responder preguntas',        cat: 'Lenguaje' },
+  { id: 'le_cuento2',    emoji: '📚', label: 'Cuento narrado',             cat: 'Lenguaje' },
+  { id: 'le_sonidos',    emoji: '🎧', label: 'Sonidos de animales',        cat: 'Lenguaje' },
+  { id: 'le_poema',      emoji: '🌼', label: 'Poema y verso',              cat: 'Lenguaje' },
+  { id: 'le_onomato',    emoji: '🔔', label: 'Onomatopeyas',               cat: 'Lenguaje' },
+
+  // 🔄 Transiciones
+  { id: 'tr_prep_guard', emoji: '⏰', label: 'Prepararse para salir',      cat: 'Transiciones' },
+  { id: 'tr_guardar',    emoji: '📦', label: 'Guardar juguetes',           cat: 'Transiciones' },
+  { id: 'tr_fila',       emoji: '🚶', label: 'Formar la fila',             cat: 'Transiciones' },
+  { id: 'tr_lavar',      emoji: '💧', label: 'Lavarse antes de comer',     cat: 'Transiciones' },
+  { id: 'tr_sentarse',   emoji: '🪑', label: 'Sentarse a la mesa',         cat: 'Transiciones' },
+  { id: 'tr_descansar',  emoji: '🛋️', label: 'Retirarse a descansar',      cat: 'Transiciones' },
+];
 
 // ───────────────────────────────────────────────────────────────────────────────
 // CATÁLOGO DE EVENTOS — biblioteca ampliada que la maestra puede agregar a su
@@ -453,6 +630,247 @@ function _renderCollectiveActions(schedule, students, logsMap, nowMinutes) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// ACCIONES DEL AULA — eventos fijos de la administración + catálogo amplio
+// visible con buscador y carrusel por categorías (las 10 reglas son internas).
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// Eventos fijos diarios/frecuentes definidos por la administración.
+const FIXED_DAILY_EVENTS = [
+  { id: 'welcome',     emoji: '👋', label: 'Bienvenida',      color: '#F59E0B' },
+  { id: 'handwash',    emoji: '🧼', label: 'Lavado de manos', color: '#0EA5E9' },
+  { id: 'breakfast',   emoji: '🍞', label: 'Desayuno',        color: '#FF8A00' },
+  { id: 'milk_gr',     emoji: '🍼', label: 'Leche',           color: '#0B63C7' },
+  { id: 'playground',  emoji: '🛝', label: 'Patio',           color: '#16A34A' },
+  { id: 'snack',       emoji: '🍎', label: 'Refrigerio',      color: '#28B54D' },
+  { id: 'departure',   emoji: '🚪', label: 'Salida',          color: '#64748B' },
+  { id: 'lunch',       emoji: '🍽️', label: 'Almuerzo',       color: '#F97316' },
+  { id: 'toothbrush',  emoji: '🪥', label: 'Cepillado',       color: '#06B6D4' },
+  { id: 'sleep_start', emoji: '😴', label: 'Duerme',          color: '#7C3AED' },
+  { id: 'sleep_end',   emoji: '😊', label: 'Despertó',        color: '#FFD43B' }
+];
+
+let _aaQuery = '';
+let _aaIndex = 0;
+let _aaBound = false;
+
+const _WH_CAT_COLORS = {
+  'Higiene':        '#0EA5E9',
+  'Alimentación':   '#FF8A00',
+  'Actividades':    '#7C3AED',
+  'Juego':          '#F59E0B',
+  'Motricidad':     '#16A34A',
+  'Descanso':       '#6366F1',
+  'Social':         '#EF4444',
+  'Exterior':       '#22C55E',
+  'Arte y música':  '#EC4899',
+  'Lenguaje':       '#0B63C7',
+  'Transiciones':   '#64748B'
+};
+
+function _aaChip(r, color) {
+  return `
+    <button type="button" class="aa-btn" onclick="App.markWholeClassRoutine('${r.id}')">
+      <span class="aa-btn-emoji">${r.emoji}</span>
+      <span class="aa-btn-label">${safeEscapeHTML(r.label)}</span>
+      <span class="aa-btn-cat" style="color:${color || '#94a3b8'}">${safeEscapeHTML(r.cat)}</span>
+    </button>`;
+}
+
+function _aaSlidesHTML(query) {
+  const q = (query || '').trim().toLowerCase();
+
+  function fixedChip(f) {
+    return `
+      <button type="button" class="aa-btn aa-fixedchip" onclick="App.routineQuickGroup('${f.id}')">
+        <span class="aa-btn-emoji">${f.emoji}</span>
+        <span class="aa-btn-label" style="color:#78350f">${safeEscapeHTML(f.label)}</span>
+        <span class="aa-btn-cat" style="color:#d97706">fijo</span>
+      </button>`;
+  }
+
+  // BUSCADOR ACTIVO — filtra por nombre del evento o por su categoría
+  if (q) {
+    const fixedMatches = FIXED_DAILY_EVENTS.filter(f => f.label.toLowerCase().includes(q));
+    const matches = WHOLE_CLASS_ROUTINES.filter(r =>
+      r.label.toLowerCase().includes(q) || r.cat.toLowerCase().includes(q)
+    );
+    const total = fixedMatches.length + matches.length;
+    if (total === 0) {
+      return `<div class="aa-slide"><div class="aa-empty">Sin resultados para “${safeEscapeHTML(query.trim())}”</div></div>`;
+    }
+    const grouped = [...new Set(matches.map(r => r.cat))];
+    return `
+      <div class="aa-slide">
+        <div class="aa-cathead">
+          <span class="aa-cattitle">🔍 Resultados</span>
+          <span class="aa-count">${total}</span>
+        </div>
+        ${fixedMatches.length ? `
+          <div class="aa-subcat">⭐ Fijos del día</div>
+          <div class="aa-grid">${fixedMatches.map(fixedChip).join('')}</div>` : ''}
+        ${grouped.map(cat => {
+          const c = _WH_CAT_COLORS[cat] || '#64748B';
+          return `
+            <div class="aa-subcat">${safeEscapeHTML(cat)}</div>
+            <div class="aa-grid">
+              ${matches.filter(r => r.cat === cat).map(r => _aaChip(r, c)).join('')}
+            </div>`;
+        }).join('')}
+      </div>`;
+  }
+
+  // PORTADA (solo los eventos fijos) + una diapositiva por categoría con TODOS sus eventos
+  const cats = [...new Set(WHOLE_CLASS_ROUTINES.map(r => r.cat))];
+  return `
+    <div class="aa-slide">
+      <div class="aa-cathead">
+        <span class="aa-catdot" style="background:#f59e0b"></span>
+        <span class="aa-cattitle">📌 Fijos del día</span>
+        <span class="aa-count">${FIXED_DAILY_EVENTS.length}</span>
+      </div>
+      <div class="aa-grid">
+        ${FIXED_DAILY_EVENTS.map(fixedChip).join('')}
+      </div>
+      <div class="aa-hint">Usa las flechas ‹ › para ver las rutinas por categoría</div>
+    </div>
+    ${cats.map(cat => {
+      const items = WHOLE_CLASS_ROUTINES.filter(r => r.cat === cat);
+      const color = _WH_CAT_COLORS[cat] || '#64748B';
+      return `
+        <div class="aa-slide">
+          <div class="aa-cathead">
+            <span class="aa-catdot" style="background:${color}"></span>
+            <span class="aa-cattitle">${safeEscapeHTML(cat)}</span>
+            <span class="aa-count">${items.length}</span>
+          </div>
+          <div class="aa-grid">
+            ${items.map(r => _aaChip(r, color)).join('')}
+          </div>
+        </div>`;
+    }).join('')}`;
+}
+
+export function aaNav(dir) {
+  const wrap = document.getElementById('aaCatWrap');
+  if (!wrap) return;
+  wrap.scrollBy({ left: dir * wrap.clientWidth, behavior: 'smooth' });
+}
+
+export function aaSearch(value) {
+  _aaQuery = (value || '').trim();
+  _renderAACatWrap();
+  const clear = document.getElementById('aaClear');
+  if (clear) clear.style.display = _aaQuery ? 'flex' : 'none';
+}
+
+function _renderAACatWrap() {
+  const wrap = document.getElementById('aaCatWrap');
+  if (!wrap) return;
+  wrap.innerHTML = _aaSlidesHTML(_aaQuery);
+  wrap.scrollLeft = 0;
+  _aaIndex = 0;
+  _bindAAScroll();
+  _syncAADots();
+}
+
+function _bindAAScroll() {
+  if (_aaBound) return;
+  _aaBound = true;
+  document.addEventListener('scroll', (e) => {
+    if (e.target && e.target.id === 'aaCatWrap') _syncAADots();
+  }, { passive: true });
+}
+
+function _syncAADots() {
+  const wrap = document.getElementById('aaCatWrap');
+  const dots = document.getElementById('aaDots');
+  if (!wrap || !dots) return;
+  const count = wrap.children.length;
+  const idx = Math.max(0, Math.min(count - 1, Math.round(wrap.scrollLeft / Math.max(wrap.clientWidth, 1))));
+  _aaIndex = idx;
+  dots.innerHTML = Array.from({ length: count }, (_, i) =>
+    `<span class="aa-dot ${i === idx ? 'on' : ''}"></span>`
+  ).join('');
+}
+
+function _renderAccionesAula() {
+  return `
+    <div class="routine-card">
+      <div class="routine-card-head">
+        <span class="routine-card-icon" style="background:#fff7ed;color:#FF8A00">🧑‍🏫</span>
+        <div>
+          <div class="routine-card-title">Acciones del Aula</div>
+          <div class="routine-card-sub">Portada: fijos del día · flechas ‹ › para ${WHOLE_CLASS_ROUTINES.length} rutinas por categoría</div>
+        </div>
+      </div>
+      <div class="routine-card-body">
+        <style>
+          .aa-fixedchip{border-color:#fde68a;background:#fffbeb}
+          .aa-fixedchip .aa-btn-label{font-size:.55rem}
+          .aa-hint{margin-top:11px;padding:8px 10px;border-radius:12px;background:#f8fafc;color:#94a3b8;font-size:.6rem;font-weight:800;text-align:center}
+          .aa-search{display:flex;align-items:center;gap:8px;padding:9px 12px;border-radius:14px;border:2px solid #e2e8f0;background:#fff;margin-bottom:12px}
+          .aa-search input{flex:1;border:none;outline:none;font-size:.75rem;font-weight:700;color:#334155;background:transparent;min-width:0}
+          .aa-search input::placeholder{color:#94a3b8}
+          .aa-clear{width:24px;height:24px;border-radius:9px;border:none;background:#fee2e2;color:#dc2626;font-size:11px;font-weight:900;display:none;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0}
+          .aa-cat{display:flex;align-items:center;gap:8px}
+          .aa-nav{width:30px;height:34px;border-radius:12px;border:2px solid #e2e8f0;background:#fff;color:#2563eb;font-size:14px;font-weight:900;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:all .15s;line-height:1}
+          .aa-nav:active{transform:scale(.92)}
+          .aa-wrap{flex:1;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;border-radius:14px;touch-action:pan-x}
+          .aa-wrap::-webkit-scrollbar{display:none}
+          .aa-slide{flex:0 0 100%;min-width:100%;scroll-snap-align:start}
+          .aa-cathead{display:flex;align-items:center;gap:8px;margin:2px 0 8px}
+          .aa-catdot{width:10px;height:10px;border-radius:5px;flex-shrink:0}
+          .aa-cattitle{font-size:.6rem;font-weight:900;color:#334155;text-transform:uppercase;letter-spacing:.05em}
+          .aa-count{margin-left:auto;font-size:.55rem;font-weight:800;color:#94a3b8;background:#f8fafc;padding:2px 8px;border-radius:99px}
+          .aa-subcat{font-size:.55rem;font-weight:800;color:#94a3b8;margin:8px 0 5px}
+          .aa-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:7px}
+          .aa-btn{display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 3px;border-radius:14px;border:2px solid #f1f5f9;background:#fff;cursor:pointer;transition:all .15s;touch-action:manipulation}
+          .aa-btn:active{transform:scale(.93);background:#eff6ff}
+          .aa-btn-emoji{font-size:1.3rem;line-height:1}
+          .aa-btn-label{font-size:.52rem;font-weight:900;color:#475569;text-align:center;line-height:1.15;text-transform:uppercase}
+          .aa-btn-cat{font-size:.48rem;font-weight:800;color:#94a3b8;margin-top:-1px}
+          .aa-dots{display:flex;justify-content:center;gap:5px;margin-top:11px}
+          .aa-dot{width:7px;height:7px;border-radius:99px;background:#e2e8f0;flex-shrink:0;transition:all .2s}
+          .aa-dot.on{background:#2563eb;width:18px}
+          .aa-empty{text-align:center;padding:26px 10px;color:#94a3b8;font-size:.7rem;font-weight:800}
+        </style>
+
+        <!-- BUSCADOR DE EVENTOS (nombre o categoría) -->
+        <div class="aa-search">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2.4" style="flex-shrink:0"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+          <input id="aaSearch" placeholder="Buscar rutina por nombre o categoría..." value="${safeEscapeHTML(_aaQuery)}" oninput="App.aaSearch(this.value)">
+          <button type="button" id="aaClear" class="aa-clear" onclick="document.getElementById('aaSearch').value='';App.aaSearch('')" style="${_aaQuery ? 'display:flex' : ''}">✕</button>
+        </div>
+
+        <!-- CARRUSEL: portada (fijos) + categorías -->
+        <div class="aa-cat">
+          <button type="button" class="aa-nav" onclick="App.aaNav(-1)" aria-label="Anterior">‹</button>
+          <div class="aa-wrap" id="aaCatWrap">${_aaSlidesHTML(_aaQuery)}</div>
+          <button type="button" class="aa-nav" onclick="App.aaNav(1)" aria-label="Siguiente">›</button>
+        </div>
+        <div class="aa-dots" id="aaDots"></div>
+      </div>
+    </div>
+  `;
+}
+
+function _renderAttendanceBanner(hasAttendance) {
+  if (hasAttendance) return '';
+  return `
+    <button onclick="App.goToAttendance()" class="w-full flex items-center justify-between gap-3 rounded-2xl px-4 py-3 text-left active:scale-[.98]" style="background:#fffbeb;border:2px solid #fcd34d">
+      <div class="flex items-center gap-3">
+        <span class="text-2xl">📋</span>
+        <div>
+          <div class="text-sm font-black" style="color:#92400e">Aún no se tomó asistencia hoy</div>
+          <div class="text-xs" style="color:#b45309">La rutina no marca a nadie hasta pasar lista</div>
+        </div>
+      </div>
+      <span class="text-[10px] font-black text-white px-3 py-1.5 rounded-full" style="background:#f59e0b">Pasar lista</span>
+    </button>
+  `;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // LEVEL 3 — TARJETAS DE LOS ALUMNOS
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -569,11 +987,14 @@ function _buildUI(students, schedule, nowMinutes) {
         </button>
       ` : ''}
 
-      ${_routineDivider('🧑‍🏫')}
+      ${_routineDivider('🤖')}
+
+      <!-- ASISTENCIA DEL DÍA (Regla 1 y 2) -->
+      ${_renderAttendanceBanner(_attendanceCount > 0)}
 
       <!-- ═══════════════════════════════════════════════════════════════ -->
-      <!-- ACCIONES COLECTIVAS DEL AULA -->
-      ${_renderCollectiveActions(schedule, students, _logsMap, nowMinutes)}
+      <!-- ACCIONES DEL AULA — fijos del día + buscador + carrusel por categoría -->
+      ${_renderAccionesAula()}
 
       ${_routineDivider('📊')}
 
@@ -617,6 +1038,7 @@ export async function initRoutine() {
     ? allStudents
     : allStudents.filter(s => presentStudentIds.has(s.id));
   _presentIds = presentStudentIds;
+  _attendanceCount = attendance.length;
 
   const logs = await MaestraApi.getDailyRoutine(classroom.id, today);
   _logsMap = {};
@@ -628,7 +1050,15 @@ export async function initRoutine() {
     if (ev) _sleepMap[log.student_id] = ev;
   });
 
+  const wasAASearchFocused = document.activeElement && document.activeElement.id === 'aaSearch';
   container.innerHTML = _buildUI(students, schedule, nowMinutes);
+
+  _bindAAScroll();
+  _syncAADots();
+  if (wasAASearchFocused) {
+    const inp = document.getElementById('aaSearch');
+    if (inp) { inp.focus(); try { inp.setSelectionRange(inp.value.length, inp.value.length); } catch (e) {} }
+  }
 
   if (window.lucide) lucide.createIcons();
 
@@ -1275,9 +1705,18 @@ export async function routineQuickGroup(eventId) {
   const classroom = AppState.get('classroom');
   const allStudents = AppState.get('students') || [];
   const today = _today();
+
+  // Regla 6 — solo dentro del horario del aula
+  const _nowMin = new Date().getHours() * 60 + new Date().getMinutes();
+  if (_nowMin < 5 * 60 || _nowMin >= 22 * 60) { safeToast('Regla 6: solo se pueden marcar rutinas de 05:00 a 22:00', 'warning'); return; }
+
   const attendance = await MaestraApi.getAttendance(classroom.id, today);
+  // Regla 2 — sin asistencia tomada no se marca a nadie
+  if (!attendance || attendance.length === 0) { safeToast('Regla 2: primero pasa asistencia del día', 'warning'); return; }
   const presentStudentIds = new Set(attendance.filter(a => ['present', 'late'].includes(a.status)).map(a => a.student_id));
   const students = allStudents.filter(s => presentStudentIds.has(s.id));
+  // Regla 1 — solo se marcan alumnos presentes
+  if (students.length === 0) { safeToast('No hay alumnos presentes para marcar', 'warning'); return; }
 
   const EVENT_MAP = {
     breakfast: { field: 'food', foodKey: 'breakfast', value: 'todo', label: 'Desayuno' },
@@ -1287,6 +1726,8 @@ export async function routineQuickGroup(eventId) {
     toothbrush: { field: '_group', value: 'toothbrush', label: 'Cepillado dental' },
     activity: { field: '_group', value: 'activity', label: 'Actividad educativa' },
     playground: { field: '_group', value: 'playground', label: 'Salida al patio' },
+    welcome: { field: '_group', value: 'activity', label: 'Bienvenida' },
+    departure: { field: '_group', value: 'activity', label: 'Salida' },
     sleep_start: { field: '_sleep', value: 'start', label: 'Iniciar siesta' },
     sleep_end: { field: '_sleep', value: 'end', label: 'Terminar siesta' },
     bathroom: { field: '_group', value: 'bath', label: 'Baño' },
@@ -1306,7 +1747,13 @@ export async function routineQuickGroup(eventId) {
     ...(catalogEvent ? { event_id: catalogEvent.id } : {})
   });
 
+  // Regla 7 — las acciones masivas se confirman antes de marcar
+  if (students.length > 5 && !confirm(`¿Marcar "${ev.label}" para ${students.length} alumnos presentes?`)) {
+    return;
+  }
+
   try {
+    let markedCount = 0;
     for (const s of students) {
       if (_isDuplicate(s.id, eventId)) continue;
       const payload = { student_id: s.id, classroom_id: classroom.id, date: today, created_at: new Date().toISOString() };
@@ -1321,8 +1768,9 @@ export async function routineQuickGroup(eventId) {
         payload.infant_event = enrich({ type: ev.value, subtype: ev.subtype, label: ev.label });
       }
       await MaestraApi.upsertDailyLog(payload);
+      markedCount++;
     }
-    safeToast(`${ev.label} registrado para todos!`, 'success');
+    safeToast(markedCount > 0 ? `${ev.label} registrado para ${markedCount} alumno(s)!` : `${ev.label} ya estaba registrado hoy (Regla 3)`, markedCount > 0 ? 'success' : 'warning');
     await initRoutine();
   } catch (err) {
     safeToast('Error al registrar evento grupal', 'error');
@@ -1341,6 +1789,79 @@ function _legacyKeyForEvent(ev) {
     milk: 'infant:milk'
   };
   return map[ev.value];
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// RUTINAS DEL AULA — MARCADO COLECTIVO DESDE EL CATÁLOGO AMPLIO (10 reglas)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export async function markWholeClassRoutine(routineId) {
+  const routine = WHOLE_CLASS_ROUTINES.find(r => r.id === routineId);
+  if (!routine) return;
+
+  // Regla 9 — solo la maestra autorizada del aula
+  const user = AppState.get('user') || {};
+  const profile = AppState.get('profile') || {};
+  if (profile.role && profile.role !== 'maestra') { safeToast('Regla 9: solo la maestra puede marcar rutinas del aula', 'warning'); return; }
+
+  const classroom = AppState.get('classroom');
+  if (!classroom?.id) { safeToast('Aula no disponible', 'warning'); return; }
+  const allStudents = AppState.get('students') || [];
+  const today = _today();
+
+  // Regla 6 — solo dentro del horario del aula
+  const _nowMin = new Date().getHours() * 60 + new Date().getMinutes();
+  if (_nowMin < 5 * 60 || _nowMin >= 22 * 60) { safeToast('Regla 6: solo se pueden marcar rutinas de 05:00 a 22:00', 'warning'); return; }
+
+  const attendance = await MaestraApi.getAttendance(classroom.id, today);
+  // Regla 2 — sin asistencia tomada no se marca a nadie
+  if (!attendance || attendance.length === 0) { safeToast('Regla 2: primero pasa asistencia del día', 'warning'); return; }
+  const presentStudentIds = new Set(attendance.filter(a => ['present', 'late'].includes(a.status)).map(a => a.student_id));
+  // Regla 1 — solo se marcan alumnos presentes
+  const students = allStudents.filter(s => presentStudentIds.has(s.id));
+  if (students.length === 0) { safeToast('Regla 1: no hay alumnos presentes para marcar', 'warning'); return; }
+
+  // Regla 7 — las acciones masivas se confirman antes de marcar
+  if (students.length > 5 && !confirm(`¿Marcar "${routine.label}" (${routine.cat}) para ${students.length} alumnos presentes?`)) {
+    return;
+  }
+
+  // Regla 4 y 10 — ocurrencia única y origen colectivo para auditoría
+  const occurrenceId = crypto.randomUUID?.() || Math.random().toString(36).substr(2, 12);
+
+  try {
+    let markedCount = 0;
+    for (const s of students) {
+      // Regla 3 — un mismo evento no se registra dos veces al mismo alumno el mismo día
+      const alreadyMarked = (_logsMap[s.id]?.infant_data || []).some(
+        e => e.type === 'activity' && e.label === routine.label
+      );
+      if (alreadyMarked) continue;
+      const payload = {
+        student_id: s.id,
+        classroom_id: classroom.id,
+        date: today,
+        created_at: new Date().toISOString(),
+        infant_event: {
+          type: 'activity',
+          label: routine.label,
+          emoji: routine.emoji,
+          category: routine.cat,
+          occurrence_id: occurrenceId,
+          origin: 'colectivo'
+        }
+      };
+      await MaestraApi.upsertDailyLog(payload);
+      markedCount++;
+    }
+    safeToast(markedCount > 0
+      ? `${routine.emoji} ${routine.label} marcado para ${markedCount} alumno(s)`
+      : `${routine.label} ya estaba registrado hoy para todos (Regla 3)`,
+      markedCount > 0 ? 'success' : 'warning');
+    await initRoutine();
+  } catch (err) {
+    safeToast('Error al registrar la rutina del aula', 'error');
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

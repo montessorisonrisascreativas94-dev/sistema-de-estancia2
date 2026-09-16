@@ -167,7 +167,7 @@ export const DirectorApi = {
         supabase.from('profiles').select('id', { count: 'exact' }).in('role', ['maestra', 'asistente', 'encargada']).is('deleted_at', null).limit(100),
         supabase.from('classrooms').select('id', { count: 'exact' }).is('deleted_at', null).limit(100),
         supabase.from('attendance').select('id', { count: 'exact' }).eq('date', today).in('status', ['present', 'late']).limit(100),
-        supabase.from('inquiries').select('id', { count: 'exact' }).in('status', ['pending', 'in_progress', 'open']).is('deleted_at', null).limit(100),
+        supabase.from('inquiries').select('id', { count: 'exact' }).in('status', ['pending', 'in_progress', 'open']).limit(100),
         // Para pagos pendientes, vencidos y en revisión, necesitamos la suma de montos
         supabase.from('payments').select('amount').in('status', ['pending', 'overdue', 'review']).limit(1000)
       ]);

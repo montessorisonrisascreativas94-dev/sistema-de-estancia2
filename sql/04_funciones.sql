@@ -903,6 +903,13 @@ CREATE OR REPLACE FUNCTION public.add_column_if_not_exists(
 ) RETURNS void LANGUAGE plpgsql AS $$
 BEGIN
   IF NOT EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = p_table
+  ) THEN
+    RAISE NOTICE 'Tabla % no existe — omitida', p_table;
+    RETURN;
+  END IF;
+  IF NOT EXISTS (
     SELECT 1 FROM information_schema.columns
     WHERE table_schema = 'public' AND table_name = p_table AND column_name = p_column
   ) THEN

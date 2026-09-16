@@ -110,8 +110,8 @@
     ═══════════════════════════════════════════════ */
     #classesGrid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 1.5rem;
+      grid-template-columns: repeat(auto-fill, minmax(285px, 1fr));
+      gap: 1.35rem;
     }
     #classesGrid > div {
       position: relative;
@@ -120,6 +120,18 @@
       -webkit-tap-highlight-color: transparent;
       touch-action: manipulation;
       pointer-events: auto;
+    }
+    @media (max-width: 520px) {
+      #classesGrid { grid-template-columns: 1fr; gap: 1.05rem; }
+    }
+    @media (min-width: 768px) and (max-width: 1200px) {
+      #classesGrid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (min-width: 1201px) {
+      #classesGrid { grid-template-columns: repeat(3, 1fr); }
+    }
+    @media (min-width: 1700px) {
+      #classesGrid { grid-template-columns: repeat(4, 1fr); }
     }
 
     /* ═══════════════════════════════════════════════

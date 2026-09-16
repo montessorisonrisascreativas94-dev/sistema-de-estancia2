@@ -115,6 +115,13 @@ CREATE OR REPLACE FUNCTION public.add_column_if_not_exists(
 ) RETURNS void LANGUAGE plpgsql AS $$
 BEGIN
   IF NOT EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = p_table
+  ) THEN
+    RAISE NOTICE 'Tabla % no existe — omitida', p_table;
+    RETURN;
+  END IF;
+  IF NOT EXISTS (
     SELECT 1 FROM information_schema.columns
     WHERE table_schema = 'public' AND table_name = p_table AND column_name = p_column
   ) THEN
@@ -123,6 +130,9 @@ BEGIN
     ELSE
       EXECUTE format('ALTER TABLE public.%I ADD COLUMN %I %s', p_table, p_column, p_type);
     END IF;
+    RAISE NOTICE 'Added column: %', p_column;
+  ELSE
+    RAISE NOTICE 'Column already exists: %', p_column;
   END IF;
 END;
 $$;
@@ -235,10 +245,16 @@ SELECT public.add_column_if_not_exists('student_preregistrations', 'reviewed_by'
 
 SELECT public.add_column_if_not_exists('student_preregistrations', 'updated_at', 'timestamp with time zone', 'now()');
 
-DO $$ BEGIN
-  ALTER TABLE public.student_preregistrations
-    ADD CONSTRAINT preregistrations_status_check
-    CHECK (status IN ('pending', 'admitted', 'rejected', 'converted'));
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'student_preregistrations'
+  ) THEN
+    ALTER TABLE public.student_preregistrations
+      ADD CONSTRAINT preregistrations_status_check
+      CHECK (status IN ('pending', 'admitted', 'rejected', 'converted'));
+  END IF;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 DO $$
@@ -431,8 +447,14 @@ DO $$ BEGIN
   ALTER TABLE public.incidents ADD COLUMN IF NOT EXISTS period_id bigint REFERENCES public.periods(id) ON DELETE SET NULL;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
-DO $$ BEGIN
-  ALTER TABLE public.student_preregistrations ADD COLUMN IF NOT EXISTS school_year_id bigint REFERENCES public.school_years(id) ON DELETE SET NULL;
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'student_preregistrations'
+  ) THEN
+    ALTER TABLE public.student_preregistrations ADD COLUMN IF NOT EXISTS school_year_id bigint REFERENCES public.school_years(id) ON DELETE SET NULL;
+  END IF;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 DO $$ BEGIN
@@ -1289,3 +1311,41 @@ SELECT public.insert_plan_b('Primaria', '8:00-15:00', 71566.85, 70766.85);
 SELECT public.insert_plan_c('Primaria', '8:00-15:00', 30000.00, 11825.00);
 
 DROP TABLE IF EXISTS public.student_preregistrations CASCADE;
+
+-- ============================================================
+-- FIX: Estudiantes invisibles para staff (0 en paneles directora/asistente)
+-- Causa: 07_politicas.sql borra "students_staff_all" y "students_select",
+--   dejando solo la política de padres. Con RLS activado, el staff
+--   recibe 0 filas en silencio (sin error) → Total Alumnos = 0.
+-- Este bloque es idempotente: seguro ejecutarlo las veces que sea.
+-- ============================================================
+
+-- 1) Diagnóstico: cuántos estudiantes existen de verdad
+SELECT
+  COUNT(*) AS total_registros,
+  COUNT(*) FILTER (WHERE deleted_at IS NULL)   AS visibles_para_paneles,
+  COUNT(*) FILTER (WHERE deleted_at IS NOT NULL) AS soft_deleted
+FROM public.students;
+
+-- 2) Políticas actuales sobre students
+SELECT policyname, cmd, roles FROM pg_policies
+WHERE schemaname='public' AND tablename='students'
+ORDER BY policyname;
+
+-- 3) Aplicar fix (staff con acceso total = mismas políticas que classrooms)
+DO $$
+BEGIN
+  DROP POLICY IF EXISTS "students_staff_all" ON public.students;
+  CREATE POLICY "students_staff_all" ON public.students FOR ALL
+    TO authenticated
+    USING (COALESCE(get_my_role(),'') IN ('directora','asistente','admin','maestra','encargada'))
+    WITH CHECK (COALESCE(get_my_role(),'') IN ('directora','asistente','admin','maestra','encargada'));
+
+  -- (Opcional) Si los estudiantes fueron "borrados" por error, restaurarlos:
+  -- UPDATE public.students SET deleted_at = NULL WHERE deleted_at IS NOT NULL;
+END $$;
+
+-- 4) Verificación final
+SELECT policyname, cmd FROM pg_policies
+WHERE schemaname='public' AND tablename='students'
+ORDER BY policyname;

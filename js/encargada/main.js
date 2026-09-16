@@ -18,6 +18,7 @@ import {
   withDaySeparators,
 } from '../shared/chat.js';
 import { ScrollModule } from '../shared/scroll.module.js';
+import { NewsCenter } from '../shared/news-center.js';
 import { WALL_REACTIONS } from '../shared/wall.js';
 const MURO_REACTION_ORDER = ['like', 'love', 'bravo', 'adore', 'party'];
 const MURO_COMMENTS_SHOWN = 3;
@@ -2119,6 +2120,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ── Sidebar accordion dropdowns handled by sidebar-manager import below ──
 
     BadgeSystem.init(auth.user.id);
+
+    // ?? Campanita de novedades (centro de notificaciones)
+    NewsCenter.init(auth.user.id);
 
     document.getElementById('btnLogout')?.addEventListener('click', async () => {
       RealtimeManager.unsubscribeAll();

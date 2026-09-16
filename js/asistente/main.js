@@ -18,6 +18,7 @@ import { UIPremium } from '../shared/ui-premium.js';
 import { AssistantAccountingModule } from './accounting.module.js';
 import { InscripcionesModule } from '../directora/inscripciones.module.js';
 import { CatalogoModule } from '../shared/catalogo-conceptos.module.js';
+import { NewsCenter } from '../shared/news-center.js';
 import { openGlobalModal, closeGlobalModal } from '../shared/modal.js';
 import { InvoiceModule } from '../shared/invoice.js';
 import { AssistantChatApp } from './chat_app.js';
@@ -93,6 +94,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // ?? Sistema de badges por sección
   BadgeSystem.init(auth.user.id);
+
+  // ?? Campanita de novedades (centro de notificaciones)
+  NewsCenter.init(auth.user.id);
 
   // Badge inscripciones pendientes
   const loadPreBadge = async () => {
