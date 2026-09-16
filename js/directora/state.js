@@ -14,53 +14,9 @@ function createInitialState() {
     currentSection: 'dashboard',
 
     // ?? DASHBOARD
-    dashboardData: {
-      kpis: {
-        total: 0,
-        active: 0,
-        inquiries: 0,
-        classrooms: 0,
-        teachers: 0,
-        overdue_payments: 0,
-        pending_payments: 0,
-        paid_payments: 0,
-        attendance_today: 0
-      },
-
-      students: {
-        recent: [],
-        total: 0,
-        active: 0
-      },
-
-      classrooms: {
-        all: [] // ?? consistente con el resto
-      },
-
-      payments: {
-        pending: [],
-        summary: {
-          total_pending: 0,
-          total_paid: 0,
-          percentagePaid: 0
-        }
-      },
-
-      inquiries: {
-        active: [],
-        count: 0
-      },
-
-      attendance: {
-        today: {
-          present: 0,
-          late: 0,
-          absent: 0,
-          total: 0
-        },
-        trend7days: {}
-      }
-    },
+    // Valor real lo provee DashboardService.getFullData() con la forma { stats: {...} }.
+    // Se inicia en null para que las tarjetas KPI no lean un estado legacy vacío.
+    dashboardData: null,
 
     // ?? ESTADÍSTICAS
     stats: {},

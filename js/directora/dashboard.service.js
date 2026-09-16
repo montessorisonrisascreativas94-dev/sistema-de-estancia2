@@ -6,6 +6,7 @@
  */
 
 import { supabase } from '../shared/supabase.js';
+import { countRowsSafe } from '../shared/db-utils.js';
 import { DirectorApi } from './api.js';
 import { AppState } from './state.js';
 
@@ -18,30 +19,49 @@ export const DashboardService = {
   listeners: [], // 🔔 Lista de funciones a avisar cuando haya cambios
 
   async getFullData(refresh = false) {
-    if (!refresh && AppState.get('dashboardData')) return AppState.get('dashboardData');
+    // Solo reutilizar caché si tiene la forma correcta ({ stats: {...} })
+    const cached = AppState.get('dashboardData');
+    if (!refresh && cached?.stats) return cached;
 
     try {
       const d = new Date();
       const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      const monthAgo = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
 
-      // Queries directas en paralelo — no dependen de RPC
-      const [studentsRes, teachersRes, classroomsRes, attendanceRes] = await Promise.allSettled([
-        supabase.from('students').select('id').limit(2000),
+      // Queries directas en paralelo — no dependen de RPC.
+      // Los conteos usan countRowsSafe: lee el count real de la BD y cae
+      // sin el filtro deleted_at si la columna no existe en el esquema.
+      const [stuCount, actCount, teaRes, clsCount, attendanceRes, attendance30Res] = await Promise.allSettled([
+        countRowsSafe('students'),
+        countRowsSafe('students', { is_active: true }),
         supabase.from('profiles').select('id').in('role', ['maestra', 'asistente', 'admin']).limit(200),
-        supabase.from('classrooms').select('id').limit(200),
-        supabase.from('attendance').select('status').eq('date', today).limit(1000)
+        countRowsSafe('classrooms'),
+        supabase.from('attendance').select('status').eq('date', today).limit(1000),
+        supabase.from('attendance').select('date,status').gte('date', monthAgo).lt('date', today).limit(5000)
       ]);
 
-      const safe = (r) => r.status === 'fulfilled' ? r.value : { count: 0, data: [] };
-      const [stu, tea, cls, att] = [studentsRes, teachersRes, classroomsRes, attendanceRes].map(safe);
+      // allSettled -> valor (para los conteos numéricos) o {data} para queries raw
+      const val = (r) => (r.status === 'fulfilled' ? r.value : null);
+      const studentsCount = val(stuCount) || 0;
+      const activeCount   = val(actCount) || 0;
+      const teaData       = (val(teaRes)?.data) || [];
+      const classroomsCount = val(clsCount) || 0;
+      const attRes        = val(attendanceRes);
+      const att30Res      = val(attendance30Res);
+      const attData       = (attRes?.data) || [];
 
-      const stuCount = (stu.data?.length) ?? stu.count ?? 0;
-      const teaCount = (tea.data?.length) ?? tea.count ?? 0;
-      const clsCount = (cls.data?.length) ?? cls.count ?? 0;
-
-      const attData = att.data || [];
       const presentCount = attData.filter(a => ['present','presente','late','tarde'].includes((a.status||'').toLowerCase())).length;
       const totalPending = 0;
+
+      // Asistencia promedio: tasa diaria promedio de los últimos 30 días
+      const byDay = {};
+      for (const a of (att30Res?.data || [])) {
+        if (!byDay[a.date]) byDay[a.date] = { present: 0, total: 0 };
+        byDay[a.date].total++;
+        if (['present','presente','late','tarde'].includes((a.status||'').toLowerCase())) byDay[a.date].present++;
+      }
+      const dayRates = Object.values(byDay).map(x => x.total > 0 ? (x.present / x.total) * 100 : 0);
+      const avgAttendance = dayRates.length ? Math.round(dayRates.reduce((a, b) => a + b, 0) / dayRates.length) : 0;
 
       // Intentar RPC como enriquecimiento opcional (no bloquea)
       let rpcKpis = {};
@@ -52,14 +72,14 @@ export const DashboardService = {
 
       const dashboardData = {
         stats: {
-          students:        rpcKpis.total      || stuCount,
-          active:          rpcKpis.active     || stuCount,
-          teachers:        rpcKpis.teachers   || teaCount,
-          classrooms:      rpcKpis.classrooms || clsCount,
-          present:         rpcKpis.attendance_today ?? presentCount,
-          attendance:      rpcKpis.attendance_pct   || 0,
+          students:         studentsCount || rpcKpis.total || 0,
+          active:           activeCount || rpcKpis.active || 0,
+          teachers:         teaData.length || rpcKpis.teachers || 0,
+          classrooms:       classroomsCount || rpcKpis.classrooms || 0,
+          present:          presentCount || rpcKpis.attendance_today || 0,
+          attendance:       avgAttendance || rpcKpis.attendance_pct || 0,
           pendingInquiries: rpcKpis.inquiries || 0,
-          pending_amount:  totalPending,
+          pending_amount:   totalPending,
           pending_payments: totalPending,
         },
         recentInquiries: []

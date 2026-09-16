@@ -157,21 +157,26 @@ export const DirectorApi = {
         };
       }
 
-      // Optimización: Usar head: true para conteos rápidos (evita descargar toda la tabla)
+      // Optimización: conteos rápidos con count exacto (data ligera para que el
+      // count siempre llegue poblado desde la BD).
       const d = new Date();
       const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
       
       const results = await Promise.allSettled([
-        supabase.from('students').select('*', { count: 'exact', head: true }).eq('is_active', true),
-        supabase.from('profiles').select('*', { count: 'exact', head: true }).in('role', ['maestra', 'asistente', 'encargada']),
-        supabase.from('classrooms').select('*', { count: 'exact', head: true }),
-        supabase.from('attendance').select('*', { count: 'exact', head: true }).eq('date', today).in('status', ['present', 'late']),
-        supabase.from('inquiries').select('*', { count: 'exact', head: true }).in('status', ['pending', 'in_progress', 'open']),
+        supabase.from('students').select('id', { count: 'exact' }).eq('is_active', true).is('deleted_at', null).limit(100),
+        supabase.from('profiles').select('id', { count: 'exact' }).in('role', ['maestra', 'asistente', 'encargada']).is('deleted_at', null).limit(100),
+        supabase.from('classrooms').select('id', { count: 'exact' }).is('deleted_at', null).limit(100),
+        supabase.from('attendance').select('id', { count: 'exact' }).eq('date', today).in('status', ['present', 'late']).limit(100),
+        supabase.from('inquiries').select('id', { count: 'exact' }).in('status', ['pending', 'in_progress', 'open']).is('deleted_at', null).limit(100),
         // Para pagos pendientes, vencidos y en revisión, necesitamos la suma de montos
         supabase.from('payments').select('amount').in('status', ['pending', 'overdue', 'review']).limit(1000)
       ]);
 
-      const get = (r) => r.status === 'fulfilled' ? r.value : { count: 0, data: [] };
+      const get = (r) => {
+        const v = r.status === 'fulfilled' ? r.value : null;
+        if (!v || v.error || !Array.isArray(v.data)) return { count: 0, data: [] };
+        return { count: v.count ?? v.data.length, data: v.data };
+      };
       const [totalRes, teachersRes, classroomsRes, attendanceRes, inquiriesRes, pendingPayRes] = results.map(get);
 
       const pendingAmount = (pendingPayRes.data || []).reduce((s, p) => s + Number(p.amount || 0), 0);
@@ -332,6 +337,7 @@ export const DirectorApi = {
         const { data, error } = await supabase
           .from(TABLES.CLASSROOMS)
           .select('id, name, level, capacity, profiles:teacher_id(name), students(count)')
+          .is('deleted_at', null)
           .order('name');
         if (error) throw error;
         const normalized = (data || []).map(r => ({
@@ -371,7 +377,8 @@ export const DirectorApi = {
       const { data: activeStudents } = await supabase
         .from(TABLES.STUDENTS)
         .select('parent_id')
-        .eq('is_active', true);
+        .eq('is_active', true)
+        .is('deleted_at', null);
 
       const activeParentIds = [...new Set((activeStudents || []).map(s => s.parent_id).filter(Boolean))];
 
@@ -402,7 +409,8 @@ export const DirectorApi = {
         .from(TABLES.STUDENTS)
         .select('parent_id, name, classroom_id')
         .in('parent_id', ids)
-        .eq('is_active', true);
+        .eq('is_active', true)
+        .is('deleted_at', null);
       if (error) throw error;
 
       // Enriquecer con nombre de aula en query separada si hay classroom_ids
@@ -437,11 +445,13 @@ export const DirectorApi = {
 
   // --- ESTUDIANTES ---
   async getStudents(filters = {}, range = null) {
-    const { data, error, count } = await _withSessionRetry(async () => {
+    const build = (useDeleted = true) => {
       let q = supabase
         .from(TABLES.STUDENTS)
         .select('id, name, avatar_url, matricula, age, age_type, classroom_id, is_active', { count: 'exact' })
         .order('name');
+
+      if (useDeleted) q = q.is('deleted_at', null);
 
       if (filters.search) q = q.ilike('name', `%${filters.search}%`);
       if (filters.classroom_id) q = q.eq('classroom_id', filters.classroom_id);
@@ -455,7 +465,14 @@ export const DirectorApi = {
       }
 
       return q;
-    });
+    };
+
+    let { data, error, count } = await _withSessionRetry(() => build());
+    // Si el esquema no tiene deleted_at, reintentar sin ese filtro
+    if (error && /deleted_at/.test(String(error.message || '')) && /does not exist|not exist|no existe|column/i.test(String(error.message || ''))) {
+      console.warn('[getStudents] Columna deleted_at ausente — reintentando sin filtro.');
+      ({ data, error, count } = await _withSessionRetry(() => build(false)));
+    }
     
     if (error) return { data, error, count };
     
@@ -479,18 +496,23 @@ export const DirectorApi = {
   },
 
   async getQuickCounts() {
-    // Ya optimizado con head: true
+    // Conteos con count exacto y fallback al largo de datos (sin head:true)
+    const safe = (r) => {
+      const v = r.status === 'fulfilled' ? r.value : null;
+      if (!v || v.error || !Array.isArray(v.data)) return 0;
+      return v.count ?? v.data.length;
+    };
     const [students, teachers, classrooms, inquiries] = await Promise.all([
-      supabase.from(TABLES.STUDENTS).select('*', { count: 'exact', head: true }).eq('is_active', true),
-      supabase.from(TABLES.PROFILES).select('*', { count: 'exact', head: true }).in('role', ['maestra', 'asistente', 'encargada']),
-      supabase.from(TABLES.CLASSROOMS).select('*', { count: 'exact', head: true }),
-      supabase.from('inquiries').select('*', { count: 'exact', head: true }).eq('status', 'pending')
+      supabase.from(TABLES.STUDENTS).select('id', { count: 'exact' }).eq('is_active', true).is('deleted_at', null).limit(500),
+      supabase.from(TABLES.PROFILES).select('id', { count: 'exact' }).in('role', ['maestra', 'asistente', 'encargada']).is('deleted_at', null).limit(500),
+      supabase.from(TABLES.CLASSROOMS).select('id', { count: 'exact' }).is('deleted_at', null).limit(500),
+      supabase.from('inquiries').select('id', { count: 'exact' }).eq('status', 'pending').limit(500)
     ]);
     return {
-      students: students.count || 0,
-      teachers: teachers.count || 0,
-      classrooms: classrooms.count || 0,
-      inquiries: inquiries.count || 0
+      students: safe(students),
+      teachers: safe(teachers),
+      classrooms: safe(classrooms),
+      inquiries: safe(inquiries)
     };
   },
   async createStudent(data) {
@@ -548,6 +570,7 @@ export const DirectorApi = {
           supabase.from(TABLES.PROFILES)
             .select('id, name, role, email, phone, avatar_url, is_active, classrooms!classrooms_teacher_id_fkey(id, name)')
             .in('role', ['maestra', 'asistente', 'encargada'])
+            .is('deleted_at', null)
             .order('name')
         );
         if (error) throw error;
@@ -598,7 +621,7 @@ export const DirectorApi = {
     try {
       return await QueryCache.get('dir_classrooms', async () => {
         const res = await _withSessionRetry(() =>
-          supabase.from(TABLES.CLASSROOMS).select('id, name, level, capacity, teacher:teacher_id(name)').order('name')
+          supabase.from(TABLES.CLASSROOMS).select('id, name, level, capacity, teacher:teacher_id(name)').is('deleted_at', null).order('name')
         );
         if (res?.error) throw res.error; // no cachear errores (evita 401 persistente 5 min)
         return res;

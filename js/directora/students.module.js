@@ -41,20 +41,25 @@ export const StudentsModule = {
 
       // 2. Obtener datos globales del dashboard para KPIs complementarios
       let dashboardData = AppState.get('dashboardData');
-      if (!dashboardData) {
+      if (!dashboardData?.stats) {
         const { DashboardService } = await import('./dashboard.service.js');
         dashboardData = await DashboardService.getFullData();
       }
-      
-      const kpis = dashboardData?.stats || {}; // DashboardService usa 'stats'
+      if (!dashboardData?.stats) dashboardData = { stats: {} }; // fallback seguro
 
-      // 3. Actualizar tarjetas KPI
+      const kpis = dashboardData.stats;
+
+      // 3. Promedio general (rendimiento académico global)
+      const avgGrade = await this._loadAvgGrade();
+
+      // 4. Actualizar tarjetas KPI
       const setTxt = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
       
-      setTxt('totalStudents', count || 0);
+      setTxt('totalStudents', count || kpis.students || 0);
       setTxt('activeStudents', kpis.active || 0);
       setTxt('incidents', kpis.pendingInquiries || 0);
       setTxt('classroomsCount', kpis.classrooms || 0);
+      setTxt('avgGrade', avgGrade);
       setTxt('avgAttendance', (kpis.attendance || 0) + '%');
 
       // 4. Renderizar vista actual
@@ -176,6 +181,47 @@ export const StudentsModule = {
           }
         );
     });
+  },
+
+  // Promedio general de rendimiento (0-100) basado en las evaluaciones activas
+  async _loadAvgGrade() {
+    try {
+      const { buildScoresMap, moduleAvg, avgOf } = await import('../shared/eval-utils.js');
+      const safe = r => r.status === 'fulfilled' ? r.value : { data: [] };
+      const [modRes, actRes, scoreRes, studRes] = await Promise.allSettled([
+        supabase.from('eval_modules').select('id,area_id,period_id,name,eval_type,config').is('deleted_at', null).limit(2000),
+        supabase.from('eval_activities').select('id,module_id,name').is('deleted_at', null).limit(5000),
+        supabase.from('eval_scores').select('module_id,activity_id,student_id,value,stars,level,yesno,checklist,rubric').limit(20000),
+        supabase.from('students').select('id,is_active').is('deleted_at', null).limit(2000)
+      ]);
+
+      const modules = safe(modRes).data || [];
+      const activities = safe(actRes).data || [];
+      const scores = safe(scoreRes).data || [];
+      const students = safe(studRes).data || [];
+
+      const actsByModule = new Map();
+      activities.forEach(a => {
+        if (!actsByModule.has(a.module_id)) actsByModule.set(a.module_id, []);
+        actsByModule.get(a.module_id).push(a);
+      });
+
+      const scoreMap = buildScoresMap(scores, activities);
+      const studentAvgs = [];
+      students.filter(s => s.is_active !== false).forEach(st => {
+        const vals = [];
+        modules.forEach(m => {
+          const ma = moduleAvg(m, actsByModule.get(m.id) || [], st.id, scoreMap);
+          if (ma != null) vals.push(ma);
+        });
+        if (vals.length) studentAvgs.push(avgOf(vals));
+      });
+
+      const overall = avgOf(studentAvgs);
+      return overall == null ? '-' : overall.toFixed(1);
+    } catch (_) {
+      return '-';
+    }
   },
 
   async printAllCarnets() {

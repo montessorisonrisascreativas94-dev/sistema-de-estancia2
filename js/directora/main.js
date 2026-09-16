@@ -492,10 +492,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Centro de Novedades (campana dorada con todos los eventos del panel)
     NewsCenter.init(auth.user.id);
 
-    // Cargar badge de pre-inscripciones pendientes
+    // Cargar badge de pre-inscripciones pendientes (tabla student_preregistrations).
+    // Se desactiva si la tabla no existe en el esquema para evitar 404 en consola.
+    let _preBadgeEnabled = true;
     const loadPreBadge = async () => {
+      if (!_preBadgeEnabled) return;
       try {
-        const {count} = await supabase.from('student_preregistrations').select('id',{count:'exact',head:true}).eq('status','pending');
+        const res = await supabase.from('student_preregistrations').select('id',{count:'exact',head:true}).eq('status','pending');
+        if (res?.error && (res.error.code === '42P01' || res.error.status === 404 || /does not exist|relation.*does not exist/i.test(res.error.message || ''))) {
+          _preBadgeEnabled = false;
+          return;
+        }
+        const count = res?.count ?? 0;
         const b=document.getElementById('badge-ciclo');
         if(b) {
           if(count>0){
@@ -505,20 +513,28 @@ document.addEventListener('DOMContentLoaded', async () => {
             b.classList.add('hidden');
           }
         }
-      } catch(e){}
+      } catch(e){
+        if (/404|does not exist|42P01/i.test(String(e?.message || e))) _preBadgeEnabled = false;
+      }
     };
     loadPreBadge();
     
     // Suscribirse a cambios en preinscripciones para actualizar badge en tiempo real
     try {
-      supabase.channel('preinscripciones-realtime')
-        .on('postgres_changes', {
-          event: '*',
-          schema: 'public',
-          table: 'student_preregistrations'
-        }, () => loadPreBadge())
-        .subscribe();
-    } catch(e){}
+      if (_preBadgeEnabled) {
+        supabase.channel('preinscripciones-realtime')
+          .on('postgres_changes', {
+            event: '*',
+            schema: 'public',
+            table: 'student_preregistrations'
+          }, () => loadPreBadge())
+          .subscribe((status) => {
+            if (status === 'closed' || status === 'channel_error') _preBadgeEnabled = false;
+          });
+      }
+    } catch(e){
+      _preBadgeEnabled = false;
+    }
 
     // 6. Configurar Logout
     document.getElementById('btnLogout')?.addEventListener('click', async () => {

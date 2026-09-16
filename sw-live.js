@@ -2,7 +2,7 @@
  * Colegio Montessori Sonrisas Creativas — Service Worker PWA for Attendance Live
  */
 
-const CACHE_NAME = 'karpus-live-v2';
+const CACHE_NAME = 'karpus-live-v3';
 const ASSETS = [
   './attendance-live.html',
   'js/shared/html5-qrcode.min.js',

@@ -267,6 +267,58 @@ export async function countRows(table, filters = {}) {
 }
 
 /**
+ * Cuenta registros de forma robusta y con fallback automático.
+ *
+ * - Pide el `count` exacto junto con data mínima (evita el caso en que
+ *   `head: true` no devuelve el count en ciertas versiones de supabase-js).
+ * - Si la tabla de tu base de datos NO tiene la columna `deleted_at`
+ *   (esquema antiguo), el primer intento falla: se reintenta sin ese filtro
+ *   para que el conteo SIEMPRE llegue desde la BD.
+ * - En cualquier fallo, registra el error en consola (para diagnóstico)
+ *   y devuelve el resultado parcial si es posible.
+ *
+ * @param {string} table  — nombre de la tabla (ej. 'students')
+ * @param {object} filters — filtros eq, ej. { is_active: true }
+ * @param {object} opts   — { hideDeleted: true } para filtrar deleted_at IS NULL
+ * @returns {Promise<number>}
+ */
+export async function countRowsSafe(table, filters = {}, { hideDeleted = true, label = table } = {}) {
+  const build = (useDeleted) => {
+    let q = supabase.from(table).select('id', { count: 'exact' }).limit(1);
+    for (const [col, val] of Object.entries(filters)) {
+      if (val !== null && val !== undefined) q = q.eq(col, val);
+    }
+    if (useDeleted) q = q.is('deleted_at', null);
+    return q;
+  };
+
+  const run = async (useDeleted) => {
+    const { count, error } = await build(useDeleted);
+    if (error) throw error;
+    return count || 0;
+  };
+
+  try {
+    return await run(hideDeleted);
+  } catch (e) {
+    const code = e?.code || '';
+    const msg = String(e?.message || '');
+    const isMissingColumn = code === 'PGRST205' ||
+      (/deleted_at/.test(msg) && /does not exist|not exist|no existe|column/i.test(msg));
+
+    if (isMissingColumn) {
+      console.warn(`[countRowsSafe] Columna deleted_at ausente en "${table}", reintentando sin filtro.`);
+      if (hideDeleted) {
+        try { return await run(false); } catch (e2) { console.error(`[countRowsSafe] ${table}:`, e2); return 0; }
+      }
+      return 0;
+    }
+    console.error(`[countRowsSafe] Error contando "${label}":`, code, msg);
+    return 0;
+  }
+}
+
+/**
  * 📊 ensureChart — Lazy loading de Chart.js
  * Solo inicializa el gráfico cuando el canvas es visible en el viewport.
  * Evita inicializar Chart.js en secciones que el usuario nunca visita.

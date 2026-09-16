@@ -3,6 +3,7 @@
  * Indicadores en tiempo real, gráficos, alertas, cumpleaños, eventos
  */
 import { supabase } from '../shared/supabase.js';
+import { countRowsSafe } from '../shared/db-utils.js';
 import { AppState } from './state.js';
 import { buildScoresMap, moduleAvg, avgOf, gradeColor, gradeToLevel } from '../shared/eval-utils.js';
 
@@ -22,31 +23,33 @@ export async function renderDashboardV2(data) {
   const monthStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
 
   const [
-    studentsRes, teachersRes, attendanceRes,
+    teachersRes, attendanceRes,
     messagesRes, cycleRes
   ] = await Promise.allSettled([
-    supabase.from('students').select('id,is_active,name').limit(2000),
-    supabase.from('profiles').select('id,role').in('role',['maestra','asistente','admin']).limit(200),
+    supabase.from('profiles').select('id,role').in('role',['maestra','asistente','admin']).is('deleted_at', null).limit(200),
     supabase.from('attendance').select('status').eq('date',todayStr).limit(1000),
     supabase.from('messages').select('id',{count:'exact',head:true}).eq('is_read',false),
     supabase.from('school_years').select('name,is_current').order('start_date',{ascending:false}).limit(5),
   ]);
 
+  // Conteos de estudiantes SIEMPRE desde la BD (con fallback si falta deleted_at)
+  const [totalStu, activeStu] = await Promise.all([
+    countRowsSafe('students', {}, { label: 'total alumnos' }),
+    countRowsSafe('students', { is_active: true }, { label: 'alumnos activos' }),
+  ]);
+
   const safe = r => r.status==='fulfilled' ? r.value : {data:[],count:0};
-  const students   = safe(studentsRes).data||[];
-  const teachers   = safe(teachersRes).data||[];
+  const teachers  = safe(teachersRes).data||[];
   const attendance = safe(attendanceRes).data||[];
-  const unread     = safe(messagesRes).count||0;
+  const unread    = safe(messagesRes).count||0;
   
   // Filtrar cumpleaños del día (ahora usando solo la tabla students y campos que existan)
   const currentMonth = String(now.getMonth()+1).padStart(2,'0');
   const currentDay = String(now.getDate()).padStart(2,'0');
   const birthdays = []; // Por ahora, si no hay campo birth_date en students, dejamos vacío
-  
+
   const cycles     = safe(cycleRes).data||[];
 
-  const totalStu   = students.length;
-  const activeStu  = students.filter(s=>s.is_active).length;
   const present    = attendance.filter(a=>['present','late'].includes(a.status?.toLowerCase())).length;
   const absent     = attendance.filter(a=>a.status?.toLowerCase()==='absent').length;
   const currentCycle = cycles.find(c=>c.is_current)?.name || cycles[0]?.name || '—';
