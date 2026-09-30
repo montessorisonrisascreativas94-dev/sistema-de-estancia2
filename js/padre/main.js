@@ -161,17 +161,25 @@ document.addEventListener('DOMContentLoaded', async () => {
     updateHeaderProfile(auth.profile, currentStudent, students);
     setupNavigation();
     setupGlobalListeners();
-    
-    // Activar sección home inmediatamente
+
+    // ✅ Inicializar navegación con History API y respetar hash de la URL
+    const initialSection = _initNavFromUrl();
     document.querySelectorAll('.section').forEach(s => s.classList.add('hidden'));
-    const homeSection = document.getElementById('home');
-    if (homeSection) {
-      homeSection.classList.remove('hidden');
-      homeSection.classList.add('active');
+    // Mostrar la sección inicial (por defecto home)
+    const initEl = document.getElementById(initialSection);
+    if (initEl) {
+      initEl.classList.remove('hidden');
+      initEl.classList.add('active');
+      AppState.set('currentSection', initialSection);
     }
+    _applySectionUI(initialSection);
+    if (window.lucide) lucide.createIcons();
+
+    // Si la URL traía una sección distinta, inicializarla después de refreshDashboard
+    const _needsNavTo = initialSection !== 'home' ? initialSection : null;
 
     // Mostrar skeletons inmediatamente
-  const timeline = document.getElementById('dailyEmojiTimeline');
+    const timeline = document.getElementById('dailyEmojiTimeline');
   if (timeline) {
     timeline.innerHTML = `
       <div class="flex items-center gap-3 p-3 bg-slate-50 rounded-2xl animate-pulse">
@@ -187,6 +195,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       BadgeSystem.init(auth.user.id);
       // ?? Campanita de novedades (centro de notificaciones)
       NewsCenter.init(auth.user.id);
+      // Navegar a la sección solicitada en la URL (si no es home)
+      if (_needsNavTo && document.getElementById(_needsNavTo)) {
+        navigateTo(_needsNavTo, { force: true });
+      }
     });
 
     if (currentStudent?.classroom_id) {
@@ -513,19 +525,68 @@ function renderLatestPosts(posts) {
 }
 
 
-// ── Navegación ────────────────────────────────────────────────────────────────
-export async function navigateTo(targetId) {
+// ── Títulos de secciones para Header Móvil ──────────────────────────────────
+const SECTION_TITLES = {
+  'home':            { title: 'Sonrisas Creativas',  subtitle: 'Bienvenido de nuevo', back: false },
+  'tasks':           { title: 'Mochila de Tareas',   subtitle: 'Tareas y actividades', back: true },
+  'grades':          { title: 'Tablero de Progreso', subtitle: 'Calificaciones', back: true },
+  'class':           { title: 'Muro de Clase',       subtitle: 'Novedades y comunicados', back: true },
+  'videocall':       { title: 'Videollamada',        subtitle: 'Clase en vivo', back: true },
+  'live-attendance': { title: 'Asistencia',          subtitle: 'Registro diario', back: true },
+  'payments':        { title: 'Finanzas',            subtitle: 'Pagos y colegiaturas', back: true },
+  'notifications':   { title: 'Comunicación',        subtitle: 'Mensajes y chat', back: true },
+  'rutina-diaria':   { title: 'Rutina Diaria',       subtitle: 'Reportes de la maestra', back: true },
+  'profile':         { title: 'Mi Cuenta',           subtitle: 'Perfil y configuración', back: true },
+  'reports':         { title: 'Reportes',            subtitle: 'Documentos', back: true },
+  'qr-access':       { title: 'Acceso QR',           subtitle: 'Código de entrada', back: true }
+};
+
+let _navSuppressPopstate = false;
+let _navLastSection = null;
+
+function _applySectionUI(targetId) {
   if (!targetId) return;
 
-  // Módulo financiero deshabilitado: redirigir al inicio
-  if (targetId === 'payments') {
-    targetId = 'home';
+  // Actualizar header móvil: título + botón atrás
+  const info = SECTION_TITLES[targetId] || SECTION_TITLES.home;
+  const titleEl = document.getElementById('mobileHeaderTitle');
+  const subEl   = document.getElementById('mobileHeaderSubtitle');
+  const backBtn = document.getElementById('backBtnMobile');
+  if (titleEl) titleEl.textContent = info.title;
+  if (subEl)   subEl.textContent   = info.subtitle;
+  if (backBtn) {
+    if (info.back) {
+      backBtn.classList.remove('hidden');
+      backBtn.classList.add('flex');
+    } else {
+      backBtn.classList.add('hidden');
+      backBtn.classList.remove('flex');
+    }
   }
+
+  // Tema / color barra
+  const themeColors = {
+    home: '#0ea5e9', tasks: '#F59E0B', class: '#3B82F6',
+    payments: '#059669', 'live-attendance': '#10B981', 'rutina-diaria': '#0B63C7',
+    notifications: '#0B63C7', grades: '#10B981', profile: '#0B63C7', videocall: '#8B5CF6'
+  };
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', themeColors[targetId] || '#0ea5e9');
+
+  // Marcar sidebar activo
+  document.querySelectorAll('[data-target]').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.target === targetId);
+  });
+  document.querySelectorAll('.submenu-item').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.target === targetId);
+  });
+}
+
+function _showOnlySection(targetId) {
+  if (!targetId) return;
+
   Helpers.vibrate?.('light');
 
-  // ✅ LIMPIEZA DE REALTIME: Eliminar canales al cambiar de sección
   if (window.RealtimeManager) RealtimeManager.unsubscribeAll(['notifications', 'live_status']);
-  // Cleanup feed channel
   if (FeedModule._channel) {
     supabase.removeChannel(FeedModule._channel);
     FeedModule._channel = null;
@@ -537,93 +598,144 @@ export async function navigateTo(targetId) {
   });
 
   const target = document.getElementById(targetId);
-  if (target) {
-    target.classList.remove('hidden');
-    target.classList.add('active');
-      
-      // Cambiar color de la barra de estado/tema según sección
-      const themeColors = {
-        home: '#0ea5e9', tasks: '#F59E0B', class: '#3B82F6', 
-        payments: '#059669', 'live-attendance': '#10B981'
-      };
-      document.querySelector('meta[name="theme-color"]')?.setAttribute('content', themeColors[targetId] || '#0ea5e9');
+  if (!target) return;
 
-    AppState.set('currentSection', targetId);
+  target.classList.remove('hidden');
+  target.classList.add('active');
+  AppState.set('currentSection', targetId);
 
-    // 🔴 Marcar badges como leídos al entrar a la sección
-    BadgeSystem.mark(targetId);
-    // También limpiar badge de la tarjeta del dashboard
-    const cardBadge = document.getElementById('badge-card-' + targetId);
-    if (cardBadge) { cardBadge.classList.add('hidden'); cardBadge.classList.remove('flex'); }
+  BadgeSystem.mark(targetId);
+  const cardBadge = document.getElementById('badge-card-' + targetId);
+  if (cardBadge) { cardBadge.classList.add('hidden'); cardBadge.classList.remove('flex'); }
 
-    const student = AppState.get('currentStudent');
-    switch (targetId) {
-      case 'home':
-        refreshDashboard().then(() => {
-          // Re-aplicar badges en tarjetas después de que se rendericen
-          if (window.BadgeSystem) BadgeSystem._reapplyCardBadges();
-        });
-        break;
-      case 'payments': {
-        const fin = AppState.get('financeConfig') || {};
-        // Update header stats
-        const setEl = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-        const paidTotal = (AppState.get('financeHistory') || []).reduce((s, p) => s + Number(p.amount || 0), 0);
-        setEl('paymentsBalance', Helpers.formatCurrency(paidTotal));
-        setEl('paymentsMonthlyFee', Helpers.formatCurrency(fin.monthly_fee || 0));
-        setEl('paymentsDueDay', fin.due_day || '-');
-        PaymentsModule.init(student?.id);
-        WizardPayment.init();
-        // Auto-fill amount for colegiatura if empty
-        setTimeout(() => {
-          const amountInput = document.getElementById('paymentAmount');
-          const concept = document.getElementById('paymentConcept')?.value;
-          if (amountInput && !amountInput.value && concept === 'mensualidad' && fin.monthly_fee > 0) {
-            amountInput.value = fin.monthly_fee;
-          }
-        }, 300);
-        break;
-      }
-      case 'tasks':           TasksModule.init(student?.id); break;
-      case 'live-attendance': AttendanceModule.init(student?.id); break;
-      case 'notifications':   ChatModule.init(); break;
-      case 'class':           FeedModule.init(student?.classroom_id); break;
-      case 'profile':         ProfileModule.init(); _initPadreQR(student); NotifyPermission.requestIfNeeded(); break;
-      case 'grades':          GradesModule.init(student?.id); break;
-      case 'reports':         ReportsModule.init(); break;
-      case 'rutina-diaria': {
-        const sid = AppState.get('currentStudent')?.id;
-        DailyReportModule.setStudent(sid);
-        DailyReportModule.load().then(() => {
-          requestAnimationFrame(() => { if (window.lucide) lucide.createIcons(); });
-        });
-        break;
-      }
-      case 'qr-access':       _initPadreQR(student); break;
-      case 'videocall': {
-        const student = AppState.get('currentStudent');
-        const profile = AppState.get('profile');
-        VideoCallUI.renderSection('videocall-section', {
-          role: 'padre',
-          // Mostrar nombre del estudiante en la videollamada, no del padre
-          userName: student?.name || profile?.name || 'Padre',
-          studentName: student?.name || '',
-          classroomId: student?.classroom_id || null
-        });
-        break;
-      }
+  const student = AppState.get('currentStudent');
+  switch (targetId) {
+    case 'home':
+      refreshDashboard().then(() => {
+        if (window.BadgeSystem) BadgeSystem._reapplyCardBadges();
+      });
+      break;
+    case 'payments': {
+      const fin = AppState.get('financeConfig') || {};
+      const setEl = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+      const paidTotal = (AppState.get('financeHistory') || []).reduce((s, p) => s + Number(p.amount || 0), 0);
+      setEl('paymentsBalance', Helpers.formatCurrency(paidTotal));
+      setEl('paymentsMonthlyFee', Helpers.formatCurrency(fin.monthly_fee || 0));
+      setEl('paymentsDueDay', fin.due_day || '-');
+      PaymentsModule.init(student?.id);
+      WizardPayment.init();
+      setTimeout(() => {
+        const amountInput = document.getElementById('paymentAmount');
+        const concept = document.getElementById('paymentConcept')?.value;
+        if (amountInput && !amountInput.value && concept === 'mensualidad' && fin.monthly_fee > 0) {
+          amountInput.value = fin.monthly_fee;
+        }
+      }, 300);
+      break;
+    }
+    case 'tasks':           TasksModule.init(student?.id); break;
+    case 'live-attendance': AttendanceModule.init(student?.id); break;
+    case 'notifications':   ChatModule.init(); break;
+    case 'class':           FeedModule.init(student?.classroom_id); break;
+    case 'profile':         ProfileModule.init(); _initPadreQR(student); NotifyPermission.requestIfNeeded(); break;
+    case 'grades':          GradesModule.init(student?.id); break;
+    case 'reports':         ReportsModule.init(); break;
+    case 'rutina-diaria': {
+      const sid = AppState.get('currentStudent')?.id;
+      DailyReportModule.setStudent(sid);
+      DailyReportModule.load().then(() => {
+        requestAnimationFrame(() => { if (window.lucide) lucide.createIcons(); });
+      });
+      break;
+    }
+    case 'qr-access':       _initPadreQR(student); break;
+    case 'videocall': {
+      const s = AppState.get('currentStudent');
+      const p = AppState.get('profile');
+      VideoCallUI.renderSection('videocall-section', {
+        role: 'padre',
+        userName: s?.name || p?.name || 'Padre',
+        studentName: s?.name || '',
+        classroomId: s?.classroom_id || null
+      });
+      break;
     }
   }
 
-  document.querySelectorAll('[data-target]').forEach(btn => {
-    const isActive = btn.dataset.target === targetId;
-    btn.classList.toggle('active', isActive);
-  });
-  
-  // Cerrar sidebar en móvil al navegar
-  if (window.innerWidth < 768 && closeSidebar) {
-    closeSidebar(); // Usar la nueva función para cerrar el sidebar
+  if (window.innerWidth < 768 && closeSidebar) closeSidebar();
+}
+
+// ── Navegación principal (con History API) ─────────────────────────────────
+export async function navigateTo(targetId, opts = {}) {
+  if (!targetId) return;
+  if (targetId === 'payments') targetId = 'home';
+
+  const current = AppState.get('currentSection');
+  if (current === targetId && !opts.force) return;
+
+  // 1) Actualizar UI
+  _showOnlySection(targetId);
+  _applySectionUI(targetId);
+
+  // 2) Actualizar URL / historial (solo si el usuario navegó)
+  if (!opts.fromPopstate) {
+    try {
+      const url = new URL(window.location.href);
+      url.hash = '#/' + targetId;
+      _navSuppressPopstate = true;
+      window.history.pushState({ section: targetId }, '', url.toString());
+      setTimeout(() => { _navSuppressPopstate = false; }, 60);
+    } catch (_) {}
   }
+
+  _navLastSection = targetId;
+}
+
+// ── Botón atrás manual ───────────────────────────────────────────────────────
+function _goBack() {
+  const current = AppState.get('currentSection');
+  if (current === 'home') return;
+  // Si hay historial propio, ir atrás; si no, ir a home
+  try {
+    if (window.history.length > 1 && window.history.state?.section) {
+      _navSuppressPopstate = true;
+      window.history.back();
+      setTimeout(() => { _navSuppressPopstate = false; }, 80);
+    } else {
+      navigateTo('home');
+    }
+  } catch (_) {
+    navigateTo('home');
+  }
+}
+
+// ── Listener global: botón atrás del navegador / gesto Android ───────────────
+window.addEventListener('popstate', (e) => {
+  if (_navSuppressPopstate) return;
+  let targetId = 'home';
+  if (e.state?.section) {
+    targetId = e.state.section;
+  } else if (window.location.hash.startsWith('#/')) {
+    targetId = window.location.hash.slice(2);
+  }
+  if (!document.getElementById(targetId)) targetId = 'home';
+  navigateTo(targetId, { fromPopstate: true, force: true });
+});
+
+// ── Inicializar navegación desde URL al cargar ───────────────────────────────
+function _initNavFromUrl() {
+  let initial = 'home';
+  if (window.location.hash.startsWith('#/')) {
+    const fromHash = window.location.hash.slice(2);
+    if (document.getElementById(fromHash)) initial = fromHash;
+  }
+  // Reemplazar estado inicial para no tener entradas "vacías"
+  try {
+    const url = new URL(window.location.href);
+    url.hash = '#/' + initial;
+    window.history.replaceState({ section: initial }, '', url.toString());
+  } catch (_) {}
+  return initial;
 }
 
 // --- Funciones globales para sidebar ---
@@ -638,6 +750,7 @@ function setupNavigation() {
   const overlay = document.getElementById('sidebarOverlay');
   const menuToggleBtn = document.getElementById('menuToggleBtn');
   const closeSidebarBtn = document.getElementById('closeSidebarBtn');
+  const backBtnMobile = document.getElementById('backBtnMobile');
 
   openSidebar = () => {
     if (!sidebar || !overlay) return;
@@ -654,23 +767,18 @@ function setupNavigation() {
     setTimeout(() => sidebar.classList.remove('animate-slide-out', 'animate-slide-in'), 300);
   };
 
-  // Toggle sidebar
   if (menuToggleBtn) menuToggleBtn.addEventListener('click', openSidebar);
   if (closeSidebarBtn) closeSidebarBtn.addEventListener('click', closeSidebar);
   if (overlay) overlay.addEventListener('click', closeSidebar);
+  if (backBtnMobile) backBtnMobile.addEventListener('click', _goBack);
 
-  // Category dropdowns
   document.querySelectorAll('.sidebar-category').forEach(categoryBtn => {
     categoryBtn.addEventListener('click', () => {
       const submenu = categoryBtn.closest('.sidebar-category-group')?.querySelector('.submenu');
       const chevron = categoryBtn.querySelector('.category-chevron');
       if (!submenu) return;
-      
-      // Toggle current
       submenu.classList.toggle('open');
       if (chevron) chevron.style.transform = submenu.classList.contains('open') ? 'rotate(180deg)' : 'rotate(0deg)';
-      
-      // Optional: Close others on mobile
       if (window.innerWidth < 768) {
         document.querySelectorAll('.submenu').forEach(other => {
           if (other !== submenu && other.classList.contains('open')) {

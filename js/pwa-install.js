@@ -9,6 +9,19 @@
 
   let deferredPrompt = null;
 
+  window.pwaInstallState = {
+    get deferredPrompt() { return deferredPrompt; },
+    get isAvailable() { return deferredPrompt !== null; },
+    isInstalled: isInstalled,
+    shouldShowBanner: shouldShowBanner
+  };
+
+  function notifyState() {
+    window.dispatchEvent(new CustomEvent('pwa-prompt-changed', {
+      detail: { available: deferredPrompt !== null, isInstalled: isInstalled() }
+    }));
+  }
+
   // ── Detectar si ya está instalada ──────────────────────────────────────────
   function isInstalled() {
     return (
@@ -95,11 +108,11 @@
 
   // ── Evento beforeinstallprompt ─────────────────────────────────────────────
   window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
     deferredPrompt = e;
 
     // Botón en login
     updateLoginBtn(true);
+    notifyState();
 
     // Banner en paneles (con pequeño delay para no interrumpir la carga)
     if (!document.getElementById('loginForm') && shouldShowBanner()) {
@@ -162,6 +175,7 @@
     document.getElementById('pwa-install-banner')?.remove();
     localStorage.setItem('pwa-dismissed', 'installed');
     deferredPrompt = null;
+    notifyState();
   });
 
   // ── CSS para animación del banner ──────────────────────────────────────────

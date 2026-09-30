@@ -2,7 +2,7 @@
   "name": "Colegio Montessori Sonrisas Creativas",
   "short_name": "Sonrisas Creativas",
   "description": "Portal educativo del Colegio Montessori Sonrisas Creativas para padres, maestros y dirección",
-  "start_url": "/index.html",
+  "start_url": "/login.html",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait-primary",

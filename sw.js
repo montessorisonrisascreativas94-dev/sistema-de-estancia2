@@ -5,7 +5,7 @@
  * para evitar conflictos de handlers con este worker.
  */
 
-const CACHE_NAME = 'karpus-pwa-v11';
+const CACHE_NAME = 'karpus-pwa-v12';
 
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
@@ -85,9 +85,32 @@ self.addEventListener('fetch', e => {
     return;
   }
 
-  // ✅ CACHÉ DE ASSETS ESTÁTICOS CORE
+  // ✅ CONFIG Y CÓDIGO: NETWORK-FIRST
+  // Un .js cacheado con datos viejos rompe el sistema: si js/shared/supabase.js
+  // queda servido desde caché con un proyecto de Supabase distinto, el login
+  // falla con 400 aunque el archivo en disco ya sea correcto. Para código y
+  // HTML siempre se pregunta a la red primero; la caché es solo el fallback
+  // sin conexión.
+  const isCode = url.pathname.endsWith('.js') ||
+                 url.pathname.endsWith('.html') ||
+                 url.pathname === '/' ||
+                 url.pathname === '';
+
+  if (isCode) {
+    e.respondWith(_safeRespond(
+      fetch(e.request).then(res => {
+        if (res && res.type === 'basic' && res.ok && res.status === 200) {
+          const copy = res.clone();
+          caches.open(CACHE_NAME).then(c => c.put(e.request, copy)).catch(() => {});
+        }
+        return res;
+      }).catch(() => caches.match(e.request).then(cached => cached || caches.match('login.html')))
+    ));
+    return;
+  }
+
+  // ✅ ASSETS INMUTABLES (css, imágenes, fuentes): cache-first
   const isCoreAsset = url.pathname.endsWith('.css') ||
-                     url.pathname.endsWith('.js') ||
                      url.pathname.endsWith('.png') ||
                      url.pathname.endsWith('.jpg') ||
                      url.pathname.endsWith('.svg');

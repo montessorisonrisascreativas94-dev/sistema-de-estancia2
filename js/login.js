@@ -215,38 +215,59 @@ document.addEventListener('DOMContentLoaded', async () => {
       await redirectByRole(userId);
 
     } catch (error) {
-      const msg  = String(error?.message || '');
-      const name = String(error?.name || '');
-      const isNetwork = name === 'AuthRetryableFetchError' || msg.includes('Failed to fetch') || msg.includes('NetworkError');
+      const msg    = String(error?.message || '');
+      const name   = String(error?.name || '');
+      const code   = String(error?.code || '');
+      const status = Number(error?.status || 0);
+      const isNetwork = name === 'AuthRetryableFetchError' || msg.includes('Failed to fetch') || msg.includes('NetworkError') || status === 0;
 
       let errorMessage = 'Ocurrió un error inesperado. Intenta de nuevo.';
-      if (isNetwork)                               errorMessage = 'Sin conexión. Verifica tu internet.';
-      else if (msg.includes('Invalid login'))      errorMessage = 'Correo o contraseña incorrectos.';
-      else if (msg.includes('Email not confirmed')) {
-        // Try to get user anyway - maybe we can bypass email confirmation check
+      let isInvalidCredential = false;
+
+      if (isNetwork) {
+        errorMessage = 'Sin conexión. Verifica tu internet.';
+      } else if (status === 429 || code === 'over_request_rate_limit' || msg.includes('Too many requests') || msg.includes('rate limit')) {
+        errorMessage = 'Demasiadas solicitudes. Espera unos segundos e intenta de nuevo.';
+      } else if (
+        msg.includes('Invalid login') ||
+        msg.includes('Invalid credentials') ||
+        code === 'invalid_credentials' ||
+        msg.includes('Email not found') ||
+        msg.includes('User not found') ||
+        code === 'user_not_found' ||
+        msg.includes('Password') && msg.includes('incorrect')
+      ) {
+        isInvalidCredential = true;
+        errorMessage = 'Correo o contraseña incorrectos.';
+      } else if (msg.includes('Email not confirmed') || code === 'email_not_confirmed') {
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
-          // Already logged in, redirect
           RATE_LIMIT.recordSuccess();
           await redirectByRole(session.user.id);
           return;
         }
         errorMessage = 'Confirma tu correo antes de ingresar.';
+      } else if (msg.includes('disabled') || code === 'signup_disabled') {
+        errorMessage = 'El inicio de sesión no está habilitado para esta cuenta.';
+      } else if (msg.includes('Password') || code === 'password_validation') {
+        errorMessage = 'Credenciales inválidas. Revisa tu correo y contraseña.';
+        isInvalidCredential = true;
       }
 
-      // Registrar intento fallido en Supabase para rate limiting server-side
-      if (!isNetwork && msg.includes('Invalid login')) {
+      if (isInvalidCredential) {
         supabase.from('login_attempts')
           .insert({ email, success: false })
           .then(() => {});
-          
+
         const locked = RATE_LIMIT.recordFailure();
         if (locked) {
-          errorMessage = `Cuenta bloqueada por 1 minuto. Demasiados intentos fallidos.`;
+          errorMessage = 'Cuenta bloqueada temporalmente. Espera 1 minuto e intenta de nuevo.';
         } else {
           const left = RATE_LIMIT.getAttemptsLeft();
           errorMessage = 'Correo o contraseña incorrectos.';
-          if (left <= 2) errorMessage += ` (${left} intento${left !== 1 ? 's' : ''} restante${left !== 1 ? 's' : ''} antes del bloqueo)`;
+          if (left <= 2) {
+            errorMessage += ` (${left} intento${left !== 1 ? 's' : ''} antes del bloqueo)`;
+          }
         }
       }
 

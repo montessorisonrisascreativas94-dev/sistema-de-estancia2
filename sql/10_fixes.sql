@@ -1310,7 +1310,14 @@ SELECT public.insert_plan_b('Primaria', '8:00-15:00', 71566.85, 70766.85);
 
 SELECT public.insert_plan_c('Primaria', '8:00-15:00', 30000.00, 11825.00);
 
-DROP TABLE IF EXISTS public.student_preregistrations CASCADE;
+-- DROP TABLE IF EXISTS public.student_preregistrations CASCADE;
+--
+-- NEUTRALIZADO 2026-09-30. Este DROP venia al final del archivo, despues de las
+-- ~55 llamadas a add_column_if_not_exists() de las lineas 140-246 sobre la misma
+-- tabla: las anadia y luego la borraba con CASCADE, destruyendo todas las
+-- preinscripciones. Las columnas de mas ya se agregan de forma idempotente mas
+-- arriba, asi que la tabla queda equivalente sin necesitar recrearla.
+-- Ver sql/MIGRACION_CORRECTIVA.sql.
 
 -- ============================================================
 -- FIX: Estudiantes invisibles para staff (0 en paneles directora/asistente)

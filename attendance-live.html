@@ -733,7 +733,6 @@
     });
 
     window.addEventListener('beforeinstallprompt', (e) => {
-      e.preventDefault();
       deferredPrompt = e;
       setTimeout(() => {
         document.getElementById('pwaBanner').classList.add('show');

@@ -89,6 +89,9 @@ END;
 $$;
 
 -- Vista de pagos con mora calculada
+-- 42P16: CREATE OR REPLACE VIEW no puede reducir columnas de una vista que ya
+-- existe. Se tira primero para que el CREATE sea siempre limpio.
+DROP VIEW IF EXISTS public.v_payments_with_mora CASCADE;
 CREATE OR REPLACE VIEW public.v_payments_with_mora AS
 SELECT
   p.*,
@@ -864,6 +867,9 @@ $$;
 GRANT EXECUTE ON FUNCTION public.generate_ascii_receipt(bigint) TO authenticated;
 
 -- Vista de rutina diaria
+-- 42P16: se reemplaza en 06_vistas.sql con mas columnas (title, subtitle...).
+-- DROP aqui evita que este CREATE de 3 columnas falle contra esa version.
+DROP VIEW IF EXISTS public.daily_routine CASCADE;
 CREATE OR REPLACE VIEW public.daily_routine AS
 SELECT * FROM (VALUES
   ('desayuno', '08:00', '🍳'),

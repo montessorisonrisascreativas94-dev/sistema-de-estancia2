@@ -265,9 +265,18 @@ export const RecentActivityModule = {
         </div>`;
     }
 
-    const visibleItems = this._items.filter(i => !i.isRead);
+    const MAX_ITEMS = 10;
+    const visibleItems = this._items.slice(0, MAX_ITEMS);
     const itemsHTML = visibleItems.map(item => this._renderItem(item)).join('');
-    this._container.innerHTML = counterHTML + `<div class="space-y-2">${itemsHTML}</div>`;
+    const moreCount = this._items.length - MAX_ITEMS;
+    const moreHTML = moreCount > 0
+      ? `<div class="text-center pt-2">
+           <button type="button" onclick="App.navigateTo('class')" class="text-[10px] font-black text-[#0B63C7] uppercase tracking-wider hover:underline">
+             Ver ${moreCount} novedad${moreCount > 1 ? 'es' : ''} más →
+           </button>
+         </div>`
+      : '';
+    this._container.innerHTML = counterHTML + `<div class="space-y-2">${itemsHTML}${moreHTML}</div>`;
     if (window.lucide) lucide.createIcons();
   },
 
@@ -276,7 +285,7 @@ export const RecentActivityModule = {
     const target = item.target || 'home';
     const unread = !item.isRead;
 
-    const unreadDot = unread ? '<span class="w-2 h-2 rounded-full bg-[#EF4444] shrink-0 animate-pulse"></span>' : '';
+    const unreadDot = unread ? '<span class="w-2.5 h-2.5 rounded-full bg-[#EF4444] shrink-0 animate-pulse"></span>' : '';
     const pinnedIcon = item.isPinned ? '<span class="text-[9px] shrink-0" title="Fijada">📌</span>' : '';
     const priorityBadge = item.priority === 'critical'
       ? '<span class="px-1.5 py-0.5 bg-red-100 text-red-700 text-[8px] font-black rounded-full uppercase animate-pulse">Urgente</span>'
@@ -284,21 +293,27 @@ export const RecentActivityModule = {
         ? '<span class="px-1.5 py-0.5 bg-amber-100 text-amber-700 text-[8px] font-black rounded-full uppercase">Importante</span>'
         : '';
 
+    const opacityClass = unread ? 'opacity-100' : 'opacity-70';
+    const borderClass = unread ? `${item.border} ring-1 ring-opacity-40` : 'border-slate-100';
+    const bgClass = unread ? item.bg : 'bg-white';
+    const titleWeight = unread ? 'font-black' : 'font-bold';
+    const msgWeight = unread ? 'font-medium' : 'font-normal';
+
     return `
       <div data-activity-id="${item.id}" data-target="${target}" data-notif-id="${item.notifId || ''}"
-        class="flex items-start gap-3 p-3 rounded-xl ${item.bg} border ${item.border} cursor-pointer hover:shadow-md hover:scale-[1.01] transition-all group activity-item ring-1 ring-opacity-30"
-        style="box-shadow: inset 3px 0 0 ${item.accent}">
-        <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-sm group-hover:scale-110 transition-transform" style="background:${item.accent}25; font-size:1.3rem">
+        class="flex items-start gap-3 p-3 rounded-xl ${bgClass} border ${borderClass} cursor-pointer hover:shadow-md hover:scale-[1.01] transition-all group activity-item ${opacityClass}"
+        style="box-shadow: ${unread ? 'inset 3px 0 0 ' + item.accent : 'inset 3px 0 0 rgba(148,163,184,0.35)'}">
+        <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-sm group-hover:scale-110 transition-transform" style="background:${unread ? item.accent + '25' : 'rgba(148,163,184,0.1)'}; font-size:1.3rem">
           ${item.icon}
         </div>
         <div class="flex-1 min-w-0">
           <div class="flex items-center gap-1.5 mb-0.5 flex-wrap">
             ${pinnedIcon}
-            <span class="text-[9px] font-black ${item.text} uppercase tracking-wider">${escapeHtml(item.title)}</span>
+            <span class="text-[9px] ${titleWeight} ${unread ? item.text : 'text-slate-500'} uppercase tracking-wider">${escapeHtml(item.title)}</span>
             ${priorityBadge}
             ${unreadDot}
           </div>
-          <p class="text-xs font-medium text-[#1A2340] leading-relaxed line-clamp-2">${escapeHtml(item.message)}</p>
+          <p class="text-xs ${msgWeight} ${unread ? 'text-[#1A2340]' : 'text-slate-500'} leading-relaxed line-clamp-2">${escapeHtml(item.message)}</p>
         </div>
         <span class="text-[9px] font-bold text-[#64748B] shrink-0 whitespace-nowrap">${time}</span>
       </div>`;
