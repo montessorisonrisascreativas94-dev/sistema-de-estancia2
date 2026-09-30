@@ -1,0 +1,1434 @@
+import { ensureRole, supabase, initOneSignal, emitEvent, sendPush } from '../shared/supabase.js';
+import { Security } from '../shared/security.js';
+import { RealtimeManager } from '../shared/realtime-manager.js';
+import { AppState } from './state.js';
+
+import { MaestraApi } from './api.js';
+import { Helpers } from '../shared/helpers.js';
+import { WallModule } from '../shared/wall.js';
+import { SchoolYearGuard } from '../shared/school-year-guard.js';
+import { SmartLoader } from '../shared/smart-loader.js';
+
+import { VideoCallModule } from '../shared/videocall.js';
+import { BadgeSystem } from '../shared/badges.js';
+import { ImageLoader } from '../shared/image-loader.js';
+
+import * as Attendance from './modules/attendance.js';
+import * as Routine from './modules/routine.js';
+import * as Tasks from './modules/tasks.js';
+import * as Students from './modules/students.js';
+import * as ChatApp from './modules/chat_app.js';
+import { PermitsModule } from './modules/permits.js';
+import { UI } from './modules/ui.js';
+
+import { UIPremium } from '../shared/ui-premium.js';
+import { NewsCenter } from '../shared/news-center.js';
+
+window.safeToast = UI.safeToast;
+window.UI = UI;
+const { safeToast, safeEscapeHTML, safeUrl, safeJS, Modal } = UI;
+
+// Cache de marcas de tiempo para evitar recargas constantes
+const _lastLoad = {};
+
+// Exponer Modal globalmente ANTES de cualquier interacción del usuario
+// Los onclick inline en HTML dinámico necesitan window.Modal disponible de inmediato
+window.Modal = Modal;
+const { initAttendance, markAllPresent, registerAttendance } = Attendance;
+const { initRoutine, openStudentRoutine, openBulkRoutineModal, markWholeClassRoutine } = Routine;
+const { initTasks, openEditTaskModal, deleteTask, openNewTaskModal, viewTaskSubmissions, submitGrade } = Tasks;
+const { openStudentProfile, registerIncidentModal } = Students;
+const { initChat, selectChatContact } = ChatApp;
+
+/**
+ * 🚀 ARQUITECTURA SENIOR: Definición Global del Objeto App
+ * Evita errores de "App is not defined" y centraliza la lógica.
+ */
+window.App = {
+  // UI Helpers
+  safeToast: UI.safeToast,
+  safeEscapeHTML: UI.safeEscapeHTML,
+  Modal: UI.Modal,
+
+  // Wall
+  WallModule: WallModule,
+
+  // Attendance
+  registerAttendance: Attendance.registerAttendance,
+  markAllPresent: Attendance.markAllPresent,
+  initAttendance: Attendance.initAttendance,
+  handleAttendancePointerDown: Attendance.handleAttendancePointerDown,
+  handleAttendancePointerUp: Attendance.handleAttendancePointerUp,
+
+  // Rutina del Aula — Sistema de Rutina para Todo el Aula (10 reglas)
+    initRoutine:              Routine.initRoutine,
+    openStudentRoutine:       Routine.openStudentRoutine,
+    openBulkRoutineModal:     Routine.openBulkRoutineModal,
+    routineQuickGroup:        Routine.routineQuickGroup,
+    markWholeClassRoutine:    Routine.markWholeClassRoutine,
+    aaSearch:                 Routine.aaSearch,
+    aaNav:                    Routine.aaNav,
+    routineWakeAll:           Routine.routineWakeAll,
+    routineWakeStudent:       Routine.routineWakeStudent,
+    setStudentMood:           Routine.setStudentMood,
+    setStudentFood:           Routine.setStudentFood,
+    setStudentNap:            Routine.setStudentNap,
+    setStudentBehavior:       Routine.setStudentBehavior,
+    addStudentEvent:          Routine.addStudentEvent,
+    deleteInfantEvent:        Routine.deleteInfantEvent,
+    saveStudentNote:          Routine.saveStudentNote,
+    _openTempModal:           Routine._openTempModal,
+    _confirmTemp:             Routine._confirmTemp,
+    _openMilkModal:           Routine._openMilkModal,
+    _openMedModal:            Routine._openMedModal,
+    _openExtraEventModal:     Routine._openExtraEventModal,
+    _confirmMilk:             Routine._confirmMilk,
+    _confirmMed:              Routine._confirmMed,
+    _confirmExtraEvent:       Routine._confirmExtraEvent,
+    publishDailyLogs:         Routine.publishDailyLogs,
+    toggleOmitToday:          Routine.toggleOmitToday,
+    insertEventAt:            Routine.insertEventAt,
+    clearDailyOverrides:      Routine.clearDailyOverrides,
+    goToAttendance:           () => window.App.activateTab?.('attendance'),
+
+  // Tasks
+  initTasks: Tasks.initTasks,
+  openEditTaskModal: Tasks.openEditTaskModal,
+  deleteTask: Tasks.deleteTask,
+  openNewTaskModal: Tasks.openNewTaskModal,
+  viewTaskSubmissions: Tasks.viewTaskSubmissions,
+  submitGrade: Tasks.submitGrade,
+
+  // Students
+  openStudentProfile: Students.openStudentProfile,
+  registerIncidentModal: Students.registerIncidentModal,
+
+  // Chat
+  initChat: ChatApp.initChat,
+  selectChatContact: ChatApp.selectChatContact,
+
+  // Permits
+  permits: PermitsModule,
+
+  // Global actions
+  setActiveSection: (targetId, options) => window.App._setActiveSection?.(targetId, options),
+  navigateTo: (sectionId, tabId) => {
+    const cleanSection = sectionId.startsWith('t-') ? sectionId : `t-${sectionId}`;
+    window.App.setActiveSection(cleanSection);
+    if (tabId) {
+      // Si la sección es detalle de aula, activar el tab
+      if (cleanSection === 't-class-detail') {
+        window.App.activateTab?.(tabId);
+      }
+      // Si la sección es home pero el tab es rutina (caso dashboard)
+      if (cleanSection === 't-home' && tabId === 'daily-routine') {
+        // En este caso, el dashboard redirige a la sección de aula detalle tab rutina
+        const classroom = AppState.get('classroom');
+        if (classroom) {
+          window.App.showClassroomDetail(classroom.id, { activeTab: tabId });
+        }
+      }
+    }
+  },
+  showClassroomDetail: (classroomId, options) => window.App._showClassroomDetail?.(classroomId, options),
+  startJitsi: () => window.App._startJitsi?.(),
+  openNewPostModal: () => window.App._openNewPostModal(),
+  submitNewPost: () => window.App._submitNewPost()
+};
+
+/**
+ * Inicialización principal
+ */
+
+/**
+ * Error reporter — estructurado para debugging en producción.
+ * Reemplaza console.log/debug. Para conectar a Sentry, descomentar la línea con Sentry.
+ */
+window.MaestraErrors = [];
+function _reportError(type, err, extra = {}) {
+  const entry = {
+    t: new Date().toISOString(),
+    type,
+    msg: err?.message || String(err),
+    stack: err?.stack?.substring(0, 500),
+    ...extra
+  };
+  window.MaestraErrors.push(entry);
+  if (window.MaestraErrors.length > 50) window.MaestraErrors.shift();
+  // Sentry: Sentry.captureException(err, { extra });
+}
+
+// Global error handlers
+window.addEventListener('unhandledrejection', (e) => {
+  const msg = e.reason?.message?.toLowerCase() ?? '';
+  if (msg.includes('indexeddb') || msg.includes('network') || msg.includes('fetch')) return;
+  _reportError('unhandledrejection', e.reason);
+});
+
+window.addEventListener('error', (e) => {
+  if (e.filename?.includes('maestra/')) {
+    _reportError('error', e.error || new Error(e.message), { file: e.filename, line: e.lineno });
+  }
+});
+
+document.addEventListener('DOMContentLoaded', async () => {
+  // Logout
+  document.getElementById('logoutBtn')?.addEventListener('click', async () => {
+    await supabase.auth.signOut();
+    window.location.href = 'login.html';
+  });
+
+  const auth = await ensureRole(['maestra', 'admin']);
+  if (!auth) return;
+  
+  AppState.set('user', auth.user);
+  AppState.set('profile', auth.profile);
+
+  // 🔔 Inicializar Notificaciones Push
+  // 🔥 FIX: Permitir subdominios como www. y otros para la inicialización
+  const host = window.location.hostname;
+  const isProd = host === 'montessorisonrisascreativas.com' || host === 'www.montessorisonrisascreativas.com' || host.endsWith('.montessorisonrisascreativas.com');
+  
+  if (isProd) {
+    try { initOneSignal(auth.user); } catch(_) {}
+  }
+
+  // 🔒 School Year Guard — Read-only banner
+  try {
+    const banner = await SchoolYearGuard.getReadOnlyBanner();
+    if (banner) {
+      const bannerContainer = document.getElementById('readOnlyBanner') || document.querySelector('.section.active .flex.flex-col');
+      if (bannerContainer) {
+        bannerContainer.insertAdjacentHTML('afterbegin', banner);
+        if (window.lucide) lucide.createIcons();
+      }
+      document.querySelectorAll('.section').forEach(sec => {
+        if (!sec.querySelector('.bg-rose-50, .bg-amber-50')) {
+          sec.insertAdjacentHTML('afterbegin', banner);
+        }
+      });
+    }
+    await SchoolYearGuard.applyBodyClass();
+  } catch (_) {}
+
+  // Identidad
+  const teacherName = auth.profile?.full_name || auth.profile?.name || 'Maestra';
+  const sidebarAvatar = document.getElementById('sidebarAvatar');
+  const sidebarName = document.getElementById('sidebarName');
+  const sidebarEmail = document.getElementById('sidebarEmail');
+  
+  if (sidebarName) sidebarName.textContent = teacherName;
+  if (sidebarEmail) sidebarEmail.textContent = auth.user.email;
+  
+  if (sidebarAvatar) {
+    const avatarUrl = auth.profile?.avatar_url;
+    sidebarAvatar.innerHTML = avatarUrl 
+      ? `<img src="${safeUrl(avatarUrl)}" class="w-full h-full object-cover">`
+      : `<div class="w-full h-full flex items-center justify-center text-xl font-black text-[#FF7A00] bg-[#FF7A00]">${teacherName.charAt(0)}</div>`;
+  }
+
+  document.querySelectorAll('.user-name-display').forEach(el => el.textContent = teacherName);
+  document.querySelectorAll('.user-email-display').forEach(el => el.textContent = auth.user.email);
+  const welcomeText = document.querySelector('#t-home header h1');
+  if (welcomeText) welcomeText.innerHTML = `<span>Hola, <span class="user-name-display text-[#FF7A00]">${UI.safeEscapeHTML(teacherName)}</span>!</span>`;
+
+  // Cargar Perfil en sección perfil
+  const pName = document.getElementById('teacherName');
+  const pEmail = document.getElementById('teacherEmail');
+  if (pName) pName.textContent = teacherName;
+  if (pEmail) pEmail.textContent = auth.user.email;
+  if (document.getElementById('profileAvatar')) {
+    document.getElementById('profileAvatar').src = auth.profile?.avatar_url || 'img/1.jpg';
+  }
+
+  // Inicializar formulario de perfil
+  const profileForm = document.getElementById('profileForm');
+  if (profileForm) {
+    // Cargar datos actuales
+    const profName = document.getElementById('profName');
+    const profPhone = document.getElementById('profPhone');
+    const profEmail = document.getElementById('profEmail');
+    const profBio = document.getElementById('profBio');
+    
+    if (profName) profName.value = auth.profile?.name || '';
+    if (profPhone) profPhone.value = auth.profile?.phone || '';
+    if (profEmail) profEmail.value = auth.user.email;
+    if (profBio) profBio.value = auth.profile?.bio || '';
+
+    profileForm.onsubmit = async (e) => {
+      e.preventDefault();
+      const btn = profileForm.querySelector('button[type="submit"]');
+      btn.disabled = true;
+      btn.innerHTML = '<i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i> Guardando...';
+      
+      try {
+        const updates = {
+          name: profName.value,
+          phone: profPhone.value,
+          bio: profBio.value,
+          updated_at: new Date().toISOString()
+        };
+        const { error } = await supabase.from('profiles').update(updates).eq('id', auth.user.id);
+        if (error) throw error;
+        
+        // Actualizar estado local
+        const oldProfile = AppState.get('profile') || {};
+        AppState.set('profile', { ...oldProfile, ...updates });
+        
+        safeToast('Perfil actualizado correctamente');
+        
+        // ✅ ACTUALIZACIÓN REACTIVA: Actualizar UI sin recargar
+        document.querySelectorAll('.user-name-display').forEach(el => el.textContent = updates.name);
+        const sidebarName = document.getElementById('sidebarName');
+        if (sidebarName) sidebarName.textContent = updates.name;
+        
+        btn.disabled = false;
+        btn.innerHTML = '<i data-lucide="save" class="w-5 h-5"></i> Guardar Cambios';
+        if (window.lucide) lucide.createIcons();
+      } catch (err) {
+        safeToast('Error al guardar perfil. Revisa tu conexión.', 'error');
+        btn.disabled = false;
+        btn.innerHTML = '<i data-lucide="save" class="w-5 h-5"></i> Guardar Cambios';
+      }
+    };
+  }
+
+  // Manejar subida de avatar
+  const avatarInput = document.getElementById('profileAvatarInput');
+  if (avatarInput) {
+    avatarInput.onchange = async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+        safeToast('La imagen es demasiado grande (máx. 5MB)', 'error');
+        return;
+      }
+      
+      const fileName = `avatar-${auth.user.id}-${Date.now()}.webp`;
+      const filePath = `avatars/${fileName}`;
+
+      try {
+        // Comprimir avatar antes de subir (máx 400px, WebP)
+        const publicUrl = await ImageLoader.uploadToStorage(file, 'karpus-uploads', filePath, {
+          maxWidth: 400, maxHeight: 400, quality: 0.85, maxSizeKB: 150
+        });
+        
+        // Actualizar perfil con nueva URL
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({ avatar_url: publicUrl })
+          .eq('id', auth.user.id);
+        
+        if (updateError) throw updateError;
+        
+        // Actualizar avatar en UI
+        setProfileAvatar(publicUrl, teacherName);
+        document.getElementById('sidebarAvatar').innerHTML = `<img src="${safeUrl(publicUrl)}" class="w-full h-full object-cover">`;
+        
+        // Actualizar estado
+        AppState.set('profile', { ...auth.profile, avatar_url: publicUrl });
+        
+        safeToast('Avatar actualizado correctamente');
+      } catch (err) {
+        safeToast('Error al subir avatar', 'error');
+      }
+    };
+  }
+
+  // Helper to set profile avatar
+  function setProfileAvatar(avatarUrl, name) {
+    const avatarEl = document.getElementById('profileAvatar');
+    if (!avatarEl) return;
+    const initial = (name || 'M').charAt(0).toUpperCase();
+    if (avatarUrl) {
+      avatarEl.innerHTML = `<img src="${safeUrl(avatarUrl)}" class="w-full h-full object-cover rounded-full">`;
+    } else {
+      avatarEl.innerHTML = initial;
+    }
+  }
+  // Initialize profile avatar
+  setProfileAvatar(auth.profile?.avatar_url, teacherName);
+
+  // 🔥 EXPOSICIÓN GLOBAL DE MÓDULOS (CRUCIAL PARA EL MURO)
+  window.WallModule = WallModule;
+
+  // Inicializar QR de la maestra en sección perfil
+  _initMaestraQR(auth.profile, auth.user);
+
+  // Asignar funciones internas al objeto global App
+  Object.assign(window.App, {
+    _showClassroomDetail: showClassroomDetail,
+    _startJitsi: startJitsi,
+    _openNewPostModal: openNewPostModal,
+    _submitNewPost: submitNewPost
+  });
+
+  // Listener delegado para acciones (PRO: submit-grade)
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-action="submit-grade"]');
+    if (btn) {
+      const { taskId, studentId } = btn.dataset;
+      submitGrade(taskId, studentId);
+      return;
+    }
+    // Cerrar modal estático studentProfileModal con clic afuera o botón X
+    const profileModal = document.getElementById('studentProfileModal');
+    if (profileModal && !profileModal.classList.contains('hidden')) {
+      if (e.target === profileModal || e.target.id === 'closeStudentProfileModal' || e.target.closest('#closeStudentProfileModal')) {
+        profileModal.classList.add('hidden');
+        profileModal.classList.remove('flex');
+      }
+    }
+  });
+
+  try {
+    const { data: classrooms, error } = await supabase
+      .from('classrooms')
+      .select('id, name, level, capacity, teacher_id, is_live')
+      .eq('teacher_id', auth.user.id)
+      .order('name');
+
+    if (error) throw error;
+    if (!classrooms?.length) {
+      safeToast('No tienes un aula asignada.', 'warning');
+      return;
+    }
+
+    AppState.set('classrooms', classrooms);
+    AppState.set('classroom', classrooms[0]);
+
+    // Switcher de aulas (para maestras con varias aulas)
+    _initClassroomSwitcher(classrooms);
+
+    // Inicializar Módulos
+    await Promise.all([
+      initDashboard(),
+      initAttendance(),
+      initNavigation(),
+      initChat()
+    ]);
+    
+    initRealtimeUpdates(classrooms[0].id);
+
+    // Cargar Badges en background
+    loadMaestraUnreadBadge(auth.user.id);
+    loadPendingTasksBadge(classrooms[0].id);
+
+    // 🔴 Sistema de badges por sección
+    BadgeSystem.init(auth.user.id);
+
+    // ?? Campanita de novedades (centro de notificaciones)
+    NewsCenter.init(auth.user.id);
+
+    // ── Sidebar Manager (mobile + desktop) ───────────────────────────────────
+    import('../shared/sidebar-manager.js')
+      .then(({ initSidebar }) => initSidebar())
+      .catch(() => {
+        // Fallback mínimo
+        const menuBtn = document.getElementById('menuBtn');
+        const sidebar  = document.getElementById('sidebar');
+        const overlay  = document.getElementById('sidebarOverlay');
+        const _openSidebar = () => {
+          sidebar?.classList.add('mobile-visible');
+          if (overlay) overlay.style.display = 'block';
+        };
+        const _closeSidebar = () => {
+          sidebar?.classList.remove('mobile-visible');
+          if (overlay) overlay.style.display = 'none';
+        };
+        if (menuBtn && sidebar) {
+          menuBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            sidebar.classList.contains('mobile-visible') ? _closeSidebar() : _openSidebar();
+          });
+        }
+        if (overlay) overlay.addEventListener('click', _closeSidebar);
+        sidebar?.querySelectorAll('button[data-section]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            if (window.innerWidth <= 768) _closeSidebar();
+          });
+        });
+      });
+    
+    WallModule.init('muroPostsContainer', { 
+      accentColor: 'blue',
+      classroomId: classrooms[0].id
+    }, AppState);
+
+  } catch (e) {
+    safeToast('Error cargando datos del aula', 'error');
+  }
+
+  if (window.lucide) window.lucide.createIcons();
+});
+
+/**
+ * 🏫 Barra selectora de aulas — para maestras con varias aulas.
+ * Inyecta pills sticky bajo el header de la app.
+ */
+function _initClassroomSwitcher(classrooms) {
+  if (!classrooms || classrooms.length < 2) return;
+  const shell = document.getElementById('layoutShell');
+  if (!shell || document.getElementById('teacherClassroomBar')) return;
+
+  if (!document.getElementById('teacherClassroomBarStyles')) {
+    const st = document.createElement('style');
+    st.id = 'teacherClassroomBarStyles';
+    st.textContent = `
+      #teacherClassroomBar{display:flex;align-items:center;gap:6px;overflow-x:auto;scrollbar-width:thin;position:sticky;top:0;z-index:45;background:rgba(255,255,255,.92);backdrop-filter:blur(8px);border-bottom:1px solid #F1F5F9;padding:8px 16px;}
+      #teacherClassroomBar::-webkit-scrollbar{height:4px}
+      #teacherClassroomBar::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:4px}
+      .croom-pill{display:inline-flex;align-items:center;gap:6px;flex-shrink:0;padding:6px 14px;border-radius:999px;font-size:12px;font-weight:800;color:#64748B;background:#F1F5F9;border:1px solid #E2E8F0;transition:all .18s ease;}
+      .croom-pill:hover{background:#E8F2FF;color:#FF7A00;border-color:#FF7A00;}
+      .croom-pill.croom-active{background:#FF7A00;color:#fff;border-color:#FF7A00;box-shadow:0 4px 12px rgba(255,122,0,.3);}
+    `;
+    document.head.appendChild(st);
+  }
+
+  const currentId = String(AppState.get('classroom')?.id);
+  const bar = document.createElement('div');
+  bar.id = 'teacherClassroomBar';
+  bar.innerHTML = (window.safeEscapeHTML ? safeEscapeHTML : (s => s))('') + `
+    <span class="croom-label" style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:#94A3B8;flex-shrink:0;">Mis aulas:</span>
+    ${classrooms.map(c => `
+      <button type="button" data-croom="${c.id}" class="croom-pill ${String(c.id) === currentId ? 'croom-active' : ''}">
+        <i data-lucide="door-open" style="width:13px;height:13px;"></i>
+        <span>${safeEscapeHTML(c.name)}</span>
+      </button>`).join('')}
+  `;
+  shell.insertBefore(bar, shell.firstChild);
+
+  bar.addEventListener('click', (e) => {
+    const pill = e.target.closest('.croom-pill');
+    if (!pill) return;
+    window.App.switchClassroom(pill.dataset.croom);
+  });
+
+  if (window.lucide) window.lucide.createIcons();
+}
+
+/**
+ * 🔄 Cambiar de aula activa (maestra multi-aula).
+ */
+window.App.switchClassroom = async (classroomId) => {
+  const list = AppState.get('classrooms') || [];
+  const target = list.find(c => String(c.id) === String(classroomId));
+  if (!target) return;
+  const current = AppState.get('classroom');
+  if (current && String(current.id) === String(target.id)) return;
+
+  // Limpiar Wall + canal realtime del aula anterior
+  WallModule.destroy?.();
+  if (current) RealtimeManager.unsubscribe(`maestra_room_${current.id}`);
+
+  AppState.set('classroom', target);
+  AppState.set('students', []);
+  localStorage.setItem('maestra_last_classroom', String(target.id));
+
+  // Re-suscribir realtime del nuevo aula y reconectar el muro
+  initRealtimeUpdates(target.id);
+  WallModule.init('muroPostsContainer', { accentColor: 'blue', classroomId: target.id }, AppState);
+
+  // Actualizar pills
+  document.querySelectorAll('.croom-pill').forEach(b => {
+    b.classList.toggle('croom-active', String(b.dataset.croom) === String(target.id));
+  });
+
+  // Recargar la sección activa con el nuevo aula
+  const activeSection = document.querySelector('.section.active')?.id || 't-home';
+  window.App._setActiveSection?.(activeSection, { skipSave: true, force: true });
+
+  loadPendingTasksBadge(target.id);
+  safeToast(`Cambiaste al aula ${safeEscapeHTML(target.name)}`, 'success');
+};
+
+function initRealtimeUpdates(classroomId) {
+  const channelName = `maestra_room_${classroomId}`;
+  
+  RealtimeManager.subscribe(channelName, (channel) => {
+    // ── Nuevas entregas de tareas ────────────────────────────────────
+    channel.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'task_evidences' }, (payload) => {
+      const student = (AppState.get('students') || []).find(s => s.id === payload.new.student_id);
+      if (student) safeToast(`📝 ${student.name} entregó una tarea`, 'info');
+      // Badge en sidebar "Mis Clases"
+      _incrementBadge('t-home');
+      _applyTabBadge('tasks');
+    });
+
+    // ── Cambios en posts del muro ────────────────────────────────────
+    channel.on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, (payload) => {
+      const { eventType, new: newPost, old: oldPost } = payload;
+      const post = newPost || oldPost;
+      
+      if (post && post.classroom_id && post.classroom_id !== classroomId) return;
+
+      if (eventType === 'INSERT') {
+        const currentUser = AppState.get('user');
+        // No mostrar badge si lo publicó la maestra misma
+        if (newPost?.teacher_id !== currentUser?.id) {
+          safeToast('📢 Nueva publicación en el muro', 'info');
+          // Badge en tab "Muro" si no está activo
+          const activeTab = localStorage.getItem('maestra_last_tab');
+          if (activeTab !== 'feed') _applyTabBadge('feed');
+        }
+        WallModule.loadPosts('muroPostsContainer');
+      } else if (eventType === 'UPDATE') {
+        const postId = newPost.id;
+        const likeSpan = document.getElementById(`like-count-${postId}`);
+        const commBtn  = document.querySelector(`#post-${postId} button[onclick*="toggleCommentSection"] span`);
+        if (likeSpan && typeof newPost.likes_count === 'number') likeSpan.textContent = newPost.likes_count;
+        if (commBtn && typeof newPost.comments_count === 'number') commBtn.textContent = `${newPost.comments_count} Comentarios`;
+      } else if (eventType === 'DELETE') {
+        document.getElementById(`post-${oldPost.id}`)?.remove();
+      }
+    });
+
+    // ── Nuevos mensajes de chat ──────────────────────────────────────
+    channel.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
+      const currentUser = AppState.get('user');
+      if (payload.new?.sender_id === currentUser?.id) return;
+      // No notificar si el chat de esa conversación ya está abierto
+      const activeConvId = AppState.get('activeConversationId');
+      if (activeConvId && payload.new?.conversation_id === activeConvId) return;
+
+      _incrementBadge('t-chat');
+      // Badge en el contacto específico dentro del chat
+      _applyContactBadge(payload.new?.sender_id);
+      safeToast('💬 Nuevo mensaje', 'info');
+    });
+
+    // ── Nuevas notificaciones generales ─────────────────────────────
+    channel.on('postgres_changes', {
+      event: 'INSERT', schema: 'public', table: 'notifications',
+      filter: `user_id=eq.${AppState.get('user')?.id}`
+    }, (payload) => {
+      const type = payload.new?.type;
+      if (type === 'payment' || type === 'receipt') _incrementBadge('t-permits');
+      if (type === 'post' || type === 'muro') {
+        const activeTab = localStorage.getItem('maestra_last_tab');
+        if (activeTab !== 'feed') _applyTabBadge('feed');
+      }
+    });
+  });
+}
+
+/** Incrementa el badge del sidebar (badge-{section}) */
+function _incrementBadge(section) {
+  const badge = document.getElementById('badge-' + section);
+  if (!badge) return;
+  const current = parseInt(badge.textContent) || 0;
+  const next = current + 1;
+  badge.textContent = next > 99 ? '99+' : String(next);
+  badge.classList.remove('hidden');
+  badge.classList.add('flex');
+  // Glow en el botón del sidebar
+  const btn = document.querySelector(`[data-section="${section}"]`);
+  if (btn) {
+    btn.classList.add('nav-badge-glow');
+    setTimeout(() => btn.classList.remove('nav-badge-glow'), 3000);
+  }
+}
+
+/** Muestra un badge puntito en el tab de aula (feed, tasks, attendance…) */
+function _applyTabBadge(tab) {
+  const tabBtn = document.querySelector(`.class-tab-btn[data-tab="${tab}"]`);
+  if (!tabBtn) return;
+  let dot = tabBtn.querySelector('.tab-badge-dot');
+  if (!dot) {
+    dot = document.createElement('span');
+    dot.className = 'tab-badge-dot';
+    tabBtn.style.position = 'relative';
+    tabBtn.appendChild(dot);
+  }
+  dot.style.cssText = [
+    'position:absolute', 'top:4px', 'right:4px',
+    'width:8px', 'height:8px', 'border-radius:50%',
+    'background:#FF8A00', 'border:2px solid white',
+    'animation:badge-pulse 1.5s infinite'
+  ].join(';');
+}
+
+/** Limpia el badge puntito de un tab */
+function _clearTabBadge(tab) {
+  const dot = document.querySelector(`.class-tab-btn[data-tab="${tab}"] .tab-badge-dot`);
+  dot?.remove();
+}
+
+/** Badge en el contacto de chat */
+function _applyContactBadge(senderId) {
+  if (!senderId) return;
+  const contactEl = document.querySelector(`[data-contact-id="${senderId}"]`);
+  if (!contactEl) return;
+  let dot = contactEl.querySelector('.contact-badge-dot');
+  if (!dot) {
+    dot = document.createElement('span');
+    dot.className = 'contact-badge-dot inline-flex items-center justify-center';
+    dot.style.cssText = [
+      'min-width:18px', 'height:18px', 'border-radius:50px',
+      'background:#FF8A00', 'color:white', 'font-size:10px',
+      'font-weight:900', 'padding:0 5px'
+    ].join(';');
+    dot.textContent = '●';
+    contactEl.style.position = 'relative';
+    contactEl.appendChild(dot);
+  }
+}
+
+
+/**
+ * 📊 Dashboard
+ */
+async function initDashboard() {
+  const classroom = AppState.get('classroom');
+  if (!classroom) return;
+
+  try {
+    const today = AppState.today();
+    const startOfDay = `${today}T00:00:00Z`;
+    const endOfDay   = `${today}T23:59:59Z`;
+
+    // 1. Carga paralela de datos críticos
+    const [students, attendance, incidentRes, classesRes] = await Promise.all([
+      MaestraApi.getStudentsByClassroom(classroom.id),
+      MaestraApi.getAttendance(classroom.id, today),
+      supabase
+        .from('incidents')
+        .select('id', { count: 'exact', head: true })
+        .eq('classroom_id', classroom.id)
+        .gte('created_at', startOfDay)
+        .lte('created_at', endOfDay),
+      supabase
+        .from('classrooms')
+        .select('id', { count: 'exact', head: true })
+        .eq('teacher_id', AppState.get('user').id)
+    ]);
+
+    AppState.set('students', students || []);
+
+    // Actualizar Estadísticas (Bloques)
+    UI.updateDashboardStats({
+      students: students?.length || 0,
+      present: (attendance || []).filter(a => ['present', 'late'].includes(a.status)).length,
+      incidents: incidentRes.count || 0,
+      classes: classesRes.count || 0
+    });
+
+    _updateNextActivityWidget();
+    _updatePunchAlertWidget(students, attendance);
+    _updateTasksToGradeWidget(classroom.id);
+
+    // Grid de Aulas (Home) — Paleta Sonrisas Creativas
+    const grid = document.getElementById('classesGrid');
+    if (grid) {
+      const attendanceToday = (attendance || []).filter(a => {
+        const now = new Date();
+        const today = now.getFullYear() + '-' +
+          String(now.getMonth() + 1).padStart(2, '0') + '-' +
+          String(now.getDate()).padStart(2, '0');
+        return a.date === today && a.status === 'present';
+      }).length;
+      const totalSt = (students || []).length;
+
+      grid.innerHTML = `
+        <div onclick="App.showClassroomDetail('${classroom.id}')"
+             class="cursor-pointer group relative overflow-hidden"
+             style="background:#fff; border-radius:2rem; border:2px solid #E6F7EB; box-shadow:0 8px 24px rgba(40,181,77,.1); transition:all .25s ease;">
+          <!-- Banda superior verde -->
+          <div style="background:linear-gradient(135deg,#28B54D,#239943); padding:24px 24px 20px; position:relative; overflow:hidden;">
+            <div style="position:absolute;top:-20px;right:-20px;width:100px;height:100px;background:rgba(255,255,255,.12);border-radius:50%;pointer-events:none;"></div>
+            <div style="position:absolute;bottom:-30px;left:-10px;width:80px;height:80px;background:rgba(255,255,255,.08);border-radius:50%;pointer-events:none;"></div>
+            <div style="display:flex;align-items:center;gap:16px;position:relative;z-index:1;">
+              <div style="width:60px;height:60px;background:rgba(255,255,255,.2);border-radius:18px;display:flex;align-items:center;justify-content:center;transition:transform .3s;flex-shrink:0;" class="group-hover:scale-110">
+                <i data-lucide="door-open" style="width:30px;height:30px;color:white;"></i>
+              </div>
+              <div>
+                <h3 style="font-weight:900;color:white;font-size:1.25rem;line-height:1.2;" class="classroom-name">${safeEscapeHTML(classroom.name)}</h3>
+                <p style="color:rgba(255,255,255,.8);font-size:.8rem;font-weight:600;margin-top:2px;">${safeEscapeHTML(classroom.level || 'Educación Inicial')}</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Cuerpo blanco -->
+          <div style="padding:20px 24px;">
+            <!-- KPIs compactos -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
+              <div style="background:#E6F7EB;border-radius:12px;padding:10px 14px;text-align:center;">
+                <p style="font-size:1.5rem;font-weight:900;color:#28B54D;line-height:1;">${totalSt}</p>
+                <p style="font-size:.65rem;font-weight:800;color:#239943;text-transform:uppercase;letter-spacing:.06em;margin-top:2px;">Alumnos</p>
+              </div>
+              <div style="background:#FFF3E0;border-radius:12px;padding:10px 14px;text-align:center;">
+                <p style="font-size:1.5rem;font-weight:900;color:#FF8A00;line-height:1;">${attendanceToday}</p>
+                <p style="font-size:.65rem;font-weight:800;color:#E07900;text-transform:uppercase;letter-spacing:.06em;margin-top:2px;">Presentes hoy</p>
+              </div>
+            </div>
+
+            <!-- Botón CTA -->
+            <button style="width:100%;padding:14px;background:linear-gradient(135deg,#FF8A00,#E07900);color:white;border:none;border-radius:14px;font-weight:900;font-size:.9rem;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;box-shadow:0 4px 14px rgba(255,138,0,.3);transition:transform .2s;" class="group-hover:scale-[1.02]">
+              🚪 Entrar al Aula
+              <i data-lucide="arrow-right" style="width:18px;height:18px;"></i>
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    // Grid de Estudiantes (Tab) — Paleta Sonrisas Creativas
+    const classGrid = document.getElementById('classroomStudentsGrid');
+    if (classGrid) {
+      if (!students || students.length === 0) {
+        classGrid.innerHTML = `
+          <div class="col-span-full py-12 text-center bg-[#F8FAFC] rounded-[2rem] border-2 border-dashed border-slate-200">
+            <p class="font-bold text-slate-400">No hay estudiantes registrados en esta aula.</p>
+          </div>
+        `;
+      } else {
+        classGrid.innerHTML = students.map(s => `
+          <div class="p-6 bg-white rounded-[2rem] border-2 border-[#FF8A00] shadow-sm hover:shadow-xl hover:border-[#28B54D] transition-all group">
+            <div class="flex items-center gap-4 mb-6">
+              <div class="w-16 h-16 rounded-2xl bg-[#E6F7EB] text-[#28B54D] flex items-center justify-center font-bold text-2xl overflow-hidden border-2 border-[#28B54D]">
+                ${s.avatar_url ? `<img src="${safeUrl(s.avatar_url)}" class="w-full h-full object-cover">` : s.name.charAt(0)}
+              </div>
+              <div class="min-w-0">
+                <div class="font-black text-slate-800 text-lg truncate">${safeEscapeHTML(s.name)}</div>
+                <div class="text-[10px] font-black uppercase tracking-widest text-[#28B54D]">Estudiante</div>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <button onclick="App.openStudentProfile('${s.id}')"
+                      class="py-2.5 bg-[#28B54D] text-white rounded-xl text-[10px] font-black uppercase hover:bg-[#239943] transition-all shadow-sm">
+                Ver Perfil
+              </button>
+              <button onclick="App.registerIncidentModal('${s.id}')"
+                      class="py-2.5 bg-[#FEE2E2] text-[#EF4444] rounded-xl text-[10px] font-black uppercase hover:bg-[#EF4444] hover:text-white transition-all">
+                Reportar
+              </button>
+            </div>
+          </div>
+        `).join('');
+      }
+    }
+    if (window.lucide) window.lucide.createIcons();
+  } catch (err) {
+    safeToast('Error cargando dashboard', 'error');
+  }
+}
+
+/**
+ * AUTOMATIZACIÓN: Widgets Inteligentes
+ */
+function _updateNextActivityWidget() {
+  const titleEl = document.getElementById('nextActivityTitle');
+  const timeEl = document.getElementById('nextActivityTime');
+  if (!titleEl || !timeEl) return;
+
+  const now = new Date();
+  const currentTime = now.getHours() * 60 + now.getMinutes();
+
+  // Horario predefinido (se puede traer de DB en el futuro)
+  const schedule = [
+    { name: 'Entrada y Bienvenida', start: 420, end: 480 }, // 7:00 AM - 8:00 AM
+    { name: 'Desayuno', start: 480, end: 540 },            // 8:00 AM - 9:00 AM
+    { name: 'Actividades Pedagógicas', start: 540, end: 660 }, // 9:00 AM - 11:00 AM
+    { name: 'Merienda', start: 660, end: 720 },            // 11:00 AM - 12:00 PM
+    { name: 'Almuerzo', start: 720, end: 780 },            // 12:00 PM - 1:00 PM
+    { name: 'Siesta', start: 780, end: 870 },              // 1:00 PM - 2:30 PM
+    { name: 'Juego Libre', start: 870, end: 960 },          // 2:30 PM - 4:00 PM
+    { name: 'Salida', start: 960, end: 1080 }              // 4:00 PM - 6:00 PM
+  ];
+
+  const current = schedule.find(s => currentTime >= s.start && currentTime < s.end);
+  const next = schedule.find(s => s.start > currentTime);
+
+  if (current) {
+    titleEl.textContent = current.name;
+    const endH = Math.floor(current.end / 60);
+    const endM = current.end % 60;
+    const ampm = endH >= 12 ? 'PM' : 'AM';
+    const h12 = endH > 12 ? endH - 12 : endH;
+    timeEl.textContent = `En curso — Termina ${h12}:${endM.toString().padStart(2, '0')} ${ampm}`;
+  } else if (next) {
+    titleEl.textContent = `Próximo: ${next.name}`;
+    const startH = Math.floor(next.start / 60);
+    const startM = next.start % 60;
+    const ampm = startH >= 12 ? 'PM' : 'AM';
+    const h12 = startH > 12 ? startH - 12 : startH;
+    timeEl.textContent = `Inicia a las ${h12}:${startM.toString().padStart(2, '0')} ${ampm}`;
+  } else {
+    titleEl.textContent = 'Fuera de Horario Escolar';
+    timeEl.textContent = '¡Hasta mañana! 👋';
+  }
+}
+
+function _updatePunchAlertWidget(students, attendance) {
+  const widget = document.getElementById('punchAlertWidget');
+  const textEl = document.getElementById('punchAlertText');
+  if (!widget || !textEl) return;
+
+  const total = students.length;
+  const present = (attendance || []).filter(a => ['present', 'late'].includes(a.status)).length;
+  const missing = total - present;
+
+  if (missing > 0 && total > 0) {
+    widget.classList.remove('hidden');
+    textEl.textContent = `${missing} niños aún no han marcado entrada hoy.`;
+  } else {
+    widget.classList.add('hidden');
+  }
+}
+
+/**
+ * Widget de Tareas Pendientes por Calificar
+ * Solo aparece si hay entregas de hace más de 24 horas sin calificar.
+ */
+async function _updateTasksToGradeWidget(classroomId) {
+  const widget = document.getElementById('tasksToGradeWidget');
+  const textEl = document.getElementById('tasksToGradeText');
+  if (!widget || !textEl) return;
+
+  try {
+    // 1. Obtener tareas del aula
+    const { data: tasks } = await supabase.from('tasks').select('id').eq('classroom_id', classroomId);
+    if (!tasks?.length) return widget.classList.add('hidden');
+
+    const taskIds = tasks.map(t => t.id);
+
+    // 2. Buscar entregas no calificadas
+    const { data: pending } = await supabase
+      .from('task_evidences')
+      .select('id, created_at')
+      .in('task_id', taskIds)
+      .neq('status', 'graded');
+
+    if (!pending?.length) return widget.classList.add('hidden');
+
+    // 3. Filtrar las que tienen más de 24 horas (opcional, según requerimiento)
+    const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const veryOld = pending.filter(p => new Date(p.created_at) < dayAgo);
+
+    if (veryOld.length > 0) {
+      widget.classList.remove('hidden');
+      textEl.textContent = `Tienes ${veryOld.length} entrega${veryOld.length > 1 ? 's' : ''} pendiente${veryOld.length > 1 ? 's' : ''} de revisar (más de 24h).`;
+    } else {
+      widget.classList.add('hidden');
+    }
+  } catch (e) {
+    // silent
+  }
+}
+
+window.App.sendAbsenceAlerts = async () => {
+  const students = AppState.get('students') || [];
+  const now = new Date();
+  const today = now.getFullYear() + '-' +
+    String(now.getMonth() + 1).padStart(2, '0') + '-' +
+    String(now.getDate()).padStart(2, '0');
+  const attendance = await MaestraApi.getAttendance(AppState.get('classroom').id, today);
+  const presentIds = new Set((attendance || []).map(a => a.student_id));
+
+  const missing = students.filter(s => !presentIds.has(s.id));
+  if (missing.length === 0) return safeToast('Todos los alumnos están presentes');
+
+  const confirmed = await Helpers.confirm(`¿Enviar aviso de ausencia a los padres de ${missing.length} niños?`);
+  if (!confirmed) return;
+
+  safeToast('Enviando notificaciones...', 'info');
+
+  // FIX N+1: fire all pushes in parallel instead of sequentially
+  const results = await Promise.allSettled(
+    missing
+      .filter(s => s.parent_id)
+      .map(s => sendPush({
+        user_id: s.parent_id,
+        title:   'Aviso de Ausencia ❓',
+        message: `Hola, notamos que ${s.name} no ha llegado hoy. Por favor confírmanos si asistirá o si tiene algún inconveniente.`,
+        link:    'panel_padres.html'
+      }))
+  );
+
+  const sent = results.filter(r => r.status === 'fulfilled').length;
+  safeToast(`Se enviaron ${sent} avisos de ausencia`);
+};
+
+/**
+ * 🧭 Navegación
+ */
+function initNavigation() {
+  const navButtons = document.querySelectorAll('.nav-btn-toy[data-section]');
+  const sections = document.querySelectorAll('.section');
+
+  // Track previous section for cleanup
+  let previousSection = null;
+  
+  const setActiveSection = (targetId, options = {}) => {
+    // Si el targetId ya viene con 't-', lo usamos directamente, si no lo agregamos
+    const fullId = targetId.startsWith('t-') ? targetId : `t-${targetId}`;
+    const cleanId = targetId.replace('t-', '');
+
+    Helpers.vibrate?.('light');
+
+    // ✅ LIMPIEZA DE REALTIME: Eliminar canales al cambiar de sección
+    if (previousSection && (previousSection === 't-home' || previousSection === 't-class-detail')) {
+      WallModule.destroy();
+      const classroom = AppState.get('classroom');
+      if (classroom) {
+        RealtimeManager.unsubscribe(`maestra_room_${classroom.id}`);
+      }
+    }
+
+    sections.forEach(s => s.classList.remove('active'));
+    const target = document.getElementById(fullId);
+    if (target) {
+      target.classList.add('active');
+      UIPremium.applySectionTransition(fullId);
+    }
+
+    navButtons.forEach(btn => {
+      const btnSection = btn.dataset.section;
+      if (btnSection === fullId) {
+        btn.classList.add('active');
+      } else {
+        btn.classList.remove('active');
+      }
+    });
+
+    // Actualizar Bottom Nav
+    document.querySelectorAll('.nav-item').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.section === fullId);
+    });
+
+    // Guardar en localStorage para persistencia
+    if (!options.skipSave) {
+      localStorage.setItem('maestra_last_section', fullId);
+    }
+
+    // Lógica de refresco inteligente (TTL: 2 minutos)
+    const now = Date.now();
+    const isFresh = _lastLoad[cleanId] && (now - _lastLoad[cleanId] < 120000);
+    if (isFresh && !options.force) return;
+    _lastLoad[cleanId] = now;
+
+    // 🧠 SmartLoader — Show humanized loading for fresh sections
+    const sectionEl = document.getElementById(fullId);
+    if (sectionEl) {
+      const loadingContainer = sectionEl.querySelector('.section-content, .flex-1, .space-y-4, .p-4, .p-6');
+      if (loadingContainer && !loadingContainer.querySelector('.smart-loading')) {
+        SmartLoader.showIn(null, cleanId, { skeleton: 'feed', rows: 3 });
+      }
+    }
+
+    if (cleanId === 'home') initDashboard();
+    if (cleanId === 'attendance') initAttendance();
+    if (cleanId === 'daily-routine') initRoutine();
+    if (cleanId === 'tasks') initTasks();
+    if (cleanId === 'grades') import('./modules/grades.js').then(m => m.MaestraGrades.init());
+    if (cleanId === 'permits') PermitsModule.init();
+    if (cleanId === 'chat') initChat();
+    if (cleanId === 'profile') {
+      import('../shared/notify-permission.js').then(m => m.NotifyPermission.requestIfNeeded());
+    }
+
+    // 🔴 Marcar badge como leído al entrar a la sección
+    BadgeSystem.mark(fullId);
+    
+    previousSection = fullId;
+  };
+
+  navButtons.forEach(btn => {
+    btn.addEventListener('click', () => setActiveSection(btn.dataset.section));
+  });
+
+  // Exponer para uso global
+  window.App.setActiveSection = setActiveSection;
+  window.App._setActiveSection = setActiveSection; // Alias interno para el proxy global
+
+  // Restaurar última sección
+  const lastSection = localStorage.getItem('maestra_last_section') || 't-home';
+  const lastClassroom = localStorage.getItem('maestra_last_classroom');
+  const lastTab = localStorage.getItem('maestra_last_tab');
+
+  if (lastSection === 't-class-detail' && lastClassroom) {
+    showClassroomDetail(lastClassroom, { activeTab: lastTab });
+  } else {
+    setActiveSection(lastSection, { skipSave: true });
+  }
+}
+
+/**
+   * 🏫 Mostrar Detalle de Aula
+   */
+  async function showClassroomDetail(classroomId, options = {}) {
+    // 1. Carga eficiente y paralela (Optimización de Datos)
+    try {
+      // Intentamos obtener del AppState primero para velocidad instantánea
+      let classroom = AppState.get('classroom');
+      let students = AppState.get('students');
+
+      // Si no tenemos los datos o el ID es diferente, cargamos en paralelo
+      if (!classroom || classroom.id != classroomId || !students) {
+      // FIX select('*'): only fetch required columns
+        const [classroomRes, studentsRes] = await Promise.all([
+          supabase.from('classrooms')
+            .select('id, name, level, capacity, teacher_id, is_live')
+            .eq('id', classroomId).maybeSingle(),
+          MaestraApi.getStudentsByClassroom(classroomId)
+        ]);
+
+        if (classroomRes.data) {
+          classroom = classroomRes.data;
+          AppState.set('classroom', classroom);
+        }
+        
+        if (studentsRes) {
+          students = studentsRes;
+          AppState.set('students', studentsRes);
+        }
+      }
+
+      if (!classroom) return safeToast('Aula no encontrada', 'error');
+
+      // Guardar para persistencia
+      localStorage.setItem('maestra_last_section', 't-class-detail');
+      localStorage.setItem('maestra_last_classroom', classroomId);
+
+      // 2. Actualizar UI del detalle
+      const nameEl = document.getElementById('currentClassName');
+      if (nameEl) nameEl.textContent = classroom.name;
+
+      // 3. Cambiar a la sección de detalle
+      const layoutShell = document.getElementById('layoutShell');
+      if (layoutShell) layoutShell.scrollTop = 0;
+
+      if (window.App.setActiveSection) {
+        window.App.setActiveSection('t-class-detail', { skipSave: true });
+      } else {
+        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+        document.getElementById('t-class-detail')?.classList.add('active');
+      }
+
+      // 4. Inicializar tabs del aula
+      WallModule.init('muroPostsContainer', { 
+        accentColor: 'blue',
+        likeColor: 'blue',
+        classroomId: classroom.id 
+      }, AppState);
+
+      initClassTabs(options.activeTab);
+
+    } catch (error) {
+      safeToast('Error al cargar datos del aula', 'error');
+    }
+}
+
+/**
+ * 📋 Inicializar Tabs Internas de Aula
+ */
+function initClassTabs(defaultTab = null) {
+  const tabBtns     = document.querySelectorAll('.class-tab-btn');
+  const tabContents = document.querySelectorAll('.class-tab-content');
+
+  const activateTab = (targetTab) => {
+    // 1. Resetear TODOS los botones — solo clase CSS, sin Tailwind inline
+    tabBtns.forEach(b => {
+      b.classList.remove('active');
+    });
+
+    // 2. Activar botón correcto
+    tabBtns.forEach(b => {
+      if (b.dataset.tab === targetTab) {
+        b.classList.add('active');
+        if (targetTab === 'daily-routine') b.classList.add('animate-pulse-subtle');
+        // Limpiar badge del tab al abrirlo
+        _clearTabBadge(targetTab);
+      }
+    });
+    tabContents.forEach(c => c.classList.add('hidden'));
+    document.getElementById(`tab-${targetTab}`)?.classList.remove('hidden');
+
+    // Guardar tab en localStorage
+    localStorage.setItem('maestra_last_tab', targetTab);
+
+    // 4. Actualizar indicador de título para contexto visual
+    const titleMap = { 
+      'feed': 'Muro del Aula', 
+      'daily-routine': 'Rutina Diaria',
+      'students': 'Lista de Estudiantes', 
+      'attendance': 'Pase de Lista', 
+      'tasks': 'Gestión de Tareas' 
+    };
+    const subTitle = document.getElementById('class-detail-subtitle');
+    if (subTitle) subTitle.textContent = titleMap[targetTab] || '';
+
+    // 5. Carga de datos optimizada (Solo si es necesario o forzado)
+    setTimeout(() => {
+      if (targetTab === 'feed')          WallModule.loadPosts();
+      if (targetTab === 'daily-routine') initRoutine();
+      if (targetTab === 'students')      initDashboard();
+      if (targetTab === 'attendance')    initAttendance();
+      if (targetTab === 'tasks')         initTasks();
+      if (targetTab === 'videocall') {
+        const classroom = AppState.get('classroom');
+        const profile   = AppState.get('profile');
+        import('../shared/videocall-ui.js').then(({ VideoCallUI }) => {
+          VideoCallUI.renderSection('videocall-maestra-section', {
+            role: 'maestra',
+            userName: profile?.name || 'Maestra',
+            classroomId: classroom?.id
+          });
+        }).catch(() => {});
+      }
+    }, 0);
+  };
+
+  tabBtns.forEach(btn => {
+    btn.addEventListener('click', () => activateTab(btn.dataset.tab));
+  });
+
+  window.App.activateTab = activateTab;
+
+  // Activar tab inicial
+  const tabToActivate = defaultTab || localStorage.getItem('maestra_last_tab') || 'feed';
+  activateTab(tabToActivate);
+}
+
+window.App.scheduleClassMeeting = async () => {
+    const confirmed = await Helpers.confirm("¿Deseas programar una nueva clase/reunión?");
+    if(!confirmed) return;
+    const title = "Clase programada";
+    
+    try {
+        await VideoCallModule.scheduleMeeting({
+            title: safeJS(title),
+            startTime: new Date().toISOString(), // O pedir fecha real
+            type: 'classroom',
+            targetId: AppState.get('classroom').id,
+            hostId: AppState.get('user').id
+        });
+        safeToast("Clase programada y notificada");
+    } catch(e) { safeToast("Error al programar", "error"); }
+};
+
+async function startJitsi() {
+  const classroom = AppState.get('classroom');
+  const container = document.getElementById('meet');
+  if (!container || !classroom) return;
+
+  const btn = document.querySelector('[onclick*="startJitsi"]');
+  if (btn) { btn.disabled = true; btn.textContent = 'Iniciando...'; }
+
+  try {
+    // 1. Crear reunión y notificar padres automáticamente
+    const meeting = await VideoCallModule.scheduleMeeting({
+      title:      `Clase en Vivo: ${classroom.name}`,
+      start_time: new Date().toISOString(),
+      type:       'classroom',
+      target_id:  classroom.id,
+      host_id:    AppState.get('user').id
+    });
+
+    // 2. Marcar como en vivo en la tabla classrooms (para que el padre lo vea)
+    await supabase.from('classrooms').update({ is_live: true }).eq('id', classroom.id);
+
+    // 3. Iniciar la reunión
+    await VideoCallModule.startMeeting(meeting.id);
+
+    window.open('https://meet.jit.si/' + meeting.room_name, '_blank');
+
+    safeToast('¡Clase iniciada! Los padres han sido notificados 🎥', 'success');
+  } catch (e) {
+    safeToast('Error al iniciar la clase: ' + e.message, 'error');
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i data-lucide="radio"></i> Iniciar Clase Ahora'; }
+  }
+}
+
+async function openNewPostModal() {
+  const html = `
+    <div class="bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl p-8 animate-fadeIn">
+      <div class="flex justify-between items-start mb-6">
+        <h3 class="text-2xl font-black text-slate-800">Crear Publicación</h3>
+        <button onclick="Modal.close('newPostModal')" class="p-2 hover:bg-slate-100 rounded-full"><i data-lucide="x" class="w-6 h-6 text-slate-400"></i></button>
+      </div>
+      <div class="space-y-4">
+        <textarea id="postContent" rows="4" class="w-full p-4 bg-slate-50 border-none rounded-2xl text-sm outline-none resize-none focus:ring-2 focus:ring-[#0B63C7]" placeholder="¿Qué quieres compartir con la clase?"></textarea>
+        
+        <div class="relative">
+          <input type="file" id="postFile" class="hidden" accept="image/*,video/*" onchange="document.getElementById('fileName').textContent = this.files[0]?.name || 'Adjuntar foto/video'">
+          <label for="postFile" class="flex items-center gap-3 p-3 border-2 border-dashed border-slate-200 rounded-2xl cursor-pointer hover:bg-slate-50 hover:border-[#FF7A00] transition-all">
+            <div class="w-10 h-10 bg-[#FF7A00] text-[#FF7A00] rounded-xl flex items-center justify-center"><i data-lucide="image-plus"></i></div>
+            <span id="fileName" class="text-sm font-bold text-slate-500">Adjuntar foto o video</span>
+          </label>
+        </div>
+
+        <button id="btnSubmitPost" onclick="App.submitNewPost()" class="w-full py-3.5 bg-[#FF7A00] text-white rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-[#FF7A00] shadow-lg shadow-orange-100 transition-all">PUBLICAR</button>
+      </div>
+    </div>
+  `;
+  Modal.open('newPostModal', html);
+}
+
+async function submitNewPost() {
+  const content = document.getElementById('postContent').value.trim();
+  const fileInput = document.getElementById('postFile');
+  const file = fileInput?.files[0];
+  const btn = document.getElementById('btnSubmitPost');
+
+  if (!content && !file) return safeToast('Escribe algo o sube un archivo', 'warning');
+
+  btn.disabled = true;
+  btn.innerHTML = '<i data-lucide="loader-2" class="w-5 h-5 animate-spin mx-auto"></i>';
+  if(window.lucide) window.lucide.createIcons();
+
+  // Barra de progreso para archivos grandes
+  let progressBar = null;
+  if (file && file.size > 500_000) {
+    progressBar = document.createElement('div');
+    progressBar.className = 'mt-3 w-full bg-slate-100 rounded-full h-2 overflow-hidden';
+    progressBar.innerHTML = '<div id="upload-progress-fill" class="h-full bg-[#FF7A00] rounded-full transition-all duration-200" style="width:0%"></div>';
+    btn.parentElement?.insertBefore(progressBar, btn.nextSibling);
+  }
+
+  const setProgress = (pct) => {
+    const fill = document.getElementById('upload-progress-fill');
+    if (fill) fill.style.width = pct + '%';
+  };
+
+  try {
+    let mediaUrl = null;
+    let mediaType = null;
+
+    if (file) {
+      const ext = file.type.startsWith('video') ? file.name.split('.').pop() : 'webp';
+      const path = `posts/${Date.now()}_${Math.random().toString(36).substr(2,9)}.${ext}`;
+      
+      mediaUrl = await ImageLoader.uploadToStorage(file, 'karpus-uploads', path, {
+        maxWidth: 1200,
+        quality: 0.8,
+        onProgress: setProgress
+      });
+      mediaType = file.type.startsWith('video') ? 'video' : 'image';
+    }
+
+    const { data: { user } } = await supabase.auth.getUser();
+    const classroom = AppState.get('classroom');
+
+    const { error } = await supabase.from('posts').insert({
+      content,
+      media_url: mediaUrl,
+      media_type: mediaType,
+      teacher_id: user.id,
+      classroom_id: classroom.id
+    });
+
+    if (error) throw error;
+
+    // Notificar a padres del aula via Edge Function
+    emitEvent('post.created', {
+      classroom_id: classroom.id,
+      teacher_name: AppState.get('profile')?.name || 'Maestra',
+      content_preview: (content || '').substring(0, 80)
+    }).catch(() => {});
+
+    safeToast('Publicación creada con éxito', 'success');
+    Modal.close('newPostModal');
+    WallModule.loadPosts('muroPostsContainer');
+
+  } catch (err) {
+    safeToast('Error al crear publicación', 'error');
+    btn.disabled = false;
+    btn.innerHTML = 'PUBLICAR';
+  }
+}
+
+/**
+ * Cargar insignias de mensajes no leídos para la maestra
+ */
+async function loadMaestraUnreadBadge(userId) {
+  try {
+    const { count } = await supabase
+      .from('messages')
+      .select('id', { count: 'exact', head: true })
+      .eq('receiver_id', userId)
+      .eq('is_read', false);
+    
+    const badge = document.getElementById('badge-t-chat');
+    if (badge) {
+      if (count > 0) {
+        badge.textContent = count > 99 ? '99+' : count;
+        badge.classList.remove('hidden');
+      } else {
+        badge.classList.add('hidden');
+      }
+    }
+  } catch (_) {}
+}
+
+/**
+ * Cargar insignias de tareas pendientes por calificar
+ */
+async function loadPendingTasksBadge(classroomId) {
+  try {
+    const { count } = await supabase
+      .from('task_evidences')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'pending');
+      // Podrías filtrar por classroom_id si las tareas tienen ese campo
+    
+    const badge = document.getElementById('badge-t-home');
+    if (badge) {
+      if (count > 0) {
+        badge.textContent = count > 99 ? '99+' : count;
+        badge.classList.remove('hidden');
+      } else {
+        badge.classList.add('hidden');
+      }
+    }
+  } catch (_) {}
+}
+
+/**
+ * Inicializar QR de la maestra
+ */
+function _initMaestraQR(profile, user) {
+  const container = document.getElementById('maestra-qr-container');
+  const matriculaEl = document.getElementById('maestra-qr-matricula');
+  
+  if (matriculaEl) {
+    matriculaEl.textContent = user.id;
+  }
+  
+  if (!container) return;
+  
+  const qrData = JSON.stringify({
+    id: user.id,
+    role: 'maestra',
+    name: profile?.name || 'Maestra'
+  });
+  
+  // Usar una API de QR externa o librería si está disponible
+  container.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrData)}" class="mx-auto border-4 border-white shadow-lg rounded-2xl" alt="QR Maestra">`;
+
+  window.App.printMaestraQR = () => {
+    const img = container.querySelector('img')?.src;
+    if (!img) return;
+    const win = window.open('', '_blank');
+    if (!win) return;
+    const name = Helpers.escapeHTML(String(profile?.name || 'Maestra'));
+    const mat = Helpers.escapeHTML(String(user.id || ''));
+    win.document.write(`<!DOCTYPE html><html><head><title>QR - ${mat}</title>
+      <style>body{font-family:Arial,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;}
+      .card{border:2px solid #e2e8f0;border-radius:16px;padding:24px;text-align:center;max-width:280px;}
+      .logo{font-size:12px;font-weight:900;color:#10B981;text-transform:uppercase;letter-spacing:2px;margin-bottom:12px;}
+      img{width:192px;height:192px;}.name{font-size:16px;font-weight:900;color:#1e293b;margin-top:12px;}
+      .mat{font-size:11px;color:#64748b;font-weight:700;margin-top:4px;}.hint{font-size:9px;color:#94a3b8;margin-top:8px;}</style>
+    </head><body><div class="card">
+      <div class="logo">🎓 Colegio Montessori Sonrisas Creativas</div>
+      <img src="${img}" alt="QR">
+      <div class="name">${name}</div>
+      <div class="mat">${mat}</div>
+      <div class="hint">Escanea para identificar a la maestra</div>
+    </div><script>window.onload=()=>{window.print();}<\/script></body></html>`);
+    win.document.close();
+  };
+}
+
+// Grades now handled by modules/grades.js (MaestraGrades)

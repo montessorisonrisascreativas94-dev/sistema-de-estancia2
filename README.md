@@ -1,0 +1,64 @@
+# ?? Karpus Kids — Panel Educativo
+
+Sistema de gestión escolar para estancias infantiles. Incluye paneles para Directora, Maestra, Asistente y Padres.
+
+## ?? Deploy a Producción
+
+### 1. Variables de entorno en Supabase
+Ve a **Supabase Dashboard ? Settings ? Edge Functions ? Secrets** y agrega:
+
+```
+RESEND_API_KEY=re_xxxxxxxxxxxx
+FROM_EMAIL=Karpus Kids <avisos@montessorisonrisascreativas.com>
+ONESIGNAL_APP_ID=47ce2d1e-152e-4ea7-9ddc-8e2142992989
+ONESIGNAL_REST_API_KEY=tu_clave_onesignal
+SUPABASE_ANON_KEY=eyJhbGci...
+```
+
+### 2. Base de datos
+Ejecuta en **Supabase SQL Editor**:
+```sql
+-- Ver: db/production-fixes.sql
+```
+
+### 3. Deploy Edge Functions
+```bash
+node scripts/deploy-functions.js
+```
+
+### 4. Verificar dominio de correo
+- Ve a [resend.com](https://resend.com) ? Domains
+- Verifica `montessorisonrisascreativas.com` con los registros DNS
+
+### 5. Pre-deploy check
+```bash
+node scripts/pre-deploy-check.js
+```
+
+## ?? Paneles
+
+| Panel | URL | Roles |
+|-------|-----|-------|
+| Inicio | `/index.html` | Público |
+| Login | `/login.html` | Todos |
+| Padre | `/panel_padres.html` | padre |
+| Maestra | `/panel-maestra.html` | maestra |
+| Directora | `/panel_directora.html` | directora |
+| Asistente | `/panel_asistente.html` | asistente |
+
+## ?? Edge Functions
+
+| Función | Propósito |
+|---------|-----------|
+| `send-email` | Envío de correos via Resend |
+| `send-push` | Notificaciones push via OneSignal |
+| `process-event` | Eventos del sistema (tareas, pagos, posts) |
+| `payment-reminders` | Recordatorios automáticos de pago |
+| `create-student-with-parent` | Crear estudiante + cuenta de padre |
+
+## ?? Seguridad
+
+- Las claves de Supabase están en `js/shared/supabase.js` (ANON_KEY es pública por diseño)
+- El SERVICE_ROLE_KEY **nunca** debe estar en el frontend
+- RLS habilitado en todas las tablas
+- CORS restringido a `https://montessorisonrisascreativas.com`

@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Recuperar Contraseña — Colegio Montessori Sonrisas Creativas</title>
+  <meta name="robots" content="noindex, nofollow">
+  <meta http-equiv="X-Content-Type-Options" content="nosniff">
+  <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
+  <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=(), interest-cohort=()">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self';">
+  <link rel="stylesheet" href="css/karpus-tailwind.css">
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    * { font-family: 'Nunito', sans-serif; }
+    body{
+      background: linear-gradient(135deg, #F7F9FB 0%, #E6F7EB 100%);
+    }
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+    .float-anim { animation: float 4s ease-in-out infinite; }
+    .float-delayed { animation: float 4s ease-in-out infinite 1s; }
+    @keyframes fadeUp { from { opacity:0; transform:translateY(24px); } to { opacity:1; transform:translateY(0); } }
+    .fade-up { animation: fadeUp .5s ease both; }
+  </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+  <div class="w-full max-w-sm relative z-10 fade-up">
+
+    <!-- Logo -->
+    <div class="text-center mb-8">
+      <div class="inline-flex items-center justify-center w-20 h-20 bg-white rounded-[2.5rem] shadow-xl border-2 border-green-100 mb-4">
+        <img src="img/monte.jpg" alt="Colegio Montessori Sonrisas Creativas" class="w-14 h-14 rounded-[1.5rem] object-cover">
+      </div>
+      <h1 class="text-2xl font-black tracking-tight text-slate-800">
+        Colegio Montessori Sonrisas Creativas
+      </h1>
+    </div>
+
+    <!-- Card -->
+    <div class="bg-white rounded-[2.5rem] shadow-xl border-2 border-slate-100 p-7 relative overflow-hidden">
+      <!-- Decorative Mascots (only on larger screens) -->
+      <div class="absolute bottom-2 right-2 hidden sm:flex gap-1 pointer-events-none">
+        <!-- Triangle -->
+        <svg width="40" height="48" viewBox="0 0 180 200" class="float-anim">
+          <polygon points="90,20 165,180 15,180" fill="#FF7A00" stroke="#E06900" stroke-width="4"/>
+          <circle cx="68" cy="105" r="12" fill="white"/>
+          <circle cx="112" cy="105" r="12" fill="white"/>
+          <circle cx="68" cy="105" r="6" fill="#333"/>
+          <circle cx="112" cy="105" r="6" fill="#333"/>
+          <path d="M 58 140 Q 90 160 122 140" stroke="#333" stroke-width="5" fill="none" stroke-linecap="round"/>
+        </svg>
+        <!-- Pentagon -->
+        <svg width="40" height="48" viewBox="0 0 180 180" class="float-delayed">
+          <polygon points="90,10 155,45 155,115 90,150 25,115 25,45" fill="#28B54D" stroke="#239943" stroke-width="4"/>
+          <ellipse cx="90" cy="28" rx="42" ry="16" fill="#0B63C7"/>
+          <circle cx="68" cy="80" r="12" fill="white"/>
+          <circle cx="112" cy="80" r="12" fill="white"/>
+          <circle cx="68" cy="80" r="6" fill="#333"/>
+          <circle cx="112" cy="80" r="6" fill="#333"/>
+          <path d="M 58 105 Q 90 125 122 105" stroke="#333" stroke-width="5" fill="none" stroke-linecap="round"/>
+        </svg>
+      </div>
+
+      <!-- Estado: Cambio de contraseña directo -->
+      <div id="stateRequest">
+        <div class="text-center mb-6">
+          <div class="w-14 h-14 bg-green-100 rounded-[1.5rem] flex items-center justify-center mx-auto mb-3">
+            <span class="text-2xl">🔄</span>
+          </div>
+          <h2 class="text-xl font-black text-slate-800">Actualizar Contraseña</h2>
+          <p class="text-sm text-slate-500 font-medium mt-1">Verifica tus datos para cambiar tu clave</p>
+        </div>
+
+        <form id="directResetForm" class="space-y-4">
+          <div>
+            <label class="block text-xs font-black text-slate-500 uppercase tracking-wider mb-1.5">Correo electrónico</label>
+            <input id="email" type="email" placeholder="tu@correo.com" required maxlength="320"
+              class="w-full px-4 py-3 rounded-[1.25rem] border-2 border-slate-100 bg-slate-50 text-slate-800 font-bold text-sm focus:outline-none focus:border-green-400 focus:bg-white focus:ring-4 focus:ring-green-50 transition-all">
+          </div>
+          <div>
+            <label class="block text-xs font-black text-slate-500 uppercase tracking-wider mb-1.5">Contraseña anterior</label>
+            <input id="oldPassword" type="password" placeholder="Tu contraseña actual" required autocomplete="current-password" maxlength="200"
+              class="w-full px-4 py-3 rounded-[1.25rem] border-2 border-slate-100 bg-slate-50 text-slate-800 font-bold text-sm focus:outline-none focus:border-green-400 focus:bg-white focus:ring-4 focus:ring-green-50 transition-all">
+          </div>
+          <div class="pt-2 border-t border-slate-100">
+            <label class="block text-xs font-black text-slate-500 uppercase tracking-wider mb-1.5">Nueva contraseña</label>
+            <input id="newPasswordDirect" type="password" placeholder="Mínimo 8 caracteres" required minlength="8" autocomplete="new-password" maxlength="200"
+              class="w-full px-4 py-3 rounded-[1.25rem] border-2 border-slate-100 bg-slate-50 text-slate-800 font-bold text-sm focus:outline-none focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-50 transition-all">
+          </div>
+          <div>
+            <label class="block text-xs font-black text-slate-500 uppercase tracking-wider mb-1.5">Confirmar nueva contraseña</label>
+            <input id="confirmPasswordDirect" type="password" placeholder="Repite la nueva clave" required autocomplete="new-password" maxlength="200"
+              class="w-full px-4 py-3 rounded-[1.25rem] border-2 border-slate-100 bg-slate-50 text-slate-800 font-bold text-sm focus:outline-none focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-50 transition-all">
+          </div>
+
+          <div id="reqError" class="hidden text-xs font-bold text-rose-600 bg-rose-50 border-2 border-rose-100 rounded-xl px-3 py-2"></div>
+          
+          <button type="submit" id="btnDirectReset"
+            class="w-full py-3.5 bg-gradient-to-r from-[#28B54D] to-[#239943] hover:from-[#239943] hover:to-[#1A8035] active:scale-95 text-white font-black rounded-[1.25rem] shadow-lg shadow-green-200 transition-all text-sm">
+            Actualizar mi contraseña ahora
+          </button>
+        </form>
+      </div>
+
+      <!-- Estado: token recibido (URL con #access_token) - Mantenemos por compatibilidad si llegara un enlace -->
+      <div id="stateReset" class="hidden">
+        <div class="text-center mb-6">
+          <div class="w-14 h-14 bg-blue-100 rounded-[1.5rem] flex items-center justify-center mx-auto mb-3">
+            <span class="text-2xl">🔒</span>
+          </div>
+          <h2 class="text-xl font-black text-slate-800">Nueva Contraseña</h2>
+          <p class="text-sm text-slate-500 font-medium mt-1">Elige una contraseña segura</p>
+        </div>
+
+        <form id="resetForm" class="space-y-4">
+          <div>
+            <label class="block text-xs font-black text-slate-500 uppercase tracking-wider mb-1.5">Nueva contraseña</label>
+            <input id="newPassword" type="password" placeholder="Mínimo 8 caracteres" required minlength="8" autocomplete="new-password" maxlength="200"
+              class="w-full px-4 py-3 rounded-[1.25rem] border-2 border-slate-100 bg-slate-50 text-slate-800 font-bold text-sm focus:outline-none focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-50 transition-all">
+          </div>
+          <div>
+            <label class="block text-xs font-black text-slate-500 uppercase tracking-wider mb-1.5">Confirmar contraseña</label>
+            <input id="confirmPassword" type="password" placeholder="Repite la contraseña" required autocomplete="new-password" maxlength="200"
+              class="w-full px-4 py-3 rounded-[1.25rem] border-2 border-slate-100 bg-slate-50 text-slate-800 font-bold text-sm focus:outline-none focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-50 transition-all">
+          </div>
+
+          <!-- Indicador de fortaleza -->
+          <div id="strengthBar" class="hidden">
+            <div class="flex gap-1 mb-1">
+              <div id="s1" class="h-1.5 flex-1 rounded-full bg-slate-200 transition-colors"></div>
+              <div id="s2" class="h-1.5 flex-1 rounded-full bg-slate-200 transition-colors"></div>
+              <div id="s3" class="h-1.5 flex-1 rounded-full bg-slate-200 transition-colors"></div>
+              <div id="s4" class="h-1.5 flex-1 rounded-full bg-slate-200 transition-colors"></div>
+            </div>
+            <p id="strengthLabel" class="text-[10px] font-bold text-slate-400"></p>
+          </div>
+
+          <div id="resetError" class="hidden text-xs font-bold text-rose-600 bg-rose-50 border-2 border-rose-100 rounded-xl px-3 py-2"></div>
+          <button type="submit" id="btnReset"
+            class="w-full py-3.5 bg-gradient-to-r from-[#0B63C7] to-[#084E9E] hover:from-[#084E9E] hover:to-[#063D7B] active:scale-95 text-white font-black rounded-[1.25rem] shadow-lg shadow-blue-200 transition-all text-sm">
+            Guardar nueva contraseña
+          </button>
+        </form>
+      </div>
+
+      <!-- Estado: éxito -->
+      <div id="stateSuccess" class="hidden text-center py-4">
+        <div class="text-5xl mb-4">✅</div>
+        <h2 class="text-xl font-black text-slate-800 mb-2">¡Contraseña actualizada!</h2>
+        <p class="text-sm text-slate-500 font-medium mb-6">Tu contraseña fue cambiada correctamente.</p>
+        <a href="panel_padres.html"
+          class="inline-block w-full py-3.5 bg-gradient-to-r from-[#28B54D] to-[#239943] hover:from-[#239943] hover:to-[#1A8035] text-white font-black rounded-[1.25rem] shadow-lg shadow-green-200 transition-all text-sm text-center">
+          Ir al Panel →
+        </a>
+      </div>
+
+    </div>
+
+    <p class="text-center text-xs text-slate-400 font-bold mt-5">
+      <a href="panel_padres.html" class="hover:text-[#28B54D] transition-colors">← Volver al Panel</a>
+      &nbsp;·&nbsp; Colegio Montessori Sonrisas Creativas © 2026
+    </p>
+  </div>
+
+  <script src="js/shared/supabase-js.min.js"></script>
+  <script type="module">
+    import { supabase } from './js/shared/supabase.js';
+
+    const show = (id) => {
+      ['stateRequest','stateReset','stateSuccess'].forEach(s => {
+        document.getElementById(s)?.classList.toggle('hidden', s !== id);
+      });
+    };
+
+    const showErr = (id, msg) => {
+      const el = document.getElementById(id);
+      if (el) { el.textContent = msg; el.classList.remove('hidden'); }
+    };
+    const hideErr = (id) => document.getElementById(id)?.classList.add('hidden');
+
+    // ── Detectar si hay token en la URL (Supabase lo pone en el hash) ─────────
+    const hash = window.location.hash;
+    const params = new URLSearchParams(hash.replace('#', ''));
+    const accessToken  = params.get('access_token');
+    const refreshToken = params.get('refresh_token');
+    const type         = params.get('type');
+
+    if (accessToken && type === 'recovery') {
+      // Establecer sesión con el token del enlace
+      await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken || '' });
+      show('stateReset');
+    } else {
+      show('stateRequest');
+    }
+
+    // ── Formulario de Cambio Directo (Sin Correo) ────────────────────────────
+    document.getElementById('directResetForm')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideErr('reqError');
+      
+      const email   = document.getElementById('email').value.trim();
+      const oldPass = document.getElementById('oldPassword').value;
+      const newPass = document.getElementById('newPasswordDirect').value;
+      const confPass = document.getElementById('confirmPasswordDirect').value;
+      const btn     = document.getElementById('btnDirectReset');
+
+      if (!email || !oldPass || !newPass) return showErr('reqError', 'Completa todos los campos.');
+      if (newPass.length < 8) return showErr('reqError', 'La nueva contraseña debe tener al menos 8 caracteres.');
+      if (newPass !== confPass) return showErr('reqError', 'Las nuevas contraseñas no coinciden.');
+      if (oldPass === newPass) return showErr('reqError', 'La nueva contraseña no puede ser igual a la anterior.');
+
+      btn.disabled = true;
+      btn.textContent = 'Verificando datos...';
+
+      try {
+        // 1. Intentar iniciar sesión con la contraseña anterior para verificar identidad
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+          email: email,
+          password: oldPass
+        });
+
+        if (signInError) {
+          throw new Error('La contraseña anterior es incorrecta o el usuario no existe.');
+        }
+
+        btn.textContent = 'Actualizando clave...';
+
+        // 2. Actualizar a la nueva contraseña
+        const { error: updateError } = await supabase.auth.updateUser({ 
+          password: newPass 
+        });
+
+        if (updateError) throw updateError;
+
+        // 3. Cerrar sesión por seguridad tras el cambio
+        await supabase.auth.signOut();
+
+        show('stateSuccess');
+      } catch (err) {
+        showErr('reqError', err.message || 'Error al actualizar. Intenta de nuevo.');
+        btn.disabled = false;
+        btn.textContent = 'Actualizar mi contraseña ahora';
+      }
+    });
+
+    // ── Formulario de solicitud (Legado/Enlace) ───────────────────────────────
+    // Este se mantiene solo por si el usuario llega desde un enlace antiguo
+    document.getElementById('requestForm')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideErr('reqError');
+      const email = document.getElementById('reqEmail').value.trim();
+      const btn   = document.getElementById('btnRequest');
+
+      if (!email) return showErr('reqError', 'Ingresa tu correo electrónico.');
+
+      btn.disabled = true;
+      btn.textContent = 'Enviando...';
+
+      try {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/recuperar.html`
+        });
+        if (error) throw error;
+
+        const successEl = document.getElementById('reqSuccess');
+        if (successEl) {
+          successEl.textContent = `✅ Enlace enviado a ${email}. Revisa tu bandeja de entrada (y spam).`;
+          successEl.classList.remove('hidden');
+        }
+        btn.textContent = 'Correo enviado ✓';
+      } catch (err) {
+        showErr('reqError', err.message || 'Error al enviar el correo. Intenta de nuevo.');
+        btn.disabled = false;
+        btn.textContent = 'Enviar enlace de recuperación';
+      }
+    });
+
+    // ── Indicador de fortaleza de contraseña ─────────────────────────────────
+    document.getElementById('newPassword')?.addEventListener('input', (e) => {
+      const pwd = e.target.value;
+      const bar = document.getElementById('strengthBar');
+      if (!bar) return;
+      bar.classList.toggle('hidden', pwd.length === 0);
+
+      let score = 0;
+      if (pwd.length >= 8)  score++;
+      if (/[A-Z]/.test(pwd)) score++;
+      if (/[0-9]/.test(pwd)) score++;
+      if (/[^A-Za-z0-9]/.test(pwd)) score++;
+
+      const colors = ['bg-rose-500','bg-orange-400','bg-amber-400','bg-green-500'];
+      const labels = ['Muy débil','Débil','Buena','Fuerte'];
+      for (let i = 1; i <= 4; i++) {
+        const seg = document.getElementById(`s${i}`);
+        if (seg) seg.className = `h-1.5 flex-1 rounded-full transition-colors ${i <= score ? colors[score-1] : 'bg-slate-200'}`;
+      }
+      const lbl = document.getElementById('strengthLabel');
+      if (lbl) lbl.textContent = score > 0 ? labels[score-1] : '';
+    });
+
+    // ── Formulario de nueva contraseña ────────────────────────────────────────
+    document.getElementById('resetForm')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideErr('resetError');
+
+      const pwd     = document.getElementById('newPassword').value;
+      const confirm = document.getElementById('confirmPassword').value;
+      const btn     = document.getElementById('btnReset');
+
+      if (pwd.length < 8) return showErr('resetError', 'La contraseña debe tener al menos 8 caracteres.');
+      if (pwd !== confirm) return showErr('resetError', 'Las contraseñas no coinciden.');
+
+      btn.disabled = true;
+      btn.textContent = 'Guardando...';
+
+      try {
+        const { error } = await supabase.auth.updateUser({ password: pwd });
+        if (error) throw error;
+        show('stateSuccess');
+      } catch (err) {
+        showErr('resetError', err.message || 'Error al actualizar la contraseña. El enlace puede haber expirado.');
+        btn.disabled = false;
+        btn.textContent = 'Guardar nueva contraseña';
+      }
+    });
+  </script>
+</body></html>

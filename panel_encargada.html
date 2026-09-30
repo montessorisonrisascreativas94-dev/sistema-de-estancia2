@@ -1,0 +1,1206 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex,nofollow">
+  <meta http-equiv="X-Content-Type-Options" content="nosniff">
+  <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://*.supabase.co wss://*.supabase.co; script-src 'self' 'unsafe-inline' https://cdn.onesignal.com https://onesignal.com https://api.onesignal.com https://meet.jit.si https://8x8.vc https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.onesignal.com https://*.onesignal.com https://onesignal.com; style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.onesignal.com https://*.onesignal.com https://onesignal.com; font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://cdn.onesignal.com https://*.onesignal.com https://onesignal.com https://api.onesignal.com https://meet.jit.si https://8x8.vc https://fonts.googleapis.com https://fonts.gstatic.com https://cdn.jsdelivr.net; frame-src https://meet.jit.si https://8x8.vc; worker-src 'self' blob:; object-src 'none'; base-uri 'self';">
+  <style>html{display:none;}</style>
+  <style>
+    /* Inline fallback: ensure hidden class works even if Tailwind fails to load */
+    #globalModalContainer.hidden { display: none !important; }
+    #globalModalContainer[style*="display: none"] { backdrop-filter: none !important; }
+    #sidebarOverlay { display: none !important; }
+    #initial-loading { z-index: 9999; }
+  </style>
+  <script>if(self===top){document.documentElement.style.display='block';}else{top.location=self.location;}</script>
+  <script src="js/pwa-update.js" defer></script>
+  <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+  <title>Panel Encargada — Colegio Montessori Sonrisas Creativas</title>
+  <link rel="icon" href="logo/favicon.ico" type="image/x-icon">
+  <link rel="manifest" href="manifest.json">
+  
+  <link rel="stylesheet" href="css/theme.css" />
+  <link rel="stylesheet" href="css/layout.css" />
+  <link rel="stylesheet" href="css/karpus-modern.css" />
+  <link rel="stylesheet" href="css/karpus-tailwind.css">
+  <link rel="stylesheet" href="css/premium-mobile.css">
+    <link rel="stylesheet" href="css/wall-social.css">
+  <link rel="stylesheet" href="css/messenger-chat.css">
+  <script src="js/shared/chart.min.js" defer></script>
+  <script src="js/shared/jspdf.min.js" defer></script>
+  <script src="js/shared/jspdf-autotable.min.js" defer></script>
+  <script>
+    window.addEventListener('load', () => {
+      if (!window.Chart) {
+        window.Chart = function() { return { destroy: () => {}, update: () => {} }; };
+        window.Chart.register = () => {};
+      }
+      if (!window.jspdf) window.jspdf = { jsPDF: function() { return { save: () => {}, text: () => {}, addPage: () => {} }; } };
+    });
+  </script>
+  
+  <style>
+    :root {
+        --primary: #7C3AED;
+        --primary-dark: #6D28D9;
+        --primary-light: #C4B5FD;
+        --secondary: #8B5CF6;
+        --accent: #6D28D9;
+        --yellow-accent: #FFD43B;
+        --surface: #F5F3FF;
+        --panel: #ffffff;
+        --panel-soft: #EDE9FE;
+        --text: #1A2340;
+        --muted: #64748b;
+        --border: #DDD6FE;
+        --shadow: 0 20px 45px rgba(124, 58, 237, 0.08);
+    }
+
+    body {
+      background: var(--surface);
+      color: var(--text);
+    }
+
+    .main {
+      background: linear-gradient(180deg, #FAF5FF 0%, #F3F0FF 100%);
+      padding: 1.5rem 1rem 2.5rem;
+    }
+
+    .section {
+      display: none;
+      overflow: visible;
+      padding: 0.25rem 0.25rem 2rem;
+    }
+
+    .section.active {
+      display: block;
+      overflow: visible;
+      animation: sectionEnter 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    @keyframes sectionEnter {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .section-shell {
+      background: linear-gradient(180deg, rgba(255,255,255,0.97), rgba(250,245,255,0.95));
+      border: 1px solid var(--border);
+      border-radius: 28px;
+      box-shadow: var(--shadow);
+      padding: 1.4rem;
+    }
+
+    .section-header {
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+      margin-bottom: 1.25rem;
+      padding: 1rem 1.1rem;
+      background: linear-gradient(135deg, #EDE9FE 0%, #F5F3FF 100%);
+      border: 1px solid #DDD6FE;
+      border-radius: 22px;
+      box-shadow: 0 4px 14px rgba(124,58,237,0.06);
+    }
+
+    .section-title {
+      font-size: clamp(1.2rem, 1.8vw, 1.6rem);
+      font-weight: 900;
+      color: var(--text);
+      line-height: 1.2;
+      margin: 0;
+    }
+
+    .section-subtitle {
+      color: var(--muted);
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin: 0;
+    }
+
+    .metric-card,
+    .quick-action-card,
+    .table-panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      box-shadow: 0 14px 35px rgba(67, 56, 202, 0.06);
+    }
+
+    .metric-card {
+      padding: 1.1rem 1.1rem 1.2rem;
+      transition: transform 0.25s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.2s ease;
+      border-left: 4px solid var(--primary);
+      position: relative;
+      overflow: hidden;
+    }
+    .metric-card::after {
+      content: '';
+      position: absolute;
+      top: -20px; right: -20px;
+      width: 80px; height: 80px;
+      border-radius: 50%;
+      background: currentColor;
+      opacity: 0.04;
+      pointer-events: none;
+    }
+    .metric-card:hover {
+      transform: translateY(-3px) scale(1.01);
+      box-shadow: 0 20px 45px rgba(15, 23, 42, 0.1);
+    }
+
+    .metric-card--primary   { border-left-color: var(--primary); }
+    .metric-card--secondary { border-left-color: var(--secondary); }
+    .metric-card--blue      { border-left-color: var(--secondary); }
+    .metric-card--success   { border-left-color: #28B54D; }
+    .metric-card--amber     { border-left-color: var(--yellow-accent); }
+    .metric-card--slate     { border-left-color: #64748b; }
+    .metric-card--rose      { border-left-color: #ef4444; }
+
+    .metric-card--primary   .metric-icon { background: #F3E8FF; color: var(--primary); }
+    .metric-card--secondary .metric-icon { background: #EDE9FE; color: var(--secondary); }
+    .metric-card--blue      .metric-icon { background: #EDE9FE; color: var(--secondary); }
+    .metric-card--success   .metric-icon { background: #ECFDF5; color: #28B54D; }
+    .metric-card--amber     .metric-icon { background: #FFFBE6; color: #B8860B; }
+    .metric-card--slate     .metric-icon { background: #F1F5F9; color: #64748b; }
+    .metric-card--rose      .metric-icon { background: #FFF1F2; color: #e11d48; }
+
+    .metric-icon {
+      width: 2.6rem;
+      height: 2.6rem;
+      border-radius: 0.9rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: #ecfdf5;
+      color: var(--primary);
+      margin-bottom: 0.8rem;
+      transition: transform 0.2s ease;
+    }
+    .metric-card:hover .metric-icon { transform: scale(1.1) rotate(-3deg); }
+
+    .metric-label {
+      font-size: 0.72rem;
+      font-weight: 900;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 0.35rem;
+    }
+
+    .metric-value {
+      font-size: 1.6rem;
+      font-weight: 900;
+      color: var(--text);
+      line-height: 1.1;
+    }
+
+    .quick-action-card {
+      padding: 1.3rem;
+      transition: transform 0.25s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.2s ease, border-color 0.2s ease;
+      border-left: 4px solid var(--primary);
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+    }
+    .quick-action-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, transparent 60%, rgba(255,255,255,0.5));
+      pointer-events: none;
+    }
+    .quick-action-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.1);
+    }
+
+    .quick-action-card--primary  { border-left-color: var(--primary); }
+    .quick-action-card--primary:hover  { border-color: var(--primary); box-shadow:0 18px 40px rgba(6, 78, 59, 0.12); }
+    .quick-action-card--secondary{ border-left-color: var(--secondary); }
+    .quick-action-card--secondary:hover{ border-color: var(--secondary); box-shadow:0 18px 40px rgba(5, 150, 105, 0.12); }
+    .quick-action-card--success { border-left-color: var(--primary-light); }
+    .quick-action-card--success:hover { border-color: var(--primary-light); box-shadow:0 18px 40px rgba(16, 185, 129, 0.12); }
+    .quick-action-card--amber { border-left-color: var(--yellow-accent); }
+    .quick-action-card--slate { border-left-color: #64748b; }
+    .quick-action-card--rose  { border-left-color: #ef4444; }
+
+    .quick-action-card--primary   .metric-icon { background: #F3E8FF; color: var(--primary); }
+    .quick-action-card--secondary .metric-icon { background: #EDE9FE; color: var(--secondary); }
+    .quick-action-card--success   .metric-icon { background: #ECFDF5; color: #28B54D; }
+    .quick-action-card--amber     .metric-icon { background: #FFFBE6; color: #B8860B; }
+    .quick-action-card--slate     .metric-icon { background: #F1F5F9; color: #64748b; }
+    .quick-action-card--rose      .metric-icon { background: #FFF1F2; color: #e11d48; }
+
+    .table-panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      box-shadow: 0 14px 35px rgba(15, 23, 42, 0.06);
+      overflow: hidden;
+      padding: 1rem;
+    }
+
+    .table-panel .data-table thead th {
+      background: #EDE9FE;
+      color: #5B21B6;
+      font-size: 0.72rem;
+      font-weight: 900;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 0.9rem 1rem;
+    }
+
+    .table-panel .data-table td {
+      padding: 0.95rem 1rem;
+      border-bottom: 1px solid #edf2f7;
+    }
+
+    .table-panel .data-table tr:hover {
+      background: #f8fbff;
+    }
+
+    .action-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.45rem 0.75rem;
+      border-radius: 9999px;
+      background: #f4f7fb;
+      color: #33506c;
+      font-size: 0.76rem;
+      font-weight: 800;
+      border: 1px solid #e6edf4;
+    }
+
+    aside#sidebar {
+        width: 288px;
+        background: linear-gradient(160deg, #5B21B6 0%, #7C3AED 50%, #8B5CF6 100%);
+        color: white;
+        position: fixed;
+        height: 100dvh;
+        top: 0; left: 0;
+        z-index: 1050;
+        overflow-y: auto;
+        overflow-x: hidden;
+        scrollbar-width: none;
+        transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                    transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 4px 0 24px rgba(91, 33, 182, 0.2);
+    }
+    aside#sidebar::-webkit-scrollbar { display: none; }
+
+    @media (min-width: 769px) {
+      body.panel-encargada-body aside#sidebar { width: 288px; }
+      body.sidebar-collapsed.panel-encargada-body aside#sidebar { width: 80px !important; }
+    }
+
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes scaleIn {
+      from { opacity: 0; transform: scale(0.95) translateY(10px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    .animate-scaleIn { animation: scaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
+
+    #layoutShell {
+      transition: margin-left .25s ease;
+    }
+    @media (min-width: 769px) {
+      .app-content-wrapper {
+        height: 100dvh;
+        overflow: hidden;
+        transition: margin-left 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+    }
+
+    body.panel-encargada-body .header {
+      background: transparent !important;
+      box-shadow: none !important;
+    }
+    body.panel-encargada-body .header button {
+      background: white !important;
+      border-color: #e2e8f0 !important;
+    }
+    body.panel-encargada-body .header h2,
+    body.panel-encargada-body .header span {
+      display: none !important;
+    }
+
+    @media (max-width: 767px) {
+      html, body { 
+        overflow-y: auto !important; 
+        overflow-x: hidden !important; 
+        height: auto !important; 
+        min-height: 100% !important;
+        position: relative !important;
+        display: block !important;
+        -webkit-overflow-scrolling: touch !important;
+        overscroll-behavior: auto !important;
+      }
+      .app {
+        display: block !important;
+        height: auto !important;
+        min-height: 100vh !important;
+        overflow: visible !important;
+      }
+      .app-content-wrapper { 
+        margin-left: 0 !important; 
+        height: auto !important; 
+        overflow: visible !important; 
+        display: block !important; 
+      }
+      .main { 
+        height: auto !important; 
+        overflow: visible !important; 
+        min-height: 100vh !important;
+        padding: 1rem 0.75rem 80px !important;
+        display: block !important;
+      }
+      #layoutShell {
+        overflow: visible !important;
+        height: auto !important;
+        display: block !important;
+      }
+      .section, .section.active {
+        overflow: visible !important;
+        height: auto !important;
+        display: none;
+      }
+      .section.active {
+        display: block !important;
+      }
+      .section-shell {
+        border: 2px solid #C4B5FD;
+        box-shadow: 0 4px 20px rgba(124, 58, 237, 0.1);
+      }
+      .section-header {
+        border: 2px solid #C4B5FD;
+      }
+      .metric-card {
+        border: 2px solid #DDD6FE;
+      }
+      .metric-card:hover {
+        transform: none;
+      }
+      .modal-content {
+        width: 95% !important;
+        max-height: 85dvh !important;
+        border: 2px solid #C4B5FD;
+      }
+    }
+
+    .nav-btn, .kk-nav-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 16px; width: 100%; color: #94a3b8;
+      border-radius: 8px; margin-bottom: 4px;
+      text-align: left; transition: all 0.2s ease;
+      position: relative; cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+    .nav-btn [data-lucide], .kk-nav-item [data-lucide] { transition: color 0.2s ease; }
+    .nav-btn:hover, .nav-btn.active, .kk-nav-item:hover, .kk-nav-item.active { background: rgba(255,255,255,0.15); color: white; }
+    .nav-btn .badge, .kk-nav-item .kk-badge { display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 5px;border-radius:50px;background:rgba(255,255,255,0.3);color:white;font-size:9px;font-weight:900;line-height:1; }
+
+    .data-table {
+      width: 100%; border-collapse: collapse; background: white;
+      border-radius: 8px; border: 1px solid #e2e8f0;
+    }
+    .data-table td { padding: 12px 16px; border-bottom: 1px solid #f1f5f9; color: #334155; }
+    .data-table tr:hover { background: #f8fafc; }
+    .table-scroll-wrap {
+      width: 100%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      border-radius: 12px;
+    }
+    .table-scroll-wrap .data-table { min-width: 600px; }
+
+    .chat-app {
+      display: flex;
+      height: calc(100dvh - 120px);
+      min-height: 500px;
+      background: white;
+      border-radius: 24px;
+      overflow: hidden;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 4px 20px -5px rgba(0,0,0,0.05);
+    }
+    .chat-list {
+      display: flex; flex-direction: column;
+      width: 35%; flex-shrink: 0;
+      border-right: 1px solid #f1f5f9; background: #f8fafc;
+      overflow-y: auto;
+    }
+    .chat-conversation {
+      display: flex; flex-direction: column;
+      width: 65%; background: white; min-width: 0;
+    }
+    #chatMessagesContainer {
+      flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
+      padding: 20px; display: flex; flex-direction: column;
+      gap: 8px; background: #ffffff;
+    }
+    .msg-bubble {
+      padding: 10px 16px; border-radius: 20px; font-size: 14px;
+      max-width: 80%; box-shadow: 0 1px 2px rgba(0,0,0,0.08); line-height: 1.5;
+    }
+    .msg-me { background: #0B63C7; color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
+    .msg-them { background: #f0f2f5; color: #1c1e21; align-self: flex-start; border-bottom-left-radius: 4px; }
+    #chatInputArea {
+      position: sticky; bottom: 0;
+      background: white; padding: 16px; border-top: 1px solid #f1f5f9; z-index: 2;
+    }
+    @media (max-width: 768px) {
+      .chat-app { height: calc(100dvh - 100px); border-radius: 16px; min-height: 400px; }
+      .chat-list { width: 100%; border-right: none; }
+      .chat-conversation { display: none; width: 100%; }
+      .chat-app.show-chat .chat-list { display: none; }
+      .chat-app.show-chat .chat-conversation { display: flex; }
+    }
+
+    .modal-content {
+      background: white;
+      border-radius: 24px;
+      width: 95% !important;
+      max-width: 600px !important;
+      max-height: 85dvh !important;
+      overflow-y: auto !important;
+      box-shadow: 0 25px 80px rgba(67,56,202,0.18);
+      animation: scaleIn 0.28s cubic-bezier(0.34,1.56,0.64,1);
+      border: 1px solid rgba(67,56,202,0.08);
+    }
+
+    .modal-header {
+      padding: 1.25rem 1.5rem;
+      border-bottom: none;
+      display: flex; align-items: center; justify-content: space-between;
+      background: linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%);
+      border-radius: 22px 22px 0 0;
+      color: white;
+      position: relative;
+      overflow: hidden;
+    }
+    .modal-header::before {
+      content: '';
+      position: absolute;
+      top: -30px; right: -30px;
+      width: 100px; height: 100px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.08);
+      pointer-events: none;
+    }
+
+    .modal-header--orange { background: linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%); }
+    .modal-header--primary  { background: linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%); }
+    .modal-header--success { background: linear-gradient(135deg, #28B54D 0%, #22c55e 100%); }
+    .modal-header--rose   { background: linear-gradient(135deg, #e11d48 0%, #be123c 100%); }
+
+    .modal-header h2,
+    .modal-header h3 { color: white !important; font-weight: 900; position: relative; z-index: 1; }
+
+    .modal-header .close-btn,
+    .modal-header button[onclick*="close"],
+    .modal-header button[data-dismiss] {
+      background: rgba(255,255,255,0.22);
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 10px;
+      color: white;
+      padding: 6px 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative; z-index: 1;
+    }
+    .modal-header .close-btn:hover { background: rgba(255,255,255,0.3); transform: scale(1.05); }
+
+    .modal-body { padding: 1.5rem; }
+    .modal-body label {
+      font-size: 0.78rem; font-weight: 900; color: #4A5568;
+      text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 6px;
+    }
+    .modal-body input:not([type=checkbox]):not([type=radio]),
+    .modal-body select,
+    .modal-body textarea {
+      width: 100%; padding: 10px 14px;
+      border: 2px solid #E2E8F0; border-radius: 14px;
+      font-size: 0.95rem; font-weight: 700; color: #1A2340;
+      background: #F8FAFC; outline: none; transition: all 0.25s;
+    }
+    .modal-body input:focus,
+    .modal-body select:focus,
+    .modal-body textarea:focus {
+      border-color: var(--primary);
+      background: white;
+      box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.1);
+    }
+    .modal-footer {
+      padding: 1rem 1.5rem;
+      border-top: 2px solid #F0F4F8;
+      display: flex; justify-content: flex-end; gap: 0.75rem;
+      background: #F8FAFC;
+      border-radius: 0 0 22px 22px;
+    }
+    .modal-footer .btn-cancel,
+    .modal-footer button[data-action="cancel"] {
+      padding: 10px 20px; border-radius: 14px;
+      border: 2px solid #E2E8F0; background: white;
+      color: #4A5568; font-weight: 800; cursor: pointer;
+      transition: all 0.2s;
+    }
+    .modal-footer .btn-cancel:hover { border-color: #CBD5E0; background: #F8FAFC; }
+    .modal-footer .btn-save,
+    .modal-footer button[data-action="save"],
+    .modal-footer button[type="submit"] {
+      padding: 10px 24px; border-radius: 14px;
+      background: var(--primary); color: white;
+      border: none; font-weight: 900; cursor: pointer;
+      box-shadow: 0 4px 14px rgba(124, 58, 237, 0.3);
+      transition: all 0.25s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    .modal-footer .btn-save:hover,
+    .modal-footer button[type="submit"]:hover {
+      background: var(--primary-dark);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(124, 58, 237, 0.35);
+    }
+    .modal-container.hidden { display: none !important; }
+
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
+      gap: 1rem;
+    }
+
+    .badge-paid,    .status-paid    { background:#E6F7EB; color:#1A8035; border:1px solid #B7EFC5; }
+    .badge-pending, .status-pending { background:#FFFBE6; color:#B8860B; border:1px solid #FFE89A; }
+    .badge-review,  .status-review  { background:#EDE9FE; color:#5B21B6; border:1px solid #C4B5FD; }
+    .badge-overdue, .status-overdue { background:#FFE4E8; color:#B91C1C; border:1px solid #FECDD3; }
+    .badge-absent                      { background:#FFE4E8; color:#B91C1C; }
+    .badge-present                     { background:#E6F7EB; color:#1A8035; }
+    .badge-late                        { background:#FFFBE6; color:#B8860B; }
+
+    .kpi-card-blue   { background:#EDE9FE; border:1px solid #DDD6FE;       color:#5B21B6; }
+    .kpi-card-orange { background:#EDE9FE; border:1px solid #DDD6FE; color:#5B21B6; }
+    .kpi-card-green  { background:#E6F7EB; border:1px solid #B7EFC5; color:#1A8035; }
+    .kpi-card-yellow { background:#FFFBE6; border:1px solid #FFE89A; color:#B8860B; }
+
+    .staff-card {
+      background:white; border-radius:20px; padding:20px;
+      border:2px solid #EDE9FE; box-shadow:0 4px 16px rgba(124,58,237,0.07);
+      transition:all 0.25s cubic-bezier(.34,1.56,.64,1);
+    }
+    .staff-card:hover { transform:translateY(-4px); box-shadow:0 12px 32px rgba(124,58,237,0.13); border-color:#7C3AED; }
+
+    .student-card {
+      background:white; border-radius:20px; padding:18px;
+      border:2px solid #EDE9FE; box-shadow:0 4px 14px rgba(0,0,0,0.06);
+      transition:all 0.25s ease; position:relative; overflow:hidden;
+    }
+    .student-card:hover { transform:translateY(-3px); box-shadow:0 10px 28px rgba(124,58,237,0.12); border-color:#7C3AED; }
+    .student-card::before {
+      content:''; position:absolute; top:0; left:0; right:0; height:4px;
+      background:linear-gradient(90deg,#7C3AED,#8B5CF6,#A78BFA,#C4B5FD);
+    }
+
+    .page-header {
+      display:flex; flex-direction:column; gap:4px; margin-bottom:1.5rem;
+    }
+    .page-header h1 {
+      font-size:1.5rem; font-weight:900; color:#1A2340; line-height:1.2;
+      display:flex; align-items:center; gap:12px;
+    }
+    .page-header .page-icon {
+      width:36px; height:36px; border-radius:12px;
+      background:#EDE9FE; color:#7C3AED;
+      display:flex; align-items:center; justify-content:center;
+      flex-shrink:0;
+    }
+    .page-header p { font-size:0.85rem; color:#718096; font-weight:600; margin-left:48px; }
+
+    .action-bar {
+      background:white; border-radius:16px; padding:14px 18px;
+      box-shadow:0 2px 12px rgba(124,58,237,0.07);
+      border:1px solid #EDE9FE;
+      display:flex; flex-wrap:wrap; align-items:center; gap:12px;
+      margin-bottom:1.5rem;
+    }
+
+    .tr-hover:hover td { background:#F8FAFC; }
+    .td-name { font-weight:900; color:#1A2340; }
+    .td-meta { font-size:0.8rem; color:#718096; font-weight:700; }
+
+    .row-paid    td:first-child { border-left:3px solid #28B54D; }
+    .row-pending td:first-child { border-left:3px solid #FFD43B; }
+    .row-review  td:first-child { border-left:3px solid #7C3AED; }
+    .row-overdue td:first-child { border-left:3px solid #EF4444; }
+
+    .kk-nav-group-toggle { position: relative; }
+    .kk-nav-chevron {
+      margin-left: auto;
+      transition: transform 0.25s ease;
+      color: rgba(255,255,255,0.5);
+    }
+    .kk-nav-group-toggle.open .kk-nav-chevron {
+      transform: rotate(180deg);
+      color: rgba(255,255,255,0.9);
+    }
+    .kk-nav-sub {
+      padding-left: 14px;
+      margin-top: 2px;
+      overflow: hidden;
+      animation: navSubOpen 0.2s ease-out both;
+    }
+    @keyframes navSubOpen {
+      from { opacity:0; transform:translateY(-6px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+    .kk-nav-sub-item {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      width: 100%;
+      padding: 8px 12px 8px 10px;
+      border-radius: 10px;
+      font-size: 12.5px;
+      font-weight: 800;
+      color: rgba(255,255,255,0.78);
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      text-align: left;
+      margin-bottom: 2px;
+      transition: all 0.18s ease;
+      border-left: 2px solid transparent;
+    }
+    .kk-nav-sub-item:hover {
+      background: rgba(255,255,255,0.1);
+      color: white;
+      border-left-color: rgba(139,92,246,0.6);
+      padding-left: 14px;
+    }
+    .kk-nav-sub-item.active {
+      background: rgba(255,255,255,0.16);
+      color: white;
+      border-left-color: #C4B5FD;
+      font-weight: 900;
+    }
+
+    .kk-nav-item.active,
+    .kk-nav-item[aria-current="page"] {
+      background:rgba(255,255,255,0.22) !important;
+      border-left:4px solid #C4B5FD !important;
+      color:white !important;
+      transform:translateX(5px);
+      box-shadow:0 4px 14px rgba(91,33,182,0.15);
+    }
+    .kk-nav-item .kk-badge {
+      background:rgba(255,255,255,0.25) !important;
+      color:white !important;
+    }
+    .kk-nav-item:hover:not(.active) {
+      background:rgba(255,255,255,0.14) !important;
+      color:white !important;
+    }
+
+    /* Purple icons for all sidebar navigation buttons */
+    .kk-nav-item i[data-lucide],
+    .kk-nav-sub-item i[data-lucide] {
+      color: #C4B5FD !important;
+    }
+    .kk-nav-item:hover i[data-lucide],
+    .kk-nav-item.active i[data-lucide],
+    .kk-nav-sub-item:hover i[data-lucide],
+    .kk-nav-sub-item.active i[data-lucide] {
+      color: white !important;
+    }
+
+    /* -----------------------------------------------
+       LOADER INICIAL
+    ----------------------------------------------- */
+    #initial-loading {
+      position: fixed;
+      inset: 0;
+      background: white;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.5s ease;
+    }
+    .loader-spin {
+      width: 48px;
+      height: 48px;
+      border: 4px solid #DDD6FE;
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .modal-header-icon {
+      width:36px; height:36px; border-radius:10px;
+      background:rgba(255,255,255,0.22);
+      display:flex; align-items:center; justify-content:center;
+      margin-right:12px; flex-shrink:0;
+    }
+
+    .empty-state {
+      text-align:center; padding:3rem 1rem; color:#94A3B8;
+    }
+    .empty-state .empty-icon {
+      width:64px; height:64px; border-radius:20px;
+      background:#F1F5F9; margin:0 auto 16px;
+      display:flex; align-items:center; justify-content:center;
+    }
+    .empty-state h3 { font-weight:900; color:#64748B; margin-bottom:6px; }
+    .empty-state p  { font-size:0.85rem; }
+
+    .tab-pill {
+      display:inline-flex; align-items:center; gap:6px;
+      padding:8px 18px; border-radius:50px;
+      font-size:0.78rem; font-weight:900; cursor:pointer;
+      border:none; background:transparent; color:#94A3B8;
+      transition:all 0.2s;
+    }
+    .tab-pill.active {
+      background:#7C3AED; color:white;
+      box-shadow:0 4px 14px rgba(124,58,237,0.3);
+    }
+    .tab-pill:hover:not(.active) { background:#F1F5F9; color:#1A2340; }
+
+    @keyframes shimmer {
+      0%   { background-position: -400px 0; }
+      100% { background-position:  400px 0; }
+    }
+    .skeleton-line {
+      background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+      background-size: 800px 100%;
+      animation: shimmer 1.6s infinite linear;
+      border-radius: 8px;
+      height: 14px;
+    }
+
+    .kk-nav-item:focus-visible,
+    .btn-action:focus-visible,
+    .tab-pill:focus-visible {
+      outline: 3px solid #A78BFA;
+      outline-offset: 2px;
+    }
+
+    @media print {
+      #sidebar, header, .no-print, #scrollTopBtn, .fab-wrap { display:none !important; }
+      .app-content-wrapper { margin:0 !important; }
+      body { background:white; }
+    }
+
+    @media (max-width: 640px) {
+      .hide-mobile { display: none !important; }
+      .overflow-x-auto { -webkit-overflow-scrolling: touch; }
+      canvas { max-width: 100% !important; }
+      .modal-content { width: 95%; max-height: 85dvh; }
+      .btn-mobile-full { width: 100% !important; justify-content: center; }
+    }
+
+    body { padding-bottom: 0 !important; }
+    @keyframes fadeInDir { from { opacity:0; transform: translateY(8px); } to { opacity:1; transform: translateY(0); } }
+  </style>
+</head>
+<body class="bg-[#F5F3FF] text-slate-800 font-nunito panel-encargada-body">
+  
+  <div id="initial-loading">
+    <div class="loader-spin mb-4"></div>
+    <h2 class="text-xl font-bold text-slate-700 animate-pulse">Sonrisas Creativas</h2>
+    <p class="text-sm text-slate-400">Cargando panel de Encargada de Educación...</p>
+  </div>
+
+  <div class="app">
+    <div id="sidebarOverlay" class="fixed inset-0 bg-black/50 z-40 transition-opacity" style="display:none;"></div>
+    
+    <aside id="sidebar" class="kk-sidebar shadow-2xl flex flex-col flex-shrink-0" style="background:linear-gradient(160deg,#5B21B6 0%,#7C3AED 50%,#8B5CF6 100%);border-right:none;">
+      <button id="toggleSidebar" class="absolute -right-3 top-8 bg-white rounded-full p-1.5 shadow-lg border border-purple-200 text-slate-500 hover:text-purple-600 hidden md:flex items-center justify-center z-10 transition-all hover:scale-110">
+        <i data-lucide="chevron-left" id="toggleSidebarIcon" class="w-3.5 h-3.5"></i>
+      </button>
+
+      <div class="kk-sidebar-logo">
+        <div class="kk-sidebar-logo-img">
+          <img src="img/monte.jpg" alt="Colegio Montessori Sonrisas Creativas" loading="eager">
+        </div>
+        <div class="kk-sidebar-logo-text label">
+          <div class="brand font-bold text-lg">Sonrisas Creativas</div>
+          <div class="sub">Encargada de Educación</div>
+        </div>
+        <!-- Triangular and Pentagonal Mascots -->
+        <div class="flex gap-2 mt-2 ml-auto">
+          <svg width="32" height="32" viewBox="0 0 180 200">
+            <polygon points="90,12 168,175 12,175" fill="#6366F1" stroke="#4F46E5" stroke-width="4"/>
+            <circle cx="72" cy="110" r="14" fill="white"/>
+            <circle cx="108" cy="110" r="14" fill="white"/>
+            <circle cx="73" cy="111" r="7" fill="#1e293b"/>
+            <circle cx="109" cy="111" r="7" fill="#1e293b"/>
+            <circle cx="76" cy="108" r="3" fill="white"/>
+            <circle cx="112" cy="108" r="3" fill="white"/>
+            <path d="M 65 138 Q 90 155 115 138" stroke="#1e293b" stroke-width="5" fill="none" stroke-linecap="round"/>
+          </svg>
+          <svg width="32" height="32" viewBox="0 0 180 210">
+            <ellipse cx="90" cy="22" rx="46" ry="16" fill="#0B63C7"/>
+            <path d="M 52 28 Q 40 42 48 56 L 132 56 Q 140 42 128 28 Z" fill="#0B63C7"/>
+            <polygon points="90,56 168,112 140,198 40,198 12,112" fill="#28B54D" stroke="#1A8035" stroke-width="4"/>
+            <circle cx="75" cy="128" r="13" fill="white"/>
+            <circle cx="105" cy="128" r="13" fill="white"/>
+            <circle cx="76" cy="129" r="6" fill="#1e293b"/>
+            <circle cx="106" cy="129" r="6" fill="#1e293b"/>
+            <circle cx="79" cy="126" r="2.5" fill="white"/>
+            <circle cx="109" cy="126" r="2.5" fill="white"/>
+            <path d="M 66 155 Q 90 170 114 155" stroke="#1e293b" stroke-width="5" fill="none" stroke-linecap="round"/>
+          </svg>
+        </div>
+      </div>
+
+      <div class="kk-sidebar-profile label mx-2">
+        <div class="kk-sidebar-profile-avatar relative group cursor-pointer" id="sidebarAvatar">
+          <img id="sidebarProfileAvatar" src="img/monte.jpg" alt="Avatar" class="w-full h-full object-cover transition-opacity group-hover:opacity-60">
+          <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+            <i data-lucide="camera" class="w-4 h-4 text-white"></i>
+          </div>
+          <input type="file" id="sidebarAvatarInput" accept="image/*" class="hidden">
+        </div>
+        <div class="kk-sidebar-profile-info label">
+          <div class="kk-sidebar-profile-role">Encargada de Educación</div>
+          <div class="kk-sidebar-profile-name" id="sidebarName">Cargando...</div>
+        </div>
+      </div>
+
+      <nav class="flex-1 overflow-y-auto kk-scroll px-2 py-2 space-y-1 relative z-10">
+        <button data-section="dashboard" class="kk-nav-item" data-tooltip="Dashboard">
+          <i data-lucide="layout-dashboard" class="text-blue-300"></i>
+          <span class="label">Dashboard</span>
+        </button>
+
+        <button data-section="rendimiento-eficiencia" class="kk-nav-item" data-tooltip="Rendimiento y Eficiencia">
+          <i data-lucide="gauge" class="shrink-0"></i>
+          <span class="label">Rendimiento y Eficiencia</span>
+        </button>
+
+        <button data-section="padres-opinion" class="kk-nav-item" data-tooltip="Opinión de Padres">
+          <i data-lucide="heart" class="text-pink-300"></i>
+          <span class="label">Opinión Padres</span>
+        </button>
+
+        <button data-section="permisos" class="kk-nav-item" data-tooltip="Permisos">
+          <i data-lucide="calendar-check" class="text-amber-300"></i>
+          <span class="label">Permisos</span>
+        </button>
+
+        <button data-section="accesos-qr" class="kk-nav-item" data-tooltip="Accesos QR">
+          <i data-lucide="qr-code" class="text-cyan-300"></i>
+          <span class="label">Accesos QR</span>
+        </button>
+
+        <button data-section="chat" class="kk-nav-item" data-tooltip="Chat Institucional">
+          <i data-lucide="messages-square" class="text-sky-300"></i>
+          <span class="label">Chat Institucional</span>
+        </button>
+
+        <button data-section="muro" class="kk-nav-item" data-tooltip="Muro Escolar">
+          <i data-lucide="megaphone" class="text-purple-300"></i>
+          <span class="label">Muro Escolar</span>
+        </button>
+
+        <button data-section="control-rutinas-cumplimiento" class="kk-nav-item" data-tooltip="Control de Rutinas y Cumplimiento">
+          <i data-lucide="clipboard-check" class="shrink-0"></i>
+          <span class="label">Control de Rutinas y Cumplimiento</span>
+        </button>
+
+        <button data-section="reportes-comparativas-alertas" class="kk-nav-item" data-tooltip="Reportes, Comparativas y Alertas">
+          <i data-lucide="file-spreadsheet" class="shrink-0"></i>
+          <span class="label">Reportes, Comparativas y Alertas</span>
+          <span id="badge-alertas" class="hidden kk-badge">0</span>
+        </button>
+
+        <button data-section="perfil" class="kk-nav-item" data-tooltip="Mi Perfil">
+          <i data-lucide="user-circle" class="text-purple-300 shrink-0"></i>
+          <span class="label">Mi Perfil</span>
+        </button>
+      </nav>
+
+      <div class="p-3 relative z-10 border-t border-white/10">
+        <button id="btnLogout" class="kk-logout-btn">
+          <i data-lucide="log-out" class="w-4 h-4"></i>
+          <span class="label">Cerrar Sesión</span>
+        </button>
+      </div>
+    </aside>
+
+    <div class="app-content-wrapper">
+      <header class="header">
+        <button id="menuBtn" class="md:hidden p-2.5 rounded-xl bg-purple-600 shadow-sm border border-purple-700 text-white hover:bg-purple-700 transition-colors active:scale-95"
+          style="position:relative;z-index:200;"
+          data-managed="true"
+          aria-label="Abrir menú">
+          <i data-lucide="menu" class="w-5 h-5"></i>
+        </button>
+        <h2 class="text-lg font-bold text-slate-800 hidden md:block"></h2>
+        <span class="text-xs font-semibold text-slate-400 uppercase tracking-widest md:hidden"></span>
+      </header>
+
+      <main class="main" id="layoutShell">
+        <section id="dashboard" class="section active">
+          <div class="section-shell">
+            <div class="section-header">
+              <h1 class="section-title">Panel Inteligente</h1>
+              <p class="section-subtitle">Resumen general del desempeño docente y cumplimiento.</p>
+            </div>
+
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
+              <div class="metric-card metric-card--primary">
+                <div class="metric-icon"><i data-lucide="users" class="w-5 h-5"></i></div>
+                <div class="metric-label">Total Maestras</div>
+                <div class="metric-value" id="kpiTotalMaestras">-</div>
+              </div>
+              <div class="metric-card metric-card--success">
+                <div class="metric-icon"><i data-lucide="check-circle" class="w-5 h-5"></i></div>
+                <div class="metric-label">Maestras Activas</div>
+                <div class="metric-value" id="kpiMaestrasActivas">-</div>
+              </div>
+              <div class="metric-card metric-card--secondary">
+                <div class="metric-icon"><i data-lucide="school" class="w-5 h-5"></i></div>
+                <div class="metric-label">Aulas Activas</div>
+                <div class="metric-value" id="kpiAulasActivas">-</div>
+              </div>
+              <div class="metric-card metric-card--amber">
+                <div class="metric-icon"><i data-lucide="user" class="w-5 h-5"></i></div>
+                <div class="metric-label">Niños</div>
+                <div class="metric-value" id="kpiNinos">-</div>
+              </div>
+              <div class="metric-card metric-card--rose">
+                <div class="metric-icon"><i data-lucide="trending-up" class="w-5 h-5"></i></div>
+                <div class="metric-label">Eficiencia Global</div>
+                <div class="metric-value" id="kpiEficienciaGlobal">-</div>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
+              <div class="metric-card metric-card--primary">
+                <div class="metric-icon"><i data-lucide="sparkles" class="w-5 h-5"></i></div>
+                <div class="metric-label">Índice de Eficiencia</div>
+                <div class="metric-value" id="kpiEficiencia">-</div>
+              </div>
+              <div class="metric-card metric-card--secondary">
+                <div class="metric-icon"><i data-lucide="target" class="w-5 h-5"></i></div>
+                <div class="metric-label">Promedio Institucional</div>
+                <div class="metric-value" id="kpiPromedioInstitucional">-</div>
+              </div>
+              <div class="metric-card metric-card--amber">
+                <div class="metric-icon"><i data-lucide="calendar-check" class="w-5 h-5"></i></div>
+                <div class="metric-label">Cumplimiento Diario</div>
+                <div class="metric-value" id="kpiCumplimientoDiario">-</div>
+              </div>
+              <div class="metric-card metric-card--slate">
+                <div class="metric-icon"><i data-lucide="calendar" class="w-5 h-5"></i></div>
+                <div class="metric-label">Cumplimiento Mensual</div>
+                <div class="metric-value" id="kpiCumplimientoMensual">-</div>
+              </div>
+              <div class="metric-card metric-card--success">
+                <div class="metric-icon"><i data-lucide="star" class="w-5 h-5"></i></div>
+                <div class="metric-label">Satisfacción Padres</div>
+                <div class="metric-value" id="kpiSatisfaccionPadres">-</div>
+              </div>
+            </div>
+
+            <!-- 10 Métricas de Desempeño por Maestra y Aulas -->
+            <div class="mb-6">
+              <h3 class="text-base font-black text-slate-800 mb-3 flex items-center gap-2">
+                <i data-lucide="bar-chart-3" class="w-5 h-5 text-purple-600"></i>
+                Métricas de Desempeño por Maestra y Aulas
+              </h3>
+              <div class="grid grid-cols-2 md:grid-cols-5 gap-3" id="metricasDesempeno">
+                <div class="bg-white rounded-2xl border border-purple-100 p-4 text-center">
+                  <div class="w-10 h-10 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center mx-auto mb-2"><i data-lucide="clock" class="w-5 h-5"></i></div>
+                  <div class="text-xl font-black text-slate-800" id="metricPuntualidad">-</div>
+                  <div class="text-[10px] font-black text-slate-400 uppercase tracking-wide mt-1">Puntualidad Docente</div>
+                </div>
+                <div class="bg-white rounded-2xl border border-violet-100 p-4 text-center">
+                  <div class="w-10 h-10 rounded-xl bg-violet-100 text-violet-600 flex items-center justify-center mx-auto mb-2"><i data-lucide="clipboard-check" class="w-5 h-5"></i></div>
+                  <div class="text-xl font-black text-slate-800" id="metricCumplimientoRutina">-</div>
+                  <div class="text-[10px] font-black text-slate-400 uppercase tracking-wide mt-1">Cumplimiento Rutinas</div>
+                </div>
+                <div class="bg-white rounded-2xl border border-indigo-100 p-4 text-center">
+                  <div class="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center mx-auto mb-2"><i data-lucide="book-open" class="w-5 h-5"></i></div>
+                  <div class="text-xl font-black text-slate-800" id="metricTareasAsignadas">-</div>
+                  <div class="text-[10px] font-black text-slate-400 uppercase tracking-wide mt-1">Tareas Asignadas</div>
+                </div>
+                <div class="bg-white rounded-2xl border border-blue-100 p-4 text-center">
+                  <div class="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center mx-auto mb-2"><i data-lucide="check-square" class="w-5 h-5"></i></div>
+                  <div class="text-xl font-black text-slate-800" id="metricTareasEntregadas">-</div>
+                  <div class="text-[10px] font-black text-slate-400 uppercase tracking-wide mt-1">Tareas Entregadas</div>
+                </div>
+                <div class="bg-white rounded-2xl border border-emerald-100 p-4 text-center">
+                  <div class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto mb-2"><i data-lucide="image" class="w-5 h-5"></i></div>
+                  <div class="text-xl font-black text-slate-800" id="metricPublicacionesMuro">-</div>
+                  <div class="text-[10px] font-black text-slate-400 uppercase tracking-wide mt-1">Publicaciones Muro</div>
+                </div>
+                <div class="bg-white rounded-2xl border border-rose-100 p-4 text-center">
+                  <div class="w-10 h-10 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center mx-auto mb-2"><i data-lucide="message-circle" class="w-5 h-5"></i></div>
+                  <div class="text-xl font-black text-slate-800" id="metricMensajesEnviados">-</div>
+                  <div class="text-[10px] font-black text-slate-400 uppercase tracking-wide mt-1">Mensajes Enviados</div>
+                </div>
+                <div class="bg-white rounded-2xl border border-amber-100 p-4 text-center">
+                  <div class="w-10 h-10 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center mx-auto mb-2"><i data-lucide="star" class="w-5 h-5"></i></div>
+                  <div class="text-xl font-black text-slate-800" id="metricCalificacionPromedio">-</div>
+                  <div class="text-[10px] font-black text-slate-400 uppercase tracking-wide mt-1">Calificación Promedio</div>
+                </div>
+                <div class="bg-white rounded-2xl border border-cyan-100 p-4 text-center">
+                  <div class="w-10 h-10 rounded-xl bg-cyan-100 text-cyan-600 flex items-center justify-center mx-auto mb-2"><i data-lucide="camera" class="w-5 h-5"></i></div>
+                  <div class="text-xl font-black text-slate-800" id="metricFotosSubidas">-</div>
+                  <div class="text-[10px] font-black text-slate-400 uppercase tracking-wide mt-1">Fotos Subidas</div>
+                </div>
+                <div class="bg-white rounded-2xl border border-pink-100 p-4 text-center">
+                  <div class="w-10 h-10 rounded-xl bg-pink-100 text-pink-600 flex items-center justify-center mx-auto mb-2"><i data-lucide="heart" class="w-5 h-5"></i></div>
+                  <div class="text-xl font-black text-slate-800" id="metricValoracionPromedio">-</div>
+                  <div class="text-[10px] font-black text-slate-400 uppercase tracking-wide mt-1">Valoración Padres</div>
+                </div>
+                <div class="bg-white rounded-2xl border border-teal-100 p-4 text-center">
+                  <div class="w-10 h-10 rounded-xl bg-teal-100 text-teal-600 flex items-center justify-center mx-auto mb-2"><i data-lucide="award" class="w-5 h-5"></i></div>
+                  <div class="text-xl font-black text-slate-800" id="metricAulasConRutina">-</div>
+                  <div class="text-[10px] font-black text-slate-400 uppercase tracking-wide mt-1">Aulas con Rutina</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div class="bg-white rounded-2xl border border-purple-100 p-6">
+                <h3 class="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                  <i data-lucide="award" class="w-5 h-5 text-purple-500"></i>
+                  Mejor Maestra del Mes
+                </h3>
+                <div id="mejorMaestra" class="text-center text-slate-400">Cargando...</div>
+              </div>
+              <div class="bg-white rounded-2xl border border-purple-100 p-6">
+                <h3 class="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                  <i data-lucide="home" class="w-5 h-5 text-purple-400"></i>
+                  Aula con Mejor Desempeño
+                </h3>
+                <div id="mejorAula" class="text-center text-slate-400">Cargando...</div>
+              </div>
+            </div>
+
+          </div>
+        </section>
+
+        <section id="rendimiento-eficiencia" class="section">
+          <div class="section-shell">
+            <div class="section-header">
+              <h1 class="section-title">Rendimiento y Eficiencia</h1>
+              <p class="section-subtitle">Eficiencia docente y ranking de maestras.</p>
+            </div>
+            <div id="eficienciaContent" class="text-slate-400">Cargando...</div>
+            <hr class="my-6 border-purple-100">
+            <div id="rankingContent" class="text-slate-400">Cargando...</div>
+          </div>
+        </section>
+
+        <section id="padres-opinion" class="section">
+          <div class="section-shell">
+            <div class="section-header">
+              <h1 class="section-title">Reporte de Opinión de Padres</h1>
+              <p class="section-subtitle">Resumen de valoraciones y comentarios.</p>
+            </div>
+            <div id="opinionesContent" class="text-slate-400">Cargando...</div>
+          </div>
+        </section>
+
+        <section id="permisos" class="section">
+          <div class="section-shell">
+            <div class="section-header">
+              <h1 class="section-title">Reportes de Permisos</h1>
+              <p class="section-subtitle">Control de permisos solicitados por docentes.</p>
+            </div>
+            <div id="permisosContent" class="text-slate-400">Cargando...</div>
+          </div>
+        </section>
+
+        <section id="accesos-qr" class="section">
+          <div class="section-shell">
+            <div class="section-header">
+              <h1 class="section-title">Accesos QR</h1>
+              <p class="section-subtitle">Gestión de códigos QR para estudiantes y maestras.</p>
+            </div>
+            <div id="qrContent" class="text-slate-400">Cargando...</div>
+          </div>
+        </section>
+
+        <section id="chat" class="section">
+          <div class="section-shell">
+            <div class="section-header">
+              <h1 class="section-title">Chat Institucional</h1>
+              <p class="section-subtitle">Comunicación directa con las maestras.</p>
+            </div>
+            <div id="chatContent" class="text-slate-400">Cargando...</div>
+          </div>
+        </section>
+
+        <section id="control-rutinas-cumplimiento" class="section">
+          <div class="section-shell">
+            <div class="section-header">
+              <h1 class="section-title">Control de Rutinas y Cumplimiento</h1>
+              <p class="section-subtitle">Monitoreo de rutinas diarias y reportes de cumplimiento.</p>
+            </div>
+            <div id="rutinasContent" class="text-slate-400">Cargando...</div>
+            <hr class="my-6 border-purple-100">
+            <div id="cumplimientoContent" class="text-slate-400">Cargando...</div>
+          </div>
+        </section>
+
+        <section id="muro" class="section">
+          <div class="section-shell">
+            <div class="section-header">
+              <h1 class="section-title">Muro Escolar</h1>
+              <p class="section-subtitle">Publica avisos, fotos y novedades para todas las aulas.</p>
+            </div>
+            <div id="muroContent" class="text-slate-400">Cargando...</div>
+          </div>
+        </section>
+
+        <section id="reportes-comparativas-alertas" class="section">
+          <div class="section-shell">
+            <div class="section-header">
+              <h1 class="section-title">Reportes, Comparativas y Alertas</h1>
+              <p class="section-subtitle">Tareas, comparativo por aulas y alertas inteligentes.</p>
+            </div>
+            <div id="tareasContent" class="text-slate-400">Cargando...</div>
+            <hr class="my-6 border-purple-100">
+            <div id="comparativoContent" class="text-slate-400">Cargando...</div>
+            <hr class="my-6 border-purple-100">
+            <div id="alertasContent" class="text-slate-400">Cargando...</div>
+          </div>
+        </section>
+
+        <section id="perfil" class="section">
+          <div class="section-shell">
+            <div class="section-header">
+              <h1 class="section-title">Mi Perfil</h1>
+              <p class="section-subtitle">Gestiona tu foto, datos personales y código QR.</p>
+            </div>
+            <div id="perfilContent" class="text-slate-400">Cargando...</div>
+          </div>
+        </section>
+
+      </main>
+    </div>
+  </div>
+
+  <div id="globalModalContainer" class="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm hidden">
+    <div id="globalModal" class="modal-content"></div>
+  </div>
+
+  <script src="js/shared/lucide.min.js" defer></script>
+  <script src="js/shared/supabase-js.min.js"></script>
+  <script src="js/shared/harden-forms.js" defer></script>
+  <script src="js/encargada/main.js" type="module" defer></script>
+
+</body>
+</html>

@@ -1,0 +1,346 @@
+/**
+ * Dashboard v2 — Centro de Control Estratégico
+ * Indicadores en tiempo real, gráficos, alertas, cumpleaños, eventos
+ */
+import { supabase } from '../shared/supabase.js';
+import { countRowsSafe } from '../shared/db-utils.js';
+import { AppState } from './state.js';
+import { buildScoresMap, moduleAvg, avgOf, gradeColor, gradeToLevel } from '../shared/eval-utils.js';
+
+const fmt = n => 'RD$' + Number(n||0).toLocaleString('es-DO',{minimumFractionDigits:2});
+const today = () => new Date().toISOString().split('T')[0];
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+let _charts = {};
+
+export async function renderDashboardV2(data) {
+  const container = document.getElementById('dashboardContainer');
+  if (!container) return;
+
+  // Gather all data in parallel
+  const now = new Date();
+  const todayStr = today();
+  const monthStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+
+  const [
+    teachersRes, attendanceRes,
+    messagesRes, cycleRes
+  ] = await Promise.allSettled([
+    supabase.from('profiles').select('id,role').in('role',['maestra','asistente','admin']).is('deleted_at', null).limit(200),
+    supabase.from('attendance').select('status').eq('date',todayStr).limit(1000),
+    supabase.from('messages').select('id',{count:'exact',head:true}).eq('is_read',false),
+    supabase.from('school_years').select('name,is_current').order('start_date',{ascending:false}).limit(5),
+  ]);
+
+  // Conteos de estudiantes SIEMPRE desde la BD (con fallback si falta deleted_at)
+  const [totalStu, activeStu] = await Promise.all([
+    countRowsSafe('students', {}, { label: 'total alumnos' }),
+    countRowsSafe('students', { is_active: true }, { label: 'alumnos activos' }),
+  ]);
+
+  const safe = r => r.status==='fulfilled' ? r.value : {data:[],count:0};
+  const teachers  = safe(teachersRes).data||[];
+  const attendance = safe(attendanceRes).data||[];
+  const unread    = safe(messagesRes).count||0;
+  
+  // Filtrar cumpleaños del día (ahora usando solo la tabla students y campos que existan)
+  const currentMonth = String(now.getMonth()+1).padStart(2,'0');
+  const currentDay = String(now.getDate()).padStart(2,'0');
+  const birthdays = []; // Por ahora, si no hay campo birth_date en students, dejamos vacío
+
+  const cycles     = safe(cycleRes).data||[];
+
+  const present    = attendance.filter(a=>['present','late'].includes(a.status?.toLowerCase())).length;
+  const absent     = attendance.filter(a=>a.status?.toLowerCase()==='absent').length;
+  const currentCycle = cycles.find(c=>c.is_current)?.name || cycles[0]?.name || '—';
+
+  let academic = { totalClassrooms: 0, evaluations: 0, activities: 0, scores: 0, overall: null, rows: [] };
+  try { academic = await _loadAcademicStats(); } catch (err) { console.error('[Dashboard] Académico', err); }
+
+  container.innerHTML = `
+  <style>
+    .kpi2{background:white;border-radius:20px;padding:16px 20px;border:1px solid #f1f5f9;box-shadow:0 2px 12px rgba(0,0,0,.04);position:relative;overflow:hidden;transition:transform .2s,box-shadow .2s}
+    .kpi2:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.08)}
+    .kpi2 .kpi-val{font-size:1.6rem;font-weight:900;line-height:1.1;color:#1a2340}
+    .kpi2 .kpi-lbl{font-size:.65rem;font-weight:900;text-transform:uppercase;letter-spacing:.1em;color:#94a3b8;margin-top:2px}
+    .kpi2 .kpi-icon{position:absolute;right:12px;top:12px;width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center}
+    .kpi2 .kpi-sub{font-size:.72rem;font-weight:700;color:#64748b;margin-top:6px}
+    .kpi2 .kpi-bar{height:3px;border-radius:2px;margin-top:10px;background:#f1f5f9}
+    .kpi2 .kpi-bar-fill{height:100%;border-radius:2px;transition:width .5s}
+    .dash-section-title{font-size:.7rem;font-weight:900;color:#94a3b8;text-transform:uppercase;letter-spacing:.15em;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+    .dash-section-title::after{content:'';flex:1;height:1px;background:#f1f5f9}
+    .alert-chip{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:14px;font-size:.8rem;font-weight:700}
+    .bday-chip{display:flex;align-items:center;gap:8px;padding:8px 12px;background:#FFF3E0;border:1px solid #FFE0B2;border-radius:12px;font-size:.8rem;font-weight:700;color:#E65100}
+  </style>
+
+  <!-- ENCABEZADO DEL CICLO ACTIVO -->
+  <div class="flex items-center justify-between flex-wrap gap-3">
+    <div>
+      <h2 class="text-2xl font-black text-slate-800">Centro de Control</h2>
+      <p class="text-sm text-slate-400 font-bold">Ciclo activo: <span class="text-emerald-600">${currentCycle}</span> · ${now.toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'})}</p>
+    </div>
+    <div class="flex gap-2 flex-wrap">
+      <button onclick="App.navigation?.goTo?.('ciclo-escolar')" class="px-4 py-2 text-white text-xs font-black uppercase rounded-xl shadow-md transition-all hover:opacity-90 active:scale-95" style="background:#0850A0">Ciclo Escolar</button>
+    </div>
+  </div>
+
+  <!-- ALERTAS / CUMPLEAÑOS -->
+  ${birthdays.length ? `
+  <div class="flex flex-wrap gap-2">
+    <span class="text-xs font-black text-amber-600 uppercase tracking-wider self-center">🎂 Hoy:</span>
+    ${birthdays.map(b=>`<span class="bday-chip">🎂 ${b.name.split(' ')[0]}</span>`).join('')}
+  </div>` : ''}
+
+  <!-- KPIs FILA 1: Estudiantes y Personal -->
+  <div>
+    <div class="dash-section-title"><i data-lucide="users" class="w-3.5 h-3.5"></i> Estudiantes y Personal</div>
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div class="kpi2">
+        <div class="kpi-icon" style="background:#ecfdf5"><i data-lucide="users" class="w-4 h-4" style="color:#047857"></i></div>
+        <div class="kpi-val">${totalStu}</div>
+        <div class="kpi-lbl">Total Alumnos</div>
+        <div class="kpi-bar"><div class="kpi-bar-fill" style="width:100%;background:#047857"></div></div>
+      </div>
+      <div class="kpi2">
+        <div class="kpi-icon" style="background:#ecfdf5"><i data-lucide="user-check" class="w-4 h-4" style="color:#047857"></i></div>
+        <div class="kpi-val">${activeStu}</div>
+        <div class="kpi-lbl">Activos</div>
+        <div class="kpi-sub">${totalStu>0?Math.round(activeStu/totalStu*100):0}% del total</div>
+      </div>
+      <div class="kpi2">
+        <div class="kpi-icon" style="background:#ecfdf5"><i data-lucide="graduation-cap" class="w-4 h-4" style="color:#047857"></i></div>
+        <div class="kpi-val">${teachers.filter(t=>t.role==='maestra').length}</div>
+        <div class="kpi-lbl">Docentes</div>
+      </div>
+      <div class="kpi2">
+        <div class="kpi-icon" style="background:#FFF3E0"><i data-lucide="clipboard-list" class="w-4 h-4" style="color:#d97706"></i></div>
+        <div class="kpi-val">${teachers.filter(t=>t.role==='asistente').length}</div>
+        <div class="kpi-lbl">Asistentes</div>
+      </div>
+      <div class="kpi2">
+        <div class="kpi-icon" style="background:#ecfdf5"><i data-lucide="calendar-check" class="w-4 h-4" style="color:#047857"></i></div>
+        <div class="kpi-val">${present}</div>
+        <div class="kpi-lbl">Presentes Hoy</div>
+        <div class="kpi-bar"><div class="kpi-bar-fill" style="width:${activeStu>0?Math.round(present/activeStu*100):0}%;background:#047857"></div></div>
+      </div>
+      <div class="kpi2">
+        <div class="kpi-icon" style="background:#FEE2E2"><i data-lucide="user-x" class="w-4 h-4" style="color:#EF4444"></i></div>
+        <div class="kpi-val">${absent}</div>
+        <div class="kpi-lbl">Ausentes Hoy</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- KPIs FILA 2: Académico y Comunicación -->
+  <div>
+    <div class="dash-section-title"><i data-lucide="graduation-cap" class="w-3.5 h-3.5"></i> Académico · Evaluaciones y Promedios</div>
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div class="kpi2" style="border-left:3px solid #8B5CF6">
+        <div class="kpi-icon" style="background:#F3E8FF"><i data-lucide="layers" class="w-4 h-4" style="color:#7C3AED"></i></div>
+        <div class="kpi-val" style="color:#7C3AED">${academic.evaluations}</div>
+        <div class="kpi-lbl">Evaluaciones</div>
+      </div>
+      <div class="kpi2">
+        <div class="kpi-icon" style="background:#F3E8FF"><i data-lucide="folder-open" class="w-4 h-4" style="color:#7C3AED"></i></div>
+        <div class="kpi-val">${academic.activities}</div>
+        <div class="kpi-lbl">Actividades</div>
+      </div>
+      <div class="kpi2">
+        <div class="kpi-icon" style="background:#F3E8FF"><i data-lucide="check-square" class="w-4 h-4" style="color:#7C3AED"></i></div>
+        <div class="kpi-val">${academic.scores}</div>
+        <div class="kpi-lbl">Notas Registradas</div>
+      </div>
+      <div class="kpi2" style="border-left:3px solid #28B54D">
+        <div class="kpi-icon" style="background:#E8FFF0"><i data-lucide="trending-up" class="w-4 h-4" style="color:#1A8035"></i></div>
+        <div class="kpi-val" style="color:#1A8035">${academic.overall != null ? academic.overall.toFixed(1) : '—'}</div>
+        <div class="kpi-lbl">Promedio General</div>
+      </div>
+      <div class="kpi2" style="border-left:3px solid #F59E0B">
+        <div class="kpi-icon" style="background:#FFFBEB"><i data-lucide="school" class="w-4 h-4" style="color:#D97706"></i></div>
+        <div class="kpi-val" style="color:#D97706">${academic.rows.length}</div>
+        <div class="kpi-lbl">Aulas con Notas</div>
+        <div class="kpi-sub">de ${academic.totalClassrooms} aulas activas</div>
+      </div>
+      <div class="kpi2" style="border-left:3px solid #8B5CF6;cursor:pointer" onclick="App.navigation?.goTo?.('comunicacion')">
+        <div class="kpi-icon" style="background:#F3E8FF"><i data-lucide="message-circle" class="w-4 h-4" style="color:#8B5CF6"></i></div>
+        <div class="kpi-val" style="color:#8B5CF6">${unread}</div>
+        <div class="kpi-lbl">Mensajes Sin Leer</div>
+      </div>
+    </div>
+    ${academic.rows.length ? `
+    <div class="mt-4 bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+      <div class="flex items-center justify-between px-4 py-3 border-b border-slate-100">
+        <h3 class="font-black text-slate-700 text-sm">Promedio por Aula</h3>
+        <span class="text-[10px] text-slate-400 font-bold">Se calcula con las actividades evaluadas de la estructura 5×5</span>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-slate-50 border-b border-slate-200">
+            <tr class="text-left text-[10px] font-black text-slate-500 uppercase tracking-wider">
+              <th class="px-4 py-2.5">Aula</th>
+              <th class="px-3 py-2.5 text-center">Alumnos</th>
+              <th class="px-3 py-2.5 text-center">Evaluados</th>
+              <th class="px-3 py-2.5 text-center">Promedio</th>
+              <th class="px-3 py-2.5 text-center">Nivel</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-50">
+            ${academic.rows.map(r => `
+              <tr class="hover:bg-purple-50/40 transition-colors">
+                <td class="px-4 py-2.5">
+                  <div class="font-black text-slate-800 text-xs">${esc(r.name)}</div>
+                  ${r.level ? `<div class="text-[9px] text-slate-400 font-bold">${esc(r.level)}</div>` : ''}
+                </td>
+                <td class="px-3 py-2.5 text-center text-xs font-bold text-slate-500">${r.students}</td>
+                <td class="px-3 py-2.5 text-center text-xs font-bold text-slate-500">${r.graded}</td>
+                <td class="px-3 py-2.5 text-center font-black text-sm ${gradeColor(r.avg)}">${r.avg != null ? r.avg.toFixed(1) : '—'}</td>
+                <td class="px-3 py-2.5 text-center"><span class="px-2 py-0.5 rounded-lg text-[9px] font-black ${gradeToLevel(r.avg).cls}">${gradeToLevel(r.avg).label}</span></td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>` : `
+    <div class="mt-4 p-8 text-center rounded-2xl border-2 border-dashed border-purple-200 bg-purple-50/30">
+      <p class="text-sm font-bold text-slate-500">Aún no hay calificaciones de evaluación. Genera la estructura y califica desde el Centro de Calificaciones.</p>
+    </div>`}
+  </div>
+
+  <!-- GRÁFICOS -->
+  <div class="grid grid-cols-1 gap-5">
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-black text-slate-700 text-sm">Asistencia Esta Semana</h3>
+      </div>
+      <div style="height:220px"><canvas id="dashAttendanceChart"></canvas></div>
+    </div>
+  </div>
+
+  `;
+
+  if (window.lucide) lucide.createIcons();
+
+  // Render attendance chart (last 7 days)
+  await _renderAttendanceChart();
+}
+
+function _renderChart(canvasId, opts) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas || !window.Chart) return;
+  if (_charts[canvasId]) _charts[canvasId].destroy();
+  _charts[canvasId] = new Chart(canvas, {
+    type: opts.type||'bar',
+    data: {
+      labels: opts.labels,
+      datasets:[{
+        label: opts.label||'',
+        data: opts.data,
+        backgroundColor: opts.color+'99',
+        borderColor: opts.color,
+        borderWidth: 2,
+        borderRadius: 6,
+      }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{
+        y:{beginAtZero:true,grid:{color:'rgba(0,0,0,.04)'},ticks:{maxTicksLimit:5}},
+        x:{grid:{display:false}}
+      }
+    }
+  });
+}
+
+async function _loadAcademicStats() {
+  const safe = r => r.status === 'fulfilled' ? r.value : { data: [] };
+  const [classRes, studRes, evalRes, modRes, actRes, scoreRes] = await Promise.allSettled([
+    supabase.from('classrooms').select('id,name,level').is('deleted_at', null).order('name').limit(200),
+    supabase.from('students').select('id,name,classroom_id,is_active').is('deleted_at', null).limit(2000),
+    supabase.from('eval_evaluations').select('id,name').is('deleted_at', null).limit(100),
+    supabase.from('eval_modules').select('id,area_id,period_id,name,eval_type,config').is('deleted_at', null).limit(2000),
+    supabase.from('eval_activities').select('id,module_id,name').is('deleted_at', null).limit(5000),
+    supabase.from('eval_scores').select('module_id,activity_id,student_id,value,stars,level,yesno,checklist,rubric').limit(20000)
+  ]);
+
+  const classrooms = safe(classRes).data || [];
+  const students = safe(studRes).data || [];
+  const evaluations = safe(evalRes).data || [];
+  const modules = safe(modRes).data || [];
+  const activities = safe(actRes).data || [];
+  const scores = safe(scoreRes).data || [];
+
+  const actsByModule = new Map();
+  activities.forEach(a => {
+    if (!actsByModule.has(a.module_id)) actsByModule.set(a.module_id, []);
+    actsByModule.get(a.module_id).push(a);
+  });
+
+  const studentsByClass = new Map();
+  students.filter(s => s.classroom_id != null).forEach(s => {
+    if (!studentsByClass.has(s.classroom_id)) studentsByClass.set(s.classroom_id, []);
+    studentsByClass.get(s.classroom_id).push(s);
+  });
+
+  const scoreMap = buildScoresMap(scores, activities);
+  const studAvg = {};
+  students.forEach(st => {
+    const vals = [];
+    modules.forEach(m => {
+      const ma = moduleAvg(m, actsByModule.get(m.id) || [], st.id, scoreMap);
+      if (ma != null) vals.push(ma);
+    });
+    if (vals.length) studAvg[st.id] = avgOf(vals);
+  });
+
+  const rows = classrooms.map(c => {
+    const sts = studentsByClass.get(c.id) || [];
+    const avgs = sts.map(s => studAvg[s.id]).filter(v => v != null);
+    return {
+      id: c.id, name: c.name, level: c.level,
+      students: sts.length,
+      graded: avgs.length,
+      avg: avgs.length ? avgOf(avgs) : null
+    };
+  }).filter(r => r.graded > 0);
+
+  return {
+    totalClassrooms: classrooms.length,
+    evaluations: evaluations.length,
+    activities: activities.length,
+    scores: scores.length,
+    overall: rows.length ? avgOf(rows.map(r => r.avg)) : null,
+    rows
+  };
+}
+
+async function _renderAttendanceChart() {
+  const days = [];
+  const present = [];
+  const absent  = [];
+  for (let i=6; i>=0; i--) {
+    const d = new Date(); d.setDate(d.getDate()-i);
+    const ds = d.toISOString().split('T')[0];
+    days.push(d.toLocaleDateString('es-ES',{weekday:'short',day:'numeric'}));
+    const { data } = await supabase.from('attendance').select('status').eq('date',ds).limit(500);
+    present.push((data||[]).filter(a=>['present','late'].includes(a.status?.toLowerCase())).length);
+    absent.push((data||[]).filter(a=>a.status?.toLowerCase()==='absent').length);
+  }
+  const canvas = document.getElementById('dashAttendanceChart');
+  if (!canvas || !window.Chart) return;
+  if (_charts['dashAttendanceChart']) _charts['dashAttendanceChart'].destroy();
+  _charts['dashAttendanceChart'] = new Chart(canvas, {
+    type:'line',
+    data:{
+      labels:days,
+      datasets:[
+        {label:'Presentes',data:present,borderColor:'#28B54D',backgroundColor:'rgba(40,181,77,.1)',fill:true,borderWidth:2,tension:.4,pointRadius:4},
+        {label:'Ausentes', data:absent, borderColor:'#EF4444',backgroundColor:'rgba(239,68,68,.1)',fill:true,borderWidth:2,tension:.4,pointRadius:4},
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:true,position:'bottom',labels:{font:{size:11,weight:'bold'},usePointStyle:true}}},
+      scales:{y:{beginAtZero:true,grid:{color:'rgba(0,0,0,.04)'}},x:{grid:{display:false}}}
+    }
+  });
+}

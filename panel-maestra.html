@@ -1,0 +1,1632 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex, nofollow">
+  <meta http-equiv="X-Content-Type-Options" content="nosniff">
+  <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
+  <meta http-equiv="Permissions-Policy" content="camera=(self), microphone=(self), geolocation=()">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://*.supabase.co wss://*.supabase.co; script-src 'self' 'unsafe-inline' https://cdn.onesignal.com https://onesignal.com https://api.onesignal.com https://meet.jit.si https://8x8.vc https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://onesignal.com https://cdn.onesignal.com; font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://cdn.onesignal.com https://onesignal.com https://api.onesignal.com https://meet.jit.si https://8x8.vc https://fonts.googleapis.com https://fonts.gstatic.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; frame-src https://meet.jit.si https://8x8.vc; worker-src 'self' blob:; object-src 'none'; base-uri 'self';">
+  <style>html{display:none;}</style>
+  <!-- X-Frame-Options debe ser configurado por el servidor, no por meta tag -->
+  <script>if(self===top){document.documentElement.style.display='block';}else{top.location=self.location;}</script>
+  <title>Colegio Montessori Sonrisas Creativas — Panel Maestra</title>
+  <link rel="icon" href="logo/favicon.ico" type="image/x-icon">
+  <link rel="manifest" href="manifest.json">
+  <!-- OneSignal (solo en dominio de producción; en localhost/preview evita error "Can only be used on: ...") -->
+  <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+  <script>
+    (function () {
+      var host = window.location.hostname;
+      var isProd = host === 'montessorisonrisascreativas.com' ||
+                   host === 'www.montessorisonrisascreativas.com' ||
+                   host.endsWith('.montessorisonrisascreativas.com');
+      if (!isProd) return; // No inicializar OneSignal fuera del dominio oficial
+      window.OneSignalDeferred = window.OneSignalDeferred || [];
+      window.OneSignalDeferred.push(async function(OneSignal) {
+        await OneSignal.init({
+          appId: "dd57c85f-852f-418e-bc8b-09a119f6c2eb",
+          safari_web_id: "web.onesignal.auto.0d8cfe1b-addf-4fe0-8094-42e4bf6360cd",
+          serviceWorkerPath: '/push/onesignal/OneSignalSDKWorker.js',
+          serviceWorkerParam: { scope: '/push/onesignal/' },
+          notifyButton: {
+            enable: true
+          }
+        });
+      });
+    })();
+  </script>
+  <!-- Suppress CORS/network errors from Edge Functions in GitHub Pages -->
+  <script>
+    window.addEventListener('unhandledrejection', function(e) {
+      const msg = e?.reason?.message || String(e?.reason || '');
+      // Silenciar errores CORS de Edge Functions (normales en GitHub Pages)
+      if (msg.includes('CORS') || msg.includes('process-event') ||
+          msg.includes('send-push') || msg.includes('ERR_FAILED') ||
+          msg.includes('preflight') || msg.includes('net::ERR') ||
+          msg.includes('get_tasks_for_period') || msg.includes('get_active_period')) {
+        e.preventDefault();
+      }
+    }, true);
+    // Suppress fetch errors for Edge Functions
+    const _origErr = console.error.bind(console);
+    console.error = function(...args) {
+      const s = args.join(' ');
+      if (s.includes('process-event') || s.includes('send-push') ||
+          s.includes('CORS') || s.includes('preflight')) return;
+      _origErr(...args);
+    };
+  </script>
+  <link rel="stylesheet" href="css/theme.css" />
+  <link rel="stylesheet" href="css/layout.css" />
+  <link rel="stylesheet" href="css/montessori-modern.css" />
+  <link rel="stylesheet" href="css/montessori-tailwind.css">
+  <link rel="stylesheet" href="css/premium-mobile.css">
+    <link rel="stylesheet" href="css/wall-social.css">
+  <link rel="stylesheet" href="css/karpus-modern.css">
+  <link rel="stylesheet" href="css/maestra-design-system.css">
+  <link rel="stylesheet" href="css/messenger-chat.css">
+  <script src="js/shared/lucide.min.js"></script>
+  
+  <style>
+    /* ═══════════════════════════════════════════════
+       SIDEBAR — gestionado por css/karpus-modern.css
+       (sistema unificado body.sidebar-collapsed)
+    ═══════════════════════════════════════════════ */
+    aside#sidebar {
+      overflow-y: auto;
+      overflow-x: hidden;
+      scrollbar-width: none;
+    }
+    aside#sidebar::-webkit-scrollbar { display: none; }
+
+    /* ═══════════════════════════════════════════════
+       LAYOUT SHELL — scroll libre, nunca bloqueado
+    ═══════════════════════════════════════════════ */
+    #layoutShell {
+      transition: margin-left .3s cubic-bezier(0.4,0,0.2,1);
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* ═══════════════════════════════════════════════
+       SECCIONES — ocultas por defecto, visibles con .active
+    ═══════════════════════════════════════════════ */
+    .section { display: none; opacity: 0; }
+    .section.active {
+      display: block;
+      opacity: 1;
+      animation: fadeIn 0.35s ease-out;
+    }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* ═══════════════════════════════════════════════
+       TARJETAS AULA — clickeables sin bloqueos
+    ═══════════════════════════════════════════════ */
+    #classesGrid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(285px, 1fr));
+      gap: 1.35rem;
+    }
+    #classesGrid > div {
+      position: relative;
+      z-index: 10;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+      pointer-events: auto;
+    }
+    @media (max-width: 520px) {
+      #classesGrid { grid-template-columns: 1fr; gap: 1.05rem; }
+    }
+    @media (min-width: 768px) and (max-width: 1200px) {
+      #classesGrid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (min-width: 1201px) {
+      #classesGrid { grid-template-columns: repeat(3, 1fr); }
+    }
+    @media (min-width: 1700px) {
+      #classesGrid { grid-template-columns: repeat(4, 1fr); }
+    }
+
+    /* ═══════════════════════════════════════════════
+       PALETA OFICIAL — SONRISAS CREATIVAS
+       (tokens centralizados en maestra-design-system.css)
+    ═══════════════════════════════════════════════ */
+    :root {
+      --sc-green:      #28B54D;
+      --sc-green-dark: #239943;
+      --sc-green-lt:   #E6F7EB;
+      --sc-orange:     #FF8A00;
+      --sc-orange-d:   #E07900;
+      --sc-orange-lt:  #FFF3E0;
+      --sc-red:        #EF4444;
+      --sc-red-lt:     #FEE2E2;
+      --sc-yellow:     #FFD43B;
+      --sc-white:      #FFFFFF;
+      --sc-gray-bg:    #F7F9FB;
+      --sc-border:     #EEF2F4;
+      --sc-blue:       #28B54D;
+      --sc-blue-d:     #239943;
+      --sc-blue-lt:    #E6F7EB;
+      --maestra-primary: var(--sc-green);
+      --maestra-dark:    var(--sc-green-dark);
+      --maestra-light:   var(--sc-green-lt);
+      --maestra-ring:    rgba(40,181,77,0.15);
+    }
+
+    /* ═══════════════════════════════════════════════
+       STAT BLOCKS — base (colores en maestra-design-system.css)
+       ═══════════════════════════════════════════════ */
+    .stat-block {
+      border-radius: 20px; padding: 24px; color: white !important;
+      position: relative; overflow: hidden;
+      transition: transform 0.2s;
+      min-height: 120px;
+    }
+    .stat-block h3,
+    .stat-block p,
+    .stat-block * { color: white !important; }
+    .stat-block:hover { transform: translateY(-4px); }
+    .stat-block svg { opacity: 0.85; transform: rotate(-10deg); position: absolute; right: -10px; bottom: -10px; width: 80px; height: 80px; }
+
+    /* ═══════════════════════════════════════════════
+       TABS DE AULA — scroll horizontal sin romper body
+    ═══════════════════════════════════════════════ */
+    .tabs-scroll-container { scrollbar-width: none; }
+    .tabs-scroll-container::-webkit-scrollbar { display: none; }
+
+    /* ═══════════════════════════════════════════════
+       CALIFICACIONES — scroll horizontal en tabla
+    ═══════════════════════════════════════════════ */
+    #t-grades-inner .grades-table-wrap {
+      width: 100%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      border-radius: 12px;
+    }
+    #t-grades-inner .grades-table-wrap table,
+    #t-grades-inner #tGradeContent table {
+      min-width: 640px;
+    }
+    #t-grades-inner #tGradeContent table.t-formal-table {
+      min-width: 980px;
+    }
+
+    /* ═══════════════════════════════════════════════
+       PERFIL — scroll vertical libre
+    ═══════════════════════════════════════════════ */
+    #t-profile {
+      /* ✅ FIX: nunca height fija, scroll natural del documento */
+      overflow: visible;
+      padding-bottom: 6rem;
+    }
+    #t-profile .profile-card-wrap {
+      overflow: visible;
+    }
+
+    /* ═══════════════════════════════════════════════
+       CHAT — layout tipo WhatsApp (Mejorado)
+    ═══════════════════════════════════════════════ */
+    .chat-shell {
+      display: flex;
+      border-radius: 24px;
+      overflow: hidden;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 4px 24px -4px rgba(0,0,0,0.07);
+      background: white;
+      height: calc(100vh - 180px); /* ✅ FIX: Altura dinámica */
+      min-height: 500px;
+    }
+    .chat-list-col {
+      width: 320px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid #f1f5f9;
+      background: #f8fafc;
+    }
+    .chat-conv-col {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      position: relative;
+    }
+    .chat-messages-scroll {
+      flex: 1;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); /* WhatsApp style bg */
+      background-size: 400px;
+    }
+    .chat-input-sticky {
+      background: white;
+      border-top: 1px solid #f1f5f9;
+      padding: 1rem;
+      z-index: 10;
+    }
+
+    @media (max-width: 768px) {
+      .chat-shell { 
+        height: calc(100vh - 120px); 
+        border-radius: 0; 
+        margin: -1rem; /* Full width */
+        border: none;
+      }
+      .chat-list-col { width: 100%; border-right: none; }
+      .chat-conv-col { 
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 150;
+        background: white;
+        display: none; 
+      }
+      .chat-conv-col.active { display: flex; }
+      .chat-list-col.hidden { display: none; }
+    }
+    /* En desktop: siempre visible */
+    @media (min-width: 769px) {
+      .chat-conv-col { display: flex !important; }
+      .chat-list-col { display: flex !important; }
+    }
+
+    /* ═══════════════════════════════════════════════
+       NOTEBOOK PAPER
+    ═══════════════════════════════════════════════ */
+    .notebook-paper {
+      background-color: #fff;
+      background-image: linear-gradient(#e5e7eb 1px, transparent 1px);
+      background-size: 100% 2rem;
+      border-left: 4px solid #ef4444;
+      padding-left: 2rem;
+      box-shadow: 2px 2px 15px rgba(0,0,0,0.05);
+      border-radius: 8px;
+      position: relative;
+    }
+    .notebook-paper::before {
+      content: ""; position: absolute; left: -12px; top: 0; bottom: 0; width: 20px;
+      background: radial-gradient(circle, #334155 30%, transparent 40%); background-size: 100% 2rem;
+    }
+
+    /* ═══════════════════════════════════════════════
+       MOBILE OVERRIDES
+    ═══════════════════════════════════════════════ */
+    @media (max-width: 640px) {
+      .nav-btn-toy { padding: 10px 14px; gap: 8px; font-size: 14px; }
+      .nav-btn-toy i { width: 18px; height: 18px; }
+      .stat-block { padding: 12px; min-height: 100px; }
+      .stat-block h3 { font-size: 1.5rem; }
+      .stat-block p { font-size: 0.75rem; }
+      .stat-block i { width: 50px; height: 50px; }
+      .notebook-paper { padding-left: 1.25rem; border-left-width: 3px; }
+      .post-actions { flex-wrap: wrap; gap: 8px; }
+      .post-actions button { flex: 1; min-width: 100px; justify-content: center; }
+      /* Tabla responsive en móvil */
+      .table-responsive { display: block; width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+      .table-responsive table { min-width: 600px; }
+    }
+
+    /* FIX: Scroll natural en móvil — no bloquear body */
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+    @media (min-width: 769px) {
+      html, body { overflow: hidden; } /* Desktop: scroll en layoutShell */
+    }
+    @media (max-width: 768px) {
+      html, body { overflow-x: hidden; overflow-y: auto; } /* Móvil: scroll del documento */
+      #layoutShell { overflow: visible !important; min-height: auto !important; }
+    }
+    
+    #sidebarOverlay {
+      background: rgba(0,0,0,0.4);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      z-index: 90;
+      display: none;
+    }
+
+    /* ═══════════════════════════════════════════════
+       MISC
+    ═══════════════════════════════════════════════ */
+    #meet iframe { border-radius: 16px; border: 3px solid var(--sc-green, #28B54D); }
+    .toast-notification {
+      position: fixed; bottom: 24px; right: 24px;
+      padding: 12px 24px; border-radius: 12px; color: white;
+      font-weight: 500; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+      z-index: 100; transition: all 0.3s ease;
+    }
+
+    /* Tab badge dot — punto naranja en esquina del tab */
+    @keyframes badge-pulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50%       { transform: scale(1.5); opacity: 0.6; }
+    }
+    .tab-badge-dot {
+      position: absolute; top: 4px; right: 4px;
+      width: 9px; height: 9px; border-radius: 50%;
+      background: #FF8A00; border: 2px solid white;
+      animation: badge-pulse 1.5s infinite;
+    }
+
+
+
+    /* Nav buttons base — sobreescritos por maestra-design-system.css */
+    .nav-btn-toy {
+      border-radius: 12px; padding: 11px 16px; font-weight: 600;
+      transition: all .18s ease; display: flex; align-items: center; gap: 11px;
+      margin-bottom: 4px; cursor: pointer; -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation; width: 100%; text-align: left;
+    }
+
+    /* ═══════════════════════════════════════════════
+       ROUTINE UI IMPROVEMENTS (Mobile First)
+    ═══════════════════════════════════════════════ */
+    @keyframes bounce-subtle {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-4px); }
+    }
+    .animate-bounce-subtle { animation: bounce-subtle 2s infinite ease-in-out; }
+    @keyframes pulse-subtle {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.9; transform: scale(0.98); }
+    }
+    .animate-pulse-subtle { animation: pulse-subtle 3s infinite ease-in-out; }
+    .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
+    .nav-btn-toy.active { background: #FFFFFF; color: #28B54D; border-left: 3px solid #28B54D; font-weight: 800; }
+
+    /* ═══════════════════════════════════════════════
+       OVERRIDE: FORCE ALL STAT BLOCK CONTENT TO BE WHITE!
+    ═══════════════════════════════════════════════ */
+    .stat-block,
+    .stat-block *,
+    .stat-block h1, .stat-block h2, .stat-block h3, .stat-block h4, .stat-block h5, .stat-block h6,
+    .stat-block p, .stat-block span, .stat-block div {
+      color: #FFFFFF !important;
+      fill: #FFFFFF !important;
+    }
+
+    /* ═══════════════════════════════════════════════
+       MODAL STYLES — base estructural
+       (colores y aspecto en maestra-design-system.css)
+    ═══════════════════════════════════════════════ */
+    #modalBackdrop {
+      position: fixed; inset: 0; z-index: 9998;
+      display: flex; align-items: flex-start;
+      justify-content: center; padding: 3vh 16px 24px;
+      overflow-y: auto;
+    }
+    #modalBackdrop.hidden { display: none !important; }
+    .modal-card {
+      width: 100%; max-height: 88vh;
+      display: flex; flex-direction: column;
+      animation: modalPop .3s cubic-bezier(0.34,1.56,0.64,1) both;
+    }
+    .modal-card-lg { max-width: 900px; }
+    @keyframes modalPop {
+      from { opacity:0; transform: scale(0.92) translateY(20px); }
+      to   { opacity:1; transform: scale(1) translateY(0); }
+    }
+    .modal-header-pink {
+      display: flex; align-items: center; justify-content: space-between;
+      flex-shrink: 0;
+    }
+    .modal-body-scroll { flex: 1; overflow-y: auto; }
+    .modal-footer-pink {
+      flex-shrink: 0;
+      display: flex; justify-content: flex-end; gap: 12px;
+    }
+    .modal-field label {
+      display: block; font-size: 0.75rem; font-weight: 800;
+      text-transform: uppercase; letter-spacing: 1.2px;
+      color: #64748B; margin-bottom: 7px;
+    }
+
+    /* ═══════════════════════════════════════════════
+       ESTILOS PERSONALIZADOS — manejados por maestra-design-system.css
+       Solo se conservan utilidades de texto y fondo
+    ═══════════════════════════════════════════════ */
+    .text-green { color: #28B54D; }
+    .text-orange { color: #FF8A00; }
+    .bg-green { background-color: #28B54D; }
+    .bg-orange { background-color: #FF8A00; }
+    .bg-green-light { background-color: #E6F7EB; }
+    .bg-orange-light { background-color: #FFF3E0; }
+
+    /* Badge / accent */
+    .badge-maestra {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 4px 12px; border-radius: 50px;
+      background: var(--sc-orange-light); color: var(--sc-orange-dark);
+      font-size: 0.75rem; font-weight: 800;
+    }
+
+    /* File drop zone */
+    .drop-zone {
+      background: var(--sc-green-light); padding: 16px;
+      border-radius: 14px; border: 2px dashed var(--sc-green);
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      cursor: pointer; transition: all .2s;
+    }
+    .drop-zone:hover { border-color: var(--sc-green-dark); background: var(--sc-green-light); }
+
+    /* Sidebar nav active tint */
+    .nav-btn-toy.active-maestra {
+      background: rgba(255,255,255,0.35); color: white;
+      border-left: 4px solid rgba(255,255,255,0.9);
+    }
+
+    /* Task card action buttons — verde */
+    .btn-task-action {
+      padding: 8px 16px; border-radius: 10px; border: none;
+      background: #28B54D;
+      color: white; font-size: 0.72rem; font-weight: 900;
+      text-transform: uppercase; letter-spacing: 0.8px;
+      cursor: pointer; transition: background .2s, transform .2s;
+      display: inline-flex; align-items: center; gap: 6px;
+      box-shadow: 0 4px 12px rgba(40,181,77,0.2);
+    }
+    .btn-task-action:hover { background: #239943; transform: translateY(-2px); }
+
+    @media (max-width: 640px) {
+      .modal-card { border-radius: 20px; max-height: 92vh; }
+      .modal-header-pink { padding: 16px 20px; }
+      .modal-body-scroll { padding: 18px 20px; }
+      .modal-footer-pink { padding: 12px 20px; }
+    }
+  </style>
+</head>
+<body class="bg-[var(--sc-gray-bg)] text-slate-800 font-nunito panel-maestra-body" style="background:#F7F9FB;overflow-y:auto;overflow-x:hidden;">
+  <div class="app">
+    <!-- OVERLAY MOBILE -->
+    <div id="sidebarOverlay" class="fixed inset-0 bg-black/50 z-40 backdrop-blur-sm transition-opacity" style="display:none;"></div>
+    <!-- SIDEBAR -->
+    <aside id="sidebar" class="kk-sidebar shadow-2xl border-r-4 border-[var(--sc-green)] p-4 flex-shrink-0 rounded-r-3xl">
+      <button id="toggleSidebar" class="absolute -right-3 top-6 bg-white rounded-full p-1.5 shadow-md border border-slate-100 text-slate-500 hover:text-[var(--sc-green)] hidden md:flex items-center justify-center z-10 transition-all hover:scale-110">
+        <i data-lucide="chevron-left" id="toggleSidebarIcon" class="w-3.5 h-3.5"></i>
+      </button>
+      
+      <div class="flex items-center gap-3 mb-6">
+        <div class="h-12 w-12 rounded-2xl bg-white flex items-center justify-center shadow-lg overflow-hidden shrink-0 border border-blue-200">
+          <img src="/img/monte.jpg" alt="logo Colegio Montessori Sonrisas Creativas" loading="eager" class="w-full h-full object-contain p-1.5" />
+        </div>
+        <div class="label overflow-hidden">
+          <h3 class="font-black text-white text-lg tracking-tight drop-shadow-md whitespace-nowrap">
+            Sonrisas Creativas
+          </h3>
+          <p class="text-xs text-green-100 font-bold truncate">Panel Maestra</p>
+        </div>
+      </div>
+
+      <!-- Perfil Debajo del Texto -->
+      <div class="mb-6 px-2 flex items-center gap-3 bg-white/10 p-3 rounded-2xl backdrop-blur-sm border border-white/10">
+        <div class="w-10 h-10 rounded-full bg-white flex items-center justify-center text-[var(--sc-green-dark)] font-black shadow-md border-2 border-[var(--sc-green-light)] overflow-hidden" id="sidebarAvatar">
+          <img src="" class="w-full h-full object-cover" alt="Avatar">
+        </div>
+        <div class="label overflow-hidden">
+          <h3 class="text-sm font-bold text-white truncate user-name-display" id="sidebarName">Cargando...</h3>
+          <p class="text-[10px] text-blue-100 truncate user-email-display" id="sidebarEmail">...</p>
+        </div>
+      </div>
+
+      <nav class="space-y-2 p-2 mb-4 relative z-10">
+        <button data-section="t-home" class="nav-btn-toy w-full active relative" aria-selected="true">
+          <i data-lucide="home" class="w-5 h-5"></i>
+          <span class="label">Mis Clases</span>
+          <span id="badge-t-home" class="hidden absolute -top-1 -right-1 w-4 h-4 bg-[#EF4444] text-white text-[9px] font-black rounded-full flex items-center justify-center shadow-sm">0</span>
+        </button>
+        <button data-section="t-chat" class="nav-btn-toy w-full relative">
+          <i data-lucide="message-square" class="w-5 h-5"></i>
+          <span class="label">Chat</span>
+          <span id="badge-t-chat" class="hidden absolute -top-1 -right-1 w-4 h-4 bg-[#EF4444] text-white text-[9px] font-black rounded-full flex items-center justify-center shadow-sm">0</span>
+        </button>
+        <button data-section="t-grades" class="nav-btn-toy w-full relative">
+          <i data-lucide="graduation-cap" class="w-5 h-5"></i>
+          <span class="label">Calificaciones</span>
+          <span id="badge-t-grades" class="hidden absolute -top-1 -right-1 w-4 h-4 bg-[#EF4444] text-white text-[9px] font-black rounded-full flex items-center justify-center shadow-sm">0</span>
+        </button>
+        <button data-section="t-permits" class="nav-btn-toy w-full relative">
+          <i data-lucide="calendar-off" class="w-5 h-5"></i>
+          <span class="label">Mis Permisos</span>
+        </button>
+        <button data-section="t-profile" class="nav-btn-toy w-full">
+          <i data-lucide="user-circle" class="w-5 h-5"></i>
+          <span class="label">Mi Perfil</span>
+        </button>
+        <button id="logoutBtn" class="nav-btn-toy w-full">
+          <i data-lucide="log-out" class="w-5 h-5"></i>
+          <span class="label">Cerrar sesión</span>
+        </button>
+      </nav>
+
+      <!-- MASCOTAS DECORATIVAS -->
+      <div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-end gap-3 pointer-events-none">
+        <!-- Triángulo Naranja — con brazos, piernas, cara expresiva -->
+        <svg width="62" height="75" viewBox="0 0 220 270" class="drop-shadow-md" style="animation: mascotBounce 2.6s ease-in-out infinite; filter:drop-shadow(0 6px 14px rgba(255,122,0,0.35))">
+          <polygon points="110,18 200,205 20,205" fill="#FF7A00" stroke="#D96500" stroke-width="5"/>
+          <circle cx="84"  cy="125" r="19" fill="white"/><circle cx="136" cy="125" r="19" fill="white"/>
+          <circle cx="85"  cy="126" r="10" fill="#333"/><circle cx="137" cy="126" r="10" fill="#333"/>
+          <circle cx="89"  cy="122" r="4"  fill="white"/><circle cx="141" cy="122" r="4"  fill="white"/>
+          <ellipse cx="70"  cy="140" rx="11" ry="7" fill="#FFB3B3" opacity=".5"/>
+          <ellipse cx="150" cy="140" rx="11" ry="7" fill="#FFB3B3" opacity=".5"/>
+          <path d="M 74 158 Q 110 180 146 158" stroke="#333" stroke-width="7" fill="none" stroke-linecap="round"/>
+          <line x1="20"  y1="158" x2="-14" y2="126" stroke="#D96500" stroke-width="6" stroke-linecap="round"/>
+          <line x1="200" y1="158" x2="234" y2="126" stroke="#D96500" stroke-width="6" stroke-linecap="round"/>
+          <line x1="82"  y1="205" x2="64"  y2="248" stroke="#D96500" stroke-width="6" stroke-linecap="round"/>
+          <line x1="138" y1="205" x2="156" y2="248" stroke="#D96500" stroke-width="6" stroke-linecap="round"/>
+          <ellipse cx="58"  cy="252" rx="15" ry="7" fill="#B85500"/>
+          <ellipse cx="162" cy="252" rx="15" ry="7" fill="#B85500"/>
+        </svg>
+        <!-- Pentágono Verde — con gorra azul, saludando -->
+        <svg width="58" height="68" viewBox="0 0 220 270" class="drop-shadow-md" style="animation: mascotWave 3.2s ease-in-out infinite 0.5s; filter:drop-shadow(0 6px 14px rgba(40,181,77,0.35))">
+          <ellipse cx="110" cy="20" rx="60" ry="22" fill="#0B63C7"/>
+          <path d="M 60 30 Q 46 50 54 64 L 166 64 Q 174 50 160 30 Z" fill="#0B63C7"/>
+          <ellipse cx="110" cy="32" rx="60" ry="11" fill="#0850A0"/>
+          <circle cx="110" cy="4" r="5" fill="#063A80"/>
+          <polygon points="110,64 192,120 162,208 58,208 28,120" fill="#28B54D" stroke="#1A8035" stroke-width="5"/>
+          <circle cx="87"  cy="138" r="18" fill="white"/><circle cx="133" cy="138" r="18" fill="white"/>
+          <circle cx="88"  cy="139" r="9"  fill="#333"/><circle cx="134" cy="139" r="9"  fill="#333"/>
+          <circle cx="91"  cy="136" r="3.5" fill="white"/><circle cx="137" cy="136" r="3.5" fill="white"/>
+          <ellipse cx="74"  cy="152" rx="9" ry="6" fill="#FFB3B3" opacity=".5"/>
+          <ellipse cx="146" cy="152" rx="9" ry="6" fill="#FFB3B3" opacity=".5"/>
+          <path d="M 77 168 Q 110 188 143 168" stroke="#333" stroke-width="6" fill="none" stroke-linecap="round"/>
+          <line x1="28" y1="130" x2="-4"  y2="112" stroke="#1A8035" stroke-width="6" stroke-linecap="round"/>
+          <line x1="28" y1="140" x2="-6"  y2="140" stroke="#1A8035" stroke-width="6" stroke-linecap="round"/>
+          <line x1="28" y1="150" x2="-4"  y2="162" stroke="#1A8035" stroke-width="6" stroke-linecap="round"/>
+          <line x1="192" y1="130" x2="222" y2="114" stroke="#1A8035" stroke-width="6" stroke-linecap="round"/>
+          <ellipse cx="224" cy="112" rx="8" ry="8" fill="#1A8035"/>
+          <line x1="80"  y1="208" x2="64"  y2="252" stroke="#1A8035" stroke-width="6" stroke-linecap="round"/>
+          <line x1="140" y1="208" x2="156" y2="252" stroke="#1A8035" stroke-width="6" stroke-linecap="round"/>
+          <ellipse cx="58"  cy="256" rx="15" ry="7" fill="#0F6B28"/>
+          <ellipse cx="162" cy="256" rx="15" ry="7" fill="#0F6B28"/>
+        </svg>
+      </div>
+      <!-- Mascot animation keyframes -->
+      <style>
+        @keyframes mascotBounce { 0%,100%{transform:translateY(0) rotate(-4deg)} 40%{transform:translateY(-20px) rotate(5deg)} 70%{transform:translateY(-10px) rotate(2deg)} 90%{transform:translateY(2px) rotate(-3deg)} }
+        @keyframes mascotWave { 0%,100%{transform:translateY(0) rotate(4deg)} 30%{transform:translateY(-16px) rotate(-4deg)} 60%{transform:translateY(-20px) rotate(5deg)} 80%{transform:translateY(-6px) rotate(1deg)} }
+      </style>
+    </aside>
+
+    <!-- Hamburger — FIXED so it never scrolls away on mobile -->
+    <button
+      class="menu-btn-mobile md:hidden fixed top-4 left-4 z-[200] w-11 h-11 flex items-center justify-center bg-white rounded-xl shadow-lg border border-slate-100 text-slate-600 hover:bg-[#E8F2FF] hover:text-[#FF7A00] transition-colors active:scale-95"
+      aria-label="Abrir menú">
+      <i data-lucide="menu" class="w-5 h-5"></i>
+    </button>
+
+    <div class="app-content-wrapper">
+    <!-- MAIN -->
+    <main class="flex-1 transition-all duration-300" id="layoutShell">
+      <!-- HEADER STICKY MÓVIL — igual que panel asistente -->
+      <header class="header md:hidden">
+        <button
+          class="menu-btn-mobile p-2.5 rounded-xl bg-white shadow-sm border border-slate-100 text-slate-600 hover:bg-[#E8F2FF] hover:text-[#FF7A00] transition-colors active:scale-95"
+          aria-label="Abrir menú"
+          style="position:relative;z-index:200;">
+          <i data-lucide="menu" class="w-5 h-5"></i>
+        </button>
+        <span class="text-xs font-semibold text-slate-400 uppercase tracking-widest ml-2">Panel Maestra</span>
+      </header>
+
+      <!-- CONTENIDO SCROLLABLE -->
+      <div class="p-4 md:p-6 pb-24 md:pb-6">
+
+      <!-- SECTION: HOME (Mis Clases) -->
+      <section id="t-home" class="section active">
+        <header class="mb-6 relative overflow-hidden">
+          <!-- Mascot decoration — triangle bottom right, sun top right -->
+          <div class="absolute right-0 top-0 flex items-end gap-3 pointer-events-none" style="opacity:0.92">
+            <!-- Mini Sun -->
+            <svg width="54" height="54" viewBox="0 0 200 200" style="animation:sunSpin 20s linear infinite,mascotFloat 4s ease-in-out infinite">
+              <line x1="100" y1="8"  x2="100" y2="26" stroke="#FFD43B" stroke-width="8" stroke-linecap="round"/>
+              <line x1="155" y1="28" x2="143" y2="42" stroke="#FFD43B" stroke-width="8" stroke-linecap="round"/>
+              <line x1="180" y1="80" x2="163" y2="86" stroke="#FFD43B" stroke-width="8" stroke-linecap="round"/>
+              <line x1="45"  y1="28" x2="57"  y2="42" stroke="#FFD43B" stroke-width="8" stroke-linecap="round"/>
+              <line x1="20"  y1="80" x2="37"  y2="86" stroke="#FFD43B" stroke-width="8" stroke-linecap="round"/>
+              <circle cx="100" cy="106" r="58" fill="#FFD43B" stroke="#F0C000" stroke-width="4"/>
+              <circle cx="82"  cy="97"  r="10" fill="white"/><circle cx="118" cy="97"  r="10" fill="white"/>
+              <circle cx="83"  cy="98"  r="6"  fill="#333"/> <circle cx="119" cy="98"  r="6"  fill="#333"/>
+              <ellipse cx="72"  cy="110" rx="8" ry="5" fill="#FFB3B3" opacity=".5"/>
+              <ellipse cx="128" cy="110" rx="8" ry="5" fill="#FFB3B3" opacity=".5"/>
+              <path d="M 80 122 Q 100 138 120 122" stroke="#333" stroke-width="5" fill="none" stroke-linecap="round"/>
+            </svg>
+            <!-- Mini Triangle -->
+            <svg width="46" height="56" viewBox="0 0 220 270" style="animation:mascotBounce 2.8s ease-in-out infinite 0.4s; margin-top:10px">
+              <polygon points="110,18 200,205 20,205" fill="#FF7A00" stroke="#D96500" stroke-width="5"/>
+              <circle cx="84" cy="125" r="18" fill="white"/><circle cx="136" cy="125" r="18" fill="white"/>
+              <circle cx="85" cy="126" r="9"  fill="#333"/><circle cx="137" cy="126" r="9"  fill="#333"/>
+              <path d="M 74 158 Q 110 180 146 158" stroke="#333" stroke-width="7" fill="none" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <h1 class="text-2xl md:text-3xl font-black text-slate-800 flex flex-wrap items-center gap-2">
+            <span>🧑‍🏫</span> <span>Hola, <span class="user-name-display text-[var(--sc-orange)]">Maestra</span>!</span>
+          </h1>
+          <p class="text-slate-500 font-medium">¡Listo para un día lleno de aprendizaje!</p>
+          <style>
+            @keyframes sunSpin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+            @keyframes mascotFloat { 0%,100%{margin-top:0} 50%{margin-top:-8px} }
+          </style>
+        </header>
+
+        <!-- Top Cards (Bloques) -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+          <div class="stat-block sb-blue">
+            <h3 id="statClasses">-</h3>
+            <p>Mis Clases</p>
+            <i data-lucide="library"></i>
+          </div>
+          <div class="stat-block sb-green">
+            <h3 id="statStudents">-</h3>
+            <p>Total Alumnos</p>
+            <i data-lucide="users"></i>
+          </div>
+          <div class="stat-block sb-orange">
+            <h3 id="statIncidents">-</h3>
+            <p>Incidentes Hoy</p>
+            <i data-lucide="alert-circle"></i>
+          </div>
+          <div class="stat-block sb-purple">
+            <h3 id="statPresent">-</h3>
+            <p>Asistencia Hoy</p>
+            <i data-lucide="calendar-check"></i>
+          </div>
+        </div>
+
+        <!-- 🚀 WIDGETS DE AUTOMATIZACIÓN -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          <!-- Widget: Actividad Próxima -->
+          <div id="nextActivityWidget" class="lg:col-span-2 bg-white rounded-[2.5rem] p-6 shadow-sm flex flex-col md:flex-row items-center gap-6">
+            <div class="w-20 h-20 bg-[var(--sc-green-light)] text-[var(--sc-green)] rounded-[2rem] flex items-center justify-center shrink-0 animate-bounce-subtle">
+              <i data-lucide="clock" class="w-10 h-10"></i>
+            </div>
+            <div class="text-center md:text-left flex-1">
+              <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Actividad en curso / Próxima</p>
+              <h4 id="nextActivityTitle" class="text-xl font-black text-[var(--sc-green)]">Cargando horario...</h4>
+              <p id="nextActivityTime" class="text-sm font-bold text-[var(--sc-orange)] mt-1">--:--</p>
+            </div>
+            <button onclick="App.navigateTo('t-home', 'daily-routine')" class="px-6 py-3 bg-[var(--sc-green)] text-white rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all hover:bg-[var(--sc-green-dark)] shadow-sm">Ver Rutina</button>
+          </div>
+
+          <!-- Widget: Alerta de Ponche -->
+          <div id="punchAlertWidget" class="alert-banner-punch bg-white rounded-[2.5rem] p-6 flex flex-col justify-center hidden">
+            <div class="flex items-center gap-4 mb-3">
+              <div class="w-12 h-12 rounded-2xl flex items-center justify-center shadow-sm">
+                <i data-lucide="user-check" class="w-7 h-7"></i>
+              </div>
+              <h4 class="font-bold text-lg tracking-tight">Faltan por Ponchar</h4>
+            </div>
+            <p id="punchAlertText" class="text-sm font-semibold mb-4">2 niños aún no han marcado entrada hoy.</p>
+            <button onclick="App.sendAbsenceAlerts()" class="w-full py-3 btn-alert-maestra rounded-xl font-bold text-sm uppercase tracking-wider flex items-center justify-center gap-2">
+              <i data-lucide="send" class="w-4 h-4"></i>
+              Enviar Avisos
+            </button>
+          </div>
+
+          <!-- Widget: Tareas por Calificar -->
+          <div id="tasksToGradeWidget" class="alert-banner-tasks bg-white rounded-[2.5rem] p-6 flex flex-col justify-center hidden">
+            <div class="flex items-center gap-4 mb-3">
+              <div class="w-12 h-12 rounded-2xl flex items-center justify-center shadow-sm">
+                <i data-lucide="book-open-check" class="w-7 h-7"></i>
+              </div>
+              <h4 class="font-bold text-lg tracking-tight">Tareas por Calificar</h4>
+            </div>
+            <p id="tasksToGradeText" class="text-sm font-semibold mb-4">Tienes 1 entrega pendiente de revisar (más de 24h).</p>
+            <button onclick="App.navigateTo('t-home', 'tasks')" class="w-full py-3 btn-maestra rounded-xl font-bold text-sm uppercase tracking-wider flex items-center justify-center gap-2">
+              <i data-lucide="arrow-right" class="w-4 h-4"></i>
+              Ir a Tareas
+            </button>
+          </div>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="classesGrid">
+          <!-- Cargando... -->
+          <div class="col-span-full py-12 text-center text-slate-500">Cargando aulas...</div>
+        </div>
+      </section>
+
+      <!-- SECTION: CLASS DETAIL (Detalle de Aula) -->
+      <section id="t-class-detail" class="section">
+        <header class="mb-4 flex items-center gap-4">
+          <button id="backToClasses" class="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-600 shrink-0">
+            <i data-lucide="arrow-left" class="w-6 h-6"></i>
+          </button>
+          <div class="min-w-0 flex-1">
+            <h1 class="text-xl md:text-2xl font-bold text-slate-800 truncate" id="currentClassName">Nombre del Aula</h1>
+            <p class="text-sm text-slate-500">Vista detallada</p>
+          </div>
+          <div class="flex gap-2 shrink-0">
+            <button id="btnGenerateReport" onclick="document.getElementById('dailyReportModal').classList.remove('hidden'); document.getElementById('dailyReportModal').classList.add('flex');" class="btn-secondary-maestra flex items-center gap-2 px-4 py-2 text-sm">
+              <i data-lucide="clipboard-list" class="w-4 h-4"></i>
+              <span class="hidden sm:inline">Reporte</span>
+            </button>
+          </div>
+        </header>
+
+        <!-- Tabs — nueva navegación colorida y amigable -->
+        <div class="mb-4">
+          <!-- Tabs (mismo diseño para móvil y desktop) -->
+          <div class="flex gap-3 overflow-x-auto pb-2" style="scrollbar-width: none;">
+            <button class="class-tab-btn active shrink-0" data-tab="feed">
+              <i data-lucide="layout"></i>
+              <span>Muro</span>
+            </button>
+            <button class="class-tab-btn shrink-0" data-tab="daily-routine">
+              <i data-lucide="calendar-clock"></i>
+              <span>Rutina</span>
+            </button>
+            <button class="class-tab-btn shrink-0" data-tab="students">
+              <i data-lucide="users"></i>
+              <span>Alumnos</span>
+            </button>
+            <button class="class-tab-btn shrink-0" data-tab="attendance">
+              <i data-lucide="list-checks"></i>
+              <span>Asistencia</span>
+            </button>
+            <button class="class-tab-btn shrink-0" data-tab="tasks">
+              <i data-lucide="file-text"></i>
+              <span>Tareas</span>
+            </button>
+            <button class="class-tab-btn shrink-0" data-tab="videocall">
+              <i data-lucide="video"></i>
+              <span>Video</span>
+              <span id="badge-videocall" class="hidden w-2 h-2 bg-red-500 rounded-full ml-1 animate-pulse"></span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Tab Contents -->
+        <div id="tab-feed" class="class-tab-content">
+          <div class="flex justify-between items-center mb-6">
+            <h3 class="text-2xl font-black text-slate-800">📢 Muro del Aula</h3>
+            <button id="btnNewPost" onclick="App.openNewPostModal()" class="btn-maestra px-6 py-2.5 text-sm">
+              <i data-lucide="plus-circle" class="w-5 h-5"></i> Nueva Publicación
+            </button>
+          </div>
+
+          <!-- Composer: ¿Qué quieres compartir? -->
+          <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-3 sm:p-4 flex items-center gap-3 wall-composer cursor-pointer transition-all mb-6" onclick="App.openNewPostModal()">
+            <div class="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center font-black text-orange-600 border-2 border-orange-50 shrink-0 overflow-hidden" id="wallComposerAvatar">
+              <i data-lucide="user" class="w-5 h-5"></i>
+            </div>
+            <div class="flex-1 min-w-0 text-sm font-bold text-slate-400">¿Qué quieres compartir?</div>
+            <div class="hidden sm:flex items-center gap-2 shrink-0">
+              <span class="wall-composer-chip"><i data-lucide="image" class="w-3.5 h-3.5 text-emerald-500"></i> Foto</span>
+              <span class="wall-composer-chip"><i data-lucide="video" class="w-3.5 h-3.5 text-blue-500"></i> Video</span>
+              <span class="wall-composer-chip"><i data-lucide="file-text" class="w-3.5 h-3.5 text-amber-500"></i> Aviso</span>
+            </div>
+            <button class="sm:hidden shrink-0 px-4 py-2.5 rounded-full bg-orange-500 text-white text-xs font-black shadow-md">
+              <i data-lucide="plus" class="w-4 h-4"></i>
+            </button>
+          </div>
+          <div id="muroPostsContainer" class="space-y-6">
+            <div class="bg-white p-6 rounded-2xl shadow-sm text-center text-slate-500">
+              <p>Aquí se mostrarán las publicaciones del aula.</p>
+            </div>
+          </div>
+        </div>
+
+        <div id="tab-daily-routine" class="class-tab-content hidden"></div>
+
+        <div id="tab-students" class="class-tab-content hidden">
+          <div id="classroomStudentsGrid" class="responsive-grid"></div>
+        </div>
+
+        <div id="tab-attendance" class="class-tab-content hidden">
+          <div id="attendanceList" class="space-y-3"></div>
+        </div>
+
+        <div id="tab-tasks" class="class-tab-content hidden">
+          <div id="tasksHeader"></div>
+          <div id="tasksListContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+        </div>
+
+        <div id="tab-videocall" class="class-tab-content hidden">
+          <div id="videocall-maestra-section" class="min-h-[60vh]">
+            <div class="flex justify-center py-12">
+              <div class="animate-spin w-8 h-8 border-2 border-[#FF7A00] rounded-full border-t-transparent"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION: CALIFICACIONES -->
+      <section id="t-grades" class="section">
+        <div id="t-grades-inner"></div>
+      </section>
+
+      <!-- SECTION: CHAT UNIFICADO -->
+      <section id="t-chat" class="section">
+        <header class="mb-4">
+          <h1 class="text-2xl font-black text-slate-800">Centro de Comunicación</h1>
+          <p class="text-slate-500 text-sm font-medium">Habla con padres y dirección en tiempo real.</p>
+        </header>
+
+        <div id="chatShell" class="m-chat-shell m-chat-grid">
+          <!-- 1) LISTA DE CONVERSACIONES -->
+          <aside class="m-chat-list">
+            <div class="m-chat-list__header">
+              <div class="m-chat-list__title"><i data-lucide="messages-square" class="w-5 h-5 text-blue-600 shrink-0"></i> Mensajes</div>
+              <div class="m-chat-list__search">
+                <i data-lucide="search"></i>
+                <input id="mChatSearch" type="text" placeholder="Buscar conversación…">
+              </div>
+            </div>
+            <div id="mChatList" class="m-chat-list__content">
+              <div class="p-4 text-center text-[#64748B] text-sm font-bold">Cargando contactos…</div>
+            </div>
+          </aside>
+
+          <!-- 2) CONVERSACIÓN PRINCIPAL -->
+          <section class="m-chat-main">
+            <div class="m-chat-header">
+              <button id="mChatBackBtn" class="m-chat-header__back">
+                <i data-lucide="arrow-left" class="w-4 h-4"></i>
+              </button>
+              <div class="m-chat-header__avatar" id="mChatActiveAvatar">
+                <i data-lucide="user" class="w-5 h-5 text-slate-400"></i>
+              </div>
+              <div class="m-chat-header__body">
+                <div class="m-chat-header__name" id="mChatActiveName">Selecciona un contacto</div>
+                <div class="m-chat-header__meta" id="mChatActiveMeta">Elige a quién escribirle</div>
+              </div>
+              <div class="m-chat-header__actions">
+                <button class="m-chat-header__btn" title="Llamar"><i data-lucide="phone" class="w-4 h-4"></i></button>
+                <button class="m-chat-header__btn" title="Videollamada"><i data-lucide="video" class="w-4 h-4"></i></button>
+                <button class="m-chat-header__btn" title="Más opciones"><i data-lucide="more-vertical" class="w-4 h-4"></i></button>
+              </div>
+            </div>
+
+            <div id="mChatScroll" class="m-chat-scroll">
+              <div class="m-empty">
+                <div class="m-empty__icon"><i data-lucide="message-circle-heart" class="w-8 h-8"></i></div>
+                <div class="m-empty__title">Centro de Comunicación</div>
+                <div class="m-empty__text">Selecciona una conversación del panel izquierdo para ver los mensajes.</div>
+              </div>
+            </div>
+
+            <div class="m-chat-input">
+              <div class="m-chat-input__tools">
+                <button class="m-chat-input__tool" title="Adjuntar imagen" type="button"><i data-lucide="image" class="w-4 h-4"></i></button>
+                <button class="m-chat-input__tool" title="Adjuntar archivo" type="button"><i data-lucide="paperclip" class="w-4 h-4"></i></button>
+              </div>
+              <div class="m-chat-input__wrap">
+                <textarea id="mChatInput" rows="1" placeholder="Escribe un mensaje…"></textarea>
+                <button class="m-chat-input__emoji" type="button" title="Emoji"><i data-lucide="smile" class="w-5 h-5"></i></button>
+              </div>
+              <button id="mChatSendBtn" class="m-chat-input__send" type="button">
+                <i data-lucide="send" class="w-4 h-4"></i>
+              </button>
+            </div>
+          </section>
+
+          <!-- 3) PANEL DE INFORMACIÓN -->
+          <aside id="mChatInfo" class="m-chat-info">
+            <div class="m-info-profile">
+              <div class="m-info-profile__avatar"><i data-lucide="user" class="w-8 h-8 text-blue-600"></i></div>
+              <div class="m-info-profile__name">Panel de info</div>
+              <div class="m-info-profile__role">Detalles del contacto</div>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <!-- SECTION: PERMISOS Y FALTAS (MAESTRA) -->
+      <section id="t-permits" class="section">
+        <header class="mb-6">
+          <h1 class="text-2xl md:text-3xl font-black text-slate-800 flex items-center gap-3">
+            <span class="p-2 bg-emerald-100 text-emerald-600 rounded-2xl"><i data-lucide="calendar-off" class="w-6 h-6"></i></span>
+            Mis Permisos y Faltas
+          </h1>
+          <p class="text-slate-500 font-medium">Solicita permisos y revisa tu historial de ausencias</p>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <!-- Formulario de Solicitud -->
+          <div class="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm">
+            <h3 class="text-lg font-black text-slate-800 mb-4">Nueva Solicitud</h3>
+            <form id="formRequestPermit" class="space-y-4">
+              <div>
+                <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Tipo de Permiso</label>
+                <select id="permitType" required class="w-full px-4 py-3 bg-slate-50 border-2 border-slate-50 rounded-2xl outline-none focus:border-[#FF7A00] focus:bg-white transition-all text-sm font-bold">
+                    <option value="permission">Permiso Personal</option>
+                    <option value="medical">Cita / Permiso M\u00e9dico</option>
+                    <option value="absence">Inasistencia</option>
+                    <option value="other">Otro</option>
+                  </select>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Desde</label>
+                    <input type="date" id="permitStart" required class="w-full px-4 py-3 bg-slate-50 border-2 border-slate-50 rounded-2xl outline-none focus:border-[#FF7A00] focus:bg-white transition-all text-sm font-bold">
+                  </div>
+                  <div>
+                    <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Hasta</label>
+                    <input type="date" id="permitEnd" required class="w-full px-4 py-3 bg-slate-50 border-2 border-slate-50 rounded-2xl outline-none focus:border-[#FF7A00] focus:bg-white transition-all text-sm font-bold">
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Motivo / Raz\u00f3n</label>
+                  <textarea id="permitReason" required rows="3" placeholder="Explique brevemente el motivo..." class="w-full px-4 py-3 bg-slate-50 border-2 border-slate-50 rounded-2xl outline-none focus:border-[#FF7A00] focus:bg-white transition-all text-sm font-bold resize-none"></textarea>
+              </div>
+              <button type="submit" class="btn-maestra w-full py-4 justify-center text-xs uppercase tracking-widest">
+                <i data-lucide="send" class="w-4 h-4"></i> Enviar Solicitud
+              </button>
+            </form>
+          </div>
+
+          <!-- Historial -->
+          <div class="lg:col-span-2 bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm">
+            <h3 class="text-lg font-black text-slate-800 mb-4">Mi Historial</h3>
+            <div class="table-responsive">
+              <table class="w-full text-left">
+                <thead>
+                  <tr class="text-slate-400 border-b border-slate-50">
+                    <th class="px-4 py-3 text-[10px] font-black uppercase tracking-widest">Tipo</th>
+                    <th class="px-4 py-3 text-[10px] font-black uppercase tracking-widest">Fecha</th>
+                    <th class="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-center">Estado</th>
+                  </tr>
+                </thead>
+                <tbody id="my-permits-table-body" class="divide-y divide-slate-50">
+                  <!-- JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION: PROFILE -->
+      <section id="t-profile" class="section pt-14 md:pt-0 pb-8">
+        <div id="notifPermissionSlot"></div>
+        <header class="mb-6">
+          <h1 class="text-2xl font-bold text-slate-800">Mi Perfil Docente</h1>
+          <p class="text-slate-500">Gestiona tu información personal y presentación.</p>
+        </header>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <!-- Tarjeta de Identidad (Izquierda) -->
+          <div class="lg:col-span-1">
+            <div class="bg-white rounded-3xl shadow-sm border border-[#28B54D] p-6 text-center relative">
+              <div class="absolute top-0 left-0 w-full h-24 bg-[#28B54D]"></div>
+              
+              <div class="relative z-10 mt-8 mb-4">
+                <div class="w-32 h-32 mx-auto bg-white rounded-full p-1 shadow-lg relative group cursor-pointer">
+                  <div id="profileAvatar" class="w-full h-full rounded-full flex items-center justify-center font-black text-3xl text-[#FF7A00] bg-[#FFF0E0] overflow-hidden"></div>
+                  <div class="absolute inset-0 bg-black/30 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <i data-lucide="camera" class="text-white w-8 h-8"></i>
+                  </div>
+                  <input type="file" id="profileAvatarInput" accept="image/*" class="absolute inset-0 opacity-0 cursor-pointer">
+                </div>
+              </div>
+              
+              <h2 class="text-xl font-black text-slate-800 user-name-display">Maestra</h2>
+              <p class="text-sm font-bold text-[#FF7A00] mb-4">Docente Titular</p>
+              
+              <div class="flex justify-center gap-2 mb-6">
+                <span class="px-3 py-1 bg-[#FFF0E0] text-[#D96500] rounded-full text-xs font-bold">Colegio Montessori Sonrisas Creativas</span>
+                <span class="px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-bold">Verificado</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Formulario de Edición (Derecha) -->
+          <div class="lg:col-span-2">
+            <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-8">
+              <h3 class="font-bold text-lg text-slate-800 mb-6 flex items-center gap-2">
+                <i data-lucide="user-cog" class="text-[#FF7A00]"></i> Editar Información
+              </h3>
+              
+              <form id="profileForm" class="space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label class="block text-sm font-bold text-slate-600 mb-2">Nombre Completo</label>
+                    <input type="text" id="profName" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-[#FF7A00] focus:ring-2 focus:ring-[#FF7A00] outline-none transition-all font-bold text-slate-700">
+                  </div>
+                  <div>
+                    <label class="block text-sm font-bold text-slate-600 mb-2">Teléfono</label>
+                    <input type="tel" id="profPhone" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-[#FF7A00] focus:ring-2 focus:ring-[#FF7A00] outline-none transition-all font-medium text-slate-700">
+                  </div>
+                </div>
+
+                <div>
+                  <label class="block text-sm font-bold text-slate-600 mb-2">Correo Electrónico</label>
+                  <input type="email" id="profEmail" class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-500 cursor-not-allowed" readonly>
+                  <p class="text-xs text-slate-400 mt-1">El correo no se puede cambiar.</p>
+                </div>
+
+                <div>
+                  <label class="block text-sm font-bold text-slate-600 mb-2">Presentación / Biografía</label>
+                  <textarea id="profBio" rows="4" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-[#FF7A00] focus:ring-2 focus:ring-[#FF7A00] outline-none transition-all text-slate-600" placeholder="Cuéntanos un poco sobre ti, tu experiencia y lo que te gusta de enseñar..."></textarea>
+                </div>
+
+                <div class="pt-4 flex justify-end">
+                  <button type="submit" id="btnSaveProfile" class="btn-maestra px-8 py-3">
+                    <i data-lucide="save" class="w-5 h-5"></i> Guardar Cambios
+                  </button>
+                </div>
+              </form>
+
+              <!-- SECCIÓN QR INTEGRADA (MAESTRA) -->
+              <div id="maestra-qr-section" class="mt-12 pt-8 border-t border-slate-100">
+                <div class="bg-slate-50 rounded-[2.5rem] p-8 flex flex-col md:flex-row items-center gap-8 border border-slate-100">
+                  <div id="maestra-qr-container" class="bg-white p-4 rounded-3xl border-2 border-slate-100 shadow-lg shrink-0">
+                    <div class="w-40 h-40 flex items-center justify-center text-slate-300">
+                      <i data-lucide="qr-code" class="w-10 h-10"></i>
+                    </div>
+                  </div>
+                  <div class="text-center md:text-left flex-1">
+                    <h4 class="text-xl font-black text-slate-800 mb-2">Mi Código QR de Identificación</h4>
+                    <p class="text-sm text-slate-500 font-medium mb-4">Usa este código para registrar tu entrada y salida de la estancia en el sistema de ponche digital.</p>
+                    <div class="flex flex-wrap gap-3 justify-center md:justify-start">
+                      <div class="px-4 py-2 bg-white rounded-xl border border-slate-200 shadow-sm">
+                        <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">ID Empleado</p>
+                        <p id="maestra-qr-matricula" class="text-lg font-black text-slate-700 leading-none">--</p>
+                      </div>
+                      <button onclick="window.App?.printMaestraQR?.()" class="btn-alert-maestra px-6 py-2 flex items-center gap-2 text-[10px] uppercase tracking-wider">
+                        <i data-lucide="printer" class="w-3.5 h-3.5"></i> Imprimir QR
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      </div><!-- end scrollable content -->
+    </main>
+    </div><!-- close app-content-wrapper -->
+  </div><!-- close app -->
+
+  <!-- MODAL: Student Profile (Copied from panel_directora.html) -->
+  <div id="studentProfileModal" class="fixed inset-0 bg-black/60 hidden items-center justify-center z-50 p-4 backdrop-blur-sm">
+    <!-- Ficha Escolar -->
+    <div class="school-record-card w-full max-w-3xl max-h-[92vh] flex flex-col overflow-y-auto">
+      <!-- Encabezado de la Ficha -->
+      <div class="record-header">
+        <div class="record-photo">
+          <!-- La foto se puede poner con JS o dejar un ícono -->
+          <i data-lucide="user" class="w-12 h-12"></i>
+        </div>
+        <div class="flex-1">
+          <h3 id="studentProfileName" class="record-title">Nombre del Estudiante</h3>
+          <p id="studentClassroom" class="record-subtitle">Aula Asignada</p>
+        </div>
+        <button id="closeStudentProfileModal" class="record-close-btn">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Cuerpo de la Ficha (con scroll) -->
+      <div class="record-body">
+        <!-- Sección Datos Personales -->
+        <div class="record-section">
+          <h4 class="record-section-title">
+            <i data-lucide="clipboard-list"></i>
+            <span>Datos Personales</span>
+          </h4>
+          <div class="record-grid">
+            <div class="record-item">
+              <label>Fecha de Nacimiento</label>
+              <p id="studentDOB">-</p>
+            </div>
+            <div class="record-item">
+              <label>Tipo de Sangre</label>
+              <p id="studentBlood">-</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sección Información de Contacto -->
+        <div class="record-section">
+          <h4 class="record-section-title">
+            <i data-lucide="users"></i>
+            <span>Información de Contacto (Padres)</span>
+          </h4>
+          <!-- Contacto 1 -->
+          <div class="record-subsection">
+            <h5 class="record-subsection-title">Contacto Principal</h5>
+            <div class="record-grid">
+              <div class="record-item">
+                <label>Nombre</label>
+                <p id="parent1Name">-</p>
+              </div>
+              <div class="record-item">
+                <label>Teléfono</label>
+                <p id="parent1Phone">-</p>
+              </div>
+              <div class="record-item col-span-2">
+                <label>Email</label>
+                <p id="parent1Email">-</p>
+              </div>
+            </div>
+          </div>
+          <!-- Contacto 2 -->
+          <div class="record-subsection mt-4">
+            <h5 class="record-subsection-title">Contacto Secundario</h5>
+            <div class="record-grid">
+              <div class="record-item">
+                <label>Nombre</label>
+                <p id="parent2Name">-</p>
+              </div>
+              <div class="record-item">
+                <label>Teléfono</label>
+                <p id="parent2Phone">-</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sección Médica y Autorizaciones -->
+        <div class="record-section">
+          <h4 class="record-section-title">
+            <i data-lucide="shield-check"></i>
+            <span>Información Médica y Autorizaciones</span>
+          </h4>
+          <div class="record-grid">
+            <div class="record-item col-span-2">
+              <label>Alergias / Condiciones Médicas</label>
+              <p id="studentAllergies" class="text-amber-700 font-semibold">Ninguna reportada</p>
+            </div>
+            <div class="record-item col-span-2">
+              <label>Personas Autorizadas para Recoger</label>
+              <p id="studentPickup">-</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Pie de la Ficha -->
+      <div class="record-footer">
+        <button id="btnRegisterIncident" class="mr-auto px-4 py-2 bg-red-50 text-red-600 rounded-lg text-sm font-bold hover:bg-red-100 transition-colors flex items-center gap-2">
+          <i data-lucide="alert-triangle" class="w-4 h-4"></i> Registrar Incidente
+        </button>
+        <button id="closeStudentProfile" class="px-5 py-2 border rounded-lg text-sm font-semibold hover:bg-slate-50 transition-colors">
+          Cerrar
+        </button>
+      </div>
+    </div>
+  </div>
+
+    <!-- Core App Module -->
+    <script src="js/shared/supabase-js.min.js"></script>
+    <script src="js/shared/jspdf.min.js"></script>
+    <script src="js/shared/jspdf-autotable.min.js"></script>
+    <script src="js/shared/qrcode.min.js"></script>
+    <script>
+      // Fallback: si jspdf no carga, definir stub para evitar ReferenceError
+      window.addEventListener('load', () => {
+        if (!window.jspdf) window.jspdf = { jsPDF: function() { return { save: () => {}, text: () => {}, addPage: () => {} }; } };
+      });
+    </script>
+    <script src="js/shared/harden-forms.js" defer></script>
+    <script type="module" src="js/maestra/main.js"></script>
+    <script src="js/shared/lightbox.js" defer></script>
+    <script src="js/shared/confirm-dialog.js" defer></script>
+    <script nomodule>alert("Navegador obsoleto, por favor actualiza.");</script>
+    <script src="https://meet.jit.si/external_api.js"></script>
+  <script>
+    // Lucide icons fallback
+    if(window.lucide) lucide.createIcons();
+  </script>
+  <!-- Lógica PWA Profesional -->
+  <script src="js/pwa-install.js" defer></script>
+  <script src="js/pwa-update.js" defer></script>
+
+  <!-- Download App Banner Styles -->
+  <style>
+    .app-banner {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: linear-gradient(135deg, #0B63C7 0%, #0850A0 100%);
+      color: white;
+      padding: 16px 20px;
+      z-index: 9999;
+      box-shadow: 0 -4px 20px rgba(11, 99, 199, 0.3);
+      animation: slideUpBanner 0.5s ease-out;
+    }
+
+    @keyframes slideUpBanner {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
+    }
+
+    .app-banner-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    .app-banner-mascots {
+      display: flex;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .app-banner-mascot {
+      width: 48px;
+      height: 48px;
+      animation: floatMascot 2.5s ease-in-out infinite;
+    }
+
+    .app-banner-mascot:nth-child(2) { animation-delay: 0.3s; }
+    .app-banner-mascot:nth-child(3) { animation-delay: 0.6s; }
+
+    @keyframes floatMascot {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+
+    .app-banner-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .app-banner-title {
+      font-family: 'Baloo 2', cursive;
+      font-weight: 800;
+      font-size: 1.1rem;
+      margin-bottom: 4px;
+    }
+
+    .app-banner-text {
+      font-size: 0.85rem;
+      opacity: 0.9;
+    }
+
+    .app-banner-buttons {
+      display: flex;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+
+    .app-banner-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: white;
+      color: #0B63C7;
+      padding: 10px 18px;
+      border-radius: 12px;
+      text-decoration: none;
+      font-weight: 800;
+      font-size: 0.85rem;
+      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      cursor: pointer;
+      border: none;
+    }
+
+    .app-banner-btn:hover {
+      transform: translateY(-3px) scale(1.05);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+    }
+
+    .app-banner-close {
+      background: rgba(255, 255, 255, 0.2);
+      border: none;
+      color: white;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      cursor: pointer;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .app-banner-close:hover {
+      background: rgba(255, 255, 255, 0.3);
+      transform: rotate(90deg);
+    }
+
+    .app-modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(4px);
+      z-index: 10000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .app-modal-overlay.active {
+      display: flex;
+      animation: fadeInModal 0.3s ease-out;
+    }
+
+    @keyframes fadeInModal { from { opacity: 0; } to { opacity: 1; } }
+
+    .app-modal {
+      background: white;
+      border-radius: 24px;
+      max-width: 500px;
+      width: 100%;
+      padding: 32px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      animation: scaleInModal 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    @keyframes scaleInModal { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+    .app-modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+    }
+
+    .app-modal-title {
+      font-family: 'Baloo 2', cursive;
+      font-weight: 900;
+      font-size: 1.4rem;
+      color: #0B63C7;
+    }
+
+    .app-modal-close {
+      background: #E8F2FF;
+      border: none;
+      color: #0B63C7;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .app-modal-close:hover { background: #0B63C7; color: white; }
+
+    .app-modal-steps {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .app-modal-step {
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+    }
+
+    .app-modal-step-number {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, #FF7A00 0%, #FF9A00 100%);
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      flex-shrink: 0;
+    }
+
+    .app-modal-step-text { flex: 1; padding-top: 4px; }
+
+    .app-modal-step-title {
+      font-weight: 800;
+      color: #1e293b;
+      margin-bottom: 4px;
+    }
+
+    .app-modal-step-desc {
+      color: #64748B;
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+
+    .app-modal-footer { margin-top: 28px; }
+
+    .app-modal-btn {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, #0B63C7 0%, #0850A0 100%);
+      color: white;
+      border: none;
+      border-radius: 16px;
+      font-family: 'Baloo 2', cursive;
+      font-weight: 800;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .app-modal-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(11, 99, 199, 0.3);
+    }
+
+    @media (max-width: 768px) {
+      main { padding-bottom: 120px !important; }
+    }
+  </style>
+
+  <!-- Download App Banner -->
+  <div class="app-banner" id="appBanner">
+    <div class="app-banner-container">
+      <div class="app-banner-mascots">
+        <!-- Triangle Mascot -->
+        <svg class="app-banner-mascot" viewBox="0 0 220 275" xmlns="http://www.w3.org/2000/svg">
+          <polygon points="110,18 200,205 20,205" fill="#FF7A00" stroke="#D96500" stroke-width="5"/>
+          <circle cx="84" cy="125" r="20" fill="white"/>
+          <circle cx="136" cy="125" r="20" fill="white"/>
+          <circle cx="85" cy="126" r="11" fill="#333"/>
+          <circle cx="137" cy="126" r="11" fill="#333"/>
+          <circle cx="89" cy="122" r="4.5" fill="white"/>
+          <circle cx="141" cy="122" r="4.5" fill="white"/>
+          <ellipse cx="70" cy="140" rx="12" ry="7.5" fill="#FF9494" opacity="0.55"/>
+          <ellipse cx="150" cy="140" rx="12" ry="7.5" fill="#FF9494" opacity="0.55"/>
+          <path d="M 74 160 Q 110 184 146 160" stroke="#333" stroke-width="7.5" fill="none" stroke-linecap="round"/>
+        </svg>
+        <!-- Pentagon Mascot -->
+        <svg class="app-banner-mascot" viewBox="0 0 220 275" xmlns="http://www.w3.org/2000/svg">
+          <polygon points="110,65 192,120 164,210 56,210 28,120" fill="#28B54D" stroke="#1A8035" stroke-width="5"/>
+          <circle cx="87" cy="140" r="19" fill="white"/>
+          <circle cx="133" cy="140" r="19" fill="white"/>
+          <circle cx="88" cy="141" r="10.5" fill="#333"/>
+          <circle cx="134" cy="141" r="10.5" fill="#333"/>
+          <circle cx="91" cy="138" r="4.5" fill="white"/>
+          <circle cx="137" cy="138" r="4.5" fill="white"/>
+          <ellipse cx="73" cy="154" rx="10" ry="6.5" fill="#FF9494" opacity="0.55"/>
+          <ellipse cx="147" cy="154" rx="10" ry="6.5" fill="#FF9494" opacity="0.55"/>
+          <path d="M 77 170 Q 110 194 143 170" stroke="#333" stroke-width="6.5" fill="none" stroke-linecap="round"/>
+        </svg>
+        <!-- Sun Mascot -->
+        <svg class="app-banner-mascot" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+          <line x1="100" y1="6" x2="100" y2="28" stroke="#FFD43B" stroke-width="9" stroke-linecap="round"/>
+          <line x1="157" y1="28" x2="144" y2="42" stroke="#FFD43B" stroke-width="9" stroke-linecap="round"/>
+          <line x1="182" y1="80" x2="164" y2="86" stroke="#FFD43B" stroke-width="9" stroke-linecap="round"/>
+          <line x1="174" y1="140" x2="157" y2="132" stroke="#FFD43B" stroke-width="9" stroke-linecap="round"/>
+          <line x1="43" y1="28" x2="56" y2="42" stroke="#FFD43B" stroke-width="9" stroke-linecap="round"/>
+          <line x1="18" y1="80" x2="36" y2="86" stroke="#FFD43B" stroke-width="9" stroke-linecap="round"/>
+          <line x1="26" y1="140" x2="43" y2="132" stroke="#FFD43B" stroke-width="9" stroke-linecap="round"/>
+          <circle cx="100" cy="108" r="64" fill="#FFD43B" stroke="#F0C000" stroke-width="4"/>
+          <ellipse cx="82" cy="98" rx="12" ry="12" fill="white"/>
+          <ellipse cx="118" cy="98" rx="12" ry="12" fill="white"/>
+          <circle cx="83" cy="99" r="7" fill="#333"/>
+          <circle cx="119" cy="99" r="7" fill="#333"/>
+          <circle cx="86" cy="96" r="3" fill="white"/>
+          <circle cx="122" cy="96" r="3" fill="white"/>
+          <ellipse cx="72" cy="112" rx="9" ry="5.5" fill="#FFB3B3" opacity="0.6"/>
+          <ellipse cx="128" cy="112" rx="9" ry="5.5" fill="#FFB3B3" opacity="0.6"/>
+          <path d="M 80 124 Q 100 140 120 124" stroke="#333" stroke-width="5.5" fill="none" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="app-banner-content">
+        <div class="app-banner-title">¡Descarga nuestra app! 📱</div>
+        <div class="app-banner-text">Accede a todas las funciones desde tu teléfono móvil</div>
+      </div>
+      <div class="app-banner-buttons">
+        <a href="#" class="app-banner-btn" id="androidBtn">
+          <i class="bi bi-android2"></i>
+          Android
+        </a>
+        <button class="app-banner-btn" id="iosBtn">
+          <i class="bi bi-apple"></i>
+          iOS
+        </button>
+      </div>
+      <button class="app-banner-close" id="closeBanner" aria-label="Cerrar banner">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- iOS Instructions Modal -->
+  <div class="app-modal-overlay" id="iosModal">
+    <div class="app-modal">
+      <div class="app-modal-header">
+        <div class="app-modal-title">Cómo instalar en iOS 🍎</div>
+        <button class="app-modal-close" id="closeModal">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+      <div class="app-modal-steps">
+        <div class="app-modal-step">
+          <div class="app-modal-step-number">1</div>
+          <div class="app-modal-step-text">
+            <div class="app-modal-step-title">Abre Safari</div>
+            <div class="app-modal-step-desc">Asegúrate de estar usando el navegador Safari en tu iPhone o iPad</div>
+          </div>
+        </div>
+        <div class="app-modal-step">
+          <div class="app-modal-step-number">2</div>
+          <div class="app-modal-step-text">
+            <div class="app-modal-step-title">Toca el botón de compartir</div>
+            <div class="app-modal-step-desc">Busca el ícono de cuadrado con flecha hacia arriba en la parte inferior de la pantalla</div>
+          </div>
+        </div>
+        <div class="app-modal-step">
+          <div class="app-modal-step-number">3</div>
+          <div class="app-modal-step-text">
+            <div class="app-modal-step-title">Selecciona "Agregar a Inicio"</div>
+            <div class="app-modal-step-desc">Desplázate hacia abajo y busca la opción "Agregar a la pantalla de inicio"</div>
+          </div>
+        </div>
+        <div class="app-modal-step">
+          <div class="app-modal-step-number">4</div>
+          <div class="app-modal-step-text">
+            <div class="app-modal-step-title">Confirma la instalación</div>
+            <div class="app-modal-step-desc">Toca "Agregar" y la app aparecerá en tu pantalla de inicio</div>
+          </div>
+        </div>
+      </div>
+      <div class="app-modal-footer">
+        <button class="app-modal-btn" id="gotItBtn">¡Entendido!</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Banner and Modal Logic
+    document.addEventListener('DOMContentLoaded', function() {
+      const appBanner = document.getElementById('appBanner');
+      const closeBanner = document.getElementById('closeBanner');
+      const iosBtn = document.getElementById('iosBtn');
+      const iosModal = document.getElementById('iosModal');
+      const closeModal = document.getElementById('closeModal');
+      const gotItBtn = document.getElementById('gotItBtn');
+
+      // Check if user has already closed the banner
+      const bannerDismissed = localStorage.getItem('appBannerDismissed');
+      if (bannerDismissed) {
+        appBanner.style.display = 'none';
+      }
+
+      // Close banner
+      closeBanner.addEventListener('click', function() {
+        appBanner.style.animation = 'slideUpBanner 0.3s ease-in reverse';
+        setTimeout(() => {
+          appBanner.style.display = 'none';
+          localStorage.setItem('appBannerDismissed', 'true');
+        }, 300);
+      });
+
+      // Open iOS modal
+      iosBtn.addEventListener('click', function() {
+        iosModal.classList.add('active');
+      });
+
+      // Close modal
+      function closeModalFunc() {
+        iosModal.classList.remove('active');
+      }
+
+      closeModal.addEventListener('click', closeModalFunc);
+      gotItBtn.addEventListener('click', closeModalFunc);
+      iosModal.addEventListener('click', function(e) {
+        if (e.target === iosModal) {
+          closeModalFunc();
+        }
+      });
+    });
+  </script>
+
+</body>
+</html>

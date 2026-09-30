@@ -1,0 +1,915 @@
+/**
+ * Academic Cycle Module — Directora
+ * Pre-inscripciones, Inscripciones, Planes de Pago, Cargos, Reinscripciones
+ */
+import { supabase } from '../shared/supabase.js';
+import { Helpers } from '../shared/helpers.js';
+import { QueryCache } from '../shared/query-cache.js';
+import { RealtimeManager } from '../shared/realtime-manager.js';
+
+const $el = id => document.getElementById(id);
+const fmtCurrency = n => 'RD$' + Number(n||0).toLocaleString('es-DO',{minimumFractionDigits:2});
+const fmtDate = d => { if(!d) return '—'; return new Date((d+'').includes('T')?d:d+'T12:00:00').toLocaleDateString('es-ES',{day:'2-digit',month:'short',year:'numeric'}); };
+
+const ST_COLOR = { preinscrito:'bg-slate-100 text-slate-600', admitido:'bg-blue-100 text-blue-700', inscrito:'bg-indigo-100 text-indigo-700', activo:'bg-green-100 text-green-700', retirado:'bg-red-100 text-red-600', reinscrito:'bg-teal-100 text-teal-700', graduado:'bg-purple-100 text-purple-700' };
+const ST_LABEL = { preinscrito:'Pre-inscrito', admitido:'Admitido', inscrito:'Inscrito', activo:'Activo', retirado:'Retirado', reinscrito:'Reinscrito', graduado:'Graduado' };
+const CH_COLOR = { pending:'bg-amber-100 text-amber-700', overdue:'bg-red-100 text-red-700', paid:'bg-green-100 text-green-700', cancelled:'bg-slate-100 text-slate-500', waived:'bg-purple-100 text-purple-600', partial_scholarship:'bg-blue-100 text-blue-600', full_scholarship:'bg-teal-100 text-teal-600' };
+const CH_LABEL = { pending:'Pendiente', overdue:'Vencida', paid:'Pagada', cancelled:'Anulada', waived:'Exonerada', partial_scholarship:'Beca Parcial', full_scholarship:'Beca Total' };
+
+export const AcademicCycleModule = {
+  _currentYear: null,
+  _years: [],
+  _allPreinsc: [],
+  _realtimeSubscribed: false,
+  _currentTab: null,
+
+  async init() {
+    if (!this._realtimeSubscribed) {
+      this._subscribeRealtime();
+    }
+    await this._loadYears();
+    this._renderShell();
+    this.showTab('preregistrations');
+  },
+
+  _subscribeRealtime() {
+    this._realtimeSubscribed = true;
+    RealtimeManager.subscribe('academic-cycle', (channel) => {
+      channel
+        .on('postgres_changes', 
+          { event: '*', schema: 'public', table: 'student_preregistrations' },
+          () => {
+            if (this._currentTab === 'preregistrations') {
+              this.loadPreregistrations();
+            }
+          }
+        )
+        .on('postgres_changes', 
+          { event: '*', schema: 'public', table: 'student_enrollments' },
+          () => {
+            if (this._currentTab === 'enrollments') {
+              this.loadEnrollments();
+            }
+          }
+        )
+        .on('postgres_changes', 
+          { event: '*', schema: 'public', table: 'payment_plans' },
+          () => {
+            if (this._currentTab === 'plans') {
+              this.loadPlans();
+            }
+          }
+        )
+        .on('postgres_changes', 
+          { event: '*', schema: 'public', table: 'student_charges' },
+          () => {
+            if (this._currentTab === 'charges') {
+              this.loadCharges();
+            }
+          }
+        );
+    });
+  },
+
+  async _loadYears() {
+    const { data, error } = await supabase.from('school_years').select('*').order('start_date',{ascending:false}).limit(10);
+    if (error) console.error('Error loading school_years:', error);
+    this._years = data || [];
+    this._currentYear = this._years.find(y=>y.is_current) || this._years[0];
+  },
+
+  _renderShell() {
+    const c = $el('academicCycleContainer');
+    if (!c) return;
+    const yr = this._currentYear;
+    c.innerHTML = `<div class="space-y-5">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 class="text-xl font-black text-slate-800">Ciclo Académico</h2>
+          <p class="text-xs text-slate-400 font-bold uppercase tracking-wider">${yr?.name || 'Sin año activo'}</p>
+        </div>
+        <div class="flex items-center gap-2 flex-wrap">
+          ${this._years.length ? `
+            <select id="yearSelector" onchange="App.academic.switchYear(this.value)"
+              class="border-2 border-slate-100 rounded-xl px-3 py-2 font-black text-sm text-slate-700 outline-none focus:border-blue-400">
+                ${this._years.map(y=>`<option value="${y.id}"${y.id===yr?.id?' selected':''}>${y.name}${y.is_current?' ✓':''}</option>`).join('')}
+            </select>
+          ` : ''}
+          <button onclick="App.academic.openNewYearModal()" class="px-3 py-2 text-white text-xs font-black uppercase rounded-xl hover:opacity-90" style="background:#28B54D">+ Año</button>
+        </div>
+      </div>
+      <div class="flex gap-2 flex-wrap pb-3 border-b border-slate-100" id="academicTabs">
+        ${[{id:'preregistrations',label:'Pre-inscripciones',icon:'📝'},{id:'enrollments',label:'Inscripciones',icon:'🎒'},{id:'plans',label:'Planes de Pago',icon:'💳'},{id:'charges',label:'Cargos',icon:'💰'},{id:'reenrollments',label:'Reinscripciones',icon:'🔄'}]
+          .map(t=>`<button data-tab="${t.id}" onclick="App.academic.showTab('${t.id}')" class="acad-tab px-3 py-1.5 rounded-xl text-xs font-black uppercase border-2 border-transparent text-slate-500 hover:bg-slate-50">${t.icon} ${t.label}</button>`).join('')}
+      </div>
+      <div id="academicTabContent"></div>
+    </div>`;
+  },
+
+  showTab(tab) {
+    this._currentTab = tab;
+    document.querySelectorAll('.acad-tab').forEach(b=>{
+      const on = b.dataset.tab===tab;
+      b.className=`acad-tab px-3 py-1.5 rounded-xl text-xs font-black uppercase border-2 ${on?'border-blue-500 bg-blue-50 text-blue-700':'border-transparent text-slate-500 hover:bg-slate-50'}`;
+    });
+    const c=$el('academicTabContent'); if(!c)return;
+    c.innerHTML='<div class="animate-pulse h-32 bg-slate-100 rounded-2xl"></div>';
+    ({preregistrations:()=>this.loadPreregistrations(), enrollments:()=>this.loadEnrollments(), plans:()=>this.loadPlans(), charges:()=>this.loadCharges(), reenrollments:()=>this.loadReenrollments()})[tab]?.();
+  },
+
+  async switchYear(id){ this._currentYear=this._years.find(y=>String(y.id)===String(id)); this.showTab('preregistrations'); },
+
+  // ── PRE-INSCRIPCIONES ────────────────────────────────────────────────────
+  async loadPreregistrations() {
+    const {data, error} = await supabase.from('student_preregistrations').select('*').order('created_at',{ascending:false}).limit(200);
+    if (error) console.error('Error loading preregistrations:', error);
+    const list = data||[]; this._allPreinsc=list;
+    const cnt = s => list.filter(r=>r.status===s).length;
+    const c=$el('academicTabContent'); if(!c)return;
+    c.innerHTML=`<div class="space-y-4">
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        ${[['Pendientes','pending','#FF8A00'],['Admitidos','admitted','#0B63C7'],['Rechazados','rejected','#EF4444'],['Convertidos','converted','#28B54D']]
+          .map(([l,s,col])=>`<div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm text-center cursor-pointer hover:shadow-md transition-all" onclick="App.academic._filterPreinsc('${s}')">
+            <div class="text-2xl font-black" style="color:${col}">${cnt(s)}</div>
+            <div class="text-xs font-bold text-slate-400 uppercase tracking-wider mt-1">${l}</div>
+          </div>`).join('')}
+      </div>
+      <div class="bg-white rounded-2xl border border-slate-100 overflow-hidden">
+        <div class="p-4 border-b border-slate-100 flex items-center justify-between gap-3 flex-wrap">
+          <span class="text-sm font-black text-slate-700">Solicitudes</span>
+          <div class="flex gap-2">
+            <select id="preinscStatusFilter" onchange="App.academic._applyPreinscFilter()" class="border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-bold outline-none focus:border-blue-400 bg-white">
+              <option value="">Todos</option><option value="pending">Pendientes</option><option value="admitted">Admitidos</option><option value="converted">Convertidos</option><option value="rejected">Rechazados</option>
+            </select>
+            <input id="preinscSearch" type="text" placeholder="Buscar..." oninput="App.academic._applyPreinscFilter()"
+              class="border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-bold outline-none focus:border-blue-400 w-36">
+          </div>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm" style="min-width:680px">
+            <thead class="bg-slate-50 border-b border-slate-100">
+              <tr>${['Alumno','Tutor','Nivel / Horario','Estado','Fecha','Acciones'].map(h=>`<th class="px-4 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider">${h}</th>`).join('')}</tr>
+            </thead>
+            <tbody id="preinscTbody" class="divide-y divide-slate-50">
+              ${list.length ? list.map(r=>this._preinscRow(r)).join('') : '<tr><td colspan="6" class="text-center py-8 text-slate-400 text-sm">Sin solicitudes</td></tr>'}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>`;
+    if(window.lucide)lucide.createIcons();
+  },
+
+  _preinscRow(r){
+    const sc={pending:'bg-amber-100 text-amber-700',admitted:'bg-blue-100 text-blue-700',rejected:'bg-red-100 text-red-600',converted:'bg-green-100 text-green-700'};
+    const sl={pending:'⏳ Pendiente',admitted:'✅ Admitido',rejected:'❌ Rechazado',converted:'🎉 Inscrito'};
+    return `<tr class="hover:bg-slate-50 transition-colors preinsc-row" data-name="${(r.student_name||'').toLowerCase()}" data-status="${r.status}">
+      <td class="px-4 py-3"><div class="font-bold text-slate-800">${Helpers.escapeHTML(r.student_name||'—')}</div><div class="text-[10px] text-slate-400">${r.birth_date ? 'Nacimiento: ' + fmtDate(r.birth_date) : ''}</div></td>
+      <td class="px-4 py-3"><div class="font-bold text-slate-700 text-xs">${Helpers.escapeHTML(r.p1_name||'—')}</div><div class="text-[10px] text-slate-400">${r.p1_phone||''} ${r.p1_email ? '• ' + r.p1_email : ''}</div></td>
+      <td class="px-4 py-3 text-xs font-bold text-slate-600">${r.section||'—'}<br><span class="text-slate-400 font-normal">${r.schedule||''}</span></td>
+      <td class="px-4 py-3 text-center"><span class="px-2.5 py-1 rounded-full text-[10px] font-black ${sc[r.status]||'bg-slate-100 text-slate-500'}">${sl[r.status]||r.status}</span></td>
+      <td class="px-4 py-3 text-xs text-slate-500">${fmtDate(r.created_at?.split('T')[0])}</td>
+      <td class="px-4 py-3"><div class="flex justify-center gap-1.5">
+        <button onclick="App.academic.viewPreinsc(${r.id})" class="p-1.5 bg-slate-50 text-slate-500 rounded-lg hover:bg-blue-50 hover:text-blue-600" title="Ver detalles"><i data-lucide="eye" class="w-4 h-4"></i></button>
+        ${r.status==='pending'?`
+          <button onclick="App.academic.admitPreinsc(${r.id})" class="p-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100" title="Marcar como admitido"><i data-lucide="check-circle" class="w-4 h-4"></i></button>
+          <button onclick="App.academic.rejectPreinsc(${r.id})" class="p-1.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-100" title="Rechazar"><i data-lucide="x-circle" class="w-4 h-4"></i></button>
+        `:''}
+        ${(r.status==='pending'||r.status==='admitted')?`<button onclick="App.academic.convertPreinsc(${r.id})" class="p-1.5 bg-green-50 text-green-600 rounded-lg hover:bg-green-100" title="Completar inscripción"><i data-lucide="user-plus" class="w-4 h-4"></i></button>`:''}
+      </div></td>
+    </tr>`;
+  },
+
+  _filterPreinsc(status){ const s=$el('preinscStatusFilter'); if(s)s.value=status; this._applyPreinscFilter(); },
+  _applyPreinscFilter(){
+    const q=($el('preinscSearch')?.value||'').toLowerCase();
+    const s=$el('preinscStatusFilter')?.value||'';
+    document.querySelectorAll('.preinsc-row').forEach(r=>{
+      const nm=r.dataset.name||''; const st=r.dataset.status||'';
+      r.style.display=(!q||nm.includes(q))&&(!s||st===s)?'':'none';
+    });
+  },
+
+  async admitPreinsc(id){
+    try {
+      const { error } = await supabase
+        .from('student_preregistrations')
+        .update({status:'admitted', reviewed_at:new Date().toISOString()})
+        .eq('id', id);
+      
+      if (error) throw error;
+      
+      Helpers.toast('✅ Preinscripción marcada como admitida', 'success');
+      this.loadPreregistrations();
+    } catch (error) {
+      console.error('Error al admitir:', error);
+      Helpers.toast('Error al actualizar estado', 'error');
+    }
+  },
+
+  async rejectPreinsc(id){
+    try {
+      const confirm = window.confirm('¿Estás seguro de que deseas rechazar esta preinscripción?');
+      if (!confirm) return;
+      
+      const { error } = await supabase
+        .from('student_preregistrations')
+        .update({status:'rejected', reviewed_at:new Date().toISOString()})
+        .eq('id', id);
+      
+      if (error) throw error;
+      
+      Helpers.toast('❌ Preinscripción rechazada', 'error');
+      this.loadPreregistrations();
+    } catch (error) {
+      console.error('Error al rechazar:', error);
+      Helpers.toast('Error al actualizar estado', 'error');
+    }
+  },
+
+  async openAdmitModal(preinscId) {
+    try {
+      const { data: pre } = await supabase
+        .from('student_preregistrations')
+        .select('*')
+        .eq('id', preinscId)
+        .single();
+      if (!pre) { Helpers.toast('Preinscripción no encontrada', 'error'); return; }
+      const { StudentRecordModal } = await import('../shared/student-record-modal.js');
+      StudentRecordModal.open('admit', null, pre);
+    } catch (e) {
+      Helpers.toast('Error al cargar preinscripción: ' + (e.message || e), 'error');
+    }
+  },
+
+  async viewPreinsc(id){
+    const {data:r}=await supabase.from('student_preregistrations').select('*').eq('id',id).single();
+    if(!r)return;
+    
+    const sc={pending:'bg-amber-100 text-amber-700',admitted:'bg-blue-100 text-blue-700',rejected:'bg-red-100 text-red-600',converted:'bg-green-100 text-green-700'};
+    const sl={pending:'⏳ Pendiente',admitted:'✅ Admitido',rejected:'❌ Rechazado',converted:'🎉 Inscrito'};
+    
+    window.openGlobalModal(`<div class="p-6 max-h-[80vh] overflow-y-auto">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-black text-slate-800">Pre-inscripción</h3>
+        <span class="px-3 py-1 rounded-full text-[11px] font-black ${sc[r.status]||'bg-slate-100 text-slate-500'}">${sl[r.status]||r.status}</span>
+      </div>
+      
+      <div class="bg-blue-50 rounded-xl p-4 mb-4">
+        <h4 class="font-bold text-blue-800 mb-2 flex items-center gap-2">
+          <i data-lucide="user" class="w-4 h-4"></i> Datos del Estudiante
+        </h4>
+        <div class="grid grid-cols-2 gap-3 text-sm">
+          ${[
+            ['Nombre', r.student_name],
+            ['Fecha de Nacimiento', r.birth_date ? fmtDate(r.birth_date) : '—'],
+            ['Género', r.gender || '—'],
+            ['Tipo de Sangre', r.blood_type || '—'],
+            ['Alergias', r.allergies || 'Ninguna reportada'],
+            ['Nivel', r.section || '—'],
+            ['Horario', r.schedule || '—']
+          ].map(([l,v])=>`
+            <div>
+              <span class="text-[10px] font-black text-slate-400 uppercase block">${l}</span>
+              <p class="font-bold text-slate-700 text-sm">${Helpers.escapeHTML(String(v||'—'))}</p>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+      
+      <div class="bg-green-50 rounded-xl p-4 mb-4">
+        <h4 class="font-bold text-green-800 mb-2 flex items-center gap-2">
+          <i data-lucide="home" class="w-4 h-4"></i> Datos del Tutor
+        </h4>
+        <div class="grid grid-cols-2 gap-3 text-sm">
+          ${[
+            ['Nombre', r.p1_name],
+            ['Parentesco', r.p1_relationship || '—'],
+            ['Teléfono', r.p1_phone || '—'],
+            ['Email', r.p1_email || '—'],
+            ['Dirección', r.p1_address || '—']
+          ].map(([l,v])=>`
+            <div>
+              <span class="text-[10px] font-black text-slate-400 uppercase block">${l}</span>
+              <p class="font-bold text-slate-700 text-sm">${Helpers.escapeHTML(String(v||'—'))}</p>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+      
+      ${r.p2_name ? `
+      <div class="bg-purple-50 rounded-xl p-4 mb-4">
+        <h4 class="font-bold text-purple-800 mb-2 flex items-center gap-2">
+          <i data-lucide="users" class="w-4 h-4"></i> Tutor Secundario
+        </h4>
+        <div class="grid grid-cols-2 gap-3 text-sm">
+          ${[
+            ['Nombre', r.p2_name],
+            ['Parentesco', r.p2_relationship || '—'],
+            ['Teléfono', r.p2_phone || '—']
+          ].map(([l,v])=>`
+            <div>
+              <span class="text-[10px] font-black text-slate-400 uppercase block">${l}</span>
+              <p class="font-bold text-slate-700 text-sm">${Helpers.escapeHTML(String(v||'—'))}</p>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+      ` : ''}
+      
+      ${r.emergency_name ? `
+      <div class="bg-red-50 rounded-xl p-4 mb-4">
+        <h4 class="font-bold text-red-800 mb-2 flex items-center gap-2">
+          <i data-lucide="alert-triangle" class="w-4 h-4"></i> Contacto de Emergencia
+        </h4>
+        <div class="grid grid-cols-2 gap-3 text-sm">
+          ${[
+            ['Nombre', r.emergency_name],
+            ['Teléfono', r.emergency_phone || '—'],
+            ['Parentesco', r.emergency_relationship || '—']
+          ].map(([l,v])=>`
+            <div>
+              <span class="text-[10px] font-black text-slate-400 uppercase block">${l}</span>
+              <p class="font-bold text-slate-700 text-sm">${Helpers.escapeHTML(String(v||'—'))}</p>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+      ` : ''}
+      
+      ${r.comments || r.reference ? `
+      <div class="bg-slate-50 rounded-xl p-4 mb-4">
+        <h4 class="font-bold text-slate-800 mb-2 flex items-center gap-2">
+          <i data-lucide="info" class="w-4 h-4"></i> Información Adicional
+        </h4>
+        ${r.reference ? `
+          <div class="mb-2">
+            <span class="text-[10px] font-black text-slate-400 uppercase block">¿Cómo se enteró?</span>
+            <p class="font-bold text-slate-700 text-sm">${Helpers.escapeHTML(r.reference)}</p>
+          </div>
+        ` : ''}
+        ${r.comments ? `
+          <div>
+            <span class="text-[10px] font-black text-slate-400 uppercase block">Comentarios</span>
+            <p class="font-medium text-slate-700 text-sm">${Helpers.escapeHTML(r.comments)}</p>
+          </div>
+        ` : ''}
+      </div>
+      ` : ''}
+      
+      <div class="text-xs text-slate-400 mb-4">
+        Solicitud recibida: ${fmtDate(r.created_at?.split('T')[0])}
+        ${r.reviewed_at ? ` • Revisado: ${fmtDate(r.reviewed_at?.split('T')[0])}` : ''}
+      </div>
+      
+      <div class="flex flex-wrap justify-end gap-2">
+        <button onclick="App.ui.closeModal()" class="px-4 py-2 text-slate-500 font-bold text-xs uppercase border border-slate-200 rounded-xl hover:bg-slate-50">
+          Cerrar
+        </button>
+        ${r.status==='pending'?`
+          <button onclick="App.ui.closeModal();App.academic.admitPreinsc(${r.id})" class="px-4 py-2 text-white font-black text-xs uppercase rounded-xl" style="background:#0B63C7">
+            ✅ Admitir
+          </button>
+          <button onclick="App.ui.closeModal();App.academic.rejectPreinsc(${r.id})" class="px-4 py-2 text-white font-black text-xs uppercase rounded-xl" style="background:#EF4444">
+            ❌ Rechazar
+          </button>
+        `:''}
+        ${(r.status==='pending'||r.status==='admitted')?`
+          <button onclick="App.ui.closeModal();App.academic.openAdmitModal(${r.id})" class="px-4 py-2 text-white font-black text-xs uppercase rounded-xl" style="background:#28B54D">
+            🎉 Completar Inscripción
+          </button>
+        `:''}
+      </div>
+    </div>`);
+    
+    // Re-render icons
+    if (window.lucide) lucide.createIcons();
+  },
+
+  async convertPreinsc(preinscId){
+    await this._loadYears();
+    const {data:pre}=await supabase.from('student_preregistrations').select('*').eq('id',preinscId).single();
+    const {data:plans}=await supabase.from('payment_plans').select('id,name,level,schedule,registration_fee').eq('school_year_id',this._currentYear?.id||0).eq('is_active',true).order('name');
+    const {data:rooms}=await supabase.from('classrooms').select('id,name,capacity').order('name');
+    const {data:lastStudent}=await supabase.from('students').select('id,matricula').order('id',{ascending:false}).limit(1).maybeSingle();
+    
+    // Generar matrícula automática
+    const year = new Date().getFullYear();
+    let nextNum = 1;
+    if (lastStudent?.matricula) {
+      const match = lastStudent.matricula.match(/-(\d+)$/);
+      if (match) nextNum = parseInt(match[1]) + 1;
+    }
+    const autoMatricula = `SC-${year}-${String(nextNum).padStart(3, '0')}`;
+    
+    const po=(plans||[]).map(p=>`<option value="${p.id}">${p.name} — ${p.level} ${p.schedule}</option>`).join('');
+    const ro=(rooms||[]).map(r=>`<option value="${r.id}">${r.name}</option>`).join('');
+    
+    window.openGlobalModal(`<div class="p-6 max-w-2xl">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-black text-slate-800">🎉 Completar Inscripción</h3>
+        <span class="text-xs font-bold text-green-600 bg-green-50 px-3 py-1 rounded-full">
+          ${pre?.student_name || 'Estudiante'}
+        </span>
+      </div>
+      
+      <div class="bg-blue-50 rounded-xl p-4 mb-4">
+        <div class="grid grid-cols-2 gap-3 text-sm">
+          <div>
+            <span class="text-[10px] font-black text-blue-400 uppercase block">Estudiante</span>
+            <p class="font-bold text-blue-800 text-sm">${Helpers.escapeHTML(pre?.student_name || '—')}</p>
+          </div>
+          <div>
+            <span class="text-[10px] font-black text-blue-400 uppercase block">Nivel</span>
+            <p class="font-bold text-blue-800 text-sm">${pre?.section || '—'}</p>
+          </div>
+          <div>
+            <span class="text-[10px] font-black text-blue-400 uppercase block">Tutor</span>
+            <p class="font-bold text-blue-800 text-sm">${Helpers.escapeHTML(pre?.p1_name || '—')}</p>
+          </div>
+          <div>
+            <span class="text-[10px] font-black text-blue-400 uppercase block">Año Escolar</span>
+            <p class="font-bold text-blue-800 text-sm">${this._currentYear?.name || '—'}</p>
+          </div>
+        </div>
+      </div>
+      
+      <div class="space-y-4">
+        <div>
+          <label class="text-[10px] font-black text-slate-400 uppercase block mb-1">
+            📋 Matrícula <span class="text-green-600">(generada automáticamente)</span>
+          </label>
+          <input id="convMatricula" type="text" value="${autoMatricula}" 
+                 class="w-full border-2 border-slate-100 rounded-xl px-3 py-2.5 text-sm font-bold outline-none focus:border-blue-400 bg-slate-50">
+        </div>
+        <div>
+          <label class="text-[10px] font-black text-slate-400 uppercase block mb-1">
+            🏫 Aula Asignada
+          </label>
+          <select id="convClassroom" class="w-full border-2 border-slate-100 rounded-xl px-3 py-2.5 text-sm font-bold outline-none focus:border-blue-400">
+            <option value="">Sin asignar</option>${ro}
+          </select>
+        </div>
+        <div>
+          <label class="text-[10px] font-black text-slate-400 uppercase block mb-1">
+            💳 Plan de Pago
+          </label>
+          <select id="convPlan" class="w-full border-2 border-slate-100 rounded-xl px-3 py-2.5 text-sm font-bold outline-none focus:border-blue-400">
+            <option value="">Sin plan</option>${po}
+          </select>
+          ${plans?.length ? `
+            <div id="planInfo" class="mt-2 text-xs text-slate-500 bg-slate-50 p-2 rounded-lg hidden">
+              <span class="font-bold">Inscripción:</span> <span id="planFee">$0.00</span>
+            </div>
+          ` : ''}
+        </div>
+        <div>
+          <label class="text-[10px] font-black text-slate-400 uppercase block mb-1">
+            💰 Mensualidad (RD$)
+          </label>
+          <input id="convMonthlyFee" type="number" placeholder="0.00" 
+                 class="w-full border-2 border-slate-100 rounded-xl px-3 py-2.5 text-sm font-bold outline-none focus:border-blue-400">
+        </div>
+      </div>
+      
+      <div class="mt-5 flex flex-wrap justify-end gap-2">
+        <button onclick="App.ui.closeModal()" class="px-4 py-2 text-slate-500 font-bold text-xs uppercase border border-slate-200 rounded-xl hover:bg-slate-50">
+          Cancelar
+        </button>
+        <button id="btnDoConvert" onclick="App.academic._doConvert(${preinscId})" 
+                class="px-5 py-2 text-white font-black text-xs uppercase rounded-xl flex items-center gap-2" 
+                style="background:#28B54D">
+          <i data-lucide="check-circle" class="w-4 h-4"></i>
+          Finalizar Inscripción
+        </button>
+      </div>
+    </div>`);
+    
+    // Re-render icons
+    if (window.lucide) lucide.createIcons();
+    
+    // Add plan info logic
+    setTimeout(() => {
+      const planSelect = document.getElementById('convPlan');
+      const planInfo = document.getElementById('planInfo');
+      const planFee = document.getElementById('planFee');
+      if (planSelect && plans?.length) {
+        planSelect.addEventListener('change', () => {
+          const selectedPlan = plans.find(p => p.id === parseInt(planSelect.value));
+          if (selectedPlan && planInfo && planFee) {
+            planInfo.classList.remove('hidden');
+            planFee.textContent = fmtCurrency(selectedPlan.registration_fee);
+          } else if (planInfo) {
+            planInfo.classList.add('hidden');
+          }
+        });
+      }
+    }, 100);
+  },
+
+  async _doConvert(preinscId){
+    const classId=$el('convClassroom')?.value||null; 
+    const planId=$el('convPlan')?.value||null; 
+    const mat=$el('convMatricula')?.value?.trim()||null;
+    const monthlyFee=$el('convMonthlyFee')?.value||null;
+    const btn=$el('btnDoConvert'); 
+    
+    if(btn){
+      btn.disabled=true;
+      btn.innerHTML='<div class="flex items-center gap-2"><div class="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>Procesando...</div>';
+    }
+    
+    try {
+      // Primero intentamos usar la función RPC, si falla hacemos la inserción manual
+      let result;
+      try {
+        const {data, error}=await supabase.rpc('convert_preregistration',{
+          p_preinsc_id:preinscId, 
+          p_school_year_id:this._currentYear?.id,
+          p_classroom_id:classId?parseInt(classId):null, 
+          p_payment_plan_id:planId?parseInt(planId):null, 
+          p_matricula:mat
+        });
+        
+        if (!error) {
+          result = data;
+        } else {
+          throw error;
+        }
+      } catch (rpcError) {
+        console.warn('RPC no disponible, usando método manual:', rpcError?.message);
+        // Método manual si la RPC no existe
+        result = await this._doConvertManual(preinscId, classId, planId, mat, monthlyFee);
+      }
+      
+      Helpers.toast('🎉 ¡Alumno inscrito exitosamente!', 'success'); 
+      App.ui.closeModal(); 
+      this.loadPreregistrations();
+      QueryCache.invalidate('dir_students');
+      
+      // Navegar automáticamente a estudiantes para ver el nuevo alumno
+      setTimeout(() => {
+        if (window.App?.navigation?.goTo) {
+          window.App.navigation.goTo('estudiantes');
+        }
+      }, 1000);
+      
+    } catch(error){
+      console.error('Error en conversión:', error);
+      Helpers.toast('Error: ' + (error.message || 'Error al inscribir'), 'error');
+      if(btn){
+        btn.disabled=false;
+        btn.innerHTML='<i data-lucide="check-circle" class="w-4 h-4"></i> Finalizar Inscripción';
+        if (window.lucide) lucide.createIcons();
+      }
+    }
+  },
+  
+  async _doConvertManual(preinscId, classId, planId, mat, monthlyFee) {
+    // Obtener datos de preinscripción
+    const {data:pre} = await supabase.from('student_preregistrations').select('*').eq('id',preinscId).single();
+    if (!pre) throw new Error('Preinscripción no encontrada');
+    
+    // 1. Crear estudiante
+    const {data:student, error:studentError} = await supabase
+      .from('students')
+      .insert({
+        name: pre.student_name,
+        classroom_id: classId ? parseInt(classId) : null,
+        allergies: pre.allergies,
+        matricula: mat,
+        monthly_fee: monthlyFee ? parseFloat(monthlyFee) : null,
+        p1_name: pre.p1_name,
+        p1_phone: pre.p1_phone,
+        p1_email: pre.p1_email,
+        p1_address: pre.p1_address,
+        p2_name: pre.p2_name,
+        p2_phone: pre.p2_phone,
+        is_active: true,
+        start_date: new Date().toISOString().split('T')[0]
+      })
+      .select()
+      .single();
+    
+    if (studentError) throw studentError;
+    
+    // 2. Crear student_enrollment
+    if (this._currentYear?.id) {
+      const {error:enrollError} = await supabase
+        .from('student_enrollments')
+        .insert({
+          student_id: student.id,
+          school_year_id: this._currentYear.id,
+          classroom_id: classId ? parseInt(classId) : null,
+          payment_plan_id: planId ? parseInt(planId) : null,
+          status: 'inscrito',
+          preinscription_date: pre.created_at,
+          admission_date: new Date().toISOString()
+        });
+      
+      if (enrollError) console.warn('Error al crear enrollment:', enrollError);
+    }
+    
+    // 3. Actualizar estado de preinscripción
+    await supabase
+      .from('student_preregistrations')
+      .update({
+        status: 'converted', 
+        reviewed_at: new Date().toISOString()
+      })
+      .eq('id', preinscId);
+    
+    QueryCache.invalidate('dir_students');
+    
+    return {success: true, student_id: student.id};
+  },
+
+  // ── INSCRIPCIONES ────────────────────────────────────────────────────────
+  async loadEnrollments() {
+    const syId=this._currentYear?.id; if(!syId){$el('academicTabContent').innerHTML='<p class="text-slate-400 p-8 text-center">Selecciona un año escolar</p>';return;}
+    const {data}=await supabase.from('student_enrollments')
+      .select('id,status,created_at,students:student_id(id,name,matricula),payment_plans:payment_plan_id(name,level),classrooms:classroom_id(name)')
+      .eq('school_year_id',syId).order('created_at',{ascending:false}).limit(300);
+    const list=data||[];
+    const c=$el('academicTabContent'); if(!c)return;
+    c.innerHTML=`<div class="bg-white rounded-2xl border border-slate-100 overflow-hidden">
+      <div class="p-4 border-b border-slate-100 flex items-center justify-between flex-wrap gap-3">
+        <span class="text-sm font-black text-slate-700">${list.length} inscripciones — ${this._currentYear?.name}</span>
+        <input type="text" placeholder="Buscar alumno..." oninput="App.academic._filterEnrollments(this.value)"
+          class="border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-bold outline-none focus:border-blue-400 w-40">
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm" style="min-width:620px">
+          <thead class="bg-slate-50 border-b border-slate-100">
+            <tr>${['Alumno','Plan','Aula','Estado','Fecha','Acciones'].map(h=>`<th class="px-4 py-3 text-left text-[10px] font-black text-slate-400 uppercase">${h}</th>`).join('')}</tr>
+          </thead>
+          <tbody id="enrollTbody" class="divide-y divide-slate-50">
+            ${list.map(e=>`<tr class="hover:bg-slate-50 enroll-row" data-name="${(e.students?.name||'').toLowerCase()}">
+              <td class="px-4 py-3"><div class="font-bold text-slate-800">${Helpers.escapeHTML(e.students?.name||'—')}</div><div class="text-[10px] text-slate-400">${e.students?.matricula||''}</div></td>
+              <td class="px-4 py-3 text-xs font-bold text-slate-600">${e.payment_plans?.name||'—'} <span class="text-slate-400">${e.payment_plans?.level||''}</span></td>
+              <td class="px-4 py-3 text-xs text-slate-600">${e.classrooms?.name||'—'}</td>
+              <td class="px-4 py-3"><span class="px-2.5 py-1 rounded-full text-[10px] font-black ${ST_COLOR[e.status]||'bg-slate-100 text-slate-500'}">${ST_LABEL[e.status]||e.status}</span></td>
+              <td class="px-4 py-3 text-xs text-slate-400">${fmtDate(e.created_at?.split('T')[0])}</td>
+              <td class="px-4 py-3"><div class="flex gap-1.5">
+                <button onclick="App.academic.viewEnrollmentCharges(${e.id},${e.students?.id},'${Helpers.escapeHTML(e.students?.name||'')}')" class="p-1.5 bg-slate-50 text-slate-500 rounded-lg hover:bg-blue-50 hover:text-blue-600" title="Ver cargos"><i data-lucide="list" class="w-4 h-4"></i></button>
+                <button onclick="App.academic.openChangePlanModal(${e.id})" class="p-1.5 bg-amber-50 text-amber-600 rounded-lg hover:bg-amber-100" title="Cambiar plan"><i data-lucide="repeat" class="w-4 h-4"></i></button>
+              </div></td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+    if(window.lucide)lucide.createIcons();
+  },
+  _filterEnrollments(q){document.querySelectorAll('.enroll-row').forEach(r=>{r.style.display=r.dataset.name.includes(q.toLowerCase())?'':'none';});},
+
+  // ── PLANES DE PAGO ───────────────────────────────────────────────────────
+  async loadPlans() {
+    const syId=this._currentYear?.id;
+    const {data:plans}=await supabase.from('payment_plans').select('id,name,level,schedule,registration_fee,is_active,plan_installments(id,month_name,amount,type,month_number)').eq('school_year_id',syId||0).order('level,name');
+    const c=$el('academicTabContent'); if(!c)return;
+    c.innerHTML=`<div class="space-y-5">
+      <div class="flex justify-end">
+        <button onclick="App.academic.openNewPlanModal()" class="px-4 py-2 text-white text-xs font-black uppercase rounded-xl hover:opacity-90" style="background:#0B63C7">+ Nuevo Plan</button>
+      </div>
+      ${(plans||[]).map(p=>`
+        <div class="bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-sm">
+          <div class="p-4 flex items-center justify-between border-b border-slate-100">
+            <div>
+              <span class="font-black text-slate-800">${Helpers.escapeHTML(p.name)}</span>
+              <span class="ml-2 text-xs text-slate-400">${p.level} · ${p.schedule}</span>
+              ${!p.is_active?'<span class="ml-2 text-[9px] bg-red-50 text-red-500 font-black px-2 py-0.5 rounded-full uppercase">Inactivo</span>':''}
+            </div>
+            <span class="text-sm font-black text-slate-600">Inscripción: ${fmtCurrency(p.registration_fee)}</span>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-xs" style="min-width:500px">
+              <thead class="bg-slate-50"><tr>
+                <th class="px-3 py-2 text-left font-black text-slate-400 uppercase text-[9px]">Mes</th>
+                <th class="px-3 py-2 text-left font-black text-slate-400 uppercase text-[9px]">Tipo</th>
+                <th class="px-3 py-2 text-right font-black text-slate-400 uppercase text-[9px]">Monto</th>
+              </tr></thead>
+              <tbody class="divide-y divide-slate-50">
+                ${(p.plan_installments||[]).sort((a,b)=>a.month_number-b.month_number).map(i=>`<tr class="hover:bg-slate-50">
+                  <td class="px-3 py-2 font-bold text-slate-700">${i.month_name}</td>
+                  <td class="px-3 py-2 text-slate-500 capitalize">${i.type}</td>
+                  <td class="px-3 py-2 text-right font-black text-slate-700">${fmtCurrency(i.amount)}</td>
+                </tr>`).join('')}
+                <tr class="bg-slate-50 font-black">
+                  <td class="px-3 py-2 text-slate-500" colspan="2">TOTAL</td>
+                  <td class="px-3 py-2 text-right text-slate-700">${fmtCurrency((p.plan_installments||[]).reduce((s,i)=>s+Number(i.amount),0)+Number(p.registration_fee))}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>`).join('') || '<p class="text-slate-400 text-center py-8">Sin planes para este año escolar</p>'}
+    </div>`;
+  },
+
+  // ── CARGOS ───────────────────────────────────────────────────────────────
+  async loadCharges() {
+    const syId=this._currentYear?.id;
+    const {data}=await supabase.from('student_charges')
+      .select('id,type,concept,amount,status,due_date,paid_date,student_enrollments!inner(school_year_id,students:student_id(name))')
+      .eq('student_enrollments.school_year_id',syId||0).is('deleted_at',null)
+      .order('due_date',{ascending:true}).limit(500);
+    const list=data||[];
+    const cnt=s=>list.filter(c=>c.status===s).length;
+    const sum=s=>list.filter(c=>c.status===s).reduce((t,c)=>t+Number(c.amount),0);
+    const c=$el('academicTabContent'); if(!c)return;
+    c.innerHTML=`<div class="space-y-4">
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        ${[['Pendientes','pending','#FF8A00'],['Vencidas','overdue','#EF4444'],['Pagadas','paid','#28B54D'],['Total año','_all','#0B63C7']]
+          .map(([l,s,col])=>`<div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm text-center">
+            <div class="text-lg font-black" style="color:${col}">${s==='_all'?fmtCurrency(sum('paid')+sum('pending')+sum('overdue')):fmtCurrency(sum(s))}</div>
+            <div class="text-[9px] font-black text-slate-400 uppercase tracking-wider mt-1">${l}</div>
+            <div class="text-xs text-slate-500 font-bold">${s==='_all'?list.length+' cargos':cnt(s)+' cargos'}</div>
+          </div>`).join('')}
+      </div>
+      <div class="bg-white rounded-2xl border border-slate-100 overflow-hidden">
+        <div class="p-4 border-b border-slate-100 flex flex-wrap gap-2 items-center">
+          <input type="text" placeholder="Buscar..." oninput="App.academic._filterCharges(this.value)"
+            class="border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-bold outline-none focus:border-blue-400 w-36">
+          <select id="chargeStatusFilter" onchange="App.academic._filterCharges()" class="border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-bold outline-none bg-white">
+            <option value="">Todos</option><option value="pending">Pendientes</option><option value="overdue">Vencidas</option><option value="paid">Pagadas</option>
+          </select>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm" style="min-width:600px">
+            <thead class="bg-slate-50 border-b border-slate-100">
+              <tr>${['Alumno','Concepto','Monto','Estado','Vence','Pagó'].map(h=>`<th class="px-4 py-3 text-left text-[10px] font-black text-slate-400 uppercase">${h}</th>`).join('')}</tr>
+            </thead>
+            <tbody id="chargeTbody" class="divide-y divide-slate-50">
+              ${list.map(charge=>`<tr class="hover:bg-slate-50 charge-row" data-name="${((charge.student_enrollments?.students?.name)||'').toLowerCase()}" data-status="${charge.status}">
+                <td class="px-4 py-3 font-bold text-slate-700">${Helpers.escapeHTML(charge.student_enrollments?.students?.name||'—')}</td>
+                <td class="px-4 py-3 text-xs text-slate-600">${Helpers.escapeHTML(charge.concept||charge.type)}</td>
+                <td class="px-4 py-3 font-black text-slate-800">${fmtCurrency(charge.amount)}</td>
+                <td class="px-4 py-3"><span class="px-2 py-1 rounded-full text-[10px] font-black ${CH_COLOR[charge.status]||'bg-slate-100 text-slate-500'}">${CH_LABEL[charge.status]||charge.status}</span></td>
+                <td class="px-4 py-3 text-xs text-slate-500">${fmtDate(charge.due_date)}</td>
+                <td class="px-4 py-3 text-xs text-slate-500">${charge.paid_date?fmtDate(charge.paid_date?.split('T')[0]):'—'}</td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>`;
+  },
+  _filterCharges(q){
+    const sq=(q||$el('chargeStatusFilter')?.value||'').toLowerCase();
+    const sf=$el('chargeStatusFilter')?.value||'';
+    document.querySelectorAll('.charge-row').forEach(r=>{
+      const nm=r.dataset.name||''; const st=r.dataset.status||'';
+      r.style.display=(!sq||nm.includes(sq))&&(!sf||st===sf)?'':'none';
+    });
+  },
+
+  // ── NUEVO PLAN DE PAGO ───────────────────────────────────────────────────
+  openNewPlanModal() {
+    const months=['Agosto','Septiembre','Octubre','Noviembre','Diciembre','Enero','Febrero','Marzo','Abril','Mayo','Junio'];
+    const rowStyle = 'display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:10px;background:#f8fafc;border:1px solid #f1f5f9';
+    window.openGlobalModal(`<div class="p-6 max-h-[85vh] overflow-y-auto">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+        <div style="width:40px;height:40px;border-radius:12px;background:#E8F2FF;display:flex;align-items:center;justify-content:center;font-size:1.2rem">📋</div>
+        <div>
+          <h3 class="text-lg font-black text-slate-800">Nuevo Plan de Pago</h3>
+          <p class="text-xs text-slate-400 font-bold">${this._currentYear?.name||''}</p>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-4 mb-5">
+        <div><label class="text-[10px] font-black text-slate-400 uppercase block mb-1">Nombre del Plan *</label>
+          <input id="np_name" type="text" placeholder="Ej: Plan Básico" class="w-full border-2 border-slate-100 rounded-xl px-3 py-2.5 text-sm font-bold outline-none focus:border-blue-400"></div>
+        <div><label class="text-[10px] font-black text-slate-400 uppercase block mb-1">Nivel</label>
+          <select id="np_level" class="w-full border-2 border-slate-100 rounded-xl px-3 py-2.5 text-sm font-bold outline-none bg-white"><option>Inicial</option><option>Primaria</option></select></div>
+        <div><label class="text-[10px] font-black text-slate-400 uppercase block mb-1">Horario</label>
+          <select id="np_schedule" class="w-full border-2 border-slate-100 rounded-xl px-3 py-2.5 text-sm font-bold outline-none bg-white"><option>8:00-12:00</option><option>8:00-13:30</option><option>8:00-15:00</option><option>8:00-17:00</option></select></div>
+        <div><label class="text-[10px] font-black text-slate-400 uppercase block mb-1">Cuota Inscripción (RD$)</label>
+          <div class="relative"><span class="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">$</span>
+          <input id="np_reg" type="number" placeholder="0.00" class="w-full border-2 border-slate-100 rounded-xl px-7 py-2.5 text-sm font-bold outline-none focus:border-blue-400"></div></div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <p class="text-[10px] font-black text-slate-400 uppercase tracking-wider">Cuotas Mensuales</p>
+        <div style="font-size:11px;font-weight:900;color:#0B63C7" id="npTotalPreview">Total: RD$0.00/mes</div>
+      </div>
+      <div class="space-y-2" id="np_months">
+        ${months.map((m,i)=>`<div style="${rowStyle}">
+          <span style="width:100px;font-size:.8rem;font-weight:700;color:#475569">${m}</span>
+          <div style="position:relative;flex:1"><span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:.7rem;font-weight:700;color:#94a3b8">$</span>
+          <input type="number" id="np_m${i}" placeholder="0.00" oninput="App.academic._updatePlanTotal()" style="width:100%;padding:8px 8px 8px 24px;border:1px solid #e2e8f0;border-radius:8px;font-size:.8rem;font-weight:700;outline:none;background:white"></div>
+          <label style="display:flex;align-items:center;gap:4px;font-size:.7rem;font-weight:700;color:#94a3b8;cursor:pointer;white-space:nowrap">
+            <input type="checkbox" id="np_skip${i}" onchange="App.academic._updatePlanTotal()" style="accent-color:#0B63C7"> Omitir
+          </label>
+        </div>`).join('')}
+      </div>
+      <div style="margin-top:14px;display:flex;justify-content:flex-end;gap:8px">
+        <button onclick="App.ui.closeModal()" class="px-4 py-2 text-slate-500 font-bold text-xs uppercase border border-slate-200 rounded-xl">Cancelar</button>
+        <button id="btnSavePlan" onclick="App.academic._doSavePlan()" class="px-5 py-2 text-white font-black text-xs uppercase rounded-xl" style="background:#0B63C7">Crear Plan</button>
+      </div>
+    </div>`,true);
+  },
+
+  _updatePlanTotal() {
+    const months=['Agosto','Septiembre','Octubre','Noviembre','Diciembre','Enero','Febrero','Marzo','Abril','Mayo','Junio'];
+    let total = 0; let count = 0;
+    months.forEach((_, i) => {
+      const skip = document.getElementById(`np_skip${i}`)?.checked;
+      if (skip) return;
+      const amt = parseFloat(document.getElementById(`np_m${i}`)?.value || 0);
+      total += amt; if (amt > 0) count++;
+    });
+    const preview = document.getElementById('npTotalPreview');
+    if (preview) {
+      const reg = parseFloat(document.getElementById('np_reg')?.value || 0);
+      preview.textContent = count > 0
+        ? `Total: RD$${total.toLocaleString('es-DO',{minimumFractionDigits:2})}/mes (${count} cuotas) · Insc: RD$${reg.toLocaleString('es-DO',{minimumFractionDigits:2})}`
+        : 'Total: RD$0.00/mes';
+    }
+  },
+
+  async _doSavePlan() {
+    const name=$el('np_name')?.value?.trim(); if(!name){Helpers.toast('Escribe el nombre','warning');return;}
+    const level=$el('np_level')?.value;
+    const schedule=$el('np_schedule')?.value;
+    const regFee=parseFloat($el('np_reg')?.value||0);
+    const months=['Agosto','Septiembre','Octubre','Noviembre','Diciembre','Enero','Febrero','Marzo','Abril','Mayo','Junio'];
+
+    const btn=$el('btnSavePlan'); if(btn){btn.disabled=true;btn.textContent='Guardando...';}
+
+    const {data:plan,error:pe}=await supabase.from('payment_plans')
+      .insert({school_year_id:this._currentYear?.id,name,level,schedule,registration_fee:regFee}).select().single();
+    if(pe){Helpers.toast('Error: '+pe.message,'error');if(btn){btn.disabled=false;btn.textContent='Guardar Plan';}return;}
+
+    const installments=[];
+    months.forEach((m,i)=>{
+      const skip=$el(`np_skip${i}`)?.checked; if(skip)return;
+      const amt=parseFloat($el(`np_m${i}`)?.value||0); if(!amt)return;
+      installments.push({payment_plan_id:plan.id,type:'colegiatura',month_number:i+1,month_name:m,amount:amt,due_day:5,due_month_offset:i});
+    });
+
+    if(installments.length){
+      const {error:ie}=await supabase.from('plan_installments').insert(installments);
+      if(ie){Helpers.toast('Error en cuotas: '+ie.message,'error');return;}
+    }
+
+    Helpers.toast('Plan creado con '+installments.length+' cuotas','success');
+    App.ui.closeModal(); this.loadPlans();
+  },
+
+  // ── NUEVO AÑO ESCOLAR ────────────────────────────────────────────────────
+  openNewYearModal() {
+    const now=new Date(); const nextY=now.getFullYear()+1;
+    window.openGlobalModal(`<div class="p-6">
+      <h3 class="text-lg font-black text-slate-800 mb-5">Nuevo Año Escolar</h3>
+      <div class="space-y-4">
+        <div><label class="text-[10px] font-black text-slate-400 uppercase block mb-1">Nombre</label>
+          <input id="ny_name" type="text" placeholder="Ej: 2027-2028" class="w-full border-2 border-slate-100 rounded-xl px-3 py-2.5 text-sm font-bold outline-none focus:border-blue-400"></div>
+        <div class="grid grid-cols-2 gap-4">
+          <div><label class="text-[10px] font-black text-slate-400 uppercase block mb-1">Inicio</label>
+            <input id="ny_start" type="date" class="w-full border-2 border-slate-100 rounded-xl px-3 py-2.5 text-sm font-bold outline-none focus:border-blue-400"></div>
+          <div><label class="text-[10px] font-black text-slate-400 uppercase block mb-1">Fin</label>
+            <input id="ny_end" type="date" class="w-full border-2 border-slate-100 rounded-xl px-3 py-2.5 text-sm font-bold outline-none focus:border-blue-400"></div>
+        </div>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" id="ny_current" class="rounded">
+          <span class="text-sm font-bold text-slate-700">Marcar como año activo</span>
+        </label>
+        <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-700 font-bold">
+          Al crear un nuevo año escolar, el historial del año anterior queda intacto.
+        </div>
+      </div>
+      <div class="mt-5 flex justify-end gap-2">
+        <button onclick="App.ui.closeModal()" class="px-4 py-2 text-slate-500 font-bold text-xs uppercase border border-slate-200 rounded-xl">Cancelar</button>
+        <button id="btnSaveYear" onclick="App.academic._doSaveYear()" class="px-5 py-2 text-white font-black text-xs uppercase rounded-xl" style="background:#28B54D">Crear Año</button>
+      </div>
+    </div>`);
+  },
+
+  async _doSaveYear() {
+    const name=$el('ny_name')?.value?.trim(); if(!name){Helpers.toast('Escribe el nombre','warning');return;}
+    const start=$el('ny_start')?.value; const end=$el('ny_end')?.value;
+    if(!start||!end){Helpers.toast('Pon fechas de inicio y fin','warning');return;}
+    const isCurrent=$el('ny_current')?.checked||false;
+    const btn=$el('btnSaveYear'); if(btn){btn.disabled=true;btn.textContent='Creando...';}
+
+    if(isCurrent){ await supabase.from('school_years').update({is_current:false}).neq('id',0); }
+
+    const {error}=await supabase.from('school_years').insert({name,start_date:start,end_date:end,is_current:isCurrent,status:'upcoming'});
+    if(error){Helpers.toast('Error: '+error.message,'error');if(btn){btn.disabled=false;btn.textContent='Crear Año';}return;}
+
+    Helpers.toast('Año escolar creado','success');
+    App.ui.closeModal();
+    await this._loadYears();
+    this._renderShell();
+    this.showTab('preregistrations');
+  },
+
+  // ── REINSCRIPCIONES (placeholder) ────────────────────────────────────────
+  loadReenrollments() {
+    const c=$el('academicTabContent');
+    if(!c)return;
+    c.innerHTML=`<div class="p-8 text-center">
+      <p class="text-slate-500">Reinscripciones coming soon</p>
+    </div>`;
+  }
+};
+
+window.AcademicCycleModule = AcademicCycleModule;
