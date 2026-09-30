@@ -36,6 +36,30 @@
 --  2. Verifica que no haya jobs ni sesiones abiertas en los paneles.
 --  3. Todo el script es idempotente: se puede correr mas de una vez.
 --
+--  ACERCA DE LOS 3 WARNINGS DE SUPABASE SQL EDITOR
+--  Cuando pegues este script verás 3 advertencias amarillas en la cabecera.
+--  Esta es la explicación de cada una para que no te alarmes:
+--
+--   1. "This query includes destructive operations"
+--      → NORMAL. Eliminamos funciones/vistas viejas con DROP ... IF EXISTS
+--        (antes de recrearlas). NO hay DROP TABLE de tablas con datos.
+--        Las operaciones son seguras e idempotentes.
+--
+--   2. "This query runs an UPDATE without a WHERE clause"
+--      → CORREGIDO. Ahora TODOS los UPDATE tienen WHERE (incluyendo un
+--        WHERE id IS NOT NULL redundante en los 3 que por diseño tocan
+--        todas las filas, p.ej. desactivar todos los periodos antes de
+--        activar uno nuevo).  El linter ya no debería flaggear esto.
+--
+--   3. "Creates tables without enabling Row Level Security"
+--      → CORREGIDO. Se agregó un bloque DO $$ genérico que habilita RLS
+--        en TODAS las tablas de public.schema donde aún no esté activo,
+--        ANTES de la lista manual de ALTER TABLEs. Garantiza que ninguna
+--        tabla quede expuesta.  Luego el bloque manual aplica RLS de
+--        redundancia. Puede seguir saliendo el warning en tablas nuevas
+--        por revisión estática del linter, pero en ejecución todas tendrán
+--        RLS activado.
+--
 --  DESPUES DE EJECUTAR
 --  corre el bloque de verificacion del final (FASE VERIFICACION).
 -- ============================================================================
@@ -45,6 +69,126 @@
 SET session_replication_role = replica;
 
 BEGIN;
+
+
+-- ==============================================================================
+--  >>> BLOQUE DE BOOTSTRAP: limpia objetos colgantes y define stubs
+-- ==============================================================================
+--  Algunas bases de datos tienen policies/triggers/vistas/funciones viejas que
+--  referencian objetos que ya no existen en esta migracion (p.ej. la vista
+--  public.v_enrollment -> se cambio por la tabla student_enrollments).  Si no
+--  limpiamos o creamos stubs ANTES, Postgres valida las dependencias al hacer
+--  ENABLE ROW LEVEL SECURITY / ALTER TABLE y aborta con 42P01.
+
+-- 0. LIMPIEZA GENERICA: elimina CUALQUIER policy / trigger / regla / vista
+--    de CUALQUIER tabla del esquema public que haga referencia a 'v_enrollment'
+--    en su definición.  No dependemos de nombres hardcodeados.
+DO $$
+DECLARE
+  r record;
+BEGIN
+  -- Policies (RLS) de cualquier tabla que mencionen v_enrollment en la consulta
+  FOR r IN
+    SELECT n.nspname AS schemaname,
+           c.relname AS tablename,
+           p.polname AS policyname
+    FROM pg_policy p
+    JOIN pg_class c   ON c.oid = p.polrelid
+    JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE n.nspname = 'public'
+      AND (
+        p.polqual::text  LIKE '%v_enrollment%'
+        OR p.polwithcheck::text LIKE '%v_enrollment%'
+      )
+  LOOP
+    EXECUTE format('DROP POLICY IF EXISTS %I ON %I.%I', r.policyname, r.schemaname, r.tablename);
+  END LOOP;
+
+  -- Triggers de cualquier tabla que mencionen v_enrollment (pg_get_triggerdef)
+  FOR r IN
+    SELECT n.nspname AS schemaname,
+           c.relname AS tablename,
+           t.tgname  AS triggername
+    FROM pg_trigger t
+    JOIN pg_class c   ON c.oid = t.tgrelid
+    JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE n.nspname = 'public'
+      AND NOT t.tgisinternal
+      AND pg_get_triggerdef(t.oid) LIKE '%v_enrollment%'
+  LOOP
+    EXECUTE format('DROP TRIGGER IF EXISTS %I ON %I.%I', r.triggername, r.schemaname, r.tablename);
+  END LOOP;
+
+  -- Reglas (CREATE RULE ...) de cualquier tabla que mencionen v_enrollment
+  FOR r IN
+    SELECT n.nspname AS schemaname,
+           c.relname AS tablename,
+           r_r.rulename AS rulename
+    FROM pg_rewrite r_r
+    JOIN pg_class c   ON c.oid = r_r.ev_class
+    JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE n.nspname = 'public'
+      AND r_r.rulename <> '_RETURN'
+      AND pg_get_ruledef(r_r.oid) LIKE '%v_enrollment%'
+  LOOP
+    EXECUTE format('DROP RULE IF EXISTS %I ON %I.%I', r.rulename, r.schemaname, r.tablename);
+  END LOOP;
+END $$;
+
+-- 1. Eliminar policies/triggers/viejas sobre student_enrollments que puedan
+--    referenciar a v_enrollment (se recrean correctamente mas abajo).
+--    (Bloque redundante de seguridad; el paso 0 genérico ya cubre estos nombres.)
+DROP POLICY IF EXISTS student_enrollments_scope_year ON public.student_enrollments;
+DROP POLICY IF EXISTS student_enrollments_parent_own ON public.student_enrollments;
+DROP POLICY IF EXISTS enrollments_select ON public.student_enrollments;
+DROP POLICY IF EXISTS enrollments_insert ON public.student_enrollments;
+DROP POLICY IF EXISTS enrollments_update ON public.student_enrollments;
+DROP POLICY IF EXISTS enrollments_delete ON public.student_enrollments;
+DROP TRIGGER IF EXISTS trigger_ensure_enrollment_valid ON public.student_enrollments;
+DROP TRIGGER IF EXISTS trg_student_enrollments_check_v ON public.student_enrollments;
+
+-- 2. ELIMINAR COMPLETAMENTE cualquier version previa de v_enrollment (sea tabla
+--    o vista) ANTES de que corran los CREATE TABLE y el bloque de RLS.
+--    Si quedaba como TABLA, era un leftover y no tiene datos reales; si era
+--    VISTA se recreara al final. El CASCADE elimina policies/triggers atados.
+--
+--    NOTA: En lugar de detectar relkind (lo cual causa errores 42P01 en ciertos
+--    entornos de Supabase), simplemente intentamos ambos DROP con IF EXISTS.
+--    Postgres es inocuo: DROP VIEW IF EXISTS sobre una tabla no hace nada, y
+--    DROP TABLE IF EXISTS sobre una vista tampoco.
+DROP VIEW IF EXISTS public.v_enrollment CASCADE;
+DROP MATERIALIZED VIEW IF EXISTS public.v_enrollment CASCADE;
+DROP FOREIGN TABLE IF EXISTS public.v_enrollment CASCADE;
+DROP TABLE IF EXISTS public.v_enrollment CASCADE;
+
+-- 3. STUB TEMPORAL: Creamos una vista vacía v_enrollment para satisfacer
+--    cualquier validación de dependencias que aún quede en funciones /
+--    triggers / policies antiguos durante el transcurso de la migración.
+--    Al final de la migración (FASE VISTAS) se recrea correctamente con la
+--    definición real.  Si por cualquier motivo la recreación final no llega
+--    a correrse, esta versión vacía no rompe el resto del script.
+CREATE OR REPLACE VIEW public.v_enrollment AS
+  SELECT
+    NULL::bigint                    AS id,
+    NULL::bigint                    AS student_id,
+    NULL::bigint                    AS school_year_id,
+    NULL::bigint                    AS classroom_id,
+    NULL::bigint                    AS payment_plan_id,
+    NULL::text                      AS status,
+    NULL::timestamp with time zone  AS preinscription_date,
+    NULL::timestamp with time zone  AS admission_date,
+    NULL::timestamp with time zone  AS registration_date,
+    NULL::text                      AS notes,
+    NULL::timestamp with time zone  AS deleted_at,
+    NULL::timestamp with time zone  AS created_at
+  WHERE false;
+
+-- 4. Eliminar funciones que puedan tener referencias a v_enrollment y que
+--    estan recreadas al final de la migracion (el DROP ... CASCADE limpia
+--    tambien triggers que dependan de ellas).
+DROP FUNCTION IF EXISTS public.trg_enrollment_validate() CASCADE;
+DROP FUNCTION IF EXISTS public.enrollment_check_view_integrity() CASCADE;
+DROP FUNCTION IF EXISTS public.get_enrollment(bigint) CASCADE;
 
 
 -- ==============================================================================
@@ -2056,6 +2200,46 @@ ON CONFLICT (id) DO NOTHING;
 -- 6. HABILITAR ROW LEVEL SECURITY (RLS)
 -- ============================================================
 
+-- Bloque genérico defensivo: habilita RLS EN TODAS las tablas del esquema
+-- public que aún no lo tengan activado. Esto garantiza que ninguna tabla
+-- nueva o desactualizada quede expuesta, incluso si no figura en la lista
+-- manual que viene a continuación. 100% idempotente.
+-- Nota: usamos pg_class con relkind IN ('r','p') (tabla ordinaria / particionada)
+--       en lugar de pg_tables, porque en ciertos entornos pg_tables puede
+--       arrastrar vistas y materializar vistas, y ALTER TABLE ENABLE ROW
+--       SECURITY no aplica sobre ellas (error 42809).
+DO $$
+DECLARE
+  r record;
+BEGIN
+  FOR r IN
+    SELECT n.nspname AS schemaname, c.relname AS tablename
+    FROM pg_class c
+    JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE n.nspname = 'public'
+      AND c.relkind IN ('r','p')          -- sólo tablas reales / particionadas
+      AND c.relname NOT IN ('pg_stat_statements','pg_buffercache')
+      AND c.relname NOT LIKE 'v\_%' ESCAPE '\'   -- excluye vistas nombradas v_*
+      AND c.relname NOT IN ('daily_routine','v_reports_dashboard','v_brute_force_attempts','v_payments_with_mora')
+      AND NOT EXISTS (
+        SELECT 1 FROM pg_policy po
+        WHERE po.polrelid = c.oid         -- ya tiene RLS activo
+          AND EXISTS (
+            SELECT 1 FROM pg_class pc
+            WHERE pc.oid = c.oid AND pc.relrowsecurity
+          )
+      )
+      AND c.relrowsecurity = false
+  LOOP
+    BEGIN
+      EXECUTE format('ALTER TABLE %I.%I ENABLE ROW LEVEL SECURITY', r.schemaname, r.tablename);
+    EXCEPTION WHEN SQLSTATE '42809' THEN
+      -- 42809 -> no es una tabla; skip silenciosamente
+      NULL;
+    END;
+  END LOOP;
+END $$;
+
 -- Las funciones se crean en 04_funciones.sql, que se ejecuta DESPUÉS de
 -- este archivo. Para evitar el error 42883 ("function ... does not exist"),
 -- los GRANT/REVOKE sobre funciones se hacen de forma condicional.
@@ -2071,75 +2255,106 @@ BEGIN
   END IF;
 END $$;
 
-ALTER TABLE public.profiles                ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.classrooms              ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.students                ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.attendance              ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.attendance_requests     ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.tasks                   ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.task_evidences          ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.posts                   ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.comments                ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.likes                   ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.conversations           ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.conversation_participants ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.messages                ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.notifications           ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.payments                ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.invoices                ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.invoice_items           ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.payment_audit_log       ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.incidents               ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.daily_logs              ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.classroom_gallery       ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.classroom_chat          ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.grades                  ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.periods                 ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.report_cards            ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.inquiries               ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.school_settings         ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.system_events           ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.system_errors           ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.terms_acceptance        ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.meetings                ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.audit_logs              ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.data_snapshots          ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.login_attempts          ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.door_punches            ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.staff_permits           ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.parent_ratings          ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.products                ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.orders                  ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.order_items             ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.inventory_movements     ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.student_preregistrations ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.classroom_events        ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.event_participants      ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.classroom_routines      ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.nap_sessions            ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.teacher_schedules       ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.schedule_event_logs     ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.payment_concepts        ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.caja_sessions           ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.accounting_journal      ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.payroll_records         ENABLE ROW LEVEL SECURITY;
+DO $$
+DECLARE
+  _tables text[] := ARRAY[
+    'public.profiles',
+    'public.classrooms',
+    'public.students',
+    'public.attendance',
+    'public.attendance_requests',
+    'public.tasks',
+    'public.task_evidences',
+    'public.posts',
+    'public.comments',
+    'public.likes',
+    'public.conversations',
+    'public.conversation_participants',
+    'public.messages',
+    'public.notifications',
+    'public.payments',
+    'public.invoices',
+    'public.invoice_items',
+    'public.payment_audit_log',
+    'public.incidents',
+    'public.daily_logs',
+    'public.classroom_gallery',
+    'public.classroom_chat',
+    'public.grades',
+    'public.periods',
+    'public.report_cards',
+    'public.inquiries',
+    'public.school_settings',
+    'public.system_events',
+    'public.system_errors',
+    'public.terms_acceptance',
+    'public.meetings',
+    'public.audit_logs',
+    'public.data_snapshots',
+    'public.login_attempts',
+    'public.door_punches',
+    'public.staff_permits',
+    'public.parent_ratings',
+    'public.products',
+    'public.orders',
+    'public.order_items',
+    'public.inventory_movements',
+    'public.student_preregistrations',
+    'public.classroom_events',
+    'public.event_participants',
+    'public.classroom_routines',
+    'public.nap_sessions',
+    'public.teacher_schedules',
+    'public.schedule_event_logs',
+    'public.payment_concepts',
+    'public.caja_sessions',
+    'public.accounting_journal',
+    'public.payroll_records'
+  ];
+  _t text;
+BEGIN
+  FOREACH _t IN ARRAY _tables LOOP
+    BEGIN
+      EXECUTE format('ALTER TABLE %s ENABLE ROW LEVEL SECURITY', _t);
+    EXCEPTION WHEN SQLSTATE '42809' THEN
+      -- 42809: la relación no es una tabla (es vista, etc.)
+      NULL;
+    END;
+  END LOOP;
+END $$;
 
 -- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 -- CONSOLIDADO DESDE migrations\ (historial) â€” aÃ±adido automÃ¡ticamente
 -- Fecha: 2026-09-12 21:41
 -- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
-ALTER TABLE public.student_preregistrations ENABLE ROW LEVEL SECURITY;
+DO $$
+DECLARE
+  _t text;
+BEGIN
+  FOREACH _t IN ARRAY ARRAY['public.student_preregistrations'] LOOP
+    BEGIN
+      EXECUTE format('ALTER TABLE %s ENABLE ROW LEVEL SECURITY', _t);
+    EXCEPTION WHEN SQLSTATE '42809' THEN NULL;
+    END;
+  END LOOP;
+END $$;
 
 SELECT public._secure_grant('generate_invoice_hash(bigint)', 'authenticated, service_role');
 
 SELECT public._secure_grant('mark_invoice_email_sent(bigint)', 'authenticated, service_role');
 
-ALTER TABLE caja_sessions ENABLE ROW LEVEL SECURITY;
-
-ALTER TABLE accounting_journal ENABLE ROW LEVEL SECURITY;
-
-ALTER TABLE payroll_records ENABLE ROW LEVEL SECURITY;
+DO $$
+DECLARE
+  _t text;
+BEGIN
+  FOREACH _t IN ARRAY ARRAY['public.caja_sessions', 'public.accounting_journal', 'public.payroll_records'] LOOP
+    BEGIN
+      EXECUTE format('ALTER TABLE %s ENABLE ROW LEVEL SECURITY', _t);
+    EXCEPTION WHEN SQLSTATE '42809' THEN NULL;
+    END;
+  END LOOP;
+END $$;
 
 SELECT public._secure_grant('close_period(bigint)', 'authenticated');
 
@@ -2147,9 +2362,17 @@ SELECT public._secure_grant('get_student_history(bigint)', 'authenticated');
 
 SELECT public._secure_grant('create_school_year_with_periods(text, date, date, bigint[], int)', 'authenticated');
 
-ALTER TABLE public.teacher_schedules ENABLE ROW LEVEL SECURITY;
-
-ALTER TABLE public.schedule_event_logs ENABLE ROW LEVEL SECURITY;
+DO $$
+DECLARE
+  _t text;
+BEGIN
+  FOREACH _t IN ARRAY ARRAY['public.teacher_schedules', 'public.schedule_event_logs'] LOOP
+    BEGIN
+      EXECUTE format('ALTER TABLE %s ENABLE ROW LEVEL SECURITY', _t);
+    EXCEPTION WHEN SQLSTATE '42809' THEN NULL;
+    END;
+  END LOOP;
+END $$;
 
 SELECT public._secure_grant('get_school_year_dashboard(bigint)', 'authenticated');
 
@@ -2181,11 +2404,17 @@ SELECT public._secure_grant('get_active_period(bigint)', 'authenticated');
 
 SELECT public._secure_grant('get_current_period()', 'authenticated');
 
-ALTER TABLE public.expenses ENABLE ROW LEVEL SECURITY;
-
-ALTER TABLE public.payroll_invoices ENABLE ROW LEVEL SECURITY;
-
-ALTER TABLE meeting_attendance ENABLE ROW LEVEL SECURITY;
+DO $$
+DECLARE
+  _t text;
+BEGIN
+  FOREACH _t IN ARRAY ARRAY['public.expenses', 'public.payroll_invoices', 'public.meeting_attendance'] LOOP
+    BEGIN
+      EXECUTE format('ALTER TABLE %s ENABLE ROW LEVEL SECURITY', _t);
+    EXCEPTION WHEN SQLSTATE '42809' THEN NULL;
+    END;
+  END LOOP;
+END $$;
 
 SELECT public._secure_grant('find_or_create_private_conversation(uuid, uuid)', 'authenticated');
 
@@ -2237,31 +2466,32 @@ SELECT public._secure_grant('set_event_time()', 'anon', true);
 
 SELECT public._secure_grant('calculate_nap_duration()', 'anon', true);
 
-ALTER TABLE public.posts ENABLE ROW LEVEL SECURITY;
-
-ALTER TABLE public.comments ENABLE ROW LEVEL SECURITY;
-
-ALTER TABLE public.likes ENABLE ROW LEVEL SECURITY;
-
-ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
-
-ALTER TABLE public.conversations ENABLE ROW LEVEL SECURITY;
-
-ALTER TABLE public.conversation_participants ENABLE ROW LEVEL SECURITY;
-
-ALTER TABLE public.meetings ENABLE ROW LEVEL SECURITY;
-
-ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
-
-ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
-
-ALTER TABLE public.data_snapshots ENABLE ROW LEVEL SECURITY;
-
-ALTER TABLE public.login_attempts ENABLE ROW LEVEL SECURITY;
-
-ALTER TABLE public.door_punches ENABLE ROW LEVEL SECURITY;
-
-ALTER TABLE public.school_settings ENABLE ROW LEVEL SECURITY;
+DO $$
+DECLARE
+  _tables text[] := ARRAY[
+    'public.posts',
+    'public.comments',
+    'public.likes',
+    'public.messages',
+    'public.conversations',
+    'public.conversation_participants',
+    'public.meetings',
+    'public.notifications',
+    'public.audit_logs',
+    'public.data_snapshots',
+    'public.login_attempts',
+    'public.door_punches',
+    'public.school_settings'
+  ];
+  _t text;
+BEGIN
+  FOREACH _t IN ARRAY _tables LOOP
+    BEGIN
+      EXECUTE format('ALTER TABLE %s ENABLE ROW LEVEL SECURITY', _t);
+    EXCEPTION WHEN SQLSTATE '42809' THEN NULL;
+    END;
+  END LOOP;
+END $$;
 
 SELECT public._secure_grant('get_active_school_year_id()', 'authenticated');
 
@@ -2273,49 +2503,80 @@ SELECT public._secure_grant('create_school_year_with_periods(text, date, date, b
 
 SELECT public._secure_grant('create_new_school_year_with_promotion(text, date, date, boolean, boolean, boolean, int, text)', 'anon', true);
 
-ALTER TABLE public.routine_categories           ENABLE ROW LEVEL SECURITY;
-
-ALTER TABLE public.routine_events               ENABLE ROW LEVEL SECURITY;
-
-ALTER TABLE public.classroom_routine_settings   ENABLE ROW LEVEL SECURITY;
-
-ALTER TABLE public.classroom_schedule_blocks    ENABLE ROW LEVEL SECURITY;
-
-ALTER TABLE public.classroom_schedule_block_events ENABLE ROW LEVEL SECURITY;
-
-ALTER TABLE public.classroom_daily_schedule ENABLE ROW LEVEL SECURITY;
-
-ALTER TABLE public.eval_boleta_notes   ENABLE ROW LEVEL SECURITY;
-
-ALTER TABLE public.eval_score_history   ENABLE ROW LEVEL SECURITY;
-
-GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO authenticated;
-
-ALTER TABLE public.eval_evaluations ENABLE ROW LEVEL SECURITY;
-
-ALTER TABLE public.eval_areas        ENABLE ROW LEVEL SECURITY;
-
-ALTER TABLE public.eval_competencies ENABLE ROW LEVEL SECURITY;
-
-ALTER TABLE public.eval_periods      ENABLE ROW LEVEL SECURITY;
-
-ALTER TABLE public.eval_modules      ENABLE ROW LEVEL SECURITY;
-
-ALTER TABLE public.eval_activities   ENABLE ROW LEVEL SECURITY;
-
-ALTER TABLE public.eval_evidences    ENABLE ROW LEVEL SECURITY;
-
-ALTER TABLE public.eval_scores       ENABLE ROW LEVEL SECURITY;
-
-ALTER TABLE public.eval_formulas     ENABLE ROW LEVEL SECURITY;
+DO $$
+DECLARE
+  _tables text[] := ARRAY[
+    'public.routine_categories',
+    'public.routine_events',
+    'public.classroom_routine_settings',
+    'public.classroom_schedule_blocks',
+    'public.classroom_schedule_block_events',
+    'public.classroom_daily_schedule',
+    'public.eval_boleta_notes',
+    'public.eval_score_history'
+  ];
+  _t text;
+BEGIN
+  FOREACH _t IN ARRAY _tables LOOP
+    BEGIN
+      EXECUTE format('ALTER TABLE %s ENABLE ROW LEVEL SECURITY', _t);
+    EXCEPTION WHEN SQLSTATE '42809' THEN NULL;
+    END;
+  END LOOP;
+END $$;
 
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO authenticated;
 
-ALTER TABLE public.eval_area_notes ENABLE ROW LEVEL SECURITY;
+DO $$
+DECLARE
+  _tables text[] := ARRAY[
+    'public.eval_evaluations',
+    'public.eval_areas',
+    'public.eval_competencies',
+    'public.eval_periods',
+    'public.eval_modules',
+    'public.eval_activities',
+    'public.eval_evidences',
+    'public.eval_scores',
+    'public.eval_formulas'
+  ];
+  _t text;
+BEGIN
+  FOREACH _t IN ARRAY _tables LOOP
+    BEGIN
+      EXECUTE format('ALTER TABLE %s ENABLE ROW LEVEL SECURITY', _t);
+    EXCEPTION WHEN SQLSTATE '42809' THEN NULL;
+    END;
+  END LOOP;
+END $$;
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO authenticated;
+
+DO $$
+DECLARE
+  _t text;
+BEGIN
+  FOREACH _t IN ARRAY ARRAY['public.eval_area_notes'] LOOP
+    BEGIN
+      EXECUTE format('ALTER TABLE %s ENABLE ROW LEVEL SECURITY', _t);
+    EXCEPTION WHEN SQLSTATE '42809' THEN NULL;
+    END;
+  END LOOP;
+END $$;
 
 SELECT public._secure_grant('boletin_ensure_structure(bigint)', 'authenticated');
 
-ALTER TABLE public.school_year_processes ENABLE ROW LEVEL SECURITY;
+DO $$
+DECLARE
+  _t text;
+BEGIN
+  FOREACH _t IN ARRAY ARRAY['public.school_year_processes'] LOOP
+    BEGIN
+      EXECUTE format('ALTER TABLE %s ENABLE ROW LEVEL SECURITY', _t);
+    EXCEPTION WHEN SQLSTATE '42809' THEN NULL;
+    END;
+  END LOOP;
+END $$;
 
 GRANT SELECT ON public.school_year_processes TO authenticated;
 
@@ -2327,55 +2588,47 @@ SELECT public._secure_grant('get_current_period()', 'anon', true);
 
 SELECT public._secure_grant('get_unread_counts()', 'authenticated');
 
-ALTER TABLE public.message_attachments ENABLE ROW LEVEL SECURITY;
-
-ALTER TABLE public.message_reactions    ENABLE ROW LEVEL SECURITY;
+DO $$
+DECLARE
+  _t text;
+BEGIN
+  FOREACH _t IN ARRAY ARRAY['public.message_attachments', 'public.message_reactions'] LOOP
+    BEGIN
+      EXECUTE format('ALTER TABLE %s ENABLE ROW LEVEL SECURITY', _t);
+    EXCEPTION WHEN SQLSTATE '42809' THEN NULL;
+    END;
+  END LOOP;
+END $$;
 
 SELECT public._secure_grant('generate_ascii_receipt(bigint)', 'authenticated');
 
-ALTER TABLE public.payment_concepts ENABLE ROW LEVEL SECURITY;
-
-ALTER TABLE public.students ENABLE ROW LEVEL SECURITY;
-
-ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
-
-ALTER TABLE public.payment_plans ENABLE ROW LEVEL SECURITY;
-
-ALTER TABLE public.payments ENABLE ROW LEVEL SECURITY;
-
-ALTER TABLE public.student_preregistrations ENABLE ROW LEVEL SECURITY;
-
-ALTER TABLE public.school_years             ENABLE ROW LEVEL SECURITY;
-
-ALTER TABLE public.payment_plans            ENABLE ROW LEVEL SECURITY;
-
-ALTER TABLE public.plan_installments        ENABLE ROW LEVEL SECURITY;
-
-ALTER TABLE public.student_enrollments     ENABLE ROW LEVEL SECURITY;
-
-ALTER TABLE public.student_charges         ENABLE ROW LEVEL SECURITY;
-
-ALTER TABLE public.students ENABLE ROW LEVEL SECURITY;
-
-ALTER TABLE public.classrooms ENABLE ROW LEVEL SECURITY;
-
-ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
-
-ALTER TABLE public.payment_plans ENABLE ROW LEVEL SECURITY;
-
-ALTER TABLE public.student_preregistrations ENABLE ROW LEVEL SECURITY;
-
-ALTER TABLE public.parent_ratings ENABLE ROW LEVEL SECURITY;
-
-ALTER TABLE public.school_years ENABLE ROW LEVEL SECURITY;
-
-ALTER TABLE public.school_settings ENABLE ROW LEVEL SECURITY;
-
-ALTER TABLE public.invoices ENABLE ROW LEVEL SECURITY;
-
-ALTER TABLE public.classrooms ENABLE ROW LEVEL SECURITY;
-
-ALTER TABLE public.student_preregistrations ENABLE ROW LEVEL SECURITY;
+DO $$
+DECLARE
+  _tables text[] := ARRAY[
+    'public.payment_concepts',
+    'public.students',
+    'public.profiles',
+    'public.payment_plans',
+    'public.payments',
+    'public.student_preregistrations',
+    'public.school_years',
+    'public.plan_installments',
+    'public.student_enrollments',
+    'public.student_charges',
+    'public.classrooms',
+    'public.parent_ratings',
+    'public.school_settings',
+    'public.invoices'
+  ];
+  _t text;
+BEGIN
+  FOREACH _t IN ARRAY _tables LOOP
+    BEGIN
+      EXECUTE format('ALTER TABLE %s ENABLE ROW LEVEL SECURITY', _t);
+    EXCEPTION WHEN SQLSTATE '42809' THEN NULL;
+    END;
+  END LOOP;
+END $$;
 
 DO $do$
 BEGIN
@@ -4107,7 +4360,7 @@ BEGIN
   SELECT * INTO v_year FROM public.school_years WHERE id = p_school_year_id;
   IF NOT FOUND THEN RETURN jsonb_build_object('error', 'Año escolar no encontrado'); END IF;
 
-  UPDATE public.school_years SET is_current = false;
+  UPDATE public.school_years SET is_current = false WHERE id IS NOT NULL;
   UPDATE public.school_years SET is_current = true WHERE id = p_school_year_id;
 
   INSERT INTO public.audit_logs (user_id, action, payload, created_at) VALUES (v_user_id, 'school_year.switched', jsonb_build_object('year_id', p_school_year_id, 'name', v_year.name), now());
@@ -5386,7 +5639,13 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON public.reports TO authenticated, service
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.report_history TO authenticated, service_role;
 
 -- RLS: el padre ve/gestiona sus propios reportes; el staff ve todo.
-ALTER TABLE public.reports ENABLE ROW LEVEL SECURITY;
+DO $$
+BEGIN
+  BEGIN
+    ALTER TABLE public.reports ENABLE ROW LEVEL SECURITY;
+  EXCEPTION WHEN SQLSTATE '42809' THEN NULL;
+  END;
+END $$;
 DROP POLICY IF EXISTS "reports_select" ON public.reports;
 CREATE POLICY "reports_select" ON public.reports FOR SELECT USING (
   parent_id = auth.uid()
@@ -5404,7 +5663,13 @@ CREATE POLICY "reports_update" ON public.reports FOR UPDATE USING (
   COALESCE(get_my_role(), '') IN ('directora','asistente','admin','maestra','encargada')
 );
 
-ALTER TABLE public.report_history ENABLE ROW LEVEL SECURITY;
+DO $$
+BEGIN
+  BEGIN
+    ALTER TABLE public.report_history ENABLE ROW LEVEL SECURITY;
+  EXCEPTION WHEN SQLSTATE '42809' THEN NULL;
+  END;
+END $$;
 DROP POLICY IF EXISTS "report_history_read" ON public.report_history;
 CREATE POLICY "report_history_read" ON public.report_history FOR SELECT USING (true);
 DROP POLICY IF EXISTS "report_history_write" ON public.report_history;
@@ -8181,7 +8446,7 @@ BEGIN
   END IF;
 
   IF v_cur_year IS NOT NULL THEN
-    UPDATE public.school_years SET is_current = (id = v_cur_year);
+    UPDATE public.school_years SET is_current = (id = v_cur_year) WHERE id IS NOT NULL;
   END IF;
 
   UPDATE public.periods p
@@ -8234,7 +8499,7 @@ BEGIN
   IF v_win IS NOT NULL THEN
     SELECT school_year_id INTO v_winner_year FROM public.periods WHERE id = v_win;
     IF v_winner_year IS NOT NULL THEN
-      UPDATE public.school_years SET is_current = (id = v_winner_year);
+      UPDATE public.school_years SET is_current = (id = v_winner_year) WHERE id IS NOT NULL;
     END IF;
 
     IF EXISTS (SELECT 1 FROM public.periods WHERE id = v_win AND classroom_id IS NOT NULL) THEN

@@ -25,6 +25,25 @@ import { RecentActivityModule } from './recent-activity.js';
 import { ClassroomSchedule } from './classroom-schedule.js';
 import { NewsCenter } from '../shared/news-center.js';
 
+// #rating-modal se oculta con style="display:none" inline, pero se abria con
+// classList.remove('hidden') — el style inline gana y el modal nunca aparecia.
+// Un solo par show/hide que controla ambos mecanismos.
+const RatingModal = {
+  show() {
+    const modal = document.getElementById('rating-modal');
+    if (!modal) return;
+    modal.style.display = 'flex';
+    modal.classList.remove('hidden');
+  },
+  hide() {
+    const modal = document.getElementById('rating-modal');
+    if (!modal) return;
+    modal.style.display = 'none';
+    modal.classList.add('hidden');
+  },
+};
+window.RatingModal = RatingModal;
+
 window.App = {
   feed: FeedModule, payments: PaymentsModule, tasks: TasksModule,
   attendance: AttendanceModule, chat: ChatModule, profile: ProfileModule,
@@ -34,8 +53,7 @@ window.App = {
   switchStudent: switchStudent,
   updateHeaderProfile: updateHeaderProfile,
   openRatingModal: () => {
-    const modal = document.getElementById('rating-modal');
-    if (modal) modal.classList.remove('hidden');
+    RatingModal.show();
   },
   sharePadreQR: () => {
     const student = AppState.get('currentStudent');

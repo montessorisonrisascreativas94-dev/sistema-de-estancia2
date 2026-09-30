@@ -141,7 +141,7 @@ export const ParentRatingModule = {
       Helpers.toast('¡Gracias por tu valoración!', 'success');
       document.getElementById('parent-rating-form')?.reset();
       this.setRating(0);
-      document.getElementById('rating-modal')?.classList.add('hidden');
+      window.RatingModal?.hide();
       await this.checkPendingRating();
 
     } catch (err) {
