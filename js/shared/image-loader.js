@@ -85,19 +85,73 @@ export const ImageLoader = {
     if (!raw) return;
     if (el.dataset.poster) el.poster = el.dataset.poster;
 
-    // 🎬 FOTOGRAMA INTELIGENTE: descargar SOLO metadatos + 1 keyframe inicial.
-    // El fragmento #t=0.7 hace que el navegador pida un rango pequeño del archivo
-    // y muestre un fotograma del video (como poster de Instagram) sin descargarlo.
+    // 🎬 FOTOGRAMA INTELIGENTE: descargar SOLO metadatos + 1 keyframe inicial (0.5s).
+    // El fragmento #t=0.5 hace que el navegador pida un rango pequeño del archivo
+    // y muestre un fotograma representativo del video como portada.
     const baseSrc = raw.replace(/#t=[\d.]+/, '');
     el.dataset.baseSrc = baseSrc;
     el.preload = 'metadata';          // pre-carga mínima: duración + fotograma
+    el.playsInline = true;
+    el.setAttribute('playsinline', '');
+
     if (el.dataset.fotograma !== 'off') {
-      el.src = baseSrc + '#t=0.7';
+      el.src = baseSrc + '#t=0.5';
     } else {
       el.src = baseSrc;
     }
     el.load();
     el.dataset.loaded = '1'; el.classList.add('karpus-img-loaded');
+  },
+
+  /**
+   * 🎬 Configura vista previa / autoplay al hacer hover o scroll sobre contenedores de video.
+   * @param {HTMLElement} container
+   */
+  setupHoverAutoplay(container = document) {
+    const videoElements = container.querySelectorAll('video[data-src], video.feed-video-el');
+    videoElements.forEach(video => {
+      if (video.dataset.hoverAutoplayBound) return;
+      video.dataset.hoverAutoplayBound = 'true';
+
+      const parentWrap = video.closest('.group\\/media') || video.parentElement;
+
+      // Autoplay al pasar por encima con el ratón
+      if (parentWrap) {
+        parentWrap.addEventListener('mouseenter', () => {
+          if (video.paused) {
+            video.muted = true;
+            video.play().catch(() => {});
+          }
+        });
+
+        parentWrap.addEventListener('mouseleave', () => {
+          if (!video.dataset.userClickedPlay) {
+            video.pause();
+          }
+        });
+      }
+    });
+
+    // Observer para reproducir silenciado al entrar en pantalla (móviles / scroll)
+    if ('IntersectionObserver' in window) {
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          const video = entry.target;
+          if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
+            if (video.paused && !video.dataset.userPaused) {
+              video.muted = true;
+              video.play().catch(() => {});
+            }
+          } else {
+            if (!video.paused && !video.dataset.userClickedPlay) {
+              video.pause();
+            }
+          }
+        });
+      }, { threshold: [0.5] });
+
+      videoElements.forEach(v => observer.observe(v));
+    }
   },
 
   img(src, opts = {}) {
