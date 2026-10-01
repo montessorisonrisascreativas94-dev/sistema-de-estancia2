@@ -327,9 +327,14 @@ export const FeedModule = {
     this._setupFeedVideos(container);
   },
 
-  // 🎬 Conecta botón de play + duración de los videos del feed
+  // 🎬 Conecta botón de play + duración + hover autoplay de los videos del feed
   _setupFeedVideos(container) {
-    (container || document).querySelectorAll('[data-action="video-toggle"]').forEach(btn => {
+    const root = container || document;
+
+    // Activar autoplay al pasar el ratón (hover) o al entrar a la pantalla (viewport)
+    ImageLoader.setupHoverAutoplay(root);
+
+    root.querySelectorAll('[data-action="video-toggle"]').forEach(btn => {
       const id = btn.dataset.postId;
       const video = document.getElementById(`media-wrap-${id}`)?.querySelector('video');
       if (!video) return;
