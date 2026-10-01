@@ -312,5 +312,188 @@ export const GradesModule = {
 
   _loadAllData() {
     return this._render();
+  },
+
+  openClassroomConfigModal() {
+    const ic = 'w-full px-4 py-2.5 border-2 border-slate-100 rounded-2xl outline-none focus:ring-4 focus:ring-blue-100 focus:border-[#0B63C7] bg-slate-50/50 transition-all text-sm font-medium';
+    const lc = 'block text-[11px] font-black text-slate-400 uppercase tracking-wider mb-1.5 ml-1';
+
+    const roomOpts = this._classrooms.map(c => `<option value="${c.id}">${_esc(c.name)} (${_esc(c.level || 'General')})</option>`).join('');
+
+    const html = `
+      <div class="w-full max-w-2xl overflow-hidden rounded-3xl bg-white shadow-2xl">
+        <div class="bg-gradient-to-r from-[#0B63C7] to-[#0850A0] p-6 text-white flex justify-between items-center">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 bg-white/20 rounded-2xl flex items-center justify-center"><i data-lucide="settings-2" class="w-5 h-5 text-white"></i></div>
+            <div>
+              <h3 class="text-xl font-black">Sistema de Estudio Único por Aula</h3>
+              <p class="text-xs text-blue-100 font-bold">Configura las Áreas y la cantidad de Actividades de cada aula</p>
+            </div>
+          </div>
+          <button onclick="App.ui.closeModal()" class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white font-bold">✕</button>
+        </div>
+        <div class="p-6 space-y-6 max-h-[75vh] overflow-y-auto">
+          <div>
+            <label class="${lc}">Selecciona el Aula</label>
+            <select id="cfgRoomSelect" class="${ic}">
+              <option value="">-- Elige un Aula --</option>
+              ${roomOpts}
+            </select>
+          </div>
+
+          <div id="cfgRoomBody" class="space-y-5 hidden">
+            <div class="p-4 bg-blue-50/60 rounded-2xl border border-blue-100 flex items-center justify-between">
+              <div>
+                <span class="text-xs font-black text-[#0B63C7] uppercase tracking-wider">Actividades por Módulo / Área</span>
+                <p class="text-[11px] text-slate-500 font-medium">Define cuántas columnas de evaluación (A1, A2, A3...) tendrá este aula.</p>
+              </div>
+              <input id="cfgNumActivities" type="number" min="1" max="10" value="5" class="w-20 px-3 py-2 border-2 border-blue-200 rounded-xl text-center font-black text-sm text-[#0850A0] bg-white outline-none focus:ring-2 focus:ring-blue-400">
+            </div>
+
+            <div>
+              <div class="flex items-center justify-between mb-3">
+                <span class="text-xs font-black text-slate-700 uppercase tracking-wider">Áreas Pedagógicas del Aula</span>
+                <button type="button" onclick="App.grades.addConfigAreaRow()" class="px-3 py-1.5 bg-[#0B63C7] text-white rounded-xl text-xs font-black uppercase shadow-sm flex items-center gap-1.5 hover:bg-[#0850A0] transition-all">
+                  <i data-lucide="plus" class="w-3.5 h-3.5"></i> Agregar Área
+                </button>
+              </div>
+              <div id="cfgAreasList" class="space-y-3">
+                <!-- Se puebla dinámicamente -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="cfgRoomFooter" class="p-6 bg-slate-50 border-t border-slate-100 flex justify-end gap-3 hidden">
+          <button onclick="App.ui.closeModal()" class="px-6 py-2.5 text-xs font-black uppercase text-slate-400 hover:text-slate-600">Cancelar</button>
+          <button id="btnSaveRoomConfig" onclick="App.grades.saveClassroomConfig()" class="px-8 py-2.5 bg-[#0B63C7] text-white rounded-xl font-black text-xs uppercase shadow-lg shadow-blue-200 hover:bg-[#0850A0] transition-all flex items-center gap-2">
+            <i data-lucide="save" class="w-4 h-4"></i> Guardar Sistema de Estudio
+          </button>
+        </div>
+      </div>`;
+
+    window.openGlobalModal(html);
+    if (window.lucide) lucide.createIcons();
+
+    const sel = document.getElementById('cfgRoomSelect');
+    if (sel) {
+      sel.addEventListener('change', (e) => {
+        const roomId = e.target.value;
+        this.loadClassroomConfigInModal(roomId);
+      });
+    }
+  },
+
+  async loadClassroomConfigInModal(roomId) {
+    const body = document.getElementById('cfgRoomBody');
+    const footer = document.getElementById('cfgRoomFooter');
+    if (!roomId) {
+      body?.classList.add('hidden');
+      footer?.classList.add('hidden');
+      return;
+    }
+    body?.classList.remove('hidden');
+    footer?.classList.remove('hidden');
+
+    const scaleCfg = this._evaluation?.scale_config || {};
+    const roomCfgs = scaleCfg.classroom_configs || {};
+    const roomCfg = roomCfgs[roomId] || null;
+
+    const numActInput = document.getElementById('cfgNumActivities');
+    if (numActInput) {
+      numActInput.value = roomCfg?.num_activities || this._evaluation?.default_modules || 5;
+    }
+
+    const list = document.getElementById('cfgAreasList');
+    if (!list) return;
+
+    let roomAreas = roomCfg?.areas || [];
+    if (!roomAreas.length) {
+      roomAreas = this._areas.map(a => ({
+        name: a.name,
+        color: a.color || '#0B63C7',
+        icon: a.icon || 'book-open'
+      }));
+    }
+    if (!roomAreas.length) {
+      roomAreas = [
+        { name: 'Desarrollo Socioemocional', color: '#F43F5E', icon: 'heart' },
+        { name: 'Lenguaje y Comunicación', color: '#0EA5E9', icon: 'message-circle' },
+        { name: 'Pensamiento Matemático', color: '#6366F1', icon: 'calculator' },
+        { name: 'Psicomotricidad', color: '#F97316', icon: 'activity' },
+        { name: 'Arte y Creatividad', color: '#A855F7', icon: 'palette' }
+      ];
+    }
+
+    list.innerHTML = '';
+    roomAreas.forEach(a => this.addConfigAreaRow(a.name, a.color, a.icon));
+  },
+
+  addConfigAreaRow(name = '', color = '#0B63C7', icon = 'book-open') {
+    const list = document.getElementById('cfgAreasList');
+    if (!list) return;
+    const row = document.createElement('div');
+    row.className = 'cfg-area-row p-3 bg-slate-50 rounded-2xl border border-slate-200 flex items-center gap-3 animate-scaleIn';
+    row.innerHTML = `
+      <input type="color" class="cfg-area-color w-10 h-10 rounded-xl border-none cursor-pointer shrink-0" value="${_esc(color)}">
+      <input type="text" class="cfg-area-name flex-1 px-4 py-2 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 bg-white outline-none focus:border-blue-400" placeholder="Nombre del Área..." value="${_esc(name)}">
+      <button type="button" onclick="this.closest('.cfg-area-row').remove()" class="w-9 h-9 bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white rounded-xl transition-all flex items-center justify-center shrink-0">
+        <i data-lucide="trash-2" class="w-4 h-4"></i>
+      </button>
+    `;
+    list.appendChild(row);
+    if (window.lucide) lucide.createIcons();
+  },
+
+  async saveClassroomConfig() {
+    const roomId = document.getElementById('cfgRoomSelect')?.value;
+    if (!roomId) return Helpers.toast('Selecciona un aula', 'warning');
+
+    const numActivities = parseInt(document.getElementById('cfgNumActivities')?.value || '5', 10);
+    const areaRows = document.querySelectorAll('.cfg-area-row');
+    const areas = [];
+    areaRows.forEach(r => {
+      const name = r.querySelector('.cfg-area-name')?.value?.trim();
+      const color = r.querySelector('.cfg-area-color')?.value;
+      if (name) areas.push({ name, color: color || '#0B63C7', icon: 'book-open' });
+    });
+
+    if (!areas.length) return Helpers.toast('Agrega al menos un área pedagógica para el aula', 'warning');
+
+    const btn = document.getElementById('btnSaveRoomConfig');
+    if (btn) { btn.disabled = true; btn.innerHTML = 'Guardando...'; }
+
+    try {
+      if (!this._evaluation?.id) throw new Error('No hay una evaluación activa.');
+
+      const currentScaleCfg = this._evaluation.scale_config || {};
+      const classroomConfigs = currentScaleCfg.classroom_configs || {};
+
+      classroomConfigs[roomId] = {
+        num_activities: numActivities,
+        areas: areas,
+        updated_at: new Date().toISOString()
+      };
+
+      const updatedScaleCfg = { ...currentScaleCfg, classroom_configs: classroomConfigs };
+
+      const { error } = await supabase
+        .from('eval_evaluations')
+        .update({ scale_config: updatedScaleCfg })
+        .eq('id', this._evaluation.id);
+
+      if (error) throw error;
+
+      this._evaluation.scale_config = updatedScaleCfg;
+      Helpers.toast('Sistema de estudio para el aula guardado correctamente ✅', 'success');
+      App.ui.closeModal();
+      await this._loadEvalData();
+      this._render();
+    } catch (e) {
+      console.error('[Grades] saveClassroomConfig', e);
+      Helpers.toast('Error al guardar configuración: ' + (e.message || e), 'error');
+    } finally {
+      if (btn) { btn.disabled = false; btn.innerHTML = '<i data-lucide="save" class="w-4 h-4"></i> Guardar Sistema de Estudio'; if (window.lucide) lucide.createIcons(); }
+    }
   }
 };
