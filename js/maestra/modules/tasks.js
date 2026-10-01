@@ -130,24 +130,24 @@ export async function initTasks() {
       const dueDate = new Date(t.due_date).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
       const pendingCount = pendingMap[t.id] || 0;
       const hasPending = pendingCount > 0;
+      const statusClass = hasPending ? ' role-accent-sub-amber' : '';
       return `
-      <!-- Tarjeta con franja ${hasPending ? 'naranja' : 'verde'} -->
-      <div class="relative bg-white p-6 rounded-[2rem] shadow-[0_8px_30px_rgba(0,0,0,0.04)] overflow-hidden transition-all hover:shadow-xl group">
-        <div class="absolute top-0 left-0 bottom-0 w-1 bg-[${hasPending ? '#FF8A00' : '#28B54D'}]"></div>
-        
+      <!-- Tarjeta: franja verde maestra + acento ámbar si tiene entregas pendientes -->
+      <div class="task-card role-accent role-green p-6 rounded-[2rem] overflow-hidden transition-all hover:shadow-xl group${statusClass}">
         <div class="ml-2">
           <div class="flex justify-between items-start mb-4">
             <div class="flex-1">
               <div class="flex items-center gap-3 mb-2">
                 <h4 class="font-black text-slate-800 text-base">${safeEscapeHTML(t.title)}</h4>
+                <span class="role-pill role-green">Docente</span>
               </div>
               <p class="text-xs font-bold text-slate-400 flex items-center gap-1.5"><i data-lucide="calendar" class="w-3 h-3"></i> Entrega: ${dueDate}</p>
             </div>
             <div class="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-              <button onclick="App.openEditTaskModal('${t.id}')" class="p-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors" title="Editar Tarea">
+              <button onclick="App.openEditTaskModal('${t.id}')" class="admin-btn role-green" style="padding:.4rem .6rem;font-size:10px;letter-spacing:0" title="Editar Tarea">
                 <i data-lucide="edit" class="w-4 h-4"></i>
               </button>
-              <button onclick="App.deleteTask('${t.id}')" class="p-2 bg-slate-100 text-slate-500 rounded-lg hover:bg-red-100 hover:text-red-600 transition-colors" title="Eliminar Tarea">
+              <button onclick="App.deleteTask('${t.id}')" class="admin-btn role-ghost" style="padding:.4rem .6rem;font-size:10px;letter-spacing:0" title="Eliminar Tarea">
                 <i data-lucide="trash-2" class="w-4 h-4"></i>
               </button>
             </div>
@@ -157,7 +157,7 @@ export async function initTasks() {
             <div>
               ${t.file_url ? '<span class="px-2 py-1 bg-green-50 text-green-600 text-[10px] font-bold rounded-full flex items-center gap-1"><i data-lucide="paperclip" class="w-3 h-3"></i> Adjunto</span>' : ''}
             </div>
-            <button onclick="App.viewTaskSubmissions('${t.id}')" class="relative px-4 py-2 bg-[#28B54D] text-white rounded-xl text-[10px] font-black uppercase hover:bg-[#239943] transition-all shadow-sm flex items-center gap-2">
+            <button onclick="App.viewTaskSubmissions('${t.id}')" class="relative admin-btn role-green" style="padding:.55rem 1rem;text-transform:uppercase;font-size:10px">
               Ver Entregas
               ${pendingCount > 0 ? `<span class="absolute -top-2 -right-2 w-5 h-5 bg-[#FF8A00] text-white text-[9px] font-black rounded-full flex items-center justify-center shadow-sm animate-pulse">${pendingCount}</span>` : ''}
             </button>

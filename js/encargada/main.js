@@ -6,6 +6,7 @@ import { UIPremium } from '../shared/ui-premium.js';
 import { BadgeSystem } from '../shared/badges.js';
 import { RealtimeManager } from '../shared/realtime-manager.js';
 import { QueryCache } from '../shared/query-cache.js';
+import { SectionCache } from '../shared/section-cache.js';
 import { TeacherEfficiencyModule } from './modules/teacher_efficiency.module.js';
 import { openGlobalModal, closeGlobalModal } from '../shared/modal.js';
 import { EncargadaChatApp } from './chat_app.js';
@@ -53,7 +54,13 @@ window.App.ui = {
 export function goToSection(sectionId) {
   if (!sectionId) return;
   Helpers.vibrate?.('light');
-  RealtimeManager.unsubscribeAll(['notifications']);
+  // Conserva los globales con sus nombres REALES. Antes ponía 'notifications',
+  // que no coincide con ningún canal, así que destruía el de badges en cada
+  // navegación sin resuscripción.
+  const _rtUid = AppState.get('user')?.id;
+  RealtimeManager.unsubscribeAll(
+    _rtUid ? ['badges_' + _rtUid, 'news-center_' + _rtUid, 'notif_' + _rtUid] : []
+  );
 
   // Dismiss any open modal overlay
   closeGlobalModal();
@@ -66,41 +73,45 @@ export function goToSection(sectionId) {
     target.classList.add('active');
     AppState.set('currentSection', sectionId);
     UIPremium.applySectionTransition(sectionId);
+
+    // Caché por sección: evita re-preguntar lo mismo en cada reentrada. Un canal
+    // de realtime invalida la sección correspondiente cuando hay cambios
+    // (ver loadMuroEscolar más abajo), así que esto no muestra datos rancios.
+    const fresh = (id) => SectionCache.shouldLoad(id, { force: sectionId === window.__forceReload });
+    const done = (id) => SectionCache.markLoaded(id);
+    window.__forceReload = null;
+
     switch (sectionId) {
       case 'dashboard':
-        loadDashboard();
+        if (fresh('dashboard')) { loadDashboard(); done('dashboard'); }
         break;
       case 'rendimiento-eficiencia':
-        loadEfficiency();
-        loadRanking();
+        if (fresh('rendimiento-eficiencia')) { loadEfficiency(); loadRanking(); done('rendimiento-eficiencia'); }
         break;
       case 'permisos':
-        loadPermits();
+        if (fresh('permisos')) { loadPermits(); done('permisos'); }
         break;
       case 'chat':
-        loadChat();
+        if (fresh('chat')) { loadChat(); done('chat'); }
         break;
       case 'reportes-comparativas-alertas':
-        loadReportesTareas();
-        loadComparativoAulas();
-        loadAlerts();
+        if (fresh('reportes-comparativas-alertas')) { loadReportesTareas(); loadComparativoAulas(); loadAlerts(); done('reportes-comparativas-alertas'); }
         break;
       case 'configuracion':
       case 'perfil':
-        loadPerfil();
+        if (fresh('perfil')) { loadPerfil(); done('perfil'); }
         break;
       case 'muro':
-        loadMuroEscolar();
+        if (fresh('muro')) { loadMuroEscolar(); done('muro'); }
         break;
       case 'padres-opinion':
-        loadPadresOpinion();
+        if (fresh('padres-opinion')) { loadPadresOpinion(); done('padres-opinion'); }
         break;
       case 'accesos-qr':
-        loadAccesosQR();
+        if (fresh('accesos-qr')) { loadAccesosQR(); done('accesos-qr'); }
         break;
       case 'control-rutinas-cumplimiento':
-        loadControlRutinas();
-        loadReportesCumplimiento();
+        if (fresh('control-rutinas-cumplimiento')) { loadControlRutinas(); loadReportesCumplimiento(); done('control-rutinas-cumplimiento'); }
         break;
 
     }
@@ -1862,8 +1873,11 @@ function initMuroRealtime() {
   muroChannel = supabase
     .channel(`encargada_muro_${Date.now()}`)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, (payload) => {
-      if (AppState.get('currentSection') !== 'muro') return;
       if (payload.new?.teacher_id === AppState.get('user')?.id) return;
+      // Invalidar SIEMPRE, tenga o no el muro abierto: si solo invalidáramos
+      // estando en la sección, el caché serviría posts viejos al volver.
+      SectionCache.invalidate('muro');
+      if (AppState.get('currentSection') !== 'muro') return;
       loadMuroEscolar();
     })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'likes' }, (payload) => {
@@ -2127,6 +2141,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // ?? Campanita de novedades (centro de notificaciones)
     NewsCenter.init(auth.user.id);
+
+    // 🔴 Mensajes no leídos: fuente única para la campana y el badge del chat.
+    // Este panel no tenía ningún cargador de no leídos.
+    import('../shared/unread-messages.js')
+      .then(({ UnreadMessages }) => UnreadMessages.init(auth.user.id, 'encargada'))
+      .catch(err => console.warn('[encargada] unread-messages no cargó:', err));
 
     document.getElementById('btnLogout')?.addEventListener('click', async () => {
       RealtimeManager.unsubscribeAll();

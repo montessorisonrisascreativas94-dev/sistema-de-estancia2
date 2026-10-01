@@ -511,15 +511,37 @@ export async function notifyReceiptUploaded(studentId, amount, month) {
 
 // ── OneSignal ─────────────────────────────────────────────────────────────────
 export function initOneSignal(currentUser = null) {
-  // Ejecutar completamente en background — NUNCA bloquear el hilo principal
   _initOneSignalAsync(currentUser).catch(() => {});
+}
+
+// Reintento exponencial seguro para OneSignal.login().
+// El SDK v16 emite "Log.ts:33 SetAlias failed: <uuid>" cuando intenta llamar
+// /players antes de que el usuario se haya suscrito al push realmente.
+// Para evitar esos 404, esperamos hasta que exista PushSubscription.id
+// (o un timeout máximo razonable), y luego reintentamos login con backoff.
+function _osLoginWithBackoff(OneSignal, userId, maxWaitMs = 60_000) {
+  const START = Date.now();
+  const _try = (delayMs) => {
+    try {
+      const subId = OneSignal.User?.PushSubscription?.id;
+      if (subId) {
+        const p = OneSignal.login(String(userId));
+        if (p && typeof p.catch === 'function') p.catch(() => {});
+        return;
+      }
+    } catch (_) {}
+    if (Date.now() - START >= maxWaitMs) return;
+    // También nos apoyamos en el evento change de la suscripción (si existe API)
+    setTimeout(() => _try(Math.min(5_000, delayMs * 2)), delayMs);
+  };
+  _try(1_500);
 }
 
 async function _initOneSignalAsync(currentUser) {
   try {
     const host = window.location.hostname;
     const isProd = host === 'montessorisonrisascreativas.com' || host === 'www.montessorisonrisascreativas.com' || host.endsWith('.montessorisonrisascreativas.com');
-    if (!isProd) return; // No inicializar en localhost
+    if (!isProd) return;
 
     if (window.OneSignalInitialized) return;
     window.OneSignalInitialized = true;
@@ -531,13 +553,12 @@ async function _initOneSignalAsync(currentUser) {
     }
     if (!user) return;
 
-    // Verificar IndexedDB con timeout corto
     const idbOk = await Promise.race([
       new Promise(resolve => {
         try {
           if (!window.indexedDB) return resolve(false);
           const req = indexedDB.open('_karpus_idb_test', 1);
-          req.onsuccess = () => { req.result.close(); resolve(true); };
+          req.onsuccess = () => { try { req.result.close(); } catch(_){} resolve(true); };
           req.onerror   = () => resolve(false);
         } catch (_) { resolve(false); }
       }),
@@ -567,11 +588,26 @@ async function _initOneSignalAsync(currentUser) {
           welcomeNotification: { disable: false }
         });
 
-        // Vincular usuario — con validación y catch
+        // IMPORTANTE: NO llamamos OneSignal.login() directamente aquí.
+        // Hasta que la suscripción no exista, login emite un HTTP 404 ("SetAlias failed")
+        // porque el player aún no fue creado en los servidores de OneSignal.
         if (user?.id) {
-          OneSignal.login(String(user.id)).catch(e => {
-            console.warn('[OneSignal] Login deferred error:', e);
-          });
+          // 1) Escuchar cambio de suscripción (primer usuario que acepta push)
+          try {
+            if (typeof OneSignal.User?.PushSubscription?.addEventListener === 'function') {
+              OneSignal.User.PushSubscription.addEventListener('change', () => {
+                try {
+                  if (OneSignal.User.PushSubscription.id) {
+                    const p = OneSignal.login(String(user.id));
+                    if (p && typeof p.catch === 'function') p.catch(() => {});
+                  }
+                } catch (_) {}
+              });
+            }
+          } catch (_) {}
+          // 2) Login lazy con backoff: cubre usuarios que YA tienen suscripción activa
+          //    de sesiones anteriores (el evento change no se dispara en esta carga).
+          _osLoginWithBackoff(OneSignal, user.id);
         }
 
         // Guardar subscription ID cuando esté disponible
@@ -579,10 +615,24 @@ async function _initOneSignalAsync(currentUser) {
           try {
             const subId = OneSignal.User?.PushSubscription?.id;
             if (subId) {
-              await supabase.from('profiles').update({ onesignal_player_id: subId }).eq('id', user.id);
+              await supabase.from('profiles').update({ onesignal_player_id: subId }).eq('id', user.id).catch(() => {});
             }
           } catch (_) {}
-        }, 3000);
+        }, 4_000);
+
+        // Y también cuando cambie la suscripción (refresh token / re-suscripción)
+        try {
+          if (typeof OneSignal.User?.PushSubscription?.addEventListener === 'function') {
+            OneSignal.User.PushSubscription.addEventListener('change', async () => {
+              try {
+                const subId = OneSignal.User?.PushSubscription?.id;
+                if (subId) {
+                  await supabase.from('profiles').update({ onesignal_player_id: subId }).eq('id', user.id).catch(() => {});
+                }
+              } catch (_) {}
+            });
+          }
+        } catch (_) {}
 
       } catch (_) {}
     });

@@ -105,12 +105,29 @@ export const ChatModule = {
       try {
         const rpcRes = await supabase.rpc('get_unread_counts');
         if (!rpcRes.error && rpcRes.data) {
+          // El RPC no tiene una forma estable: sql/04_funciones.sql lo declaraba
+          // como jsonb (objeto) y este código lo trataba como array, así que
+          // `.forEach` reventaba con TypeError y el catch lo degradaba siempre
+          // al fallback de la tabla. sql/14 lo pasa a RETURNS TABLE, pero
+          // normalizamos las tres formas para no romper contra el SQL viejo.
           const counts = {};
           let total = 0;
-          (rpcRes.data || []).forEach(r => {
-            counts[r.user_id] = Number(r.unread || 0);
-            total += Number(r.unread || 0);
-          });
+          const add = (id, n) => {
+            if (!id || !(n > 0)) return;
+            counts[id] = (counts[id] || 0) + n;
+            total += n;
+          };
+
+          if (Array.isArray(rpcRes.data)) {
+            rpcRes.data.forEach(r => add(r.user_id || r.sender_id, Number(r.unread ?? r.count ?? 0)));
+          } else {
+            // Objeto jsonb. La clave 'total' es un agregado, no un remitente:
+            // sumarla como si fuera un usuario duplicaba el total.
+            for (const [key, val] of Object.entries(rpcRes.data)) {
+              if (key === 'total') continue;
+              add(key, Number(val));
+            }
+          }
           return { total, counts };
         }
       } catch (_) { /* RPC no existe aún → fallback */ }
@@ -119,7 +136,8 @@ export const ChatModule = {
         .from('messages')
         .select('sender_id')
         .eq('receiver_id', user.id)
-        .eq('is_read', false);
+        .eq('is_read', false)
+        .is('deleted_at', null);
 
       if (error) return { total: 0, counts: {} };
 
@@ -452,6 +470,9 @@ export const ChatModule = {
         p_conversation_id: conversationId
       });
     } catch (_) {}
+    // El UPDATE de is_read no dispara el INSERT que escucha el canal de la
+    // campana, así que hay que reconciliar a mano o el badge se queda pegado.
+    try { window.UnreadMessages?.onConversationRead(); } catch (_) {}
   },
 
   /* ───────────────  RESPONDER / REACCIONES / EDITAR / ELIMINAR  ───────────────── */

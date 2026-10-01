@@ -76,7 +76,19 @@ export async function loadInscripciones() {
   try {
     const { data, error } = await supabase
       .from('student_preregistrations')
-      .select('id, student_name, section, schedule, p1_name, p1_phone, p1_email, status, created_at')
+      .select(`
+        id,
+        student_name,
+        student_last_name,
+        level_requested,
+        school_year_requested,
+        schedule,
+        p1_name,
+        p1_phone,
+        p1_email,
+        status,
+        created_at
+      `)
       .order('created_at', { ascending: false });
 
     if (error) throw error;
@@ -157,13 +169,20 @@ function _renderRow(r) {
        </button>`
     : `<span class="text-[10px] text-slate-400 font-bold">—</span>`;
 
+  const fullName = [r.student_name, r.student_last_name].filter(Boolean).join(' ') || '—';
+  const levelParts = [r.level_requested, r.school_year_requested].filter(Boolean);
+  const nivelTag = levelParts.length ? `<span class="px-2 py-0.5 bg-[#E8F2FF] text-[#0B63C7] text-[10px] font-black rounded-full block mb-1">${esc(levelParts.join(' · '))}</span>` : '';
+  const scheduleTag = r.schedule
+    ? `<span class="px-2 py-0.5 bg-slate-100 text-slate-700 text-[10px] font-black rounded-full block">${esc(r.schedule)}</span>`
+    : '';
+
   return `
     <tr data-status="${esc(r.status)}" class="hover:bg-slate-50 transition-colors">
       <td class="px-4 py-3">
-        <div class="font-bold text-slate-800">${esc(r.student_name)}</div>
+        <div class="font-bold text-slate-800">${esc(fullName)}</div>
       </td>
       <td class="px-4 py-3 hidden md:table-cell">
-        <span class="px-2 py-0.5 bg-[#E8F2FF] text-[#0B63C7] text-[10px] font-black rounded-full">${esc(r.section || '—')}</span>
+        ${nivelTag}${scheduleTag}${(!nivelTag && !scheduleTag) ? '<span class="text-slate-400 text-[10px] font-bold">—</span>' : ''}
       </td>
       <td class="px-4 py-3 hidden md:table-cell">
         <div class="font-bold text-slate-700 text-xs">${esc(r.p1_name || '—')}</div>

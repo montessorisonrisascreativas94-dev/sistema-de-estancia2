@@ -92,17 +92,33 @@ export const BadgeSystem = {
 
       // Mensajes no leidos
       try {
-        const { data: unreadData } = await supabase.rpc('get_unread_counts');
-        if (unreadData) {
-          const total = Object.values(unreadData).reduce(function(a, b) { return a + Number(b); }, 0);
-          if (total > 0) {
-            // Panel padre
-            this._renderBadge('notifications', total);
-            this._renderCardBadge('notifications', total);
-            // Panel staff
-            this._renderBadge('chat', total);
-            this._renderBadge('comunicacion', total);
-            this._renderCardBadge('comunicacion', total);
+        // UnreadMessages es el dueño del badge de chat y de la campana. Este
+        // bloque solo queda como red de seguridad si el módulo no cargó.
+        // `get_unread_counts` (jsonb) metía una clave 'total' DENTRO del objeto
+        // de conteos, y Object.values().reduce(+) la contaba dos veces.
+        if (window.UnreadMessages) {
+          await window.UnreadMessages.refresh();
+        } else {
+          const { data: unreadData } = await supabase.rpc('get_unread_counts');
+          if (unreadData) {
+            let total = 0;
+            if (Array.isArray(unreadData)) {
+              unreadData.forEach(r => { total += Number(r.unread ?? r.count ?? 0); });
+            } else {
+              for (const [k, v] of Object.entries(unreadData)) {
+                if (k === 'total') continue; // agregado, no un remitente
+                total += Number(v);
+              }
+            }
+            if (total > 0) {
+              // Panel padre
+              this._renderBadge('notifications', total);
+              this._renderCardBadge('notifications', total);
+              // Panel staff
+              this._renderBadge('chat', total);
+              this._renderBadge('comunicacion', total);
+              this._renderCardBadge('comunicacion', total);
+            }
           }
         }
       } catch (_) {}
@@ -199,25 +215,35 @@ export const BadgeSystem = {
       table: 'messages'
     }, function(payload) {
       if (payload.new && payload.new.sender_id === self._userId) return;
-      
+
       // ✅ REGLA DE NO DUPLICACIÓN: Ignorar si el chat con esta conversación ya está abierto
       const activeConvId = (window.AppState && AppState.get('activeConversationId'));
       if (activeConvId && payload.new.conversation_id === activeConvId) return;
 
-      const active = self._getActiveSection();
-      if (active === 'notifications' || active === 'chat' || active === 'comunicacion') return;
-      // Panel padre
-      const prevN = self._getBadgeCount('notifications');
-      self._renderBadge('notifications', prevN + 1);
-      self._renderCardBadge('notifications', prevN + 1);
-      // Panel staff
-      const prevC = self._getBadgeCount('chat');
-      self._renderBadge('chat', prevC + 1);
-      self._renderBadge('comunicacion', prevC + 1);
-      self._renderCardBadge('comunicacion', prevC + 1);
-      self._applyGlow('notifications', 'message');
-      self._applyGlow('comunicacion', 'message');
-      self._showMiniToast(self._toastMsg('message'));
+      // UnreadMessages es el dueño del indicador de mensajes sin leer: tiene su
+      // propio canal (no lo mata MAX_CHANNELS ni unsubscribeAll) y relee la BD
+      // en vez de hacer un +1 a ciegas que se desfasaba con el primer evento
+      // perdido. Aquí solo el brillo/toast, que este módulo sí sabe pintar.
+      if (window.UnreadMessages) {
+        window.UnreadMessages.refresh();
+        self._applyGlow('notifications', 'message');
+        self._applyGlow('comunicacion', 'message');
+        self._showMiniToast(self._toastMsg('message'));
+      } else {
+        // Sin el módulo cargado: degradar al +1 de antes.
+        const active = self._getActiveSection();
+        if (active === 'notifications' || active === 'chat' || active === 'comunicacion') return;
+        const prevN = self._getBadgeCount('notifications');
+        self._renderBadge('notifications', prevN + 1);
+        self._renderCardBadge('notifications', prevN + 1);
+        const prevC = self._getBadgeCount('chat');
+        self._renderBadge('chat', prevC + 1);
+        self._renderBadge('comunicacion', prevC + 1);
+        self._renderCardBadge('comunicacion', prevC + 1);
+        self._applyGlow('notifications', 'message');
+        self._applyGlow('comunicacion', 'message');
+        self._showMiniToast(self._toastMsg('message'));
+      }
     });
 
     // 3. Nuevos posts en el muro

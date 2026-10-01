@@ -24,6 +24,7 @@ import { WizardPayment } from './payment-wizard.js';
 import { RecentActivityModule } from './recent-activity.js';
 import { ClassroomSchedule } from './classroom-schedule.js';
 import { NewsCenter } from '../shared/news-center.js';
+import { SectionCache } from '../shared/section-cache.js';
 
 // #rating-modal se oculta con style="display:none" inline, pero se abria con
 // classList.remove('hidden') — el style inline gana y el modal nunca aparecia.
@@ -234,9 +235,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('btnLogout')?.addEventListener('click', logoutHandler);
     document.getElementById('btnLogoutDesktop')?.addEventListener('click', logoutHandler);
 
-    // Badge de mensajes no leídos
-    loadUnreadBadge();
-    initMessageBadgeRealtime();
+    // 🔴 Mensajes no leídos: fuente única para la campana y el badge de
+    // Comunicación. Reemplaza a loadUnreadBadge() + initMessageBadgeRealtime(),
+    // que pintaban sobre 'badge-muro' — un id que no existe en este panel.
+    import('../shared/unread-messages.js')
+      .then(({ UnreadMessages }) => UnreadMessages.init(auth.user.id, 'padre'))
+      .catch(err => console.warn('[padre] unread-messages no cargó:', err));
 
     // 🔴 Sistema de badges — se inicia en el .then() de refreshDashboard arriba
 
@@ -604,7 +608,16 @@ function _showOnlySection(targetId) {
 
   Helpers.vibrate?.('light');
 
-  if (window.RealtimeManager) RealtimeManager.unsubscribeAll(['notifications', 'live_status']);
+  // Conserva los globales con sus nombres REALES. Antes ponía
+  // 'notifications' y 'live_status', que no coinciden con ningún canal real
+  // ('badges_<uid>', 'notif_<uid>', 'live_status_<classroomId>'), así que el
+  // canal de badges moría en cada navegación sin resuscripción.
+  if (window.RealtimeManager) {
+    const _rtUid = AppState.get('user')?.id;
+    const _rtKeep = _rtUid ? ['badges_' + _rtUid, 'news-center_' + _rtUid, 'notif_' + _rtUid] : [];
+    if (currentStudent?.classroom_id) _rtKeep.push('live_status_' + currentStudent.classroom_id);
+    RealtimeManager.unsubscribeAll(_rtKeep);
+  }
   if (FeedModule._channel) {
     supabase.removeChannel(FeedModule._channel);
     FeedModule._channel = null;
@@ -627,10 +640,24 @@ function _showOnlySection(targetId) {
   if (cardBadge) { cardBadge.classList.add('hidden'); cardBadge.classList.remove('flex'); }
 
   const student = AppState.get('currentStudent');
+
+  // Caché por sección. Solo se salta lo que hace una consulta de datos; lo que
+  // únicamente pinta UI (QR, videollamada, perfil, chat) se sigue ejecutando
+  // siempre, porque ese DOM se pierde al cambiar de sección y hay que
+  // reconstruirlo. Los canales de realtime invalidan la sección cuando hay
+  // cambios, así que esto no deja datos rancios.
+  const need = (id, fn) => {
+    if (!SectionCache.shouldLoad(id)) return;
+    fn();
+    SectionCache.markLoaded(id);
+  };
+
   switch (targetId) {
     case 'home':
-      refreshDashboard().then(() => {
-        if (window.BadgeSystem) BadgeSystem._reapplyCardBadges();
+      need('home', () => {
+        refreshDashboard().then(() => {
+          if (window.BadgeSystem) BadgeSystem._reapplyCardBadges();
+        });
       });
       break;
     case 'payments': {
@@ -651,18 +678,20 @@ function _showOnlySection(targetId) {
       }, 300);
       break;
     }
-    case 'tasks':           TasksModule.init(student?.id); break;
-    case 'live-attendance': AttendanceModule.init(student?.id); break;
+    case 'tasks':           need('tasks', () => TasksModule.init(student?.id)); break;
+    case 'live-attendance':  need('live-attendance', () => AttendanceModule.init(student?.id)); break;
     case 'notifications':   ChatModule.init(); break;
-    case 'class':           FeedModule.init(student?.classroom_id); break;
+    case 'class':           need('class', () => FeedModule.init(student?.classroom_id)); break;
     case 'profile':         ProfileModule.init(); _initPadreQR(student); NotifyPermission.requestIfNeeded(); break;
-    case 'grades':          GradesModule.init(student?.id); break;
-    case 'reports':         ReportsModule.init(); break;
+    case 'grades':          need('grades', () => GradesModule.init(student?.id)); break;
+    case 'reports':         need('reports', () => ReportsModule.init()); break;
     case 'rutina-diaria': {
       const sid = AppState.get('currentStudent')?.id;
-      DailyReportModule.setStudent(sid);
-      DailyReportModule.load().then(() => {
-        requestAnimationFrame(() => { if (window.lucide) lucide.createIcons(); });
+      need('rutina-diaria', () => {
+        DailyReportModule.setStudent(sid);
+        DailyReportModule.load().then(() => {
+          requestAnimationFrame(() => { if (window.lucide) lucide.createIcons(); });
+        });
       });
       break;
     }
@@ -843,45 +872,10 @@ function setupGlobalListeners() {
 }
 
 // ── Badge mensajes no leídos ──────────────────────────────────────────────────
-async function loadUnreadBadge() {
-  try {
-    const user = AppState.get('user');
-    if (!user) return;
-
-    let total = 0;
-    const { data, error } = await supabase.rpc('get_unread_counts');
-    if (!error && data) {
-      total = Object.values(data).reduce((a, b) => a + Number(b), 0);
-    }
-    // Si el RPC falla, mostrar 0 silenciosamente
-
-    const badge = document.getElementById('badge-muro');
-    if (!badge) return;
-
-    if (total > 0) {
-      badge.textContent = total > 99 ? '99+' : String(total);
-      badge.classList.remove('hidden');
-      badge.classList.add('flex');
-    } else {
-      badge.classList.add('hidden');
-      badge.classList.remove('flex');
-    }
-  } catch (_) { /* silencioso */ }
-}
-
-// Actualizar badge en tiempo real cuando llega un mensaje nuevo
-function initMessageBadgeRealtime() {
-  const user = AppState.get('user');
-  if (!user || window._padreUnreadChannel) return;
-  window._padreUnreadChannel = supabase
-    .channel('padre_unread_' + user.id)
-    .on('postgres_changes', {
-      event: 'INSERT',
-      schema: 'public',
-      table: 'messages'
-    }, () => { loadUnreadBadge(); })
-    .subscribe();
-}
+// Reemplazado por shared/unread-messages.js. La versión anterior pintaba sobre
+// 'badge-muro', un id que no existe en panel_padres.html, y sumaba con
+// Object.values() sobre un jsonb que traía la clave 'total' dentro — o sea,
+// duplicaba el conteo y lo escribía en un elemento inexistente.
 
 /**
  * ✨ Abrir Carnet Digital con Brillo Máximo

@@ -23,13 +23,11 @@ import { UI } from './modules/ui.js';
 
 import { UIPremium } from '../shared/ui-premium.js';
 import { NewsCenter } from '../shared/news-center.js';
+import { SectionCache } from '../shared/section-cache.js';
 
 window.safeToast = UI.safeToast;
 window.UI = UI;
 const { safeToast, safeEscapeHTML, safeUrl, safeJS, Modal } = UI;
-
-// Cache de marcas de tiempo para evitar recargas constantes
-const _lastLoad = {};
 
 // Exponer Modal globalmente ANTES de cualquier interacción del usuario
 // Los onclick inline en HTML dinámico necesitan window.Modal disponible de inmediato
@@ -412,7 +410,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     initRealtimeUpdates(classrooms[0].id);
 
     // Cargar Badges en background
-    loadMaestraUnreadBadge(auth.user.id);
     loadPendingTasksBadge(classrooms[0].id);
 
     // 🔴 Sistema de badges por sección
@@ -420,6 +417,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // ?? Campanita de novedades (centro de notificaciones)
     NewsCenter.init(auth.user.id);
+
+    // 🔴 Mensajes no leídos: fuente única para la campana y el badge del chat.
+    // Reemplaza a loadMaestraUnreadBadge() + _incrementBadge('t-chat'), que solo
+    // hacían un +1 sobre el DOM y morían con el canal de badges.
+    import('../shared/unread-messages.js')
+      .then(({ UnreadMessages }) => UnreadMessages.init(auth.user.id, 'maestra'))
+      .catch(err => console.warn('[maestra] unread-messages no cargó:', err));
 
     // ── Sidebar Manager (mobile + desktop) ───────────────────────────────────
     import('../shared/sidebar-manager.js')
@@ -592,7 +596,14 @@ function initRealtimeUpdates(classroomId) {
       const activeConvId = AppState.get('activeConversationId');
       if (activeConvId && payload.new?.conversation_id === activeConvId) return;
 
-      _incrementBadge('t-chat');
+      // UnreadMessages relee la BD y pinta el badge de la campana y el de la
+      // sección. El _incrementBadge de aquí era un +1 a ciegas sobre el DOM que
+      // se desfasaba para siempre con el primer evento perdido.
+      if (window.UnreadMessages) {
+        window.UnreadMessages.refresh();
+      } else {
+        _incrementBadge('t-chat');
+      }
       // Badge en el contacto específico dentro del chat
       _applyContactBadge(payload.new?.sender_id);
       safeToast('💬 Nuevo mensaje', 'info');
@@ -1002,11 +1013,11 @@ function initNavigation() {
       localStorage.setItem('maestra_last_section', fullId);
     }
 
-    // Lógica de refresco inteligente (TTL: 2 minutos)
-    const now = Date.now();
-    const isFresh = _lastLoad[cleanId] && (now - _lastLoad[cleanId] < 120000);
-    if (isFresh && !options.force) return;
-    _lastLoad[cleanId] = now;
+    // Lógica de refresco inteligente (TTL). Antes vivía en un objeto local
+    // `_lastLoad`; ahora lo lleva SectionCache, el mismo que usan el resto de
+    // paneles, para que se pueda invalidar desde los handlers de realtime.
+    if (!SectionCache.shouldLoad(cleanId, { force: options.force })) return;
+    SectionCache.markLoaded(cleanId);
 
     // 🧠 SmartLoader — Show humanized loading for fresh sections
     const sectionEl = document.getElementById(fullId);
@@ -1340,29 +1351,6 @@ async function submitNewPost() {
     btn.disabled = false;
     btn.innerHTML = 'PUBLICAR';
   }
-}
-
-/**
- * Cargar insignias de mensajes no leídos para la maestra
- */
-async function loadMaestraUnreadBadge(userId) {
-  try {
-    const { count } = await supabase
-      .from('messages')
-      .select('id', { count: 'exact', head: true })
-      .eq('receiver_id', userId)
-      .eq('is_read', false);
-    
-    const badge = document.getElementById('badge-t-chat');
-    if (badge) {
-      if (count > 0) {
-        badge.textContent = count > 99 ? '99+' : count;
-        badge.classList.remove('hidden');
-      } else {
-        badge.classList.add('hidden');
-      }
-    }
-  } catch (_) {}
 }
 
 /**

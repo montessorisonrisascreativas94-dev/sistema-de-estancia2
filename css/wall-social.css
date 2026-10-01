@@ -159,3 +159,178 @@
 /* Scrollbar suave para listas de comentarios (refuerzo) */
 .kk-scroll::-webkit-scrollbar { width: 5px; }
 .kk-scroll::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 9999px; }
+
+/* ========================================================================
+   ROLE THEME — Franjas de color contextuales por panel
+   Azul:      padre / directora  →  school / administración
+   Morado:    encargada de educación
+   Verde:     maestra / asistente
+   Uso: cualquier contenedor que tenga la clase .role-accent + rol
+   ======================================================================== */
+
+:root {
+  --role-blue:   #2563EB;   /* azul principal (padre/directora) */
+  --role-blue-soft: #DBEAFE;
+  --role-purple: #8B5CF6;   /* morado (encargada educación) */
+  --role-purple-soft: #EDE9FE;
+  --role-green:  #28B54D;   /* verde maestro (maestra/asistente) */
+  --role-green-soft:  #DCFCE7;
+}
+
+.role-accent {
+  position: relative !important;
+  overflow: hidden;
+  transition: box-shadow .3s ease, transform .25s ease;
+}
+.role-accent::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; bottom: 0;
+  width: 4px;
+  background: currentColor;
+  opacity: .92;
+  z-index: 1;
+}
+.role-accent.role-blue         { color: var(--role-blue);   box-shadow: 0 12px 32px -8px rgba(37,99,235,.18); }
+.role-accent.role-purple       { color: var(--role-purple); box-shadow: 0 12px 32px -8px rgba(139,92,246,.18); }
+.role-accent.role-green        { color: var(--role-green);  box-shadow: 0 12px 32px -8px rgba(40,181,77,.18); }
+
+.role-accent.role-blue:hover   { box-shadow: 0 16px 40px -8px rgba(37,99,235,.28); transform: translateY(-1px); }
+.role-accent.role-purple:hover { box-shadow: 0 16px 40px -8px rgba(139,92,246,.28); transform: translateY(-1px); }
+.role-accent.role-green:hover  { box-shadow: 0 16px 40px -8px rgba(40,181,77,.28); transform: translateY(-1px); }
+
+.role-accent + .role-accent { margin-top: 1.25rem; }
+
+/* Franja en el texto del encabezado de post (tag color según rol) */
+.role-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  padding: 2px 10px;
+  border-radius: 9999px;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.role-pill.role-blue   { background: var(--role-blue-soft);   color: var(--role-blue); }
+.role-pill.role-purple { background: var(--role-purple-soft); color: var(--role-purple); }
+.role-pill.role-green  { background: var(--role-green-soft);  color: var(--role-green); }
+
+/* Admin contenedores — estilo limpio con animaciones (tarjetas tipo dashboard) */
+.admin-card {
+  background: #ffffff;
+  border-radius: 1.25rem;
+  border: 1px solid #F1F5F9;
+  box-shadow: 0 6px 20px -8px rgba(15,23,42,.08);
+  transition: box-shadow .3s ease, transform .25s ease, border-color .25s ease;
+  position: relative;
+  overflow: hidden;
+}
+.admin-card:hover {
+  box-shadow: 0 16px 40px -10px rgba(15,23,42,.14);
+  transform: translateY(-2px);
+  border-color: #E2E8F0;
+}
+.admin-card .admin-card-head {
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid #F1F5F9;
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  font-weight: 900;
+  color: #0F172A;
+}
+.admin-card .admin-card-body { padding: 1.25rem; }
+.admin-card .admin-ico {
+  width: 2.25rem; height: 2.25rem;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 12px;
+  color: #fff;
+  box-shadow: 0 6px 16px -4px currentColor;
+}
+
+/* Botones contextuales admin — animación interacción */
+.admin-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .45rem;
+  padding: .65rem 1rem;
+  border-radius: .9rem;
+  font-weight: 900;
+  font-size: 12px;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+  transition: all .18s ease;
+  cursor: pointer;
+  user-select: none;
+}
+.admin-btn:active { transform: scale(.96); }
+.admin-btn.role-blue   { background: var(--role-blue);   color: #fff; box-shadow: 0 8px 20px -6px rgba(37,99,235,.45); }
+.admin-btn.role-blue:hover   { background: #1D4ED8; }
+.admin-btn.role-purple { background: var(--role-purple); color: #fff; box-shadow: 0 8px 20px -6px rgba(139,92,246,.45); }
+.admin-btn.role-purple:hover { background: #7C3AED; }
+.admin-btn.role-green  { background: var(--role-green);  color: #fff; box-shadow: 0 8px 20px -6px rgba(40,181,77,.45); }
+.admin-btn.role-green:hover  { background: #239943; }
+.admin-btn.role-ghost  { background: #F8FAFC; color: #334155; border-color: #E2E8F0; }
+.admin-btn.role-ghost:hover  { background: #F1F5F9; }
+
+/* Inputs de admin — focus con color contextual de rol */
+.admin-input {
+  width: 100%;
+  padding: .7rem 1rem;
+  border-radius: 14px;
+  background: #fff;
+  border: 2px solid #E2E8F0;
+  color: #0F172A;
+  font-weight: 700;
+  outline: none;
+  transition: border-color .2s ease, box-shadow .2s ease, background .2s ease;
+}
+.admin-input:focus {
+  background: #FDFEFF;
+  border-color: #93C5FD;
+  box-shadow: 0 0 0 4px rgba(37,99,235,.10);
+}
+.admin-panel-blue   .admin-input:focus { border-color: #93C5FD; box-shadow: 0 0 0 4px rgba(37,99,235,.10); }
+.admin-panel-purple .admin-input:focus { border-color: #C4B5FD; box-shadow: 0 0 0 4px rgba(139,92,246,.10); }
+.admin-panel-green  .admin-input:focus { border-color: #86EFAC; box-shadow: 0 0 0 4px rgba(40,181,77,.10); }
+
+/* Animaciones sutiles para realtime/updates */
+@keyframes rolePulse {
+  0%,100% { filter: brightness(1); }
+  50%     { filter: brightness(1.25); }
+}
+.role-pulse { animation: rolePulse 1.2s ease; }
+
+@keyframes roleFadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.role-fade-up { animation: roleFadeUp .35s cubic-bezier(.2,.8,.2,1) both; }
+
+/* Publicaciones del muro — sobreescribe post-card con la franja de rol */
+.role-accent.post-card { border-left: none; }
+.role-accent.post-card::before { width: 5px; }
+.role-accent.post-card.role-blue   { border-top: 2px solid var(--role-blue-soft); }
+.role-accent.post-card.role-purple { border-top: 2px solid var(--role-purple-soft); }
+.role-accent.post-card.role-green  { border-top: 2px solid var(--role-green-soft); }
+
+/* Composer: "Qué quieres compartir?" — estilo temático por rol */
+.role-composer-wrapper { position: relative; border-radius: 1.75rem; overflow: hidden; background: #fff; }
+.role-composer-wrapper > .role-strip { position: absolute; left: 0; top: 0; bottom: 0; width: 5px; z-index: 2; }
+.role-composer-wrapper.role-blue   > .role-strip { background: var(--role-blue); }
+.role-composer-wrapper.role-purple > .role-strip { background: var(--role-purple); }
+.role-composer-wrapper.role-green  > .role-strip { background: var(--role-green); }
+
+/* Sub-acento: cambia el color de la franja cuando hay entregas pendientes (ámbar) */
+.role-accent.role-accent-sub-amber::before { background: #FF8A00 !important; box-shadow: inset 2px 0 0 0 rgba(255,138,0,.15); }
+.role-accent.role-accent-sub-amber { color: #FF8A00 !important; }
+
+/* Tarjetas de tareas (class task-card) — contenedor rol-temático */
+.task-card.role-accent::before { width: 5px; }
+.task-card.role-accent.role-blue   { color: var(--role-blue);   background: linear-gradient(180deg, #fff 0%, #F8FAFF 100%); }
+.task-card.role-accent.role-purple { color: var(--role-purple); background: linear-gradient(180deg, #fff 0%, #FBF9FF 100%); }
+.task-card.role-accent.role-green  { color: var(--role-green);  background: linear-gradient(180deg, #fff 0%, #F4FFF6 100%); }

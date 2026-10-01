@@ -144,6 +144,10 @@ export const WallModule = {
     this._postReactionState = {};
     this._commentsState = {};
 
+    this._roleColor = this._resolvePanelRole();
+    this._applyBodyRoleTheme();
+    this._applyComposerRoleTheme();
+
     const container = document.getElementById(containerId);
     if (!container) return;
 
@@ -154,6 +158,56 @@ export const WallModule = {
     this._startFreshnessTimer();
     this._closeOnOutside();
     this._fillComposer();
+  },
+
+  /**
+   * Resuelve el color temático del panel según el rol actual.
+   * - padre / directora / admin → azul  (#2563EB)
+   * - encargada                 → morado (#8B5CF6)
+   * - maestra / asistente       → verde  (#28B54D)
+   */
+  _resolvePanelRole() {
+    const optsColor = this._options?.roleColor;
+    if (optsColor && ['blue', 'purple', 'green'].includes(optsColor)) return optsColor;
+
+    // Fallback: nombre del archivo HTML (panel_padres.html, etc.)
+    const path = (window.location.pathname || '').toLowerCase();
+    if (/panel_padre/.test(path)) return 'blue';
+    if (/panel_maestra/.test(path)) return 'green';
+    if (/panel_encargada/.test(path)) return 'purple';
+    if (/panel_directora/.test(path)) return 'blue';
+    if (/panel_asistente/.test(path)) return 'green';
+    if (/panel_control/.test(path)) return 'blue';
+
+    // Fallback final: profile.role
+    const role = (this._appState?.get?.('profile')?.role ||
+                  this._appState?.get?.('user')?.role || '').toLowerCase();
+    if (['padre', 'directora', 'admin'].includes(role)) return 'blue';
+    if (['encargada'].includes(role)) return 'purple';
+    if (['maestra', 'asistente'].includes(role)) return 'green';
+    return 'blue';
+  },
+
+  /** Aplica clase admin-panel-{color} en <body> para inputs focus y utilidades CSS */
+  _applyBodyRoleTheme() {
+    try {
+      document.body.classList.remove('admin-panel-blue', 'admin-panel-purple', 'admin-panel-green');
+      document.body.classList.add(`admin-panel-${this._roleColor}`);
+    } catch(_){}
+  },
+
+  /** Envuelve el composer (wallComposerWrapper) con la franja de color por rol */
+  _applyComposerRoleTheme() {
+    const wrappers = document.querySelectorAll('[data-wall-composer], #wallComposerWrapper, .wall-composer');
+    wrappers.forEach(w => {
+      w.classList.remove('role-composer-wrapper', 'role-blue', 'role-purple', 'role-green');
+      w.classList.add('role-composer-wrapper', `role-${this._roleColor}`);
+      if (!w.querySelector(':scope > .role-strip')) {
+        const strip = document.createElement('div');
+        strip.className = 'role-strip';
+        w.prepend(strip);
+      }
+    });
   },
 
   // Rellena el avatar del composer "¿Qué quieres compartir?" si existe
@@ -638,8 +692,10 @@ export const WallModule = {
     const myReaction = p.my_reaction;
     const reactActive = p.total_reactions > 0;
 
+    const roleColor = this._roleColor || 'blue';
+    const rolePillText = { blue: 'Administrativo', purple: 'Educación', green: 'Docente' }[roleColor] || '';
     return `
-      <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden mb-6 ${p.is_pinned ? 'ring-2 ring-amber-200' : ''}" id="post-${p.id}" data-classroom-id="${p.classroom_id || 'null'}" data-teacher-id="${p.teacher_id || ''}">
+      <div class="post-card role-accent role-${roleColor} bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden mb-6 ${p.is_pinned ? 'ring-2 ring-amber-200' : ''} role-fade-up" id="post-${p.id}" data-classroom-id="${p.classroom_id || 'null'}" data-teacher-id="${p.teacher_id || ''}">
         ${p.is_important ? `
           <div class="wall-important-banner px-5 py-2.5 flex items-center gap-2">
             <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-600 shrink-0"></i>
@@ -665,7 +721,10 @@ export const WallModule = {
                 })}
               </div>
               <div>
-                <div class="font-bold text-slate-800 text-sm flex items-center gap-1.5">${Helpers.escapeHTML(p.teacher_name)}</div>
+                <div class="font-bold text-slate-800 text-sm flex items-center gap-1.5">
+                  ${Helpers.escapeHTML(p.teacher_name)}
+                  ${rolePillText ? `<span class="role-pill role-${roleColor}">${rolePillText}</span>` : ''}
+                </div>
                 <div class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
                   ${date} • ${Helpers.escapeHTML(p.classroom?.name || 'General')} <span id="freshness-${p.id}">${this._freshnessBadge(p.created_at)}</span>
                 </div>

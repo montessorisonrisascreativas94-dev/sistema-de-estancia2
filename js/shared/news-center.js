@@ -82,6 +82,14 @@ const STYLE = `
   box-shadow:0 0 0 2px rgba(255,255,255,.9),0 4px 10px rgba(220,38,38,.5);
 }
 #newsCenterBadge.hidden{display:none}
+/* Indicador rojo: halo + sacudida al entrar un mensaje sin leer.
+   .is-ringing lo pone UnreadMessages cuando llega un INSERT en la tabla
+   messages (los mensajes de chat no crean fila en notifications, así que sin
+   esto la campana nunca se encendía por un mensaje). */
+#newsCenterBellWrap.is-ringing .ncenter-halo{background:radial-gradient(circle,rgba(239,68,68,.6),rgba(239,68,68,0) 70%);animation:ncenter-halo-red .8s ease-out 3}
+@keyframes ncenter-halo-red{0%,100%{transform:scale(1);opacity:.7}50%{transform:scale(1.35);opacity:.15}}
+#newsCenterBellWrap.is-ringing #newsCenterBell{animation:ncenter-ring .55s ease-in-out 3, ncenter-bell-flash .8s ease-out 3}
+@keyframes ncenter-bell-flash{0%,100%{filter:none}50%{filter:drop-shadow(0 0 14px rgba(239,68,68,.9))}}
 #ncenterBackdrop{position:fixed;inset:0;background:rgba(15,23,42,.45);backdrop-filter:blur(3px);z-index:961;opacity:0;pointer-events:none;transition:opacity .25s ease;border:none;padding:0}
 #ncenterBackdrop.show{opacity:1;pointer-events:auto}
 #newsCenterModal{
@@ -268,10 +276,18 @@ function _renderList() {
   const unreadArr = _getUnread();
   const visible = _state.filter === 'unread' ? unreadArr : _state.items;
 
-  // Actualizar contadores
+  // Actualizar contadores.
+  //
+  // La campana es propiedad de UnreadMessages cuando está activo: su contador
+  // suma mensajes sin leer + notificaciones sin leer. Antes lo pintaba solo
+  // `_state.items` (las notificaciones), así que un mensaje de chat arriving por
+  // realtime nunca encendía la campana, y ambos módulos se pisaban el badge.
   const unreadCount = unreadArr.length;
-  els.badge.textContent = unreadCount > 99 ? '99+' : String(unreadCount);
-  els.badge.classList.toggle('hidden', unreadCount === 0);
+  const bellTotal = (window.UnreadMessages && window.UnreadMessages._ready)
+    ? (window.UnreadMessages.getTotal() + window.UnreadMessages.getNotificationTotal())
+    : unreadCount;
+  els.badge.textContent = bellTotal > 99 ? '99+' : String(bellTotal);
+  els.badge.classList.toggle('hidden', bellTotal === 0);
   els.emptyCount.textContent = unreadCount;
   els.markAll.classList.toggle('hidden', unreadCount === 0);
   els.chipAll.classList.toggle('active', _state.filter === 'all');
@@ -535,6 +551,8 @@ export const NewsCenter = {
       try {
         await supabase.from('notifications').update({ is_read: true }).eq('id', id);
       } catch (_) {}
+      // Reconciliar la campana con la BD (el UPDATE no emite postgres_changes).
+      try { window.UnreadMessages?.refresh(); } catch (_) {}
     }
   },
 
@@ -550,6 +568,8 @@ export const NewsCenter = {
         .eq('user_id', _state.userId)
         .in('id', ids);
     } catch (_) {}
+    // Reconciliar la campana: el UPDATE recién hecho no dispara postgres_changes.
+    try { window.UnreadMessages?.refresh(); } catch (_) {}
   },
 
   toggle() {

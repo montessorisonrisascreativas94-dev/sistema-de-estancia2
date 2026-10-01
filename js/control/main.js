@@ -244,6 +244,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 🛎️ Campanita de novedades (centro de notificaciones) — esquina superior
     if (currentUser?.id) {
       try { NewsCenter.init(currentUser.id); } catch (_) {}
+      // 🔴 Mensajes no leídos: este panel no tenía BadgeSystem.init, así que
+      // ningún indicador de mensajes sin leer se mantenía al día.
+      import('../shared/unread-messages.js')
+        .then(({ UnreadMessages }) => UnreadMessages.init(currentUser.id, 'control'))
+        .catch(err => console.warn('[control] unread-messages no cargó:', err));
     }
 
   } catch (err) {
@@ -500,9 +505,15 @@ async function renderDashboard() {
 window.App.runEmergencyCycle = async function() {
   if (!confirm('¿Ejecutar ciclo de pagos de emergencia?')) return;
   const { data, error } = await supabase.rpc('run_payment_cycle');
-  if (error) alert('Error: ' + error.message);
-  else alert('Éxito: ' + data.generated + ' cobros generados.');
-  window.location.reload();
+  if (error) {
+    alert('Error: ' + error.message);
+    return;
+  }
+  alert('Éxito: ' + data.generated + ' cobros generados.');
+  // Refrescar en el sitio. Antes hacía location.reload(), que destruía todo el
+  // estado del panel para reconstruirlo. refreshAll() es el mismo camino que
+  // usa el canal admin-realtime cuando cambian los pagos.
+  await refreshAll();
 };
 
 // -- Charts --------------------------------------------------------------------

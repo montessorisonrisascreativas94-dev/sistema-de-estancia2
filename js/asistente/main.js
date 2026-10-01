@@ -98,6 +98,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ?? Campanita de novedades (centro de notificaciones)
   NewsCenter.init(auth.user.id);
 
+  // 🔴 Mensajes no leídos: fuente única para la campana y el badge del chat.
+  // Este panel no tenía NINGÚN cargador de no leídos: 'badge-chat' solo lo
+  // escribía el +1 a ciegas del handler compartido de postgres_changes.
+  import('../shared/unread-messages.js')
+    .then(({ UnreadMessages }) => UnreadMessages.init(auth.user.id, 'asistente'))
+    .catch(err => console.warn('[asistente] unread-messages no cargó:', err));
+
   // Badge inscripciones pendientes
   const loadPreBadge = async () => {
     try {
@@ -341,7 +348,13 @@ function initNavigation() {
     Helpers.vibrate?.('light');
 
     // ✅ LIMPIEZA DE REALTIME: Eliminar canales al cambiar de sección
-    RealtimeManager.unsubscribeAll(['notifications']);
+    // Conserva los globales con sus nombres REALES. Antes ponía 'notifications',
+    // que no coincide con ningún canal ('badges_<uid>', 'notif_<uid>'), así que
+    // destruía el canal de badges en cada navegación sin resuscripción.
+    const _uid = AppState.get('user')?.id;
+    RealtimeManager.unsubscribeAll(
+      _uid ? ['badges_' + _uid, 'news-center_' + _uid, 'notif_' + _uid] : []
+    );
 
     // Desuscribir muro al salir (ahorro de recursos Realtime)
     const prevSection = AppState.get('currentSection');
@@ -703,7 +716,14 @@ async function initAssistantChat() {
 window.App.runEmergencyCycle = async function() {
   if (!confirm('¿Ejecutar ciclo de pagos de emergencia?')) return;
   const { data, error } = await supabase.rpc('run_payment_cycle');
-  if (error) alert('Error: ' + error.message);
-  else alert('Éxito: ' + data.generated + ' cobros generados.');
-  window.location.reload();
+  if (error) {
+    Helpers.toast('Error: ' + error.message, 'error');
+    return;
+  }
+  Helpers.toast('Éxito: ' + data.generated + ' cobros generados.', 'success');
+  // Refrescar en el sitio. Antes hacía location.reload(), que tiraba todo el
+  // estado del panel (canales realtime, sesión del chat, scroll) para volver a
+  // construirlo desde cero. Los módulos que tocaron `payments` ya emiten su
+  // propio postgres_changes, así que un refetch de la sección es suficiente.
+  showSection('pagos');
 };

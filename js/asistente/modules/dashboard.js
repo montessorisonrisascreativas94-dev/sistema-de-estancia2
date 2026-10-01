@@ -200,10 +200,24 @@ export const DashboardModule = {
     const countEl = document.getElementById('dashUnreadMessages');
     if (!countEl) return;
     try {
-      const { data: unreadData } = await supabase.rpc('get_unread_counts');
-      const total = Array.isArray(unreadData)
-        ? unreadData.reduce((s, r) => s + Number(r.count || 0), 0)
-        : 0;
+      let total = 0;
+      // UnreadMessages ya tiene el total reconciled contra la BD.
+      if (window.UnreadMessages) {
+        total = window.UnreadMessages.getTotal();
+      } else {
+        // El RPC se declaraba RETURNS jsonb (objeto), así que este
+        // Array.isArray() era false y el contador salía siempre en 0.
+        // Se aceptan las dos formas.
+        const { data: unreadData } = await supabase.rpc('get_unread_counts');
+        if (Array.isArray(unreadData)) {
+          unreadData.forEach(r => { total += Number(r.unread ?? r.count ?? 0); });
+        } else if (unreadData && typeof unreadData === 'object') {
+          for (const [k, v] of Object.entries(unreadData)) {
+            if (k === 'total') continue;
+            total += Number(v);
+          }
+        }
+      }
       countEl.textContent = total > 99 ? '99+' : String(total);
       const wrap = countEl.closest('.unread-wrap');
       if (wrap) wrap.classList.toggle('has-unread', total > 0);

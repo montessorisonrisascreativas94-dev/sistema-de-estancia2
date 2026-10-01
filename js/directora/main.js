@@ -100,10 +100,12 @@ export function goToSection(sectionId) {
   Helpers.vibrate?.('light');
 
   // ✅ LIMPIEZA DE REALTIME: Eliminar canales al cambiar de sección
-  // Conserva los canales globales: notificaciones y Centro de Novedades (campana)
-  const _keepChannels = ['notifications'];
+  // Conserva los canales globales. OJO: los keep-lists usan nombres que no
+  // existían ('notifications' en vez de 'badges_<uid>' / 'notif_<uid>'), así que
+  // esta llamada mataba el único canal que escuchaba INSERT en `messages` en
+  // cada cambio de sección, sin ninguna resuscripción después.
   const _uid = AppState.get('user')?.id;
-  if (_uid) _keepChannels.push('news-center_' + _uid);
+  const _keepChannels = _uid ? ['badges_' + _uid, 'news-center_' + _uid, 'notif_' + _uid] : [];
   RealtimeManager.unsubscribeAll(_keepChannels);
 
   // Desuscribir muro al salir (ahorro de recursos Realtime)
@@ -481,8 +483,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupSearch('wallSearch', 'wall');
     setupSearch('chatSearchInput', 'chat');
 
-    // 5c. Badge de mensajes no le�dos (directora)
-    loadUnreadMessageBadge(auth.user.id);
+    // 5c. 🔴 Mensajes no leídos: fuente única para la campana y el badge de
+    // Comunicación. Reemplaza a loadUnreadMessageBadge(), que pintaba sobre
+    // 'unreadMessagesBadge' y 'badge-card-comunicacion' — ninguno existe en el
+    // HTML de este panel, así que su updateBadgeUI() era un no-op silencioso.
+    import('../shared/unread-messages.js')
+      .then(({ UnreadMessages }) => UnreadMessages.init(auth.user.id, 'directora'))
+      .catch(err => console.warn('[directora] unread-messages no cargó:', err));
 
     // Badge de posts nuevos en muro
     loadNewPostsBadge();
@@ -871,50 +878,14 @@ async function _loadCycleSelectors() {
 window._loadCycleSelectors = _loadCycleSelectors;
 
 /**
- * ?? Notificaciones de Mensajes No Le�dos
+ * ?? Notificaciones de Mensajes No Leídos — reemplazado por
+ * shared/unread-messages.js.
+ *
+ * Esta versión pintaba sobre 'unreadMessagesBadge' y 'badge-card-comunicacion',
+ * y NINGUNO de los dos ids existe en panel_directora.html, así que
+ * updateBadgeUI() era un no-op silencioso. Además Object.values() sobre el jsonb
+ * de get_unread_counts duplicaba el total por la clave 'total' interna.
  */
-async function loadUnreadMessageBadge(userId) {
-  if (!userId) return;
-  try {
-    let total = 0;
-
-    // Intentar RPC primero
-    const { data, error } = await supabase.rpc('get_unread_counts');
-    if (!error && data) {
-      total = Object.values(data).reduce((a, b) => a + Number(b), 0);
-    }
-    // Si el RPC falla, simplemente mostrar 0 � no hacer fallback a tablas que pueden no existir
-
-    updateBadgeUI(total);
-  } catch (_) {
-    updateBadgeUI(0);
-  }
-}
-
-function updateBadgeUI(total) {
-  const badge = document.getElementById('unreadMessagesBadge');
-  if (badge) {
-    if (total > 0) {
-      badge.textContent = total > 99 ? '99+' : total;
-      badge.classList.remove('hidden');
-    } else {
-      badge.classList.add('hidden');
-    }
-  }
-
-  // Solo actualizar tarjeta del dashboard (no sidebar)
-  const cardBadge = document.getElementById('badge-card-comunicacion');
-  if (cardBadge) {
-    if (total > 0) {
-      cardBadge.textContent = total > 99 ? '99+' : String(total);
-      cardBadge.classList.remove('hidden');
-      cardBadge.classList.add('flex');
-    } else {
-      cardBadge.classList.add('hidden');
-      cardBadge.classList.remove('flex');
-    }
-  }
-}
 
 async function loadNewPostsBadge() {
   try {
