@@ -113,6 +113,21 @@ export const GradebookGrid = {
           { label: 'D', min: 0, max: 59, color: '#EF4444' }
         ] };
 
+    // Verificar si el aula del estudiante tiene un sistema de estudio/áreas personalizado
+    const roomCfgs = S.scaleConfig.classroom_configs || {};
+    const roomCfg = S.classroomId ? roomCfgs[S.classroomId] : null;
+    if (roomCfg && Array.isArray(roomCfg.areas) && roomCfg.areas.length) {
+      S.areas = roomCfg.areas.map((a, idx) => ({
+        id: a.id || (idx + 1000),
+        name: a.name,
+        color: a.color || '#0B63C7',
+        icon: a.icon || 'book-open',
+        weight: a.weight || 0
+      }));
+      const numAct = roomCfg.num_activities || 5;
+      S.activityLabels = Array.from({ length: numAct }, (_, i) => ({ name: `Actividad ${i + 1}`, max_value: 100 }));
+    }
+
     const { data: modules } = await supabase.from('eval_modules')
       .select('*').eq('period_id', S.period.id).is('deleted_at', null).order('sort_order').order('created_at');
     S.modules = modules || [];
