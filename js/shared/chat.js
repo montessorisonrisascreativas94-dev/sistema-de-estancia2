@@ -627,24 +627,29 @@ export const ChatModule = {
       } catch (_) { /* sin datos */ }
     }
 
-    // Enriquecer y ordenar
+    // Enriquecer y ordenar (Sistema de Garantía de Respuesta: Zero Unanswered Messages)
     const enriched = contactos.map(c => {
       const last = lastByOther[c.id];
+      const isMine = last ? last.sender_id === user.id : false;
+      // Determinar si la conversación está pendiente de respuesta
+      const waitingReply = last ? !isMine : false;
+
       return {
         ...c,
         unread: Number(unreadMap[c.id] || 0),
         lastMessage: last?.content || '',
         lastMessageTime: last?.created_at || null,
-        lastMessageIsMine: last ? last.sender_id === user.id : false,
+        lastMessageIsMine: isMine,
         lastMessageIsRead: last ? !!last.is_read : null,
+        waitingReply, // true si el último mensaje fue del otro usuario y requiere respuesta
       };
     });
 
-    // Orden: primero los que tienen mensaje más reciente, luego los no leídos
+    // Orden: priorizar conversaciones pendientes de respuesta (SLA cero mensajes sin contestar), luego fecha
     enriched.sort((a, b) => {
+      if (a.waitingReply !== b.waitingReply) return b.waitingReply ? 1 : -1;
       const ta = a.lastMessageTime ? new Date(a.lastMessageTime).getTime() : -1;
       const tb = b.lastMessageTime ? new Date(b.lastMessageTime).getTime() : -1;
-      // Sin mensaje: ponerlos después pero con no leídos arriba
       if (ta === -1 && tb === -1) return (b.unread - a.unread);
       if (ta === -1) return 1;
       if (tb === -1) return -1;
