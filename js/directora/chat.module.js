@@ -315,12 +315,17 @@ export const ChatModule = {
 
       const time = c.lastMessageTime ? fmtLastMsgTime(c.lastMessageTime) : '';
 
+      // 🚨 SLA (mejras.md §3): consulta del padre sin responder.
+      const slaMark = c.waitingReply
+        ? ' <span class="m-sla-flag-staff" title="Pendiente de respuesta al padre">🚨</span>'
+        : '';
+
       const subtitle = c.parentName
-        ? `<span class="m-conv-item__subtitle">${escapeHtml(c.parentName)}${unreadMark}</span>`
-        : `<span class="m-conv-item__subtitle">${c.roleIcon} ${escapeHtml(c.roleLabel || 'Contacto')}${unreadMark}</span>`;
+        ? `<span class="m-conv-item__subtitle">${escapeHtml(c.parentName)}${unreadMark}${slaMark}</span>`
+        : `<span class="m-conv-item__subtitle">${c.roleIcon} ${escapeHtml(c.roleLabel || 'Contacto')}${unreadMark}${slaMark}</span>`;
 
       return `
-        <div class="m-conv-item ${isActive ? 'is-active' : ''} ${isNew ? 'is-new' : ''}"
+        <div class="m-conv-item ${isActive ? 'is-active' : ''} ${isNew ? 'is-new' : ''} ${c.waitingReply ? 'is-waiting' : ''}"
              data-contact-id="${c.id}" tabindex="0" role="button"
              aria-label="Abrir chat con ${escapeHtml(c.name)}">
           <div class="m-conv-item__avatar">${avatarHTML}${dot}</div>

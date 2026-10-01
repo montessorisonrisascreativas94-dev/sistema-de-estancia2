@@ -147,9 +147,19 @@ export const ChatModule = {
       if (c.lastMessageIsMine) lastPreview = `<span class="checks text-slate-400">${checks}</span>` + lastPreview;
       if (!c.lastMessage) lastPreview = '<span class="italic opacity-70">Comienza la conversación</span>';
 
+      // 📤 SLA de respuesta (mejras.md §3): el padre ve el estado de su
+      // mensaje hasta que el centro conteste.
+      let slaBadge = '';
+      if (c.waitingReply) {
+        lastPreview = '<span class="m-sla-pending">📤 Enviado — En revisión por el centro</span>';
+        slaBadge = '<span class="m-sla-flag" title="Pendiente de respuesta del centro">⏳</span>';
+      } else if (c.replied) {
+        slaBadge = '<span class="m-sla-done" title="Contestado por el centro">✅</span>';
+      }
+
       return `
       <div data-contact-id="${c.id}"
-           class="m-conv-item ${isActive ? 'is-active' : ''} ${isNew ? 'is-new' : ''}">
+           class="m-conv-item ${isActive ? 'is-active' : ''} ${isNew ? 'is-new' : ''} ${c.waitingReply ? 'is-waiting' : ''}">
         <div class="m-conv-item__avatar bg-gradient-to-br from-blue-400 to-blue-600">
           ${c.avatar_url
             ? `<img src="${Security.safeUrl(c.avatar_url)}" alt="">`
@@ -158,6 +168,7 @@ export const ChatModule = {
         </div>
 
         ${isNew && !isActive ? `<div class="m-conv-item__unread">${c.unread > 9 ? '9+' : c.unread}</div>` : ''}
+        ${slaBadge}
 
         <div class="m-conv-item__body">
           <div class="m-conv-item__top">

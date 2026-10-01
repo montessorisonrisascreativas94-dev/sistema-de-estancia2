@@ -236,6 +236,34 @@
 .m-conv-item.is-new .m-conv-item__last { color: #334155; font-weight: 700; }
 .m-conv-item__last .checks { font-size: .7rem; }
 
+/* ── SLA de respuesta a padres (mejras.md §3) ────────────────── */
+.m-conv-item.is-waiting { box-shadow: inset 3px 0 0 #f59e0b; }
+.m-conv-item__last .m-sla-pending {
+  color: #b45309;
+  font-weight: 800;
+  font-size: .68rem;
+  letter-spacing: .01em;
+}
+.m-sla-flag {
+  position: absolute;
+  top: .5rem;
+  right: .5rem;
+  font-size: .8rem;
+  line-height: 1;
+  pointer-events: none;
+}
+.m-sla-done {
+  position: absolute;
+  top: .5rem;
+  right: .5rem;
+  font-size: .72rem;
+  line-height: 1;
+  opacity: .65;
+  pointer-events: none;
+}
+/* Panel docente: consulta del padre esperando respuesta. */
+.m-sla-flag-staff { font-size: .72rem; line-height: 1; }
+
 .m-conv-item__dot {
   width: 8px;
   height: 8px;

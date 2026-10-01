@@ -11,6 +11,7 @@ const _urlCache = new Map();
 
 export const ImageLoader = {
   _observer: null,
+  _vpObserver: null,
 
   init() {
     if (this._observer || typeof IntersectionObserver === 'undefined') return;
@@ -127,6 +128,115 @@ export const ImageLoader = {
 
   skeleton(cls = 'w-full h-48') {
     return `<div class="skeleton ${cls} rounded-xl"></div>`;
+  },
+
+  /**
+   * 🎬 Reproducción automática inteligente (CHAT.MD §1.3)
+   *   - Escritorio: `mouseenter` en el contenedor reproduce en silencio;
+   *     `mouseleave` pausa de inmediato.
+   *   - Móvil / scroll: `IntersectionObserver` reproduce en bucle cuando el
+   *     video cubre >=50% del viewport y pausa al salir (ahorra datos/batería).
+   *   - Manual: si el usuario tocó el control del video, `data-autoplay` queda
+   *     en 'off' y el autoplay deja de intervenir para ese elemento.
+   *
+   * @param {ParentNode} container — contenedor padre (o document)
+   */
+  setupHoverAutoplay(container = document) {
+    const root = container || document;
+    if (!root || typeof root.querySelectorAll !== 'function') return;
+
+    // Respeta prefers-reduced-motion y ahorro de datos: no gastes ancho de banda solo.
+    const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+    const saveData = navigator.connection?.saveData === true;
+    const coarse   = window.matchMedia?.('(hover: none)')?.matches;
+
+    this._wireHover(root);
+
+    if (reduced || saveData) return;
+
+    // Un solo observer para todos los videos del contenedor.
+    if (!this._vpObserver && typeof IntersectionObserver !== 'undefined') {
+      this._vpObserver = new IntersectionObserver((entries) => {
+        entries.forEach(e => {
+          const video = e.target;
+          if (video.dataset.autoplay === 'off') return;
+          if (e.isIntersecting && e.intersectionRatio >= 0.5) {
+            video.muted = true;
+            video.loop = true;
+            this._safePlay(video);
+          } else if (!coarse) {
+            // En escritorio manda el hover; solo pausamos si no está en hover.
+            if (video.dataset.hovering !== '1') video.pause();
+          } else {
+            video.pause();
+          }
+        });
+      }, { threshold: [0, 0.5, 1] });
+    }
+
+    root.querySelectorAll('video').forEach(v => {
+      if (v.dataset.autoplayWired === '1') return;
+      v.dataset.autoplayWired = '1';
+      this._vpObserver?.observe(v);
+    });
+  },
+
+  /**
+   * play() seguro: el autoplay puede dispararse antes de que el lazy loader
+   * asigne `src`. En ese caso esperamos a `loadedmetadata` y reintentamos una
+   * sola vez, en vez de fallar en silencio.
+   */
+  _safePlay(video) {
+    if (!video) return;
+    const play = () => video.play().catch(() => { /* autoplay bloqueado */ });
+    if (video.readyState >= 1 || video.currentSrc || video.src) {
+      play();
+      return;
+    }
+    video.addEventListener('loadedmetadata', play, { once: true });
+  },
+
+  /**
+   * Conecta mouseenter/mouseleave a los contenedores de media.
+   * El contenedor interactivo es el wrapper `.group\/media` del video; si no
+   * existe, cae al propio <video>.
+   */
+  _wireHover(root) {
+    const targets = root.querySelectorAll('video, .group\\/media');
+    targets.forEach(el => {
+      const video = el.tagName === 'VIDEO' ? el : el.querySelector('video');
+      if (!video) return;
+      // Evita doble wiring si el wrapper y el video coinciden en el NodeList.
+      if (video.dataset.hoverWired === '1') return;
+      video.dataset.hoverWired = '1';
+      if (video.dataset.autoplay == null) video.dataset.autoplay = 'on';
+
+      const surface = el.classList?.contains('group/media') ? el : (video.parentElement || video);
+
+      surface.addEventListener('mouseenter', () => {
+        if (video.dataset.autoplay === 'off') return;
+        video.dataset.hovering = '1';
+        video.muted = true;
+        this._safePlay(video);
+      });
+
+      surface.addEventListener('mouseleave', () => {
+        video.dataset.hovering = '0';
+        if (video.dataset.autoplay === 'off') return;
+        video.pause();
+      });
+
+      // Si el usuario reproduce con controles, respeta su decisión.
+      video.addEventListener('play', () => {
+        if (video.dataset.autoplay === 'on' && !video.muted) video.dataset.autoplay = 'off';
+      }, { once: true });
+    });
+  },
+
+  /** Desconecta observers de autoplay (usar en destroy() de módulos). */
+  teardownAutoplay() {
+    this._vpObserver?.disconnect();
+    this._vpObserver = null;
   },
 
   /**

@@ -301,9 +301,14 @@ function renderContacts() {
           ? 'from-slate-300 to-slate-400'
           : 'from-orange-400 to-orange-600';
 
+    // 🚨 SLA (mejras.md §3): consulta del padre sin responder.
+    const slaMark = (!c.unlinked && c.waitingReply)
+      ? ' <span class="m-sla-flag-staff" title="Pendiente de respuesta al padre">🚨</span>'
+      : '';
+
     return `
       <div data-contact-id="${c.id || ''}"
-           class="m-conv-item ${isActive ? 'is-active' : ''} ${isNew ? 'is-new' : ''} ${c.unlinked ? 'opacity-60' : ''}"
+           class="m-conv-item ${isActive ? 'is-active' : ''} ${isNew ? 'is-new' : ''} ${c.unlinked ? 'opacity-60' : ''} ${(!c.unlinked && c.waitingReply) ? 'is-waiting' : ''}"
            ${c.unlinked ? 'onclick="window.safeToast(\'Este padre aún no ha creado su cuenta de acceso\', \'warning\')"' : ''}>
         <div class="m-conv-item__avatar bg-gradient-to-br ${avatarBg}">
           ${c.avatar_url
@@ -320,7 +325,7 @@ function renderContacts() {
             <div class="m-conv-item__last">${lastPreview}</div>
             ${isNew ? '<div class="m-conv-item__dot"></div>' : ''}
           </div>
-          <div class="m-conv-item__meta">${safeEscapeHTML(c.roleLabel || '')}</div>
+          <div class="m-conv-item__meta">${safeEscapeHTML(c.roleLabel || '')}${slaMark}</div>
         </div>
       </div>`;
   }).join('');

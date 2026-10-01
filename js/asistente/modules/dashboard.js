@@ -2,6 +2,7 @@ import { supabase } from '../../shared/supabase.js';
 import { AppState } from '../state.js';
 import { Helpers } from '../../shared/helpers.js';
 import { QueryCache } from '../../shared/query-cache.js';
+import { ImageLoader } from '../../shared/image-loader.js';
 
 export const DashboardModule = {
   _chart: null,
@@ -135,8 +136,10 @@ export const DashboardModule = {
       const src = p.media_url || p.image_url || null;
       const media = src
         ? (isVideo
-            ? `<div class="mt-2 rounded-xl overflow-hidden bg-slate-100 aspect-video"><video src="${Helpers.escapeAttr(src)}" muted playsinline preload="metadata" class="w-full h-full object-cover"></video></div>`
-            : `<img src="${Helpers.escapeAttr(src)}" loading="lazy" alt="" class="mt-2 rounded-xl w-full h-40 object-cover bg-slate-100">`)
+            // 🎬 ImageLoader.video() aplica el fotograma #t (CHAT.MD §1.2) y el
+            // wrapper group/media habilita el autoplay por hover/viewport.
+            ? `<div class="relative group/media mt-2 rounded-xl overflow-hidden bg-slate-900 aspect-video">${ImageLoader.video(src, '', { cls: 'w-full h-full object-cover', controls: false })}</div>`
+            : ImageLoader.img(src, { alt: '', cls: 'mt-2 rounded-xl w-full h-40 object-cover bg-slate-100' }))
         : '';
       const name = p.teacher_name || p.title || 'Publicación';
       const ini = name.charAt(0).toUpperCase();
@@ -185,6 +188,9 @@ export const DashboardModule = {
       });
 
       container.innerHTML = items.join('');
+      // 🖼️ Activar lazy loading + autoplay de los medios recién insertados.
+      ImageLoader.observe(container);
+      ImageLoader.setupHoverAutoplay(container);
     } catch (_) {
       container.innerHTML = Helpers.errorState('Error al cargar');
     }

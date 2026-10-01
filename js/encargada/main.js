@@ -20,6 +20,7 @@ import {
 import { ScrollModule } from '../shared/scroll.module.js';
 import { NewsCenter } from '../shared/news-center.js';
 import { WALL_REACTIONS } from '../shared/wall.js';
+import { ImageLoader } from '../shared/image-loader.js';
 const MURO_REACTION_ORDER = ['like', 'love', 'bravo', 'adore', 'party'];
 const MURO_COMMENTS_SHOWN = 3;
 const muroReactions = {};
@@ -1338,7 +1339,7 @@ async function loadMuroEscolar() {
               </div>
             </div>
             <p class="text-sm text-slate-700 whitespace-pre-wrap">${Helpers.escapeHTML(p.content || '')}</p>
-            ${p.media_url ? `<img src="${p.media_url}" class="mt-3 rounded-xl max-h-64 object-cover border border-slate-100">` : ''}
+            ${p.media_url ? ImageLoader.img(p.media_url, { alt: '', cls: 'mt-3 rounded-xl max-h-64 object-cover border border-slate-100 w-full' }) : ''}
             ${react.total > 0 ? `
               <div class="flex items-center justify-between pt-3 mt-3 border-t border-slate-50">
                 <div class="flex items-center gap-1.5 text-xs font-bold text-slate-500">
@@ -1369,6 +1370,9 @@ async function loadMuroEscolar() {
       </div>
     `;
     if (window.lucide) lucide.createIcons();
+    // 🖼️ Lazy loading + skeleton para las imágenes/videos del muro.
+    ImageLoader.observe(el);
+    ImageLoader.setupHoverAutoplay(el);
     _bindMuroEvents();
     initMuroRealtime();
 

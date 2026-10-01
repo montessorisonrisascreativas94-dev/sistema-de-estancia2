@@ -399,11 +399,16 @@ export const WallModule = {
     const last = container.lastElementChild;
     if (last) this._observer.observe(last);
 
-    // 🎥 Setup Autoplay de videos al hacer scroll
-    this._setupVideoAutoplay();
+    // 🎬 Setup de precarga de videos al hacer scroll
+    this._setupVideoPreload();
   },
 
-  _setupVideoAutoplay() {
+  /**
+   * 🎬 Precarga inteligente por scroll: sube/baja `preload` según cercanía.
+   * NO reproduce — la reproducción (hover + viewport) vive en
+   * ImageLoader.setupHoverAutoplay(), invocado desde _watchVideos().
+   */
+  _setupVideoPreload() {
     if (this._videoObserver) this._videoObserver.disconnect();
     this._videoObserver = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
@@ -421,14 +426,25 @@ export const WallModule = {
       });
     }, { rootMargin: '400px', threshold: [0, 0.7] });
 
-    // Vincular observador a todos los videos presentes
-    document.querySelectorAll('video').forEach(v => this._videoObserver.observe(v));
+    // Vincular observador SOLO a los videos de este muro. Un querySelectorAll
+    // global observaba videos de otros paneles y los dejaba colgados en el
+    // observer incluso después de destroy().
+    const scope = this._containerId
+      ? document.getElementById(this._containerId)
+      : null;
+    (scope || document).querySelectorAll('video').forEach(v => this._videoObserver.observe(v));
   },
 
   // Observa videos nuevos (al hacer append de posts) sin recrear el observer
   _watchVideos(container) {
-    if (!this._videoObserver) { this._setupVideoAutoplay(); return; }
-    container.querySelectorAll('video').forEach(v => this._videoObserver.observe(v));
+    if (!this._videoObserver) {
+      this._setupVideoPreload();
+    } else {
+      container.querySelectorAll('video').forEach(v => this._videoObserver.observe(v));
+    }
+    // 🎬 Autoplay por hover + viewport (CHAT.MD §1.3). El método es idempotente:
+    // los videos ya cableados se saltan, así que es seguro llamarlo en cada render.
+    ImageLoader.setupHoverAutoplay(container);
   },
 
   /** Play/Pause desde el botón central estilo Instagram */
@@ -1554,6 +1570,10 @@ export const WallModule = {
     this._unsubscribeRealtime();
     if (this._freshnessTimer) { clearInterval(this._freshnessTimer); this._freshnessTimer = null; }
     if (this._videoObserver) { this._videoObserver.disconnect(); this._videoObserver = null; }
+    // Detener cualquier autoplay pendiente antes de soltar los listeners.
+    (this._containerId ? document.getElementById(this._containerId) : document)
+      ?.querySelectorAll('video').forEach(v => { try { v.pause(); } catch (_) {} });
+    ImageLoader.teardownAutoplay();
     this._postTimes = {};
     this.closePopovers();
   },

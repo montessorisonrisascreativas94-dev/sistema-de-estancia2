@@ -340,7 +340,7 @@ const FunCounterComponent = {
                 this.count++;
             }
             lastScroll = currentScroll;
-        }, 100));
+        }, 100), { passive: true });
     }
 };
 

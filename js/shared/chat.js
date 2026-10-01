@@ -605,6 +605,16 @@ export const ChatModule = {
     const unreadRes = await this.getUnreadCounts();
     const unreadMap = unreadRes.counts || {};
 
+    // Rol del usuario actual: define qué lado del SLA representamos.
+    // 'padre' espera respuesta del centro; el personal espera al padre.
+    let myRole = null;
+    try {
+      const { data: prof } = await supabase
+        .from('profiles').select('role').eq('id', user.id).maybeSingle();
+      myRole = prof?.role || null;
+    } catch (_) { /* sin perfil: se degrada al comportamiento anterior */ }
+    const isParent = myRole === 'padre';
+
     // Buscar último mensaje por cada par de usuarios enriquecido
     const ids = contactos.map(c => c.id).filter(Boolean);
     let lastByOther = {};
@@ -630,18 +640,42 @@ export const ChatModule = {
     // Enriquecer y ordenar
     const enriched = contactos.map(c => {
       const last = lastByOther[c.id];
+      const mine = last ? last.sender_id === user.id : false;
+      // 🚨 SLA de respuesta (mejras.md §3).
+      // El padre marca "esperando al centro" cuando su último mensaje sigue
+      // sin respuesta del personal; el personal marca "pendiente" cuando el
+      // último mensaje es del padre y aún no se ha contestado.
+      // `is_read` solo indica que el destinatario ABIÓ el chat, por eso se
+      // combina con el sentido del mensaje y no se usa en solitario.
+      let waitingReply = false;
+      let replied = false;
+      if (last) {
+        if (isParent) {
+          // Padre: pendiente si el último mensaje lo mandó él (sin respuesta aún).
+          waitingReply = mine && !last.is_read;
+          replied = !mine && !!last.is_read;
+        } else {
+          // Personal: pendiente si el último mensaje es del padre y no está leído.
+          waitingReply = !mine && !last.is_read;
+          replied = mine && !!last.is_read;
+        }
+      }
       return {
         ...c,
         unread: Number(unreadMap[c.id] || 0),
         lastMessage: last?.content || '',
         lastMessageTime: last?.created_at || null,
-        lastMessageIsMine: last ? last.sender_id === user.id : false,
+        lastMessageIsMine: mine,
         lastMessageIsRead: last ? !!last.is_read : null,
+        waitingReply,
+        replied,
       };
     });
 
-    // Orden: primero los que tienen mensaje más reciente, luego los no leídos
+    // Orden: pendientes de respuesta primero (§3), luego no leídos, luego
+    // por fecha de último mensaje.
     enriched.sort((a, b) => {
+      if (a.waitingReply !== b.waitingReply) return a.waitingReply ? -1 : 1;
       const ta = a.lastMessageTime ? new Date(a.lastMessageTime).getTime() : -1;
       const tb = b.lastMessageTime ? new Date(b.lastMessageTime).getTime() : -1;
       // Sin mensaje: ponerlos después pero con no leídos arriba

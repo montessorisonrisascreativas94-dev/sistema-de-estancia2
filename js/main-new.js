@@ -31,7 +31,7 @@ function initNavbar() {
         } else {
             navbar.classList.remove('scrolled');
         }
-    });
+    }, { passive: true });
 }
 
 /**
@@ -131,7 +131,7 @@ function initConfetti() {
             createConfettiBurst(confettiEmojis);
             lastScrollY = currentScrollY;
         }
-    });
+    }, { passive: true });
 }
 
 /**

@@ -86,7 +86,7 @@ export const RecentActivityModule = {
           .limit(30),
         supabase.from('posts')
           .select('id, content, media_url, media_type, created_at, classroom_id, teacher:teacher_id(name)')
-          .or(`classroom_id.is.null,classroom_id.eq.${student.classroom_id || 0}`)
+          .or(`classroom_id.is.null,classroom_id.eq.${student.classroom_id ?? 0}`)
           .order('created_at', { ascending: false })
           .limit(10)
       ]);

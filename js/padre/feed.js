@@ -185,8 +185,14 @@ export const FeedModule = {
         const postId = videoToggle.dataset.postId;
         const video = document.getElementById(`media-wrap-${postId}`)?.querySelector('video');
         if (video) {
-          if (video.paused) video.play().catch(() => {});
-          else video.pause();
+          if (video.paused) {
+            // 👆 Interacción manual: el usuario toma control y el autoplay
+            // deja de intervenir en este video (CHAT.MD §1.3).
+            video.dataset.autoplay = 'off';
+            video.play().catch(() => {});
+          } else {
+            video.pause();
+          }
         }
         return;
       }
@@ -243,7 +249,7 @@ export const FeedModule = {
           is_pinned, is_important,
           teacher:teacher_id ( id, name, avatar_url )
         `)
-        .or(`classroom_id.is.null,classroom_id.eq.${student?.classroom_id || 0}`)
+        .or(`classroom_id.is.null,classroom_id.eq.${student?.classroom_id ?? 0}`)
         .order('is_pinned', { ascending: false })
         .order('created_at', { ascending: false })
         .limit(50);
@@ -258,7 +264,7 @@ export const FeedModule = {
             id, content, media_url, media_type, created_at, classroom_id,
             teacher:teacher_id ( id, name, avatar_url )
           `)
-          .or(`classroom_id.is.null,classroom_id.eq.${student?.classroom_id || 0}`)
+          .or(`classroom_id.is.null,classroom_id.eq.${student?.classroom_id ?? 0}`)
           .order('created_at', { ascending: false })
           .limit(50);
         if (res.error) throw res.error;
@@ -354,6 +360,9 @@ export const FeedModule = {
       if (video.readyState >= 1) setDuration();
       updateBtn();
     });
+
+    // 🎬 Autoplay por hover + viewport (CHAT.MD §1.3). Idempotente por diseño.
+    ImageLoader.setupHoverAutoplay(container);
   },
 
   /**
@@ -394,7 +403,7 @@ export const FeedModule = {
       if (isVideo) {
         mediaHTML = `
           <div class="relative group/media rounded-2xl overflow-hidden mb-4 bg-black" id="media-wrap-${p.id}">
-            ${ImageLoader.video(p.media_url, '', { cls: 'w-full max-h-80 object-contain' })}
+            ${ImageLoader.video(p.media_url, '', { cls: 'w-full max-h-80 object-contain', controls: false })}
             <button data-action="video-toggle" data-post-id="${p.id}" aria-label="Reproducir video"
                class="absolute inset-0 m-auto w-16 h-16 rounded-full bg-white/25 backdrop-blur-md border border-white/40 text-white flex items-center justify-center transition-all hover:scale-110 hover:bg-white/40 shadow-xl">
               <i data-lucide="play" class="w-7 h-7 fill-current ml-1"></i>

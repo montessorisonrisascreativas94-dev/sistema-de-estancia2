@@ -229,6 +229,25 @@ body:not(.panel-padre-body) aside#sidebar::-webkit-scrollbar { display: none; }
 .karpus-img-loaded { filter: none !important; opacity: 1 !important; animation: none !important; background: none !important; }
 video.karpus-img-loading { background: #1e293b; }
 
+/* ── 14b. FOTOGRAMAS + AUTOPLAY (CHAT.MD §2) ────────────────── */
+/* Contenedor interactivo para hover suave sobre el fotograma. */
+.group\/media { position: relative; overflow: hidden; background-color: #000; }
+.group\/media video { transition: transform .3s ease; }
+.group\/media:hover video { transform: scale(1.02); }
+
+/* Respeta prefers-reduced-motion: sin zoom y sin transición. */
+@media (prefers-reduced-motion: reduce) {
+  .group\/media video,
+  .group\/media:hover video { transform: none; transition: none; }
+}
+
+/* En táctil no existe hover: sin esto el :hover queda "pegado" tras un tap
+   y el video se ve escalado hasta el siguiente toque (mejras.md #49). */
+@media (pointer: coarse) {
+  .group\/media video,
+  .group\/media:hover video { transform: none; transition: none; }
+}
+
 /* ── 15. CHAT WHATSAPP ───────────────────────────────────────── */
 .chat-shell {
   display: flex;

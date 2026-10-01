@@ -115,11 +115,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!auth) return;
     
     // Initialize Parent Rating Module
-    window.user = auth.user;
-    ParentRatingModule.init();
-
+    // El módulo resuelve el usuario con supabase.auth.getUser(); se eliminó
+    // la variable global window.user que nadie leía (mejras.md #47).
     AppState.set('user', auth.user);
     AppState.set('profile', auth.profile);
+    ParentRatingModule.init();
 
     // ⚡ PREFETCH: Iniciar carga silenciosa de recursos críticos
     Prefetch.start({
@@ -332,7 +332,7 @@ async function refreshDashboard() {
     supabase
       .from('posts')
       .select('*, teacher:profiles(id, name, avatar_url)')
-      .or(`classroom_id.is.null,classroom_id.eq.${student.classroom_id}`)
+      .or(`classroom_id.is.null,classroom_id.eq.${student.classroom_id || 0}`)
       .order('created_at', { ascending: false })
       .limit(3)
   ]);
