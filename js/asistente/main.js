@@ -264,17 +264,23 @@ async function submitNewPost() {
     let mediaType = null;
 
     if (file) {
-      const ext = file.type.startsWith('video') ? file.name.split('.').pop() : 'webp';
+      const isVideo = file.type.startsWith('video/');
+      const ext = isVideo ? (file.name.split('.').pop() || 'mp4').toLowerCase() : 'webp';
       const path = `posts/${Date.now()}_${Math.random().toString(36).substr(2,9)}.${ext}`;
-      
-      const publicUrl = await ImageLoader.uploadToStorage(
-        file,
-        'classroom_media',
-        path,
-        { maxWidth: 1200, maxHeight: 1200, quality: 0.82, maxSizeKB: 400 }
-      );
+
+      // Los videos van al bucket `posts`: es el único con mimes de video
+      // habilitados. Para imágenes, `classroom_media`.
+      const publicUrl = isVideo
+        ? await ImageLoader.uploadToStorage(file, 'posts', path, { maxSizeMB: 25 })
+        : await ImageLoader.uploadToStorage(
+            file,
+            'classroom_media',
+            path,
+            { maxWidth: 1200, maxHeight: 1200, quality: 0.82, maxSizeKB: 400 }
+          );
+
       mediaUrl = publicUrl;
-      mediaType = file.type.startsWith('video') ? 'video' : 'image';
+      mediaType = isVideo ? 'video' : 'image';
     }
 
     const user = AppState.get('user');

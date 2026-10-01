@@ -1297,15 +1297,17 @@ async function submitNewPost() {
     let mediaType = null;
 
     if (file) {
-      const ext = file.type.startsWith('video') ? file.name.split('.').pop() : 'webp';
+      const isVideo = file.type.startsWith('video/');
+      const ext = isVideo ? (file.name.split('.').pop() || 'mp4').toLowerCase() : 'webp';
       const path = `posts/${Date.now()}_${Math.random().toString(36).substr(2,9)}.${ext}`;
-      
-      mediaUrl = await ImageLoader.uploadToStorage(file, 'karpus-uploads', path, {
-        maxWidth: 1200,
-        quality: 0.8,
-        onProgress: setProgress
-      });
-      mediaType = file.type.startsWith('video') ? 'video' : 'image';
+
+      // Los videos van al bucket `posts`: es el único con mimes de video
+      // habilitados. `karpus-uploads` solo acepta imágenes y PDF.
+      mediaUrl = isVideo
+        ? await ImageLoader.uploadToStorage(file, 'posts', path, { maxSizeMB: 25, onProgress: setProgress })
+        : await ImageLoader.uploadToStorage(file, 'karpus-uploads', path, { maxWidth: 1200, quality: 0.8 });
+
+      mediaType = isVideo ? 'video' : 'image';
     }
 
     const { data: { user } } = await supabase.auth.getUser();
@@ -1333,7 +1335,8 @@ async function submitNewPost() {
     WallModule.loadPosts('muroPostsContainer');
 
   } catch (err) {
-    safeToast('Error al crear publicación', 'error');
+    console.error('[createPost]', err);
+    safeToast(err?.message || 'Error al crear publicación', 'error');
     btn.disabled = false;
     btn.innerHTML = 'PUBLICAR';
   }

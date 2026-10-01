@@ -36,8 +36,13 @@
     grid-template-columns: 1fr;
     grid-template-rows: minmax(600px, 78vh);
   }
-  .m-chat-list,
   .m-chat-info { display: none !important; }
+  /* La lista se oculta SOLO cuando no estamos en vista-lista. El `!important`
+     que antes cubría a .m-chat-list y .m-chat-info juntas ganaba siempre y dejaba
+     los contactos invisibles en móvil, aunque el JS añadiera `is-view-list`.
+     Los selectores se prefijan con .m-chat-grid para ganarle por especificidad
+     a las reglas base, que aparecen más abajo en este mismo archivo. */
+  .m-chat-grid .m-chat-list { display: none; }
   .m-chat-grid.is-view-list .m-chat-list { display: flex; }
   .m-chat-grid.is-view-list .m-chat-main { display: none; }
   .m-chat-grid.is-view-chat .m-chat-main { display: flex; }

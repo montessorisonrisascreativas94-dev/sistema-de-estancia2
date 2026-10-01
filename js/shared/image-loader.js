@@ -342,6 +342,12 @@ export const ImageLoader = {
   async uploadToStorage(file, bucket, path, compressOpts = {}) {
     const { supabase } = await import('./supabase.js');
 
+    // Los videos NO pasan por la Edge Function: convertirlos a base64 infla el
+    // archivo ~33% y resize-image solo acepta ~5MB. Se suben crudos a Storage.
+    if (file.type && file.type.startsWith('video/')) {
+      return this._uploadVideo(supabase, file, bucket, path, compressOpts);
+    }
+
     const maxWidth  = compressOpts.maxWidth  || 800;
     const maxHeight = compressOpts.maxHeight || 800;
     const quality   = compressOpts.quality   ? Math.round(compressOpts.quality * 100) : 82;
@@ -377,6 +383,53 @@ export const ImageLoader = {
 
     const { data } = supabase.storage.from(bucket).getPublicUrl(path);
     return data.publicUrl;
+  },
+
+  /**
+   * 🎬 Sube un video directo a Supabase Storage.
+   * Sin base64 y sin Edge Function: el archivo viaja crudo al bucket, que es la
+   * única forma de que un clip de varios MB no reviente el límite del body.
+   *
+   * @param {object} supabase — cliente de Supabase
+   * @param {File}   file     — video a subir
+   * @param {string} bucket   — bucket de Storage (debe permitir el mime del video)
+   * @param {string} path     — ruta destino (ej: 'posts/1234_ab.mp4')
+   * @param {object} opts     — { maxSizeMB, onProgress, allowedTypes }
+   * @returns {Promise<string>} — URL pública del video
+   */
+  _uploadVideo(supabase, file, bucket, path, opts = {}) {
+    const { maxSizeMB = 25, onProgress, allowedTypes } = opts;
+
+    const mime = file.type || 'video/mp4';
+    if (allowedTypes && !allowedTypes.includes(mime)) {
+      throw new Error(`Formato no permitido (${mime}). Sube un MP4 o WebM.`);
+    }
+    if (file.size > maxSizeMB * 1024 * 1024) {
+      throw new Error(`El video pesa ${(file.size / 1048576).toFixed(1)} MB y el máximo son ${maxSizeMB} MB. Graba un clip más corto.`);
+    }
+
+    const task = supabase.storage.from(bucket).upload(path, file, {
+      cacheControl: '31536000',
+      upsert: true,
+      contentType: mime,
+    });
+
+    if (onProgress && typeof task?.subscribe === 'function') {
+      task.subscribe(({ event, progress }) => {
+        if (event === 'UPLOAD_PROGRESS') onProgress(Math.min(100, Math.round(progress || 0)));
+      });
+    }
+
+    return task.then(({ error }) => {
+      if (error) {
+        // 400 en un upload de video casi siempre es mime/tamaño rechazado por el bucket.
+        if (error.status === 400) {
+          throw new Error(`El servidor rechazó el video (${mime}, ${(file.size / 1048576).toFixed(1)} MB). Revisa el bucket "${bucket}".`);
+        }
+        throw error;
+      }
+      return supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl;
+    });
   },
 
   /** Convierte un File a base64 string */
