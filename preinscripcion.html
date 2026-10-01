@@ -58,7 +58,7 @@
         .header h1{
             font-size:2rem;font-weight:900;margin-bottom:6px;
             background:linear-gradient(135deg,var(--orange),var(--blue));
-            -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+            -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
         }
         .header p{font-size:.95rem;color:var(--gray);max-width:480px;margin:0 auto}
 
@@ -123,6 +123,8 @@
             outline:none;border-color:var(--orange);box-shadow:0 0 0 3px var(--orange-glow);
         }
         .form-input.error,.form-select.error{border-color:var(--red);box-shadow:0 0 0 3px rgba(239,68,68,.1)}
+        .checkbox-item input[type="checkbox"].error{outline:2px solid var(--red);outline-offset:2px}
+        .form-input[type="date"]{min-height:43px}
         .form-textarea{resize:vertical;min-height:72px}
         .form-hint{font-size:.72rem;color:var(--gray-soft)}
 
@@ -283,6 +285,53 @@
             .progress-step .step-label{display:none}
             .progress-step .step-dot{width:30px;height:30px;font-size:.75rem}
         }
+
+        /* ── Age Validation Box ── */
+        .age-box{
+            border-radius:14px;padding:12px 14px;
+            border-width:1.5px;border-style:solid;
+            display:flex;gap:10px;align-items:flex-start;
+            font-size:.8rem;line-height:1.45;
+        }
+        .age-box .ab-icon{font-size:1.2rem;flex-shrink:0;margin-top:1px}
+        .age-box.ok{
+            background:#F0FDF4;border-color:#BBF7D0;color:#166534;
+        }
+        .age-box.ok .ab-icon{color:#16A34A}
+        .age-box.warn{
+            background:#FFF7ED;border-color:#FED7AA;color:#9A3412;
+        }
+        .age-box.warn .ab-icon{color:#F97316}
+        .age-box.err{
+            background:#FEF2F2;border-color:#FECACA;color:#991B1B;
+        }
+        .age-box.err .ab-icon{color:#EF4444}
+        .age-box .ab-title{font-weight:800;margin-bottom:3px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+        .age-box .ab-body{color:inherit;opacity:.95}
+        .age-box .ab-pill{
+            font-size:.65rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;
+            padding:2px 7px;border-radius:999px;border:1px solid currentColor;opacity:.85
+        }
+        .age-box .ab-field{margin-top:10px}
+        .age-box label.ab-check{
+            display:flex;align-items:flex-start;gap:8px;cursor:pointer;font-weight:700;color:inherit;
+            padding:8px 10px;border-radius:10px;border:1px dashed currentColor;background:rgba(255,255,255,0.4);
+        }
+        .age-box label.ab-check input{margin-top:3px;accent-color:#0B63C7}
+        .age-box textarea{
+            margin-top:8px;width:100%;min-height:60px;resize:vertical;border-radius:10px;
+            border:1.5px solid #FED7AA;padding:8px 10px;font-size:.78rem;font-family:inherit;
+            background:#fff;color:#1E293B;outline:none;transition:all .2s
+        }
+        .age-box textarea:focus{border-color:#F97316;box-shadow:0 0 0 3px rgba(249,115,22,.14)}
+        .age-box input[type=text].ab-err,
+        .age-box select.ab-err,
+        .age-box textarea.ab-err{border-color:#EF4444!important;box-shadow:0 0 0 3px rgba(239,68,68,.12)!important}
+        .age-level-suggest{
+            display:inline-flex;align-items:center;gap:6px;
+            font-weight:800;padding:2px 8px;border-radius:999px;
+            background:#EFF6FF;color:#0B63C7;border:1px solid #BFDBFE
+        }
     </style>
 </head>
 <body>
@@ -300,7 +349,7 @@
 
     <header class="header">
         <div data-aos="fade-down">
-            <h1>Formulario de Preinscripcion</h1>
+            <h1>Formulario de Preinscripción</h1>
             <p>Completa los datos y nos pondremos en contacto contigo para finalizar el proceso</p>
         </div>
     </header>
@@ -321,8 +370,8 @@
                 <!-- ══════ PASO 1: ESTUDIANTE ══════ -->
                 <div class="step-content active" data-step="1">
                     <div class="step-header">
-                        <div class="step-title"><i class="bi bi-person-heart"></i> Datos del Nino(a)</div>
-                        <p class="step-subtitle">Informacion personal y academica</p>
+                        <div class="step-title"><i class="bi bi-person-heart"></i> Datos del Niño(a)</div>
+                        <p class="step-subtitle">Información personal y académica</p>
                     </div>
                     <div class="form-grid">
                         <div class="form-group"><label class="form-label">Nombres <span class="req">*</span></label><input type="text" class="form-input" name="student_name" required placeholder="Ej: Juan Perez"></div>
@@ -333,17 +382,44 @@
                         <div class="form-group"><label class="form-label">Nacionalidad</label><input type="text" class="form-input" name="nationality" placeholder="Ej: Dominicana"></div>
                     </div>
 
-                    <div class="divider"><i class="bi bi-book"></i> Solicitud Academica</div>
+                    <div class="divider"><i class="bi bi-book"></i> Solicitud Académica</div>
                     <div class="form-grid">
-                        <div class="form-group"><label class="form-label">Ano Escolar <span class="req">*</span></label><select class="form-select" name="school_year_requested" required><option value="">Seleccionar</option></select></div>
-                        <div class="form-group"><label class="form-label">Nivel Solicitado <span class="req">*</span></label><select class="form-select" name="level_requested" required><option value="">Seleccionar</option><option value="Maternal">Maternal (0-2 años)</option><option value="Infante">Infante (2-3 años)</option><option value="Parvulos">Parvulos (3-4 años)</option><option value="Pre-Kinder">Pre-Kinder (4-5 años)</option><option value="Kinder">Kinder (5-6 años)</option><option value="Preprimaria">Preprimaria (6-7 años)</option><option value="1ro Primaria">1ro Primaria (7-8 años)</option><option value="2do Primaria">2do Primaria (8-9 años)</option><option value="3ro Primaria">3ro Primaria (9-10 años)</option><option value="4to Primaria">4to Primaria (10-11 años)</option><option value="5to Primaria">5to Primaria (11-12 años)</option><option value="6to Primaria">6to Primaria (12-13 años)</option></select></div>
+                        <div class="form-group"><label class="form-label">Año Escolar <span class="req">*</span></label><select class="form-select" name="school_year_requested" required><option value="">Seleccionar</option></select></div>
+                        <div class="form-group"><label class="form-label">Nivel Solicitado <span class="req">*</span></label>
+                          <select class="form-select" name="level_requested" id="level_requested" required>
+                            <option value="">Seleccionar</option>
+                            <optgroup label="Aulas Regulares (Edad Oficial)">
+                              <option value="Párvulos I">Párvulos I (45 días – 11 meses)</option>
+                              <option value="Párvulos II">Párvulos II (12 – 23 meses)</option>
+                              <option value="Párvulos III">Párvulos III (24 – 35 meses)</option>
+                              <option value="Pre-Kínder – Línea Blanca">Pre-Kínder – Línea Blanca (3 años)</option>
+                              <option value="Kínder – Línea Gris">Kínder – Línea Gris (4 años)</option>
+                              <option value="Pre-Primario – Línea Negra">Pre-Primario – Línea Negra (5 años)</option>
+                              <option value="1ro – Línea Roja">1ro – Línea Roja (6 años)</option>
+                              <option value="2do – Línea Amarilla">2do – Línea Amarilla (7 años)</option>
+                              <option value="3ro – Línea Azul">3ro – Línea Azul (8 años)</option>
+                              <option value="4to – Línea Verde">4to – Línea Verde (9 años)</option>
+                              <option value="5to – Línea Naranja">5to – Línea Naranja (10 años)</option>
+                              <option value="6to – Línea Morado">6to – Línea Morado (11 años)</option>
+                            </optgroup>
+                            <optgroup label="Aulas y Actividades Especiales (Sin rango de edad)">
+                              <option value="Verano">Verano</option>
+                              <option value="Inglés Afterschool">Inglés Afterschool</option>
+                              <option value="Ballet / Danza">Ballet / Danza</option>
+                              <option value="Taekwondo">Taekwondo</option>
+                              <option value="Sala de Tarea">Sala de Tarea</option>
+                              <option value="Cuido">Cuido</option>
+                            </optgroup>
+                          </select>
+                          <div id="levelValidationBox" style="display:none; margin-top:10px"></div>
+                        </div>
                         <div class="form-group"><label class="form-label">Horario Deseado <span class="req">*</span></label><select class="form-select" name="schedule" required><option value="">Seleccionar</option><option value="8:00-12:00">8:00 AM - 12:00 PM</option><option value="8:00-15:00">8:00 AM - 3:00 PM</option><option value="8:00-17:00">8:00 AM - 5:00 PM</option></select></div>
                         <div class="form-group"><label class="form-label">Fecha Estimada de Ingreso</label><input type="date" class="form-input" name="estimated_entry_date"></div>
                     </div>
 
                     <div class="divider"><i class="bi bi-people"></i> Hermanos</div>
                     <div class="form-grid">
-                        <div class="form-group"><label class="form-label">Tiene hermanos inscritos?</label><select class="form-select" name="has_siblings" id="hasSiblings"><option value="false">No</option><option value="true">Si</option></select></div>
+                        <div class="form-group"><label class="form-label">Tiene hermanos inscritos?</label><select class="form-select" name="has_siblings" id="hasSiblings"><option value="false">No</option><option value="true">Sí</option></select></div>
                         <div class="form-group" id="siblingNameGroup" style="display:none"><label class="form-label">Nombre del Hermano(a)</label><input type="text" class="form-input" name="sibling_name" placeholder="Nombre completo"></div>
                     </div>
 
@@ -357,7 +433,7 @@
                 <div class="step-content" data-step="2">
                     <div class="step-header">
                         <div class="step-title"><i class="bi bi-people-fill"></i> Padres o Tutores</div>
-                        <p class="step-subtitle">Informacion de ambos padres o tutores legales</p>
+                        <p class="step-subtitle">Información de ambos padres o tutores legales</p>
                     </div>
 
                     <div class="parents-wrap">
@@ -370,10 +446,10 @@
                                 <div class="form-group"><label class="form-label">Celular <span class="req">*</span></label><input type="tel" class="form-input" name="p1_phone" required placeholder="809-123-4567"></div>
                                 <div class="form-group"><label class="form-label">WhatsApp</label><input type="tel" class="form-input" name="p1_whatsapp" placeholder="Si es diferente"></div>
                                 <div class="form-group"><label class="form-label">Correo <span class="req">*</span></label><input type="email" class="form-input" name="p1_email" required placeholder="correo@ejemplo.com"></div>
-                                <div class="form-group"><label class="form-label">Direccion <span class="req">*</span></label><input type="text" class="form-input" name="p1_address" required placeholder="Calle, Sector, Ciudad"></div>
-                                <div class="form-group"><label class="form-label">Ocupacion</label><input type="text" class="form-input" name="p1_occupation" placeholder="Ej: Ingeniero"></div>
-                                <div class="form-group"><label class="form-label">Profesion</label><input type="text" class="form-input" name="p1_profession" placeholder="Ej: Ing. de Sistemas"></div>
-                                <div class="form-group"><label class="form-label">Lugar de Trabajo</label><input type="text" class="form-input" name="p1_workplace" placeholder="Empresa o institucion"></div>
+                                <div class="form-group"><label class="form-label">Dirección <span class="req">*</span></label><input type="text" class="form-input" name="p1_address" required placeholder="Calle, Sector, Ciudad"></div>
+                                <div class="form-group"><label class="form-label">Ocupación</label><input type="text" class="form-input" name="p1_occupation" placeholder="Ej: Ingeniero"></div>
+                                <div class="form-group"><label class="form-label">Profesión</label><input type="text" class="form-input" name="p1_profession" placeholder="Ej: Ing. de Sistemas"></div>
+                                <div class="form-group"><label class="form-label">Lugar de Trabajo</label><input type="text" class="form-input" name="p1_workplace" placeholder="Empresa o institución"></div>
                             </div>
                         </div>
 
@@ -386,10 +462,10 @@
                                 <div class="form-group"><label class="form-label">Celular <span class="req">*</span></label><input type="tel" class="form-input" name="p2_phone" required placeholder="809-123-4567"></div>
                                 <div class="form-group"><label class="form-label">WhatsApp</label><input type="tel" class="form-input" name="p2_whatsapp" placeholder="Si es diferente"></div>
                                 <div class="form-group"><label class="form-label">Correo <span class="req">*</span></label><input type="email" class="form-input" name="p2_email" required placeholder="correo@ejemplo.com"></div>
-                                <div class="form-group"><label class="form-label">Direccion</label><input type="text" class="form-input" name="p2_address" placeholder="Calle, Sector, Ciudad"></div>
-                                <div class="form-group"><label class="form-label">Ocupacion</label><input type="text" class="form-input" name="p2_occupation" placeholder="Ej: Medica"></div>
-                                <div class="form-group"><label class="form-label">Profesion</label><input type="text" class="form-input" name="p2_profession" placeholder="Ej: Pediatra"></div>
-                                <div class="form-group"><label class="form-label">Lugar de Trabajo</label><input type="text" class="form-input" name="p2_workplace" placeholder="Empresa o institucion"></div>
+                                <div class="form-group"><label class="form-label">Dirección</label><input type="text" class="form-input" name="p2_address" placeholder="Calle, Sector, Ciudad"></div>
+                                <div class="form-group"><label class="form-label">Ocupación</label><input type="text" class="form-input" name="p2_occupation" placeholder="Ej: Medica"></div>
+                                <div class="form-group"><label class="form-label">Profesión</label><input type="text" class="form-input" name="p2_profession" placeholder="Ej: Pediatra"></div>
+                                <div class="form-group"><label class="form-label">Lugar de Trabajo</label><input type="text" class="form-input" name="p2_workplace" placeholder="Empresa o institución"></div>
                             </div>
                         </div>
                     </div>
@@ -410,9 +486,9 @@
                     <div class="divider"><i class="bi bi-exclamation-triangle"></i> Contacto de Emergencia</div>
                     <div class="form-grid">
                         <div class="form-group"><label class="form-label">Nombre Completo <span class="req">*</span></label><input type="text" class="form-input" name="emergency_name" required placeholder="Nombre completo"></div>
-                        <div class="form-group"><label class="form-label">Parentesco <span class="req">*</span></label><input type="text" class="form-input" name="emergency_relationship" required placeholder="Ej: Abuela, Tio"></div>
+                        <div class="form-group"><label class="form-label">Parentesco <span class="req">*</span></label><input type="text" class="form-input" name="emergency_relationship" required placeholder="Ej: Abuela, Tío"></div>
                         <div class="form-group"><label class="form-label">Cedula <span class="req">*</span></label><input type="text" class="form-input" name="emergency_cedula" required placeholder="001-1234567-8"></div>
-                        <div class="form-group"><label class="form-label">Telefono <span class="req">*</span></label><input type="tel" class="form-input" name="emergency_phone" required placeholder="809-123-4567"></div>
+                        <div class="form-group"><label class="form-label">Teléfono <span class="req">*</span></label><input type="tel" class="form-input" name="emergency_phone" required placeholder="809-123-4567"></div>
                         <div class="form-group full"><label class="form-label">Observaciones</label><textarea class="form-textarea" name="emergency_observations" placeholder="Nota relevante para emergencias..."></textarea></div>
                     </div>
 
@@ -420,8 +496,8 @@
                     <div id="authorizedPersons">
                         <div class="auth-row" data-index="0">
                             <div class="form-group"><label class="form-label">Nombre</label><input type="text" class="form-input" name="auth_name_0" placeholder="Nombre"></div>
-                            <div class="form-group"><label class="form-label">Parentesco</label><input type="text" class="form-input" name="auth_relationship_0" placeholder="Tio"></div>
-                            <div class="form-group"><label class="form-label">Telefono</label><input type="tel" class="form-input" name="auth_phone_0" placeholder="Tel"></div>
+                            <div class="form-group"><label class="form-label">Parentesco</label><input type="text" class="form-input" name="auth_relationship_0" placeholder="Tío"></div>
+                            <div class="form-group"><label class="form-label">Teléfono</label><input type="tel" class="form-input" name="auth_phone_0" placeholder="Tel"></div>
                             <div><button type="button" class="btn-remove" onclick="this.closest('.auth-row').remove()"><i class="bi bi-trash3"></i></button></div>
                         </div>
                     </div>
@@ -438,7 +514,7 @@
                 <!-- ══════ PASO 4: SALUD ══════ -->
                 <div class="step-content" data-step="4">
                     <div class="step-header">
-                        <div class="step-title"><i class="bi bi-heart-pulse"></i> Informacion Medica</div>
+                        <div class="step-title"><i class="bi bi-heart-pulse"></i> Información Médica</div>
                         <p class="step-subtitle">Datos de salud indispensables del estudiante</p>
                     </div>
                     <div class="form-grid">
@@ -477,49 +553,49 @@
                             <div class="fu-name"></div>
                         </div>
                         <div class="file-upload" id="fu-ced-front">
-                            <input type="file" accept="image/*" onchange="handleFile(this,'fu-ced-front','Cedula del tutor frontal')">
+                            <input type="file" accept="image/*" onchange="handleFile(this,'fu-ced-front','Cédula del tutor frontal')">
                             <i class="bi bi-card-image"></i>
-                            <div class="fu-title">Cedula del Tutor (Frontal)</div>
+                            <div class="fu-title">Cédula del Tutor (Frontal)</div>
                             <div class="fu-hint">Foto de la cedula frontal</div>
                             <div class="fu-name"></div>
                         </div>
                         <div class="file-upload" id="fu-ced-back">
-                            <input type="file" accept="image/*" onchange="handleFile(this,'fu-ced-back','Cedula del tutor trasera')">
+                            <input type="file" accept="image/*" onchange="handleFile(this,'fu-ced-back','Cédula del tutor trasera')">
                             <i class="bi bi-card-image"></i>
-                            <div class="fu-title">Cedula del Tutor (Trasera)</div>
+                            <div class="fu-title">Cédula del Tutor (Trasera)</div>
                             <div class="fu-hint">Foto de la cedula trasera</div>
                             <div class="fu-name"></div>
                         </div>
                         <div class="file-upload" id="fu-p1-ced-front">
                             <input type="file" accept="image/*" onchange="handleFile(this,'fu-p1-ced-front','Cedula padre/madre frontal')">
                             <i class="bi bi-person-badge"></i>
-                            <div class="fu-title">Cedula Padre/Madre (Frontal)</div>
-                            <div class="fu-hint">Cedula del representante 1</div>
+                            <div class="fu-title">Cédula Padre/Madre (Frontal)</div>
+                            <div class="fu-hint">Cédula del representante 1</div>
                             <div class="fu-name"></div>
                         </div>
                         <div class="file-upload" id="fu-p1-ced-back">
                             <input type="file" accept="image/*" onchange="handleFile(this,'fu-p1-ced-back','Cedula padre/madre trasera')">
                             <i class="bi bi-person-badge"></i>
-                            <div class="fu-title">Cedula Padre/Madre (Trasera)</div>
-                            <div class="fu-hint">Cedula del representante 1</div>
+                            <div class="fu-title">Cédula Padre/Madre (Trasera)</div>
+                            <div class="fu-hint">Cédula del representante 1</div>
                             <div class="fu-name"></div>
                         </div>
                         <div class="file-upload" id="fu-p2-ced-front">
                             <input type="file" accept="image/*" onchange="handleFile(this,'fu-p2-ced-front','Cedula segundo tutor frontal')">
                             <i class="bi bi-person-badge"></i>
-                            <div class="fu-title">Cedula Segundo Tutor (Frontal)</div>
-                            <div class="fu-hint">Cedula del representante 2 (opcional)</div>
+                            <div class="fu-title">Cédula Segundo Tutor (Frontal)</div>
+                            <div class="fu-hint">Cédula del representante 2 (opcional)</div>
                             <div class="fu-name"></div>
                         </div>
                         <div class="file-upload" id="fu-p2-ced-back">
                             <input type="file" accept="image/*" onchange="handleFile(this,'fu-p2-ced-back','Cedula segundo tutor trasera')">
                             <i class="bi bi-person-badge"></i>
-                            <div class="fu-title">Cedula Segundo Tutor (Trasera)</div>
-                            <div class="fu-hint">Cedula del representante 2 (opcional)</div>
+                            <div class="fu-title">Cédula Segundo Tutor (Trasera)</div>
+                            <div class="fu-hint">Cédula del representante 2 (opcional)</div>
                             <div class="fu-name"></div>
                         </div>
                     </div>
-                    <p class="form-hint" style="margin-top:12px;text-align:center"><i class="bi bi-info-circle"></i> Si no tienes los documentos ahora, puedes.skipar este paso y entregarlos despues.</p>
+                    <p class="form-hint" style="margin-top:12px;text-align:center"><i class="bi bi-info-circle"></i> Si no tienes los documentos ahora, puedes omitir este paso y entregarlos despues.</p>
                     <div class="step-btns">
                         <button type="button" class="btn btn-back" onclick="prevStep(5)"><i class="bi bi-arrow-left"></i> Anterior</button>
                         <button type="button" class="btn btn-next" onclick="nextStep(5)">Siguiente <i class="bi bi-arrow-right"></i></button>
@@ -535,7 +611,7 @@
                     <div class="checkbox-list">
                         <div class="checkbox-item"><input type="checkbox" id="auth1" name="auth_data_treatment" required><label for="auth1">Acepto el tratamiento de mis datos personales y los de mi hijo(a) conforme a la politica de privacidad del colegio.</label></div>
                         <div class="checkbox-item"><input type="checkbox" id="auth2" name="auth_correct_info" required><label for="auth2">Confirmo que toda la informacion proporcionada en este formulario es correcta y veraz.</label></div>
-                        <div class="checkbox-item"><input type="checkbox" id="auth3" name="auth_contact" required><label for="auth3">Acepto que el colegio me contacte por telefono, correo o WhatsApp para comunicaciones de la preinscripcion.</label></div>
+                        <div class="checkbox-item"><input type="checkbox" id="auth3" name="auth_contact" required><label for="auth3">Acepto que el colegio me contacte por telefono, correo o WhatsApp para comunicaciones de la preinscripción.</label></div>
                         <div class="checkbox-item"><input type="checkbox" id="auth4" name="auth_regulations" required><label for="auth4">Acepto el reglamento de preinscripcion y normas internas del Colegio Montessori Sonrisas Creativas.</label></div>
                     </div>
 
@@ -562,15 +638,16 @@
                     <div id="reviewSummary"></div>
                     <div class="step-btns" style="border-top:none;padding-top:8px">
                         <button type="button" class="btn btn-back" onclick="prevStep(7)"><i class="bi bi-arrow-left"></i> Anterior</button>
-                        <button type="submit" class="btn btn-submit" id="submitBtn"><i class="bi bi-send-check"></i> Enviar Preinscripcion</button>
+                        <button type="submit" class="btn btn-submit" id="submitBtn"><i class="bi bi-send-check"></i> Enviar Preinscripción</button>
                     </div>
                 </div>
             </form>
 
             <div class="success-screen" id="successScreen">
                 <div class="success-icon"><i class="bi bi-check-lg"></i></div>
-                <h2>Preinscripcion Enviada!</h2>
+                <h2>¡Preinscripción enviada!</h2>
                 <p>Recibimos tus datos correctamente. Nos pondremos en contacto contigo muy pronto.</p>
+                <p id="successNote" style="display:none;color:#9A3412;background:#FFF7ED;border:1px solid #FED7AA;border-radius:12px;padding:10px 12px;margin-top:12px;font-size:.8rem"></p>
                 <a href="index.html" class="btn btn-next" style="margin-top:20px"><i class="bi bi-house"></i> Volver al Inicio</a>
             </div>
         </div>
@@ -580,7 +657,7 @@
         <div class="footer-inner">
             <div>
                 <a href="index.html" class="logo"><img src="img/monte.jpg" alt="Sonrisas" class="logo-img"><span class="logo-text" style="color:#fff">Sonrisas Creativas</span></a>
-                <p style="color:rgba(255,255,255,.6);margin-top:10px;max-width:340px;font-size:.85rem">Colegio Montessori donde cada nino descubre su potencial a traves del amor, la creatividad y el respeto.</p>
+                <p style="color:rgba(255,255,255,.6);margin-top:10px;max-width:340px;font-size:.85rem">Colegio Montessori donde cada nino descubre su potencial a través del amor, la creatividad y el respeto.</p>
             </div>
             <div>
                 <h4 style="font-weight:800;margin-bottom:10px;font-size:.9rem">Contacto</h4>
@@ -589,7 +666,7 @@
                 <p style="font-size:.85rem;color:rgba(255,255,255,.7)"><i class="bi bi-geo-alt"></i> Don Honorio, Santo Domingo</p>
             </div>
         </div>
-        <div class="footer-bottom"><p>&copy; 2025 Colegio Montessori Sonrisas Creativas.</p></div>
+        <div class="footer-bottom"><p>© 2026 Colegio Montessori Sonrisas Creativas.</p></div>
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -602,13 +679,227 @@
 
         AOS.init({duration:500,easing:'ease-out-cubic',once:true});
 
-        // ── AGE ──
-        document.querySelector('[name="birth_date"]').addEventListener('change',function(){
-            const b=new Date(this.value);if(isNaN(b)){document.getElementById('calculatedAge').value='';return}
-            const n=new Date();let y=n.getFullYear()-b.getFullYear(),m=n.getMonth()-b.getMonth();
-            if(m<0||(m===0&&n.getDate()<b.getDate())){y--;m+=12}if(m<0)m+=12;
-            document.getElementById('calculatedAge').value=y>0?y+' an'+(y===1?'o':'os'):m+' mes'+(m===1?'':'es');
-        });
+        // ── AGE + LEVEL VALIDATION (pre.md) ──
+        window._precalc = { suggestedLevel: null, ageMatch: true, isSpecial: false, totalDays: 0, tooYoung: false };
+        let _levelTouchedByUser = false;
+
+        const LEVEL_AGE_RANGES = [
+            { key: 'Párvulos I',                 minDays: 45,  maxDays: 365,     labelRange: '45 días – 11 meses' },
+            { key: 'Párvulos II',                minDays: 365, maxDays: 730,     labelRange: '12 – 23 meses' },
+            { key: 'Párvulos III',               minDays: 730, maxDays: 1095,    labelRange: '24 – 35 meses' },
+            { key: 'Pre-Kínder – Línea Blanca',  minDays: 1095,maxDays: 1460,    labelRange: '3 años' },
+            { key: 'Kínder – Línea Gris',        minDays: 1460,maxDays: 1825,    labelRange: '4 años' },
+            { key: 'Pre-Primario – Línea Negra', minDays: 1825,maxDays: 2190,    labelRange: '5 años' },
+            { key: '1ro – Línea Roja',           minDays: 2190,maxDays: 2555,    labelRange: '6 años' },
+            { key: '2do – Línea Amarilla',       minDays: 2555,maxDays: 2920,    labelRange: '7 años' },
+            { key: '3ro – Línea Azul',           minDays: 2920,maxDays: 3285,    labelRange: '8 años' },
+            { key: '4to – Línea Verde',          minDays: 3285,maxDays: 3650,    labelRange: '9 años' },
+            { key: '5to – Línea Naranja',        minDays: 3650,maxDays: 4015,    labelRange: '10 años' },
+            { key: '6to – Línea Morado',         minDays: 4015,maxDays: 4380,    labelRange: '11 años' }
+        ];
+        const SPECIAL_LEVELS = ['Verano','Inglés Afterschool','Ballet / Danza','Taekwondo','Sala de Tarea','Cuido'];
+
+        function daysBetween(a, b){ return Math.max(0, Math.round((b.getTime() - a.getTime()) / (1000 * 60 * 60 * 24))); }
+
+        function calcAgeBreakdown(birthDate, refDate = new Date()){
+            if(!(birthDate instanceof Date) || isNaN(birthDate)) return null;
+            if(birthDate > refDate) return null;
+            let years = refDate.getFullYear() - birthDate.getFullYear();
+            let months = refDate.getMonth() - birthDate.getMonth();
+            let days = refDate.getDate() - birthDate.getDate();
+            if(days < 0){
+                const prevMonth = new Date(refDate.getFullYear(), refDate.getMonth(), 0);
+                days += prevMonth.getDate();
+                months--;
+            }
+            if(months < 0){ months += 12; years--; }
+            const totalDays = daysBetween(birthDate, refDate);
+            return { years, months, days, totalDays, totalMonths: years * 12 + months };
+        }
+
+        function suggestLevelFromAge(totalDays){
+            if(totalDays < 45) return null; // demasiado pequeño
+            for(const lv of LEVEL_AGE_RANGES){
+                if(totalDays >= lv.minDays && totalDays < lv.maxDays) return lv.key;
+            }
+            if(totalDays >= 4380) return '6to – Línea Morado';
+            return null;
+        }
+
+        function levelRangeInfo(levelName){
+            return LEVEL_AGE_RANGES.find(x => x.key === levelName) || null;
+        }
+
+        function isLevelInAge(totalDays, levelName){
+            if(SPECIAL_LEVELS.includes(levelName)) return { ok: true, special: true };
+            const r = levelRangeInfo(levelName);
+            if(!r) return { ok: true, unknown: true };
+            return { ok: totalDays >= r.minDays && totalDays < r.maxDays, special: false, range: r };
+        }
+
+        function formatAgeHuman(b){
+            if(!b) return '';
+            if(b.years <= 0){
+                if(b.totalMonths <= 0){
+                    return (b.days||0) + ' día' + ((b.days||0)===1?'':'s');
+                }
+                const parts = [];
+                if(b.totalMonths) parts.push(b.totalMonths + ' mes' + (b.totalMonths===1?'':'es'));
+                if(b.days) parts.push(b.days + ' día' + (b.days===1?'':'s'));
+                return parts.join(', ');
+            }
+            const parts = [];
+            if(b.years) parts.push(b.years + ' año' + (b.years===1?'':'s'));
+            if(b.months) parts.push(b.months + ' mes' + (b.months===1?'':'es'));
+            return parts.join(', ');
+        }
+
+        // El checkbox de autorización y su nota viven DENTRO del box, que se
+        // regenera en cada cambio de fecha o nivel. Sin guardar el estado
+        // primero, el texto que el padre ya escribió se perdía al re-renderizar.
+        function captureAuthDraft(){
+            const cb = document.getElementById('directorAuthRequested');
+            const note = document.getElementById('directorAuthorizationNote');
+            window._authDraft = {
+                checked: cb ? cb.checked : false,
+                note: note ? note.value : ''
+            };
+        }
+        function restoreAuthDraft(){
+            const cb = document.getElementById('directorAuthRequested');
+            const note = document.getElementById('directorAuthorizationNote');
+            if(!cb || !note || !window._authDraft) return;
+            cb.checked = !!window._authDraft.checked;
+            note.value = window._authDraft.note || '';
+        }
+
+        function renderAgeValidationBox(){
+            captureAuthDraft();
+            const box = document.getElementById('levelValidationBox');
+            const levelSel = document.getElementById('level_requested');
+            const birthInput = document.querySelector('[name="birth_date"]');
+            if(!box || !levelSel || !birthInput){ return; }
+            const levelName = levelSel.value;
+            const birthVal = birthInput.value;
+
+            // Clear prev status CSS on select
+            levelSel.classList.remove('error');
+
+            if(!birthVal || !levelName){
+                box.style.display='none';
+                box.innerHTML = '';
+                return;
+            }
+            const b = calcAgeBreakdown(new Date(birthVal));
+            if(!b){ box.style.display='none'; box.innerHTML=''; return; }
+
+            if(SPECIAL_LEVELS.includes(levelName)){
+                // Nivel especial: no hay control de edad
+                window._precalc = { suggestedLevel: window._precalc.suggestedLevel || null, ageMatch: true, isSpecial: true, totalDays: b.totalDays, tooYoung: false };
+                box.style.display='none';
+                box.innerHTML='';
+                return;
+            }
+
+            const rng = levelRangeInfo(levelName);
+            if(!rng){
+                // No reconozco el nivel pero NO es especial (por defecto nada para no romper)
+                window._precalc = { suggestedLevel: null, ageMatch: true, isSpecial: false, totalDays: b.totalDays, tooYoung: false };
+                box.style.display='none'; box.innerHTML='';
+                return;
+            }
+
+            const check = isLevelInAge(b.totalDays, levelName);
+            const tooYoung = b.totalDays < 45;
+            const suggested = suggestLevelFromAge(b.totalDays);
+
+            window._precalc = {
+                suggestedLevel: suggested,
+                ageMatch: check.ok && !tooYoung,
+                isSpecial: false,
+                totalDays: b.totalDays,
+                tooYoung
+            };
+
+            let statusClass = 'ok';
+            let title = 'Edad correcta para este nivel';
+            let iconClass = 'bi bi-check-circle-fill';
+            let body = '';
+            if(tooYoung){
+                statusClass = 'err';
+                title = 'Demasiado pequeño';
+                iconClass = 'bi bi-exclamation-octagon-fill';
+                body = `El menor tiene <strong>${formatAgeHuman(b)}</strong> (${b.totalDays} ${b.totalDays===1?'día':'días'}). La edad mínima oficial para cualquier nivel regular es <strong>45 días</strong>. Si deseas inscribirlo en <strong>Párvulos I</strong> de todas formas, marca la autorización abajo.`;
+            } else if(!check.ok){
+                statusClass = 'warn';
+                title = 'Edad fuera del rango oficial';
+                iconClass = 'bi bi-exclamation-triangle-fill';
+                body = `Este nivel (<strong>${levelName}</strong>) corresponde a edades de <strong>${rng.labelRange}</strong>. La edad actual del menor es <strong>${formatAgeHuman(b)}</strong>.`;
+            } else {
+                body = `Rango oficial del nivel: <strong>${rng.labelRange}</strong> • Edad del menor: <strong>${formatAgeHuman(b)}</strong>.`;
+            }
+
+            const showCheckbox = tooYoung || !check.ok;
+            const suggestedBadge = suggested ? `<div class="ab-field" style="margin-top:8px"><span class="ab-pill">Nivel sugerido por edad</span> <span class="age-level-suggest"><i class="bi bi-stars"></i> ${suggested}</span></div>` : '';
+
+            const checkboxHtml = showCheckbox ? `
+                <div class="ab-field">
+                    <label class="ab-check" for="directorAuthRequested">
+                        <input type="checkbox" id="directorAuthRequested" name="director_authorization_requested">
+                        <span style="display:block">Solicito autorización a la <strong>Dirección General</strong> para considerar esta preinscripción a pesar del rango de edad. <em style="font-weight:500;opacity:.85">La dirección puede aprobar o rechazar en su revisión.</em></span>
+                    </label>
+                    <textarea name="director_authorization_note" id="directorAuthorizationNote" placeholder="Motivo opcional: ej. hermanos en el aula, ingreso tardío, evaluación de madurez, convenio, etc."></textarea>
+                </div>` : '';
+
+            const pillType = showCheckbox ? `<span class="ab-pill">${tooYoung ? 'fuera de rango mínimo' : 'fuera de rango'}</span>` : `<span class="ab-pill" style="opacity:.9">válido</span>`;
+
+            box.className = `age-box ${statusClass}`;
+            box.style.display = 'flex';
+            box.innerHTML = `
+                <i class="ab-icon ${iconClass}"></i>
+                <div style="flex:1;min-width:0">
+                    <div class="ab-title">${title} ${pillType}</div>
+                    <div class="ab-body">${body}</div>
+                    ${suggestedBadge}
+                    ${checkboxHtml}
+                </div>
+            `;
+            restoreAuthDraft();
+        }
+
+        // ── birth_date change handler ──
+        const birthDateInput = document.querySelector('[name="birth_date"]');
+        if(birthDateInput){
+            birthDateInput.addEventListener('change', function(){
+                const b = this.value ? new Date(this.value) : null;
+                if(!b || isNaN(b)){ document.getElementById('calculatedAge').value = ''; renderAgeValidationBox(); return; }
+                const age = calcAgeBreakdown(b);
+                document.getElementById('calculatedAge').value = age ? formatAgeHuman(age) : '';
+                // Auto-select suggested level ONLY if user has not touched level select yet
+                if(!_levelTouchedByUser){
+                    const suggested = suggestLevelFromAge(age ? age.totalDays : 0);
+                    const levelSel = document.getElementById('level_requested');
+                    if(levelSel && suggested){
+                        const matchingOption = Array.from(levelSel.options).find(o => o.value === suggested);
+                        if(matchingOption){
+                            levelSel.value = suggested;
+                        }
+                    }
+                }
+                renderAgeValidationBox();
+            });
+        }
+
+        // ── level_requested change handler ──
+        const levelSel = document.getElementById('level_requested');
+        if(levelSel){
+            levelSel.addEventListener('change', function(){
+                _levelTouchedByUser = true;
+                // clear error styling
+                this.classList.remove('error');
+                renderAgeValidationBox();
+            });
+        }
 
         // ── SIBLINGS ──
         document.getElementById('hasSiblings').addEventListener('change',function(){
@@ -621,9 +912,31 @@
             try{
                 const{data}=await sb.from('school_years').select('id,name').eq('status','active').order('start_date',{ascending:false});
                 const sel=document.querySelector('[name="school_year_requested"]');
-                if(data&&data.length){data.forEach(y=>{const o=document.createElement('option');o.value=y.name;o.textContent=y.name;sel.appendChild(o)})}
-                else{const o=document.createElement('option');o.value='2025-2026';o.textContent='2025-2026';sel.appendChild(o)}
-            }catch(e){console.warn(e)}
+                if(data&&data.length){
+                    data.forEach(y=>{
+                        const o=document.createElement('option');
+                        o.value=y.name; o.textContent=y.name;
+                        sel.appendChild(o);
+                    });
+                }
+                else{
+                    const o=document.createElement('option');
+                    o.value='2026-2027'; o.textContent='2026-2027';
+                    sel.appendChild(o);
+                }
+                // El año escolar es obligatorio: preseleccionar el más reciente
+                // evita que el usuario tenga que elegirlo a mano.
+                const hasValidOptions = sel.options.length > 1;
+                if (hasValidOptions) {
+                  sel.value = sel.options[1].value;
+                }
+            }catch(e){
+                console.warn('No se pudieron cargar los años escolares:',e);
+                const o=document.createElement('option');
+                o.value='2026-2027'; o.textContent='2026-2027';
+                sel.appendChild(o);
+                sel.value='2026-2027';
+            }
         })();
 
         // ── NAVIGATION ──
@@ -639,11 +952,74 @@
         }
         function validateStep(s){
             const el=document.querySelector('.step-content[data-step="'+s+'"]');
-            let ok=true;el.querySelectorAll('[required]').forEach(i=>{i.classList.remove('error');if(!i.value.trim()){i.classList.add('error');ok=false}});
-            if(!ok){const f=el.querySelector('.error');if(f)f.focus()}return ok;
+            let ok=true;
+            el.querySelectorAll('[required]').forEach(i=>{
+                i.classList.remove('error');
+                // Un checkbox marcado tiene value "on", así que `value` no sirve
+                // para validarlo: hay que mirar `.checked` explícitamente.
+                if(i.type === 'checkbox' || i.type === 'radio'){
+                    if(!i.checked){ i.classList.add('error'); ok=false; }
+                    return;
+                }
+                const v=(i.value||'').trim();
+                if(!v){ i.classList.add('error'); ok=false; }
+            });
+
+            // Correo válido: type="email" no bloquea al enviar porque el
+            // formulario nunca se envía de forma nativa (preventDefault).
+            el.querySelectorAll('input[type="email"][required]').forEach(i=>{
+                if(i.value && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(i.value.trim())){
+                    i.classList.add('error');
+                    ok=false;
+                }
+            });
+
+            // Validación extra para Paso 1: control de edad / autorización directora
+            if(String(s)==='1'){
+                const box = document.getElementById('levelValidationBox');
+                const precalc = window._precalc || {};
+                const directorAuthCheckbox = document.getElementById('directorAuthRequested');
+                const levelSel = document.getElementById('level_requested');
+                if(box && box.style.display !== 'none' && precalc && precalc.ageMatch === false){
+                    if(!directorAuthCheckbox || !directorAuthCheckbox.checked){
+                        ok = false;
+                        if(levelSel){ levelSel.classList.add('error'); }
+                        // Scroll hacia el box
+                        setTimeout(()=>{
+                            box.scrollIntoView({behavior:'smooth', block:'center'});
+                            if(directorAuthCheckbox){
+                                const lbl = directorAuthCheckbox.closest('label.ab-check');
+                                if(lbl){
+                                    lbl.style.boxShadow = '0 0 0 3px rgba(239,68,68,.18)';
+                                    lbl.style.borderColor = '#EF4444';
+                                    setTimeout(()=>{ lbl.style.boxShadow=''; lbl.style.borderColor='currentColor'; }, 2800);
+                                }
+                            }
+                        }, 50);
+                    }
+                }
+            }
+
+            if(!ok){const f=el.querySelector('.error, :invalid'); if(f) f.focus();}
+            return ok;
         }
-        function nextStep(f){if(!validateStep(f))return;if(f<totalSteps){currentStep=f+1;showStep(currentStep)}}
+        function nextStep(f){
+            if(!validateStep(f)) return;
+            // No dejar avanzar si el nivel quedó fuera de rango sin autorización.
+            if(Number(f)===1){
+                const pc = window._precalc || {};
+                if(pc.ageMatch===false && !document.getElementById('directorAuthRequested')){
+                    alert('Revisa la advertencia de edad del paso 1 antes de continuar.');
+                    return;
+                }
+            }
+            if(f<totalSteps){ currentStep=f+1; showStep(currentStep); }
+        }
         function prevStep(f){if(f>1){currentStep=f-1;showStep(currentStep)}}
+        function goToStep(n){
+            // Solo permite saltar a un paso ya completado, para no saltarse validaciones.
+            if(n < currentStep){ currentStep=n; showStep(currentStep); }
+        }
 
         // ── AUTH PERSONS ──
         function addAuthPerson(){
@@ -651,8 +1027,8 @@
             document.getElementById('authorizedPersons').insertAdjacentHTML('beforeend',
                 '<div class="auth-row" data-index="'+i+'">'+
                 '<div class="form-group"><label class="form-label">Nombre</label><input type="text" class="form-input" name="auth_name_'+i+'" placeholder="Nombre"></div>'+
-                '<div class="form-group"><label class="form-label">Parentesco</label><input type="text" class="form-input" name="auth_relationship_'+i+'" placeholder="Tio"></div>'+
-                '<div class="form-group"><label class="form-label">Telefono</label><input type="tel" class="form-input" name="auth_phone_'+i+'" placeholder="Tel"></div>'+
+                '<div class="form-group"><label class="form-label">Parentesco</label><input type="text" class="form-input" name="auth_relationship_'+i+'" placeholder="Tío"></div>'+
+                '<div class="form-group"><label class="form-label">Teléfono</label><input type="tel" class="form-input" name="auth_phone_'+i+'" placeholder="Tel"></div>'+
                 '<div><button type="button" class="btn-remove" onclick="this.closest(\'.auth-row\').remove()"><i class="bi bi-trash3"></i></button></div></div>');
         }
 
@@ -665,28 +1041,154 @@
         });
         function handleFile(input,fuId,label){
             const fu=document.getElementById(fuId);
-            if(input.files&&input.files[0]){
-                fu.classList.add('has-file');
-                fu.querySelector('.fu-name').textContent=input.files[0].name;
-                fu.querySelector('i').className='bi bi-check-circle-fill';
-                fu.querySelector('i').style.color='var(--green)';
+            const nameEl=fu.querySelector('.fu-name');
+            const iconEl=fu.querySelector('i');
+
+            // Limpiar estado previo: el onchange también se dispara al cancelar.
+            input.value='';
+            if(!input.files || !input.files[0]){
+                fu.classList.remove('has-file');
+                nameEl.textContent='';
+                iconEl.className='bi '+(fu.dataset.icon||'bi-file-earmark');
+                iconEl.style.color='';
+                return;
             }
+
+            const v = validateFileInput(input);
+            if(!v.ok){
+                fu.classList.remove('has-file');
+                nameEl.textContent = v.msg;
+                nameEl.style.color = 'var(--red)';
+                nameEl.style.display = 'block';
+                fu.querySelector('.fu-hint').style.display='block';
+                iconEl.className='bi bi-exclamation-triangle-fill';
+                iconEl.style.color='var(--red)';
+                return;
+            }
+
+            const total = totalSelectedBytes();
+            if(total > MAX_TOTAL_BYTES){
+                fu.classList.remove('has-file');
+                nameEl.textContent = 'El total de documentos supera 12 MB. Quita algún archivo.';
+                nameEl.style.color = 'var(--red)';
+                nameEl.style.display = 'block';
+                iconEl.className='bi bi-exclamation-triangle-fill';
+                iconEl.style.color='var(--red)';
+                return;
+            }
+
+            fu.classList.add('has-file');
+            nameEl.style.color='';
+            nameEl.textContent=v.file.name+' ('+formatBytes(v.file.size)+')';
+            iconEl.className='bi bi-check-circle-fill';
+            iconEl.style.color='var(--green)';
+        }
+
+        function formatBytes(bytes){
+            if(bytes<1024) return bytes+' B';
+            if(bytes<1024*1024) return (bytes/1024).toFixed(0)+' KB';
+            return (bytes/(1024*1024)).toFixed(1)+' MB';
         }
 
         // ── SIGNATURE ──
         (function(){
             const c=document.getElementById('signatureCanvas'),ctx=c.getContext('2d');let d=false;
             function pos(e){const r=c.getBoundingClientRect();const t=e.touches?e.touches[0]:e;return{x:t.clientX-r.left,y:t.clientY-r.top}}
-            function start(e){d=true;const p=pos(e);ctx.beginPath();ctx.moveTo(p.x,p.y);e.preventDefault()}
+            function start(e){d=true;window._sigDirty=true;const p=pos(e);ctx.beginPath();ctx.moveTo(p.x,p.y);e.preventDefault()}
             function draw(e){if(!d)return;const p=pos(e);ctx.lineTo(p.x,p.y);ctx.strokeStyle='#1E293B';ctx.lineWidth=2.5;ctx.lineCap='round';ctx.stroke();e.preventDefault()}
             function stop(){d=false}
             c.addEventListener('mousedown',start);c.addEventListener('mousemove',draw);c.addEventListener('mouseup',stop);c.addEventListener('mouseleave',stop);
             c.addEventListener('touchstart',start,{passive:false});c.addEventListener('touchmove',draw,{passive:false});c.addEventListener('touchend',stop);
         })();
-        function clearSig(){const c=document.getElementById('signatureCanvas');c.getContext('2d').clearRect(0,0,c.width,c.height)}
+        function clearSig(){
+            const c=document.getElementById('signatureCanvas');
+            c.getContext('2d').clearRect(0,0,c.width,c.height);
+            window._sigDirty=false;
+        }
 
-        // ── FILE TO BASE64 ──
-        function fileToBase64(file){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(file)})}
+        // Detecta si el canvas realmente tiene trazos. Un PNG de un canvas
+        // vacío pesa igual de grande en el payload pero no vale como firma.
+        function signatureHasInk(){
+            const c=document.getElementById('signatureCanvas');
+            if(!c) return false;
+            if(window._sigDirty) return true;
+            try{
+                const ctx=c.getContext('2d');
+                const {data}=ctx.getImageData(0,0,c.width,c.height);
+                for(let i=3;i<data.length;i+=4){ if(data[i]!==0) return true; }
+                return false;
+            }catch(e){ return !!window._sigDirty; }
+        }
+
+        // ── FILE HANDLING ──
+        // Límite por archivo y total. Antes se mandaban en base64 dentro del
+        // INSERT, lo que disparaba el límite de payload de PostgREST (8 campos
+        // x fotos de móvil = varios MB) y hacía fallar TODO el envío.
+        const MAX_FILE_BYTES   = 4 * 1024 * 1024;  // 4 MB por archivo
+        const MAX_TOTAL_BYTES  = 12 * 1024 * 1024; // 12 MB en total
+        const ACCEPTED_MIME    = ['image/jpeg','image/jpg','image/png','image/webp','application/pdf'];
+        const ALLOWED_EXT      = ['.jpg','.jpeg','.png','.webp','.pdf'];
+
+        function validateFileInput(input){
+            const f = input.files && input.files[0];
+            if(!f) return { ok:true };
+            const name=(f.name||'').toLowerCase();
+            const extOk = ALLOWED_EXT.some(x => name.endsWith(x));
+            const mimeOk = ACCEPTED_MIME.includes((f.type||'').toLowerCase());
+            if(!extOk && !mimeOk){
+                return { ok:false, msg:'Formato no permitido. Usa JPG, PNG, WEBP o PDF.' };
+            }
+            if(f.size > MAX_FILE_BYTES){
+                return { ok:false, msg:'El archivo supera los 4 MB. Comprime la imagen o tómala con menor resolución.' };
+            }
+            return { ok:true, file:f };
+        }
+
+        function totalSelectedBytes(){
+            let total = 0;
+            document.querySelectorAll('.file-upload input[type="file"]').forEach(inp=>{
+                if(inp.files && inp.files[0]) total += inp.files[0].size;
+            });
+            return total;
+        }
+
+        function fileToBase64(file){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=()=>rej(new Error('No se pudo leer el archivo'));r.readAsDataURL(file)})}
+
+        // Comprime imágenes en el navegador antes de convertirlas a data URL.
+        // PDFs y GIFs pasan tal cual: comprimir un PDF en canvas lo destruiría.
+        function compressForUpload(file, quality){
+            if(file.type === 'application/pdf' || file.type === 'image/gif'){
+                return fileToBase64(file);
+            }
+            return new Promise((resolve,reject)=>{
+                const url = URL.createObjectURL(file);
+                const img = new Image();
+                img.onload = function(){
+                    try{
+                        // Sin ampliar: si la foto ya es pequeña queda como está.
+                        const scale = Math.min(1, 1400 / Math.max(img.width, img.height));
+                        const w = Math.max(1, Math.round(img.width * scale));
+                        const h = Math.max(1, Math.round(img.height * scale));
+                        const c = document.createElement('canvas');
+                        c.width=w; c.height=h;
+                        const ctx = c.getContext('2d');
+                        ctx.fillStyle='#fff';
+                        ctx.fillRect(0,0,w,h);
+                        ctx.drawImage(img,0,0,w,h);
+                        const out = c.toDataURL('image/jpeg', quality);
+                        if(!out || out === 'data:,') throw new Error('Canvas vacío');
+                        resolve(out);
+                    }catch(e){ reject(e); }
+                    finally{ URL.revokeObjectURL(url); }
+                };
+                img.onerror = function(){
+                    URL.revokeObjectURL(url);
+                    // Si el navegador no decodifica la imagen, mandarla tal cual.
+                    fileToBase64(file).then(resolve, reject);
+                };
+                img.src = url;
+            });
+        }
 
         // ── REVIEW ──
         function buildReview(){
@@ -694,10 +1196,18 @@
             const v=n=>f.get(n)||'';
             const yes=n=>f.get(n)==='true'||f.get(n)==='on'?'Si':'No';
             let auths=[];for(let i=0;i<authCount;i++){const n=v('auth_name_'+i);if(n)auths.push({n,r:v('auth_relationship_'+i),p:v('auth_phone_'+i)})}
-            const docs=['Foto','Acta Nac.','Cedula Front.','Cedula Tras.'].map((d,i)=>{
-                const el=document.getElementById(['fu-photo','fu-acta','fu-ced-front','fu-ced-back'][i]);
-                return d+': '+(el.classList.contains('has-file')?'<span style="color:var(--green)">Adjuntado</span>':'<span style="color:var(--gray-soft)">Pendiente</span>');
+            const docs=['Foto','Acta Nac.','Cédula Est. Front.','Cédula Est. Tras.','Cédula Padre Front.','Cédula Padre Tras.','Cédula Madre Front.','Cédula Madre Tras.'].map((d,i)=>{
+                const el=document.getElementById(['fu-photo','fu-acta','fu-ced-front','fu-ced-back','fu-p1-ced-front','fu-p1-ced-back','fu-p2-ced-front','fu-p2-ced-back'][i]);
+                return d+': '+(el&&el.classList.contains('has-file')?'<span style="color:var(--green)">Adjuntado</span>':'<span style="color:var(--gray-soft)">Pendiente</span>');
             });
+            const hasSiblings = v('has_siblings')==='true';
+            const siblingName = v('sibling_name');
+            const siblingsHTML = hasSiblings
+              ? '<div class="review-section"><h4><i class="bi bi-diagram-3"></i> Hermanos</h4><div class="review-grid">'+
+                '<div class="review-item"><span class="rl">Tiene hermanos</span><span class="rv"><span style="color:#0B63C7;font-weight:800">Si</span></span></div>'+
+                '<div class="review-item full"><span class="rl">Nombre del hermano(a)</span><span class="rv">'+(siblingName||'<span style="color:#EF4444;font-weight:800">Sin especificar</span>')+'</span></div>'+
+                '</div></div>'
+              : '';
             document.getElementById('reviewSummary').innerHTML=
                 '<div class="review-section"><h4><i class="bi bi-person-heart"></i> Estudiante</h4><div class="review-grid">'+
                 '<div class="review-item"><span class="rl">Nombre</span><span class="rv">'+v('student_name')+' '+v('student_last_name')+'</span></div>'+
@@ -705,6 +1215,33 @@
                 '<div class="review-item"><span class="rl">Edad</span><span class="rv">'+(document.getElementById('calculatedAge').value||'—')+'</span></div>'+
                 '<div class="review-item"><span class="rl">Sexo</span><span class="rv">'+v('gender')+'</span></div>'+
                 '<div class="review-item"><span class="rl">Nivel</span><span class="rv">'+v('level_requested')+'</span></div>'+
+                (() => {
+                    const pc = window._precalc || {};
+                    const validBadge = (pc.isSpecial || !v('birth_date')) ? '—' :
+                        (pc.ageMatch
+                            ? '<span style="display:inline-flex;align-items:center;gap:4px;color:#16A34A;font-weight:800"><i class="bi bi-check-circle-fill"></i> Correcta</span>'
+                            : '<span style="display:inline-flex;align-items:center;gap:4px;color:#F97316;font-weight:800"><i class="bi bi-exclamation-triangle-fill"></i> Fuera de rango</span>');
+                    let html = '';
+                    if(v('birth_date')){
+                        html +=
+                            '<div class="review-item"><span class="rl">Nivel Sugerido</span><span class="rv">'+(pc.suggestedLevel || '—')+'</span></div>'+
+                            '<div class="review-item"><span class="rl">Edad x Nivel</span><span class="rv">'+validBadge+'</span></div>';
+                        if(pc.ageMatch === false && !pc.isSpecial){
+                            const authRequested = v('director_authorization_requested') === 'on';
+                            const note = v('director_authorization_note');
+                            const authBadge = authRequested
+                                ? '<span style="color:#0B63C7;font-weight:800">Solicitada</span>'
+                                : '<span style="color:#EF4444;font-weight:800">No solicitada</span>';
+                            html +=
+                                '<div class="review-item"><span class="rl">Autoriz. Directora</span><span class="rv">'+authBadge+'</span></div>';
+                            if(note){
+                                html +=
+                                    '<div class="review-item full"><span class="rl">Motivo autoriz.</span><span class="rv" style="white-space:pre-wrap">'+note+'</span></div>';
+                            }
+                        }
+                    }
+                    return html;
+                })()+
                 '<div class="review-item"><span class="rl">Horario</span><span class="rv">'+v('schedule')+'</span></div></div></div>'+
                 '<div class="review-section"><h4><i class="bi bi-people"></i> Padres</h4><div class="review-grid">'+
                 '<div class="review-item"><span class="rl">Padre</span><span class="rv">'+v('p1_name')+'</span></div>'+
@@ -715,10 +1252,11 @@
                 '<div class="review-item"><span class="rl">Cedula</span><span class="rv">'+(v('p2_cedula')||'—')+'</span></div>'+
                 '<div class="review-item"><span class="rl">Tel</span><span class="rv">'+(v('p2_phone')||'—')+'</span></div>'+
                 '<div class="review-item"><span class="rl">Email</span><span class="rv">'+(v('p2_email')||'—')+'</span></div></div></div>'+
+                siblingsHTML+
                 '<div class="review-section"><h4><i class="bi bi-telephone-plus"></i> Emergencia</h4><div class="review-grid">'+
                 '<div class="review-item"><span class="rl">Contacto</span><span class="rv">'+v('emergency_name')+'</span></div>'+
                 '<div class="review-item"><span class="rl">Parentesco</span><span class="rv">'+v('emergency_relationship')+'</span></div>'+
-                '<div class="review-item"><span class="rl">Telefono</span><span class="rv">'+v('emergency_phone')+'</span></div>'+
+                '<div class="review-item"><span class="rl">Teléfono</span><span class="rv">'+v('emergency_phone')+'</span></div>'+
                 '<div class="review-item"><span class="rl">Cedula</span><span class="rv">'+v('emergency_cedula')+'</span></div></div></div>'+
                 '<div class="review-section"><h4><i class="bi bi-heart-pulse"></i> Salud</h4><div class="review-grid">'+
                 '<div class="review-item"><span class="rl">Sangre</span><span class="rv">'+(v('blood_type')||'—')+'</span></div>'+
@@ -736,7 +1274,36 @@
         // ── SUBMIT ──
         document.getElementById('preinscripcionForm').addEventListener('submit',async function(e){
             e.preventDefault();
-            const btn=document.getElementById('submitBtn');btn.disabled=true;btn.innerHTML='<i class="bi bi-hourglass-split"></i> Enviando...';
+            const btn=document.getElementById('submitBtn');
+
+            // Cerrojo anti doble-envío: sin esto, dos clics rápidos crean dos
+            // filas idénticas en la tabla.
+            if(btn.dataset.sending === '1') return;
+
+            // Re-validar TODOS los pasos, no solo el 7: el usuario puede haber
+            // regresado y vaciado un campo obligatorio en un paso anterior.
+            for(let s=1; s<totalSteps; s++){
+                if(!validateStep(s)){ showStep(s); alert('Faltan datos obligatorios en el paso '+s+'.'); return; }
+            }
+
+            // La firma es obligatoria en la práctica: sin ella se guarda una
+            // imagen en blanco y Dirección no tiene forma de verificar.
+            if(!signatureHasInk()){
+                showStep(6);
+                alert('Firma en el recuadro de firma digital antes de enviar.');
+                return;
+            }
+
+            if(!sb){
+                alert('No pudimos conectar con el servidor. Revisa tu conexión a internet y recarga la página.');
+                return;
+            }
+
+            btn.dataset.sending='1';
+            btn.disabled=true;
+            btn.innerHTML='<i class="bi bi-hourglass-split"></i> Enviando...';
+            const t0=Date.now();
+
             const f=new FormData(this);const v=n=>f.get(n)||null;
 
             let authPersons=[];for(let i=0;i<authCount;i++){const n=v('auth_name_'+i);if(n)authPersons.push({name:n,relationship:v('auth_relationship_'+i),phone:v('auth_phone_'+i)})}
@@ -744,6 +1311,7 @@
             const canvas=document.getElementById('signatureCanvas');let sig=null;
             try{sig=canvas.toDataURL('image/png')}catch(ex){}
 
+            const pc = window._precalc || {};
             const data={
                 student_name:v('student_name')||'',
                 student_last_name:v('student_last_name'),
@@ -763,34 +1331,104 @@
                 blood_type:v('blood_type'),allergies:v('allergies'),medical_conditions:v('medical_conditions'),medications:v('medications'),food_restrictions:v('food_restrictions'),medical_notes:v('medical_notes'),
                 auth_data_treatment:v('auth_data_treatment')==='on',auth_correct_info:v('auth_correct_info')==='on',auth_contact:v('auth_contact')==='on',auth_regulations:v('auth_regulations')==='on',
                 digital_signature:sig,signature_date:new Date().toISOString(),
-                status:'pending'
+                status:'pending',
+                suggested_level:pc.suggestedLevel || null,
+                age_match:!!pc.ageMatch,
+                director_authorization_requested:v('director_authorization_requested')==='on',
+                director_authorization_note:v('director_authorization_note') || null,
+                director_authorization_approved:null
             };
 
             // Convert files to base64 and attach
+            // Los documentos NO se mandan como base64 dentro del INSERT: 8 campos de
+            // fotos de móvil superaban el límite de payload de PostgREST y el
+            // envío completo fallaba. Ahora se comprime cada imagen en el
+            // navegador y se guarda su data URL; si aun así es demasiado
+            // grande, se envía la preinscripción SIN el documento en vez de
+            // perder la solicitud entera.
             const fileMap={photo_url:'fu-photo',birth_certificate_url:'fu-acta',cedula_front_url:'fu-ced-front',cedula_back_url:'fu-ced-back',p1_cedula_front_url:'fu-p1-ced-front',p1_cedula_back_url:'fu-p1-ced-back',p2_cedula_front_url:'fu-p2-ced-front',p2_cedula_back_url:'fu-p2-ced-back'};
             for(const[col,fuId]of Object.entries(fileMap)){
-                const inp=document.getElementById(fuId).querySelector('input[type="file"]');
-                if(inp.files&&inp.files[0]){
-                    try{data[col]=await fileToBase64(inp.files[0])}catch(ex){data[col]=null}
-                }else{data[col]=null}
+                data[col]=null;
+                const box=document.getElementById(fuId);
+                if(!box || !box.classList.contains('has-file')) continue;
+                const inp=box.querySelector('input[type="file"]');
+                if(!inp.files || !inp.files[0]) continue;
+                const v=validateFileInput(inp);
+                if(!v.ok){ console.warn('Documento rechazado en',fuId,v.msg); continue; }
+                try{
+                    const b64=await compressForUpload(v.file, col==='photo_url' ? 0.72 : 0.82);
+                    data[col]=b64;
+                }catch(ex){
+                    console.warn('No se pudo procesar el documento en',fuId,ex);
+                }
             }
 
-            try{
-                if(sb){
-                    const{error}=await sb.from('student_preregistrations').insert([data]);
-                    if(error)throw error;
-                }else{
-                    console.warn('Supabase no disponible',data);await new Promise(r=>setTimeout(r,1500));
-                }
-                document.getElementById('wizardCard').querySelector('.progress-bar').style.display='none';
-                document.getElementById('wizardCard').querySelector('form').style.display='none';
-                document.getElementById('successScreen').classList.add('active');
+            // Columnas que solo existen si se ejecutó FIX_PREINSCRIPCION_AGE_CONTROL.sql.
+        // Si faltan, se reintenta sin ellas en vez de perder la preinscripción:
+        // el control de edad es una ayuda, no un requisito para poder matricular.
+        const OPTIONAL_COLS = ['suggested_level','age_match',
+            'director_authorization_requested','director_authorization_note',
+            'director_authorization_approved'];
+
+        async function insertPrereg(data){
+            const {error} = await sb.from('student_preregistrations').insert([data]);
+            if(!error) return { ok:true };
+
+            const msg = String(error.message || '');
+            const faltanColumnas = OPTIONAL_COLS.some(c => new RegExp(c).test(msg)) &&
+                /does not exist|undefined_column|42703/i.test(msg);
+
+            if(faltanColumnas){
+                console.warn('Faltan columnas de control de edad; reintentando sin ellas.');
+                const reduced = {...data};
+                OPTIONAL_COLS.forEach(c => delete reduced[c]);
+                const retry = await sb.from('student_preregistrations').insert([reduced]);
+                if(!retry.error) return { ok:true, degraded:true };
+                throw retry.error;
+            }
+            throw error;
+        }
+
+        try{
+                const res = await insertPrereg(data);
+                renderSuccess(res.degraded);
             }catch(err){
                 console.error('Error al enviar:',err);
-                alert('Ocurrio un error al enviar la preinscripcion.\n\nDetalle: '+(err.message||err));
-                btn.disabled=false;btn.innerHTML='<i class="bi bi-send-check"></i> Enviar Preinscripcion';
+                const msg = String(err.message || err || '');
+
+                if(/does not exist|undefined_column|column .* does not exist|42703/i.test(msg)){
+                    alert('Error de configuración en la base de datos.\n\nFalta ejecutar el script "FIX_PREINSCRIPCION_AGE_CONTROL.sql" en el Editor SQL de Supabase (agrega las columnas de control de edad y autorización).\n\nDetalle: '+msg);
+                }else if(/PGRST|413|payload|request entity too large|row-level security|42501|403/i.test(msg)){
+                    alert('No pudimos guardar la preinscripción.\n\nPrueba de nuevo en unos minutos. Si el problema continúa, escríbenos por WhatsApp al 809-532-4903.\n\nDetalle: '+msg);
+                }else if(/timeout|failed to fetch|network/i.test(msg)){
+                    alert('Se perdió la conexión al enviar. Revisa tu internet y vuelve a intentar; tus datos siguen en el formulario.\n\nDetalle: '+msg);
+                }else{
+                    alert('Ocurrió un error al enviar la preinscripción.\n\nDetalle: '+msg);
+                }
+                btn.dataset.sending='0';
+                btn.disabled=false;
+                btn.innerHTML='<i class="bi bi-send-check"></i> Enviar Preinscripción';
             }
         });
+
+        function renderSuccess(degraded){
+            const card=document.getElementById('wizardCard');
+            card.querySelector('.progress-bar').style.display='none';
+            card.querySelector('form').style.display='none';
+            const ok=document.getElementById('successScreen');
+            ok.classList.add('active');
+
+            if(degraded){
+                const n=document.getElementById('successNote');
+                if(n){
+                    n.style.display='block';
+                    n.textContent='Tu solicitud se registró. El colegio la revisará junto al resto de las preinscripciones.';
+                }
+            }
+
+            if(window.AOS && typeof AOS.refreshHard === 'function') AOS.refreshHard();
+            window.scrollTo({top:0,behavior:'smooth'});
+        }
 
         document.getElementById('sigDate').textContent=new Date().toLocaleDateString('es-DO',{year:'numeric',month:'long',day:'numeric'});
     </script>

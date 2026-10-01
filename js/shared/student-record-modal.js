@@ -104,7 +104,13 @@ export const StudentRecordModal = {
       gender: p.gender || '',
       nationality: p.nationality || '',
       level_requested: p.level_requested || '',
+      school_year_requested: p.school_year_requested || '',
       schedule: p.schedule || '',
+      suggested_level: p.suggested_level || null,
+      age_match: p.age_match,
+      director_authorization_requested: p.director_authorization_requested,
+      director_authorization_note: p.director_authorization_note || null,
+      director_authorization_approved: p.director_authorization_approved ?? null,
       p1_name: p.p1_name || '',
       p1_relationship: p.p1_relationship || '',
       p1_cedula: p.p1_cedula || '',
@@ -503,12 +509,92 @@ export const StudentRecordModal = {
 
   _tabAccess() {
     const d = _state.data;
+    const preName = (this._v('name') || this._v('student_name') + ' ' + this._v('student_last_name') || '');
+    const classroomEl = document.getElementById('srm-classroom');
+    const classroomName = classroomEl?.options?.[classroomEl.selectedIndex]?.text
+      || _state.classes?.find(c => String(c.id) === String(d.classroom_id || this._v('classroom_id')))?.name
+      || d.classrooms?.name
+      || 'Pendiente';
+    const levelName = classroomEl?.options?.[classroomEl.selectedIndex]?.dataset?.level
+      || _state.classes?.find(c => String(c.id) === String(d.classroom_id || this._v('classroom_id')))?.level
+      || d.classrooms?.level
+      || this._v('level_requested')
+      || '';
+    const monthlyFee = document.getElementById('srm-monthlyfee')?.value || this._v('monthly_fee') || '0.00';
+    const scheduleSel = document.getElementById('srm-schedule');
+    const scheduleTxt = scheduleSel?.options?.[scheduleSel.selectedIndex]?.text || this._v('schedule') || 'Regular (8:00 AM – 12:00 PM)';
+    const studentMatricula = document.getElementById('srm-matricula')?.value || _state.data?.matricula || 'MSC-XXXXXXXX';
+    const p1Name = this._v('p1_name') || 'Família';
+    const currentEmail = this._v('login_email') || this._v('p1_email') || d.parent?.email || '';
+    const currentPw = this._v('password') || '';
+
     return `
       <div class="srm-grid-2">
-        <div><label class="${L}">Correo de Login</label><input id="srm-emailuser" type="email" value="${Helpers.escapeHTML(d.parent?.email || this._v('login_email'))}" class="${I}" placeholder="usuario@ejemplo.com"></div>
+        <div>
+          <label class="${L}">Correo de Login</label>
+          <div class="flex gap-2">
+            <input id="srm-emailuser" type="email" value="${Helpers.escapeHTML(d.parent?.email || this._v('login_email'))}" class="${I} flex-1" placeholder="usuario@ejemplo.com">
+            <button type="button" onclick="StudentRecordModal._syncEmailFromP1()" title="Copiar correo del padre/madre 1" class="srm-btn-sm srm-btn-dark px-3 whitespace-nowrap">
+              <i data-lucide="copy" class="w-3 h-3"></i>
+            </button>
+          </div>
+        </div>
         <div><label class="${L}">Correo Notificaciones</label><input id="srm-emailnotif" type="email" value="${Helpers.escapeHTML(this._v('p1_email'))}" class="${I}"></div>
-        <div><label class="${L}">Contraseña Temporal</label><input id="srm-password" type="text" placeholder="Mínimo 6 caracteres" class="${I}"></div>
+        <div>
+          <label class="${L}">Contraseña Temporal</label>
+          <div class="flex gap-2">
+            <input id="srm-password" type="text" placeholder="8+ caracteres alfanuméricos + símbolo" value="${Helpers.escapeHTML(currentPw)}" class="${I} flex-1">
+            <button type="button" onclick="StudentRecordModal._genSecurePassword()" title="Generar contraseña segura (8+ alfanum+símbolo)" class="srm-btn-sm srm-btn-blue px-3 whitespace-nowrap">
+              <i data-lucide="key-round" class="w-3 h-3"></i>
+            </button>
+          </div>
+          <p class="text-[10px] text-slate-400 mt-1 font-bold">Recomendado: minúscula, mayúscula, dígito, símbolo. Mín. 8 caracteres.</p>
+        </div>
         <div><label class="${L}">Último Acceso</label><input value="${this._v('last_login') ? new Date(d.last_login).toLocaleString() : 'Nunca'}" class="${I}" readonly style="background:#f8fafc"></div>
+      </div>
+
+      <div class="srm-section-divider mt-6"><i data-lucide="sparkles" class="w-4 h-4"></i> Vista Previa Credenciales</div>
+      <div id="srm-credpreview" class="rounded-2xl border border-slate-200 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-4 space-y-3 shadow-inner">
+        <div class="grid grid-cols-2 gap-3">
+          <div class="bg-white rounded-xl p-3 border border-blue-100">
+            <p class="text-[10px] font-black uppercase text-blue-600 tracking-wide">Estudiante</p>
+            <p class="text-sm font-black text-slate-800 mt-0.5">${Helpers.escapeHTML(preName || '—')}</p>
+          </div>
+          <div class="bg-white rounded-xl p-3 border border-emerald-100">
+            <p class="text-[10px] font-black uppercase text-emerald-600 tracking-wide">Matrícula</p>
+            <p class="text-sm font-black text-emerald-700 mt-0.5 font-mono tracking-tight">${Helpers.escapeHTML(studentMatricula)}</p>
+          </div>
+          <div class="bg-white rounded-xl p-3 border border-purple-100">
+            <p class="text-[10px] font-black uppercase text-purple-600 tracking-wide">Aula / Nivel</p>
+            <p class="text-sm font-black text-slate-800 mt-0.5">${Helpers.escapeHTML(classroomName)} ${levelName ? `<span class="text-[10px] text-purple-600 font-bold">· ${levelName}</span>` : ''}</p>
+          </div>
+          <div class="bg-white rounded-xl p-3 border border-amber-100">
+            <p class="text-[10px] font-black uppercase text-amber-600 tracking-wide">Horario</p>
+            <p class="text-xs font-bold text-slate-700 mt-0.5">${Helpers.escapeHTML(scheduleTxt)}</p>
+          </div>
+          <div class="bg-white rounded-xl p-3 border border-sky-100 col-span-2">
+            <p class="text-[10px] font-black uppercase text-sky-600 tracking-wide">Credenciales de Acceso</p>
+            <div class="mt-1.5 flex flex-wrap gap-2">
+              <span class="inline-flex items-center gap-1.5 rounded-lg bg-sky-50 px-2.5 py-1 text-xs font-bold text-sky-700 border border-sky-200">
+                <i data-lucide="mail" class="w-3 h-3"></i> ${currentEmail ? Helpers.escapeHTML(currentEmail) : '<span class="text-sky-400 italic">correo pendiente</span>'}
+              </span>
+              <span class="inline-flex items-center gap-1.5 rounded-lg bg-orange-50 px-2.5 py-1 text-xs font-bold text-orange-700 border border-orange-200">
+                <i data-lucide="lock" class="w-3 h-3"></i> ${currentPw ? Helpers.escapeHTML(currentPw) : '<span class="text-orange-400 italic">sin contraseña</span>'}
+              </span>
+              <span class="inline-flex items-center gap-1.5 rounded-lg bg-rose-50 px-2.5 py-1 text-xs font-bold text-rose-700 border border-rose-200">
+                <i data-lucide="dollar-sign" class="w-3 h-3"></i> Mensualidad: $${monthlyFee}
+              </span>
+            </div>
+          </div>
+        </div>
+        <div class="flex gap-2 pt-1">
+          <button onclick="StudentRecordModal._refreshCredPreview()" class="srm-btn-sm srm-btn-dark flex-1">
+            <i data-lucide="refresh-cw" class="w-3 h-3"></i> Actualizar Vista
+          </button>
+          <button onclick="StudentRecordModal._sendTestWelcomeEmail()" class="srm-btn-sm srm-btn-green flex-1">
+            <i data-lucide="send" class="w-3 h-3"></i> Enviar Correo Prueba
+          </button>
+        </div>
       </div>
 
       <div class="srm-section-divider"><i data-lucide="qr-code" class="w-4 h-4"></i> Código QR de Asistencia</div>
@@ -524,6 +610,238 @@ export const StudentRecordModal = {
         </div>
       </div>
     `;
+  },
+
+  _syncEmailFromP1() {
+    const p1Email = document.getElementById('srm-p1email')?.value?.trim();
+    if (p1Email) {
+      const u = document.getElementById('srm-emailuser');
+      const n = document.getElementById('srm-emailnotif');
+      if (u && !u.value) u.value = p1Email;
+      if (n && !n.value) n.value = p1Email;
+      this._refreshCredPreview();
+    }
+  },
+
+  _genSecurePassword() {
+    const lowers = 'abcdefghijkmnopqrstuvwxyz';
+    const uppers = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+    const digits = '23456789';
+    const syms   = '!@#$%&*?+-=';
+    const pick   = (s, n) => Array.from({length: n}, () => s[Math.floor(Math.random() * s.length)]).join('');
+    const chars = (pick(lowers, 3) + pick(uppers, 2) + pick(digits, 2) + pick(syms, 1)).split('');
+    for (let i = chars.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [chars[i], chars[j]] = [chars[j], chars[i]]; }
+    const pw = chars.join('');
+    const el = document.getElementById('srm-password');
+    if (el) el.value = pw;
+    this._refreshCredPreview();
+    Helpers.toast('Contraseña segura generada', 'success');
+  },
+
+  _refreshCredPreview() {
+    if (_state.activeTab !== 'access') return;
+    const body = document.getElementById('srmBody');
+    if (!body) return;
+    body.innerHTML = this._renderTabContent('access');
+    if (window.lucide) lucide.createIcons();
+    this._bindEvents();
+  },
+
+  async _sendTestWelcomeEmail() {
+    const email = document.getElementById('srm-emailuser')?.value?.trim()
+      || document.getElementById('srm-emailnotif')?.value?.trim()
+      || this._v('p1_email');
+    if (!email) return Helpers.toast('Ingresa un correo para la prueba', 'warning');
+    const password = document.getElementById('srm-password')?.value?.trim() || 'DemoPass1!';
+    const p1Name = document.getElementById('srm-p1name')?.value?.trim() || 'Padre/Madre';
+    const studentName = (document.getElementById('srm-name')?.value?.trim() || (document.getElementById('srm-name') && (document.getElementById('srm-student_name')?.value + ' ' + document.getElementById('srm-student_last_name')?.value) || 'Estudiante Demo')).trim();
+    const matricula = document.getElementById('srm-matricula')?.value?.trim() || 'MSC-TEST-0001';
+    const sel = document.getElementById('srm-classroom');
+    const classroom = sel?.options?.[sel?.selectedIndex]?.text || 'Aula de Prueba';
+    const level = sel?.options?.[sel?.selectedIndex]?.dataset?.level || this._v('level_requested') || 'Nivel';
+    const schedule = document.getElementById('srm-schedule')?.value || 'Regular (8:00 AM – 12:00 PM)';
+    const fee = parseFloat(document.getElementById('srm-monthlyfee')?.value || '0') || 0;
+
+    Helpers.toast('Enviando correo de prueba...', 'info');
+    try {
+      const html = this._buildWelcomeEmailTemplate({ p1Name, studentName, matricula, classroom, level, schedule, email, password, monthlyFee: fee, isTest: true });
+      const text = this._buildWelcomeEmailText({ p1Name, studentName, matricula, classroom, level, schedule, email, password, monthlyFee: fee, isTest: true });
+      const subject = `[PRUEBA] Bienvenido(a) ${studentName} — Matrícula ${matricula}`;
+      const ok = await this._sendEmailViaEdge({ to: email, subject, html, text });
+      if (ok) Helpers.toast('Correo de prueba enviado a ' + email, 'success');
+      else Helpers.toast('No se pudo enviar el correo (Edge Function sin respuesta)', 'warning');
+    } catch (e) {
+      Helpers.toast('Error enviando correo prueba: ' + (e.message || e), 'error');
+    }
+  },
+
+  async _sendEmailViaEdge({ to, subject, html, text, attachments }) {
+    const fnUrl = window.__SUPABASE_EDGE_BASE__
+      ? window.__SUPABASE_EDGE_BASE__.replace(/\/$/, '') + '/send-email'
+      : (window.SUPABASE_URL
+        ? window.SUPABASE_URL.replace(/\/$/, '') + '/functions/v1/send-email'
+        : null);
+    if (!fnUrl) return false;
+
+    try {
+      const token = supabase?.auth?.currentSession?.access_token || '';
+      const resp = await fetch(fnUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: 'Bearer ' + token } : {}) },
+        body: JSON.stringify({ to, subject, html, text, attachments })
+      });
+      if (!resp.ok) return false;
+      const r = await resp.json().catch(() => ({}));
+      return r && (r.success || r.ok || r.id);
+    } catch (_) {
+      return false;
+    }
+  },
+
+  _buildWelcomeEmailText({ p1Name, studentName, matricula, classroom, level, schedule, email, password, monthlyFee, isTest }) {
+    return (isTest ? '*** ESTE ES UN CORREO DE PRUEBA – NO ES LA ADMISIÓN OFICIAL ***\n\n' : '') +
+      `Estimado(a) ${p1Name},\n\n` +
+      `Con mucha alegría le damos la bienvenida a la familia Montessori Sonrisas Creativas.\n` +
+      `Su hijo(a) ${studentName} ha sido admitido(a) oficialmente en nuestra institución.\n\n` +
+      `DATOS DEL ESTUDIANTE\n` +
+      `Nombre completo: ${studentName}\n` +
+      `Matrícula: ${matricula}\n` +
+      `Aula: ${classroom}\n` +
+      `Nivel: ${level || '—'}\n` +
+      `Horario: ${schedule}\n` +
+      `${monthlyFee ? 'Mensualidad: $' + monthlyFee + '\n' : ''}` +
+      `\nCREDENCIALES DE ACCESO AL PORTAL DE PADRES\n` +
+      `URL del portal: ${location.origin}/panel_padres.html\n` +
+      `Correo (usuario): ${email}\n` +
+      `Contraseña temporal: ${password}\n\n` +
+      `IMPORTANTE: Por favor cambie su contraseña temporal al ingresar por primera vez.\n\n` +
+      `Si tiene alguna duda, contáctenos:\n` +
+      `Instagram: @montessorisonrisascreativas\n` +
+      `Teléfono: +1 (809) 555-0100\n\n` +
+      `Atentamente,\n` +
+      `Dirección Académica – Montessori Sonrisas Creativas\n\n` +
+      `Este correo fue enviado automáticamente. Por favor no responda a este mensaje.`;
+  },
+
+  _buildWelcomeEmailTemplate({ p1Name, studentName, matricula, classroom, level, schedule, email, password, monthlyFee, isTest }) {
+    const host = location.origin || 'https://montessorisonrisascreativas.com';
+    const logoUrl = `${host}/img/monte.jpg`;
+    const portalUrl = `${host}/panel_padres.html`;
+    const year = new Date().getFullYear();
+    const feeCell = monthlyFee
+      ? `<tr><td style="padding:6px 0;border-bottom:1px dashed #e5e7eb"><span style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#475569;font-weight:700">Mensualidad</span></td><td style="padding:6px 0;border-bottom:1px dashed #e5e7eb;text-align:right"><span style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#0B63C7;font-weight:900">$${monthlyFee.toFixed(2)} USD</span></td></tr>`
+      : '';
+    return `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Bienvenido a Montessori Sonrisas Creativas</title></head>
+<body style="margin:0;padding:0;background:#f4f7fb;font-family:Arial,Helvetica,sans-serif;color:#334155">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f4f7fb">
+<tr><td align="center" style="padding:24px 12px">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:620px;background:#ffffff;border-radius:18px;overflow:hidden;box-shadow:0 10px 30px rgba(11,99,199,0.08)">
+  ${isTest ? `<tr><td style="background:#fef3c7;padding:10px 24px;text-align:center"><span style="font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#92400e;font-weight:900;letter-spacing:0.5px;text-transform:uppercase">✉  Correo de prueba – no es admisión oficial</span></td></tr>` : ''}
+  <tr>
+    <td style="background:linear-gradient(135deg,#0B63C7 0%,#2563eb 55%,#4f46e5 100%);padding:22px 28px">
+      <table width="100%" cellpadding="0" cellspacing="0"><tr>
+        <td width="64"><img src="${logoUrl}" alt="Logo MSC" width="56" height="56" style="border-radius:14px;background:#ffffff;padding:4px;display:block" onerror="this.style.display='none'"></td>
+        <td style="padding-left:12px;color:#ffffff">
+          <div style="font-family:Arial,Helvetica,sans-serif;font-size:18px;font-weight:900;line-height:1.1">Montessori Sonrisas Creativas</div>
+          <div style="font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#dbeafe;margin-top:3px;letter-spacing:0.5px;text-transform:uppercase">Centro Educativo · Año Escolar ${year}</div>
+        </td>
+      </tr></table>
+    </td>
+  </tr>
+  <tr><td style="padding:28px 28px 18px">
+    <div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#0f172a;font-weight:900;margin-bottom:4px">¡Bienvenido(a) a la familia MSC!</div>
+    <div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#475569;margin-top:10px;line-height:1.6">
+      Estimado(a) <strong>${Helpers.escapeHTML(p1Name)}</strong>,<br><br>
+      Con mucha alegría le confirmamos la <strong style="color:#0B63C7">admisión oficial</strong> de su hijo(a) a Montessori Sonrisas Creativas. A continuación los datos importantes para comenzar esta gran etapa junto a nosotros.
+    </div>
+  </td></tr>
+  <tr><td style="padding:4px 28px">
+    <div style="border-radius:14px;background:linear-gradient(135deg,#ecfeff 0%,#eff6ff 50%,#faf5ff 100%);padding:16px 18px;border:1px solid #dbeafe">
+      <div style="font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#0B63C7;font-weight:900;letter-spacing:0.6px;text-transform:uppercase;margin-bottom:10px">◆ Datos del Estudiante</div>
+      <table width="100%" cellpadding="0" cellspacing="0">
+        <tr><td style="padding:6px 0;border-bottom:1px dashed #e5e7eb"><span style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#475569;font-weight:700">Nombre</span></td><td style="padding:6px 0;border-bottom:1px dashed #e5e7eb;text-align:right"><span style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#0f172a;font-weight:900">${Helpers.escapeHTML(studentName)}</span></td></tr>
+        <tr><td style="padding:6px 0;border-bottom:1px dashed #e5e7eb"><span style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#475569;font-weight:700">Matrícula</span></td><td style="padding:6px 0;border-bottom:1px dashed #e5e7eb;text-align:right"><span style="display:inline-block;background:#10b981;color:#ffffff;padding:3px 10px;border-radius:999px;font-family:'Courier New',monospace;font-size:12px;font-weight:900;letter-spacing:0.3px">${Helpers.escapeHTML(matricula)}</span></td></tr>
+        <tr><td style="padding:6px 0;border-bottom:1px dashed #e5e7eb"><span style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#475569;font-weight:700">Aula</span></td><td style="padding:6px 0;border-bottom:1px dashed #e5e7eb;text-align:right"><span style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#0f172a;font-weight:900">${Helpers.escapeHTML(classroom)}</span></td></tr>
+        ${level ? `<tr><td style="padding:6px 0;border-bottom:1px dashed #e5e7eb"><span style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#475569;font-weight:700">Nivel</span></td><td style="padding:6px 0;border-bottom:1px dashed #e5e7eb;text-align:right"><span style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#0f172a;font-weight:900">${Helpers.escapeHTML(level)}</span></td></tr>` : ''}
+        <tr><td style="padding:6px 0;border-bottom:1px dashed #e5e7eb"><span style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#475569;font-weight:700">Horario</span></td><td style="padding:6px 0;border-bottom:1px dashed #e5e7eb;text-align:right"><span style="font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#0f172a;font-weight:800">${Helpers.escapeHTML(schedule)}</span></td></tr>
+        ${feeCell}
+      </table>
+    </div>
+  </td></tr>
+  <tr><td style="padding:18px 28px 4px">
+    <div style="border-radius:14px;background:#0f172a;padding:18px 18px;color:#ffffff;border:1px solid #1e293b">
+      <div style="font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#7dd3fc;font-weight:900;letter-spacing:0.6px;text-transform:uppercase;margin-bottom:12px">🔐 Credenciales de Acceso al Portal</div>
+      <table width="100%" cellpadding="0" cellspacing="0">
+        <tr><td style="padding:6px 0;width:35%"><span style="font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#94a3b8;font-weight:700">Usuario</span></td><td style="padding:6px 0"><span style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#ffffff;font-weight:900">${Helpers.escapeHTML(email)}</span></td></tr>
+        <tr><td style="padding:6px 0"><span style="font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#94a3b8;font-weight:700">Contraseña</span></td><td style="padding:6px 0"><span style="display:inline-block;background:#1e293b;border:1px dashed #475569;padding:4px 10px;border-radius:8px;font-family:'Courier New',monospace;font-size:13px;color:#fbbf24;font-weight:900;letter-spacing:0.5px">${Helpers.escapeHTML(password)}</span></td></tr>
+      </table>
+      <div style="margin-top:14px;text-align:center">
+        <a href="${portalUrl}" style="display:inline-block;background:linear-gradient(135deg,#0B63C7 0%,#2563eb 100%);color:#ffffff;text-decoration:none;padding:12px 28px;border-radius:999px;font-family:Arial,Helvetica,sans-serif;font-size:13px;font-weight:900;letter-spacing:0.5px;text-transform:uppercase;box-shadow:0 6px 18px rgba(11,99,199,0.35)">
+          Ingresar al Portal de Padres →
+        </a>
+      </div>
+      <div style="margin-top:10px;text-align:center;font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#64748b;line-height:1.4">
+        URL directa: <a href="${portalUrl}" style="color:#7dd3fc;text-decoration:underline">${portalUrl}</a><br>
+        <strong style="color:#fca5a5">Por favor cambie su contraseña temporal al ingresar por primera vez.</strong>
+      </div>
+    </div>
+  </td></tr>
+  <tr><td style="padding:22px 28px 6px;color:#475569;font-size:13px;line-height:1.6;font-family:Arial,Helvetica,sans-serif">
+    <p style="margin:0">Si durante el proceso tiene alguna pregunta sobre horarios, uniformes, materiales o pagos, no dude en contactarnos respondiendo este correo o por nuestras líneas oficiales.</p>
+    <p style="margin:10px 0 0">Con cariño,<br><strong>Dirección Académica</strong><br>Montessori Sonrisas Creativas</p>
+  </td></tr>
+  <tr><td style="padding:14px 28px 24px">
+    <div style="border-top:1px solid #e5e7eb;padding-top:14px;text-align:center;color:#94a3b8;font-family:Arial,Helvetica,sans-serif;font-size:11px;line-height:1.6">
+      <div style="margin-bottom:6px">
+        <span style="display:inline-block;margin:0 8px">📱 +1 (809) 555-0100</span>
+        <span style="display:inline-block;margin:0 8px">📍 Calle Principal, Centro Educativo</span>
+        <span style="display:inline-block;margin:0 8px">📷 @montessorisonrisascreativas</span>
+      </div>
+      <div style="color:#cbd5e1;font-size:10px;margin-top:8px">
+        © ${year} Montessori Sonrisas Creativas · Todos los derechos reservados.<br>
+        Este correo fue enviado automáticamente. Por favor no responda directamente a este mensaje.
+      </div>
+    </div>
+  </td></tr>
+</table>
+</td></tr></table></body></html>`;
+  },
+
+  async _createStudentViaEdgeFn({ payload, parentEmail, parentPassword }) {
+    const fnBase = window.__SUPABASE_EDGE_BASE__
+      ? window.__SUPABASE_EDGE_BASE__.replace(/\/$/, '')
+      : (window.SUPABASE_URL ? window.SUPABASE_URL.replace(/\/$/, '') + '/functions/v1' : null);
+    if (!fnBase) return { ok: false, fallback: true, reason: 'no-edge-base' };
+
+    const token = supabase?.auth?.currentSession?.access_token || '';
+    const body = {
+      student: payload,
+      parent: {
+        email: parentEmail,
+        password: parentPassword,
+        name: payload.p1_name || payload.name,
+        phone: payload.p1_phone || null,
+        p1_cedula: payload.p1_cedula || null,
+        p2_cedula: payload.p2_cedula || null,
+      },
+      pre_registration_id: _state.preData?._preId || _state.preData?.id || null,
+    };
+    try {
+      const res = await fetch(fnBase + '/create-student-with-parent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: 'Bearer ' + token } : {}) },
+        body: JSON.stringify(body)
+      });
+      if (!res.ok) {
+        const txt = await res.text().catch(() => '');
+        return { ok: false, fallback: res.status >= 500, status: res.status, body: txt };
+      }
+      const data = await res.json().catch(() => ({}));
+      return { ok: true, data };
+    } catch (e) {
+      return { ok: false, fallback: true, reason: 'network', message: e.message };
+    }
   },
 
   // ── TAB 7: HISTORIAL ────────────────────────────────────────
@@ -725,25 +1043,239 @@ export const StudentRecordModal = {
     if (!payload.classroom_id) return Helpers.toast('Selecciona un aula', 'warning');
     if (!payload.matricula) return Helpers.toast('Genera una matrícula', 'warning');
 
-    Helpers.toast('Procesando admisión...', 'info');
+    const parentEmail = document.getElementById('srm-emailuser')?.value?.trim()
+      || document.getElementById('srm-emailnotif')?.value?.trim()
+      || payload.p1_email;
+    const parentPassword = document.getElementById('srm-password')?.value?.trim();
+
+    const p1Name = payload.p1_name || 'Familia';
+    const studentName = payload.name;
+    const matricula = payload.matricula;
+    const sel = document.getElementById('srm-classroom');
+    const classroomName = sel?.options?.[sel?.selectedIndex]?.text
+      || _state.classes?.find(c => String(c.id) === String(payload.classroom_id))?.name
+      || 'Aula Asignada';
+    const levelName = sel?.options?.[sel?.selectedIndex]?.dataset?.level
+      || _state.classes?.find(c => String(c.id) === String(payload.classroom_id))?.level
+      || payload.level_requested
+      || '';
+    const scheduleSel = document.getElementById('srm-schedule');
+    const scheduleTxt = scheduleSel?.options?.[scheduleSel.selectedIndex]?.text || payload.schedule || 'Regular (8:00 AM – 12:00 PM)';
+    const fee = payload.monthly_fee || 0;
+
+    Helpers.toast('Paso 1/5 — Validando datos...', 'info');
+    payload.is_active = true;
+    payload.start_date = payload.start_date || new Date().toISOString().split('T')[0];
+    const planType = document.getElementById('srm-plan')?.value || document.getElementById('srm-plan')?.selectedIndex > -1 ? document.getElementById('srm-plan').value : 'Mensual';
+
+    let studentId = null;
+    let parentId = null;
+    let usedEdgeFn = false;
+    let emailSent = false;
+
     try {
-      payload.is_active = true;
-      payload.start_date = payload.start_date || new Date().toISOString().split('T')[0];
-
-      const { error: stErr } = await supabase.from('students').insert([payload]);
-      if (stErr) throw stErr;
-
-      if (_state.preData?.id) {
-        await supabase.from('student_preregistrations')
-          .update({ status: 'admitted', reviewed_at: new Date().toISOString() })
-          .eq('id', _state.preData.id);
+      // ── Paso 2: Crear usuario + estudiante ──
+      if (parentEmail && parentPassword && parentPassword.length >= 6) {
+        Helpers.toast('Paso 2/5 — Creando usuario padre vía Edge Function...', 'info');
+        const edgeResult = await this._createStudentViaEdgeFn({ payload, parentEmail, parentPassword });
+        if (edgeResult.ok) {
+          usedEdgeFn = true;
+          studentId = edgeResult.data?.student?.id || edgeResult.data?.studentId;
+          parentId  = edgeResult.data?.parent?.id  || edgeResult.data?.parentId;
+          if (!studentId) {
+            const { data: stu } = await supabase.from('students').select('id').eq('matricula', matricula).maybeSingle();
+            studentId = stu?.id;
+          }
+        } else if (edgeResult.fallback) {
+          Helpers.toast('Edge no disponible – usando admisión local (fallback)', 'warning');
+        } else {
+          throw new Error(edgeResult.body || ('Error en Edge Function (HTTP ' + (edgeResult.status || '?') + ')'));
+        }
       }
 
-      Helpers.toast('Estudiante admitido correctamente', 'success');
-      this.close();
-      if (typeof window !== 'undefined' && window.App?.students?.init) window.App.students.init();
+      if (!studentId) {
+        Helpers.toast('Paso 2/5 — Guardando estudiante localmente...', 'info');
+        if (parentEmail && parentPassword && parentPassword.length >= 6) {
+          try {
+            const { data: authData, error: authError } = await supabase.auth.signUp({
+              email: parentEmail, password: parentPassword,
+              options: { data: { name: p1Name, role: 'padre', phone: payload.p1_phone }, emailRedirectTo: null }
+            });
+            if (authError) {
+              if (authError.message?.toLowerCase().includes('already registered') || authError.status === 422) {
+                const { data: existing } = await supabase.from('profiles').select('id').eq('email', parentEmail).maybeSingle();
+                if (existing?.id) { parentId = existing.id; Helpers.toast('Usuario padre existente – vinculando', 'info'); }
+              } else {
+                Helpers.toast('No se creó usuario – continuar sin usuario (admite estudiante de todas formas)', 'warning');
+              }
+            } else if (authData?.user) {
+              parentId = authData.user.id;
+            }
+            if (parentId) {
+              await supabase.from('profiles').upsert(
+                { id: parentId, name: p1Name, email: parentEmail, phone: payload.p1_phone, role: 'padre' },
+                { onConflict: 'id' }
+              );
+            }
+          } catch (e) {
+            Helpers.toast('Usuario no creado – continúa admisión de estudiante', 'warning');
+          }
+        }
+        if (parentId) payload.parent_id = parentId;
+        const { data: insData, error: stErr } = await supabase.from('students').insert([payload]).select('id').limit(1).single();
+        if (stErr) throw stErr;
+        studentId = insData?.id;
+      }
+      if (!studentId) throw new Error('No se pudo obtener el ID del estudiante');
+
+      // ── Paso 3: Marcar preinscripción admitida ──
+      Helpers.toast('Paso 3/5 — Cerrando preinscripción...', 'info');
+      const preId = _state.preData?._preId || _state.preData?.id;
+      if (preId) {
+        try {
+          const noteExtra = `[${new Date().toLocaleString()}] — Admitido(a) como estudiante #${studentId} · Matrícula ${matricula}${usedEdgeFn ? ' · vía Edge Function' : ''}`;
+          const { error: upErr } = await supabase
+            .from('student_preregistrations')
+            .update({
+              status: 'admitted',
+              reviewed_at: new Date().toISOString(),
+              reviewer_note: (_state.preData?.reviewer_note ? _state.preData.reviewer_note + '\n\n' : '') + noteExtra
+            })
+            .eq('id', preId);
+          if (upErr) console.warn('No se actualizó preregistro:', upErr);
+        } catch (_) { /* soft error – no abortar */ }
+      }
+
+      // ── Paso 4: Plan de pagos + 12 cuotas ──
+      Helpers.toast('Paso 4/5 — Creando plan de pagos...', 'info');
+      try {
+        if (studentId && fee > 0) {
+          const dueDay = payload.due_day || 5;
+          const startMonth = new Date(payload.start_date || new Date());
+          startMonth.setDate(1);
+          const plan = {
+            student_id: studentId,
+            plan_type: planType || 'Mensual',
+            total_amount: fee * 12,
+            monthly_fee: fee,
+            registration_fee: payload.registration_fee || 0,
+            discount: payload.discount || 0,
+            prolongado_fee: payload.prolongado_fee || 0,
+            due_day: dueDay,
+            start_date: payload.start_date,
+            status: 'active'
+          };
+          const { data: planData, error: plErr } = await supabase.from('payment_plans').insert([plan]).select('id').limit(1).single();
+          if (plErr) throw plErr;
+          const planId = planData?.id;
+          if (planId) {
+            const months = [];
+            const monthsEs = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+            for (let i = 0; i < 12; i++) {
+              const m = new Date(startMonth);
+              m.setMonth(m.getMonth() + i);
+              const due = new Date(m.getFullYear(), m.getMonth(), Math.min(dueDay, 28));
+              months.push({
+                payment_plan: planId,
+                month_paid: monthsEs[m.getMonth()] + ' ' + m.getFullYear(),
+                due_date: due.toISOString().split('T')[0],
+                amount: fee,
+                status: 'pending',
+                description: 'Cuota mensual – Colegiatura MSC'
+              });
+            }
+            const { error: pmErr } = await supabase.from('payments').insert(months);
+            if (pmErr) console.warn('No se crearon cuotas de pago:', pmErr);
+          }
+        }
+      } catch (_) { Helpers.toast('Plan de pagos no creado – puedes configurarlo luego en Pagos', 'warning'); }
+
+      // ── Paso 5: Enviar correo bienvenida ──
+      if (parentEmail && parentPassword) {
+        Helpers.toast('Paso 5/5 — Enviando correo de bienvenida...', 'info');
+        try {
+          const subject = `Bienvenido(a) ${studentName} — Matrícula ${matricula} · Credenciales de acceso`;
+          const html = this._buildWelcomeEmailTemplate({
+            p1Name, studentName, matricula, classroom: classroomName, level: levelName,
+            schedule: scheduleTxt, email: parentEmail, password: parentPassword,
+            monthlyFee: fee, isTest: false
+          });
+          const text = this._buildWelcomeEmailText({
+            p1Name, studentName, matricula, classroom: classroomName, level: levelName,
+            schedule: scheduleTxt, email: parentEmail, password: parentPassword,
+            monthlyFee: fee, isTest: false
+          });
+          emailSent = await this._sendEmailViaEdge({ to: parentEmail, subject, html, text });
+          if (!emailSent) {
+            if (window.__ADMIT_EMAIL_RETRY__) window.__ADMIT_EMAIL_RETRY__({ parentEmail, studentName, matricula });
+            const retryBtnId = 'retry-email-' + Date.now();
+            const retryHTML = `
+              <div id="${retryBtnId}" style="margin-top:8px" class="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-[12px] text-amber-800 font-bold">
+                <span>⚠ Credenciales generadas pero el correo no llegó. Revisa conexión a Edge Functions/Resend.</span>
+                <button onclick="StudentRecordModal._sendWelcomeEmailRetry({to:'${parentEmail}',studentName:'${studentName.replace(/'/g,'')}',matricula:'${matricula.replace(/'/g,'')}',classroom:'${classroomName.replace(/'/g,'')}',level:'${(levelName||'').replace(/'/g,'')}',schedule:'${scheduleTxt.replace(/'/g,'')}',email:'${parentEmail.replace(/'/g,'')}',password:'${parentPassword.replace(/'/g,'')}',fee:${fee}})"
+                  class="ml-auto inline-flex items-center gap-1.5 rounded-lg bg-amber-600 text-white px-3 py-1.5 text-xs font-black shadow hover:bg-amber-700 active:scale-95">
+                  <i data-lucide="send" class="w-3 h-3"></i> Reenviar
+                </button>
+              </div>`;
+            setTimeout(() => {
+              const toastCont = document.querySelector('.toast-container') || document.body;
+              const tmp = document.createElement('div');
+              tmp.innerHTML = retryHTML;
+              const child = tmp.firstElementChild;
+              if (toastCont && child) toastCont.appendChild(child);
+              if (window.lucide && child) lucide.createIcons({ root: child });
+            }, 800);
+          }
+        } catch (e) { emailSent = false; console.warn('Email send failed:', e); }
+      }
+
+      Helpers.toast(
+        '¡Admisión exitosa! ' + (emailSent
+          ? 'Correo enviado a ' + parentEmail
+          : (parentEmail ? 'Sin correo de bienvenida – revisa Edge Functions' : 'Sin correo (falta dirección)')),
+        'success',
+        { duration: 6000 }
+      );
+
+      setTimeout(() => {
+        this.close();
+        if (typeof window !== 'undefined' && typeof window.App !== 'undefined') {
+          try { if (window.App?.students?.init) window.App.students.init(); } catch (_) {}
+          try { if (window.App?.inscripciones?.init) window.App.inscripciones.init(); } catch (_) {}
+          try { if (window.App?.payments?.init) window.App.payments.init(); } catch (_) {}
+        } else if (typeof window.InscripcionesModule !== 'undefined' && typeof window.InscripcionesModule.init === 'function') {
+          window.InscripcionesModule.init();
+        }
+      }, 1200);
+
     } catch (e) {
-      Helpers.toast('Error en admisión: ' + (e.message || e), 'error');
+      Helpers.toast('Error en admisión (paso 2-5): ' + (e.message || e), 'error', { duration: 8000 });
+    }
+  },
+
+  async _sendWelcomeEmailRetry({ to, studentName, matricula, classroom, level, schedule, email, password, fee }) {
+    Helpers.toast('Reenviando correo de bienvenida...', 'info');
+    try {
+      const p1Name = document.getElementById('srm-p1name')?.value?.trim() || 'Familia';
+      const subject = `Bienvenido(a) ${studentName} — Matrícula ${matricula} · Credenciales de acceso`;
+      const html = this._buildWelcomeEmailTemplate({
+        p1Name, studentName, matricula, classroom, level, schedule,
+        email: email || to, password, monthlyFee: fee || 0, isTest: false
+      });
+      const text = this._buildWelcomeEmailText({
+        p1Name, studentName, matricula, classroom, level, schedule,
+        email: email || to, password, monthlyFee: fee || 0, isTest: false
+      });
+      const ok = await this._sendEmailViaEdge({ to, subject, html, text });
+      if (ok) {
+        Helpers.toast('¡Correo reenviado a ' + to + '!', 'success');
+        const el = document.querySelector('[onclick*="_sendWelcomeEmailRetry"]')?.closest('[id^="retry-email-"]');
+        if (el) el.remove();
+      } else {
+        Helpers.toast('No se pudo reenviar – revisa RESEND_API_KEY y FROM_EMAIL', 'error');
+      }
+    } catch (e) {
+      Helpers.toast('Error: ' + (e.message || e), 'error');
     }
   },
 
@@ -803,11 +1335,34 @@ export const StudentRecordModal = {
   },
 
   async sendCredentials() {
-    const email = document.getElementById('srm-emailuser')?.value?.trim();
+    const email = document.getElementById('srm-emailuser')?.value?.trim()
+      || document.getElementById('srm-emailnotif')?.value?.trim()
+      || this._v('p1_email');
     const password = document.getElementById('srm-password')?.value?.trim();
     if (!email) return Helpers.toast('Ingresa el correo de login', 'warning');
     if (!password || password.length < 6) return Helpers.toast('La contraseña debe tener al menos 6 caracteres', 'warning');
-    Helpers.toast('Credenciales preparadas — funcionalidad pendiente de Edge Function', 'info');
+    const p1Name = document.getElementById('srm-p1name')?.value?.trim() || this._v('p1_name') || 'Familia';
+    const studentName = document.getElementById('srm-name')?.value?.trim() || this._v('name') || 'Estudiante';
+    const matricula = document.getElementById('srm-matricula')?.value?.trim() || this._v('matricula') || 'MSC-XXXXXXXX';
+    const sel = document.getElementById('srm-classroom');
+    const classroom = sel?.options?.[sel?.selectedIndex]?.text || this._v('classroom') || 'Aula Asignada';
+    const level = sel?.options?.[sel?.selectedIndex]?.dataset?.level || this._v('level_requested') || '';
+    const schedule = document.getElementById('srm-schedule')?.value || this._v('schedule') || 'Regular';
+    const fee = parseFloat(document.getElementById('srm-monthlyfee')?.value || '0') || 0;
+
+    Helpers.toast('Enviando credenciales a ' + email + '...', 'info');
+    const subject = `Credenciales Portal de Padres · ${studentName} (${matricula})`;
+    const html = this._buildWelcomeEmailTemplate({
+      p1Name, studentName, matricula, classroom, level, schedule,
+      email, password, monthlyFee: fee, isTest: false
+    });
+    const text = this._buildWelcomeEmailText({
+      p1Name, studentName, matricula, classroom, level, schedule,
+      email, password, monthlyFee: fee, isTest: false
+    });
+    const ok = await this._sendEmailViaEdge({ to: email, subject, html, text });
+    if (ok) Helpers.toast('Credenciales enviadas correctamente', 'success');
+    else Helpers.toast('No se pudo enviar – revisa Edge Function / Resend. Puedes reintentar.', 'warning');
   },
 
   // ════════════════════════════════════════════════════════════════

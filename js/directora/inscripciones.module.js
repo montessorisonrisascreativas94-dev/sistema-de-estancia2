@@ -2,20 +2,18 @@
  * ╔══════════════════════════════════════════════════════════╗
  * ║  MÓDULO INSCRIPCIONES — Panel Directora / Asistente      ║
  * ║  Lee: student_preregistrations (status=pending/admitted) ║
- * ║  Admite: students → profiles → payment_plans →           ║
- * ║          monthly_payments → status=admitted              ║
+ * ║  Controles de edad (pre.md) + Autorizaciones Directora     ║
+ * ║  Admite: students → profiles → payment_plans →               ║
+ * ║          monthly_payments → status=admitted                ║
  * ╚══════════════════════════════════════════════════════════╝
  */
 import { supabase } from '../shared/supabase.js';
 import { Helpers } from '../shared/helpers.js';
 import { SCHOOL_SETTINGS_ID } from '../shared/constants.js';
 
-// AppState: works for both directora and asistente panels
-// Uses a lazy import so the module can be shared across panels
 let _AppState = null;
 async function _getAppState() {
   if (_AppState) return _AppState;
-  // Try directora state first, then asistente
   try {
     const mod = await import('./state.js');
     _AppState = mod.AppState;
@@ -29,10 +27,15 @@ async function _getAppState() {
   return _AppState;
 }
 
-// ── Constantes ──────────────────────────────────────────────
-const MONTHS_IN_YEAR     = 12;
+async function _currentRole() {
+  const s = await _getAppState();
+  const u = s?.get?.('user') || {};
+  const profile = s?.get?.('profile') || {};
+  return profile.role || u.role || '';
+}
 
-// ── Helpers locales ──────────────────────────────────────────
+const MONTHS_IN_YEAR = 12;
+
 const esc = (s = '') => String(s)
   .replace(/&/g,'&amp;').replace(/</g,'&lt;')
   .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -41,13 +44,58 @@ const fmt = (d) => d
   ? new Date(d).toLocaleDateString('es-DO', { day:'2-digit', month:'short', year:'numeric' })
   : '—';
 
+const fmtDT = (d) => d
+  ? new Date(d).toLocaleString('es-DO', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' })
+  : '—';
+
 const statusBadge = (s) => ({
   pending:  '<span class="px-2 py-0.5 bg-yellow-100 text-yellow-800 text-[10px] font-black rounded-full uppercase">Pendiente</span>',
   admitted: '<span class="px-2 py-0.5 bg-green-100 text-green-800 text-[10px] font-black rounded-full uppercase">Admitido</span>',
   rejected: '<span class="px-2 py-0.5 bg-red-100 text-red-700 text-[10px] font-black rounded-full uppercase">Rechazado</span>',
 })[s] || `<span class="px-2 py-0.5 bg-slate-100 text-slate-600 text-[10px] font-black rounded-full uppercase">${esc(s)}</span>`;
 
-// ── Realtime subscription ────────────────────────────────────
+function ageBadge(r) {
+  if (r.age_match === false) {
+    return `<span class="inline-flex items-center gap-1 px-2 py-0.5 bg-green-100 text-green-700 text-[10px] font-black rounded-full" title="Edad en rango oficial">
+      <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+      Edad OK
+    </span>`;
+  }
+  if (r.age_match === false || r.age_match === false) {}
+  return `<span class="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-100 text-amber-700 text-[10px] font-black rounded-full" title="Edad fuera de rango oficial">
+    <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>
+    Edad Fuera
+  </span>`;
+}
+
+function dirAuthBadge(r) {
+  if (!r.age_match) return '';
+  // Edad fuera OK → badge ok
+  if (r.age_match) return '';
+  // Edad fuera → Mostrar estado autorizacion
+  if (r.director_authorization_requested && r.director_authorization_approved === true) {
+    return `<span class="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[10px] font-black rounded-full">
+      <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      Autoriz. Aprobada
+    </span>`;
+  }
+  if (r.director_authorization_approved === false) {
+    return `<span class="inline-flex items-center gap-1 px-2 py-0.5 bg-rose-100 text-rose-700 text-[10px] font-black rounded-full">
+      <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" x2="9" y1="9" y2="15"/><line x1="9" x2="15" y1="9" y2="15"/></svg>
+      Autoriz. Rechazada
+    </span>`;
+  }
+  if (r.director_authorization_requested) {
+    return `<span class="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 text-blue-700 text-[10px] font-black rounded-full" title="Pendiente de revisión por Directora">
+      <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      Pend. Autoriz.
+    </span>`;
+  }
+  return `<span class="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-200 text-slate-600 text-[10px] font-black rounded-full">
+    Sin Solicitud
+  </span>`;
+}
+
 let _channel = null;
 function _subscribeRealtime() {
   if (_channel) { supabase.removeChannel(_channel); _channel = null; }
@@ -62,7 +110,6 @@ export function destroyInscripciones() {
   if (_channel) { supabase.removeChannel(_channel); _channel = null; }
 }
 
-// ── Main render ──────────────────────────────────────────────
 export async function loadInscripciones() {
   const container = document.getElementById('inscripcionesContainer');
   if (!container) return;
@@ -80,6 +127,7 @@ export async function loadInscripciones() {
         id,
         student_name,
         student_last_name,
+        birth_date,
         level_requested,
         school_year_requested,
         schedule,
@@ -87,7 +135,14 @@ export async function loadInscripciones() {
         p1_phone,
         p1_email,
         status,
-        created_at
+        created_at,
+        suggested_level,
+        age_match,
+        director_authorization_requested,
+        director_authorization_note,
+        director_authorization_approved,
+        reviewed_at,
+        reviewed_by
       `)
       .order('created_at', { ascending: false });
 
@@ -96,7 +151,9 @@ export async function loadInscripciones() {
     if (!data || data.length === 0) {
       container.innerHTML = `
         <div class="text-center py-16 text-slate-400">
-          <div class="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4 text-3xl">📋</div>
+          <div class="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-9 h-9 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><line x1="10" x2="8" y1="9" y2="9"/></svg>
+          </div>
           <h3 class="font-black text-slate-500 mb-2">Sin preinscripciones</h3>
           <p class="text-sm">Cuando un padre llene el formulario aparecerá aquí.</p>
         </div>`;
@@ -106,29 +163,41 @@ export async function loadInscripciones() {
     const pending  = data.filter(r => r.status === 'pending');
     const admitted = data.filter(r => r.status === 'admitted');
     const rejected = data.filter(r => r.status === 'rejected');
+    const authPending = data.filter(r => !r.age_match && r.director_authorization_requested && r.director_authorization_approved === null);
+    const ageOutOfRange = data.filter(r => r.age_match === false);
 
     container.innerHTML = `
       <!-- KPIs -->
-      <div class="grid grid-cols-3 gap-4 mb-6">
-        <div class="bg-yellow-50 border border-yellow-200 rounded-2xl p-4 text-center">
-          <p class="text-2xl font-black text-yellow-700">${pending.length}</p>
-          <p class="text-xs font-black text-yellow-600 uppercase tracking-wide">Pendientes</p>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div class="relative overflow-hidden bg-gradient-to-br from-yellow-50 to-yellow-100 border border-yellow-200 rounded-2xl p-4 text-center">
+          <div class="absolute -top-6 -right-6 w-16 h-16 rounded-full bg-yellow-200/40"></div>
+          <p class="relative text-3xl font-black text-yellow-700">${pending.length}</p>
+          <p class="relative text-xs font-black text-yellow-700 uppercase tracking-wide mt-1">Pendientes</p>
         </div>
-        <div class="bg-green-50 border border-green-200 rounded-2xl p-4 text-center">
-          <p class="text-2xl font-black text-green-700">${admitted.length}</p>
-          <p class="text-xs font-black text-green-600 uppercase tracking-wide">Admitidos</p>
+        <div class="relative overflow-hidden bg-gradient-to-br from-green-50 to-green-100 border border-green-200 rounded-2xl p-4 text-center">
+          <div class="absolute -top-6 -right-6 w-16 h-16 rounded-full bg-green-200/40"></div>
+          <p class="relative text-3xl font-black text-green-700">${admitted.length}</p>
+          <p class="relative text-xs font-black text-green-700 uppercase tracking-wide mt-1">Admitidos</p>
         </div>
-        <div class="bg-red-50 border border-red-200 rounded-2xl p-4 text-center">
-          <p class="text-2xl font-black text-red-700">${rejected.length}</p>
-          <p class="text-xs font-black text-red-600 uppercase tracking-wide">Rechazados</p>
+        <div class="relative overflow-hidden bg-gradient-to-br from-red-50 to-red-100 border border-red-200 rounded-2xl p-4 text-center">
+          <div class="absolute -top-6 -right-6 w-16 h-16 rounded-full bg-red-200/40"></div>
+          <p class="relative text-3xl font-black text-red-700">${rejected.length}</p>
+          <p class="relative text-xs font-black text-red-700 uppercase tracking-wide mt-1">Rechazados</p>
+        </div>
+        <div class="relative overflow-hidden bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-200 rounded-2xl p-4 text-center">
+          <div class="absolute -top-6 -right-6 w-16 h-16 rounded-full bg-purple-200/40"></div>
+          <p class="relative text-3xl font-black text-purple-700">${authPending.length}</p>
+          <p class="relative text-xs font-black text-purple-700 uppercase tracking-wide mt-1">Pend. Autoriz.</p>
         </div>
       </div>
 
       <!-- Filters -->
       <div class="flex gap-2 mb-4 flex-wrap">
-        <button onclick="InscripcionesModule.filterStatus('all')"      class="insc-filter-btn active px-4 py-2 rounded-xl text-xs font-black" data-status="all">Todos (${data.length})</button>
-        <button onclick="InscripcionesModule.filterStatus('pending')"  class="insc-filter-btn px-4 py-2 rounded-xl text-xs font-black" data-status="pending">Pendientes (${pending.length})</button>
-        <button onclick="InscripcionesModule.filterStatus('admitted')" class="insc-filter-btn px-4 py-2 rounded-xl text-xs font-black" data-status="admitted">Admitidos (${admitted.length})</button>
+        <button onclick="InscripcionesModule.filterStatus('all')" class="insc-filter-btn active px-4 py-2 rounded-xl text-xs font-black" data-filter="all">Todos (${data.length})</button>
+        <button onclick="InscripcionesModule.filterStatus('pending')" class="insc-filter-btn px-4 py-2 rounded-xl text-xs font-black" data-filter="pending">Pendientes (${pending.length})</button>
+        <button onclick="InscripcionesModule.filterStatus('admitted')" class="insc-filter-btn px-4 py-2 rounded-xl text-xs font-black" data-filter="admitted">Admitidos (${admitted.length})</button>
+        <button onclick="InscripcionesModule.filterStatus('age-out')" class="insc-filter-btn px-4 py-2 rounded-xl text-xs font-black" data-filter="age-out">Edad Fuera Rango (${ageOutOfRange.length})</button>
+        <button onclick="InscripcionesModule.filterStatus('auth-pending')" class="insc-filter-btn px-4 py-2 rounded-xl text-xs font-black" data-filter="auth-pending">Autoriz. Pendiente (${authPending.length})</button>
       </div>
 
       <!-- Table -->
@@ -138,7 +207,7 @@ export async function loadInscripciones() {
             <thead class="bg-[#E8F2FF]">
               <tr>
                 <th class="px-4 py-3 text-left text-[10px] font-black text-[#0850A0] uppercase tracking-wider">Estudiante</th>
-                <th class="px-4 py-3 text-left text-[10px] font-black text-[#0850A0] uppercase tracking-wider hidden md:table-cell">Sección</th>
+                <th class="px-4 py-3 text-left text-[10px] font-black text-[#0850A0] uppercase tracking-wider hidden md:table-cell">Sección / Edad</th>
                 <th class="px-4 py-3 text-left text-[10px] font-black text-[#0850A0] uppercase tracking-wider hidden md:table-cell">Tutor</th>
                 <th class="px-4 py-3 text-left text-[10px] font-black text-[#0850A0] uppercase tracking-wider hidden lg:table-cell">Fecha</th>
                 <th class="px-4 py-3 text-center text-[10px] font-black text-[#0850A0] uppercase tracking-wider">Estado</th>
@@ -153,21 +222,41 @@ export async function loadInscripciones() {
       </div>`;
 
     _attachFilterStyles();
+    _attachPreDetailStyles();
     _subscribeRealtime();
 
   } catch (err) {
-    container.innerHTML = `<div class="p-6 text-red-600 font-bold">Error al cargar: ${esc(err.message)}</div>`;
+    const msg = err.message || String(err);
+    const rlsHint = /403|policy|permission|denied/i.test(msg)
+      ? ' — Permiso denegado: contacta al administrador para revisar políticas RLS.'
+      : '';
+    container.innerHTML = `<div class="p-6 text-red-600 font-bold">Error al cargar: ${esc(msg)}${esc(rlsHint)}</div>`;
     console.error('[Inscripciones] load error:', err);
   }
 }
 
 function _renderRow(r) {
+  const ageMatch = !(r.age_match === false);
+  const needsAuth = r.age_match === false && r.director_authorization_approved !== true;
+  const disabled = needsAuth ? 'disabled' : '';
+  const disabledClass = needsAuth ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[#0850A0]';
+  const disabledTitle = needsAuth ? 'Requiere aprobación de Directora' : '';
+
   const admitBtn = r.status === 'pending'
     ? `<button onclick="InscripcionesModule.openAdmitModal(${r.id})"
-         class="px-3 py-1.5 bg-[#0B63C7] text-white rounded-xl text-[10px] font-black uppercase hover:bg-[#0850A0] transition-all shadow-sm">
-         ✅ Admitir
+         title="${esc(disabledTitle)}"
+         ${disabled}
+         class="px-3 py-1.5 bg-[#0B63C7] text-white rounded-xl text-[10px] font-black uppercase ${disabledClass} transition-all shadow-sm">
+         Admitir
        </button>`
     : `<span class="text-[10px] text-slate-400 font-bold">—</span>`;
+
+  const detailBtn = `
+    <button onclick="InscripcionesModule.openPreDetail(${r.id})"
+      class="px-3 py-1.5 bg-slate-100 text-slate-700 rounded-xl text-[10px] font-black uppercase hover:bg-slate-200 transition-all"
+      title="Ver detalle completo">
+      Ver
+    </button>`;
 
   const fullName = [r.student_name, r.student_last_name].filter(Boolean).join(' ') || '—';
   const levelParts = [r.level_requested, r.school_year_requested].filter(Boolean);
@@ -176,10 +265,17 @@ function _renderRow(r) {
     ? `<span class="px-2 py-0.5 bg-slate-100 text-slate-700 text-[10px] font-black rounded-full block">${esc(r.schedule)}</span>`
     : '';
 
+  const dataAgeOut = r.age_match === false ? 'data-age-out="1"' : '';
+  const dataAuthPending = (!r.age_match && r.director_authorization_requested && r.director_authorization_approved === null) ? 'data-auth-pending="1"' : '';
+
   return `
-    <tr data-status="${esc(r.status)}" class="hover:bg-slate-50 transition-colors">
+    <tr data-status="${esc(r.status)}" ${dataAgeOut} ${dataAuthPending} class="hover:bg-slate-50 transition-colors">
       <td class="px-4 py-3">
         <div class="font-bold text-slate-800">${esc(fullName)}</div>
+        <div class="mt-1 flex flex-wrap gap-1">
+          ${ageBadge(r)}
+          ${dirAuthBadge(r)}
+        </div>
       </td>
       <td class="px-4 py-3 hidden md:table-cell">
         ${nivelTag}${scheduleTag}${(!nivelTag && !scheduleTag) ? '<span class="text-slate-400 text-[10px] font-bold">—</span>' : ''}
@@ -187,10 +283,16 @@ function _renderRow(r) {
       <td class="px-4 py-3 hidden md:table-cell">
         <div class="font-bold text-slate-700 text-xs">${esc(r.p1_name || '—')}</div>
         <div class="text-[10px] text-slate-400">${esc(r.p1_phone || '')}</div>
+        <div class="text-[10px] text-slate-400 truncate max-w-[160px]">${esc(r.p1_email || '')}</div>
       </td>
       <td class="px-4 py-3 hidden lg:table-cell text-xs text-slate-500">${fmt(r.created_at)}</td>
       <td class="px-4 py-3 text-center">${statusBadge(r.status)}</td>
-      <td class="px-4 py-3 text-center">${admitBtn}</td>
+      <td class="px-4 py-3">
+        <div class="flex items-center justify-center gap-1">
+          ${detailBtn}
+          ${admitBtn}
+        </div>
+      </td>
     </tr>`;
 }
 
@@ -207,17 +309,20 @@ function _attachFilterStyles() {
   document.head.appendChild(s);
 }
 
-// ── Filter ────────────────────────────────────────────────────
-export function filterStatus(status) {
+export function filterStatus(filter) {
   document.querySelectorAll('.insc-filter-btn').forEach(b => {
-    b.classList.toggle('active', b.dataset.status === status);
+    b.classList.toggle('active', b.dataset.filter === filter);
   });
   document.querySelectorAll('#inscripcionesTbody tr').forEach(tr => {
-    tr.style.display = (status === 'all' || tr.dataset.status === status) ? '' : 'none';
+    let show = false;
+    if (filter === 'all') show = true;
+    else if (filter === 'pending' || filter === 'admitted' || filter === 'rejected') show = (tr.dataset.status === filter);
+    else if (filter === 'age-out') show = (tr.dataset.ageOut === '1');
+    else if (filter === 'auth-pending') show = (tr.dataset.authPending === '1');
+    tr.style.display = show ? '' : 'none';
   });
 }
 
-// ── Admit Modal — usa el mismo modal completo de Estudiantes ─────
 export async function openAdmitModal(preregId) {
   const { data: reg, error } = await supabase
     .from('student_preregistrations')
@@ -227,17 +332,312 @@ export async function openAdmitModal(preregId) {
 
   if (error || !reg) { Helpers.toast('No se pudo cargar el registro', 'error'); return; }
 
+  if (reg.age_match === false && reg.director_authorization_approved !== true) {
+    Helpers.toast('Requiere aprobación de Directora: ver detalle y autorizar excepción', 'warning');
+    openPreDetail(preregId);
+    return;
+  }
+
   const { StudentRecordModal } = await import('../shared/student-record-modal.js');
   StudentRecordModal.open('admit', null, reg);
 }
 
+export async function openPreDetail(preregId) {
+  const gc = document.getElementById('globalModalContainer');
+  if (!gc) return;
 
-// ── Flag to prevent double execution ───────────────────────
+  try {
+    const { data: r, error } = await supabase
+      .from('student_preregistrations')
+      .select('*')
+      .eq('id', preregId)
+      .single();
+
+    if (error || !r) throw new Error('Registro no encontrado');
+
+    const role = await _currentRole();
+    const isDirector = role === 'directora' || role === 'admin';
+
+    gc.style.display = 'block';
+    gc.style.zIndex = '9999';
+    gc.style.position = 'fixed';
+    gc.innerHTML = _renderPreDetail(r, isDirector);
+    _bindPreDetailEvents(r, isDirector);
+    if (window.lucide) lucide.createIcons();
+  } catch (e) {
+    Helpers.toast('Error: ' + e.message, 'error');
+  }
+}
+
+function _calcAgeFromBirth(birthDateStr) {
+  if (!birthDateStr) return null;
+  const b = new Date(birthDateStr);
+  const ref = new Date();
+  if (isNaN(b) || b > ref) return null;
+  let years = ref.getFullYear() - b.getFullYear();
+  let months = ref.getMonth() - b.getMonth();
+  let days = ref.getDate() - b.getDate();
+  if (days < 0) { const prevM = new Date(ref.getFullYear(), ref.getMonth(), 0); days += prevM.getDate(); months--; }
+  if (months < 0) { months += 12; years--; }
+  const totalDays = Math.max(0, Math.round((ref.getTime() - b.getTime()) / (1000 * 60 * 60 * 24)));
+  return { years, months, days, totalDays };
+}
+
+function _fmtHuman(a) {
+  if (!a) return '—';
+  if (a.years <= 0) {
+    const tms = a.years * 12 + a.months;
+    const parts = [];
+    if (tms) parts.push(tms + ' mes' + (tms === 1 ? '' : 'es'));
+    if (a.days) parts.push(a.days + ' día' + (a.days === 1 ? '' : 's'));
+    return parts.length ? parts.join(', ') : a.totalDays + ' días';
+  }
+  const parts = [];
+  if (a.years) parts.push(a.years + ' año' + (a.years === 1 ? '' : 's'));
+  if (a.months) parts.push(a.months + ' mes' + (a.months === 1 ? '' : 'es'));
+  return parts.join(', ');
+}
+
+function _renderPreDetail(r, isDirector) {
+  const age = _calcAgeFromBirth(r.birth_date);
+  const ageStr = _fmtHuman(age);
+  const sName = esc([r.student_name, r.student_last_name].filter(Boolean).join(' ') || '—');
+  const auths = Array.isArray(r.authorized_persons) ? r.authorized_persons : [];
+
+  return `
+  <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-start justify-center overflow-y-auto py-6 px-2" id="pred-overlay">
+    <div class="relative w-full max-w-5xl bg-white rounded-3xl shadow-2xl animate-[fadeIn_.25s_ease] my-auto">
+      <div class="flex items-start justify-between p-6 border-b border-slate-100">
+        <div class="flex items-center gap-4">
+          <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-2xl font-black">${esc(((r.student_name||'?').charAt(0)))}</div>
+          <div>
+            <h2 class="text-xl font-black text-slate-800">${sName}</h2>
+            <div class="flex flex-wrap gap-1.5 mt-2">
+              ${statusBadge(r.status)}
+              ${ageBadge(r)}
+              ${dirAuthBadge(r)}
+            </div>
+          </div>
+        </div>
+        <button class="p-2 rounded-xl hover:bg-slate-100 transition-colors text-slate-400 hover:text-slate-700" id="pred-close" title="Cerrar">
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>
+        </button>
+      </div>
+
+      <div class="p-6 space-y-5 max-h-[75vh] overflow-y-auto">
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+          <div class="p-4 rounded-2xl border border-slate-200 bg-slate-50">
+            <h3 class="text-sm font-black text-slate-700 mb-3 flex items-center gap-2">
+              <span class="w-7 h-7 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              </span>
+              Datos del Estudiante
+            </h3>
+            <div class="grid grid-cols-2 gap-3 text-xs">
+              <div><span class="block text-[10px] font-black text-slate-400 uppercase">Nombres</span><span class="block font-bold text-slate-800">${esc(r.student_name||'—')}</span></div>
+              <div><span class="block text-[10px] font-black text-slate-400 uppercase">Apellidos</span><span class="block font-bold text-slate-800">${esc(r.student_last_name||'—')}</span></div>
+              <div><span class="block text-[10px] font-black text-slate-400 uppercase">Fecha Nac.</span><span class="block font-bold text-slate-800">${fmt(r.birth_date)}</span></div>
+              <div><span class="block text-[10px] font-black text-slate-400 uppercase">Edad</span><span class="block font-bold text-slate-800">${esc(ageStr)}</span></div>
+              <div><span class="block text-[10px] font-black text-slate-400 uppercase">Sexo</span><span class="block font-bold text-slate-800">${esc(r.gender||'—')}</span></div>
+              <div><span class="block text-[10px] font-black text-slate-400 uppercase">Nacionalidad</span><span class="block font-bold text-slate-800">${esc(r.nationality||'—')}</span></div>
+              <div><span class="block text-[10px] font-black text-slate-400 uppercase">Nivel Solicitado</span><span class="block font-bold text-slate-800">${esc(r.level_requested||'—')}</span></div>
+              <div><span class="block text-[10px] font-black text-slate-400 uppercase">Año Escolar</span><span class="block font-bold text-slate-800">${esc(r.school_year_requested||'—')}</span></div>
+              <div><span class="block text-[10px] font-black text-slate-400 uppercase">Horario</span><span class="block font-bold text-slate-800">${esc(r.schedule||'—')}</span></div>
+              <div><span class="block text-[10px] font-black text-slate-400 uppercase">Ingreso Estimado</span><span class="block font-bold text-slate-800">${fmt(r.estimated_entry_date)}</span></div>
+            </div>
+          </div>
+
+          <div class="p-4 rounded-2xl border ${r.age_match === false ? 'border-amber-200 bg-amber-50' : 'border-emerald-200 bg-emerald-50'}">
+            <h3 class="text-sm font-black ${r.age_match === false ? 'text-amber-800' : 'text-emerald-800'} mb-3 flex items-center gap-2">
+              <span class="w-7 h-7 rounded-lg ${r.age_match === false ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'} flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+              </span>
+              Control de Edad / Autorización
+            </h3>
+            <div class="grid grid-cols-1 gap-2 text-xs">
+              <div class="p-3 rounded-xl bg-white/60 border border-white/80">
+                <span class="block text-[10px] font-black text-slate-400 uppercase">Edad Real</span>
+                <span class="block font-black text-slate-800 text-sm">${esc(ageStr)} ${age ? `(${age.totalDays} días)` : ''}</span>
+              </div>
+              <div class="p-3 rounded-xl bg-white/60 border border-white/80">
+                <span class="block text-[10px] font-black text-slate-400 uppercase">Nivel Sugerido</span>
+                <span class="block font-black text-blue-700 text-sm">${esc(r.suggested_level || '—')}</span>
+              </div>
+              <div class="p-3 rounded-xl bg-white/60 border border-white/80">
+                <span class="block text-[10px] font-black text-slate-400 uppercase">Solicitud de Autorización</span>
+                <span class="block font-black text-slate-800 text-sm">${r.director_authorization_requested ? 'SÍ solicitada' : 'No solicitada'}</span>
+              </div>
+              ${r.director_authorization_note ? `
+              <div class="p-3 rounded-xl bg-white border-l-4 border-blue-400">
+                <span class="block text-[10px] font-black text-slate-400 uppercase mb-1">Motivo del Padre/Madre</span>
+                <p class="text-slate-700 font-medium" style="white-space:pre-wrap">${esc(r.director_authorization_note)}</p>
+              </div>` : ''}
+              ${isDirector && r.age_match === false ? `
+              <div class="p-3 rounded-xl bg-white border border-slate-200 space-y-2">
+                <span class="block text-[10px] font-black text-slate-500 uppercase">Resolución de Directora (solo tu)</span>
+                <textarea id="pred-revnote" rows="2" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-xs outline-none focus:border-blue-500" placeholder="Motivo de la resolución (opcional)..."></textarea>
+                <div class="flex gap-2">
+                  <button id="pred-approve" class="flex-1 px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black transition-all">Aprobar Excepción</button>
+                  <button id="pred-reject" class="flex-1 px-3 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-black transition-all">Rechazar Excepción</button>
+                </div>
+              </div>` : r.age_match === false ? `
+              <div class="p-3 rounded-xl bg-white/80 text-center text-[11px] font-bold text-slate-500">
+                Solo Directora puede aprobar/rechazar esta excepción
+              </div>` : ''}
+            </div>
+          </div>
+
+          <div class="p-4 rounded-2xl border border-slate-200 bg-slate-50 md:col-span-2">
+            <h3 class="text-sm font-black text-slate-700 mb-3 flex items-center gap-2">
+              <span class="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              </span>
+              Familiares y Contactos
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+              <div class="p-3 rounded-xl bg-blue-50 border border-blue-100">
+                <h4 class="text-[10px] font-black uppercase text-blue-700 mb-2">Tutor Principal</h4>
+                <div class="space-y-1">
+                  <div><span class="text-slate-400 font-bold">Nombre: </span><span class="font-bold text-slate-800">${esc(r.p1_name||'—')}</span></div>
+                  <div><span class="text-slate-400 font-bold">Parentesco: </span><span class="font-bold text-slate-800">${esc(r.p1_relationship||'—')}</span></div>
+                  <div><span class="text-slate-400 font-bold">Cédula: </span><span class="font-bold text-slate-800">${esc(r.p1_cedula||'—')}</span></div>
+                  <div><span class="text-slate-400 font-bold">Teléfono: </span><span class="font-bold text-slate-800">${esc(r.p1_phone||'—')}</span></div>
+                  <div><span class="text-slate-400 font-bold">Correo: </span><span class="font-bold text-slate-800">${esc(r.p1_email||'—')}</span></div>
+                  <div><span class="text-slate-400 font-bold">Dirección: </span><span class="font-bold text-slate-800">${esc(r.p1_address||'—')}</span></div>
+                </div>
+              </div>
+              <div class="p-3 rounded-xl bg-orange-50 border border-orange-100">
+                <h4 class="text-[10px] font-black uppercase text-orange-700 mb-2">Tutor Secundario</h4>
+                <div class="space-y-1">
+                  <div><span class="text-slate-400 font-bold">Nombre: </span><span class="font-bold text-slate-800">${esc(r.p2_name||'—')}</span></div>
+                  <div><span class="text-slate-400 font-bold">Parentesco: </span><span class="font-bold text-slate-800">${esc(r.p2_relationship||'—')}</span></div>
+                  <div><span class="text-slate-400 font-bold">Cédula: </span><span class="font-bold text-slate-800">${esc(r.p2_cedula||'—')}</span></div>
+                  <div><span class="text-slate-400 font-bold">Teléfono: </span><span class="font-bold text-slate-800">${esc(r.p2_phone||'—')}</span></div>
+                  <div><span class="text-slate-400 font-bold">Correo: </span><span class="font-bold text-slate-800">${esc(r.p2_email||'—')}</span></div>
+                </div>
+              </div>
+              <div class="p-3 rounded-xl bg-rose-50 border border-rose-100">
+                <h4 class="text-[10px] font-black uppercase text-rose-700 mb-2">Contacto de Emergencia</h4>
+                <div class="space-y-1">
+                  <div><span class="text-slate-400 font-bold">Nombre: </span><span class="font-bold text-slate-800">${esc(r.emergency_name||'—')}</span></div>
+                  <div><span class="text-slate-400 font-bold">Parentesco: </span><span class="font-bold text-slate-800">${esc(r.emergency_relationship||'—')}</span></div>
+                  <div><span class="text-slate-400 font-bold">Teléfono: </span><span class="font-bold text-slate-800">${esc(r.emergency_phone||'—')}</span></div>
+                  <div><span class="text-slate-400 font-bold">Cédula: </span><span class="font-bold text-slate-800">${esc(r.emergency_cedula||'—')}</span></div>
+                </div>
+              </div>
+              <div class="p-3 rounded-xl bg-amber-50 border border-amber-100">
+                <h4 class="text-[10px] font-black uppercase text-amber-700 mb-2">Personas Autorizadas a Recoger</h4>
+                ${auths.length ? `
+                <div class="space-y-1">
+                  ${auths.map(a => `
+                    <div class="p-2 bg-white/70 rounded-lg">
+                      <span class="block font-bold text-slate-800">${esc(a.name||'')}</span>
+                      <span class="block text-[11px] text-slate-500">${esc(a.relationship||'')} • ${esc(a.phone||'')}</span>
+                    </div>
+                  `).join('')}
+                </div>` : `<span class="text-slate-400 text-[11px] italic">No hay personas registradas</span>`}
+              </div>
+            </div>
+          </div>
+
+          <div class="p-4 rounded-2xl border border-slate-200 bg-slate-50 md:col-span-2">
+            <h3 class="text-sm font-black text-slate-700 mb-3 flex items-center gap-2">
+              <span class="w-7 h-7 rounded-lg bg-slate-200 text-slate-700 flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              </span>
+              Timeline
+            </h3>
+            <div class="relative pl-5 space-y-3 border-l-2 border-slate-100 ml-2">
+              <div class="relative">
+              <span class="absolute -left-[27px] top-1.5 w-3 h-3 rounded-full bg-blue-500"></span>
+                <p class="text-xs font-bold text-slate-700">Preinscripción enviada</p>
+                <p class="text-[11px] text-slate-400 font-bold">${fmtDT(r.created_at)}</p>
+              </div>
+              ${r.director_authorization_approved === true ? `<div class="relative"><span class="absolute -left-[27px] top-1.5 w-3 h-3 rounded-full bg-emerald-500"></span><p class="text-xs font-bold text-slate-700">Autorización de edad Aprobada por Directora</p><p class="text-[11px] text-slate-400 font-bold">${fmtDT(r.reviewed_at || r.created_at)}</p></div>` : ''}
+              ${r.director_authorization_approved === false ? `<div class="relative"><span class="absolute -left-[27px] top-1.5 w-3 h-3 rounded-full bg-rose-500"></span><p class="text-xs font-bold text-slate-700">Autorización Rechazada</p><p class="text-[11px] text-slate-400 font-bold">${fmtDT(r.reviewed_at || r.created_at)}</p></div>` : ''}
+              ${r.status === 'admitted' ? `<div class="relative"><span class="absolute -left-[27px] top-1.5 w-3 h-3 rounded-full bg-green-500"></span><p class="text-xs font-bold text-slate-700">Estudiante Admitido</p><p class="text-[11px] text-slate-400 font-bold">${fmtDT(r.reviewed_at)}</p></div>` : ''}
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <div class="flex justify-between items-center p-5 border-t border-slate-100 bg-slate-50/50 rounded-b-3xl">
+        <button id="pred-close2" class="px-5 py-2.5 text-slate-500 font-black text-xs uppercase hover:bg-slate-100 rounded-xl transition-all">Cerrar</button>
+        ${r.status === 'pending' ? `
+          <button id="pred-admit" class="px-5 py-2.5 bg-gradient-to-r from-[#0B63C7] to-[#0850A0] text-white font-black text-xs uppercase rounded-xl shadow-md hover:shadow-lg transition-all ${r.age_match === false && r.director_authorization_approved !== true ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''}">
+            ${r.age_match === false && r.director_authorization_approved !== true ? '🔒 Requiere Autorización' : 'Ir a Admitir →'}
+          </button>
+        ` : ''}
+      </div>
+    </div>
+  </div>`;
+}
+
+function _bindPreDetailEvents(r, isDirector) {
+  const close = () => {
+    const gc = document.getElementById('globalModalContainer');
+    if (gc) { gc.style.display = 'none'; gc.innerHTML = ''; }
+  };
+  const bindId = (id, fn) => { const el = document.getElementById(id); if (el) el.addEventListener('click', fn); };
+  const overlay = document.getElementById('pred-overlay');
+  if (overlay) overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+  bindId('pred-close', close);
+  bindId('pred-close2', close);
+  bindId('pred-admit', () => {
+    close();
+    openAdmitModal(r.id);
+  });
+  if (isDirector && r.age_match === false) {
+    const doAuth = async (approved, verb) => {
+      const noteEl = document.getElementById('pred-revnote');
+      const note = noteEl?.value?.trim() || '';
+      const appState = await _getAppState();
+      const uid = appState?.get?.('user')?.id || null;
+      const prevNote = r.director_authorization_note || '';
+      const stamp = `\n\n[${new Date().toLocaleString('es-DO')} — Resolución ${approved ? 'APROBADA' : 'RECHAZADA'} por Directora]\n${note}`;
+      const finalNote = (prevNote ? prevNote : '') + stamp;
+      try {
+        const { error } = await supabase
+          .from('student_preregistrations')
+          .update({
+            director_authorization_approved: approved,
+            director_authorization_note: finalNote,
+            reviewed_at: new Date().toISOString(),
+            reviewed_by: uid
+          })
+          .eq('id', r.id);
+        if (error) throw error;
+        Helpers.toast(verb + ' exitosa', 'success');
+        close();
+        loadInscripciones();
+      } catch (e) {
+        const msg = e.message || String(e);
+        const rlsHint = /403|policy|permission|denied/i.test(msg) ? ' Permiso denegado (RLS): contacta al administrador para revisar políticas.' : '';
+        Helpers.toast('Error: ' + msg + rlsHint, 'error');
+      }
+    };
+    bindId('pred-approve', () => doAuth(true, 'Aprobación'));
+    bindId('pred-reject', () => doAuth(false, 'Rechazo'));
+  }
+}
+
+function _attachPreDetailStyles() {
+  const style = document.getElementById('_inscPredStyle');
+  if (style) return;
+  const s = document.createElement('style');
+  s.id = '_inscPredStyle';
+  s.textContent = `@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}`;
+  document.head.appendChild(s);
+}
+
 let _admittingStudent = false;
-// ── Admit Student — full flow ─────────────────────────────────
-export async function admitStudent(preregId) {
-  if (_admittingStudent) return; // Prevent double execution
-  
+export async function _legacyAdmitStudent(preregId) {
+  if (_admittingStudent) return;
+
   _admittingStudent = true;
   const btn = document.getElementById('btnConfirmAdmit');
   if (btn) {
@@ -248,7 +648,6 @@ export async function admitStudent(preregId) {
   }
 
   try {
-    // 1. Load pre-registration and check status
     const { data: reg, error: regErr } = await supabase
       .from('student_preregistrations')
       .select('*')
@@ -257,7 +656,6 @@ export async function admitStudent(preregId) {
     if (regErr || !reg) throw new Error('Registro no encontrado');
     if (reg.status === 'admitted') throw new Error('El estudiante ya fue admitido');
 
-    // 2. Read all form fields (using getElementById — forms use id= not name=)
     const v = (id) => document.getElementById(id)?.value?.trim() || null;
     const n = (id, def = 0) => { const val = parseFloat(document.getElementById(id)?.value); return isNaN(val) ? def : val; };
 
@@ -273,9 +671,9 @@ export async function admitStudent(preregId) {
     if (!password || password.length < 6) throw new Error('La contraseña debe tener al menos 6 caracteres');
     if (!emailUser)    throw new Error('El registro no tiene email del tutor');
 
-    // Build student payload from form
     const studentPayload = {
       name:                  v('stName') || reg.student_name,
+      last_name:             v('stLastname') || reg.student_last_name,
       matricula,
       classroom_id:          classroomId ? parseInt(classroomId) : null,
       schedule:              v('stHorario') || reg.schedule,
@@ -297,20 +695,15 @@ export async function admitStudent(preregId) {
       payment_plan:          v('paymentPlan') || 'monthly',
     };
 
-    // 3. Handle parent user (sibling shares parent, otherwise create via signUp)
     let parentUserId = null;
 
     if (siblingId) {
-      // Inherit parent from sibling — no new auth user needed
       const sibSel = document.getElementById('stSiblingId');
       const sibOpt = sibSel?.options[sibSel?.selectedIndex];
       parentUserId  = sibOpt?.dataset?.parentId || null;
     }
 
     if (!parentUserId) {
-      // Note: supabase.auth.admin is NOT available client-side (requires service_role key).
-      // Use signUp instead — it works for new accounts. If email already exists,
-      // we look up the existing profile by email.
       const { data: signupData, error: signupErr } = await supabase.auth.signUp({
         email: emailUser,
         password,
@@ -322,7 +715,6 @@ export async function admitStudent(preregId) {
       } else if (signupErr?.message?.toLowerCase().includes('already registered') ||
                  signupErr?.status === 422 ||
                  signupErr?.message?.toLowerCase().includes('user already')) {
-        // Email already exists — look up existing profile
         const { data: existingProfile } = await supabase
           .from('profiles')
           .select('id')
@@ -330,13 +722,11 @@ export async function admitStudent(preregId) {
           .maybeSingle();
         if (existingProfile?.id) parentUserId = existingProfile.id;
       }
-      // If signup returns identities=[] it means email exists but is unconfirmed — still has an id
       if (!parentUserId && signupData?.user?.identities?.length === 0 && signupData?.user?.id) {
         parentUserId = signupData.user.id;
       }
     }
 
-    // Upsert parent profile (only if we have a userId)
     if (parentUserId) {
       const profileData = {
         id:    parentUserId,
@@ -345,13 +735,11 @@ export async function admitStudent(preregId) {
         phone: studentPayload.p1_phone || '',
         role:  'padre',
       };
-      // Try upsert; if it fails, try plain update; ignore all profile errors (non-fatal)
       const { error: profileErr } = await supabase
         .from('profiles')
         .upsert(profileData, { onConflict: 'id', ignoreDuplicates: false });
 
       if (profileErr) {
-        // Fallback: try update only (profile may already exist)
         try {
           await supabase.from('profiles').update({
             name:  profileData.name,
@@ -365,7 +753,6 @@ export async function admitStudent(preregId) {
       studentPayload.parent_id = parentUserId;
     }
 
-    // Check if student with same matricula already exists
     const { data: existingStudent } = await supabase
       .from('students')
       .select('id')
@@ -373,7 +760,6 @@ export async function admitStudent(preregId) {
       .maybeSingle();
     if (existingStudent) throw new Error(`Ya existe un estudiante con la matrícula: ${matricula}`);
 
-    // 4. Create student record
     const { data: student, error: stuErr } = await supabase
       .from('students')
       .insert(studentPayload)
@@ -383,7 +769,6 @@ export async function admitStudent(preregId) {
 
     const studentId = student.id;
 
-    // 5. Create payment plan
     let plan = null;
     try {
       const { data } = await supabase
@@ -397,7 +782,6 @@ export async function admitStudent(preregId) {
       plan = null;
     }
 
-    // 6. Create 12 monthly payments
     if (plan?.id) {
       const payments = [];
       const [yr, mo] = startMonth.split('-').map(Number);
@@ -414,13 +798,11 @@ export async function admitStudent(preregId) {
       }
     }
 
-    // 7. Mark pre-registration as admitted
     const appState = await _getAppState();
     await supabase.from('student_preregistrations').update({
       status: 'admitted', reviewed_at: new Date().toISOString(), reviewed_by: appState?.get('user')?.id || null
     }).eq('id', preregId);
 
-    // 8. Close modal & notify
     if (window.App?.ui?.closeModal) {
       window.App.ui.closeModal();
     } else {
@@ -432,7 +814,6 @@ export async function admitStudent(preregId) {
     Helpers.toast(`✅ ${studentPayload.name} admitido — Matrícula: ${matricula}`, 'success');
     loadInscripciones();
 
-    // Refresh students if visible
     if (typeof window.App?.students?.init === 'function') {
       const currentSection = document.querySelector('.section.active')?.id;
       if (currentSection === 'estudiantes') window.App.students.init();
@@ -448,15 +829,25 @@ export async function admitStudent(preregId) {
       btn.innerHTML = '✅ Confirmar Admisión';
     }
   } finally {
-    _admittingStudent = false; // Reset flag
+    _admittingStudent = false;
   }
 }
 
-// ── Export global ─────────────────────────────────────────────
+export async function admitStudent(preregId) {
+  try {
+    const { StudentRecordModal } = await import('../shared/student-record-modal.js');
+    const { data: reg } = await supabase.from('student_preregistrations').select('*').eq('id', preregId).single();
+    if (reg) StudentRecordModal.open('admit', null, reg);
+  } catch (_) {
+    return _legacyAdmitStudent(preregId);
+  }
+}
+
 export const InscripcionesModule = {
   load:        loadInscripciones,
   destroy:     destroyInscripciones,
   filterStatus,
   openAdmitModal,
+  openPreDetail,
   admitStudent
 };
