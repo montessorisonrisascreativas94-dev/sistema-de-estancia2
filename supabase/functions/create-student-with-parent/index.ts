@@ -15,7 +15,15 @@ Deno.serve(async (req) => {
   if (!auth.allowed) return json({ error: auth.error ?? 'Forbidden' }, auth.status, origin);
 
   try {
-    const { studentData, parentData } = await req.json();
+    const rawBody = await req.json();
+    // Robustez: aceptar tanto formato nuevo {studentData,parentData} como
+    // formato antiguo {student,parent} y también pre_registration_id.
+    const studentData = rawBody?.studentData ?? rawBody?.student ?? {};
+    const parentData  = rawBody?.parentData  ?? rawBody?.parent  ?? {};
+    const preRegistrationId = rawBody?.pre_registration_id
+      ?? rawBody?.pre_registration_id
+      ?? studentData?.pre_registration_id
+      ?? null;
 
     // ✅ REGLA NUEVA (Oct 2026):
     // El usuario de Supabase Auth usa SIEMPRE el dominio institucional
@@ -109,16 +117,72 @@ Deno.serve(async (req) => {
       ...studentData,
       parent_id: user.id,
     };
+    if (preRegistrationId) {
+      (finalStudentData as any).pre_registration_id = preRegistrationId;
+    }
+    // Limpiar campos nulos/undefined que rompan columnas inexistentes
+    const cleanStudent: Record<string, any> = {};
+    const STUDENT_ALLOWED = new Set([
+      'name','student_name','student_last_name','birth_date','gender','nationality',
+      'birth_place','address','province','municipality','sector','matricula',
+      'level_requested','school_year_requested','classroom_id','schedule','start_date',
+      'is_active','observations','p1_name','p1_relationship','p1_cedula','p1_phone',
+      'p1_whatsapp','p1_email','p1_address','p1_profession','p1_workplace','p1_occupation',
+      'p1_emergency_contact','p2_name','p2_relationship','p2_cedula','p2_phone',
+      'p2_whatsapp','p2_email','p2_address','p2_profession','p2_workplace',
+      'emergency_name','emergency_relationship','emergency_cedula','emergency_phone',
+      'blood_type','allergies','medications','medical_conditions','disability',
+      'food_restrictions','medical_notes','insurance','pediatrician','pediatrician_phone',
+      'vaccines_complete','payment_plan','monthly_fee','prolonged_fee','registration_fee',
+      'discount','due_day','authorized_persons','parent_id','pre_registration_id',
+      'photo_url','birth_certificate_url','cedula_front_url','cedula_back_url',
+      'p1_cedula_front_url','p1_cedula_back_url','p2_cedula_front_url','p2_cedula_back_url',
+      'vaccine_card_url','contract_signed_url',
+    ]);
+    Object.entries(finalStudentData).forEach(([k, v]) => {
+      if (STUDENT_ALLOWED.has(k) && v !== undefined && v !== null) {
+        cleanStudent[k] = v;
+      }
+    });
 
-    const { data: newStudent, error: studentError } = await supabaseAdmin
-      .from("students")
-      .insert(finalStudentData)
-      .select()
-      .single();
+    // Si el insert falla porque la tabla no tiene alguna columna, se identifica
+    // la culpable y se reintenta sin ella. Sin esto, UNA columna faltante
+    // (fue `prolonged_fee`) tumbaba la admisión completa con 400.
+    const missingColumnOf = (msg: string): string | null => {
+      const m =
+        msg.match(/Could not find the '([^']+)' column/i) ||
+        msg.match(/column "?([a-z0-9_]+)"? (?:of|does not exist)/i) ||
+        msg.match(/column\s+students\.([a-z0-9_]+)/i);
+      return m ? m[1] : null;
+    };
+
+    const droppedColumns: string[] = [];
+    let newStudent: any = null;
+    let studentError: any = null;
+
+    for (let attempt = 0; attempt < 10; attempt++) {
+      const res = await supabaseAdmin
+        .from("students")
+        .insert(cleanStudent)
+        .select()
+        .single();
+      newStudent = res.data ?? null;
+      studentError = res.error ?? null;
+      if (!studentError) break;
+      const bad = missingColumnOf(String(studentError.message ?? ""));
+      if (!bad || !(bad in cleanStudent)) break;
+      delete cleanStudent[bad];
+      droppedColumns.push(bad);
+      console.warn(`[create-student-with-parent] columna "${bad}" no existe en students; se omite`);
+    }
 
     if (studentError) throw studentError;
 
-    return json({ student: newStudent, parent: { id: user.id, email: loginEmail } }, 201, origin);
+    return json({
+      student: newStudent,
+      parent: { id: user.id, email: loginEmail },
+      ...(droppedColumns.length ? { dropped_columns: droppedColumns } : {}),
+    }, 201, origin);
 
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);

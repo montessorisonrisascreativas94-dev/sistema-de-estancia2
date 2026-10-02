@@ -1342,6 +1342,9 @@
                 </div>
               </div>
               <div class="flex gap-3 w-full md:w-auto justify-end">
+                <button id="btnToggleStaffView" class="dc-btn dc-btn--soft dc-btn--sm" type="button" aria-pressed="false">
+                  <i data-lucide="layout-grid"></i> <span data-staff-view-label>Ver tarjetas</span>
+                </button>
                 <button id="btnAddAssistant" class="admin-btn role-orange-ghost flex items-center gap-2 !bg-orange-50 !text-orange-600 hover:!bg-orange-100">
                   <i data-lucide="user-plus" class="w-4 h-4"></i> Nuevo Asistente
                 </button>
@@ -1375,7 +1378,7 @@
           </div>
 
           <div class="table-panel">
-            <div class="table-scroll-wrap rounded-2xl border border-slate-200">
+            <div id="teachersTableWrapper" class="table-scroll-wrap rounded-2xl border border-slate-200">
               <table class="data-table w-full text-sm text-left border-collapse">
                 <thead>
                   <tr>
@@ -1390,6 +1393,7 @@
                 <tbody id="teachersTableBody"></tbody>
               </table>
             </div>
+            <div id="teachersGrid" class="dc-students hidden"></div>
             <div id="teachersEmptyState" class="hidden text-center py-12">
               <div class="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3"><i data-lucide="users" class="w-8 h-8 text-slate-400"></i></div>
               <h3 class="text-slate-600 font-bold">No hay personal registrado</h3>
@@ -1533,6 +1537,8 @@
                     <th>Estudiante</th>
                     <th>Aula / Línea</th>
                     <th>Estado</th>
+                    <th>Hora de entrada</th>
+                    <th>Hora de salida</th>
                     <th style="text-align:right">Acciones</th>
                   </tr>
                 </thead>
@@ -1552,7 +1558,7 @@
                 <span class="section-title-ico"><i data-lucide="door-open"></i></span>
                 Centro Académico
               </h1>
-              <p class="section-subtitle">Cada aula con su línea oficial de color y su barra de capacidad en tiempo real.</p>
+              <p class="section-subtitle">Cada aula con su color identificador y su barra de capacidad en tiempo real, incluidas las clases especiales.</p>
             </div>
             <div class="section-actions">
               <button id="btnAddRoom" onclick="App.rooms.openModal()" class="dc-btn dc-btn--primary">
@@ -1575,10 +1581,10 @@
               <div style="display:flex;flex-wrap:wrap;align-items:center;gap:.6rem;flex:1;min-width:240px;">
                 <div class="dc-search" style="max-width:340px;width:100%;">
                   <i data-lucide="search"></i>
-                  <input type="text" id="roomsSearch" placeholder="Buscar aula o línea..." autocomplete="off">
+                  <input type="text" id="roomsSearch" placeholder="Buscar aula o nivel..." autocomplete="off">
                 </div>
                 <select id="roomsLineFilter" class="dc-select" style="max-width:210px;">
-                  <option value="">Todas las líneas</option>
+                  <option value="">Todos los niveles</option>
                 </select>
                 <select id="roomsStatusFilter" class="dc-select" style="max-width:210px;">
                   <option value="all">Todos los estados</option>
@@ -1590,6 +1596,9 @@
               </div>
               <div class="dc-pick-summary" style="border:0;background:transparent;padding:0;">
                 <span class="dc-pick-counter" id="roomsCounter">0 aulas</span>
+                <button id="btnToggleRoomsView" class="dc-btn dc-btn--soft dc-btn--sm" type="button" aria-pressed="false">
+                  <i data-lucide="layout-grid"></i> <span data-rooms-view-label>Ver tarjetas</span>
+                </button>
                 <button id="btnRoomsReset" class="dc-btn dc-btn--ghost dc-btn--sm" type="button">
                   <i data-lucide="rotate-ccw"></i> Limpiar
                 </button>
@@ -1597,8 +1606,24 @@
             </div>
           </div>
 
-          <!-- Contenedores de aulas -->
+          <!-- Contenedores de aulas: tarjetas y tabla -->
           <div id="roomsGrid" class="dc-rooms"></div>
+          <div id="roomsTableWrapper" class="dc-table-panel hidden">
+            <div class="dc-table-wrap">
+              <table class="dc-table">
+                <thead>
+                  <tr>
+                    <th>Aula</th>
+                    <th>Nivel</th>
+                    <th>Ocupación</th>
+                    <th>Docente</th>
+                    <th style="text-align:right">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="roomsTable"></tbody>
+              </table>
+            </div>
+          </div>
 
           <!-- Estudiantes sin aula -->
           <div class="dc-panel dc-panel--flat">
@@ -2364,18 +2389,19 @@
       <!-- Contabilidad deshabilitada -->
       <!-- SECTION: INSCRIPCIONES -->
       <section id="inscripciones" class="section">
-        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-          <div>
-            <div class="flex items-center gap-3 mb-1">
-              <div class="w-1 h-8 bg-[#FF7A00] rounded-full"></div>
-              <h1 class="text-2xl font-black text-[#1A2340]">Inscripciones</h1>
+        <div class="mb-5">
+          <div class="inline-flex items-center gap-3 px-5 py-3 bg-white border border-slate-200 rounded-tr-2xl rounded-bl-xl border-l-[3px] border-l-[#0B63C7] shadow-sm">
+            <div class="w-1.5 h-7 rounded-full bg-gradient-to-b from-[#0B63C7] to-[#28B54D]"></div>
+            <div class="leading-tight text-left">
+              <h1 class="text-lg font-black text-slate-800 tracking-tight">Inscripciones</h1>
+              <div class="flex flex-wrap items-center gap-1.5 mt-1">
+                <span class="px-2.5 py-0.5 rounded-lg bg-[#E8F2FF] text-[#0B63C7] text-[10px] font-bold tracking-wide">Solicitudes de preinscripción y admisiones</span>
+                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-[#EDE9FE] text-[#7C3AED] text-[10px] font-bold tracking-wide">
+                  <span class="w-1.5 h-1.5 rounded-full bg-[#8B5CF6] animate-pulse"></span>Pend. Autoriz.
+                </span>
+              </div>
             </div>
-            <p class="text-slate-500 font-medium ml-4">Solicitudes de preinscripción y admisiones pendientes</p>
           </div>
-          <button onclick="InscripcionesModule.load()"
-            class="flex items-center gap-2 px-4 py-2.5 bg-[#E8F2FF] text-[#0B63C7] rounded-xl font-black text-sm hover:bg-[#0B63C7] hover:text-white transition-all">
-            <i data-lucide="refresh-cw" class="w-4 h-4"></i> Actualizar
-          </button>
         </div>
         <div id="inscripcionesContainer">
           <div class="text-center py-8 text-slate-400">Haz clic en Inscripciones para cargar...</div>

@@ -6,15 +6,37 @@ import { supabase, createClient, SUPABASE_URL, SUPABASE_ANON_KEY } from '../shar
 import { auditLog } from '../shared/db-utils.js';
 import { QueryCache } from '../shared/query-cache.js';
 import { RealtimeManager } from '../shared/realtime-manager.js';
-import { findCanonicalClassroom } from '../shared/constants.js';
+import { findCanonicalClassroom, findSpecialClassroom } from '../shared/constants.js';
 
 // Vista activa: 'table' | 'grid'
 let _view = 'table';
+const VIEW_KEY = 'dc_students_view';
+
+try {
+  const _saved = localStorage.getItem(VIEW_KEY);
+  if (_saved === 'grid' || _saved === 'table') _view = _saved;
+} catch (_) {}
+
+function persistView() {
+  try { localStorage.setItem(VIEW_KEY, _view); } catch (_) {}
+}
 
 function avg(arr) {
   const valid = arr.filter(v => v != null && !isNaN(v));
   if (!valid.length) return '-';
   return (valid.reduce((a, b) => a + Number(b), 0) / valid.length).toFixed(1);
+}
+
+function fmtTime(ts) {
+  if (!ts) return '—';
+  const d = new Date(ts);
+  if (isNaN(d.getTime())) return '—';
+  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+function dateStr(d) {
+  const p = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
 
 export const StudentsModule = {
@@ -63,17 +85,11 @@ export const StudentsModule = {
       setTxt('avgGrade', avgGrade);
       setTxt('avgAttendance', (kpis.attendance || 0) + '%');
 
-      // 4. Renderizar vista actual
-      const tableWrapper = document.getElementById('studentsTableWrapper');
-      const gridWrapper = document.getElementById('studentsGrid');
-      
-      if (_view === 'grid') {
-        tableWrapper?.classList.add('hidden');
-        gridWrapper?.classList.remove('hidden');
-      } else {
-        tableWrapper?.classList.remove('hidden');
-        gridWrapper?.classList.add('hidden');
-      }
+      // 4. Horarios de entrada / salida de hoy
+      await this._loadAttendance(students);
+
+      // 5. Renderizar vista actual (tarjeta o tabla)
+      this._applyView();
       this.render(students);
 
       // Renderizar paginación
@@ -127,27 +143,14 @@ export const StudentsModule = {
       const btnToggleView = document.getElementById('btnToggleStuView');
       if (btnToggleView && !btnToggleView._bound) {
         btnToggleView._bound = true;
-        btnToggleView.onclick = () => {
+        btnToggleView.addEventListener('click', () => {
           _view = _view === 'grid' ? 'table' : 'grid';
-          const label = btnToggleView.querySelector('[data-stu-view-label]');
-          if (label) label.textContent = _view === 'grid' ? 'Ver tabla' : 'Ver tarjetas';
-          btnToggleView.innerHTML = `<i data-lucide="${_view === 'grid' ? 'table' : 'layout-grid'}"></i> ` +
-            `<span data-stu-view-label>${_view === 'grid' ? 'Ver tabla' : 'Ver tarjetas'}</span>`;
-          if (window.lucide) lucide.createIcons();
-          
-          const tableWrapper = document.getElementById('studentsTableWrapper');
-          const gridWrapper = document.getElementById('studentsGrid');
-          
-          if (_view === 'grid') {
-            tableWrapper?.classList.add('hidden');
-            gridWrapper?.classList.remove('hidden');
-          } else {
-            tableWrapper?.classList.remove('hidden');
-            gridWrapper?.classList.add('hidden');
-          }
+          persistView();
+          this._applyView();
           this.render(AppState.get('students') || []);
-        };
+        });
       }
+      this._paintToggleLabel();
 
       const btnExport = document.getElementById('btnExportStudents');
       if (btnExport && !btnExport._bound) {
@@ -176,7 +179,7 @@ export const StudentsModule = {
 
   _subscribeRealtime() {
     this._realtimeSubscribed = true;
-    
+
     RealtimeManager.subscribe('directora-students', (channel) => {
       channel
         .on('postgres_changes', 
@@ -184,8 +187,84 @@ export const StudentsModule = {
           () => {
             this.init();
           }
+        )
+        .on('postgres_changes',
+          { event: '*', schema: 'public', table: 'attendance' },
+          async () => {
+            // Solo refrescamos los horarios, sin recargar toda la sección
+            const cached = AppState.get('students') || [];
+            if (!cached.length) return;
+            await this._loadAttendance(cached);
+            this.render(cached);
+          }
         );
     });
+  },
+
+  /** Sincroniza botones, contenedores y etiqueta del toggle tabla/tarjeta */
+  _applyView() {
+    const tableWrapper = document.getElementById('studentsTableWrapper');
+    const gridWrapper = document.getElementById('studentsGrid');
+    if (_view === 'grid') {
+      tableWrapper?.classList.add('hidden');
+      gridWrapper?.classList.remove('hidden');
+    } else {
+      tableWrapper?.classList.remove('hidden');
+      gridWrapper?.classList.add('hidden');
+    }
+    this._paintToggleLabel();
+  },
+
+  _paintToggleLabel() {
+    const btn = document.getElementById('btnToggleStuView');
+    if (!btn) return;
+    const isGrid = _view === 'grid';
+    btn.innerHTML = `<i data-lucide="${isGrid ? 'table' : 'layout-grid'}"></i> ` +
+      `<span data-stu-view-label>${isGrid ? 'Ver tabla' : 'Ver tarjetas'}</span>`;
+    btn.setAttribute('aria-pressed', String(isGrid));
+    btn.setAttribute('title', isGrid ? 'Cambiar a vista de tabla' : 'Cambiar a vista de tarjetas');
+  },
+
+  /**
+   * Carga los horarios de entrada/salida de hoy (y del último día con registro)
+   * para los estudiantes de la página actual.
+   */
+  async _loadAttendance(students) {
+    const ids = (students || []).map(s => s.id).filter(Boolean);
+    if (!ids.length) { this._attendanceMap = new Map(); return; }
+
+    const since = dateStr(new Date(Date.now() - 7 * 864e5));
+    try {
+      const { data, error } = await supabase
+        .from('attendance')
+        .select('student_id, date, status, check_in, check_out')
+        .in('student_id', ids)
+        .gte('date', since)
+        .order('date', { ascending: false });
+
+      if (error) { this._attendanceMap = new Map(); return; }
+
+      const map = new Map();
+      (data || []).forEach(a => {
+        const key = String(a.student_id);
+        // La consulta viene ordenada por fecha desc: la primera fila gana
+        if (!map.has(key)) {
+          map.set(key, {
+            date: a.date,
+            status: a.status,
+            check_in: a.check_in,
+            check_out: a.check_out
+          });
+        }
+      });
+      this._attendanceMap = map;
+    } catch (_) {
+      this._attendanceMap = new Map();
+    }
+  },
+
+  _attendanceFor(studentId) {
+    return this._attendanceMap?.get(String(studentId)) || null;
   },
 
   // Promedio general de rendimiento (0-100) basado en las evaluaciones activas
@@ -229,33 +308,12 @@ export const StudentsModule = {
     }
   },
 
-  async printAllCarnets() {
-    Helpers.toast('Generando carnets...', 'info');
-    const students = AppState.get('students') || [];
-    if (!students.length) { Helpers.toast('Sin estudiantes para imprimir', 'warning'); return; }
-    const list = students.map(s => ({
-      name:      s.name || '',
-      matricula: s.matricula || '',
-      classroom: s.classrooms?.name || s.classroom_name || '',
-      nivel:     s.classrooms?.level || s.level || '',
-      p1_name:   s.p1_name || '',
-      p2_name:   s.p2_name || '',
-      p1_phone:  s.p1_phone || '',
-      p2_phone:  s.p2_phone || '',
-      _parentName:  s._parentName || '',
-      _parentPhone: s._parentPhone || '',
-      student_id:   s.id || '',
-      is_active:    s.is_active !== false
-    }));
-    await Helpers.printAllCarnets(list);
-  },
-
   render(students) {
     const tableContainer = document.getElementById('studentsTable');
     const gridContainer = document.getElementById('studentsGrid');
     
     if (!students?.length) {
-      if (tableContainer) tableContainer.innerHTML = '<tr><td colspan="4"><div class="dc-empty"><i data-lucide="user-x"></i><span>No hay estudiantes para mostrar.</span></div></td></tr>';
+      if (tableContainer) tableContainer.innerHTML = '<tr><td colspan="6"><div class="dc-empty"><i data-lucide="user-x"></i><span>No hay estudiantes para mostrar.</span></div></td></tr>';
       if (gridContainer) gridContainer.innerHTML = '<div class="dc-empty"><i data-lucide="user-x"></i><span>No hay estudiantes para mostrar.</span></div>';
       if (window.lucide) lucide.createIcons();
       return;
@@ -265,15 +323,50 @@ export const StudentsModule = {
     this._roomsById = this._roomsById || new Map();
     const canonOf = (s) => findCanonicalClassroom(s?.classrooms?.level || s?.classrooms?.name || s?.level_requested || s?.level || '');
 
+/** Nivel legible del aula del estudiante: "1° Primero", "Inglés Afterschool"… */
+const roomLevelOf = (s) => {
+  const canon = canonOf(s);
+  if (canon?.displayLevel) return canon.displayLevel;
+  const special = findSpecialClassroom(s?.classrooms?.name) || findSpecialClassroom(s?.classrooms?.level);
+  return special?.displayName || '';
+};
+
+/** Color del aula: canónico, especial o azul por defecto. */
+const roomColorOf = (s) => {
+  const canon = canonOf(s);
+  if (canon?.color) return canon.color;
+  const special = findSpecialClassroom(s?.classrooms?.name) || findSpecialClassroom(s?.classrooms?.level);
+  return special?.color || '#0B63C7';
+};
+    const times = (s) => {
+      const att = this._attendanceFor(s.id);
+      return {
+        status: att?.status || null,
+        in: fmtTime(att?.check_in),
+        out: fmtTime(att?.check_out),
+        hasIn: !!att?.check_in,
+        hasOut: !!att?.check_out
+      };
+    };
+
     // Render Table
     if (tableContainer) {
       tableContainer.innerHTML = pageStudents.map(s => {
-        const canon = canonOf(s);
-        const color = canon?.color || '#0B63C7';
+        const color = roomColorOf(s);
         const roomName = s.classrooms?.name || 'Sin aula';
         const avatar = s.avatar_url
           ? `<img src="${Helpers.escapeHTML(s.avatar_url)}" alt="">`
           : `<i data-lucide="user"></i>`;
+        const t = times(s);
+        const attBadge = t.status
+          ? `<span class="dc-badge ${t.hasOut ? 'dc-badge--on' : 'dc-badge--none'}" style="margin-top:.25rem">
+               <i data-lucide="${t.hasOut ? 'check-check' : 'clock'}"></i>${
+                 t.status === 'present' ? 'Presente' :
+                 t.status === 'absent'  ? 'Ausente' :
+                 t.status === 'late'    ? 'Tarde' :
+                 t.status === 'retirado'? 'Retirado' : Helpers.escapeHTML(t.status)}
+             </span>`
+          : '';
         return `
         <tr ondblclick="App.students.openModal('${s.id}')" style="cursor:pointer">
           <td>
@@ -290,13 +383,22 @@ export const StudentsModule = {
               <span class="dc-badge ${s.classrooms ? 'dc-badge--room' : 'dc-badge--none'}" style="--room:${color}">
                 <i data-lucide="door-open"></i><span>${Helpers.escapeHTML(roomName)}</span>
               </span>
-              ${canon ? `<span class="dc-badge dc-badge--room" style="--room:${color}"><i></i><span>Línea ${Helpers.escapeHTML(canon.line)}</span></span>` : ''}
+              ${roomLevelOf(s) ? `<span class="dc-badge dc-badge--room" style="--room:${color}"><i></i><span>${Helpers.escapeHTML(roomLevelOf(s))}</span></span>` : ''}
             </div>
           </td>
           <td>
-            <span class="dc-badge ${s.is_active ? 'dc-badge--on' : 'dc-badge--off'}">
-              <i data-lucide="${s.is_active ? 'check' : 'pause'}"></i>${s.is_active ? 'Activo' : 'Inactivo'}
-            </span>
+            <div class="dc-student-badges" style="margin-top:0">
+              <span class="dc-badge ${s.is_active ? 'dc-badge--on' : 'dc-badge--off'}">
+                <i data-lucide="${s.is_active ? 'check' : 'pause'}"></i>${s.is_active ? 'Activo' : 'Inactivo'}
+              </span>
+              ${attBadge}
+            </div>
+          </td>
+          <td style="white-space:nowrap">
+            <span style="font-weight:900;font-size:.78rem;color:${t.hasIn ? color : 'var(--dc-faint)'}">${t.in}</span>
+          </td>
+          <td style="white-space:nowrap">
+            <span style="font-weight:900;font-size:.78rem;color:${t.hasOut ? color : 'var(--dc-faint)'}">${t.out}</span>
           </td>
           <td>
             <div class="dc-student-actions" style="justify-content:flex-end">
@@ -315,12 +417,12 @@ export const StudentsModule = {
     // Render tarjetas (contenedores con borde y color de línea del aula)
     if (gridContainer) {
       gridContainer.innerHTML = pageStudents.map(s => {
-        const canon = canonOf(s);
-        const color = canon?.color || '#0B63C7';
+        const color = roomColorOf(s);
         const roomName = s.classrooms?.name || 'Sin aula';
         const avatar = s.avatar_url
           ? `<img src="${Helpers.escapeHTML(s.avatar_url)}" alt="">`
           : `<i data-lucide="user"></i>`;
+        const t = times(s);
         return `
         <article class="dc-student ${s.is_active ? '' : 'dc-student--off'}" style="--room:${color}"
           onclick="App.students.openModal('${s.id}')"
@@ -336,7 +438,7 @@ export const StudentsModule = {
                 <span class="dc-badge ${s.classrooms ? 'dc-badge--room' : 'dc-badge--none'}">
                   <i data-lucide="door-open"></i><span>${Helpers.escapeHTML(roomName)}</span>
                 </span>
-                ${canon ? `<span class="dc-badge dc-badge--room"><i></i><span>Línea ${Helpers.escapeHTML(canon.line)}</span></span>` : ''}
+                ${roomLevelOf(s) ? `<span class="dc-badge dc-badge--room" style="--room:${color}"><i></i><span>${Helpers.escapeHTML(roomLevelOf(s))}</span></span>` : ''}
                 <span class="dc-badge ${s.is_active ? 'dc-badge--on' : 'dc-badge--off'}">
                   <i data-lucide="${s.is_active ? 'check' : 'pause'}"></i>${s.is_active ? 'Activo' : 'Inactivo'}
                 </span>
@@ -347,11 +449,19 @@ export const StudentsModule = {
           <div class="dc-student-stats">
             <div class="dc-student-stat">
               <span class="dc-student-stat-k">Nivel</span>
-              <span class="dc-student-stat-v" style="color:var(--room)">${Helpers.escapeHTML(s.classrooms?.level || canon?.line || '—')}</span>
+              <span class="dc-student-stat-v" style="color:var(--room)">${Helpers.escapeHTML(roomLevelOf(s) || '—')}</span>
             </div>
             <div class="dc-student-stat">
               <span class="dc-student-stat-k">Edad</span>
               <span class="dc-student-stat-v">${s.age != null ? Helpers.escapeHTML(String(s.age)) + ' ' + Helpers.escapeHTML(s.age_type || 'años') : '—'}</span>
+            </div>
+            <div class="dc-student-stat">
+              <span class="dc-student-stat-k">Hora de entrada</span>
+              <span class="dc-student-stat-v" style="color:${t.hasIn ? 'var(--room)' : 'var(--dc-faint)'}">${t.in}</span>
+            </div>
+            <div class="dc-student-stat">
+              <span class="dc-student-stat-k">Hora de salida</span>
+              <span class="dc-student-stat-v" style="color:${t.hasOut ? 'var(--room)' : 'var(--dc-faint)'}">${t.out}</span>
             </div>
           </div>
 
@@ -420,6 +530,7 @@ export const StudentsModule = {
     try {
       const { data, count } = await DirectorApi.getStudents(filters, range);
       this._totalStudentsCount = count || 0;
+      await this._loadAttendance(data);
       this.render(data);
       this._renderDirPagination(1, Math.ceil((count || 0) / pageSize), count || 0, data);
     } catch (e) {

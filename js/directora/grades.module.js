@@ -10,7 +10,7 @@ import { supabase } from '../shared/supabase.js';
 import { DirectorApi } from './api.js';
 import { buildScoresMap, normalizeScore, avgOf, gradeColor, gradeToLevel } from '../shared/eval-utils.js';
 import { GradebookGrid } from '../shared/gradebook-grid.module.js';
-import { findCanonicalClassroom } from '../shared/constants.js';
+import { findCanonicalClassroom, findSpecialClassroom, formatClassroomLevel } from '../shared/constants.js';
 
 const _esc = (s) => Helpers.escapeHTML(String(s ?? ''));
 const canonOf = (c) => findCanonicalClassroom(c?.level || c?.name || '');
@@ -76,7 +76,7 @@ export const GradesModule = {
                 <span class="cfg-pip"></span>
                 <div style="min-width:0">
                   <h4 class="cfg-editor-name" id="cfgEditorName">Aula</h4>
-                  <span class="cfg-editor-line"><i></i><span id="cfgEditorLine">Línea</span></span>
+                  <span class="cfg-editor-line"><i></i><span id="cfgEditorLine">Nivel</span></span>
                 </div>
               </div>
               <div class="cfg-tools">
@@ -175,7 +175,7 @@ export const GradesModule = {
       return `<div class="cfg-room${isSel ? ' is-sel' : ''}${active ? '' : ' is-off'}" style="--room:${canon?.color || '#0B63C7'}" data-room="${_esc(key)}" role="button" tabindex="0" aria-pressed="${isSel}">
         <span class="cfg-room-info">
           <span class="cfg-room-name">${_esc(c.name || 'Aula')}</span>
-          <span class="cfg-room-meta">${areas.length ? `${areas.length} áreas · ${total}%` : (canon?.line ? 'Línea ' + _esc(canon.line) : 'Sin configurar')}</span>
+          <span class="cfg-room-meta">${areas.length ? `${areas.length} áreas · ${total}%` : (canon?.displayLevel ? _esc(canon.displayLevel) : 'Sin configurar')}</span>
         </span>
         <button type="button" class="cfg-toggle${active ? ' is-on' : ''}" data-toggle="${_esc(key)}" title="${active ? 'Desactivar aula' : 'Activar aula'}" aria-label="${active ? 'Desactivar' : 'Activar'} ${_esc(c.name || 'aula')}"></button>
       </div>`;
@@ -261,7 +261,7 @@ _renderCfgAreas(classroomId) {
     const editorTitle = document.getElementById('cfgEditorName');
     if (editorTitle) editorTitle.textContent = c?.name || 'Aula';
     const editorLine = document.getElementById('cfgEditorLine');
-    if (editorLine) editorLine.textContent = canon?.line ? `Línea ${canon.line}` : (c?.level || 'Aula especial');
+    if (editorLine) editorLine.textContent = canon?.displayLevel || (findSpecialClassroom(c?.name)?.displayName) || formatClassroomLevel(c?.level) || 'Sin nivel';
     const pip = document.querySelector('.cfg-editor-title .cfg-pip');
     if (pip) pip.style.background = accent;
     const lineEl = document.querySelector('.cfg-editor-line');

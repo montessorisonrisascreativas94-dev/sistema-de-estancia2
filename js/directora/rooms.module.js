@@ -6,7 +6,12 @@ import { QueryCache } from '../shared/query-cache.js';
 import {
   CANONICAL_CLASSROOMS,
   SPECIAL_CLASSROOMS,
+  SPECIAL_CLASSROOMS_META,
   findCanonicalClassroom,
+  findSpecialClassroom,
+  formatClassroomFullName,
+  formatClassroomLevel,
+  classroomColorFor,
   validateAgeForClassroom,
   suggestClassroomByAge,
   ageInDays,
@@ -15,35 +20,118 @@ import {
 export const RoomsModule = {
   _rooms: [],
   _filtersBound: false,
+  _view: 'grid',
 
   async init() {
-    const container = document.getElementById('roomsGrid') || document.getElementById('roomsTable');
-    if (!container) return;
+    if (!document.getElementById('roomsGrid') && !document.getElementById('roomsTable')) return;
+
+    this._loadViewPreference();
+    this._bindToggle();
+    this._applyView();
 
     // Invalidar cache para obtener datos frescos
     QueryCache.invalidate('dir_classrooms_occ');
 
-    container.innerHTML = this._gridLoader();
+    const gridEl = document.getElementById('roomsGrid');
+    const tableEl = document.getElementById('roomsTable');
+    const loader = this._gridLoader();
+    if (this._view === 'grid' && gridEl) { gridEl.innerHTML = loader; if (tableEl) tableEl.innerHTML = ''; }
+    else if (tableEl) { tableEl.innerHTML = Array.from({length: 6}).map(() => '<tr><td colspan="5" class="py-4 px-6"><div class="h-8 bg-slate-100 rounded-2xl animate-pulse"></div></td></tr>').join(''); if (gridEl) gridEl.innerHTML = ''; }
+
     try {
       const res = await DirectorApi.getClassroomsWithOccupancy();
-      const classrooms = res?.data || [];
+      const rawRooms = res?.data || [];
       if (res?.error) throw new Error(res.error);
 
-      this._rooms = classrooms;
+      // ============================================================
+      // DEDUPLICACIÓN DEFENSIVA (en caso de que el SQL no se haya
+      // ejecutado o aún existan duplicados en la BD).
+      // Dos aulas que correspondan a la MISMA aula canónica se
+      // fusionan: se queda la que tenga teacher_id / mayor id.
+      // ============================================================
+      const dedup = new Map();
+      rawRooms.forEach((r) => {
+        const canon = findCanonicalClassroom(r.level || r.name);
+        const special = canon ? null : (findSpecialClassroom(r.name) || findSpecialClassroom(r.level));
+        const key = canon
+          ? `canon:${canon.id}`
+          : special
+            ? `special:${special.key}`
+            : `custom:${(r.level || r.name || r.id).toString().toLowerCase()}`;
+
+        if (!dedup.has(key)) {
+          dedup.set(key, r);
+          return;
+        }
+        const prev = dedup.get(key);
+        // Score: elige la fila más "útil".
+        const scorePrev = (prev.teacher_id ? 1000 : 0) + (prev.is_special ? 500 : 0) + Number(prev.id || 0);
+        const scoreNew  = (r.teacher_id ? 1000 : 0) + (r.is_special ? 500 : 0) + Number(r.id || 0);
+        if (scoreNew > scorePrev) {
+          // Fusionar occupancy: prev.student_count a r si r no lo tiene.
+          if (r.student_count == null && prev.student_count != null) {
+            r.student_count = prev.student_count;
+          }
+          dedup.set(key, r);
+        } else {
+          if (prev.student_count == null && r.student_count != null) {
+            prev.student_count = r.student_count;
+          }
+        }
+      });
+      const classrooms = Array.from(dedup.values());
+
+      this._rooms = [...classrooms];
+      SPECIAL_CLASSROOMS_META.forEach(meta => {
+        const exists = this._rooms.some(r => {
+          const key = r.level || r.name || '';
+          return !!findSpecialClassroom(key) ||
+            key === meta.key ||
+            String(r.name) === meta.displayName ||
+            String(r.name) === meta.key;
+        });
+        if (!exists) {
+          this._rooms.push({
+            id: null,
+            isSpecial: true,
+            name: meta.displayName,
+            level: meta.key,
+            capacity: 20,
+            student_count: 0,
+            color: meta.color,
+            __meta: meta
+          });
+        }
+      });
+
       this._populateLineFilter();
       this._bindFilters();
       this.render();
 
-      if (!classrooms.length) {
-        container.innerHTML = this._emptyState('No hay aulas registradas', 'Crea la primera aula del catálogo oficial para comenzar.');
+      if (!this._rooms.length) {
+        const gridEl = document.getElementById('roomsGrid');
+        const tableEl = document.getElementById('roomsTable');
+        const empty = this._emptyState('No hay aulas registradas', 'Crea la primera aula del catálogo oficial para comenzar.');
+        if (this._view === 'grid' && gridEl) { gridEl.innerHTML = empty; if (tableEl) tableEl.innerHTML = ''; }
+        else if (tableEl) { tableEl.innerHTML = empty; if (gridEl) gridEl.innerHTML = ''; }
       }
     } catch (e) {
-      container.innerHTML = this._emptyState('Error al cargar aulas', e.message, true);
+      const gridEl2 = document.getElementById('roomsGrid');
+      const tableEl2 = document.getElementById('roomsTable');
+      const err = this._emptyState('Error al cargar aulas', e.message, true);
+      if (this._view === 'grid' && gridEl2) { gridEl2.innerHTML = err; if (tableEl2) tableEl2.innerHTML = ''; }
+      else if (tableEl2) { tableEl2.innerHTML = err; if (gridEl2) gridEl2.innerHTML = ''; }
     }
     if (window.lucide) lucide.createIcons();
 
     // Cargar estudiantes sin aula en paralelo
     this.loadUnassigned();
+  },
+
+  _activeContainer() {
+    return this._view === 'table'
+      ? (document.getElementById('roomsTable') || document.getElementById('roomsGrid'))
+      : (document.getElementById('roomsGrid') || document.getElementById('roomsTable'));
   },
 
   _gridLoader() {
@@ -57,6 +145,54 @@ export const RoomsModule = {
     ).join('');
   },
 
+  _loadViewPreference() {
+    try {
+      const v = localStorage.getItem('dc_rooms_view');
+      if (v === 'grid' || v === 'table') this._view = v;
+    } catch (_) {}
+  },
+
+  _saveViewPreference() {
+    try { localStorage.setItem('dc_rooms_view', this._view); } catch (_) {}
+  },
+
+  _bindToggle() {
+    const btn = document.getElementById('btnToggleRoomsView');
+    if (btn && !btn._bound) {
+      btn._bound = true;
+      btn.addEventListener('click', () => {
+        this._view = this._view === 'grid' ? 'table' : 'grid';
+        this._saveViewPreference();
+        this._applyView();
+        this.render();
+      });
+    }
+  },
+
+  _paintToggleLabel() {
+    const btn = document.getElementById('btnToggleRoomsView');
+    if (!btn) return;
+    const isGrid = this._view === 'grid';
+    btn.innerHTML = `<i data-lucide="${isGrid ? 'table' : 'layout-grid'}"></i> ` +
+      `<span data-rooms-view-label>${isGrid ? 'Ver tabla' : 'Ver tarjetas'}</span>`;
+    btn.setAttribute('aria-pressed', String(isGrid));
+    btn.setAttribute('title', isGrid ? 'Cambiar a vista de tabla' : 'Cambiar a vista de tarjetas');
+  },
+
+  /** Muestra el contenedor correspondiente a la vista activa */
+  _applyView() {
+    const grid = document.getElementById('roomsGrid');
+    const table = document.getElementById('roomsTableWrapper');
+    if (this._view === 'table') {
+      grid?.classList.add('hidden');
+      table?.classList.remove('hidden');
+    } else {
+      grid?.classList.remove('hidden');
+      table?.classList.add('hidden');
+    }
+    this._paintToggleLabel();
+  },
+
   _emptyState(title, msg, isError) {
     return '<div class="dc-empty" style="grid-column:1/-1">' +
       '<i data-lucide="' + (isError ? 'alert-triangle' : 'door-open') + '"></i>' +
@@ -65,15 +201,23 @@ export const RoomsModule = {
     '</div>';
   },
 
+  /** Filtro por nivel legible ("1° Primero", "Inglés Afterschool"…) */
   _populateLineFilter() {
     const sel = document.getElementById('roomsLineFilter');
     if (!sel) return;
     const current = sel.value;
-    const lines = [...new Set(
-      this._rooms.map(r => findCanonicalClassroom(r.level || r.name)?.line).filter(Boolean)
-    )].sort();
-    sel.innerHTML = '<option value="">Todas las líneas</option>' +
-      lines.map(l => `<option value="${Helpers.escapeHTML(l)}">Línea ${Helpers.escapeHTML(l)}</option>`).join('');
+    const levels = [...new Set(
+      this._rooms
+        .map(r => {
+          const canon = findCanonicalClassroom(r.level || r.name);
+          if (canon?.displayLevel) return canon.displayLevel;
+          const special = findSpecialClassroom(r.name) || findSpecialClassroom(r.level);
+          return special?.displayName || formatClassroomLevel(r.level || r.name) || null;
+        })
+        .filter(Boolean)
+    )].sort((a, b) => a.localeCompare(b, 'es'));
+    sel.innerHTML = '<option value="">Todos los niveles</option>' +
+      levels.map(l => `<option value="${Helpers.escapeHTML(l)}">${Helpers.escapeHTML(l)}</option>`).join('');
     sel.value = current;
   },
 
@@ -94,16 +238,22 @@ export const RoomsModule = {
 
   _filtered() {
     const term = (document.getElementById('roomsSearch')?.value || '').trim().toLowerCase();
-    const line = document.getElementById('roomsLineFilter')?.value || '';
+    const level = document.getElementById('roomsLineFilter')?.value || '';
     const status = document.getElementById('roomsStatusFilter')?.value || 'all';
 
-    return this._rooms.filter(r => {
+    const levelOf = (r) => {
       const canon = findCanonicalClassroom(r.level || r.name);
+      if (canon?.displayLevel) return canon.displayLevel;
+      const special = findSpecialClassroom(r.name) || findSpecialClassroom(r.level);
+      return special?.displayName || formatClassroomLevel(r.level || r.name) || '';
+    };
+
+    return this._rooms.filter(r => {
       if (term) {
-        const hay = `${r.name || ''} ${r.level || ''} ${canon?.line || ''} ${r.profiles?.name || ''}`.toLowerCase();
+        const hay = `${r.name || ''} ${r.level || ''} ${levelOf(r)} ${r.profiles?.name || ''}`.toLowerCase();
         if (!hay.includes(term)) return false;
       }
-      if (line && canon?.line !== line) return false;
+      if (level && levelOf(r) !== level) return false;
       const occ = Number(r.student_count || 0);
       const cap = Number(r.capacity || 20);
       const free = Math.max(0, cap - occ);
@@ -118,11 +268,14 @@ export const RoomsModule = {
 
   _renderKpis() {
     const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-    const total = this._rooms.length;
-    const students = this._rooms.reduce((a, r) => a + Number(r.student_count || 0), 0);
-    const capacity = this._rooms.reduce((a, r) => a + Number(r.capacity || 20), 0);
+    // Los KPIs describen la realidad de la BD: las clases especiales virtuales
+    // (id === null) se muestran en la lista pero NO son aulas reales.
+    const real = this._rooms.filter(r => r.id);
+    const total = real.length;
+    const students = real.reduce((a, r) => a + Number(r.student_count || 0), 0);
+    const capacity = real.reduce((a, r) => a + Number(r.capacity || 0), 0);
     const pct = capacity > 0 ? Math.round((students / capacity) * 100) : 0;
-    const assigned = this._rooms.filter(r => r.profiles?.name).length;
+    const assigned = real.filter(r => r.profiles?.name).length;
 
     set('roomsKpiTotal', total);
     set('roomsKpiStudents', students);
@@ -135,10 +288,12 @@ export const RoomsModule = {
   },
 
   render() {
-    const container = document.getElementById('roomsGrid') || document.getElementById('roomsTable');
-    if (!container) return;
-    const list = this._filtered();
+    this._applyView();
+    const gridEl = document.getElementById('roomsGrid');
+    const tableEl = document.getElementById('roomsTable');
+    if (!gridEl && !tableEl) return;
 
+    const list = this._filtered();
     this._renderKpis();
 
     const counter = document.getElementById('roomsCounter');
@@ -148,12 +303,14 @@ export const RoomsModule = {
         : `<b>${list.length}</b> de ${this._rooms.length} aulas`;
     }
 
-    if (container.tagName === 'TBODY') {
-      container.innerHTML = list.map(r => UI.renderClassroomRow(r)).join('');
-    } else if (!list.length) {
-      container.innerHTML = this._emptyState('Sin resultados', 'Ajusta la búsqueda o los filtros aplicados.');
+    const empty = this._emptyState('Sin resultados', 'Ajusta la búsqueda o los filtros aplicados.');
+
+    if (this._view === 'grid') {
+      if (gridEl) gridEl.innerHTML = !list.length ? empty : list.map(r => UI.renderClassroomCard(r)).join('');
+      if (tableEl) tableEl.innerHTML = '';
     } else {
-      container.innerHTML = list.map(r => UI.renderClassroomCard(r)).join('');
+      if (tableEl) tableEl.innerHTML = !list.length ? empty : list.map(r => UI.renderClassroomRow(r)).join('');
+      if (gridEl) gridEl.innerHTML = '';
     }
     if (window.lucide) lucide.createIcons();
   },
@@ -405,37 +562,71 @@ export const RoomsModule = {
   },
 
   async deleteRoom(roomId, roomName) {
+    if (!roomId || roomId === 'null' || !Number.isInteger(parseInt(roomId, 10))) {
+      return Helpers.toast('Las clases especiales no se pueden eliminar desde aquí', 'warning');
+    }
     const ok = window._karpusConfirmDelete
-      ? await window._karpusConfirmDelete('¿Eliminar aula "' + roomName + '"?', 'Los estudiantes quedarán sin aula asignada.')
-      : confirm('¿Eliminar aula "' + roomName + '"? Los estudiantes quedarán sin aula.');
+      ? await window._karpusConfirmDelete('\u00bfEliminar aula "' + roomName + '"?', 'Los estudiantes quedar\u00e1n sin aula asignada. El hist\u00f3rico de asistencia y notas se conserva.')
+      : confirm('\u00bfEliminar aula "' + roomName + '"? Los estudiantes quedar\u00e1n sin aula.');
     if (!ok) return;
 
+    const roomIdNum = parseInt(roomId, 10);
     try {
-      const { error } = await supabase.from('classrooms').delete().eq('id', parseInt(roomId));
-      if (error) throw error;
+      // 1) Soltar a los estudiantes del aula
+      await supabase.from('students').update({ classroom_id: null }).eq('classroom_id', roomIdNum);
+
+      // 2) Soft delete. classrooms tiene columna deleted_at y TODAS las consultas
+      //    filtran .is('deleted_at', null), asi que el aula desaparece de la UI
+      //    pero attendance/grades/report_cards conservan su FK intacta.
+      //    Un DELETE fisico falla con:
+      //    "attendance_classroom_id_fkey violates foreign key constraint"
+      const { error } = await supabase
+        .from('classrooms')
+        .update({ deleted_at: new Date().toISOString() })
+        .eq('id', roomIdNum);
+
+      // Instalaciones anteriores a sql/10_fixes.sql no tienen deleted_at:
+      // se cae a borrado fisico, limpiando antes la FK que lo bloquea.
+      if (error && /deleted_at|column/i.test(error.message || '')) {
+        await supabase.from('attendance').update({ classroom_id: null }).eq('classroom_id', roomIdNum);
+        const { error: delErr } = await supabase.from('classrooms').delete().eq('id', roomIdNum);
+        if (delErr) throw delErr;
+      } else if (error) {
+        throw error;
+      }
+
       Helpers.toast('Aula eliminada', 'success');
       QueryCache.invalidate('dir_classrooms_occ');
       QueryCache.invalidate('dir_classrooms');
       await this.init();
     } catch (e) {
-      Helpers.toast('Error al eliminar: ' + e.message, 'error');
+      const msg = /foreign key constraint/i.test(e.message || '')
+        ? 'No se pudo eliminar el aula. Revisa la migraci\u00f3n sql/16_fix_classroom_delete.sql'
+        : 'Error al eliminar: ' + e.message;
+      Helpers.toast(msg, 'error');
     }
   },
 
   async openModal(roomId = null) {
+    // Normaliza: las clases especiales se pintan con id === null y no existen en BD.
+    if (roomId != null && !Number.isInteger(parseInt(roomId, 10))) roomId = null;
     const IC = 'w-full px-4 py-2.5 border-2 border-slate-100 rounded-2xl outline-none focus:ring-4 focus:ring-blue-100 focus:border-[#0B63C7] bg-slate-50/50 transition-all text-sm font-medium';
     const IC_READONLY = 'w-full px-4 py-2.5 border-2 border-slate-100 rounded-2xl outline-none bg-slate-100 text-slate-600 cursor-not-allowed text-sm font-medium';
     const LC = 'block text-[11px] font-black text-slate-400 uppercase tracking-wider mb-1.5 ml-1';
 
-    const canonOptions = CANONICAL_CLASSROOMS.map((c, idx) => `
+    // El value conserva la clave real de BD ("1ro - Línea Roja") para que
+    // findCanonicalClassroom siga funcionando; la etiqueta usa el nivel legible.
+    const canonOptions = CANONICAL_CLASSROOMS.map((c) => `
       <option value="${Helpers.escapeHTML(c.level)}" data-min="${c.minDays}" data-max="${c.maxDays}">
-        ${idx + 1}. ${Helpers.escapeHTML(c.level)} — (${c.labelRange})
+        ${Helpers.escapeHTML(c.displayLevel || c.level)} (${Helpers.escapeHTML(c.labelRange)})
       </option>
     `).join('');
 
-    const specialOptions = SPECIAL_CLASSROOMS.length
-      ? '<optgroup label="Aulas Especiales (sin rango de edad)">' +
-        SPECIAL_CLASSROOMS.map((s) => `<option value="${Helpers.escapeHTML(s)}">${Helpers.escapeHTML(s)}</option>`).join('') +
+    const specialOptions = SPECIAL_CLASSROOMS_META.length
+      ? '<optgroup label="Clases especiales (sin rango de edad)">' +
+        SPECIAL_CLASSROOMS_META.map((s) =>
+          `<option value="${Helpers.escapeHTML(s.key)}">${s.emoji} ${Helpers.escapeHTML(s.displayName)}</option>`
+        ).join('') +
         '</optgroup>'
       : '';
 
@@ -563,16 +754,22 @@ export const RoomsModule = {
           const display = document.getElementById('roomLevelDisplay');
           const ageDisp = document.getElementById('roomAgeRangeDisplay');
           if (display) {
-            const canon = findCanonicalClassroom(room.level || room.name);
-            display.innerHTML = canon
-              ? `<span class="inline-flex items-center gap-2"><span class="w-3 h-3 rounded-full shrink-0" style="background:${canon.color}"></span><b>${Helpers.escapeHTML(canon.level)}</b> · Línea ${canon.line}</span>`
-              : `<b>${Helpers.escapeHTML(room.level || room.name || '—')}</b>`;
+            const canon   = findCanonicalClassroom(room.level || room.name);
+            const special = canon ? null : findSpecialClassroom(room.name) || findSpecialClassroom(room.level);
+            const color   = canon?.color || special?.color || classroomColorFor(room.name, room.level);
+            const label   = canon?.displayLevel || special?.displayName || formatClassroomLevel(room.level || room.name) || '—';
+            display.innerHTML =
+              `<span class="inline-flex items-center gap-2"><span class="w-3 h-3 rounded-full shrink-0" style="background:${color}"></span>` +
+              `<b>${Helpers.escapeHTML(label)}</b>` +
+              (special ? '<span class="text-[10px] font-black uppercase tracking-wider opacity-70">especial</span>' : '') +
+              '</span>';
           }
           if (ageDisp) {
             const canon = findCanonicalClassroom(room.level || room.name);
+            const special = canon ? null : findSpecialClassroom(room.name) || findSpecialClassroom(room.level);
             ageDisp.textContent = canon
               ? canon.labelRange
-              : (SPECIAL_CLASSROOMS.includes(room.level || room.name) ? 'Sin rango (aula especial)' : 'No definido');
+              : (special ? 'Sin rango (clase especial)' : 'No definido');
           }
         }
       } catch (e) { /* ignore */ }
@@ -587,19 +784,25 @@ export const RoomsModule = {
         const v = canonSel.value;
         if (!v) { hintBox.classList.add('hidden'); return; }
         const canon = findCanonicalClassroom(v);
+        const special = canon ? null : findSpecialClassroom(v);
         if (canon) {
           hintBox.classList.remove('hidden');
-          hintText.textContent = `Rango oficial: ${canon.labelRange} · Línea ${canon.line}`;
+          hintText.textContent = `Rango oficial: ${canon.labelRange}`;
           hintBox.className = 'mt-2 px-3 py-2 rounded-xl font-bold text-[11px] hidden';
           hintBox.style.background = canon.color + '22';
           hintBox.style.color = canon.color;
           hintBox.classList.remove('hidden');
           const nm = document.getElementById('roomName');
-          if (nm && !nm.value.trim()) nm.value = canon.level;
-        } else if (SPECIAL_CLASSROOMS.includes(v)) {
+          // El nombre se autocompleta con el nivel legible, no con "1ro – Línea Roja"
+          if (nm && !nm.value.trim()) nm.value = canon.displayLevel || canon.level;
+        } else if (special) {
           hintBox.classList.remove('hidden');
-          hintBox.className = 'mt-2 px-3 py-2 rounded-xl bg-slate-100 text-slate-600 text-[11px] font-bold';
-          hintText.textContent = 'Aula especial — Sin restricción de rango de edad';
+          hintBox.className = 'mt-2 px-3 py-2 rounded-xl text-[11px] font-bold';
+          hintBox.style.background = special.color + '1F';
+          hintBox.style.color = special.color;
+          hintText.textContent = `${special.emoji} Clase especial — sin restricción de rango de edad`;
+          const nm = document.getElementById('roomName');
+          if (nm && !nm.value.trim()) nm.value = special.displayName;
         } else {
           hintBox.classList.add('hidden');
         }

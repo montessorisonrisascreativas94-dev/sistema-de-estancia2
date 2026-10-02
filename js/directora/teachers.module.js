@@ -6,7 +6,7 @@ import { supabase } from '../shared/supabase.js';
 import { auditLog } from '../shared/db-utils.js';
 import { requireReauth } from '../shared/reauth.js';
 import { QueryCache } from '../shared/query-cache.js';
-import { findCanonicalClassroom } from '../shared/constants.js';
+import { findCanonicalClassroom, formatClassroomLevel } from '../shared/constants.js';
 
 const ROLE_BADGE = Object.freeze({
   maestra:    'bg-emerald-100 text-emerald-700',
@@ -47,12 +47,56 @@ const THEME_COLOR = Object.freeze({
 export const TeachersModule = {
   _listenersBound: false,
   _currentTab: 'all',
+  _view: 'table',
+
+  _loadViewPreference() {
+    try {
+      const v = localStorage.getItem('dc_staff_view');
+      if (v === 'grid' || v === 'table') this._view = v;
+    } catch (_) {}
+  },
+
+  _saveViewPreference() {
+    try { localStorage.setItem('dc_staff_view', this._view); } catch (_) {}
+  },
+
+  _paintToggleLabel() {
+    const btn = document.getElementById('btnToggleStaffView');
+    if (!btn) return;
+    const isGrid = this._view === 'grid';
+    btn.innerHTML = `<i data-lucide="${isGrid ? 'table' : 'layout-grid'}"></i> ` +
+      `<span data-staff-view-label>${isGrid ? 'Ver tabla' : 'Ver tarjetas'}</span>`;
+    btn.setAttribute('aria-pressed', String(isGrid));
+    btn.setAttribute('title', isGrid ? 'Cambiar a vista de tabla' : 'Cambiar a vista de tarjetas');
+  },
+
+  _applyView() {
+    const table = document.getElementById('teachersTableWrapper');
+    const grid = document.getElementById('teachersGrid');
+    if (this._view === 'grid') {
+      table?.classList.add('hidden');
+      grid?.classList.remove('hidden');
+    } else {
+      table?.classList.remove('hidden');
+      grid?.classList.add('hidden');
+    }
+    this._paintToggleLabel();
+  },
+
   async init(renderTargetId = 'teachersTableBody') {
     const container = document.getElementById(renderTargetId);
     if (!container) return;
 
+    this._loadViewPreference();
+    this._bindViewToggle();
+    this._applyView();
+
     const loadingHtml = '<tr><td colspan="6" class="text-center py-8">Cargando...</td></tr>';
     container.innerHTML = loadingHtml;
+    const gridLoading = document.getElementById('teachersGrid');
+    if (gridLoading) {
+      gridLoading.innerHTML = '<div class="dc-empty"><i data-lucide="loader-2"></i><span>Cargando personal...</span></div>';
+    }
 
     try {
       const { data: teachers, error } = await DirectorApi.getTeachers();
@@ -139,6 +183,19 @@ export const TeachersModule = {
     }
   },
 
+  _bindViewToggle() {
+    const btn = document.getElementById('btnToggleStaffView');
+    if (!btn || btn._viewBound) return;
+    btn._viewBound = true;
+    btn.addEventListener('click', () => {
+      this._view = this._view === 'grid' ? 'table' : 'grid';
+      this._saveViewPreference();
+      this._applyView();
+      const allStaff = AppState.get('teachers') || [];
+      this._applyFilter(allStaff);
+    });
+  },
+
   _applyFilter(allStaff) {
     const search = (document.getElementById('searchTeacher')?.value || '').toLowerCase();
     let filtered = allStaff;
@@ -161,13 +218,19 @@ export const TeachersModule = {
 
   render(staff, renderTargetId = 'teachersTableBody') {
     const container = document.getElementById(renderTargetId);
-    if (!container) return;
+    const grid = document.getElementById('teachersGrid');
+    if (!container && !grid) return;
 
-    if (!staff.length) {
-      container.innerHTML = '<tr><td colspan="6" class="text-center py-8 text-slate-500">No hay personal que coincida con el filtro actual.</td></tr>';
+    this._applyView();
+
+    if (!staff || !staff.length) {
+      if (container) container.innerHTML = '<tr><td colspan="6" class="text-center py-8 text-slate-500">No hay personal que coincida con el filtro actual.</td></tr>';
+      if (grid) grid.innerHTML = '<div class="dc-empty"><i data-lucide="user-x"></i><span>No hay personal que coincida con el filtro actual.</span></div>';
+      if (window.lucide) lucide.createIcons();
       return;
     }
-    container.innerHTML = staff.map((t) => {
+
+    const meta = (t) => {
       const roleBadge = ROLE_BADGE[t.role] || 'bg-slate-100 text-slate-600';
       const roleLbl = ROLE_LABEL[t.role] || t.role || 'Personal';
       const roleIcon = {
@@ -178,7 +241,14 @@ export const TeachersModule = {
         admin:     '<i data-lucide="briefcase" class="w-3 h-3"></i>',
       }[t.role] || '<i data-lucide="user" class="w-3 h-3"></i>';
       const classroomsLbl = (t.classrooms?.map?.((c) => c?.name)?.join(', ') || '').trim() || 'Sin Aula';
-      return `
+      const canon = findCanonicalClassroom(t.classrooms?.map?.((c) => c?.level || c?.name)?.join(' ') || '');
+      return { roleBadge, roleLbl, roleIcon, classroomsLbl, canon, color: canon?.color || '#0B63C7' };
+    };
+
+    if (container) {
+      container.innerHTML = staff.map((t) => {
+        const { roleBadge, roleLbl, roleIcon, classroomsLbl } = meta(t);
+        return `
         <tr class="hover:bg-slate-50 transition-colors cursor-pointer" ondblclick="App.teachers.openModal('${t.id}')">
           <td class="p-4 font-bold text-slate-700">${Helpers.escapeHTML(t.name)}</td>
           <td class="p-4 text-slate-500">${Helpers.escapeHTML(t.email || '')}</td>
@@ -201,7 +271,66 @@ export const TeachersModule = {
             </div>
           </td>
         </tr>`;
-    }).join('');
+      }).join('');
+    }
+
+    if (grid) {
+      grid.innerHTML = staff.map((t) => {
+        const { roleBadge, roleLbl, roleIcon, classroomsLbl, color } = meta(t);
+        const initial = (t.name || '?').trim().charAt(0).toUpperCase();
+        const active = t.is_active !== false;
+        return `
+        <article class="dc-student ${active ? '' : 'dc-student--off'}" style="--room:${color}"
+          onclick="App.teachers.openModal('${t.id}')"
+          onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();App.teachers.openModal('${t.id}')}"
+          tabindex="0" role="button" aria-label="Abrir ficha de ${Helpers.escapeHTML(t.name || '')}">
+
+          <div class="dc-student-top">
+            <div class="dc-student-av">
+              ${t.avatar_url ? `<img src="${Helpers.escapeHTML(t.avatar_url)}" alt="">` : Helpers.escapeHTML(initial)}
+            </div>
+            <div class="dc-student-id">
+              <h3 class="dc-student-name">${Helpers.escapeHTML(t.name || 'Sin nombre')}</h3>
+              <span class="dc-student-mat">${Helpers.escapeHTML(t.email || 'Sin correo')}</span>
+              <div class="dc-student-badges">
+                <span class="dc-badge dc-badge--room" style="--room:${color}">
+                  <i data-lucide="door-open"></i><span>${Helpers.escapeHTML(classroomsLbl)}</span>
+                </span>
+                <span class="dc-badge dc-badge--off">
+                  ${roleIcon} ${Helpers.escapeHTML(roleLbl)}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div class="dc-student-stats">
+            <div class="dc-student-stat">
+              <span class="dc-student-stat-k">Estado</span>
+              <span class="dc-student-stat-v" style="color:${active ? '#047857' : 'var(--dc-faint)'}">${active ? 'Activo' : 'Inactivo'}</span>
+            </div>
+            <div class="dc-student-stat">
+              <span class="dc-student-stat-k">Teléfono</span>
+              <span class="dc-student-stat-v">${Helpers.escapeHTML(t.phone || '—')}</span>
+            </div>
+          </div>
+
+          <div class="dc-student-foot">
+            <span class="dc-badge ${active ? 'dc-badge--on' : 'dc-badge--off'}">
+              <i data-lucide="${active ? 'check' : 'pause'}"></i>${active ? 'Activo' : 'Inactivo'}
+            </span>
+            <div class="dc-student-actions">
+              <button class="dc-icon-btn" onclick="event.stopPropagation();App.teachers.openModal('${t.id}')" title="Editar">
+                <i data-lucide="pencil"></i>
+              </button>
+              <button class="dc-icon-btn dc-icon-btn--danger" onclick="event.stopPropagation();App.teachers.delete('${t.id}')" title="Eliminar">
+                <i data-lucide="trash-2"></i>
+              </button>
+            </div>
+          </div>
+        </article>`;
+      }).join('');
+    }
+
     if (window.lucide) lucide.createIcons();
   },
 
@@ -716,7 +845,7 @@ export const TeachersModule = {
           <input type="checkbox" class="dc-pick-check" data-room="${r.id}" ${checked ? 'checked' : ''} aria-label="Asignar ${Helpers.escapeHTML(r.name || 'aula')}">
           <span class="dc-pick-info">
             <span class="dc-pick-name">${Helpers.escapeHTML(r.name || 'Aula')}</span>
-            <span class="dc-pick-line"><i></i> Línea ${Helpers.escapeHTML(canon?.line || 'General')}</span>
+            <span class="dc-pick-line"><i></i> ${Helpers.escapeHTML(canon?.displayLevel || formatClassroomLevel(r.level) || 'General')}</span>
             <span class="dc-pick-cap">
               <span class="dc-pick-cap-track"><span class="dc-pick-cap-fill${free === 0 ? ' dc-pick-cap-fill--full' : ''}" style="width:${Math.min(100, pct)}%"></span></span>
               <span class="dc-pick-cap-num">${occ}/${cap}</span>

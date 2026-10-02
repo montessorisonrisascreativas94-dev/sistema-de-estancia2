@@ -140,12 +140,13 @@ export const Helpers = {
     const year      = opts.year      || new Date().getFullYear();
     const school    = 'Colegio Montessori Sonrisas Creativas';
     const logoUrl   = opts.logoUrl   || (window.location.origin + '/img/monte.jpg');
+    const photoUrl  = opts.photo_url || opts.avatar_url || '';
     const phone     = '+1 (809) 532-4903';
     const email     = 'montessorisonrisascreativas@gmail.com';
     const web       = 'montessorisonrisascreativas.com';
     const address   = 'F2VC+X76, Santo Domingo, Rep. Dominicana';
 
-    return this._buildCarnetHTML(qrImg, name, mat, { classroom, nivel, p1Name, p2Name, p1Phone, p2Phone, parentName, parentPhone, studentId, isActive, year, school, logoUrl, phone, email, web, address });
+    return this._buildCarnetHTML(qrImg, name, mat, { classroom, nivel, p1Name, p2Name, p1Phone, p2Phone, parentName, parentPhone, studentId, isActive, year, school, logoUrl, photoUrl, phone, email, web, address });
   },
 
   /**
@@ -400,9 +401,9 @@ body{font-family:'Nunito',sans-serif;background:#e8ecf1;-webkit-print-color-adju
     <!-- TOP -->
     <div class="b-top">
       <div style="text-align:center">
-        <div class="b-logo"><img src="${d.logoUrl}" alt="Logo"></div>
-        <div class="b-title">Colegio Montessori</div>
-        <div class="b-sub">Sonrisas Creativas</div>
+        <div class="b-logo"><img src="${d.photoUrl ? d.photoUrl : d.logoUrl}" alt="${d.photoUrl ? 'Foto Estudiante' : 'Logo'}" onerror="this.onerror=null;this.src='${d.logoUrl}'"></div>
+        <div class="b-title">${d.photoUrl ? Helpers.escapeHTML((Helpers.titleCase(name) || 'Estudiante').substring(0, 22)) : 'Colegio Montessori'}</div>
+        <div class="b-sub">${d.photoUrl ? Helpers.escapeHTML(mat) : 'Sonrisas Creativas'}</div>
       </div>
     </div>
 

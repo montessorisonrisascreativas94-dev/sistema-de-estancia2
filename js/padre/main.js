@@ -24,6 +24,7 @@ import { WizardPayment } from './payment-wizard.js';
 import { RecentActivityModule } from './recent-activity.js';
 import { ClassroomSchedule } from './classroom-schedule.js';
 import { NewsCenter } from '../shared/news-center.js';
+import { AnnouncementBanner } from './announcement-banner.js';
 import { SectionCache } from '../shared/section-cache.js';
 
 // #rating-modal se oculta con style="display:none" inline, pero se abria con
@@ -101,112 +102,114 @@ const TempPasswordGuard = {
       <div class="tpw-backdrop" style="
         position:fixed;inset:0;background:rgba(15,23,42,0.78);backdrop-filter:blur(8px);
         -webkit-backdrop-filter:blur(8px);z-index:99998;display:flex;align-items:center;justify-content:center;
-        padding:16px;">
+        padding:10px;">
         <div class="tpw-card" style="
-          position:relative;width:100%;max-width:480px;background:white;border-radius:28px;
-          box-shadow:0 30px 80px rgba(2,6,23,0.35);overflow:hidden;animation:tpwPop .35s cubic-bezier(.2,.8,.2,1);
-          border:1px solid rgba(226,232,240,0.8);">
+          position:relative;width:100%;max-width:360px;background:white;border-radius:20px;
+          box-shadow:0 24px 60px rgba(2,6,23,0.32);overflow:hidden;animation:tpwPop .35s cubic-bezier(.2,.8,.2,1);
+          border:1px solid rgba(226,232,240,0.8);
+          max-height: calc(100vh - 20px); overflow-y: auto;">
           <style>
-            @keyframes tpwPop { from { transform: translateY(24px) scale(.96); opacity: 0; } to { transform: none; opacity: 1; } }
+            @keyframes tpwPop { from { transform: translateY(18px) scale(.97); opacity: 0; } to { transform: none; opacity: 1; } }
             @keyframes tpwSpin { to { transform: rotate(360deg); } }
             .tpw-check-icon.ok path { stroke-dashoffset: 0; }
             .tpw-check-circle.ok { stroke-dashoffset: 0; }
             .tpw-banner {
               background: linear-gradient(135deg,#0B63C7 0%,#4F46E5 55%,#7C3AED 100%);
-              color:white;padding:22px 22px 20px 22px;
+              color:white;padding:12px 14px 12px 14px;
             }
             .tpw-title-font { font-family:'Baloo 2','Nunito',system-ui,sans-serif; }
             .tpw-input {
-              width:100%;padding:13px 14px;border:2px solid #E2E8F0;border-radius:14px;
-              font-size:14px;font-weight:600;color:#0F172A;background:#F8FAFC;
+              width:100%;padding:10px 12px;border:1.5px solid #E2E8F0;border-radius:12px;
+              font-size:13px;font-weight:600;color:#0F172A;background:#F8FAFC;
               outline:none;transition:all .18s ease;box-sizing:border-box;font-family:inherit;
             }
-            .tpw-input:focus { border-color:#0B63C7; background:#FFF; box-shadow:0 0 0 4px rgba(11,99,199,0.12); }
-            .tpw-input.error { border-color:#EF4444; background:#FEF2F2; box-shadow:0 0 0 4px rgba(239,68,68,0.1); }
-            .tpw-label { display:block; font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.6px; color:#64748B; margin-bottom:7px; }
-            .tpw-tip { display:flex; align-items:center; gap:8px; font-size:12px; font-weight:700; color:#94A3B8; padding:3px 0; }
+            .tpw-input:focus { border-color:#0B63C7; background:#FFF; box-shadow:0 0 0 3px rgba(11,99,199,0.12); }
+            .tpw-input.error { border-color:#EF4444; background:#FEF2F2; box-shadow:0 0 0 3px rgba(239,68,68,0.1); }
+            .tpw-label { display:block; font-size:10px; font-weight:900; text-transform:uppercase; letter-spacing:.5px; color:#64748B; margin-bottom:5px; }
+            .tpw-tip { display:flex; align-items:center; gap:6px; font-size:10.5px; font-weight:700; color:#94A3B8; padding:1.5px 0; }
             .tpw-tip.pass { color:#059669; }
-            .tpw-tip .dot { width:16px; height:16px; border-radius:50%; border:2px solid currentColor; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; opacity:.55; }
+            .tpw-tip .dot { width:12px; height:12px; border-radius:50%; border:1.75px solid currentColor; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; opacity:.55; }
             .tpw-tip.pass .dot { opacity:1; background:currentColor; color:#059669; }
-            .tpw-tip .dot svg { width:10px; height:10px; stroke:white; fill:none; stroke-width:3; stroke-linecap:round; stroke-linejoin:round; }
+            .tpw-tip .dot svg { width:7.5px; height:7.5px; stroke:white; fill:none; stroke-width:3.5; stroke-linecap:round; stroke-linejoin:round; }
             .tpw-btn {
-              width:100%;padding:14px 18px;border:none;border-radius:16px;cursor:pointer;
-              font-family:'Baloo 2','Nunito',system-ui,sans-serif;font-size:14px;font-weight:800;
+              width:100%;padding:10px 14px;border:none;border-radius:12px;cursor:pointer;
+              font-family:'Baloo 2','Nunito',system-ui,sans-serif;font-size:12.5px;font-weight:800;
               text-transform:uppercase;letter-spacing:.3px;transition:all .2s ease;
             }
             .tpw-btn-primary {
               background: linear-gradient(135deg,#0B63C7 0%,#4F46E5 100%);color:white;
-              box-shadow:0 8px 24px rgba(11,99,199,0.3);
+              box-shadow:0 6px 18px rgba(11,99,199,0.3);
             }
-            .tpw-btn-primary:hover:not(:disabled) { transform:translateY(-1px); box-shadow:0 12px 28px rgba(11,99,199,0.38); }
+            .tpw-btn-primary:hover:not(:disabled) { transform:translateY(-1px); box-shadow:0 10px 22px rgba(11,99,199,0.38); }
             .tpw-btn-primary:active:not(:disabled) { transform:translateY(0); }
             .tpw-btn-primary:disabled { opacity:.55; cursor:not-allowed; }
-            .tpw-error-msg { color:#DC2626; font-size:12px; font-weight:700; margin-top:6px; min-height:16px; }
-            .tpw-logout-link { color:#94A3B8; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.5px; cursor:pointer; text-decoration:none; }
+            .tpw-error-msg { color:#DC2626; font-size:11px; font-weight:700; margin-top:4px; min-height:14px; line-height:1.35; }
+            .tpw-logout-link { color:#94A3B8; font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.5px; cursor:pointer; text-decoration:none; }
             .tpw-logout-link:hover { color:#EF4444; }
+            @media (max-width: 420px) {
+              .tpw-card { border-radius: 16px; }
+              .tpw-banner { padding: 10px 12px; }
+            }
           </style>
 
           <!-- Banner superior -->
           <div class="tpw-banner">
-            <div style="display:flex;align-items:center;gap:12px">
-              <div style="width:46px;height:46px;border-radius:16px;background:rgba(255,255,255,0.18);display:flex;align-items:center;justify-content:center;flex-shrink:0">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="color:white"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            <div style="display:flex;align-items:center;gap:9px">
+              <div style="width:36px;height:36px;border-radius:12px;background:rgba(255,255,255,0.18);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="color:white"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
               </div>
-              <div style="min-width:0">
-                <h2 id="temp-pw-title" class="tpw-title-font" style="margin:0;font-size:20px;line-height:1.15">¡${Helpers.escapeHTML(name)}, bienvenido(a)!</h2>
-                <p style="margin:4px 0 0;font-size:12.5px;font-weight:600;color:rgba(255,255,255,0.88);line-height:1.5">
-                  Estás usando la contraseña temporal del colegio. Cámbiala ahora mismo por una <strong style="color:white">solo tuya y segura</strong>.
+              <div style="min-width:0;flex:1">
+                <h2 id="temp-pw-title" class="tpw-title-font" style="margin:0;font-size:15.5px;line-height:1.15">¡${Helpers.escapeHTML(name)}, cambia tu clave!</h2>
+                <p style="margin:3px 0 0;font-size:11px;font-weight:600;color:rgba(255,255,255,0.9);line-height:1.4">
+                  Estás usando la clave temporal del colegio. Elige una nueva y segura.
                 </p>
               </div>
             </div>
           </div>
 
           <!-- Cuerpo -->
-          <div style="padding:22px">
+          <div style="padding:14px">
 
             <!-- Cuenta (solo lectura) -->
-            <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#F1F5F9;border:1.5px solid #E2E8F0;border-radius:14px;margin-bottom:18px">
-              <div style="width:32px;height:32px;border-radius:10px;background:#0B63C7;color:white;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:900;font-size:13px">
+            <div style="display:flex;align-items:center;gap:8px;padding:7px 9px;background:#F1F5F9;border:1.5px solid #E2E8F0;border-radius:11px;margin-bottom:12px">
+              <div style="width:24px;height:24px;border-radius:8px;background:#0B63C7;color:white;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:900;font-size:11px">
                 ${(email.charAt(0) || 'U').toUpperCase()}
               </div>
               <div style="min-width:0;flex:1">
-                <p style="margin:0;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.5px;color:#64748B">Tu cuenta</p>
-                <p style="margin:1px 0 0;font-size:12.5px;font-weight:800;color:#0F172A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${Helpers.escapeHTML(email)}</p>
+                <p style="margin:0;font-size:8.5px;font-weight:900;text-transform:uppercase;letter-spacing:.5px;color:#64748B">Tu cuenta</p>
+                <p style="margin:1px 0 0;font-size:11.5px;font-weight:800;color:#0F172A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${Helpers.escapeHTML(email)}</p>
               </div>
             </div>
 
             <!-- Formulario -->
             <div id="tpw-form">
-              <!-- Actual (solo confirmación visual) -->
-              <div style="margin-bottom:14px">
-                <label class="tpw-label" for="tpw-current">Contraseña Actual (temporal)</label>
-                <input id="tpw-current" type="password" class="tpw-input" placeholder="••••••••••" autocomplete="current-password">
+              <!-- Actual -->
+              <div style="margin-bottom:9px">
+                <label class="tpw-label" for="tpw-current">Clave temporal actual</label>
+                <input id="tpw-current" type="password" class="tpw-input" placeholder="••••••••" autocomplete="current-password">
                 <p class="tpw-error-msg" id="tpw-err-current"></p>
-                <p style="margin:6px 0 0;font-size:10.5px;color:#94A3B8;font-weight:700;line-height:1.5">
-                  Es la que te asignó el colegio para tu primer ingreso. Si no la recuerdas, pregunta en recepción.
-                </p>
               </div>
 
               <!-- Nueva -->
-              <div style="margin-bottom:14px">
-                <label class="tpw-label" for="tpw-new">Nueva Contraseña</label>
+              <div style="margin-bottom:9px">
+                <label class="tpw-label" for="tpw-new">Nueva clave</label>
                 <input id="tpw-new" type="password" class="tpw-input" placeholder="Crea una clave segura" autocomplete="new-password">
               </div>
 
               <!-- Confirmar -->
-              <div style="margin-bottom:14px">
-                <label class="tpw-label" for="tpw-confirm">Confirmar Nueva Contraseña</label>
+              <div style="margin-bottom:10px">
+                <label class="tpw-label" for="tpw-confirm">Repetir nueva clave</label>
                 <input id="tpw-confirm" type="password" class="tpw-input" placeholder="Repite la clave" autocomplete="new-password">
                 <p class="tpw-error-msg" id="tpw-err-confirm"></p>
               </div>
 
-              <!-- Reglas -->
-              <div style="background:#F8FAFC;border:1.5px solid #E2E8F0;border-radius:14px;padding:12px 14px;margin-bottom:18px">
-                <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
-                  <p style="margin:0;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.5px;color:#475569">Reglas de seguridad</p>
+              <!-- Reglas (compactas, 2 columnas) -->
+              <div style="background:#F8FAFC;border:1.5px solid #E2E8F0;border-radius:11px;padding:8px 10px;margin-bottom:12px">
+                <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                  <p style="margin:0;font-size:9.5px;font-weight:900;text-transform:uppercase;letter-spacing:.5px;color:#475569">Requisitos</p>
                 </div>
-                <div id="tpw-tips" style="padding-top:2px;display:grid;grid-template-columns:1fr;gap:0">
+                <div id="tpw-tips" style="display:grid;grid-template-columns:1fr 1fr;column-gap:10px;row-gap:0;">
                   ${PASSWORD_RULES.tips.map(t => `
                     <div class="tpw-tip" data-rule="${t.id}">
                       <span class="dot">
@@ -219,12 +222,12 @@ const TempPasswordGuard = {
               </div>
 
               <button id="tpw-submit" class="tpw-btn tpw-btn-primary" disabled>
-                <span id="tpw-btn-label">🔐 Cambiar contraseña y entrar</span>
+                <span id="tpw-btn-label">🔐 Cambiar y entrar</span>
               </button>
 
-              <div style="display:flex;align-items:center;justify-content:center;margin-top:14px">
+              <div style="display:flex;align-items:center;justify-content:center;margin-top:10px">
                 <a id="tpw-logout" class="tpw-logout-link" href="#">
-                  ⟵ Cerrar sesión y volver al inicio
+                  ⟵ Cerrar sesión
                 </a>
               </div>
             </div>
@@ -627,6 +630,14 @@ document.addEventListener('DOMContentLoaded', async () => {
       BadgeSystem.init(auth.user.id);
       // ?? Campanita de novedades (centro de notificaciones)
       NewsCenter.init(auth.user.id);
+      // ?? Banner dinámico "modo anuncio": horarios de entrega/búsqueda del niño
+      //    + avisos del centro de novedades. Funciona aunque el padre NO tenga
+      //    las notificaciones push activadas (el banner es el canal in-app).
+      AnnouncementBanner.init({
+        parentId: auth.user.id,
+        studentId: currentStudent?.id,
+        studentName: currentStudent?.name
+      }).catch(err => console.warn('[padre] announcement-banner no cargó:', err));
       // Navegar a la sección solicitada en la URL (si no es home)
       if (_needsNavTo && document.getElementById(_needsNavTo)) {
         navigateTo(_needsNavTo, { force: true });
@@ -1531,7 +1542,7 @@ async function switchStudent(studentId) {
 
     // 2. Desuscribir Canales Realtime actuales de forma exhaustiva
     // FIX orphaned channels: use removeChannel() (not just unsubscribe) to fully release socket slots
-    const channels = ['_dailyLogChannel', '_chatChannel', '_classroomChannel', '_notificationChannel', '_padreUnreadChannel'];
+    const channels = ['_dailyLogChannel', '_chatChannel', '_classroomChannel', '_notificationChannel', '_padreUnreadChannel', '_announcementChannel'];
     channels.forEach(ch => {
       if (window[ch]) {
         try { supabase.removeChannel(window[ch]); } catch(err) {
@@ -1552,6 +1563,13 @@ async function switchStudent(studentId) {
     _initDailyLogRealtime(selected.id);
     if (selected.classroom_id) initLiveClassListener(selected.classroom_id);
     ClassroomSchedule.init();
+
+    // 4b. Refrescar el banner dinámico con los horarios del hijo seleccionado
+    AnnouncementBanner.rebind({
+      parentId: auth.user?.id,
+      studentId: selected.id,
+      studentName: selected.name
+    }).catch(() => {});
 
     // 5. Recargar Dashboard y UI
     updateHeaderProfile(AppState.get('profile'), selected, all);

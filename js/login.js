@@ -205,11 +205,14 @@ document.addEventListener('DOMContentLoaded', async () => {
       supabase.from('profiles')
         .update({ last_sign_in_at: new Date().toISOString() })
         .eq('id', userId)
-        .then(() => {});
+        .then(() => {})
+        .catch(() => {});
 
+      // Registro de login exitoso (soft-fail: no bloquea el flujo si la tabla tiene RLS)
       supabase.from('login_attempts')
         .insert({ email, success: true })
-        .then(() => {});
+        .then(() => {})
+        .catch(() => {});
 
       localStorage.setItem('karpus_user', JSON.stringify({ id: userId }));
       await redirectByRole(userId);
@@ -255,9 +258,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
 
       if (isInvalidCredential) {
+        // Registro de intento fallido (soft-fail: no rompe el flujo)
         supabase.from('login_attempts')
           .insert({ email, success: false })
-          .then(() => {});
+          .then(() => {})
+          .catch(() => {});
 
         const locked = RATE_LIMIT.recordFailure();
         if (locked) {

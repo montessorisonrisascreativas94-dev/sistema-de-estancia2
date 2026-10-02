@@ -6,7 +6,48 @@ import { Helpers } from '../shared/helpers.js';
  * M�dulo de Gesti�n de Maestros para Asistente
  */
 export const TeachersModule = {
+  _view: 'table',
+  _toggleBound: false,
+
+  _loadView() {
+    this._view = 'table';
+    try {
+      const v = localStorage.getItem('asis_staff_view');
+      if (v === 'grid' || v === 'table') this._view = v;
+    } catch (_) {}
+  },
+
+  _saveView() {
+    try { localStorage.setItem('asis_staff_view', this._view); } catch (_) {}
+  },
+
+  _paintToggle() {
+    const btn = document.getElementById('btnToggleStaffView');
+    if (!btn) return;
+    const isGrid = this._view === 'grid';
+    btn.innerHTML = `<i data-lucide="${isGrid ? 'table' : 'layout-grid'}" class="w-4 h-4"></i>` +
+      `<span data-staff-view-label>${isGrid ? 'Ver tabla' : 'Ver tarjetas'}</span>`;
+    btn.setAttribute('aria-pressed', String(isGrid));
+  },
+
+  _applyView() {
+    const table = document.getElementById('teachersTableWrapper');
+    const grid = document.getElementById('teachersGrid');
+    if (this._view === 'grid') {
+      table?.classList.add('hidden');
+      grid?.classList.remove('hidden');
+    } else {
+      table?.classList.remove('hidden');
+      grid?.classList.add('hidden');
+    }
+    this._paintToggle();
+  },
+
   async init() {
+    this._loadView();
+    this._bindToggle();
+    this._applyView();
+
     const btnAdd = document.getElementById('btnAddTeacher');
     if (btnAdd) btnAdd.onclick = () => this.openModal();
     
@@ -19,40 +60,122 @@ export const TeachersModule = {
     await this.loadTeachers();
   },
 
+  _bindToggle() {
+    if (this._toggleBound) return;
+    const btn = document.getElementById('btnToggleStaffView');
+    if (!btn) return;
+    this._toggleBound = true;
+    btn.addEventListener('click', () => {
+      this._view = this._view === 'grid' ? 'table' : 'grid';
+      this._saveView();
+      this._applyView();
+      this.loadTeachers(document.getElementById('teacherSearch')?.value || '');
+    });
+  },
+
   async loadTeachers(searchTerm = '') {
     const tbody = document.getElementById('teachersTableBody');
-    if (!tbody) return;
+    const grid = document.getElementById('teachersGrid');
+    if (!tbody && !grid) return;
+    this._applyView();
 
-    tbody.innerHTML = `<tr><td colspan="4" class="p-8">${Helpers.skeleton(3, 'h-12')}</td></tr>`;
+    if (tbody) tbody.innerHTML = `<tr><td colspan="4" class="p-8">${Helpers.skeleton(3, 'h-12')}</td></tr>`;
+    if (grid) grid.innerHTML = `<div class="col-span-full p-8">${Helpers.skeleton(3, 'h-12')}</div>`;
     
     try {
       const teachers = await AssistantApi.getTeachersDetail(searchTerm);
       if (!teachers.length) {
-        tbody.innerHTML = `<tr><td colspan="4">${Helpers.emptyState('No hay maestros registrados')}</td></tr>`;
+        if (tbody) tbody.innerHTML = `<tr><td colspan="4">${Helpers.emptyState('No hay maestros registrados')}</td></tr>`;
+        if (grid) grid.innerHTML = `<div class="col-span-full">${Helpers.emptyState('No hay maestros registrados')}</div>`;
+        if (window.lucide) lucide.createIcons();
         return;
       }
 
-      tbody.innerHTML = teachers.map(t => `
-        <tr class="hover:bg-slate-50 transition-colors border-b border-slate-50 cursor-pointer" ondblclick="window.openTeacherModal('${t.id}')">
-          <td class="px-6 py-4 font-bold text-slate-700 text-sm">${Helpers.escapeHTML(t.name)}</td>
-          <td class="px-6 py-4 text-slate-500 text-xs font-medium uppercase tracking-wider">${t.email || '-'}</td>
-          <td class="px-6 py-4 text-slate-500 text-xs font-bold">${t.phone || '-'}</td>
-          <td class="px-6 py-4">
-            <div class="flex gap-1.5">
-              <button onclick="window.openTeacherModal('${t.id}')" class="px-2 py-1 rounded-lg bg-teal-50 text-teal-600 text-[10px] font-black uppercase hover:bg-teal-100 transition-all border border-teal-100 flex items-center gap-1">
-                <i data-lucide="edit-2" class="w-3 h-3"></i>Editar
-              </button>
-              <button onclick="window.App.teachers.deleteTeacher('${t.id}','${Helpers.escapeHTML(t.name)}')" class="px-2 py-1 rounded-lg bg-rose-50 text-rose-500 text-[10px] font-black uppercase hover:bg-rose-100 transition-all border border-rose-100 flex items-center gap-1">
-                <i data-lucide="trash-2" class="w-3 h-3"></i>Eliminar
-              </button>
-            </div>
-          </td>
-        </tr>
-      `).join('');
+      const ROLE_BADGE = {
+        maestra:   'bg-emerald-100 text-emerald-700',
+        asistente: 'bg-orange-100 text-orange-700',
+        encargada: 'bg-purple-100 text-purple-700',
+      };
+      const ROLE_LABEL = {
+        maestra:   'Maestro/a',
+        asistente: 'Asistente',
+        encargada: 'Encargada',
+      };
+      const ROLE_ICON = {
+        maestra:   'book-open',
+        asistente: 'clipboard-list',
+        encargada: 'award',
+      };
+
+      if (tbody) {
+        tbody.innerHTML = teachers.map(t => `
+          <tr class="hover:bg-slate-50 transition-colors border-b border-slate-50 cursor-pointer" ondblclick="window.openTeacherModal('${t.id}')">
+            <td class="px-6 py-4 font-bold text-slate-700 text-sm">${Helpers.escapeHTML(t.name)}</td>
+            <td class="px-6 py-4 text-slate-500 text-xs font-medium uppercase tracking-wider">${Helpers.escapeHTML(t.email || '-')}</td>
+            <td class="px-6 py-4 text-slate-500 text-xs font-bold">${Helpers.escapeHTML(t.phone || '-')}</td>
+            <td class="px-6 py-4">
+              <div class="flex gap-1.5">
+                <button onclick="window.openTeacherModal('${t.id}')" class="px-2 py-1 rounded-lg bg-teal-50 text-teal-600 text-[10px] font-black uppercase hover:bg-teal-100 transition-all border border-teal-100 flex items-center gap-1">
+                  <i data-lucide="edit-2" class="w-3 h-3"></i>Editar
+                </button>
+                <button onclick="window.App.teachers.deleteTeacher('${t.id}','${Helpers.escapeHTML(t.name)}')" class="px-2 py-1 rounded-lg bg-rose-50 text-rose-500 text-[10px] font-black uppercase hover:bg-rose-100 transition-all border border-rose-100 flex items-center gap-1">
+                  <i data-lucide="trash-2" class="w-3 h-3"></i>Eliminar
+                </button>
+              </div>
+            </td>
+          </tr>
+        `).join('');
+      }
+
+      if (grid) {
+        grid.innerHTML = teachers.map(t => {
+          const role = t.role || 'maestra';
+          const initial = (t.name || '?').trim().charAt(0).toUpperCase();
+          return `
+            <article class="bg-white rounded-3xl border-2 border-slate-100 shadow-sm hover:shadow-md hover:border-teal-200 transition-all overflow-hidden cursor-pointer group"
+              onclick="window.openTeacherModal('${t.id}')"
+              onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();window.openTeacherModal('${t.id}')}"
+              tabindex="0" role="button" aria-label="Abrir ficha de ${Helpers.escapeHTML(t.name || '')}">
+
+              <div class="p-5 flex items-center gap-3">
+                <div class="w-12 h-12 rounded-2xl bg-teal-50 border border-teal-100 overflow-hidden shrink-0 flex items-center justify-center">
+                  ${t.avatar_url
+                    ? `<img src="${Helpers.escapeHTML(t.avatar_url)}" class="w-full h-full object-cover" alt="">`
+                    : `<span class="font-black text-teal-600 text-lg">${Helpers.escapeHTML(initial)}</span>`}
+                </div>
+                <div class="min-w-0 flex-1">
+                  <div class="font-black text-slate-700 text-sm truncate group-hover:text-teal-600 transition-colors">${Helpers.escapeHTML(t.name)}</div>
+                  <div class="text-[9px] font-bold text-slate-400 uppercase tracking-widest truncate">${Helpers.escapeHTML(t.email || 'Sin correo')}</div>
+                </div>
+                <span class="shrink-0 px-2 py-1 rounded-full text-[9px] font-black uppercase ${ROLE_BADGE[role] || 'bg-slate-100 text-slate-600'} flex items-center gap-1">
+                  <i data-lucide="${ROLE_ICON[role] || 'user'}" class="w-3 h-3"></i>${Helpers.escapeHTML(ROLE_LABEL[role] || role)}
+                </span>
+              </div>
+
+              <div class="px-5 pb-4 grid grid-cols-1 gap-2">
+                <div class="bg-slate-50 rounded-2xl p-3 border border-slate-100">
+                  <span class="block text-[9px] font-black text-slate-400 uppercase tracking-widest">Teléfono</span>
+                  <span class="block text-sm font-black text-slate-700">${Helpers.escapeHTML(t.phone || '—')}</span>
+                </div>
+              </div>
+
+              <div class="px-5 py-3 border-t border-slate-100 bg-slate-50/60 flex items-center justify-end gap-2">
+                <button onclick="event.stopPropagation();window.openTeacherModal('${t.id}')" class="px-3 py-1.5 bg-white text-teal-600 text-[10px] font-black uppercase rounded-xl border border-teal-100 hover:bg-teal-50 transition-all flex items-center gap-1">
+                  <i data-lucide="edit-2" class="w-3 h-3"></i>Editar
+                </button>
+                <button onclick="event.stopPropagation();window.App.teachers.deleteTeacher('${t.id}','${Helpers.escapeHTML(t.name)}')" class="px-3 py-1.5 bg-white text-rose-500 text-[10px] font-black uppercase rounded-xl border border-rose-100 hover:bg-rose-50 transition-all flex items-center gap-1">
+                  <i data-lucide="trash-2" class="w-3 h-3"></i>Eliminar
+                </button>
+              </div>
+            </article>`;
+        }).join('');
+      }
       
       if (window.lucide) lucide.createIcons();
     } catch (e) {
-      tbody.innerHTML = `<tr><td colspan="4" class="text-center text-rose-500 py-8 font-bold text-sm">Error cargando maestros</td></tr>`;
+      if (tbody) tbody.innerHTML = `<tr><td colspan="4" class="text-center text-rose-500 py-8 font-bold text-sm">Error cargando maestros</td></tr>`;
+      if (grid) grid.innerHTML = `<div class="col-span-full text-center text-rose-500 py-8 font-bold text-sm">Error cargando maestros</div>`;
+      if (window.lucide) lucide.createIcons();
     }
   },
 

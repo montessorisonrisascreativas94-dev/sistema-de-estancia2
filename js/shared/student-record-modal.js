@@ -7,7 +7,7 @@
  *   'admit'    — Admitir desde preinscripción (precarga datos)
  *   'edit'     — Editar estudiante existente
  */
-import { supabase, SUPABASE_URL } from './supabase.js';
+import { supabase, SUPABASE_URL, SUPABASE_ANON_KEY } from './supabase.js';
 import { Helpers } from './helpers.js';
 import {
   CANONICAL_LEVELS, SPECIAL_LEVELS, normalizeLevel, isSpecialLevel,
@@ -38,12 +38,12 @@ const LEVELS = [...CANONICAL_LEVELS.map((l) => l.canon), ...SPECIAL_LEVELS];
 const SCHEDULES = ['8:00-12:00','8:00-15:00','8:00-17:00'];
 const PAYMENT_PLANS = [{v:'monthly',l:'Mensual'},{v:'two_installments',l:'Dos Cuotas'},{v:'semestral',l:'Semestral'},{v:'anual',l:'Anual'}];
 
-let _state = { mode: 'new', studentId: null, preData: null, activeTab: 'info', data: {}, classes: [], draft: {} };
+let _state = { mode: 'new', studentId: null, preData: null, activeTab: 'info', data: {}, classes: [], draft: {}, lastEmailError: null };
 
-export const StudentRecordModal = {
-
-  async open(mode = 'new', studentId = null, preData = null) {
-    _state = { mode, studentId, preData, activeTab: 'info', data: {}, classes: [], draft: {} };
+  export const StudentRecordModal = {
+  
+    async open(mode = 'new', studentId = null, preData = null) {
+      _state = { mode, studentId, preData, activeTab: 'info', data: {}, classes: [], draft: {}, lastEmailError: null };
 
     if (mode === 'edit' && studentId) {
       _state.data = await this._loadStudent(studentId);
@@ -813,9 +813,14 @@ export const StudentRecordModal = {
       <div class="srm-section-divider mt-6"><i data-lucide="sparkles" class="w-4 h-4"></i> Vista Previa Credenciales</div>
       <div id="srm-credpreview" class="rounded-2xl border border-slate-200 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-4 space-y-3 shadow-inner">
         <div class="grid grid-cols-2 gap-3">
-          <div class="bg-white rounded-xl p-3 border border-blue-100">
-            <p class="text-[10px] font-black uppercase text-blue-600 tracking-wide">Estudiante</p>
-            <p class="text-sm font-black text-slate-800 mt-0.5">${Helpers.escapeHTML(preName || '—')}</p>
+          <div class="bg-white rounded-xl p-3 border border-blue-100 flex items-center gap-3">
+            <div class="w-14 h-14 rounded-xl overflow-hidden border-2 border-blue-200 shrink-0 bg-gradient-to-br from-blue-100 to-emerald-100 flex items-center justify-center">
+              ${(d.photo_url || d.avatar_url || '') ? `<img src="${Helpers.escapeHTML(d.photo_url || d.avatar_url || '')}" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<span class=\\'text-2xl font-black text-blue-700\\'>${(preName||'?').charAt(0)}</span>'">` : `<span class="text-2xl font-black text-blue-700">${(preName||'?').charAt(0)}</span>`}
+            </div>
+            <div class="min-w-0">
+              <p class="text-[10px] font-black uppercase text-blue-600 tracking-wide">Estudiante</p>
+              <p class="text-sm font-black text-slate-800 mt-0.5 truncate">${Helpers.escapeHTML(preName || '—')}</p>
+            </div>
           </div>
           <div class="bg-white rounded-xl p-3 border border-emerald-100">
             <p class="text-[10px] font-black uppercase text-emerald-600 tracking-wide">Matrícula</p>
@@ -835,8 +840,8 @@ export const StudentRecordModal = {
               <span class="inline-flex items-center gap-1.5 rounded-lg bg-sky-50 px-2.5 py-1 text-xs font-bold text-sky-700 border border-sky-200">
                 <i data-lucide="mail" class="w-3 h-3"></i> ${currentEmail ? Helpers.escapeHTML(currentEmail) : '<span class="text-sky-400 italic">correo pendiente</span>'}
               </span>
-              <span class="inline-flex items-center gap-1.5 rounded-lg bg-orange-50 px-2.5 py-1 text-xs font-bold text-orange-700 border border-orange-200">
-                <i data-lucide="lock" class="w-3 h-3"></i> ${currentPw ? Helpers.escapeHTML(currentPw) : '<span class="text-orange-400 italic">sin contraseña</span>'}
+              <span class="inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700 border border-emerald-200">
+                <i data-lucide="lock" class="w-3 h-3"></i> ${currentPw ? Helpers.escapeHTML(currentPw) : '<span class="text-emerald-400 italic">sin contraseña</span>'}
               </span>
               <span class="inline-flex items-center gap-1.5 rounded-lg bg-rose-50 px-2.5 py-1 text-xs font-bold text-rose-700 border border-rose-200">
                 <i data-lucide="dollar-sign" class="w-3 h-3"></i> Mensualidad: $${monthlyFee}
@@ -849,7 +854,7 @@ export const StudentRecordModal = {
             <i data-lucide="refresh-cw" class="w-3 h-3"></i> Actualizar Vista
           </button>
           <button onclick="StudentRecordModal._sendTestWelcomeEmail()" class="srm-btn-sm srm-btn-green flex-1">
-            <i data-lucide="send" class="w-3 h-3"></i> Enviar Correo Prueba
+            <i data-lucide="send" class="w-3 h-3"></i> Enviar Correo
           </button>
         </div>
       </div>
@@ -959,23 +964,23 @@ export const StudentRecordModal = {
     const schedule = data.schedule || '8:00-12:00';
     const fee = data.monthly_fee || 0;
 
-    Helpers.toast('Enviando correo de prueba a ' + email + '...', 'info');
+    Helpers.toast('Enviando correo a ' + email + '...', 'info');
     try {
       const html = this._buildWelcomeEmailTemplate({
         p1Name, studentName, matricula, classroom, level, schedule,
-        email: loginEmail, password, monthlyFee: fee, isTest: true,
+        email: loginEmail, password, monthlyFee: fee, isTest: false,
         notificationEmail: email, planType: data.payment_plan,
       });
       const text = this._buildWelcomeEmailText({
         p1Name, studentName, matricula, classroom, level, schedule,
-        email: loginEmail, password, monthlyFee: fee, isTest: true
+        email: loginEmail, password, monthlyFee: fee, isTest: false
       });
-      const subject = `[PRUEBA] Bienvenido(a) ${studentName} — Matrícula ${matricula}`;
+      const subject = `Bienvenido(a) ${studentName} — Matrícula ${matricula}`;
       const ok = await this._sendEmailViaEdge({ to: email, subject, html, text });
-      if (ok) Helpers.toast('Correo de prueba enviado a ' + email, 'success');
-      else Helpers.toast('No se pudo enviar — revisa RESEND_API_KEY y FROM_EMAIL', 'warning');
+      if (ok) Helpers.toast('Correo enviado a ' + email, 'success');
+      else Helpers.toast(this._emailErrorHint(' Revisa RESEND_API_KEY / FROM_EMAIL en la Edge Function.'), 'warning');
     } catch (e) {
-      Helpers.toast('Error enviando correo prueba: ' + (e.message || e), 'error');
+      Helpers.toast('Error enviando correo: ' + (e.message || e), 'error');
     }
   },
 
@@ -993,11 +998,22 @@ export const StudentRecordModal = {
       console.warn('[srm] sin base de Edge Functions');
       return { ok: false, status: 0, body: 'no-edge-base' };
     }
-    const token = supabase?.auth?.currentSession?.access_token || '';
+    // OJO: supabase-js 2.49 no expone auth.currentSession (propiedad); el
+    // único access_token válido sale de getSession(). Sin este header la
+    // gateway responde 401 (verify_jwt = true) y el correo NUNCA se envía.
+    let token = '';
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      token = sessionData?.session?.access_token || '';
+    } catch (_) { /* sin sesión: la gateway responderá 401 */ }
     try {
       const resp = await fetch(`${base.replace(/\/$/, '')}/${name}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: 'Bearer ' + token } : {}) },
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: SUPABASE_ANON_KEY,
+          ...(token ? { Authorization: 'Bearer ' + token } : {}),
+        },
         body: JSON.stringify(body),
       });
       if (!resp.ok) {
@@ -1010,12 +1026,28 @@ export const StudentRecordModal = {
     }
   },
 
-  async _sendEmailViaEdge({ to, subject, html, text, attachments }) {
-    if (!to) return false;
-    const res = await this._invokeEdge('send-email', { to, subject, html, text, attachments });
-    if (!res.ok) console.warn('[srm] send-email falló:', res.status, res.body);
-    return res.ok;
-  },
+    async _sendEmailViaEdge({ to, subject, html, text, attachments }) {
+      if (!to) return false;
+      const res = await this._invokeEdge('send-email', { to, subject, html, text, attachments });
+      if (!res.ok) {
+        // status 0 = fetch falló: normalmente CORS o red, no configuración de Resend
+        console.warn('[srm] send-email falló:', res.status, res.body);
+      }
+      _state.lastEmailError = res.network
+        ? 'No se pudo contactar la Edge Function (CORS o red).'
+        : res.status === 401 || res.status === 403
+          ? 'La Edge Function rechazó la petición (JWT o rol).'
+          : res.status
+            ? `La Edge Function respondió ${res.status}: ${res.body || 'sin detalle'}`
+            : 'La Edge Function no respondió.';
+      return res.ok;
+    },
+
+    /** Mensaje accionable para el toast cuando falla el envío de correo. */
+    _emailErrorHint(suffix = '') {
+      const why = _state.lastEmailError || 'Error desconocido.';
+      return `${why}${suffix}`;
+    },
 
   _buildWelcomeEmailText({ p1Name, studentName, matricula, classroom, level, schedule, email, password, monthlyFee, isTest, notificationEmail }) {
     return (isTest ? '*** ESTE ES UN CORREO DE PRUEBA – NO ES LA ADMISIÓN OFICIAL ***\n\n' : '') +
@@ -1062,7 +1094,6 @@ export const StudentRecordModal = {
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f4f7fb">
 <tr><td align="center" style="padding:24px 12px">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:620px;background:#ffffff;border-radius:18px;overflow:hidden;box-shadow:0 10px 30px rgba(11,99,199,0.08)">
-  ${isTest ? `<tr><td style="background:#fef3c7;padding:10px 24px;text-align:center"><span style="font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#92400e;font-weight:900;letter-spacing:0.5px;text-transform:uppercase">✉  Correo de prueba – no es admisión oficial</span></td></tr>` : ''}
   <tr>
     <td style="background:linear-gradient(135deg,#0B63C7 0%,#2563eb 55%,#4f46e5 100%);padding:22px 28px">
       <table width="100%" cellpadding="0" cellspacing="0"><tr>
@@ -1096,27 +1127,27 @@ export const StudentRecordModal = {
     </div>
   </td></tr>
   <tr><td style="padding:18px 28px 4px">
-    <div style="border-radius:14px;background:#0f172a;padding:18px 18px;color:#ffffff;border:1px solid #1e293b">
-      <div style="font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#7dd3fc;font-weight:900;letter-spacing:0.6px;text-transform:uppercase;margin-bottom:12px">🔐 Credenciales de Acceso al Portal</div>
+    <div style="border-radius:14px;background:linear-gradient(135deg,#0B63C7 0%,#2563eb 55%,#10B981 100%);padding:18px 18px;color:#ffffff;border:1px solid #bfdbfe">
+      <div style="font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#dbeafe;font-weight:900;letter-spacing:0.6px;text-transform:uppercase;margin-bottom:12px">🔐 Credenciales de Acceso al Portal</div>
       <table width="100%" cellpadding="0" cellspacing="0">
-        <tr><td style="padding:6px 0;width:35%"><span style="font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#94a3b8;font-weight:700">Usuario</span></td><td style="padding:6px 0"><span style="font-family:'Courier New',monospace;font-size:13px;color:#ffffff;font-weight:900">${Helpers.escapeHTML(email)}</span></td></tr>
-        <tr><td style="padding:6px 0"><span style="font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#94a3b8;font-weight:700">Contraseña</span></td><td style="padding:6px 0"><span style="display:inline-block;background:#1e293b;border:1px dashed #475569;padding:4px 10px;border-radius:8px;font-family:'Courier New',monospace;font-size:13px;color:#fbbf24;font-weight:900;letter-spacing:0.5px">${Helpers.escapeHTML(password)}</span></td></tr>
+        <tr><td style="padding:6px 0;width:35%"><span style="font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#e0f2fe;font-weight:700">Usuario</span></td><td style="padding:6px 0"><span style="font-family:'Courier New',monospace;font-size:13px;color:#ffffff;font-weight:900">${Helpers.escapeHTML(email)}</span></td></tr>
+        <tr><td style="padding:6px 0"><span style="font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#e0f2fe;font-weight:700">Contraseña</span></td><td style="padding:6px 0"><span style="display:inline-block;background:rgba(255,255,255,0.15);border:1px dashed rgba(255,255,255,0.4);padding:4px 10px;border-radius:8px;font-family:'Courier New',monospace;font-size:13px;color:#fef3c7;font-weight:900;letter-spacing:0.5px">${Helpers.escapeHTML(password)}</span></td></tr>
       </table>
-      <div style="margin-top:12px;padding:10px 12px;border-radius:10px;background:#1e293b;border:1px solid #334155">
-        <div style="font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#94a3b8;line-height:1.6">
+      <div style="margin-top:12px;padding:10px 12px;border-radius:10px;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2)">
+        <div style="font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#dbeafe;line-height:1.6">
           Este usuario es institucional y pertenece al colegio. Los avisos de cuotas,
           ausencias y documentos se envían a
-          <strong style="color:#7dd3fc">${Helpers.escapeHTML(notificationEmail || email)}</strong>.
+          <strong style="color:#ffffff">${Helpers.escapeHTML(notificationEmail || email)}</strong>.
         </div>
       </div>
       <div style="margin-top:14px;text-align:center">
-        <a href="${portalUrl}" style="display:inline-block;background:linear-gradient(135deg,#0B63C7 0%,#2563eb 100%);color:#ffffff;text-decoration:none;padding:12px 28px;border-radius:999px;font-family:Arial,Helvetica,sans-serif;font-size:13px;font-weight:900;letter-spacing:0.5px;text-transform:uppercase;box-shadow:0 6px 18px rgba(11,99,199,0.35)">
+        <a href="${portalUrl}" style="display:inline-block;background:linear-gradient(135deg,#ffffff 0%,#ecfeff 100%);color:#0B63C7;text-decoration:none;padding:12px 28px;border-radius:999px;font-family:Arial,Helvetica,sans-serif;font-size:13px;font-weight:900;letter-spacing:0.5px;text-transform:uppercase;box-shadow:0 6px 18px rgba(0,0,0,0.2)">
           Ingresar al Portal de Padres →
         </a>
       </div>
-      <div style="margin-top:10px;text-align:center;font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#64748b;line-height:1.4">
-        URL directa: <a href="${portalUrl}" style="color:#7dd3fc;text-decoration:underline">${portalUrl}</a><br>
-        <strong style="color:#fca5a5">Por favor cambie su contraseña temporal al ingresar por primera vez.</strong>
+      <div style="margin-top:10px;text-align:center;font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#dbeafe;line-height:1.4">
+        URL directa: <a href="${portalUrl}" style="color:#ffffff;text-decoration:underline">${portalUrl}</a><br>
+        <strong style="color:#fef3c7">Por favor cambie su contraseña temporal al ingresar por primera vez.</strong>
       </div>
     </div>
   </td></tr>
@@ -1142,9 +1173,11 @@ export const StudentRecordModal = {
   },
 
   async _createStudentViaEdgeFn({ payload, parentEmail, parentPassword, notificationEmail }) {
+    const preId = _state.preData?._preId || _state.preData?.id || null;
+    const studentData = preId ? { ...payload, pre_registration_id: preId } : payload;
     const body = {
-      student: payload,
-      parent: {
+      studentData,
+      parentData: {
         email: parentEmail,
         password: parentPassword,
         notification_email: notificationEmail || null,
@@ -1153,7 +1186,6 @@ export const StudentRecordModal = {
         p1_cedula: payload.p1_cedula || null,
         p2_cedula: payload.p2_cedula || null,
       },
-      pre_registration_id: _state.preData?._preId || _state.preData?.id || null,
     };
     const res = await this._invokeEdge('create-student-with-parent', body);
     if (res.ok) return { ok: true, data: res.data };
@@ -1377,8 +1409,7 @@ export const StudentRecordModal = {
       _state.draft['srm-emailuser']
         || document.getElementById('srm-emailuser')?.value?.trim()
         || _state.data?.login_email
-        || payload.p1_email,
-      payload.p1_cedula
+        || payload.p1_email
     );
     const password  = _state.draft['srm-password']
       || document.getElementById('srm-password')?.value?.trim()
@@ -1424,8 +1455,10 @@ export const StudentRecordModal = {
             }, { onConflict: 'id' });
           }
         }
-        const { error } = await supabase.from('students').insert([payload]);
-        if (error) throw error;
+        // Misma tolerancia que en la admisión: si la tabla no tiene alguna
+        // columna del formulario, PostgREST rechazaba el insert entero.
+        const insNew = await this._insertStudentResilient(payload);
+        if (!insNew.ok) throw insNew.error;
         Helpers.toast('Estudiante creado', 'success');
       }
       this.close();
@@ -1433,6 +1466,49 @@ export const StudentRecordModal = {
     } catch (e) {
       Helpers.toast('Error: ' + (e.message || e), 'error');
     }
+  },
+
+  /**
+   * PostgREST devuelve 400 (PGRST204 / 42703) cuando el INSERT lleva una
+   * columna que la tabla no tiene. Devuelve el nombre de esa columna.
+   */
+  _missingColumn(err) {
+    const msg = String(err?.message || '');
+    return (
+      msg.match(/Could not find the '([^']+)' column/i) ||
+      msg.match(/column "?([a-z0-9_]+)"? (?:of|does not exist)/i) ||
+      msg.match(/column\s+students\.([a-z0-9_]+)/i) ||
+      []
+    )[1] || null;
+  },
+
+  /**
+   * Inserta el estudiante tolerando drift de esquema.
+   *
+   * Antes: un solo insert con ~60 columnas. Si UNA no existía en la tabla
+   * (fue `prolonged_fee`), PostgREST rechazaba el insert COMPLETO con 400 y
+   * la admisión entera se caía: sin estudiante, sin perfil y sin usuario en
+   * Auth. Ahora se identifica la columna culpable, se quita y se reintenta.
+   */
+  async _insertStudentResilient(payload) {
+    const data = { ...payload };
+    const dropped = [];
+    for (let attempt = 0; attempt < 10; attempt++) {
+      const { data: ins, error } = await supabase
+        .from('students').insert([data]).select('id').limit(1).single();
+      if (!error) {
+        if (dropped.length) {
+          console.warn('[srm] columnas ausentes en students, no se guardaron:', dropped);
+          Helpers.toast('No se guardaron: ' + dropped.join(', ') + ' (no existen en la BD)', 'warning');
+        }
+        return { ok: true, id: ins?.id, dropped };
+      }
+      const col = this._missingColumn(error);
+      if (!col || !(col in data)) return { ok: false, error, dropped };
+      delete data[col];
+      dropped.push(col);
+    }
+    return { ok: false, error: new Error('Demasiadas columnas incompatibles con la tabla students'), dropped };
   },
 
   async admitStudent() {
@@ -1533,10 +1609,21 @@ export const StudentRecordModal = {
           const { data: stu } = await supabase.from('students').select('id').eq('matricula', matricula).maybeSingle();
           studentId = stu?.id;
         }
-      } else if (edgeResult.fallback) {
-        Helpers.toast('Edge no disponible — creando expediente localmente', 'warning');
       } else {
-        throw new Error(edgeResult.body || ('Error en Edge Function (HTTP ' + (edgeResult.status || '?') + ')'));
+        // El 400 de la Edge siempre trae {error, detail}: sin esto el toast
+        // solo decía "HTTP 400" y no había forma de saber la causa real.
+        let detail = '';
+        try {
+          const parsed = JSON.parse(edgeResult.body || '{}');
+          detail = parsed?.detail || parsed?.error || '';
+        } catch { detail = String(edgeResult.body || '').slice(0, 160); }
+        Helpers.toast(
+          edgeResult.fallback
+            ? 'Edge no disponible — creando expediente localmente'
+            : 'Edge respondió con error — creando localmente: '
+              + (edgeResult.status ? 'HTTP ' + edgeResult.status + ' ' : '') + detail,
+          'warning'
+        );
       }
 
       if (!studentId) {
@@ -1575,9 +1662,9 @@ export const StudentRecordModal = {
           }
         }
         if (parentId) payload.parent_id = parentId;
-        const { data: insData, error: stErr } = await supabase.from('students').insert([payload]).select('id').limit(1).single();
-        if (stErr) throw stErr;
-        studentId = insData?.id;
+          const ins = await this._insertStudentResilient(payload);
+          if (!ins.ok) throw ins.error;
+          studentId = ins.id;
       }
       if (!studentId) throw new Error('No se pudo obtener el ID del estudiante');
 
@@ -1729,7 +1816,7 @@ export const StudentRecordModal = {
           const retryBtnId = 'retry-email-' + Date.now();
           const retryHTML = `
             <div id="${retryBtnId}" style="margin-top:8px" class="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-[12px] text-amber-800 font-bold">
-              <span>Credenciales creadas pero el correo no llegó. Revisa RESEND_API_KEY / FROM_EMAIL en la Edge Function.</span>
+              <span>Credenciales creadas pero el correo no llegó. ${Helpers.escapeHTML(this._emailErrorHint(' Revisa RESEND_API_KEY / FROM_EMAIL en la Edge Function.'))}</span>
               <button onclick="StudentRecordModal._sendWelcomeEmailRetry({to:'${Helpers.escapeHTML(notificationEmail)}',studentName:'${Helpers.escapeHTML(studentName)}',matricula:'${Helpers.escapeHTML(matricula)}',classroom:'${Helpers.escapeHTML(classroomName)}',level:'${Helpers.escapeHTML(levelName || '')}',schedule:'${Helpers.escapeHTML(scheduleTxt)}',email:'${Helpers.escapeHTML(parentEmail)}',password:'${Helpers.escapeHTML(parentPassword)}',fee:${fee}})"
                 class="ml-auto inline-flex items-center gap-1.5 rounded-lg bg-amber-600 text-white px-3 py-1.5 text-xs font-black shadow hover:bg-amber-700 active:scale-95">
                 <i data-lucide="send" class="w-3 h-3"></i> Reenviar
@@ -1789,7 +1876,7 @@ export const StudentRecordModal = {
         const el = document.querySelector('[onclick*="_sendWelcomeEmailRetry"]')?.closest('[id^="retry-email-"]');
         if (el) el.remove();
       } else {
-        Helpers.toast('No se pudo reenviar — revisa RESEND_API_KEY y FROM_EMAIL en la Edge Function', 'error');
+        Helpers.toast(this._emailErrorHint(' Revisa RESEND_API_KEY / FROM_EMAIL en la Edge Function.'), 'error');
       }
     } catch (e) {
       Helpers.toast('Error: ' + (e.message || e), 'error');
@@ -1875,8 +1962,6 @@ export const StudentRecordModal = {
   },
 
   printCarnet() {
-    // Igual que genQR: la matrícula y el nombre pueden estar en otra
-    // pestaña, así que se leen del draft y no solo del DOM.
     const data = this._collectFormData();
     const matricula = this._currentMatricula();
     const name = data.name || '';
@@ -1890,6 +1975,7 @@ export const StudentRecordModal = {
     const p1phone = data.p1_phone || '';
     const p2phone = data.p2_phone || '';
     const isActive = data.is_active ?? true;
+    const photoUrl = _state.data?.photo_url || _state.data?.avatar_url || data.photo_url || '';
     const win = window.open('', '_blank');
     if (win) {
       win.document.write(Helpers.getQRPrintTemplate(qrImg, name, matricula, {
@@ -1899,7 +1985,8 @@ export const StudentRecordModal = {
         _parentName:  _state.data?.parent?.name || '',
         _parentPhone: _state.data?.parent?.phone || '',
         student_id: _state.studentId || _state.data?.id || '',
-        is_active: isActive
+        is_active: isActive,
+        photo_url: photoUrl
       }));
       win.document.close();
     }
@@ -1908,14 +1995,33 @@ export const StudentRecordModal = {
   async sendCredentials() {
     this._captureDraft();
     const data = this._collectFormData();
-    const loginEmail = normalizeLoginEmail(
-      _state.draft['srm-emailuser'] || _state.data?.login_email || data.p1_email,
-      data.p1_cedula
-    );
-    const notificationEmail = _state.draft['srm-emailnotif'] || data.p1_email || '';
-    const password = _state.draft['srm-password'] || '';
+    const studentNameForLogin = data.student_name || data.name || '';
+    const studentLastForLogin = data.student_last_name || '';
+    const fallbackLoginEmail = buildStudentParentLoginEmail({
+      studentName: studentNameForLogin,
+      studentLastName: studentLastForLogin
+    });
+    const loginEmailRaw = _state.draft['srm-emailuser']
+      || document.getElementById('srm-emailuser')?.value?.trim()
+      || _state.data?.login_email
+      || '';
+    const loginEmail = (() => {
+      const raw = (loginEmailRaw || fallbackLoginEmail).trim();
+      const local = raw.includes('@') ? raw.split('@')[0] : raw;
+      return `${local}@${LOGIN_DOMAIN}`;
+    })();
+    const notificationEmail = _state.draft['srm-emailnotif']
+      || document.getElementById('srm-emailnotif')?.value?.trim()
+      || _state.data?.notification_email
+      || data.p1_email
+      || '';
+    const password = _state.draft['srm-password']
+      || document.getElementById('srm-password')?.value?.trim()
+      || _state.data?.password
+      || STUDENT_DEFAULT_PASSWORD;
     if (!notificationEmail) return Helpers.toast('Ingresa el correo de notificaciones', 'warning');
     if (!password || password.length < 6) return Helpers.toast('La contraseña debe tener al menos 6 caracteres', 'warning');
+    if (!loginEmail) return Helpers.toast('No se pudo generar el usuario de login', 'error');
 
     const p1Name = data.p1_name || 'Familia';
     const studentName = data.name || 'Estudiante';
@@ -1924,13 +2030,119 @@ export const StudentRecordModal = {
     const level = normalizeLevel(data.level_requested || '');
     const schedule = data.schedule || '8:00-12:00';
     const fee = data.monthly_fee || 0;
+    const planType = data.payment_plan || 'monthly';
 
-    Helpers.toast('Enviando credenciales a ' + notificationEmail + '...', 'info');
+    let parentId = null;
+    let existingStudentId = _state.studentId || _state.data?.id || null;
+
+    Helpers.toast('Paso 1/3 — Verificando usuario de acceso...', 'info');
+    try {
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: loginEmail, password,
+        options: {
+          data: { name: p1Name, role: 'padre', phone: data.p1_phone, is_temporary_password: true },
+          emailRedirectTo: null
+        }
+      });
+      if (authError) {
+        const msg = (authError.message || '').toLowerCase();
+        if (msg.includes('already registered') || msg.includes('already') || msg.includes('exists') || authError.status === 422) {
+          const { data: existingProfile } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('email', loginEmail)
+            .maybeSingle();
+          if (existingProfile?.id) {
+            parentId = existingProfile.id;
+            Helpers.toast('Usuario ya existente — reutilizando cuenta', 'info');
+          } else {
+            try {
+              const { data: sessionData } = await supabase.auth.getSession();
+              if (sessionData?.session?.user && (sessionData.session.user.email || '').toLowerCase() === loginEmail.toLowerCase()) {
+                parentId = sessionData.session.user.id;
+              }
+            } catch (_) {}
+          }
+          if (!parentId) {
+            Helpers.toast('El correo ya está en uso. Intenta con las credenciales anteriores.', 'warning');
+          }
+        } else {
+          throw authError;
+        }
+      } else if (authData?.user?.id) {
+        parentId = authData.user.id;
+      }
+
+      if (!parentId && authData?.user?.identities?.length === 0 && authData?.user?.id) {
+        parentId = authData.user.id;
+      }
+    } catch (authExc) {
+      console.warn('[srm] sendCredentials signUp fallback:', authExc);
+      try {
+        const { data: profile } = await supabase
+          .from('profiles').select('id').eq('email', loginEmail).maybeSingle();
+        if (profile?.id) parentId = profile.id;
+      } catch (_) {}
+    }
+
+    Helpers.toast('Paso 2/3 — Guardando perfil y vínculos...', 'info');
+    if (parentId) {
+      try {
+        await supabase.from('profiles').upsert({
+          id: parentId,
+          name: p1Name,
+          email: loginEmail,
+          notification_email: notificationEmail || null,
+          phone: data.p1_phone || null,
+          role: 'padre',
+          is_temporary_password: true,
+        }, { onConflict: 'id' });
+      } catch (profileErr) {
+        console.warn('[srm] profile upsert:', profileErr);
+        try {
+          await supabase.from('profiles').update({
+            name: p1Name,
+            email: loginEmail,
+            notification_email: notificationEmail || null,
+            phone: data.p1_phone || null,
+            role: 'padre',
+            is_temporary_password: true,
+          }).eq('id', parentId);
+        } catch (_) {}
+      }
+
+      if (existingStudentId) {
+        try {
+          await supabase
+            .from('students')
+            .update({ parent_id: parentId, p1_email: data.p1_email || notificationEmail || null })
+            .eq('id', parseInt(existingStudentId, 10));
+        } catch (stuUpdErr) { console.warn('[srm] student parent link:', stuUpdErr); }
+      } else if (data.matricula) {
+        try {
+          const { data: stuData } = await supabase
+            .from('students')
+            .select('id')
+            .eq('matricula', data.matricula)
+            .maybeSingle();
+          if (stuData?.id) {
+            existingStudentId = stuData.id;
+            _state.studentId = stuData.id;
+            await supabase
+              .from('students')
+              .update({ parent_id: parentId, p1_email: data.p1_email || notificationEmail || null })
+              .eq('id', stuData.id);
+          }
+        } catch (_) {}
+      }
+    }
+
+    Helpers.toast('Paso 3/3 — Enviando credenciales a ' + notificationEmail + '...', 'info');
     const subject = `Credenciales Portal de Padres · ${studentName} (${matricula})`;
     const html = this._buildWelcomeEmailTemplate({
       p1Name, studentName, matricula, classroom, level, schedule,
       email: loginEmail, password, monthlyFee: fee, isTest: false,
-      notificationEmail, planType: data.payment_plan,
+      notificationEmail, planType,
     });
     const text = this._buildWelcomeEmailText({
       p1Name, studentName, matricula, classroom, level, schedule,
@@ -1941,12 +2153,14 @@ export const StudentRecordModal = {
       Helpers.toast('Credenciales enviadas a ' + notificationEmail, 'success');
       const preId = _state.preData?._preId || _state.preData?.id;
       if (preId) {
-        await supabase.from('student_preregistrations')
-          .update({ credentials_sent_at: new Date().toISOString() })
-          .eq('id', preId);
+        try {
+          await supabase.from('student_preregistrations')
+            .update({ credentials_sent_at: new Date().toISOString() })
+            .eq('id', preId);
+        } catch (_) {}
       }
     } else {
-      Helpers.toast('No se pudo enviar — revisa RESEND_API_KEY y FROM_EMAIL', 'warning');
+      Helpers.toast(this._emailErrorHint(' Las credenciales ya quedaron creadas en el sistema; reenvía el correo luego.'), 'warning');
     }
   },
 

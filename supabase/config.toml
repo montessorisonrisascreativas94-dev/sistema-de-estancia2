@@ -12,3 +12,9 @@ verify_jwt = true
 
 [functions.generate-invoice]
 verify_jwt = true
+
+# Pública por diseño: la llama preinscripcion.html sin sesión y se
+# auto-protege validando que el correo coincida con el de la fila
+# (además tiene rate limit por IP).
+[functions.prereg-notify]
+verify_jwt = false

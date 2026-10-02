@@ -30,6 +30,33 @@
 }
 
 /* ==========================================================================
+   0. UTILIDAD .hidden — CRÍTICA para el toggle tabla/tarjetas
+   --------------------------------------------------------------------------
+   panel_directora.html carga este archivo DESPUÉS de css/karpus-tailwind.css:
+
+     line 47  <link ... css/karpus-tailwind.css>   ->  .hidden{display:none}
+     line 50  <link ... css/directora-containers.css> -> .dc-rooms{display:grid}
+
+   Ambos selectores tienen la MISMA especificidad (0,1,0), así que gana el
+   ÚLTIMO en el orden de la cascada. Resultado: .dc-rooms{display:grid} gana,
+   el JS añade .hidden al cambiar de vista y el grid SIGUE VISIBLE => se veían
+   las tarjetas y la tabla a la vez.
+
+   Esta regla reintroduce el display:none con especificidad (0,2,0) +
+   !important para que ningún display: posterior la pise.
+   ========================================================================== */
+.hidden,
+.dc-rooms.hidden,
+.dc-students.hidden,
+.dc-staff.hidden,
+.dc-table-panel.hidden,
+.dc-table-wrap.hidden,
+.table-panel.hidden,
+.table-scroll-wrap.hidden {
+  display: none !important;
+}
+
+/* ==========================================================================
    1. ESTRUCTURA DE SECCIÓN (tod las secciones del panel)
    ========================================================================== */
 
@@ -664,8 +691,15 @@
   border-color: color-mix(in srgb, var(--room) 45%, var(--dc-line));
 }
 
-.dc-room--inactive { opacity: .72; }
-.dc-room--inactive::before { background: var(--dc-faint); box-shadow: none; }
+  .dc-room--inactive { opacity: .72; }
+  .dc-room--inactive::before { background: var(--dc-faint); box-shadow: none; }
+
+  /* Clases especiales (Inglés, Cuido, Ballet, Verano…): mismo indicador de
+     color pero con fondo punteado para distinguirlas de las 12 aulas canónicas. */
+  .dc-room--special { background: linear-gradient(180deg, color-mix(in srgb, var(--room) 6%, #fff), #fff 46%); }
+  .dc-room--special::before { box-shadow: 0 0 0 1px color-mix(in srgb, var(--room) 30%, #fff); }
+  .dc-room--special .dc-room-name { color: var(--room); }
+
 
 .dc-room-top {
   display: flex;

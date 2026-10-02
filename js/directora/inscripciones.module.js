@@ -163,31 +163,56 @@ export async function loadInscripciones() {
     const ageOutOfRange = data.filter(r => r.age_match === false);
 
     container.innerHTML = `
-      <!-- KPIs (más gruesas: +padding, +border, +shadow, +radius) -->
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-10">
-        <div class="relative overflow-hidden bg-gradient-to-br from-yellow-50 to-yellow-100 border-[3px] border-yellow-300 rounded-[28px] p-6 md:p-7 text-center shadow-[0_14px_36px_rgba(234,179,8,0.14)]">
-          <div class="absolute -top-10 -right-10 w-28 h-28 rounded-full bg-yellow-200/50"></div>
-          <p class="relative text-[2.55rem] leading-none font-black text-yellow-700 tracking-tight">${pending.length}</p>
-          <p class="relative text-[13px] font-black text-yellow-800 uppercase tracking-wider mt-4">Pendientes</p>
-          <div class="mt-4 h-2.5 w-full rounded-full bg-yellow-200 overflow-hidden"><div class="h-full bg-yellow-500 w-2/3 rounded-r-full"></div></div>
+      <!-- KPIs compactos y elegantes -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3.5 mb-7">
+        <div class="relative overflow-hidden bg-white border border-amber-200/80 rounded-2xl px-4 py-3.5 shadow-[0_2px_10px_rgba(15,23,42,0.05)] hover:-translate-y-0.5 hover:shadow-[0_6px_18px_rgba(234,179,8,0.15)] transition-all cursor-pointer" onclick="InscripcionesModule.filterStatus('pending')">
+          <div class="flex items-center justify-between gap-2">
+            <div class="min-w-0">
+              <p class="text-[11px] font-bold text-amber-700 uppercase tracking-widest leading-none">Pendientes</p>
+              <p class="mt-2 text-[32px] leading-none font-black text-amber-600 tracking-tight">${pending.length}</p>
+            </div>
+            <div class="shrink-0 w-10 h-10 rounded-xl bg-gradient-to-br from-amber-100 to-yellow-200 flex items-center justify-center border border-amber-200/70">
+              <i data-lucide="clock" class="w-4.5 h-4.5 text-amber-700"></i>
+            </div>
+          </div>
+          <div class="mt-3 h-1.5 w-full rounded-full bg-amber-100 overflow-hidden"><div class="h-full bg-gradient-to-r from-amber-400 to-yellow-500 w-2/3 rounded-r-full"></div></div>
         </div>
-        <div class="relative overflow-hidden bg-gradient-to-br from-green-50 to-emerald-100 border-[3px] border-green-400 rounded-[28px] p-6 md:p-7 text-center shadow-[0_14px_36px_rgba(34,197,94,0.14)]">
-          <div class="absolute -top-10 -right-10 w-28 h-28 rounded-full bg-green-200/50"></div>
-          <p class="relative text-[2.55rem] leading-none font-black text-emerald-700 tracking-tight">${admitted.length}</p>
-          <p class="relative text-[13px] font-black text-emerald-800 uppercase tracking-wider mt-4">Admitidos</p>
-          <div class="mt-4 h-2.5 w-full rounded-full bg-emerald-200 overflow-hidden"><div class="h-full bg-emerald-500 w-4/5 rounded-r-full"></div></div>
+        <div class="relative overflow-hidden bg-white border border-emerald-200/80 rounded-2xl px-4 py-3.5 shadow-[0_2px_10px_rgba(15,23,42,0.05)] hover:-translate-y-0.5 hover:shadow-[0_6px_18px_rgba(34,197,94,0.16)] transition-all cursor-pointer" onclick="InscripcionesModule.filterStatus('admitted')">
+          <div class="flex items-center justify-between gap-2">
+            <div class="min-w-0">
+              <p class="text-[11px] font-bold text-emerald-700 uppercase tracking-widest leading-none">Admitidos</p>
+              <p class="mt-2 text-[32px] leading-none font-black text-emerald-600 tracking-tight">${admitted.length}</p>
+            </div>
+            <div class="shrink-0 w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-100 to-green-200 flex items-center justify-center border border-emerald-200/70">
+              <i data-lucide="check-circle-2" class="w-4.5 h-4.5 text-emerald-700"></i>
+            </div>
+          </div>
+          <div class="mt-3 h-1.5 w-full rounded-full bg-emerald-100 overflow-hidden"><div class="h-full bg-gradient-to-r from-emerald-400 to-green-600 w-4/5 rounded-r-full"></div></div>
         </div>
-        <div class="relative overflow-hidden bg-gradient-to-br from-red-50 to-rose-100 border-[3px] border-rose-400 rounded-[28px] p-6 md:p-7 text-center shadow-[0_14px_36px_rgba(244,63,94,0.14)]">
-          <div class="absolute -top-10 -right-10 w-28 h-28 rounded-full bg-rose-200/50"></div>
-          <p class="relative text-[2.55rem] leading-none font-black text-rose-700 tracking-tight">${rejected.length}</p>
-          <p class="relative text-[13px] font-black text-rose-800 uppercase tracking-wider mt-4">Rechazados</p>
-          <div class="mt-4 h-2.5 w-full rounded-full bg-rose-200 overflow-hidden"><div class="h-full bg-rose-500 w-1/4 rounded-r-full"></div></div>
+        <div class="relative overflow-hidden bg-white border border-rose-200/80 rounded-2xl px-4 py-3.5 shadow-[0_2px_10px_rgba(15,23,42,0.05)] hover:-translate-y-0.5 hover:shadow-[0_6px_18px_rgba(244,63,94,0.16)] transition-all cursor-pointer" onclick="InscripcionesModule.filterStatus('rejected')">
+          <div class="flex items-center justify-between gap-2">
+            <div class="min-w-0">
+              <p class="text-[11px] font-bold text-rose-700 uppercase tracking-widest leading-none">Rechazados</p>
+              <p class="mt-2 text-[32px] leading-none font-black text-rose-600 tracking-tight">${rejected.length}</p>
+            </div>
+            <div class="shrink-0 w-10 h-10 rounded-xl bg-gradient-to-br from-rose-100 to-pink-200 flex items-center justify-center border border-rose-200/70">
+              <i data-lucide="x-circle" class="w-4.5 h-4.5 text-rose-700"></i>
+            </div>
+          </div>
+          <div class="mt-3 h-1.5 w-full rounded-full bg-rose-100 overflow-hidden"><div class="h-full bg-gradient-to-r from-rose-400 to-pink-600 w-1/4 rounded-r-full"></div></div>
         </div>
-        <div class="relative overflow-hidden bg-gradient-to-br from-purple-50 to-violet-100 border-[3px] border-violet-400 rounded-[28px] p-6 md:p-7 text-center shadow-[0_14px_36px_rgba(139,92,246,0.14)]">
-          <div class="absolute -top-10 -right-10 w-28 h-28 rounded-full bg-purple-200/50"></div>
-          <p class="relative text-[2.55rem] leading-none font-black text-violet-700 tracking-tight">${authPending.length}</p>
-          <p class="relative text-[13px] font-black text-violet-800 uppercase tracking-wider mt-4">Pend. Autoriz.</p>
-          <div class="mt-4 h-2.5 w-full rounded-full bg-violet-200 overflow-hidden"><div class="h-full bg-violet-500 w-1/3 rounded-r-full"></div></div>
+        <div class="relative overflow-hidden bg-white border border-violet-200/80 rounded-2xl px-4 py-3.5 shadow-[0_2px_10px_rgba(15,23,42,0.05)] hover:-translate-y-0.5 hover:shadow-[0_6px_18px_rgba(139,92,246,0.18)] transition-all cursor-pointer" onclick="InscripcionesModule.filterStatus('auth-pending')">
+          <div class="flex items-center justify-between gap-2">
+            <div class="min-w-0">
+              <p class="text-[11px] font-bold text-violet-700 uppercase tracking-widest leading-none">Pend. Autoriz.</p>
+              <p class="mt-2 text-[32px] leading-none font-black text-violet-600 tracking-tight">${authPending.length}</p>
+            </div>
+            <div class="shrink-0 w-10 h-10 rounded-xl bg-gradient-to-br from-violet-100 to-indigo-200 flex items-center justify-center border border-violet-200/70 relative">
+              <i data-lucide="shield-alert" class="w-4.5 h-4.5 text-violet-700"></i>
+              <span class="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-[#8B5CF6] animate-pulse ring-2 ring-white"></span>
+            </div>
+          </div>
+          <div class="mt-3 h-1.5 w-full rounded-full bg-violet-100 overflow-hidden"><div class="h-full bg-gradient-to-r from-violet-500 to-indigo-600 w-1/3 rounded-r-full"></div></div>
         </div>
       </div>
 
@@ -274,11 +299,36 @@ function _renderRow(r) {
   const dataAgeOut = r.age_match === false ? 'data-age-out="1"' : '';
   const dataAuthPending = (!r.age_match && r.director_authorization_requested && r.director_authorization_approved === null) ? 'data-auth-pending="1"' : '';
 
+  const status = r.status || '';
+  let rowBg = '';
+  let borderL = '';
+  if (status === 'pending') {
+    rowBg = 'bg-gradient-to-r from-yellow-50/70 to-amber-50/30 hover:from-yellow-50 hover:to-amber-100/50';
+    borderL = 'border-l-[6px] border-l-amber-400';
+  } else if (status === 'admitted') {
+    rowBg = 'bg-gradient-to-r from-emerald-50/70 to-green-50/30 hover:from-emerald-50 hover:to-green-100/50';
+    borderL = 'border-l-[6px] border-l-emerald-500';
+  } else if (status === 'rejected') {
+    rowBg = 'bg-gradient-to-r from-rose-50/70 to-pink-50/30 hover:from-rose-50 hover:to-pink-100/50';
+    borderL = 'border-l-[6px] border-l-rose-500';
+  } else {
+    rowBg = 'hover:bg-[#F8FAFC]';
+    borderL = 'border-l-[6px] border-l-slate-200';
+  }
+
+  if (r.age_match === false && r.director_authorization_approved === null) {
+    borderL = 'border-l-[6px] border-l-violet-500';
+  } else if (r.age_match === false && r.director_authorization_approved === true) {
+    borderL = 'border-l-[6px] border-l-teal-500';
+  } else if (r.age_match === false && r.director_authorization_approved === false) {
+    borderL = 'border-l-[6px] border-l-red-500';
+  }
+
   return `
-    <tr data-status="${esc(r.status)}" ${dataAgeOut} ${dataAuthPending} class="hover:bg-[#F8FAFC] transition-colors">
+    <tr data-status="${esc(r.status)}" ${dataAgeOut} ${dataAuthPending} class="${rowBg} ${borderL} border-b-[3px] border-b-white transition-all duration-200">
       <td class="px-8 py-6">
         <div class="flex items-center gap-4">
-          <div class="w-14 h-14 rounded-[20px] bg-gradient-to-br from-[#0B63C7] to-[#4F46E5] flex items-center justify-center text-white text-[17px] font-black shadow-[0_8px_20px_rgba(11,99,199,0.22)] border-[2px] border-white">
+          <div class="w-14 h-14 rounded-[20px] bg-gradient-to-br from-[#0B63C7] to-[#4F46E5] flex items-center justify-center text-white text-[17px] font-black shadow-[0_10px_24px_rgba(11,99,199,0.28)] border-[3px] border-white">
             ${esc(((r.student_name||'?').charAt(0)).toUpperCase())}
           </div>
           <div class="min-w-0">

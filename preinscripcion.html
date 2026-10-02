@@ -392,23 +392,23 @@
                               <option value="Párvulos I">Párvulos I (45 días – 11 meses)</option>
                               <option value="Párvulos II">Párvulos II (12 – 23 meses)</option>
                               <option value="Párvulos III">Párvulos III (24 – 35 meses)</option>
-                              <option value="Pre-Kínder – Línea Blanca">Pre-Kínder – Línea Blanca (3 años)</option>
-                              <option value="Kínder – Línea Gris">Kínder – Línea Gris (4 años)</option>
-                              <option value="Pre-Primario – Línea Negra">Pre-Primario – Línea Negra (5 años)</option>
-                              <option value="1ro – Línea Roja">1ro – Línea Roja (6 años)</option>
-                              <option value="2do – Línea Amarilla">2do – Línea Amarilla (7 años)</option>
-                              <option value="3ro – Línea Azul">3ro – Línea Azul (8 años)</option>
-                              <option value="4to – Línea Verde">4to – Línea Verde (9 años)</option>
-                              <option value="5to – Línea Naranja">5to – Línea Naranja (10 años)</option>
-                              <option value="6to – Línea Morado">6to – Línea Morado (11 años)</option>
+                              <option value="Pre-Kínder – Línea Blanca">Pre-Kínder Blanca (3 años)</option>
+                              <option value="Kínder – Línea Gris">Kínder Gris (4 años)</option>
+                              <option value="Pre-Primario – Línea Negra">Pre-Primario Negra (5 años)</option>
+                              <option value="1ro – Línea Roja">1° Primero (6 años)</option>
+                              <option value="2do – Línea Amarilla">2° Segundo (7 años)</option>
+                              <option value="3ro – Línea Azul">3° Tercero (8 años)</option>
+                              <option value="4to – Línea Verde">4° Cuarto (9 años)</option>
+                              <option value="5to – Línea Naranja">5° Quinto (10 años)</option>
+                              <option value="6to – Línea Morado">6° Sexto (11 años)</option>
                             </optgroup>
-                            <optgroup label="Aulas y Actividades Especiales (Sin rango de edad)">
-                              <option value="Verano">Verano</option>
-                              <option value="Inglés Afterschool">Inglés Afterschool</option>
-                              <option value="Ballet / Danza">Ballet / Danza</option>
-                              <option value="Taekwondo">Taekwondo</option>
-                              <option value="Sala de Tarea">Sala de Tarea</option>
-                              <option value="Cuido">Cuido</option>
+                            <optgroup label="Clases Especiales (Sin rango de edad)">
+                              <option value="Verano">☀️ Campamento de Verano</option>
+                              <option value="Inglés Afterschool">🇬🇧 Inglés Afterschool</option>
+                              <option value="Ballet / Danza">🩰 Ballet y Danza</option>
+                              <option value="Taekwondo">🥋 Taekwondo</option>
+                              <option value="Sala de Tarea">📚 Sala de Tarea</option>
+                              <option value="Cuido">🧸 Cuido Infantil</option>
                             </optgroup>
                           </select>
                           <div id="levelValidationBox" style="display:none; margin-top:10px"></div>
@@ -811,6 +811,35 @@
             return LEVEL_AGE_RANGES.find(x => x.key === levelName) || null;
         }
 
+        // "1ro - Línea Roja" (clave de BD) -> "1° Primero" (lo que se lee)
+        // "Inglés Afterschool" -> "🇬🇧 Inglés Afterschool"
+        const SPECIAL_LABELS = {
+            'Verano': '☀️ Campamento de Verano',
+            'Inglés Afterschool': '🇬🇧 Inglés Afterschool',
+            'Ballet / Danza': '🩰 Ballet y Danza',
+            'Taekwondo': '🥋 Taekwondo',
+            'Sala de Tarea': '📚 Sala de Tarea',
+            'Cuido': '🧸 Cuido Infantil'
+        };
+        const ORDINAL_ES = { 1:'Primero', 2:'Segundo', 3:'Tercero', 4:'Cuarto', 5:'Quinto', 6:'Sexto' };
+        const ORDINAL_SYM = { 1:'1°', 2:'2°', 3:'3°', 4:'4°', 5:'5°', 6:'6°' };
+
+        function friendlyLevel(levelName){
+            const raw = String(levelName || '').trim();
+            if(!raw) return '';
+            if(SPECIAL_LABELS[raw]) return SPECIAL_LABELS[raw];
+            if(/^Párvulos/i.test(raw)) return raw.replace(/^Párvulos/i, 'Párvulos');
+            // Quita el sufijo "- Línea X" y convierte "Nro" en "N° Palabra"
+            const m = raw.match(/^(\d{1,2})(?:ro|do|to|ra|s[oa])?\s*[–—-]\s*[Ll][íi]nea\s*(.+)$/);
+            if(m){
+                const n = Number(m[1]);
+                const word = ORDINAL_ES[n] || m[2];
+                const sym  = ORDINAL_SYM[n] || (n + '°');
+                return `${sym} ${word}`;
+            }
+            return raw.replace(/\s*[–—-]\s*[Ll][íi]nea\s*.*$/, '').trim() || raw;
+        }
+
         function isLevelInAge(totalDays, levelName){
             if(SPECIAL_LEVELS.includes(levelName)) return { ok: true, special: true };
             const r = levelRangeInfo(levelName);
@@ -915,13 +944,13 @@
                 statusClass = 'warn';
                 title = 'Edad fuera del rango oficial';
                 iconClass = 'bi bi-exclamation-triangle-fill';
-                body = `Este nivel (<strong>${levelName}</strong>) corresponde a edades de <strong>${rng.labelRange}</strong>. La edad actual del menor es <strong>${formatAgeHuman(b)}</strong>.`;
+                body = `Este nivel (<strong>${friendlyLevel(levelName)}</strong>) corresponde a edades de <strong>${rng.labelRange}</strong>. La edad actual del menor es <strong>${formatAgeHuman(b)}</strong>.`;
             } else {
                 body = `Rango oficial del nivel: <strong>${rng.labelRange}</strong> • Edad del menor: <strong>${formatAgeHuman(b)}</strong>.`;
             }
 
             const showCheckbox = tooYoung || !check.ok;
-            const suggestedBadge = suggested ? `<div class="ab-field" style="margin-top:8px"><span class="ab-pill">Nivel sugerido por edad</span> <span class="age-level-suggest"><i class="bi bi-stars"></i> ${suggested}</span></div>` : '';
+            const suggestedBadge = suggested ? `<div class="ab-field" style="margin-top:8px"><span class="ab-pill">Nivel sugerido por edad</span> <span class="age-level-suggest"><i class="bi bi-stars"></i> ${friendlyLevel(suggested)}</span></div>` : '';
 
             const checkboxHtml = showCheckbox ? `
                 <div class="ab-field">
@@ -1295,7 +1324,7 @@
                 '<div class="review-item"><span class="rl">Fecha Nac.</span><span class="rv">'+v('birth_date')+'</span></div>'+
                 '<div class="review-item"><span class="rl">Edad</span><span class="rv">'+(document.getElementById('calculatedAge').value||'—')+'</span></div>'+
                 '<div class="review-item"><span class="rl">Sexo</span><span class="rv">'+v('gender')+'</span></div>'+
-                '<div class="review-item"><span class="rl">Nivel</span><span class="rv">'+v('level_requested')+'</span></div>'+
+                '<div class="review-item"><span class="rl">Nivel</span><span class="rv">'+(v('level_requested') ? friendlyLevel(v('level_requested')) : '—')+'</span></div>'+
                 (() => {
                     const pc = window._precalc || {};
                     const validBadge = (pc.isSpecial || !v('birth_date')) ? '—' :
@@ -1305,7 +1334,7 @@
                     let html = '';
                     if(v('birth_date')){
                         html +=
-                            '<div class="review-item"><span class="rl">Nivel Sugerido</span><span class="rv">'+(pc.suggestedLevel || '—')+'</span></div>'+
+                            '<div class="review-item"><span class="rl">Nivel Sugerido</span><span class="rv">'+(pc.suggestedLevel ? friendlyLevel(pc.suggestedLevel) : '—')+'</span></div>'+
                             '<div class="review-item"><span class="rl">Edad x Nivel</span><span class="rv">'+validBadge+'</span></div>';
                         if(pc.ageMatch === false && !pc.isSpecial){
                             const authRequested = v('director_authorization_requested') === 'on';

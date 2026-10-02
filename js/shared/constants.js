@@ -110,18 +110,18 @@ export const SCHOOL_SETTINGS_ID = 1;
 // Rangos en days (preciso para validación nacimiento) y years (útil para UI).
 // ============================
 export const CANONICAL_CLASSROOMS = Object.freeze([
-  Object.freeze({ id: 1,  name: 'Párvulos I',                 level: 'Párvulos I',                 color: '#F472B6', line: 'Rosa',    minDays: 45,   maxDays: 365,   minAge: 0.12, maxAge: 1.0,  labelRange: '45 días – 11 meses' }),
-  Object.freeze({ id: 2,  name: 'Párvulos II',                level: 'Párvulos II',                color: '#FB923C', line: 'Naranja', minDays: 365,  maxDays: 730,   minAge: 1.0,  maxAge: 2.0,  labelRange: '12 – 23 meses' }),
-  Object.freeze({ id: 3,  name: 'Párvulos III',               level: 'Párvulos III',               color: '#FACC15', line: 'Amarillo',minDays: 730,  maxDays: 1095,  minAge: 2.0,  maxAge: 3.0,  labelRange: '24 – 35 meses' }),
-  Object.freeze({ id: 4,  name: 'Pre-Kínder – Línea Blanca',  level: 'Pre-Kínder – Línea Blanca',  color: '#E5E7EB', line: 'Blanca',  minDays: 1095, maxDays: 1460,  minAge: 3.0,  maxAge: 4.0,  labelRange: '3 años' }),
-  Object.freeze({ id: 5,  name: 'Kínder – Línea Gris',        level: 'Kínder – Línea Gris',        color: '#9CA3AF', line: 'Gris',    minDays: 1460, maxDays: 1825,  minAge: 4.0,  maxAge: 5.0,  labelRange: '4 años' }),
-  Object.freeze({ id: 6,  name: 'Pre-Primario – Línea Negra', level: 'Pre-Primario – Línea Negra', color: '#374151', line: 'Negra',   minDays: 1825, maxDays: 2190,  minAge: 5.0,  maxAge: 6.0,  labelRange: '5 años' }),
-  Object.freeze({ id: 7,  name: '1ro – Línea Roja',           level: '1ro – Línea Roja',           color: '#EF4444', line: 'Roja',    minDays: 2190, maxDays: 2555,  minAge: 6.0,  maxAge: 7.0,  labelRange: '6 años' }),
-  Object.freeze({ id: 8,  name: '2do – Línea Amarilla',       level: '2do – Línea Amarilla',       color: '#EAB308', line: 'Amarilla',minDays: 2555, maxDays: 2920,  minAge: 7.0,  maxAge: 8.0,  labelRange: '7 años' }),
-  Object.freeze({ id: 9,  name: '3ro – Línea Azul',           level: '3ro – Línea Azul',           color: '#3B82F6', line: 'Azul',    minDays: 2920, maxDays: 3285,  minAge: 8.0,  maxAge: 9.0,  labelRange: '8 años' }),
-  Object.freeze({ id: 10, name: '4to – Línea Verde',          level: '4to – Línea Verde',          color: '#22C55E', line: 'Verde',   minDays: 3285, maxDays: 3650,  minAge: 9.0,  maxAge: 10.0, labelRange: '9 años' }),
-  Object.freeze({ id: 11, name: '5to – Línea Naranja',        level: '5to – Línea Naranja',        color: '#F97316', line: 'Naranja', minDays: 3650, maxDays: 4015,  minAge: 10.0, maxAge: 11.0, labelRange: '10 años' }),
-  Object.freeze({ id: 12, name: '6to – Línea Morado',         level: '6to – Línea Morado',         color: '#A855F7', line: 'Morada',  minDays: 4015, maxDays: 4380,  minAge: 11.0, maxAge: 12.0, labelRange: '11 años' }),
+  Object.freeze({ id: 1,  name: 'Párvulos I',       level: 'Párvulos I',       displayLevel: 'Párvulos I',       color: '#F472B6', line: 'Rosa',     minDays: 45,   maxDays: 365,   minAge: 0.12, maxAge: 1.0,  labelRange: '45 días – 11 meses' }),
+  Object.freeze({ id: 2,  name: 'Párvulos II',      level: 'Párvulos II',      displayLevel: 'Párvulos II',      color: '#FB923C', line: 'Naranja',  minDays: 365,  maxDays: 730,   minAge: 1.0,  maxAge: 2.0,  labelRange: '12 – 23 meses' }),
+  Object.freeze({ id: 3,  name: 'Párvulos III',     level: 'Párvulos III',     displayLevel: 'Párvulos III',     color: '#FACC15', line: 'Amarillo', minDays: 730,  maxDays: 1095,  minAge: 2.0,  maxAge: 3.0,  labelRange: '24 – 35 meses' }),
+  Object.freeze({ id: 4,  name: 'Pre-Kínder',       level: 'Pre-Kínder',       displayLevel: 'Pre-Kínder',       color: '#E5E7EB', line: 'Blanca',   minDays: 1095, maxDays: 1460,  minAge: 3.0,  maxAge: 4.0,  labelRange: '3 años' }),
+  Object.freeze({ id: 5,  name: 'Kínder',           level: 'Kínder',           displayLevel: 'Kínder',           color: '#9CA3AF', line: 'Gris',     minDays: 1460, maxDays: 1825,  minAge: 4.0,  maxAge: 5.0,  labelRange: '4 años' }),
+  Object.freeze({ id: 6,  name: 'Pre-Primario',     level: 'Pre-Primario',     displayLevel: 'Pre-Primario',     color: '#374151', line: 'Negra',    minDays: 1825, maxDays: 2190,  minAge: 5.0,  maxAge: 6.0,  labelRange: '5 años' }),
+  Object.freeze({ id: 7,  name: '1° Primero',       level: '1° Primero',       displayLevel: '1° Primero',       color: '#EF4444', line: 'Roja',     minDays: 2190, maxDays: 2555,  minAge: 6.0,  maxAge: 7.0,  labelRange: '6 años' }),
+  Object.freeze({ id: 8,  name: '2° Segundo',       level: '2° Segundo',       displayLevel: '2° Segundo',       color: '#EAB308', line: 'Amarilla', minDays: 2555, maxDays: 2920,  minAge: 7.0,  maxAge: 8.0,  labelRange: '7 años' }),
+  Object.freeze({ id: 9,  name: '3° Tercero',       level: '3° Tercero',       displayLevel: '3° Tercero',       color: '#3B82F6', line: 'Azul',     minDays: 2920, maxDays: 3285,  minAge: 8.0,  maxAge: 9.0,  labelRange: '8 años' }),
+  Object.freeze({ id: 10, name: '4° Cuarto',        level: '4° Cuarto',        displayLevel: '4° Cuarto',        color: '#22C55E', line: 'Verde',    minDays: 3285, maxDays: 3650,  minAge: 9.0,  maxAge: 10.0, labelRange: '9 años' }),
+  Object.freeze({ id: 11, name: '5° Quinto',        level: '5° Quinto',        displayLevel: '5° Quinto',        color: '#F97316', line: 'Naranja',  minDays: 3650, maxDays: 4015,  minAge: 10.0, maxAge: 11.0, labelRange: '10 años' }),
+  Object.freeze({ id: 12, name: '6° Sexto',         level: '6° Sexto',         displayLevel: '6° Sexto',         color: '#A855F7', line: 'Morada',   minDays: 4015, maxDays: 4380,  minAge: 11.0, maxAge: 12.0, labelRange: '11 años' }),
 ]);
 
 export const SPECIAL_CLASSROOMS = Object.freeze([
@@ -129,25 +129,114 @@ export const SPECIAL_CLASSROOMS = Object.freeze([
   'Taekwondo', 'Sala de Tarea', 'Cuido',
 ]);
 
+export const SPECIAL_CLASSROOMS_META = Object.freeze([
+  Object.freeze({ key: 'Verano',             displayName: 'Campamento de Verano', color: '#0EA5E9', emoji: '☀️', short: 'Verano' }),
+  Object.freeze({ key: 'Inglés Afterschool', displayName: 'Inglés Afterschool',   color: '#2563EB', emoji: '🇬🇧', short: 'Inglés' }),
+  Object.freeze({ key: 'Ballet / Danza',     displayName: 'Ballet y Danza',       color: '#EC4899', emoji: '🩰', short: 'Ballet' }),
+  Object.freeze({ key: 'Taekwondo',          displayName: 'Taekwondo',             color: '#DC2626', emoji: '🥋', short: 'Taekwondo' }),
+  Object.freeze({ key: 'Sala de Tarea',      displayName: 'Sala de Tarea',         color: '#059669', emoji: '📚', short: 'Tarea' }),
+  Object.freeze({ key: 'Cuido',              displayName: 'Cuido Infantil',        color: '#D97706', emoji: '🧸', short: 'Cuido' }),
+]);
+
+export function findSpecialClassroom(nameOrKey) {
+  if (!nameOrKey) return null;
+  const k = String(nameOrKey).trim();
+  return SPECIAL_CLASSROOMS_META.find(m => m.key === k || m.short === k || m.displayName === k) || null;
+}
+
+function _ordinalES(n) {
+  const num = Number(n);
+  if (!Number.isFinite(num) || num <= 0) return String(n);
+  const map = { 1:'1°', 2:'2°', 3:'3°', 4:'4°', 5:'5°', 6:'6°', 7:'7°', 8:'8°', 9:'9°', 10:'10°' };
+  return map[num] || `${num}°`;
+}
+
+function _wordES(n) {
+  const num = Number(n);
+  if (!Number.isFinite(num) || num <= 0) return String(n);
+  const map = { 1:'Primero', 2:'Segundo', 3:'Tercero', 4:'Cuarto', 5:'Quinto', 6:'Sexto', 7:'Séptimo', 8:'Octavo', 9:'Noveno', 10:'Décimo' };
+  return map[num] || String(n);
+}
+
+export function formatClassroomLevel(levelOrName) {
+  if (!levelOrName) return '';
+  const raw = String(levelOrName);
+  const canon = findCanonicalClassroom(raw);
+  if (canon?.displayLevel) return canon.displayLevel;
+  const special = findSpecialClassroom(raw);
+  if (special) return special.displayName;
+  const cleaned = raw
+    .replace(/[–—−]/g, '-')
+    .replace(/\s*-\s*linea\s*.*/gi, '')
+    .replace(/\s*línea\s*.*/gi, '')
+    .trim();
+  const m = cleaned.match(/^(\d{1,2})(?:[rao]s?|°)?\b\s*(.*)$/i);
+  if (m) {
+    const n = Number(m[1]);
+    const rest = (m[2] || '').replace(/^de\s+/i, '').trim();
+    const word = rest || _wordES(n);
+    return `${_ordinalES(n)} ${word.charAt(0).toUpperCase()}${word.slice(1)}`;
+  }
+  return cleaned;
+}
+
+export function formatClassroomFullName(name, level) {
+  const n = String(name || '').trim();
+  const canon = findCanonicalClassroom(level || n);
+  if (canon?.displayLevel) return canon.displayLevel;
+  const special = findSpecialClassroom(n) || findSpecialClassroom(level);
+  if (special) return special.displayName;
+  const disp = formatClassroomLevel(n || level || '');
+  return disp || n || 'Sin aula';
+}
+
+export function classroomColorFor(name, level) {
+  const canon = findCanonicalClassroom(level || name);
+  if (canon?.color) return canon.color;
+  const special = findSpecialClassroom(name) || findSpecialClassroom(level);
+  if (special?.color) return special.color;
+  return '#0B63C7';
+}
+
 export const CANONICAL_CLASSROOM_LEVELS = Object.freeze(
   CANONICAL_CLASSROOMS.map((c) => c.level)
 );
 
-/** Busca un aula canónica por nombre/level (normaliza acentos). */
+/** Busca un aula canónica por nombre/level (normaliza acentos, detecta "Línea Color", "1ro", ordinales). */
 export function findCanonicalClassroom(levelOrName) {
   if (!levelOrName) return null;
-  const key = String(levelOrName)
+  const normalize = (s) => String(s ?? '')
     .toLowerCase()
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    .replace(/[–—−]/g, '-').replace(/\s+/g, ' ').trim();
+    .replace(/[–—−]/g, '-').replace(/\s+/g, ' ')
+    .replace(/\s*-\s*linea\s*.*/g, '')
+    .replace(/\s*linea\s*.*/g, '')
+    .replace(/\b(\d{1,2})(?:[ro]s?|°)\b/gi, (_, n) => n)
+    .replace(/\b(primero|segundo|tercero|cuarto|quinto|sexto|septimo|octavo|noveno|decimo)\b/gi, (m) => {
+      const map = {primero:1,segundo:2,tercero:3,cuarto:4,quinto:5,sexto:6,septimo:7,octavo:8,noveno:9,decimo:10};
+      return String(map[m.toLowerCase()] || m);
+    })
+    .replace(/pre[ -]*kinder/gi, 'pre-kinder')
+    .replace(/pre[ -]*primario/gi, 'pre-primario')
+    .replace(/maternal/gi, 'parvulos')
+    .replace(/manternal/gi, 'parvulos')
+    .replace(/parvalo/gi, 'parvulos')
+    .replace(/parvulos\s*[ivx123]+/gi, (m) => {
+      const roman = m.match(/[ivx123]+/i);
+      if (!roman) return m;
+      const map = {i:1,ii:2,iii:3,iv:4,v:5,x:10,'1':1,'2':2,'3':3};
+      const n = map[roman[0].toLowerCase()];
+      return n ? `parvulos ${n}` : m;
+    })
+    .replace(/\s+/g, ' ').trim();
+  const key = normalize(levelOrName);
   return CANONICAL_CLASSROOMS.find((c) => {
-    const cK = c.level.toLowerCase()
-      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-      .replace(/[–—−]/g, '-').replace(/\s+/g, ' ').trim();
-    const cK2 = c.name.toLowerCase()
-      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-      .replace(/[–—−]/g, '-').replace(/\s+/g, ' ').trim();
-    return cK === key || cK2 === key;
+    const ck1 = normalize(c.level);
+    const ck2 = normalize(c.name);
+    const ck3 = normalize(`${c.id} ${c.line}`);
+    return ck1 === key || ck2 === key || ck3 === key
+      || ck1.includes(key) || key.includes(ck1)
+      || ck2.includes(key) || key.includes(ck2);
   }) || null;
 }
 

@@ -840,35 +840,35 @@ function _createModal() {
 window.resetPassword = function(userId, email) {
   const modal = document.getElementById('userModal') || _createModal();
   modal.innerHTML = `
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:28px;width:min(90vw,400px);">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-        <h3 style="font-size:16px;font-weight:900;color:var(--text);">Cambiar contraseña</h3>
-        <button onclick="document.getElementById('userModal').style.display='none'" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;">?</button>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;width:min(90vw,320px);box-shadow:0 18px 50px rgba(0,0,0,.45);max-height:calc(100vh - 24px);overflow-y:auto;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <h3 style="font-size:14px;font-weight:900;color:var(--text);margin:0;">Cambiar contraseña</h3>
+        <button onclick="document.getElementById('userModal').style.display='none'" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:2px 6px;border-radius:6px;" title="Cerrar">✕</button>
       </div>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">Usuario: <strong style="color:var(--text);">${escH(email)}</strong></p>
-      <div style="margin-bottom:12px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-          <label style="font-size:11px;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;">Nueva contraseña</label>
-          <button class="btn btn-ghost" style="padding:2px 8px;font-size:9px;" onclick="generateRandomPassword()">
-            <i class="bi bi-magic"></i> Generar segura
+      <p style="font-size:11.5px;color:var(--muted);margin:0 0 12px;line-height:1.45;">Usuario: <strong style="color:var(--text);">${escH(email)}</strong></p>
+      <div style="margin-bottom:10px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+          <label style="font-size:9.5px;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;">Nueva contraseña</label>
+          <button class="btn btn-ghost" style="padding:1.5px 6px;font-size:9px;line-height:1.3;" onclick="generateRandomPassword()">
+            <i class="bi bi-magic"></i> Generar
           </button>
         </div>
         <div style="position:relative;">
-          <input class="inp" id="newPwdInput" type="text" placeholder="Mínimo 6 caracteres" autocomplete="off">
-          <i class="bi bi-eye-fill" style="position:absolute;right:12px;top:12px;color:var(--muted);cursor:pointer;" onclick="togglePwdVisibility()"></i>
+          <input class="inp" id="newPwdInput" type="text" placeholder="Mínimo 6 caracteres" autocomplete="off" style="padding:8px 10px;font-size:12.5px;border-radius:9px;">
+          <i class="bi bi-eye-fill" style="position:absolute;right:10px;top:9px;color:var(--muted);cursor:pointer;font-size:13px;" onclick="togglePwdVisibility()"></i>
         </div>
       </div>
-      <div style="margin-bottom:16px;">
-        <label style="font-size:11px;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;display:block;margin-bottom:6px;">Confirmar contraseña</label>
-        <input class="inp" id="newPwdConfirm" type="text" placeholder="Repite la contraseña" autocomplete="off">
+      <div style="margin-bottom:10px;">
+        <label style="font-size:9.5px;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;display:block;margin-bottom:4px;">Confirmar</label>
+        <input class="inp" id="newPwdConfirm" type="text" placeholder="Repite la clave" autocomplete="off" style="padding:8px 10px;font-size:12.5px;border-radius:9px;">
       </div>
-      <div id="pwdMsg" style="font-size:12px;font-weight:700;margin-bottom:12px;"></div>
-      <div style="display:flex;gap:8px;">
-        <button class="btn btn-primary" onclick="doResetPassword('${userId}')"><i class="bi bi-check-lg"></i> Guardar contraseña</button>
-        <button class="btn btn-ghost" onclick="document.getElementById('userModal').style.display='none'">Cancelar</button>
+      <div id="pwdMsg" style="font-size:11px;font-weight:700;margin-bottom:10px;min-height:14px;"></div>
+      <div style="display:flex;gap:6px;">
+        <button class="btn btn-primary" onclick="doResetPassword('${userId}')" style="padding:8px 12px;font-size:11.5px;border-radius:9px;flex:1;"><i class="bi bi-check-lg"></i> Guardar</button>
+        <button class="btn btn-ghost" onclick="document.getElementById('userModal').style.display='none'" style="padding:8px 10px;font-size:11.5px;border-radius:9px;">Cancelar</button>
       </div>
     </div>`;
-  modal.style.cssText = 'display:flex;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;align-items:center;justify-content:center;';
+  modal.style.cssText = 'display:flex;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;align-items:center;justify-content:center;padding:12px;';
 };
 
 window.generateRandomPassword = function() {

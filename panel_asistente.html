@@ -452,6 +452,12 @@
               <input type="text" id="searchStudentInput" placeholder="Buscar por nombre o matrícula..."
                 class="w-full pl-12 pr-4 py-3 bg-white border-2 border-slate-100 rounded-2xl text-sm font-bold text-slate-700 outline-none focus:border-teal-400 focus:ring-4 focus:ring-teal-50 transition-all shadow-sm">
             </div>
+            <button id="btnToggleStuView" type="button" aria-pressed="false"
+              class="px-5 py-3 bg-white border-2 border-teal-100 text-teal-700 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center gap-2 hover:bg-teal-50 transition-all shadow-sm active:scale-95 shrink-0"
+              title="Cambiar entre tarjetas y tabla">
+              <i data-lucide="layout-grid" class="w-4 h-4"></i>
+              <span data-stu-view-label>Ver tarjetas</span>
+            </button>
             <button id="btnPrintCarnets" onclick="App.printAllCarnets()" class="px-6 py-3 rounded-2xl text-sm font-black flex items-center gap-2 transition-all hover:opacity-90" style="background:#8B5CF6;color:white" title="Imprimir todos los carnets en PDF">
               <i data-lucide="badge" class="w-4 h-4"></i> Carnets PDF
             </button>
@@ -461,13 +467,15 @@
           </div>
         </div>
 
-        <div class="table-panel">
+        <div id="studentsTableWrapper" class="table-panel">
           <div class="table-scroll-wrap rounded-2xl border border-slate-200 overflow-hidden">
-            <table class="data-table w-full text-left border-collapse" style="min-width:720px;">
+            <table class="data-table w-full text-left border-collapse" style="min-width:860px;">
               <thead class="bg-[#ECFDF5] text-teal-700 font-black uppercase text-[10px] tracking-[0.2em] sticky top-0 z-10">
                 <tr class="border-b border-teal-100">
                   <th class="px-8 py-5 border-b border-teal-100">Estudiante / Matrícula</th>
                   <th class="px-8 py-5 border-b border-teal-100">Aula / Nivel</th>
+                  <th class="px-8 py-5 border-b border-teal-100">Hora de entrada</th>
+                  <th class="px-8 py-5 border-b border-teal-100">Hora de salida</th>
                   <th class="px-8 py-5 border-b border-teal-100">Padre / Tutor</th>
                   <th class="px-8 py-5 border-b border-teal-100 text-right">Acciones Rápidas</th>
                 </tr>
@@ -478,6 +486,8 @@
             </table>
           </div>
         </div>
+
+        <div id="studentsGrid" class="hidden grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5"></div>
       </section>
 
       <!-- AULAS -->
@@ -487,11 +497,19 @@
             <span class="w-8 h-8 bg-indigo-100 text-[#0B63C7] rounded-xl flex items-center justify-center shrink-0"><i data-lucide="home" class="w-4 h-4"></i></span>
             Gestión de Aulas
           </h2>
-          <button id="btnAddRoom" onclick="window.App.rooms.openModal()" class="flex items-center gap-2 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-sm font-black transition-all active:scale-95 shadow-sm shrink-0">
-            <i data-lucide="plus" class="w-4 h-4"></i> Nueva Aula
-          </button>
+<div class="flex gap-2 flex-wrap">
+            <button id="btnToggleRoomsView" type="button" aria-pressed="false"
+              class="flex items-center gap-2 px-4 py-2 bg-white border-2 border-teal-100 text-teal-700 rounded-xl text-xs font-black transition-all hover:bg-teal-50 active:scale-95 shadow-sm shrink-0"
+              title="Cambiar entre tarjetas y tabla">
+              <i data-lucide="layout-grid" class="w-4 h-4"></i>
+              <span data-rooms-view-label>Ver tarjetas</span>
+            </button>
+            <button id="btnAddRoom" onclick="window.App.rooms.openModal()" class="flex items-center gap-2 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-sm font-black transition-all active:scale-95 shadow-sm shrink-0">
+              <i data-lucide="plus" class="w-4 h-4"></i> Nueva Aula
+            </button>
+          </div>
         </div>
-        <div class="table-panel">
+        <div id="roomsTableWrapper" class="table-panel">
           <div class="table-scroll-wrap rounded-2xl border border-slate-200 overflow-hidden">
             <table class="data-table w-full text-sm text-left border-collapse" style="min-width:560px;">
               <thead class="bg-[#ECFDF5] text-teal-700 font-black uppercase text-[10px] tracking-wider sticky top-0 z-10">
@@ -507,6 +525,7 @@
             </table>
           </div>
         </div>
+        <div id="roomsGrid" class="hidden grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5"></div>
       </section>
 
       <section id="maestros" class="section">
@@ -520,12 +539,18 @@
               <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"></i>
               <input id="searchTeacherInput" placeholder="Buscar..." class="w-full pl-9 pr-4 py-2 border-2 border-slate-100 rounded-xl text-sm bg-slate-50 focus:border-teal-400 outline-none transition-all">
             </div>
+            <button id="btnToggleStaffView" type="button" aria-pressed="false"
+              class="flex items-center gap-2 px-4 py-2 bg-white border-2 border-teal-100 text-teal-700 rounded-xl text-xs font-black transition-all hover:bg-teal-50 active:scale-95 shadow-sm shrink-0"
+              title="Cambiar entre tarjetas y tabla">
+              <i data-lucide="layout-grid" class="w-4 h-4"></i>
+              <span data-staff-view-label>Ver tarjetas</span>
+            </button>
             <button id="btnAddTeacher" class="flex items-center gap-2 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-sm font-black transition-all active:scale-95 shadow-sm shrink-0">
               <i data-lucide="plus" class="w-4 h-4"></i><span class="hidden sm:inline">Nuevo</span> Maestro
             </button>
           </div>
         </div>
-        <div class="table-panel">
+        <div id="teachersTableWrapper" class="table-panel">
           <div class="table-scroll-wrap rounded-2xl border border-slate-200 overflow-hidden">
             <table class="data-table w-full text-sm text-left border-collapse" style="min-width:560px;">
               <thead class="bg-[#ECFDF5] text-teal-700 font-black uppercase text-[10px] tracking-wider sticky top-0 z-10">
@@ -540,6 +565,7 @@
             </table>
           </div>
         </div>
+        <div id="teachersGrid" class="hidden grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5"></div>
       </section>
 
       <!-- ACCESOS (Control de Ponche Profesional) -->
@@ -1096,18 +1122,21 @@
 
       <!-- INSCRIPCIONES -->
       <section id="inscripciones" class="section hidden">
-        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-          <div>
-            <h2 class="text-2xl font-black text-slate-800 flex items-center gap-3">
-              <span class="w-10 h-10 bg-[#E8F2FF] rounded-2xl flex items-center justify-center text-xl">📋</span>
-              Inscripciones
-            </h2>
-            <p class="text-sm text-slate-500 mt-1 font-medium">Preinscripciones pendientes y admisión de estudiantes</p>
+        <div class="mb-5">
+          <div class="inline-flex items-center gap-3 px-5 py-3 bg-white border border-slate-200 rounded-tr-2xl rounded-bl-xl border-l-[3px] border-l-[#0B63C7] shadow-sm">
+            <span class="w-9 h-9 bg-gradient-to-br from-[#0B63C7] to-[#28B54D] rounded-xl flex items-center justify-center shadow-sm">
+              <i data-lucide="clipboard-list" class="w-4 h-4 text-white"></i>
+            </span>
+            <div class="leading-tight text-left">
+              <h2 class="text-lg font-black text-slate-800 tracking-tight">Inscripciones</h2>
+              <div class="flex flex-wrap items-center gap-1.5 mt-1">
+                <span class="px-2.5 py-0.5 rounded-lg bg-[#E8F2FF] text-[#0B63C7] text-[10px] font-bold tracking-wide">Solicitudes de preinscripción y admisiones</span>
+                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-[#EDE9FE] text-[#7C3AED] text-[10px] font-bold tracking-wide">
+                  <span class="w-1.5 h-1.5 rounded-full bg-[#8B5CF6] animate-pulse"></span>Pend. Autoriz.
+                </span>
+              </div>
+            </div>
           </div>
-          <button onclick="InscripcionesModule && InscripcionesModule.load()"
-            class="flex items-center gap-2 px-4 py-2.5 bg-[#0B63C7] hover:bg-[#0850A0] text-white rounded-xl font-black text-xs uppercase tracking-wider shadow-sm transition-all active:scale-95">
-            <i data-lucide="refresh-cw" class="w-4 h-4"></i> Actualizar
-          </button>
         </div>
         <div id="inscripcionesContainer">
           <div class="text-center py-8 text-slate-400">Cargando preinscripciones...</div>

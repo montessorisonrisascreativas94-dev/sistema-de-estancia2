@@ -50,18 +50,22 @@ export async function requireReauth({ message = 'esta acción', timeoutMs = 3000
     const settle = (v) => { if (resolved) return; resolved = true; resolve(finish(v)); };
 
     modal = document.createElement('div');
-    modal.className = 'fixed inset-0 z-[1000] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4';
+    modal.className = 'fixed inset-0 z-[1000] bg-black/50 backdrop-blur-sm flex items-center justify-center p-2';
     modal.innerHTML = `
-      <div class="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-sm animate-scaleIn">
-        <div class="flex items-center justify-center w-14 h-14 rounded-2xl bg-amber-100 text-2xl mb-4">🔒</div>
-        <h3 class="text-lg font-extrabold text-slate-800 mb-1">Verifica tu identidad</h3>
-        <p class="text-sm text-slate-500 mb-5">Ingresa tu contraseña para continuar con <b class="text-slate-700">${message}</b></p>
+      <div class="bg-white rounded-2xl shadow-2xl p-4 w-full max-w-xs animate-scaleIn" style="max-height: calc(100vh - 16px); overflow-y: auto;">
+        <div class="flex items-center gap-2 mb-3">
+          <div class="flex items-center justify-center w-9 h-9 rounded-xl bg-amber-100 text-lg shrink-0">🔒</div>
+          <div class="min-w-0">
+            <h3 class="text-[15px] font-extrabold text-slate-800 leading-tight">Verifica tu identidad</h3>
+            <p class="text-[11px] text-slate-500 leading-snug">Para <b class="text-slate-700">${message}</b></p>
+          </div>
+        </div>
         <input id="reauthPwd" type="password" autocomplete="current-password" placeholder="Contraseña"
-          class="w-full px-4 py-3 bg-slate-100 border-2 border-transparent focus:border-violet-500 outline-none rounded-xl mb-3" />
-        <p id="reauthErr" class="text-rose-500 text-xs font-semibold h-4 mb-1"></p>
+          class="w-full px-3 py-2 bg-slate-100 border-2 border-transparent focus:border-violet-500 outline-none rounded-lg mb-2 text-[13px]" />
+        <p id="reauthErr" class="text-rose-500 text-[11px] font-semibold h-4 mb-2 leading-snug"></p>
         <div class="flex gap-2">
-          <button id="reauthCancel" class="flex-1 py-3 rounded-xl font-bold text-slate-600 bg-slate-100 hover:bg-slate-200">Cancelar</button>
-          <button id="reauthOk" class="flex-1 py-3 rounded-xl font-bold text-white bg-violet-600 hover:bg-violet-700 shadow-lg">Verificar</button>
+          <button id="reauthCancel" class="flex-1 py-2 rounded-lg font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 text-[12px]">Cancelar</button>
+          <button id="reauthOk" class="flex-1 py-2 rounded-lg font-bold text-white bg-violet-600 hover:bg-violet-700 shadow-lg text-[12px]">Verificar</button>
         </div>
       </div>`;
     document.body.appendChild(modal);

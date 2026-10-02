@@ -306,6 +306,12 @@ export const AttendanceModule = {
       tarde:    { label: 'Tarde',    cls: 'bg-amber-100 text-amber-700' }
     };
 
+    const fmt = (ts) => {
+      if (!ts) return '—';
+      const d = new Date(ts);
+      return isNaN(d.getTime()) ? '—' : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    };
+
     container.innerHTML = data.map(a => {
       const statusKey = a.status?.toLowerCase();
       const st  = statusMap[statusKey] || { label: a.status, cls: 'bg-slate-100 text-slate-600' };
@@ -316,7 +322,8 @@ export const AttendanceModule = {
             '<div class="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-sm font-black text-slate-400 group-hover:bg-emerald-50 group-hover:text-emerald-500 transition-colors">' + day + '</div>' +
             '<div>' +
               '<p class="text-sm font-black text-slate-800">' + Helpers.formatDate(a.date) + '</p>' +
-              '<p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">' + (a.check_in ? 'Ingreso: ' + a.check_in : 'Sin registro de hora') + '</p>' +
+              '<p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Entrada: ' + fmt(a.check_in) +
+                ' \u00b7 Salida: ' + fmt(a.check_out) + '</p>' +
             '</div>' +
           '</div>' +
           '<span class="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-tighter ' + st.cls + '">' + st.label + '</span>' +
