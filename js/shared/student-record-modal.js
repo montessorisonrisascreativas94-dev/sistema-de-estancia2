@@ -91,6 +91,100 @@ let _state = { mode: 'new', studentId: null, preData: null, activeTab: 'info', d
   },
 
   // ════════════════════════════════════════════════════════════════
+  // MICROINTERACCIONES (rápidas, sin dependencias externas)
+  // ════════════════════════════════════════════════════════════════
+
+  /** Sacude un campo para señalar un error de validación (0.4s). */
+  _nudge(elOrId) {
+    const el = typeof elOrId === 'string' ? document.getElementById(elOrId) : elOrId;
+    if (!el) return;
+    el.classList.remove('srm-shake');
+    void el.offsetWidth; // reinicia la animación
+    el.classList.add('srm-shake');
+    setTimeout(() => el.classList.remove('srm-shake'), 450);
+  },
+
+  /** Barra de progreso indeterminada en la cabecera del modal. */
+  _setModalBusy(on) {
+    const modal = document.querySelector('#srm-overlay .srm-modal');
+    if (!modal) return;
+    let bar = modal.querySelector('.srm-progress');
+    if (!bar) {
+      bar = document.createElement('div');
+      bar.className = 'srm-progress';
+      modal.appendChild(bar);
+    }
+    bar.classList.toggle('on', !!on);
+  },
+
+  /** Convierte un botón en "cargando" con spinner y evita doble clic. */
+  _setButtonLoading(btn, on) {
+    if (!btn) return;
+    if (on) {
+      if (!btn.querySelector('.srm-spinner')) {
+        const s = document.createElement('span');
+        s.className = 'srm-spinner';
+        btn.appendChild(s);
+      }
+      if (!btn.classList.contains('is-loading')) btn.dataset.wasDisabled = btn.disabled ? '1' : '0';
+      btn.classList.add('is-loading');
+      btn.disabled = true;
+    } else {
+      btn.classList.remove('is-loading');
+      btn.disabled = btn.dataset.wasDisabled === '1';
+      btn.querySelector('.srm-spinner')?.remove();
+    }
+  },
+
+  /** Overlay verde con check animado. Se cierra solo (~1.4s). */
+  async _playSuccessOverlay({ title, subtitle, emailSent, email } = {}) {
+    const modal = document.querySelector('#srm-overlay .srm-modal');
+    if (!modal) return;
+    const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+    const ov = document.createElement('div');
+    ov.className = 'srm-success-overlay';
+    ov.innerHTML = `
+      <div class="srm-success-badge">
+        <svg class="srm-success-check" viewBox="0 0 52 52" aria-hidden="true"><path d="M14 27l8 8 16-18"></path></svg>
+        <span class="srm-sparkle" style="top:6px;left:-6px;background:#FFC107"></span>
+        <span class="srm-sparkle" style="top:-4px;right:2px;background:#16A34A;animation-delay:.12s"></span>
+        <span class="srm-sparkle" style="bottom:0;right:-8px;background:#0B63C7;animation-delay:.24s"></span>
+      </div>
+      <h3>${Helpers.escapeHTML(title || '¡Listo!')}</h3>
+      ${subtitle ? `<p>${Helpers.escapeHTML(subtitle)}</p>` : ''}
+      ${emailSent && email ? `<span class="srm-success-mail"><i data-lucide="mail-check" style="width:13px;height:13px"></i> Correo enviado a ${Helpers.escapeHTML(email)}</span>` : ''}`;
+    modal.appendChild(ov);
+    if (window.lucide) { try { lucide.createIcons({ root: ov }); } catch (_) {} }
+    await new Promise((r) => setTimeout(r, reduced ? 450 : 1400));
+    ov.style.transition = 'opacity .2s ease';
+    ov.style.opacity = '0';
+    await new Promise((r) => setTimeout(r, 200));
+    ov.remove();
+  },
+
+  /** Confirma en línea (dentro de la pestaña Accesos) el envío del correo. */
+  _setCredStatus(kind, title, detail) {
+    const box = document.getElementById('srm-credstatus');
+    if (!box) return null;
+    const icon = kind === 'success'
+      ? '<i data-lucide="check" style="width:16px;height:16px"></i>'
+      : kind === 'error'
+        ? '<i data-lucide="alert-triangle" style="width:16px;height:16px"></i>'
+        : kind === 'pending'
+          ? '<span class="srm-mini-spin"></span>'
+          : '';
+    box.innerHTML = `
+      <div class="srm-cred-status is-${Helpers.escapeHTML(kind || 'idle')}">
+        <div class="srm-cs-icon">${icon}</div>
+        <div class="srm-cs-text"><b>${Helpers.escapeHTML(title || '')}</b>${detail ? `<span>${Helpers.escapeHTML(detail)}</span>` : ''}</div>
+      </div>`;
+    if (window.lucide) { try { lucide.createIcons({ root: box }); } catch (_) {} }
+    const card = box.firstElementChild;
+    if (card) { try { card.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch (_) {} }
+    return card;
+  },
+
+  // ════════════════════════════════════════════════════════════════
   // DATA LOADING
   // ════════════════════════════════════════════════════════════════
 
@@ -810,6 +904,8 @@ let _state = { mode: 'new', studentId: null, preData: null, activeTab: 'info', d
         <div><label class="${L}">Último Acceso</label><input value="${this._v('last_login') ? new Date(d.last_login).toLocaleString() : 'Nunca'}" class="${I}" readonly style="background:#f8fafc"></div>
       </div>
 
+      <div id="srm-credstatus"></div>
+
       <div class="srm-section-divider mt-6"><i data-lucide="sparkles" class="w-4 h-4"></i> Vista Previa Credenciales</div>
       <div id="srm-credpreview" class="rounded-2xl border border-slate-200 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-4 space-y-3 shadow-inner">
         <div class="grid grid-cols-2 gap-3">
@@ -964,6 +1060,9 @@ let _state = { mode: 'new', studentId: null, preData: null, activeTab: 'info', d
     const schedule = data.schedule || '8:00-12:00';
     const fee = data.monthly_fee || 0;
 
+    const testBtn = document.querySelector('#srm-overlay [onclick*="_sendTestWelcomeEmail"]');
+    this._setButtonLoading(testBtn, true);
+    this._setCredStatus('pending', 'Enviando correo de prueba…', 'Destino: ' + email);
     Helpers.toast('Enviando correo a ' + email + '...', 'info');
     try {
       const html = this._buildWelcomeEmailTemplate({
@@ -977,10 +1076,18 @@ let _state = { mode: 'new', studentId: null, preData: null, activeTab: 'info', d
       });
       const subject = `Bienvenido(a) ${studentName} — Matrícula ${matricula}`;
       const ok = await this._sendEmailViaEdge({ to: email, subject, html, text });
-      if (ok) Helpers.toast('Correo enviado a ' + email, 'success');
-      else Helpers.toast(this._emailErrorHint(' Revisa RESEND_API_KEY / FROM_EMAIL en la Edge Function.'), 'warning');
+      if (ok) {
+        Helpers.toast('Correo enviado a ' + email, 'success');
+        this._setCredStatus('success', '¡Correo de prueba enviado!', 'Entregado a ' + email);
+      } else {
+        Helpers.toast(this._emailErrorHint(' Revisa RESEND_API_KEY / FROM_EMAIL en la Edge Function.'), 'warning');
+        this._setCredStatus('error', 'No se pudo enviar el correo', this._emailErrorHint(' Revisa RESEND_API_KEY / FROM_EMAIL.'));
+      }
     } catch (e) {
       Helpers.toast('Error enviando correo: ' + (e.message || e), 'error');
+      this._setCredStatus('error', 'Error al enviar el correo', (e.message || String(e)));
+    } finally {
+      this._setButtonLoading(testBtn, false);
     }
   },
 
@@ -1513,9 +1620,9 @@ let _state = { mode: 'new', studentId: null, preData: null, activeTab: 'info', d
 
   async admitStudent() {
     const payload = this._collectFormData();
-    if (!payload.name || payload.name.length < 3) return Helpers.toast('Nombre inválido', 'warning');
-    if (!payload.classroom_id) return Helpers.toast('Selecciona un aula', 'warning');
-    if (!payload.matricula) return Helpers.toast('Genera una matrícula', 'warning');
+    if (!payload.name || payload.name.length < 3) { this._nudge('srm-name'); return Helpers.toast('Nombre inválido', 'warning'); }
+    if (!payload.classroom_id) { this._nudge('srm-classroom'); return Helpers.toast('Selecciona un aula', 'warning'); }
+    if (!payload.matricula) { this._nudge('srm-matricula'); return Helpers.toast('Genera una matrícula', 'warning'); }
 
     // Doble clic en "Aprobar" crearía dos expedientes y dos cuentas
     // padre. Si ya existe un estudiante para esta preinscripción, se
@@ -1582,6 +1689,10 @@ let _state = { mode: 'new', studentId: null, preData: null, activeTab: 'info', d
     const levelName = normalizeLevel(classroom?.level || payload.level_requested || '');
     const scheduleTxt = payload.schedule || '8:00-12:00';
     const fee = payload.monthly_fee || 0;
+
+    const admitBtn = document.querySelector('#srm-overlay [onclick*="admitStudent"]');
+    this._setButtonLoading(admitBtn, true);
+    this._setModalBusy(true);
 
     Helpers.toast('Paso 1/5 — Validando datos...', 'info');
     payload.is_active = true;
@@ -1841,18 +1952,31 @@ let _state = { mode: 'new', studentId: null, preData: null, activeTab: 'info', d
         { duration: 6000 }
       );
 
-      setTimeout(() => {
-        this.close();
-        if (typeof window !== 'undefined' && typeof window.App !== 'undefined') {
-          try { if (window.App?.students?.init) window.App.students.init(); } catch (_) {}
-          try { if (window.App?.inscripciones?.init) window.App.inscripciones.init(); } catch (_) {}
-          try { if (window.App?.payments?.init) window.App.payments.init(); } catch (_) {}
-        } else if (typeof window.InscripcionesModule !== 'undefined' && typeof window.InscripcionesModule.init === 'function') {
-          window.InscripcionesModule.init();
-        }
-      }, 1200);
+      // Feedback visual dentro del modal antes de cerrar.
+      this._setButtonLoading(admitBtn, false);
+      this._setModalBusy(false);
+      await this._playSuccessOverlay({
+        title: '¡Admisión exitosa!',
+        subtitle: emailSent
+          ? `${studentName} · Matrícula ${matricula}`
+          : `${studentName} quedó admitido. El correo está pendiente de reenvío.`,
+        emailSent,
+        email: notificationEmail,
+      });
+
+      this.close();
+      if (typeof window !== 'undefined' && typeof window.App !== 'undefined') {
+        try { if (window.App?.students?.init) window.App.students.init(); } catch (_) {}
+        try { if (window.App?.inscripciones?.init) window.App.inscripciones.init(); } catch (_) {}
+        try { if (window.App?.payments?.init) window.App.payments.init(); } catch (_) {}
+      } else if (typeof window.InscripcionesModule !== 'undefined' && typeof window.InscripcionesModule.init === 'function') {
+        window.InscripcionesModule.init();
+      }
 
     } catch (e) {
+      this._setButtonLoading(admitBtn, false);
+      this._setModalBusy(false);
+      this._nudge(document.querySelector('#srm-overlay .srm-modal'));
       Helpers.toast('Error en admisión (paso 2-5): ' + (e.message || e), 'error', { duration: 8000 });
     }
   },
@@ -1873,10 +1997,12 @@ let _state = { mode: 'new', studentId: null, preData: null, activeTab: 'info', d
       const ok = await this._sendEmailViaEdge({ to, subject, html, text });
       if (ok) {
         Helpers.toast('¡Correo reenviado a ' + to + '!', 'success');
+        this._setCredStatus('success', '¡Credenciales enviadas!', 'Correo reenviado a ' + to);
         const el = document.querySelector('[onclick*="_sendWelcomeEmailRetry"]')?.closest('[id^="retry-email-"]');
         if (el) el.remove();
       } else {
         Helpers.toast(this._emailErrorHint(' Revisa RESEND_API_KEY / FROM_EMAIL en la Edge Function.'), 'error');
+        this._setCredStatus('error', 'No se pudo reenviar el correo', this._emailErrorHint(' Revisa RESEND_API_KEY / FROM_EMAIL.'));
       }
     } catch (e) {
       Helpers.toast('Error: ' + (e.message || e), 'error');
@@ -2019,9 +2145,15 @@ let _state = { mode: 'new', studentId: null, preData: null, activeTab: 'info', d
       || document.getElementById('srm-password')?.value?.trim()
       || _state.data?.password
       || STUDENT_DEFAULT_PASSWORD;
-    if (!notificationEmail) return Helpers.toast('Ingresa el correo de notificaciones', 'warning');
-    if (!password || password.length < 6) return Helpers.toast('La contraseña debe tener al menos 6 caracteres', 'warning');
+    if (!notificationEmail) { this._nudge('srm-emailnotif'); return Helpers.toast('Ingresa el correo de notificaciones', 'warning'); }
+    if (!password || password.length < 6) { this._nudge('srm-password'); return Helpers.toast('La contraseña debe tener al menos 6 caracteres', 'warning'); }
     if (!loginEmail) return Helpers.toast('No se pudo generar el usuario de login', 'error');
+
+    const sendBtns = Array.from(document.querySelectorAll('#srm-overlay [onclick*="sendCredentials"]'));
+    sendBtns.forEach((b) => this._setButtonLoading(b, true));
+    this._setModalBusy(true);
+    this._setCredStatus('pending', 'Enviando credenciales…', 'Preparando el correo para ' + notificationEmail);
+    try {
 
     const p1Name = data.p1_name || 'Familia';
     const studentName = data.name || 'Estudiante';
@@ -2150,7 +2282,11 @@ let _state = { mode: 'new', studentId: null, preData: null, activeTab: 'info', d
     });
     const ok = await this._sendEmailViaEdge({ to: notificationEmail, subject, html, text });
     if (ok) {
+      const sentAt = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       Helpers.toast('Credenciales enviadas a ' + notificationEmail, 'success');
+      this._setCredStatus('success', '¡Credenciales enviadas!', `Correo entregado a ${notificationEmail} · ${sentAt}`);
+      const preview = document.getElementById('srm-credpreview');
+      if (preview) { preview.classList.remove('srm-flash'); void preview.offsetWidth; preview.classList.add('srm-flash'); }
       const preId = _state.preData?._preId || _state.preData?.id;
       if (preId) {
         try {
@@ -2161,6 +2297,11 @@ let _state = { mode: 'new', studentId: null, preData: null, activeTab: 'info', d
       }
     } else {
       Helpers.toast(this._emailErrorHint(' Las credenciales ya quedaron creadas en el sistema; reenvía el correo luego.'), 'warning');
+      this._setCredStatus('error', 'No se pudo enviar el correo', this._emailErrorHint(' Revisa RESEND_API_KEY / FROM_EMAIL en la Edge Function.'));
+    }
+    } finally {
+      sendBtns.forEach((b) => this._setButtonLoading(b, false));
+      this._setModalBusy(false);
     }
   },
 

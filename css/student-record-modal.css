@@ -541,3 +541,252 @@
     height: 44px;
   }
 }
+
+/* ══════════════════════════════════════════════════════════════════
+   MICROINTERACCIONES — rápidas (<0.5s), sin dependencias
+   ══════════════════════════════════════════════════════════════════ */
+
+@keyframes srmPopIn {
+  0%   { opacity: 0; transform: scale(0.75); }
+  60%  { opacity: 1; transform: scale(1.05); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes srmFadeSlide {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes srmCheckDraw {
+  from { stroke-dashoffset: 48; }
+  to   { stroke-dashoffset: 0; }
+}
+@keyframes srmRingPulse {
+  0%   { transform: scale(0.6); opacity: 0.75; }
+  100% { transform: scale(1.9); opacity: 0; }
+}
+@keyframes srmSpin { to { transform: rotate(360deg); } }
+@keyframes srmShake {
+  10%, 90%      { transform: translateX(-1px); }
+  20%, 80%      { transform: translateX(2px); }
+  30%, 50%, 70% { transform: translateX(-4px); }
+  40%, 60%      { transform: translateX(4px); }
+}
+@keyframes srmSparkle {
+  0%   { transform: translateY(0) scale(0); opacity: 0; }
+  40%  { opacity: 1; }
+  100% { transform: translateY(-22px) scale(1); opacity: 0; }
+}
+@keyframes srmProgress {
+  0%   { left: -35%; width: 35%; }
+  50%  { left: 25%;  width: 45%; }
+  100% { left: 100%; width: 35%; }
+}
+@keyframes srmFlash {
+  0%   { box-shadow: 0 0 0 0 rgba(22,163,74,0.45); }
+  100% { box-shadow: 0 0 0 14px rgba(22,163,74,0); }
+}
+
+/* Botón con estado de carga (spinner) */
+.srm-btn-primary,
+.srm-btn-sm { position: relative; }
+.srm-btn.is-loading { pointer-events: none; cursor: progress; }
+.srm-btn.is-loading > *:not(.srm-spinner) { visibility: hidden; }
+.srm-spinner {
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 15px; height: 15px;
+  margin: -7.5px 0 0 -7.5px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.4);
+  border-top-color: #fff;
+  animation: srmSpin 0.55s linear infinite;
+}
+
+/* Barra de progreso indeterminada en la cabecera del modal */
+.srm-progress {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  overflow: hidden;
+  z-index: 3;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+.srm-progress.on { opacity: 1; }
+.srm-progress::after {
+  content: '';
+  position: absolute;
+  top: 0; height: 100%;
+  background: linear-gradient(90deg, #0B63C7, #16A34A, #FB8C00);
+  border-radius: 3px;
+  animation: srmProgress 1.1s ease-in-out infinite;
+}
+
+/* Confirmación en línea del envío de credenciales */
+.srm-cred-status {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.7rem 0.85rem;
+  border-radius: 0.85rem;
+  border: 1.5px solid #e2e8f0;
+  background: #f8fafc;
+  margin-bottom: 0.75rem;
+  animation: srmFadeSlide 0.25s ease both;
+}
+.srm-cred-status .srm-cs-icon {
+  position: relative;
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.srm-cred-status .srm-cs-text { min-width: 0; }
+.srm-cred-status .srm-cs-text b {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 900;
+  color: #334155;
+}
+.srm-cred-status .srm-cs-text span {
+  display: block;
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: #64748b;
+  margin-top: 1px;
+}
+.srm-cred-status.is-pending { border-color: #bfdbfe; background: #eff6ff; }
+.srm-cred-status.is-pending .srm-cs-icon { background: #dbeafe; }
+.srm-mini-spin {
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  border: 2px solid #bfdbfe;
+  border-top-color: #2563eb;
+  animation: srmSpin 0.55s linear infinite;
+}
+.srm-cred-status.is-success { border-color: #bbf7d0; background: #f0fdf4; }
+.srm-cred-status.is-success .srm-cs-text b { color: #166534; }
+.srm-cred-status.is-success .srm-cs-text span { color: #15803d; }
+.srm-cred-status.is-success .srm-cs-icon {
+  background: #16A34A; color: #fff;
+  animation: srmPopIn 0.35s cubic-bezier(0.16,1,0.3,1) both;
+}
+.srm-cred-status.is-success .srm-cs-icon::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid #16A34A;
+  animation: srmRingPulse 0.7s ease-out 1;
+}
+.srm-cred-status.is-error { border-color: #fecdd3; background: #fff1f2; }
+.srm-cred-status.is-error .srm-cs-text b { color: #9f1239; }
+.srm-cred-status.is-error .srm-cs-icon { background: #e11d48; color: #fff; }
+
+/* Overlay de éxito dentro del modal */
+.srm-success-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.1rem;
+  text-align: center;
+  padding: 1rem;
+  background: rgba(255,255,255,0.94);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: srmFadeIn 0.18s ease both;
+}
+.srm-success-badge {
+  position: relative;
+  width: 84px; height: 84px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #16A34A 0%, #15803D 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 12px 32px rgba(22,163,74,0.4);
+  animation: srmPopIn 0.4s cubic-bezier(0.16,1,0.3,1) both;
+}
+.srm-success-badge::before {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 3px solid rgba(22,163,74,0.5);
+  animation: srmRingPulse 0.9s ease-out 1;
+}
+.srm-success-check { width: 44px; height: 44px; }
+.srm-success-check path {
+  fill: none;
+  stroke: #fff;
+  stroke-width: 5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 48;
+  stroke-dashoffset: 48;
+  animation: srmCheckDraw 0.45s ease-out 0.15s forwards;
+}
+.srm-success-overlay h3 {
+  margin: 0.6rem 0 0;
+  font-size: 1.15rem;
+  font-weight: 900;
+  color: #14532d;
+  animation: srmFadeSlide 0.3s ease 0.18s both;
+}
+.srm-success-overlay p {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #4b5563;
+  animation: srmFadeSlide 0.3s ease 0.26s both;
+}
+.srm-success-mail {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #15803d;
+  animation: srmFadeSlide 0.3s ease 0.34s both;
+}
+.srm-sparkle {
+  position: absolute;
+  width: 10px; height: 10px;
+  border-radius: 2px;
+  animation: srmSparkle 0.9s ease-out forwards;
+}
+
+/* Utilidades */
+.srm-shake { animation: srmShake 0.4s ease both; }
+.srm-flash { animation: srmFlash 0.7s ease; }
+
+@media (prefers-reduced-motion: reduce) {
+  .srm-overlay,
+  .srm-modal,
+  .srm-success-overlay,
+  .srm-success-badge,
+  .srm-success-badge::before,
+  .srm-success-check path,
+  .srm-success-overlay h3,
+  .srm-success-overlay p,
+  .srm-success-mail,
+  .srm-sparkle,
+  .srm-cred-status,
+  .srm-cred-status.is-success .srm-cs-icon,
+  .srm-cred-status.is-success .srm-cs-icon::after,
+  .srm-spinner,
+  .srm-mini-spin,
+  .srm-progress,
+  .srm-progress::after,
+  .srm-shake,
+  .srm-flash {
+    animation: none !important;
+  }
+}
