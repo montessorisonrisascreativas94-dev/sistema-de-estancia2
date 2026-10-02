@@ -1,5 +1,6 @@
 import { Helpers } from '../shared/helpers.js';
 import { UIPremium } from '../shared/ui-premium.js';
+import { findCanonicalClassroom } from '../shared/constants.js';
 
 const UIHelpers = {
   setLoading(isLoading, containerSelector = '#globalModalContainer', btnSelector = null) {
@@ -118,39 +119,124 @@ const DirectorUI = {
     });
   },
 
+  /**
+   * Tarjeta-contendor de aula.
+   * Muestra la franja vertical con el color oficial de la línea del aula y la
+   * línea de capacidad (barra + ocupación) usando ese mismo color.
+   */
+  renderClassroomCard(r) {
+    const canon    = findCanonicalClassroom(r.level || r.name);
+    const color    = canon?.color || '#0B63C7';
+    const lineName = canon?.line || 'Aula Especial';
+    const occupancy = Number(r.student_count || 0);
+    const capacity  = Number(r.capacity || 20);
+    const percent   = capacity > 0 ? Math.round((occupancy / capacity) * 100) : 0;
+    const free      = Math.max(0, capacity - occupancy);
+    const full      = free === 0;
+    const teacher   = r.profiles?.name || '';
+    const initial   = (teacher.trim()[0] || '?').toUpperCase();
+
+    const freeCls = full ? 'dc-cap-free--full' : free <= 3 ? 'dc-cap-free--tight' : 'dc-cap-free';
+
+    return (
+      '<article class="dc-room' + (full ? ' dc-room--inactive' : '') + '" style="--room:' + color + '" ' +
+        'onclick="App.rooms.openModal(\'' + r.id + '\')" ' +
+        'onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();App.rooms.openModal(\'' + r.id + '\')}" ' +
+        'tabindex="0" role="button" aria-label="Abrir aula ' + Helpers.escapeHTML(r.name || '') + '">' +
+
+        '<div class="dc-room-top">' +
+          '<div style="min-width:0">' +
+            '<h3 class="dc-room-name">' + Helpers.escapeHTML(r.name || 'Aula') + '</h3>' +
+            '<p class="dc-room-level">' + Helpers.escapeHTML(r.level || 'General') + '</p>' +
+          '</div>' +
+          '<div class="dc-room-actions">' +
+            '<button class="dc-icon-btn" onclick="event.stopPropagation();App.rooms.openModal(\'' + r.id + '\')" title="Editar aula">' +
+              '<i data-lucide="pencil"></i>' +
+            '</button>' +
+            '<button class="dc-icon-btn dc-icon-btn--danger" onclick="event.stopPropagation();App.rooms.deleteRoom(\'' + r.id + '\',\'' + Helpers.escapeHTML(r.name || '') + '\')" title="Eliminar aula">' +
+              '<i data-lucide="trash-2"></i>' +
+            '</button>' +
+          '</div>' +
+        '</div>' +
+
+        // Línea oficial del aula (color del catálogo)
+        '<span class="dc-line-chip"><i></i> Línea ' + Helpers.escapeHTML(lineName) + '</span>' +
+
+        // Línea de capacidad
+        '<div class="dc-cap">' +
+          '<div class="dc-cap-head">' +
+            '<span class="dc-cap-title">Capacidad</span>' +
+            '<span class="dc-cap-num"><b>' + occupancy + '</b><span> / ' + capacity + '</span></span>' +
+          '</div>' +
+          '<div class="dc-cap-track"><div class="dc-cap-fill' + (full ? ' dc-cap-fill--full' : '') + '" style="width:' + Math.min(100, percent) + '%"></div></div>' +
+          '<div class="dc-cap-foot">' +
+            '<span>' + percent + '% ocupado</span>' +
+            '<span class="' + freeCls + '">' + (full ? 'Sin cupos' : free + ' cupos libres') + '</span>' +
+          '</div>' +
+        '</div>' +
+
+        // Maestra asignada
+        '<div class="dc-room-teacher' + (teacher ? '' : ' dc-room-teacher--empty') + '">' +
+          '<div class="dc-room-teacher-av">' + (teacher ? initial : '–') + '</div>' +
+          '<div class="dc-room-teacher-txt">' +
+            '<span class="dc-room-teacher-name">' + (teacher ? Helpers.escapeHTML(teacher) : 'Sin maestra asignada') + '</span>' +
+            '<span class="dc-room-teacher-role">' + (teacher ? 'Docente a cargo' : 'Pendiente') + '</span>' +
+          '</div>' +
+        '</div>' +
+
+        '<div class="dc-room-tags">' +
+          '<span class="dc-tag"><i data-lucide="users"></i>' + occupancy + ' de ' + capacity + '</span>' +
+          (canon?.labelRange
+            ? '<span class="dc-tag"><i data-lucide="cake"></i>' + Helpers.escapeHTML(canon.labelRange) + '</span>'
+            : '<span class="dc-tag dc-tag--warn"><i data-lucide="info"></i>Sin rango de edad</span>') +
+          (r.is_live ? '<span class="dc-tag dc-tag--live"><i data-lucide="check"></i>Activa</span>' : '') +
+        '</div>' +
+
+      '</article>'
+    );
+  },
+
   renderClassroomRow(r) {
-    const occupancy = r.student_count || 0;
-    const capacity  = r.capacity || 20;
-    const percent   = Math.round((occupancy / capacity) * 100);
-    const barColor  = percent > 90 ? 'bg-rose-500' : percent > 70 ? 'bg-amber-500' : 'bg-emerald-500';
+    const canon    = findCanonicalClassroom(r.level || r.name);
+    const color    = canon?.color || '#0B63C7';
+    const lineName = canon?.line || 'Aula Especial';
+    const occupancy = Number(r.student_count || 0);
+    const capacity  = Number(r.capacity || 20);
+    const percent   = capacity > 0 ? Math.round((occupancy / capacity) * 100) : 0;
+    const free      = Math.max(0, capacity - occupancy);
+    const full      = free === 0;
 
     return (
       '<tr class="hover:bg-slate-50 transition-colors cursor-pointer" ondblclick="App.rooms.openModal(\'' + r.id + '\')">' +
-        '<td class="py-4 px-6">' +
+        '<td class="py-4 px-6" style="border-left:6px solid ' + color + '">' +
           '<div class="font-bold text-slate-800">' + Helpers.escapeHTML(r.name) + '</div>' +
           '<div class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">' + (r.level || 'General') + '</div>' +
         '</td>' +
         '<td class="py-4 px-6">' +
-          '<div class="flex items-center gap-3">' +
-            '<div class="w-8 h-8 rounded-lg bg-[#E8F2FF] text-[#0B63C7] flex items-center justify-center text-xs font-bold">' + (r.profiles?.name || '?').charAt(0) + '</div>' +
-            '<div class="text-sm font-medium text-slate-600">' + Helpers.escapeHTML(r.profiles?.name || 'Sin asignar') + '</div>' +
-          '</div>' +
+          '<span class="dc-line-chip" style="--room:' + color + ';display:inline-flex"><i></i> Línea ' + Helpers.escapeHTML(lineName) + '</span>' +
         '</td>' +
         '<td class="py-4 px-6">' +
           '<div class="flex items-center gap-4">' +
-            '<div class="flex-1 bg-slate-100 rounded-full h-2 overflow-hidden max-w-[100px]">' +
-              '<div class="' + barColor + ' h-full rounded-full" style="width:' + percent + '%"></div>' +
+            '<div class="dc-cap-track" style="--room:' + color + ';max-width:120px;flex:1">' +
+              '<div class="dc-cap-fill' + (full ? ' dc-cap-fill--full' : '') + '" style="width:' + Math.min(100, percent) + '%"></div>' +
             '</div>' +
             '<span class="text-xs font-bold text-slate-500">' + occupancy + '/' + capacity + '</span>' +
+          '</div>' +
+          '<div class="text-[10px] text-slate-400 font-bold mt-1">' + percent + '% · ' + (full ? 'sin cupos' : free + ' libres') + '</div>' +
+        '</td>' +
+        '<td class="py-4 px-6">' +
+          '<div class="flex items-center gap-3">' +
+            '<div class="w-8 h-8 rounded-lg text-white flex items-center justify-center text-xs font-bold" style="background:' + color + '">' + (r.profiles?.name || '?').charAt(0) + '</div>' +
+            '<div class="text-sm font-medium text-slate-600">' + Helpers.escapeHTML(r.profiles?.name || 'Sin asignar') + '</div>' +
           '</div>' +
         '</td>' +
         '<td class="py-4 px-6 text-center">' +
           '<div class="flex items-center justify-center gap-1">' +
-          '<button onclick="App.rooms.openModal(\'' + r.id + '\')" class="p-2 text-slate-400 hover:text-[#0B63C7] hover:bg-[#E8F2FF] rounded-lg transition-all" title="Editar">' +
-            '<i data-lucide="edit-3" class="w-4 h-4"></i>' +
+          '<button onclick="App.rooms.openModal(\'' + r.id + '\')" class="dc-icon-btn" title="Editar">' +
+            '<i data-lucide="pencil"></i>' +
           '</button>' +
-          '<button onclick="App.rooms.deleteRoom(\'' + r.id + '\',\'' + Helpers.escapeHTML(r.name) + '\')" class="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all" title="Eliminar">' +
-            '<i data-lucide="trash-2" class="w-4 h-4"></i>' +
+          '<button onclick="App.rooms.deleteRoom(\'' + r.id + '\',\'' + Helpers.escapeHTML(r.name) + '\')" class="dc-icon-btn dc-icon-btn--danger" title="Eliminar">' +
+            '<i data-lucide="trash-2"></i>' +
           '</button>' +
           '</div>' +
         '</td>' +

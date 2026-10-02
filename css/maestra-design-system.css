@@ -1024,3 +1024,240 @@ body.panel-maestra-body .stat-block {
   border: none !important;
   box-shadow: 0 4px 16px rgba(0,0,0,.06) !important;
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   GLOBALES — para Directora / Asistente / Encargada / Maestra
+   (sin prefijo panel-maestra-body, para que apliquen en todos los HTML
+    que usen table-panel y table-scroll-wrap)
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── Contenedor de tabla premium ──────────────────────────────── */
+.table-panel {
+  background: #FFFFFF;
+  border: 1px solid #EEF2F4;
+  border-radius: 24px;
+  box-shadow: 0 8px 30px rgba(15, 23, 42, 0.04);
+  padding: 12px;
+  overflow: hidden;
+}
+
+/* ── Scroll-wrapper interno con borde y esquinas redondeadas ──── */
+.table-scroll-wrap {
+  width: 100%;
+  overflow-x: auto;
+  border-radius: 20px;
+  border: 1px solid #E2E8F0;
+  background: #FFFFFF;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+.table-scroll-wrap::-webkit-scrollbar { height: 6px; width: 6px; }
+.table-scroll-wrap::-webkit-scrollbar-track { background: transparent; }
+.table-scroll-wrap::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 999px;
+}
+.table-scroll-wrap::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
+
+.table-scroll-wrap .data-table { min-width: 600px; }
+
+/* ── Estilos unificados de data-table dentro de table-panel ───── */
+.data-table {
+  border-collapse: separate;
+  border-spacing: 0;
+  width: 100%;
+}
+.data-table thead th {
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 16px 20px;
+  background: #F8FAFC;
+  color: #475569;
+  border-bottom: 1px solid #E2E8F0;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  white-space: nowrap;
+}
+.data-table tbody td {
+  padding: 14px 20px;
+  border-bottom: 1px solid #F1F5F9;
+  color: #0F172A;
+  font-size: 0.875rem;
+  font-weight: 500;
+  vertical-align: middle;
+  transition: background-color 0.15s ease;
+}
+.data-table tbody tr { transition: background-color 0.15s ease; }
+.data-table tbody tr:hover { background-color: #F8FAFC; }
+.data-table tbody tr:last-child td { border-bottom: none; }
+
+/* ── Avatar genérico en tablas ────────────────────────────────── */
+.tbl-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #EEF2FF;
+  color: #6366F1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+  border: 1.5px solid #E0E7FF;
+}
+.tbl-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* ── Badges de estado (globales, semánticos) ─────────────────── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+.badge::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.9;
+}
+
+.badge-active, .badge-activo {
+  background: #ECFDF5;
+  color: #047857;
+  border: 1px solid #A7F3D0;
+}
+.badge-inactive, .badge-inactivo {
+  background: #F1F5F9;
+  color: #475569;
+  border: 1px solid #CBD5E1;
+}
+.badge-pending, .badge-pendiente {
+  background: #FFF7ED;
+  color: #C2410C;
+  border: 1px solid #FED7AA;
+}
+.badge-review, .badge-revisando {
+  background: #EFF6FF;
+  color: #1D4ED8;
+  border: 1px solid #BFDBFE;
+}
+.badge-danger, .badge-vencida, .badge-error {
+  background: #FEF2F2;
+  color: #B91C1C;
+  border: 1px solid #FECACA;
+}
+.badge-success, .badge-aprobado {
+  background: #F0FDF4;
+  color: #15803D;
+  border: 1px solid #BBF7D0;
+}
+.badge-info {
+  background: #ECFEFF;
+  color: #0E7490;
+  border: 1px solid #A5F3FC;
+}
+.badge-warn {
+  background: #FEFCE8;
+  color: #A16207;
+  border: 1px solid #FDE68A;
+}
+
+/* Estado Online / Away / Offline para accesos */
+.badge-online {
+  background: #ECFDF5;
+  color: #047857;
+  border: 1px solid #A7F3D0;
+}
+.badge-away {
+  background: #FEF3C7;
+  color: #92400E;
+  border: 1px solid #FDE68A;
+}
+.badge-offline {
+  background: #F1F5F9;
+  color: #64748B;
+  border: 1px solid #CBD5E1;
+}
+
+/* ── Botones dentro de tablas (Action Pills) ─────────────────── */
+.tbl-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+  line-height: 1;
+}
+.tbl-btn:hover { transform: translateY(-1px); }
+.tbl-btn:active { transform: translateY(0) scale(0.97); }
+
+.tbl-btn-primary {
+  background: #6366F1;
+  color: #fff;
+  box-shadow: 0 3px 10px rgba(99, 102, 241, 0.22);
+}
+.tbl-btn-primary:hover { background: #4F46E5; }
+
+.tbl-btn-success {
+  background: #28B54D;
+  color: #fff;
+  box-shadow: 0 3px 10px rgba(40, 181, 77, 0.22);
+}
+.tbl-btn-success:hover { background: #239943; }
+
+.tbl-btn-warning {
+  background: #FF8A00;
+  color: #fff;
+  box-shadow: 0 3px 10px rgba(255, 138, 0, 0.22);
+}
+.tbl-btn-warning:hover { background: #E07900; }
+
+.tbl-btn-danger {
+  background: #EF4444;
+  color: #fff;
+  box-shadow: 0 3px 10px rgba(239, 68, 68, 0.2);
+}
+.tbl-btn-danger:hover { background: #DC2626; }
+
+.tbl-btn-ghost {
+  background: #F1F5F9;
+  color: #475569;
+}
+.tbl-btn-ghost:hover { background: #E2E8F0; color: #0F172A; }
+
+/* ── Animación de entrada para secciones ─────────────────────── */
+@keyframes tbl-fadein {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.table-panel, .table-scroll-wrap + * { animation: tbl-fadein 0.22s ease-out both; }
+
+/* ── Responsive touch-friendly para móviles ───────────────────── */
+@media (max-width: 640px) {
+  .table-panel { padding: 6px; border-radius: 18px; }
+  .table-scroll-wrap { border-radius: 14px; }
+  .data-table thead th { padding: 12px 14px; font-size: 9px; }
+  .data-table tbody td { padding: 12px 14px; font-size: 0.8rem; }
+  .tbl-btn { padding: 6px 10px; font-size: 10px; }
+  .badge { padding: 3px 10px; font-size: 10px; }
+}

@@ -309,6 +309,25 @@ async function redirectByRole(userId) {
     };
 
     if (routes[role]) {
+      // Un padre solo entra si Dirección ya aceptó su preinscripción y
+      // le creó al menos un estudiante vinculado. Antes de eso, el acceso
+      // queda bloqueado aunque la cuenta exista en Auth.
+      if (role === 'padre') {
+        const { data: hijo, error: childErr } = await supabase
+          .from('students')
+          .select('id')
+          .eq('parent_id', userId)
+          .eq('is_active', true)
+          .limit(1);
+
+        if (childErr) throw childErr;
+        if (!hijo || !hijo.length) {
+          alert('Tu cuenta todavía no tiene ninguna matrícula activa.\n\nEl Portal de Padres se habilita cuando el colegio acepta la preinscripción y te envía la matrícula por correo.');
+          await supabase.auth.signOut();
+          window.location.href = 'index.html';
+          return;
+        }
+      }
       window.location.href = routes[role];
     } else {
       await supabase.auth.signOut();

@@ -648,7 +648,76 @@
                 <h2>¡Preinscripción enviada!</h2>
                 <p>Recibimos tus datos correctamente. Nos pondremos en contacto contigo muy pronto.</p>
                 <p id="successNote" style="display:none;color:#9A3412;background:#FFF7ED;border:1px solid #FED7AA;border-radius:12px;padding:10px 12px;margin-top:12px;font-size:.8rem"></p>
-                <a href="index.html" class="btn btn-next" style="margin-top:20px"><i class="bi bi-house"></i> Volver al Inicio</a>
+
+                <!-- PANEL DE CREDENCIALES (reglas que se aplicarán CUANDO seas admitido/a) -->
+                <div style="margin-top:28px;text-align:left;background:linear-gradient(135deg,#EFF6FF 0%,#F5F3FF 45%,#ECFDF5 100%);border:2px solid #BFDBFE;border-radius:20px;padding:22px;box-shadow:0 12px 30px rgba(14,116,144,0.08)">
+                  <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+                    <div style="width:40px;height:40px;border-radius:12px;background:#0B63C7;display:flex;align-items:center;justify-content:center;color:#fff">
+                      <i class="bi bi-key-fill" style="font-size:18px"></i>
+                    </div>
+                    <div>
+                      <h3 style="margin:0;font-size:16px;font-weight:800;color:#0F172A;font-family:'Baloo 2',cursive">Cómo serán tus credenciales</h3>
+                      <p style="margin:2px 0 0;font-size:11px;color:#475569;font-weight:600">Se asignarán automáticamente cuando la Directora apruebe la admisión</p>
+                    </div>
+                  </div>
+
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px">
+                    <div style="background:#fff;border:1.5px solid #BFDBFE;border-radius:14px;padding:12px 14px">
+                      <p style="margin:0;font-size:10px;font-weight:800;color:#0B63C7;text-transform:uppercase;letter-spacing:.5px">👤 Usuario de Login (fijo)</p>
+                      <p style="margin:6px 0 0;font-size:14px;font-weight:800;color:#1E293B;font-family:ui-monospace,Menlo,Consolas,monospace">
+                        primer_nombre.primer_apellido<br>
+                        <span style="color:#0B63C7">@sonrisacreativas.com</span>
+                      </p>
+                      <p style="margin:8px 0 0;font-size:10px;color:#64748B;font-weight:600;line-height:1.4">
+                        Ejemplo: si tu hijo/a se llama <strong>Juan Pérez Cabrera</strong> ➜ <span style="background:#EFF6FF;padding:1px 6px;border-radius:6px;color:#0B63C7;font-weight:800">juan.perez@sonrisacreativas.com</span>
+                      </p>
+                    </div>
+
+                    <div style="background:#fff;border:1.5px solid #BBF7D0;border-radius:14px;padding:12px 14px">
+                      <p style="margin:0;font-size:10px;font-weight:800;color:#059669;text-transform:uppercase;letter-spacing:.5px">🔐 Contraseña Temporal</p>
+                      <p style="margin:6px 0 0;font-size:16px;font-weight:900;color:#1E293B;letter-spacing:1px;font-family:ui-monospace,Menlo,Consolas,monospace;background:#F0FDF4;display:inline-block;padding:4px 10px;border-radius:10px;border:1.5px solid #86EFAC">sonrisa123</p>
+                      <p style="margin:8px 0 0;font-size:10px;color:#64748B;font-weight:600;line-height:1.4">
+                        Siempre es la misma para tu primer ingreso. Todo en minúsculas, sin espacios.
+                      </p>
+                    </div>
+
+                    <div style="background:#fff;border:1.5px solid #C7D2FE;border-radius:14px;padding:12px 14px">
+                      <p style="margin:0;font-size:10px;font-weight:800;color:#4F46E5;text-transform:uppercase;letter-spacing:.5px">🌐 Dominio Fijo</p>
+                      <p style="margin:6px 0 0;font-size:14px;font-weight:800;color:#1E293B">@sonrisacreativas.com</p>
+                      <p style="margin:8px 0 0;font-size:10px;color:#64748B;font-weight:600;line-height:1.4">
+                        Todas las familias usan este dominio oficial del colegio para iniciar sesión.
+                      </p>
+                    </div>
+
+                    <div style="background:#fff;border:1.5px solid #FCD34D;border-radius:14px;padding:12px 14px">
+                      <p style="margin:0;font-size:10px;font-weight:800;color:#B45309;text-transform:uppercase;letter-spacing:.5px">📧 Correo de Notificaciones</p>
+                      <p style="margin:6px 0 0;font-size:13px;font-weight:700;color:#1E293B">Tu correo personal</p>
+                      <p style="margin:8px 0 0;font-size:10px;color:#64748B;font-weight:600;line-height:1.4">
+                        Ahí llegan acuses, cuotas mensuales y avisos importantes de la maestra.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div style="margin-top:16px;padding:14px 16px;background:#FEF3C7;border:1.5px solid #FCD34D;border-radius:14px">
+                    <div style="display:flex;align-items:flex-start;gap:10px">
+                      <i class="bi bi-info-circle-fill" style="font-size:18px;color:#B45309;margin-top:1px"></i>
+                      <div style="font-size:11px;color:#92400E;font-weight:600;line-height:1.6">
+                        <strong style="font-size:12px;color:#78350F">Al primer ingreso al Panel de Padres</strong>
+                        te pediremos <strong>CAMBIAR LA CONTRASEÑA OBLIGATORIAMENTE</strong>
+                        por una segura con estas reglas:
+                        <ul style="margin:8px 0 0;padding-left:18px">
+                          <li>Mínimo 8 caracteres</li>
+                          <li>Al menos 1 letra mayúscula (A-Z)</li>
+                          <li>Al menos 1 letra minúscula (a-z)</li>
+                          <li>Al menos 1 número (0-9)</li>
+                          <li>Al menos 1 símbolo (@ $ ! % * ? &amp; # . - _)</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <a href="index.html" class="btn btn-next" style="margin-top:24px"><i class="bi bi-house"></i> Volver al Inicio</a>
             </div>
         </div>
     </div>
@@ -683,7 +752,10 @@
         window._precalc = { suggestedLevel: null, ageMatch: true, isSpecial: false, totalDays: 0, tooYoung: false };
         let _levelTouchedByUser = false;
 
-        const LEVEL_AGE_RANGES = [
+        // ⚠️ FALLBACK LOCAL por si falla la carga del módulo constants.js
+        // La fuente ÚNICA DE VERDAD es constants.js CANONICAL_CLASSROOMS
+        // Si el módulo ES6 se carga correctamente, estos valores se sobreescriben.
+        let LEVEL_AGE_RANGES = window.__CANONICAL_LEVELS_FALLBACK = [
             { key: 'Párvulos I',                 minDays: 45,  maxDays: 365,     labelRange: '45 días – 11 meses' },
             { key: 'Párvulos II',                minDays: 365, maxDays: 730,     labelRange: '12 – 23 meses' },
             { key: 'Párvulos III',               minDays: 730, maxDays: 1095,    labelRange: '24 – 35 meses' },
@@ -697,7 +769,16 @@
             { key: '5to – Línea Naranja',        minDays: 3650,maxDays: 4015,    labelRange: '10 años' },
             { key: '6to – Línea Morado',         minDays: 4015,maxDays: 4380,    labelRange: '11 años' }
         ];
-        const SPECIAL_LEVELS = ['Verano','Inglés Afterschool','Ballet / Danza','Taekwondo','Sala de Tarea','Cuido'];
+        let SPECIAL_LEVELS = window.__CANONICAL_SPECIAL_FALLBACK = ['Verano','Inglés Afterschool','Ballet / Danza','Taekwondo','Sala de Tarea','Cuido'];
+
+        // Exponer para que el ES Module pueda sobreescribir la fuente de verdad
+        window.__preinscripcion_refs = {
+          get levels() { return LEVEL_AGE_RANGES; },
+          set levels(v) { LEVEL_AGE_RANGES = v; },
+          get special() { return SPECIAL_LEVELS; },
+          set special(v) { SPECIAL_LEVELS = v; },
+          refreshBox: () => { try { renderAgeValidationBox && renderAgeValidationBox(); } catch(_) {} }
+        };
 
         function daysBetween(a, b){ return Math.max(0, Math.round((b.getTime() - a.getTime()) / (1000 * 60 * 60 * 24))); }
 
@@ -1371,10 +1452,12 @@
             'director_authorization_approved'];
 
         async function insertPrereg(data){
-            const {error} = await sb.from('student_preregistrations').insert([data]);
-            if(!error) return { ok:true };
+            // .select('id') es imprescindible: sin el id devuelto no se
+            // puede pedir el acuse de recibo a la Edge Function.
+            const {data:rows,error} = await sb.from('student_preregistrations').insert([data]).select('id').single();
+            if(!error && rows) return { ok:true, id:rows.id };
 
-            const msg = String(error.message || '');
+            const msg = String(error?.message || '');
             const faltanColumnas = OPTIONAL_COLS.some(c => new RegExp(c).test(msg)) &&
                 /does not exist|undefined_column|42703/i.test(msg);
 
@@ -1382,16 +1465,47 @@
                 console.warn('Faltan columnas de control de edad; reintentando sin ellas.');
                 const reduced = {...data};
                 OPTIONAL_COLS.forEach(c => delete reduced[c]);
-                const retry = await sb.from('student_preregistrations').insert([reduced]);
-                if(!retry.error) return { ok:true, degraded:true };
-                throw retry.error;
+                const retry = await sb.from('student_preregistrations').insert([reduced]).select('id').single();
+                if(!retry.error && retry.data) return { ok:true, id:retry.data.id, degraded:true };
+                throw retry.error || error;
             }
             throw error;
         }
 
+        /**
+         * Pide el acuse de recibo a la Edge Function `prereg-notify`.
+         * Es una llamada pública: la función valida que el correo sea el
+         * mismo que esa fila registró. Si falla, la preinscripción YA
+         * quedó guardada, así que sólo se avisa por pantalla.
+         */
+        async function sendAck(id, email){
+            if(!id || !email) return { ok:false };
+            try{
+                const url = `${supabaseUrl}/functions/v1/prereg-notify`;
+                const res = await fetch(url, {
+                    method:'POST',
+                    headers:{
+                        'Content-Type':'application/json',
+                        'apikey':supabaseAnonKey,
+                        'Authorization':'Bearer '+supabaseAnonKey
+                    },
+                    body: JSON.stringify({ id, email })
+                });
+                if(!res.ok){
+                    console.warn('prereg-notify respondió', res.status, await res.text());
+                    return { ok:false };
+                }
+                return await res.json();
+            }catch(err){
+                console.warn('No se pudo enviar el acuse:', err);
+                return { ok:false };
+            }
+        }
+
         try{
                 const res = await insertPrereg(data);
-                renderSuccess(res.degraded);
+                const ack = await sendAck(res.id, data.p1_email);
+                renderSuccess(res.degraded, ack && ack.ok && !ack.already_sent);
             }catch(err){
                 console.error('Error al enviar:',err);
                 const msg = String(err.message || err || '');
@@ -1411,19 +1525,26 @@
             }
         });
 
-        function renderSuccess(degraded){
+        function renderSuccess(degraded, ackSent){
             const card=document.getElementById('wizardCard');
             card.querySelector('.progress-bar').style.display='none';
             card.querySelector('form').style.display='none';
             const ok=document.getElementById('successScreen');
             ok.classList.add('active');
 
-            if(degraded){
-                const n=document.getElementById('successNote');
-                if(n){
-                    n.style.display='block';
-                    n.textContent='Tu solicitud se registró. El colegio la revisará junto al resto de las preinscripciones.';
-                }
+            const n=document.getElementById('successNote');
+            if(n && ackSent){
+                n.style.display='block';
+                n.style.color='#065F46';
+                n.style.background='#ECFDF5';
+                n.style.borderColor='#A7F3D0';
+                n.textContent='Te enviamos un correo de confirmación con el número de preinscripción. Revisa también la carpeta de spam.';
+            }else if(n && degraded){
+                n.style.display='block';
+                n.textContent='Tu solicitud se registró. El colegio la revisará junto al resto de las preinscripciones.';
+            }else if(n){
+                n.style.display='block';
+                n.textContent='Tu solicitud quedó registrada, pero no pudimos enviar el correo de confirmación. No hace falta que hagas nada: el colegio la revisará y te contactará.';
             }
 
             if(window.AOS && typeof AOS.refreshHard === 'function') AOS.refreshHard();

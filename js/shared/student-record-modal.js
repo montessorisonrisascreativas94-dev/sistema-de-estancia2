@@ -7,8 +7,13 @@
  *   'admit'    — Admitir desde preinscripción (precarga datos)
  *   'edit'     — Editar estudiante existente
  */
-import { supabase } from './supabase.js';
+import { supabase, SUPABASE_URL } from './supabase.js';
 import { Helpers } from './helpers.js';
+import {
+  CANONICAL_LEVELS, SPECIAL_LEVELS, normalizeLevel, isSpecialLevel,
+  suggestLevelByAge, normalizeLoginEmail, buildLoginEmail, LOGIN_DOMAIN,
+  buildStudentParentLoginEmail, STUDENT_DEFAULT_PASSWORD,
+} from './admision-utils.js';
 
 const IN = 'srm-input';
 const LB = 'srm-label';
@@ -26,16 +31,19 @@ const TABS = [
 ];
 
 const BLOOD_TYPES = ['No sabe','A+','A-','B+','B-','AB+','AB-','O+','O-'];
-const LEVELS = ['Maternal','Infante','Párvulos','Pre-Kinder','Kinder','Preprimaria','1ro Primaria','2do Primaria','3ro Primaria','4to Primaria','5to Primaria','6to Primaria'];
+// Antes eran 12 etiquetas cortas ('Kinder', '1ro Primaria') que NO
+// coincidían con las que produce preinscripcion.html ('Kínder – Línea
+// Gris', '1ro – Línea Roja'), así que el select nuncaaba preseleccionado.
+const LEVELS = [...CANONICAL_LEVELS.map((l) => l.canon), ...SPECIAL_LEVELS];
 const SCHEDULES = ['8:00-12:00','8:00-15:00','8:00-17:00'];
 const PAYMENT_PLANS = [{v:'monthly',l:'Mensual'},{v:'two_installments',l:'Dos Cuotas'},{v:'semestral',l:'Semestral'},{v:'anual',l:'Anual'}];
 
-let _state = { mode: 'new', studentId: null, preData: null, activeTab: 'info', data: {}, classes: [] };
+let _state = { mode: 'new', studentId: null, preData: null, activeTab: 'info', data: {}, classes: [], draft: {} };
 
 export const StudentRecordModal = {
 
   async open(mode = 'new', studentId = null, preData = null) {
-    _state = { mode, studentId, preData, activeTab: 'info', data: {}, classes: [] };
+    _state = { mode, studentId, preData, activeTab: 'info', data: {}, classes: [], draft: {} };
 
     if (mode === 'edit' && studentId) {
       _state.data = await this._loadStudent(studentId);
@@ -44,6 +52,10 @@ export const StudentRecordModal = {
     }
 
     _state.classes = await this._loadClasses();
+
+    // El prellenado va DESPUÉS de cargar las aulas: la sugerencia de
+    // classroom_id necesita _state.classes para hacer el match por nivel.
+    if (mode === 'admit' && preData) this._prefillAdmission();
 
     const gc = document.getElementById('globalModalContainer');
     if (!gc) return;
@@ -62,7 +74,10 @@ export const StudentRecordModal = {
     gc.style.zIndex = '9999';
     gc.style.position = 'fixed';
 
+    this._installDraftListener(gc);
     this._bindEvents();
+    try { this._syncAgeField(); } catch (_) {}
+    try { this._refreshCredPreviewValues(); } catch (_) {}
     if (window.lucide) lucide.createIcons();
   },
 
@@ -94,6 +109,110 @@ export const StudentRecordModal = {
     return data || [];
   },
 
+  /**
+   * Prellenado automático al admitir una preinscripción.
+   *
+   * Antes solo se copiaban los campos crudos. Faltaban cuatro cosas
+   * que Direction tenía que escribir a mano en cada admisión:
+   *   - nivel normalizado al canon del colegio,
+   *   - aula sugerida por edad cuando el nivel no existe tal cual,
+   *   - matrícula generada,
+   *   - correo de login institucional + contraseña temporal.
+   */
+  _prefillAdmission() {
+    const d = _state.data;
+
+    d.level_requested = normalizeLevel(d.level_requested || d.suggested_level || '');
+    if (!d.level_requested && d.birth_date) {
+      d.level_requested = suggestLevelByAge(d.birth_date);
+      if (d.level_requested) d.suggested_level = d.level_requested;
+    }
+    d.level_requested = normalizeLevel(d.level_requested);
+
+    if (!d.start_date) d.start_date = new Date().toISOString().split('T')[0];
+    if (!d.nationality) d.nationality = 'Dominicana';
+    if (d.authorized_persons && !Array.isArray(d.authorized_persons)) d.authorized_persons = [];
+
+    if (!d.matricula) d.matricula = this._generateMatricula();
+
+    // Aula sugerida por nivel; Dirección puede cambiarla.
+    if (!d.classroom_id) {
+      const match = _state.classes.find(
+        (c) => normalizeLevel(c.level) === d.level_requested && c.deleted_at == null
+      );
+      if (match) d.classroom_id = match.id;
+    }
+
+    // ✅ REGLA NUEVA: el usuario de login siempre se construye con el
+    // PRIMER NOMBRE + PRIMER APELLIDO del ESTUDIANTE (nunca con cédula
+    // del tutor ni con el nombre del padre). El correo de notificaciones
+    // es el correo personal que entregó la familia.
+    const studentName = d.student_name || d.name || '';
+    const studentLast = d.student_last_name || '';
+    d.login_email = d.login_email || buildStudentParentLoginEmail({ studentName, studentLastName: studentLast });
+    d.notification_email = d.notification_email || d.p1_email || '';
+    d.password = d.password || this._generatePassword();
+
+    if (d.login_email) _state.draft['srm-emailuser'] = d.login_email;
+    if (d.notification_email) _state.draft['srm-emailnotif'] = d.notification_email;
+    if (d.password) _state.draft['srm-password'] = d.password;
+    if (d.matricula) _state.draft['srm-matricula'] = d.matricula;
+    if (d.classroom_id) _state.draft['srm-classroom'] = String(d.classroom_id);
+  },
+
+  _generateMatricula() {
+    const year = new Date().getFullYear();
+    const n = String(Math.floor(Math.random() * 9000) + 1000);
+    return `MSC-${year}-${n}`;
+  },
+
+  _generatePassword() {
+    return STUDENT_DEFAULT_PASSWORD;
+  },
+
+  /** Calcula edad a partir de fecha YYYY-MM-DD (años, meses, días). */
+  _calcAgeFromBirth(birthDateStr) {
+    if (!birthDateStr) return null;
+    const b = new Date(birthDateStr);
+    const ref = new Date();
+    if (isNaN(b) || b > ref) return null;
+    let years = ref.getFullYear() - b.getFullYear();
+    let months = ref.getMonth() - b.getMonth();
+    let days = ref.getDate() - b.getDate();
+    if (days < 0) { const prevM = new Date(ref.getFullYear(), ref.getMonth(), 0); days += prevM.getDate(); months--; }
+    if (months < 0) { months += 12; years--; }
+    const totalDays = Math.max(0, Math.round((ref.getTime() - b.getTime()) / (1000 * 60 * 60 * 24)));
+    return { years, months, days, totalDays };
+  },
+
+  _fmtAge(a) {
+    if (!a) return '—';
+    if (a.years <= 0) {
+      const tms = a.years * 12 + a.months;
+      const parts = [];
+      if (tms) parts.push(tms + ' mes' + (tms === 1 ? '' : 'es'));
+      if (a.days) parts.push(a.days + ' día' + (a.days === 1 ? '' : 's'));
+      return parts.length ? parts.join(', ') : a.totalDays + ' días';
+    }
+    const parts = [];
+    if (a.years) parts.push(a.years + ' año' + (a.years === 1 ? '' : 's'));
+    if (a.months) parts.push(a.months + ' mes' + (a.months === 1 ? '' : 'es'));
+    return parts.join(', ') + ` (${a.totalDays} d)`;
+  },
+
+  /** Actualiza el campo de edad read-only cuando cambia fecha nacimiento. */
+  _syncAgeField() {
+    const birth = document.getElementById('srm-birthdate');
+    const ageField = document.getElementById('srm-age-display');
+    if (!birth || !ageField) return;
+    const value = birth.value || _state.draft['srm-birthdate'] || _state.data?.birth_date || '';
+    const age = this._calcAgeFromBirth(value);
+    ageField.value = age ? this._fmtAge(age) : '—';
+    const suggested = value ? suggestLevelByAge(value) : '';
+    const sug = document.getElementById('srm-level-suggested');
+    if (sug) sug.textContent = suggested || 'Sin sugerencia';
+  },
+
   _mapPreData(p) {
     return {
       _preId: p.id,
@@ -121,6 +240,7 @@ export const StudentRecordModal = {
       p1_occupation: p.p1_occupation || '',
       p1_profession: p.p1_profession || '',
       p1_workplace: p.p1_workplace || '',
+      p1_occupation: p.p1_occupation || '',
       p2_name: p.p2_name || '',
       p2_relationship: p.p2_relationship || '',
       p2_cedula: p.p2_cedula || '',
@@ -210,10 +330,103 @@ export const StudentRecordModal = {
   },
 
   switchTab(tabId) {
+    this._captureDraft();
     _state.activeTab = tabId;
     document.querySelectorAll('.srm-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tabId));
     document.getElementById('srmBody').innerHTML = this._renderTabContent(tabId);
+    this._restoreDraft();
+    if (tabId === 'info') this._syncAgeField();
+    if (tabId === 'access') this._refreshCredPreviewValues();
     if (window.lucide) lucide.createIcons();
+  },
+
+  /**
+   * Copia los inputs visibles de la pestaña activa a `_state.draft`.
+   * El id del elemento es la clave, así el mapeo es automático y
+   * cualquier campo nuevo queda cubierto sin tocar este archivo.
+   */
+  _captureDraft() {
+    const body = document.getElementById('srmBody');
+    if (!body) return;
+    body.querySelectorAll('input, select, textarea').forEach((el) => {
+      if (!el.id || !el.id.startsWith('srm-')) return;
+      if (el.type === 'checkbox') _state.draft[el.id] = el.checked;
+      else if (el.type === 'radio') { if (el.checked) _state.draft[el.id] = el.value; }
+      else _state.draft[el.id] = el.value;
+    });
+    // Personas autorizadas a recoger
+    const authRows = body.querySelectorAll('.srm-auth-row');
+    if (authRows.length) {
+      _state.draft['srm-auth-persons'] = [...authRows].map((row) => ({
+        name: row.querySelector('.srm-auth-name')?.value?.trim() || '',
+        relationship: row.querySelector('.srm-auth-rel')?.value?.trim() || '',
+        phone: row.querySelector('.srm-auth-phone')?.value?.trim() || '',
+      })).filter((a) => a.name);
+    }
+  },
+
+  /**
+   * Repone en el DOM recién renderizado lo que hay en `_state.draft`.
+   * `_v()` ya lee del draft, pero los valores que NO pasan por `_v()`
+   * (los que se calculan desde el DOM, como aula o nivel) se fijan aquí.
+   */
+  _restoreDraft() {
+    const body = document.getElementById('srmBody');
+    if (!body) return;
+    Object.entries(_state.draft).forEach(([id, value]) => {
+      if (id === 'srm-auth-persons') return;
+      const el = document.getElementById(id);
+      if (!el) return;
+      if (el.type === 'checkbox') el.checked = !!value;
+      else if (el.tagName === 'SELECT' || el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') el.value = value;
+    });
+    const persons = _state.draft['srm-auth-persons'];
+    if (persons?.length) {
+      const holder = document.getElementById('srm-auth-persons');
+      if (holder) holder.innerHTML = persons.map((ap, i) => this._authPersonRow(ap, i)).join('');
+    }
+  },
+
+  /**
+   * Listener delegado en el contenedor del modal (no en los inputs).
+   * Sobrevive a los re-renders de `innerHTML` que hace switchTab.
+   */
+  _installDraftListener(gc) {
+    if (gc.dataset.srmDraftBound === '1') return;
+    gc.dataset.srmDraftBound = '1';
+    const handler = (ev) => {
+      const el = ev.target;
+      if (!el || !el.id || !el.id.startsWith('srm-')) return;
+      if (el.type === 'checkbox') _state.draft[el.id] = el.checked;
+      else if (el.type === 'radio') { if (el.checked) _state.draft[el.id] = el.value; }
+      else _state.draft[el.id] = el.value;
+
+      // 🎂 Calculo en vivo de edad cuando cambia fecha nacimiento.
+      if (el.id === 'srm-birthdate') this._syncAgeField();
+
+      // 👥 Regenerar usuario institucional cuando cambia nombre/apellido del estudiante.
+      if (el.id === 'srm-name' || el.id === 'srm-lastname') {
+        try { this._regenerateLoginEmail(); } catch (_) {}
+      }
+
+      // 🔁 Sincronizar correo de notificaciones con correo del tutor.
+      if (el.id === 'srm-p1email') {
+        try { this._syncEmailFromP1(); } catch (_) {}
+      }
+
+      // El dominio del login es fijo: se normaliza mientras se escribe.
+      if (el.id === 'srm-emailuser' && typeof el.value === 'string' && el.value.includes('@')) {
+        const forced = normalizeLoginEmail(el.value);
+        if (forced !== el.value) {
+          const pos = el.selectionStart;
+          el.value = forced;
+          _state.draft[el.id] = forced;
+          try { el.setSelectionRange(pos, pos); } catch (_) {}
+        }
+      }
+    };
+    gc.addEventListener('input', handler);
+    gc.addEventListener('change', handler);
   },
 
   // ════════════════════════════════════════════════════════════════
@@ -233,7 +446,25 @@ export const StudentRecordModal = {
     }
   },
 
-  _v(field, def = '') { return (_state.data[field] ?? def) || ''; },
+  /**
+   * Valor a mostrar. Prioridad: draft (lo que escribió el usuario) >
+   * data (precarga) > default.
+   *
+   * `elId` permite leer del draft por id de input cuando el nombre del
+   * campo y el id no coinciden (p.ej. classroom_id → 'srm-classroom').
+   *
+   * Antes leía siempre de `_state.data`, así que cualquier cambio del
+   * usuario se perdía al cambiar de pestaña.
+   */
+  _v(field, def = '', elId = null) {
+    const key = elId || field;
+    if (Object.prototype.hasOwnProperty.call(_state.draft, key)) {
+      const dv = _state.draft[key];
+      return dv === null || dv === undefined ? '' : dv;
+    }
+    const val = _state.data[field];
+    return (val ?? def) || '';
+  },
 
   // ── TAB 1: INFORMACIÓN GENERAL ──────────────────────────────
 
@@ -249,14 +480,20 @@ export const StudentRecordModal = {
       <div class="srm-grid-2">
         <div><label class="${L}">Nombres *</label><input id="srm-name" value="${Helpers.escapeHTML(this._v('name') || this._v('student_name'))}" class="${I}" placeholder="Nombre completo"></div>
         <div><label class="${L}">Apellidos</label><input id="srm-lastname" value="${Helpers.escapeHTML(this._v('student_last_name'))}" class="${I}" placeholder="Apellidos"></div>
-        <div><label class="${L}">Fecha de Nacimiento</label><input id="srm-birthdate" type="date" value="${this._v('birth_date')}" class="${I}"></div>
+        <div><label class="${L}">Fecha de Nacimiento *</label><input id="srm-birthdate" type="date" value="${this._v('birth_date')}" class="${I}"></div>
+        <div>
+          <label class="${L}">Edad (calculada)</label>
+          <input id="srm-age-display" readonly class="${I}" style="background:#F8FAFC;font-weight:800;color:#1E293B">
+          <p class="text-[10px] font-black text-slate-400 mt-1 uppercase tracking-wide">Nivel sugerido por edad: 
+            <span id="srm-level-suggested" class="text-[#0B63C7]">—</span>
+          </p>
+        </div>
         <div><label class="${L}">Sexo</label>
           <select id="srm-gender" class="${I}"><option value="">Seleccionar</option>
             <option value="Masculino" ${this._v('gender')==='Masculino'?'selected':''}>Masculino</option>
             <option value="Femenino" ${this._v('gender')==='Femenino'?'selected':''}>Femenino</option>
           </select></div>
         <div><label class="${L}">Nacionalidad</label><input id="srm-nationality" value="${Helpers.escapeHTML(this._v('nationality','Dominicana'))}" class="${I}"></div>
-        <div><label class="${L}">Lugar de Nacimiento</label><input id="srm-birthplace" value="${Helpers.escapeHTML(this._v('birth_place'))}" class="${I}" placeholder="Ciudad, País"></div>
       </div>
 
       <div class="srm-section-divider"><i data-lucide="map-pin" class="w-4 h-4"></i> Ubicación</div>
@@ -509,46 +746,66 @@ export const StudentRecordModal = {
 
   _tabAccess() {
     const d = _state.data;
-    const preName = (this._v('name') || this._v('student_name') + ' ' + this._v('student_last_name') || '');
-    const classroomEl = document.getElementById('srm-classroom');
-    const classroomName = classroomEl?.options?.[classroomEl.selectedIndex]?.text
-      || _state.classes?.find(c => String(c.id) === String(d.classroom_id || this._v('classroom_id')))?.name
-      || d.classrooms?.name
-      || 'Pendiente';
-    const levelName = classroomEl?.options?.[classroomEl.selectedIndex]?.dataset?.level
-      || _state.classes?.find(c => String(c.id) === String(d.classroom_id || this._v('classroom_id')))?.level
-      || d.classrooms?.level
-      || this._v('level_requested')
-      || '';
-    const monthlyFee = document.getElementById('srm-monthlyfee')?.value || this._v('monthly_fee') || '0.00';
-    const scheduleSel = document.getElementById('srm-schedule');
-    const scheduleTxt = scheduleSel?.options?.[scheduleSel.selectedIndex]?.text || this._v('schedule') || 'Regular (8:00 AM – 12:00 PM)';
-    const studentMatricula = document.getElementById('srm-matricula')?.value || _state.data?.matricula || 'MSC-XXXXXXXX';
-    const p1Name = this._v('p1_name') || 'Família';
-    const currentEmail = this._v('login_email') || this._v('p1_email') || d.parent?.email || '';
+    const preName = (this._v('name') || [this._v('student_name'), this._v('student_last_name')].filter(Boolean).join(' '));
+    const studentName = this._v('student_name') || d.student_name || d.name || '';
+    const studentLast = this._v('student_last_name') || d.student_last_name || '';
+
+    const classroomId = this._v('classroom_id', d.classroom_id, 'srm-classroom');
+    const classroomObj = _state.classes?.find((c) => String(c.id) === String(classroomId));
+    const classroomName = classroomObj?.name || d.classrooms?.name || 'Pendiente';
+    const levelName = normalizeLevel(classroomObj?.level || d.classrooms?.level || this._v('level_requested', '', 'srm-level') || '');
+    const monthlyFee = this._v('monthly_fee', '0', 'srm-monthlyfee') || '0.00';
+    const scheduleTxt = this._v('schedule', '', 'srm-schedule') || '8:00-12:00';
+    const studentMatricula = this._v('matricula', '', 'srm-matricula') || d.matricula || 'MSC-XXXXXXXX';
+    const p1Name = this._v('p1_name') || 'Familia';
+    const currentEmail = this._v('login_email') || d.parent?.email || '';
     const currentPw = this._v('password') || '';
 
+    const exampleUser = buildStudentParentLoginEmail({
+      studentName: studentName || 'Juan', studentLastName: studentLast || 'Perez'
+    });
+
     return `
-      <div class="srm-grid-2">
-        <div>
-          <label class="${L}">Correo de Login</label>
-          <div class="flex gap-2">
-            <input id="srm-emailuser" type="email" value="${Helpers.escapeHTML(d.parent?.email || this._v('login_email'))}" class="${I} flex-1" placeholder="usuario@ejemplo.com">
-            <button type="button" onclick="StudentRecordModal._syncEmailFromP1()" title="Copiar correo del padre/madre 1" class="srm-btn-sm srm-btn-dark px-3 whitespace-nowrap">
-              <i data-lucide="copy" class="w-3 h-3"></i>
-            </button>
+      <div class="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 mb-5">
+        <div class="flex items-start gap-2.5">
+          <i data-lucide="badge-check" class="w-4 h-4 text-emerald-600 mt-0.5 shrink-0"></i>
+          <div class="text-[12px] text-emerald-900 leading-relaxed">
+            <strong>El usuario de acceso siempre usa el dominio del colegio
+            (@${Helpers.escapeHTML(LOGIN_DOMAIN)}).</strong>
+            Se construye con el <strong>primer nombre + primer apellido del estudiante</strong>
+            (ej: ${Helpers.escapeHTML(exampleUser)}). El correo de notificaciones es el personal
+            que dio la familia: ahí llegan los acuses, las cuotas y los avisos.
+            La contraseña temporal inicial siempre es <code class="px-1.5 py-0.5 rounded bg-white text-xs font-black text-emerald-800 border border-emerald-300">${STUDENT_DEFAULT_PASSWORD}</code>.
           </div>
         </div>
-        <div><label class="${L}">Correo Notificaciones</label><input id="srm-emailnotif" type="email" value="${Helpers.escapeHTML(this._v('p1_email'))}" class="${I}"></div>
+      </div>
+
+      <div class="srm-grid-2">
+        <div>
+          <label class="${L}">Usuario de Login (fijo)</label>
+          <div class="flex gap-2">
+            <input id="srm-emailuser" type="email" readonly
+                   value="${Helpers.escapeHTML(currentEmail)}" class="${I} flex-1 bg-slate-50"
+                   placeholder="usuario@${Helpers.escapeHTML(LOGIN_DOMAIN)}">
+            <button type="button" onclick="StudentRecordModal._regenerateLoginEmail()" title="Regenerar usuario desde primer nombre + apellido del estudiante" class="srm-btn-sm srm-btn-dark px-3 whitespace-nowrap">
+              <i data-lucide="refresh-cw" class="w-3 h-3"></i>
+            </button>
+          </div>
+          <p class="text-[10px] text-slate-400 mt-1 font-bold">Dominio fijo: @${Helpers.escapeHTML(LOGIN_DOMAIN)} · Formato: <code class="text-[10px]">primer_nombre.primer_apellido</code></p>
+        </div>
+        <div><label class="${L}">Correo de Notificaciones</label><input id="srm-emailnotif" type="email" value="${Helpers.escapeHTML(this._v('notification_email') || this._v('p1_email'))}" class="${I}"></div>
         <div>
           <label class="${L}">Contraseña Temporal</label>
           <div class="flex gap-2">
-            <input id="srm-password" type="text" placeholder="8+ caracteres alfanuméricos + símbolo" value="${Helpers.escapeHTML(currentPw)}" class="${I} flex-1">
-            <button type="button" onclick="StudentRecordModal._genSecurePassword()" title="Generar contraseña segura (8+ alfanum+símbolo)" class="srm-btn-sm srm-btn-blue px-3 whitespace-nowrap">
+            <input id="srm-password" type="text" placeholder="${STUDENT_DEFAULT_PASSWORD}" value="${Helpers.escapeHTML(currentPw)}" class="${I} flex-1">
+            <button type="button" onclick="StudentRecordModal._genSecurePassword()" title="Restablecer la contraseña temporal predeterminada" class="srm-btn-sm srm-btn-blue px-3 whitespace-nowrap">
               <i data-lucide="key-round" class="w-3 h-3"></i>
             </button>
           </div>
-          <p class="text-[10px] text-slate-400 mt-1 font-bold">Recomendado: minúscula, mayúscula, dígito, símbolo. Mín. 8 caracteres.</p>
+          <p class="text-[10px] text-slate-400 mt-1 font-bold">
+            Predeterminada: <strong class="text-slate-600">${STUDENT_DEFAULT_PASSWORD}</strong>.
+            Después del primer ingreso el padre la cambiará por una segura.
+          </p>
         </div>
         <div><label class="${L}">Último Acceso</label><input value="${this._v('last_login') ? new Date(d.last_login).toLocaleString() : 'Nunca'}" class="${I}" readonly style="background:#f8fafc"></div>
       </div>
@@ -613,92 +870,154 @@ export const StudentRecordModal = {
   },
 
   _syncEmailFromP1() {
-    const p1Email = document.getElementById('srm-p1email')?.value?.trim();
-    if (p1Email) {
-      const u = document.getElementById('srm-emailuser');
-      const n = document.getElementById('srm-emailnotif');
-      if (u && !u.value) u.value = p1Email;
-      if (n && !n.value) n.value = p1Email;
+    // El login ya no se copia del padre: vive en el dominio del colegio.
+    const p1Email = document.getElementById('srm-p1email')?.value?.trim()
+      || _state.draft['srm-p1email']
+      || _state.data?.p1_email;
+    const n = document.getElementById('srm-emailnotif');
+    if (p1Email && n) {
+      n.value = p1Email;
+      _state.draft['srm-emailnotif'] = p1Email;
       this._refreshCredPreview();
     }
   },
 
+  /** Reconstruye el usuario institucional desde primer nombre + primer apellido DEL ESTUDIANTE (regla nueva). */
+  _regenerateLoginEmail() {
+    const studentName = _state.draft['srm-name']
+      || _state.data?.student_name
+      || _state.data?.name
+      || '';
+    const studentLastName = _state.draft['srm-lastname']
+      || _state.data?.student_last_name
+      || '';
+    const email = buildStudentParentLoginEmail({ studentName, studentLastName });
+    const el = document.getElementById('srm-emailuser');
+    if (el) el.value = email;
+    _state.draft['srm-emailuser'] = email;
+    _state.data.login_email = email;
+    Helpers.toast('Usuario de login: ' + email, 'info');
+    this._refreshCredPreview();
+  },
+
   _genSecurePassword() {
-    const lowers = 'abcdefghijkmnopqrstuvwxyz';
-    const uppers = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
-    const digits = '23456789';
-    const syms   = '!@#$%&*?+-=';
-    const pick   = (s, n) => Array.from({length: n}, () => s[Math.floor(Math.random() * s.length)]).join('');
-    const chars = (pick(lowers, 3) + pick(uppers, 2) + pick(digits, 2) + pick(syms, 1)).split('');
-    for (let i = chars.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [chars[i], chars[j]] = [chars[j], chars[i]]; }
-    const pw = chars.join('');
+    const pw = this._generatePassword();
     const el = document.getElementById('srm-password');
     if (el) el.value = pw;
+    _state.draft['srm-password'] = pw;
     this._refreshCredPreview();
-    Helpers.toast('Contraseña segura generada', 'success');
+    Helpers.toast('Contraseña temporal restaurada: ' + pw, 'success');
   },
 
   _refreshCredPreview() {
     if (_state.activeTab !== 'access') return;
+    this._captureDraft();
     const body = document.getElementById('srmBody');
     if (!body) return;
     body.innerHTML = this._renderTabContent('access');
+    this._restoreDraft();
     if (window.lucide) lucide.createIcons();
-    this._bindEvents();
+  },
+
+  /** Actualiza el preview sin re-renderizar (preserva inputs visibles). */
+  _refreshCredPreviewValues() {
+    this._syncAgeField();
+    const loginEmail = _state.draft['srm-emailuser']
+      || buildStudentParentLoginEmail({
+        studentName: _state.draft['srm-name'] || _state.data?.student_name || _state.data?.name || '',
+        studentLastName: _state.draft['srm-lastname'] || _state.data?.student_last_name || ''
+      });
+    if (loginEmail) {
+      const userEl = document.getElementById('srm-emailuser');
+      if (userEl && !userEl.value) userEl.value = loginEmail;
+      if (!_state.draft['srm-emailuser']) _state.draft['srm-emailuser'] = loginEmail;
+    }
+    if (!_state.draft['srm-password']) {
+      const pw = STUDENT_DEFAULT_PASSWORD;
+      const pwEl = document.getElementById('srm-password');
+      if (pwEl && !pwEl.value) pwEl.value = pw;
+      _state.draft['srm-password'] = pw;
+    }
   },
 
   async _sendTestWelcomeEmail() {
-    const email = document.getElementById('srm-emailuser')?.value?.trim()
-      || document.getElementById('srm-emailnotif')?.value?.trim()
-      || this._v('p1_email');
-    if (!email) return Helpers.toast('Ingresa un correo para la prueba', 'warning');
-    const password = document.getElementById('srm-password')?.value?.trim() || 'DemoPass1!';
-    const p1Name = document.getElementById('srm-p1name')?.value?.trim() || 'Padre/Madre';
-    const studentName = (document.getElementById('srm-name')?.value?.trim() || (document.getElementById('srm-name') && (document.getElementById('srm-student_name')?.value + ' ' + document.getElementById('srm-student_last_name')?.value) || 'Estudiante Demo')).trim();
-    const matricula = document.getElementById('srm-matricula')?.value?.trim() || 'MSC-TEST-0001';
-    const sel = document.getElementById('srm-classroom');
-    const classroom = sel?.options?.[sel?.selectedIndex]?.text || 'Aula de Prueba';
-    const level = sel?.options?.[sel?.selectedIndex]?.dataset?.level || this._v('level_requested') || 'Nivel';
-    const schedule = document.getElementById('srm-schedule')?.value || 'Regular (8:00 AM – 12:00 PM)';
-    const fee = parseFloat(document.getElementById('srm-monthlyfee')?.value || '0') || 0;
+    this._captureDraft();
+    const data = this._collectFormData();
+    const email = _state.draft['srm-emailnotif'] || data.p1_email;
+    if (!email) return Helpers.toast('Ingresa un correo de notificaciones para la prueba', 'warning');
+    const loginEmail = _state.draft['srm-emailuser']
+      || buildStudentParentLoginEmail({
+        studentName: data.student_name || data.name || '',
+        studentLastName: data.student_last_name || ''
+      });
+    const password = _state.draft['srm-password'] || STUDENT_DEFAULT_PASSWORD;
+    const p1Name = data.p1_name || 'Padre/Madre';
+    const studentName = data.name || 'Estudiante Demo';
+    const matricula = data.matricula || 'MSC-TEST-0001';
+    const classroom = _state.classes?.find((c) => String(c.id) === String(data.classroom_id))?.name || 'Aula de Prueba';
+    const level = normalizeLevel(data.level_requested || '') || 'Nivel';
+    const schedule = data.schedule || '8:00-12:00';
+    const fee = data.monthly_fee || 0;
 
-    Helpers.toast('Enviando correo de prueba...', 'info');
+    Helpers.toast('Enviando correo de prueba a ' + email + '...', 'info');
     try {
-      const html = this._buildWelcomeEmailTemplate({ p1Name, studentName, matricula, classroom, level, schedule, email, password, monthlyFee: fee, isTest: true });
-      const text = this._buildWelcomeEmailText({ p1Name, studentName, matricula, classroom, level, schedule, email, password, monthlyFee: fee, isTest: true });
+      const html = this._buildWelcomeEmailTemplate({
+        p1Name, studentName, matricula, classroom, level, schedule,
+        email: loginEmail, password, monthlyFee: fee, isTest: true,
+        notificationEmail: email, planType: data.payment_plan,
+      });
+      const text = this._buildWelcomeEmailText({
+        p1Name, studentName, matricula, classroom, level, schedule,
+        email: loginEmail, password, monthlyFee: fee, isTest: true
+      });
       const subject = `[PRUEBA] Bienvenido(a) ${studentName} — Matrícula ${matricula}`;
       const ok = await this._sendEmailViaEdge({ to: email, subject, html, text });
       if (ok) Helpers.toast('Correo de prueba enviado a ' + email, 'success');
-      else Helpers.toast('No se pudo enviar el correo (Edge Function sin respuesta)', 'warning');
+      else Helpers.toast('No se pudo enviar — revisa RESEND_API_KEY y FROM_EMAIL', 'warning');
     } catch (e) {
       Helpers.toast('Error enviando correo prueba: ' + (e.message || e), 'error');
     }
   },
 
-  async _sendEmailViaEdge({ to, subject, html, text, attachments }) {
-    const fnUrl = window.__SUPABASE_EDGE_BASE__
-      ? window.__SUPABASE_EDGE_BASE__.replace(/\/$/, '') + '/send-email'
-      : (window.SUPABASE_URL
-        ? window.SUPABASE_URL.replace(/\/$/, '') + '/functions/v1/send-email'
-        : null);
-    if (!fnUrl) return false;
-
+  /**
+   * Invoca una Edge Function.
+   *
+   * Antes dependía de `window.SUPABASE_URL`, que no existía en ningún
+   * archivo del proyecto: el `fnUrl` salía `null` y la función retornaba
+   * `false` sin llegar a hacer fetch. Ahora usa el valor exportado por
+   * supabase.js y reporta el motivo del fallo.
+   */
+  async _invokeEdge(name, body) {
+    const base = window.__SUPABASE_EDGE_BASE__ || (SUPABASE_URL ? SUPABASE_URL + '/functions/v1' : null);
+    if (!base) {
+      console.warn('[srm] sin base de Edge Functions');
+      return { ok: false, status: 0, body: 'no-edge-base' };
+    }
+    const token = supabase?.auth?.currentSession?.access_token || '';
     try {
-      const token = supabase?.auth?.currentSession?.access_token || '';
-      const resp = await fetch(fnUrl, {
+      const resp = await fetch(`${base.replace(/\/$/, '')}/${name}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: 'Bearer ' + token } : {}) },
-        body: JSON.stringify({ to, subject, html, text, attachments })
+        body: JSON.stringify(body),
       });
-      if (!resp.ok) return false;
-      const r = await resp.json().catch(() => ({}));
-      return r && (r.success || r.ok || r.id);
-    } catch (_) {
-      return false;
+      if (!resp.ok) {
+        const txt = await resp.text().catch(() => '');
+        return { ok: false, status: resp.status, body: txt };
+      }
+      return { ok: true, data: await resp.json().catch(() => ({})) };
+    } catch (e) {
+      return { ok: false, status: 0, body: e.message, network: true };
     }
   },
 
-  _buildWelcomeEmailText({ p1Name, studentName, matricula, classroom, level, schedule, email, password, monthlyFee, isTest }) {
+  async _sendEmailViaEdge({ to, subject, html, text, attachments }) {
+    if (!to) return false;
+    const res = await this._invokeEdge('send-email', { to, subject, html, text, attachments });
+    if (!res.ok) console.warn('[srm] send-email falló:', res.status, res.body);
+    return res.ok;
+  },
+
+  _buildWelcomeEmailText({ p1Name, studentName, matricula, classroom, level, schedule, email, password, monthlyFee, isTest, notificationEmail }) {
     return (isTest ? '*** ESTE ES UN CORREO DE PRUEBA – NO ES LA ADMISIÓN OFICIAL ***\n\n' : '') +
       `Estimado(a) ${p1Name},\n\n` +
       `Con mucha alegría le damos la bienvenida a la familia Montessori Sonrisas Creativas.\n` +
@@ -712,24 +1031,30 @@ export const StudentRecordModal = {
       `${monthlyFee ? 'Mensualidad: $' + monthlyFee + '\n' : ''}` +
       `\nCREDENCIALES DE ACCESO AL PORTAL DE PADRES\n` +
       `URL del portal: ${location.origin}/panel_padres.html\n` +
-      `Correo (usuario): ${email}\n` +
+      `Usuario (institucional): ${email}\n` +
       `Contraseña temporal: ${password}\n\n` +
+      `El usuario de acceso pertenece al colegio. Los avisos de cuotas, ausencias y\n` +
+      `documentos se envían a: ${notificationEmail || email}\n\n` +
       `IMPORTANTE: Por favor cambie su contraseña temporal al ingresar por primera vez.\n\n` +
       `Si tiene alguna duda, contáctenos:\n` +
       `Instagram: @montessorisonrisascreativas\n` +
-      `Teléfono: +1 (809) 555-0100\n\n` +
+      `Teléfono: +1 (809) 532-4903\n\n` +
       `Atentamente,\n` +
       `Dirección Académica – Montessori Sonrisas Creativas\n\n` +
       `Este correo fue enviado automáticamente. Por favor no responda a este mensaje.`;
   },
 
-  _buildWelcomeEmailTemplate({ p1Name, studentName, matricula, classroom, level, schedule, email, password, monthlyFee, isTest }) {
+  _buildWelcomeEmailTemplate({ p1Name, studentName, matricula, classroom, level, schedule, email, password, monthlyFee, isTest, notificationEmail, planType }) {
     const host = location.origin || 'https://montessorisonrisascreativas.com';
     const logoUrl = `${host}/img/monte.jpg`;
     const portalUrl = `${host}/panel_padres.html`;
     const year = new Date().getFullYear();
     const feeCell = monthlyFee
       ? `<tr><td style="padding:6px 0;border-bottom:1px dashed #e5e7eb"><span style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#475569;font-weight:700">Mensualidad</span></td><td style="padding:6px 0;border-bottom:1px dashed #e5e7eb;text-align:right"><span style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#0B63C7;font-weight:900">$${monthlyFee.toFixed(2)} USD</span></td></tr>`
+      : '';
+    const planLabel = { monthly: 'Mensual', two_installments: 'Dos cuotas', semestral: 'Semestral', anual: 'Anual' }[planType];
+    const planCell = planLabel
+      ? `<tr><td style="padding:6px 0;border-bottom:1px dashed #e5e7eb"><span style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#475569;font-weight:700">Plan de pago</span></td><td style="padding:6px 0;border-bottom:1px dashed #e5e7eb;text-align:right"><span style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#0f172a;font-weight:900">${Helpers.escapeHTML(planLabel)}</span></td></tr>`
       : '';
     return `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Bienvenido a Montessori Sonrisas Creativas</title></head>
@@ -766,6 +1091,7 @@ export const StudentRecordModal = {
         ${level ? `<tr><td style="padding:6px 0;border-bottom:1px dashed #e5e7eb"><span style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#475569;font-weight:700">Nivel</span></td><td style="padding:6px 0;border-bottom:1px dashed #e5e7eb;text-align:right"><span style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#0f172a;font-weight:900">${Helpers.escapeHTML(level)}</span></td></tr>` : ''}
         <tr><td style="padding:6px 0;border-bottom:1px dashed #e5e7eb"><span style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#475569;font-weight:700">Horario</span></td><td style="padding:6px 0;border-bottom:1px dashed #e5e7eb;text-align:right"><span style="font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#0f172a;font-weight:800">${Helpers.escapeHTML(schedule)}</span></td></tr>
         ${feeCell}
+        ${planCell}
       </table>
     </div>
   </td></tr>
@@ -773,9 +1099,16 @@ export const StudentRecordModal = {
     <div style="border-radius:14px;background:#0f172a;padding:18px 18px;color:#ffffff;border:1px solid #1e293b">
       <div style="font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#7dd3fc;font-weight:900;letter-spacing:0.6px;text-transform:uppercase;margin-bottom:12px">🔐 Credenciales de Acceso al Portal</div>
       <table width="100%" cellpadding="0" cellspacing="0">
-        <tr><td style="padding:6px 0;width:35%"><span style="font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#94a3b8;font-weight:700">Usuario</span></td><td style="padding:6px 0"><span style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#ffffff;font-weight:900">${Helpers.escapeHTML(email)}</span></td></tr>
+        <tr><td style="padding:6px 0;width:35%"><span style="font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#94a3b8;font-weight:700">Usuario</span></td><td style="padding:6px 0"><span style="font-family:'Courier New',monospace;font-size:13px;color:#ffffff;font-weight:900">${Helpers.escapeHTML(email)}</span></td></tr>
         <tr><td style="padding:6px 0"><span style="font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#94a3b8;font-weight:700">Contraseña</span></td><td style="padding:6px 0"><span style="display:inline-block;background:#1e293b;border:1px dashed #475569;padding:4px 10px;border-radius:8px;font-family:'Courier New',monospace;font-size:13px;color:#fbbf24;font-weight:900;letter-spacing:0.5px">${Helpers.escapeHTML(password)}</span></td></tr>
       </table>
+      <div style="margin-top:12px;padding:10px 12px;border-radius:10px;background:#1e293b;border:1px solid #334155">
+        <div style="font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#94a3b8;line-height:1.6">
+          Este usuario es institucional y pertenece al colegio. Los avisos de cuotas,
+          ausencias y documentos se envían a
+          <strong style="color:#7dd3fc">${Helpers.escapeHTML(notificationEmail || email)}</strong>.
+        </div>
+      </div>
       <div style="margin-top:14px;text-align:center">
         <a href="${portalUrl}" style="display:inline-block;background:linear-gradient(135deg,#0B63C7 0%,#2563eb 100%);color:#ffffff;text-decoration:none;padding:12px 28px;border-radius:999px;font-family:Arial,Helvetica,sans-serif;font-size:13px;font-weight:900;letter-spacing:0.5px;text-transform:uppercase;box-shadow:0 6px 18px rgba(11,99,199,0.35)">
           Ingresar al Portal de Padres →
@@ -794,8 +1127,8 @@ export const StudentRecordModal = {
   <tr><td style="padding:14px 28px 24px">
     <div style="border-top:1px solid #e5e7eb;padding-top:14px;text-align:center;color:#94a3b8;font-family:Arial,Helvetica,sans-serif;font-size:11px;line-height:1.6">
       <div style="margin-bottom:6px">
-        <span style="display:inline-block;margin:0 8px">📱 +1 (809) 555-0100</span>
-        <span style="display:inline-block;margin:0 8px">📍 Calle Principal, Centro Educativo</span>
+        <span style="display:inline-block;margin:0 8px">📱 +1 (809) 532-4903</span>
+        <span style="display:inline-block;margin:0 8px">📍 Don Honorio, Santo Domingo</span>
         <span style="display:inline-block;margin:0 8px">📷 @montessorisonrisascreativas</span>
       </div>
       <div style="color:#cbd5e1;font-size:10px;margin-top:8px">
@@ -808,18 +1141,13 @@ export const StudentRecordModal = {
 </td></tr></table></body></html>`;
   },
 
-  async _createStudentViaEdgeFn({ payload, parentEmail, parentPassword }) {
-    const fnBase = window.__SUPABASE_EDGE_BASE__
-      ? window.__SUPABASE_EDGE_BASE__.replace(/\/$/, '')
-      : (window.SUPABASE_URL ? window.SUPABASE_URL.replace(/\/$/, '') + '/functions/v1' : null);
-    if (!fnBase) return { ok: false, fallback: true, reason: 'no-edge-base' };
-
-    const token = supabase?.auth?.currentSession?.access_token || '';
+  async _createStudentViaEdgeFn({ payload, parentEmail, parentPassword, notificationEmail }) {
     const body = {
       student: payload,
       parent: {
         email: parentEmail,
         password: parentPassword,
+        notification_email: notificationEmail || null,
         name: payload.p1_name || payload.name,
         phone: payload.p1_phone || null,
         p1_cedula: payload.p1_cedula || null,
@@ -827,21 +1155,14 @@ export const StudentRecordModal = {
       },
       pre_registration_id: _state.preData?._preId || _state.preData?.id || null,
     };
-    try {
-      const res = await fetch(fnBase + '/create-student-with-parent', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: 'Bearer ' + token } : {}) },
-        body: JSON.stringify(body)
-      });
-      if (!res.ok) {
-        const txt = await res.text().catch(() => '');
-        return { ok: false, fallback: res.status >= 500, status: res.status, body: txt };
-      }
-      const data = await res.json().catch(() => ({}));
-      return { ok: true, data };
-    } catch (e) {
-      return { ok: false, fallback: true, reason: 'network', message: e.message };
-    }
+    const res = await this._invokeEdge('create-student-with-parent', body);
+    if (res.ok) return { ok: true, data: res.data };
+    return {
+      ok: false,
+      fallback: res.status >= 500 || res.network === true,
+      status: res.status,
+      body: res.body,
+    };
   },
 
   // ── TAB 7: HISTORIAL ────────────────────────────────────────
@@ -921,69 +1242,130 @@ export const StudentRecordModal = {
   // ACTIONS
   // ════════════════════════════════════════════════════════════════
 
+  /**
+   * Serializa TODAS las pestañas, no solo la visible.
+   *
+   * Antes leía `document.getElementById(...)`, que devuelve null para
+   * cualquier campo de una pestaña que no esté montada: al admitir
+   * desde la pestaña "Accesos", se guardaban casi todos los campos
+   * como NULL. Se llama `_captureDraft()` antes para sincronizar.
+   */
   _collectFormData() {
-    const g = (id) => document.getElementById(id)?.value?.trim() || null;
-    return {
-      name: g('srm-name'),
-      student_name: g('srm-name'),
-      student_last_name: g('srm-lastname'),
-      birth_date: g('srm-birthdate'),
-      gender: g('srm-gender'),
-      nationality: g('srm-nationality'),
-      birth_place: g('srm-birthplace'),
-      address: g('srm-address'),
-      province: g('srm-province'),
-      municipality: g('srm-municipality'),
-      sector: g('srm-sector'),
-      matricula: g('srm-matricula'),
-      level_requested: g('srm-level'),
-      classroom_id: g('srm-classroom') ? parseInt(g('srm-classroom')) : null,
-      schedule: g('srm-schedule'),
-      start_date: g('srm-startdate'),
-      is_active: document.getElementById('srm-active')?.checked ?? true,
-      observations: g('srm-observations'),
-      p1_name: g('srm-p1name'),
-      p1_relationship: g('srm-p1rel'),
-      p1_cedula: g('srm-p1cedula'),
-      p1_phone: g('srm-p1phone'),
-      p1_whatsapp: g('srm-p1whatsapp'),
-      p1_email: g('srm-p1email'),
-      p1_address: g('srm-p1address'),
-      p1_profession: g('srm-p1profession'),
-      p1_workplace: g('srm-p1workplace'),
-      p1_occupation: g('srm-p1occupation'),
-      p1_emergency_contact: g('srm-p1emergency'),
-      p2_name: g('srm-p2name'),
-      p2_relationship: g('srm-p2rel'),
-      p2_cedula: g('srm-p2cedula'),
-      p2_phone: g('srm-p2phone'),
-      p2_whatsapp: g('srm-p2whatsapp'),
-      p2_email: g('srm-p2email'),
-      p2_address: g('srm-p2address'),
-      p2_profession: g('srm-p2profession'),
-      p2_workplace: g('srm-p2workplace'),
-      emergency_name: g('srm-emerName'),
-      emergency_relationship: g('srm-emerRel'),
-      emergency_cedula: g('srm-emerCedula'),
-      emergency_phone: g('srm-emerPhone'),
-      blood_type: g('srm-blood'),
-      allergies: g('srm-allergies'),
-      medications: g('srm-medications'),
-      medical_conditions: g('srm-medconditions'),
-      disability: g('srm-disability'),
-      food_restrictions: g('srm-foodrestrict'),
-      medical_notes: g('srm-mednotes'),
-      insurance: g('srm-insurance'),
-      pediatrician: g('srm-pediatrician'),
-      pediatrician_phone: g('srm-pediatricianPhone'),
-      vaccines_complete: document.getElementById('srm-vaccines-complete')?.checked ?? false,
-      payment_plan: g('srm-plan'),
-      monthly_fee: parseFloat(g('srm-monthlyfee') || '0') || 0,
-      prolongado_fee: parseFloat(g('srm-prolongadofee') || '0') || 0,
-      registration_fee: parseFloat(g('srm-registrationfee') || '0') || 0,
-      discount: parseFloat(g('srm-discount') || '0') || 0,
-      due_day: parseInt(g('srm-duedate') || '5') || 5,
+    this._captureDraft();
+
+    const draft = _state.draft;
+    const data = _state.data;
+
+    // id del input → clave del payload de `students`
+    const MAP = {
+      'srm-name': 'name',
+      'srm-lastname': 'student_last_name',
+      'srm-birthdate': 'birth_date',
+      'srm-gender': 'gender',
+      'srm-nationality': 'nationality',
+      'srm-birthplace': 'birth_place',
+      'srm-address': 'address',
+      'srm-province': 'province',
+      'srm-municipality': 'municipality',
+      'srm-sector': 'sector',
+      'srm-matricula': 'matricula',
+      'srm-level': 'level_requested',
+      'srm-classroom': 'classroom_id',
+      'srm-schedule': 'schedule',
+      'srm-startdate': 'start_date',
+      'srm-observations': 'observations',
+      'srm-p1name': 'p1_name',
+      'srm-p1rel': 'p1_relationship',
+      'srm-p1cedula': 'p1_cedula',
+      'srm-p1phone': 'p1_phone',
+      'srm-p1whatsapp': 'p1_whatsapp',
+      'srm-p1email': 'p1_email',
+      'srm-p1address': 'p1_address',
+      'srm-p1profession': 'p1_profession',
+      'srm-p1workplace': 'p1_workplace',
+      'srm-p1occupation': 'p1_occupation',
+      'srm-p1emergency': 'p1_emergency_contact',
+      'srm-p2name': 'p2_name',
+      'srm-p2rel': 'p2_relationship',
+      'srm-p2cedula': 'p2_cedula',
+      'srm-p2phone': 'p2_phone',
+      'srm-p2whatsapp': 'p2_whatsapp',
+      'srm-p2email': 'p2_email',
+      'srm-p2address': 'p2_address',
+      'srm-p2profession': 'p2_profession',
+      'srm-p2workplace': 'p2_workplace',
+      'srm-emerName': 'emergency_name',
+      'srm-emerRel': 'emergency_relationship',
+      'srm-emerCedula': 'emergency_cedula',
+      'srm-emerPhone': 'emergency_phone',
+      'srm-blood': 'blood_type',
+      'srm-allergies': 'allergies',
+      'srm-medications': 'medications',
+      'srm-medconditions': 'medical_conditions',
+      'srm-disability': 'disability',
+      'srm-foodrestrict': 'food_restrictions',
+      'srm-mednotes': 'medical_notes',
+      'srm-insurance': 'insurance',
+      'srm-pediatrician': 'pediatrician',
+      'srm-pediatricianPhone': 'pediatrician_phone',
+      'srm-plan': 'payment_plan',
     };
+
+    const NUM = {
+      'srm-monthlyfee': 'monthly_fee',
+      'srm-prolongadofee': 'prolonged_fee',
+      'srm-registrationfee': 'registration_fee',
+      'srm-discount': 'discount',
+    };
+
+    const payload = {};
+    Object.entries(MAP).forEach(([id, key]) => {
+      let raw = draft[id];
+      if (raw === undefined) {
+        const el = document.getElementById(id);
+        raw = el ? (el.type === 'checkbox' ? el.checked : el.value) : data[key];
+      }
+      let v = raw === null || raw === undefined ? '' : String(raw).trim();
+      if (key === 'classroom_id') v = v ? parseInt(v, 10) : null;
+      if (!v && key !== 'classroom_id') v = null;
+      payload[key] = v;
+    });
+
+    Object.entries(NUM).forEach(([id, key]) => {
+      let raw = draft[id];
+      if (raw === undefined) {
+        const el = document.getElementById(id);
+        raw = el ? el.value : data[key];
+      }
+      payload[key] = parseFloat(raw || '0') || 0;
+    });
+
+    const dueRaw = draft['srm-duedate'] ?? document.getElementById('srm-duedate')?.value ?? data.due_day ?? 5;
+    payload.due_day = parseInt(dueRaw, 10) || 5;
+
+    const activeEl = document.getElementById('srm-active');
+    payload.is_active = activeEl ? activeEl.checked : (draft['srm-active'] ?? data.is_active ?? true);
+
+    const vaccines = document.getElementById('srm-vaccines-complete');
+    payload.vaccines_complete = vaccines ? vaccines.checked : !!data.vaccines_complete;
+
+    const authPersons = draft['srm-auth-persons'] || data.authorized_persons || [];
+    payload.authorized_persons = authPersons;
+
+    // `students.name` es NOT NULL y es el campo que usa todo el panel.
+    // El formulario separa nombre/apellido, así que se recompone.
+    if (!payload.name) {
+      payload.name = [payload.student_name, payload.student_last_name].filter(Boolean).join(' ').trim();
+    }
+    if (!payload.student_name && payload.name) {
+      const parts = payload.name.trim().split(/\s+/);
+      payload.student_name = parts[0] || payload.name;
+      payload.student_last_name = payload.student_last_name || parts.slice(1).join(' ');
+    }
+
+    payload.level_requested = normalizeLevel(payload.level_requested) || payload.level_requested;
+
+    return payload;
   },
 
   async save() {
@@ -991,8 +1373,17 @@ export const StudentRecordModal = {
     const payload = this._collectFormData();
     if (!payload.name || payload.name.length < 3) return Helpers.toast('Nombre inválido', 'warning');
 
-    const emailUser = document.getElementById('srm-emailuser')?.value?.trim();
-    const password  = document.getElementById('srm-password')?.value?.trim();
+    const emailUser = normalizeLoginEmail(
+      _state.draft['srm-emailuser']
+        || document.getElementById('srm-emailuser')?.value?.trim()
+        || _state.data?.login_email
+        || payload.p1_email,
+      payload.p1_cedula
+    );
+    const password  = _state.draft['srm-password']
+      || document.getElementById('srm-password')?.value?.trim()
+      || _state.data?.password
+      || '';
 
     Helpers.toast('Guardando...', 'info');
     try {
@@ -1023,7 +1414,14 @@ export const StudentRecordModal = {
           }
           if (parentId) {
             payload.parent_id = parentId;
-            await supabase.from('profiles').upsert({ id: parentId, name: payload.p1_name || payload.name, email: emailUser, phone: payload.p1_phone, role: 'padre' }, { onConflict: 'id' });
+            await supabase.from('profiles').upsert({
+              id: parentId,
+              name: payload.p1_name || payload.name,
+              email: emailUser,
+              notification_email: _state.draft['srm-emailnotif'] || _state.data?.notification_email || payload.p1_email || null,
+              phone: payload.p1_phone,
+              role: 'padre',
+            }, { onConflict: 'id' });
           }
         }
         const { error } = await supabase.from('students').insert([payload]);
@@ -1043,30 +1441,78 @@ export const StudentRecordModal = {
     if (!payload.classroom_id) return Helpers.toast('Selecciona un aula', 'warning');
     if (!payload.matricula) return Helpers.toast('Genera una matrícula', 'warning');
 
-    const parentEmail = document.getElementById('srm-emailuser')?.value?.trim()
+    // Doble clic en "Aprobar" crearía dos expedientes y dos cuentas
+    // padre. Si ya existe un estudiante para esta preinscripción, se
+    // aborta y se ofrece reenviar las credenciales.
+    const preIdCheck = _state.preData?._preId || _state.preData?.id || null;
+    if (preIdCheck) {
+      const { data: yaExiste, error: dupErr } = await supabase
+        .from('students')
+        .select('id, matricula, name')
+        .eq('pre_registration_id', preIdCheck)
+        .limit(1);
+      if (dupErr) {
+        console.warn('[srm] no se pudo verificar duplicados:', dupErr.message);
+      } else if (yaExiste && yaExiste.length) {
+        const ya = yaExiste[0];
+        Helpers.toast('Esta preinscripción ya fue admitida (' + ya.matricula + ')', 'warning');
+        if (confirm('Ya existe el expediente ' + ya.matricula + '.\n\n¿Deseas reenviarle las credenciales a la familia?')) {
+          _state.studentId = ya.id;
+          _state.mode = 'edit';
+          this.sendCredentials();
+        }
+        return;
+      }
+    }
+
+    // El login se lee del draft porque el input vive en la pestaña
+    // Accesos y el botón de admisión está en el footer (siempre visible).
+    // Si Dirección nunca abrió esa pestaña, se usan los valores que
+    // _prefillAdmission() ya dejó en _state.data.
+    // ✅ REGLA NUEVA: el usuario SIEMPRE se construye con PRIMER NOMBRE +
+    // PRIMER APELLIDO del ESTUDIANTE (nunca cédula del tutor, nunca nombre del tutor).
+    const loginEmailRaw = _state.draft['srm-emailuser']
+      || document.getElementById('srm-emailuser')?.value?.trim()
+      || _state.data?.login_email
+      || '';
+    const studentNameForLogin = payload.student_name || payload.name || '';
+    const studentLastForLogin = payload.student_last_name || '';
+    const fallbackStudentEmail = buildStudentParentLoginEmail({ studentName: studentNameForLogin, studentLastName: studentLastForLogin });
+    // Normalizamos SOLO el dominio (nunca agregamos cédula). Si el valor
+    // trae @ se recorta la parte local y se re-aplica el dominio.
+    const parentEmail = (() => {
+      const raw = (loginEmailRaw || fallbackStudentEmail).trim();
+      const local = raw.includes('@') ? raw.split('@')[0] : raw;
+      return `${local}@${LOGIN_DOMAIN}`;
+    })();
+    const notificationEmail = _state.draft['srm-emailnotif']
       || document.getElementById('srm-emailnotif')?.value?.trim()
-      || payload.p1_email;
-    const parentPassword = document.getElementById('srm-password')?.value?.trim();
+      || _state.data?.notification_email
+      || payload.p1_email
+      || '';
+    // ✅ REGLA NUEVA: contraseña temporal SIEMPRE es sonrisa123 (minúscula).
+    // Si el draft trae algo distinto se fuerza a la predeterminada.
+    const parentPassword = STUDENT_DEFAULT_PASSWORD;
+
+    if (!parentPassword || parentPassword.length < 6) {
+      return Helpers.toast('Genera la contraseña temporal en la pestaña Accesos', 'warning');
+    }
 
     const p1Name = payload.p1_name || 'Familia';
     const studentName = payload.name;
     const matricula = payload.matricula;
-    const sel = document.getElementById('srm-classroom');
-    const classroomName = sel?.options?.[sel?.selectedIndex]?.text
-      || _state.classes?.find(c => String(c.id) === String(payload.classroom_id))?.name
-      || 'Aula Asignada';
-    const levelName = sel?.options?.[sel?.selectedIndex]?.dataset?.level
-      || _state.classes?.find(c => String(c.id) === String(payload.classroom_id))?.level
-      || payload.level_requested
-      || '';
-    const scheduleSel = document.getElementById('srm-schedule');
-    const scheduleTxt = scheduleSel?.options?.[scheduleSel.selectedIndex]?.text || payload.schedule || 'Regular (8:00 AM – 12:00 PM)';
+    const classroom = _state.classes?.find((c) => String(c.id) === String(payload.classroom_id));
+    const classroomName = classroom?.name || 'Aula Asignada';
+    const levelName = normalizeLevel(classroom?.level || payload.level_requested || '');
+    const scheduleTxt = payload.schedule || '8:00-12:00';
     const fee = payload.monthly_fee || 0;
 
     Helpers.toast('Paso 1/5 — Validando datos...', 'info');
     payload.is_active = true;
     payload.start_date = payload.start_date || new Date().toISOString().split('T')[0];
-    const planType = document.getElementById('srm-plan')?.value || document.getElementById('srm-plan')?.selectedIndex > -1 ? document.getElementById('srm-plan').value : 'Mensual';
+    const planType = payload.payment_plan || 'monthly';
+    const preId = _state.preData?._preId || _state.preData?.id || null;
+    if (preId) payload.pre_registration_id = preId;
 
     let studentId = null;
     let parentId = null;
@@ -1075,22 +1521,22 @@ export const StudentRecordModal = {
 
     try {
       // ── Paso 2: Crear usuario + estudiante ──
-      if (parentEmail && parentPassword && parentPassword.length >= 6) {
-        Helpers.toast('Paso 2/5 — Creando usuario padre vía Edge Function...', 'info');
-        const edgeResult = await this._createStudentViaEdgeFn({ payload, parentEmail, parentPassword });
-        if (edgeResult.ok) {
-          usedEdgeFn = true;
-          studentId = edgeResult.data?.student?.id || edgeResult.data?.studentId;
-          parentId  = edgeResult.data?.parent?.id  || edgeResult.data?.parentId;
-          if (!studentId) {
-            const { data: stu } = await supabase.from('students').select('id').eq('matricula', matricula).maybeSingle();
-            studentId = stu?.id;
-          }
-        } else if (edgeResult.fallback) {
-          Helpers.toast('Edge no disponible – usando admisión local (fallback)', 'warning');
-        } else {
-          throw new Error(edgeResult.body || ('Error en Edge Function (HTTP ' + (edgeResult.status || '?') + ')'));
+      Helpers.toast('Paso 2/5 — Creando usuario padre y expediente...', 'info');
+      const edgeResult = await this._createStudentViaEdgeFn({
+        payload, parentEmail, parentPassword, notificationEmail,
+      });
+      if (edgeResult.ok) {
+        usedEdgeFn = true;
+        studentId = edgeResult.data?.student?.id || edgeResult.data?.studentId;
+        parentId  = edgeResult.data?.parent?.id  || edgeResult.data?.parentId;
+        if (!studentId) {
+          const { data: stu } = await supabase.from('students').select('id').eq('matricula', matricula).maybeSingle();
+          studentId = stu?.id;
         }
+      } else if (edgeResult.fallback) {
+        Helpers.toast('Edge no disponible — creando expediente localmente', 'warning');
+      } else {
+        throw new Error(edgeResult.body || ('Error en Edge Function (HTTP ' + (edgeResult.status || '?') + ')'));
       }
 
       if (!studentId) {
@@ -1099,21 +1545,28 @@ export const StudentRecordModal = {
           try {
             const { data: authData, error: authError } = await supabase.auth.signUp({
               email: parentEmail, password: parentPassword,
-              options: { data: { name: p1Name, role: 'padre', phone: payload.p1_phone }, emailRedirectTo: null }
+              options: {
+                data: { name: p1Name, role: 'padre', phone: payload.p1_phone, is_temporary_password: true },
+                emailRedirectTo: null
+              }
             });
             if (authError) {
               if (authError.message?.toLowerCase().includes('already registered') || authError.status === 422) {
                 const { data: existing } = await supabase.from('profiles').select('id').eq('email', parentEmail).maybeSingle();
-                if (existing?.id) { parentId = existing.id; Helpers.toast('Usuario padre existente – vinculando', 'info'); }
+                if (existing?.id) { parentId = existing.id; Helpers.toast('Usuario padre existente — vinculando', 'info'); }
               } else {
-                Helpers.toast('No se creó usuario – continuar sin usuario (admite estudiante de todas formas)', 'warning');
+                Helpers.toast('No se creó usuario — el estudiante se admite igual', 'warning');
               }
             } else if (authData?.user) {
               parentId = authData.user.id;
             }
             if (parentId) {
               await supabase.from('profiles').upsert(
-                { id: parentId, name: p1Name, email: parentEmail, phone: payload.p1_phone, role: 'padre' },
+                {
+                  id: parentId, name: p1Name, email: parentEmail,
+                  notification_email: notificationEmail || null, phone: payload.p1_phone,
+                  role: 'padre', is_temporary_password: true
+                },
                 { onConflict: 'id' }
               );
             }
@@ -1130,7 +1583,6 @@ export const StudentRecordModal = {
 
       // ── Paso 3: Marcar preinscripción admitida ──
       Helpers.toast('Paso 3/5 — Cerrando preinscripción...', 'info');
-      const preId = _state.preData?._preId || _state.preData?.id;
       if (preId) {
         try {
           const noteExtra = `[${new Date().toLocaleString()}] — Admitido(a) como estudiante #${studentId} · Matrícula ${matricula}${usedEdgeFn ? ' · vía Edge Function' : ''}`;
@@ -1139,100 +1591,165 @@ export const StudentRecordModal = {
             .update({
               status: 'admitted',
               reviewed_at: new Date().toISOString(),
-              reviewer_note: (_state.preData?.reviewer_note ? _state.preData.reviewer_note + '\n\n' : '') + noteExtra
+              admitted_at: new Date().toISOString(),
+              reviewer_note: (_state.preData?.reviewer_note ? _state.preData.reviewer_note + '\n\n' : '') + noteExtra,
             })
             .eq('id', preId);
-          if (upErr) console.warn('No se actualizó preregistro:', upErr);
-        } catch (_) { /* soft error – no abortar */ }
+          if (upErr) {
+            // Sin reviewer_note/admitted_at el UPDATE completo revienta.
+            console.warn('[srm] update de prereg falló, reintentando sin columnas nuevas:', upErr);
+            const { error: retryErr } = await supabase
+              .from('student_preregistrations')
+              .update({
+                status: 'admitted',
+                reviewed_at: new Date().toISOString(),
+                comments: noteExtra,
+              })
+              .eq('id', preId);
+            if (retryErr) Helpers.toast('No se pudo cerrar la preinscripción: ' + retryErr.message, 'warning');
+          }
+        } catch (e) { /* soft error – no abortar */ }
       }
 
-      // ── Paso 4: Plan de pagos + 12 cuotas ──
-      Helpers.toast('Paso 4/5 — Creando plan de pagos...', 'info');
+      // ── Paso 4: Enrollment + plan de pagos + 12 cuotas ──
+      Helpers.toast('Paso 4/5 — Configurando pagos...', 'info');
       try {
         if (studentId && fee > 0) {
           const dueDay = payload.due_day || 5;
           const startMonth = new Date(payload.start_date || new Date());
           startMonth.setDate(1);
-          const plan = {
-            student_id: studentId,
-            plan_type: planType || 'Mensual',
-            total_amount: fee * 12,
-            monthly_fee: fee,
-            registration_fee: payload.registration_fee || 0,
-            discount: payload.discount || 0,
-            prolongado_fee: payload.prolongado_fee || 0,
-            due_day: dueDay,
-            start_date: payload.start_date,
-            status: 'active'
-          };
-          const { data: planData, error: plErr } = await supabase.from('payment_plans').insert([plan]).select('id').limit(1).single();
-          if (plErr) throw plErr;
-          const planId = planData?.id;
-          if (planId) {
-            const months = [];
-            const monthsEs = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-            for (let i = 0; i < 12; i++) {
-              const m = new Date(startMonth);
-              m.setMonth(m.getMonth() + i);
-              const due = new Date(m.getFullYear(), m.getMonth(), Math.min(dueDay, 28));
-              months.push({
-                payment_plan: planId,
-                month_paid: monthsEs[m.getMonth()] + ' ' + m.getFullYear(),
-                due_date: due.toISOString().split('T')[0],
-                amount: fee,
-                status: 'pending',
-                description: 'Cuota mensual – Colegiatura MSC'
-              });
-            }
-            const { error: pmErr } = await supabase.from('payments').insert(months);
-            if (pmErr) console.warn('No se crearon cuotas de pago:', pmErr);
-          }
-        }
-      } catch (_) { Helpers.toast('Plan de pagos no creado – puedes configurarlo luego en Pagos', 'warning'); }
 
-      // ── Paso 5: Enviar correo bienvenida ──
-      if (parentEmail && parentPassword) {
-        Helpers.toast('Paso 5/5 — Enviando correo de bienvenida...', 'info');
-        try {
-          const subject = `Bienvenido(a) ${studentName} — Matrícula ${matricula} · Credenciales de acceso`;
-          const html = this._buildWelcomeEmailTemplate({
-            p1Name, studentName, matricula, classroom: classroomName, level: levelName,
-            schedule: scheduleTxt, email: parentEmail, password: parentPassword,
-            monthlyFee: fee, isTest: false
-          });
-          const text = this._buildWelcomeEmailText({
-            p1Name, studentName, matricula, classroom: classroomName, level: levelName,
-            schedule: scheduleTxt, email: parentEmail, password: parentPassword,
-            monthlyFee: fee, isTest: false
-          });
-          emailSent = await this._sendEmailViaEdge({ to: parentEmail, subject, html, text });
-          if (!emailSent) {
-            if (window.__ADMIT_EMAIL_RETRY__) window.__ADMIT_EMAIL_RETRY__({ parentEmail, studentName, matricula });
-            const retryBtnId = 'retry-email-' + Date.now();
-            const retryHTML = `
-              <div id="${retryBtnId}" style="margin-top:8px" class="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-[12px] text-amber-800 font-bold">
-                <span>⚠ Credenciales generadas pero el correo no llegó. Revisa conexión a Edge Functions/Resend.</span>
-                <button onclick="StudentRecordModal._sendWelcomeEmailRetry({to:'${parentEmail}',studentName:'${studentName.replace(/'/g,'')}',matricula:'${matricula.replace(/'/g,'')}',classroom:'${classroomName.replace(/'/g,'')}',level:'${(levelName||'').replace(/'/g,'')}',schedule:'${scheduleTxt.replace(/'/g,'')}',email:'${parentEmail.replace(/'/g,'')}',password:'${parentPassword.replace(/'/g,'')}',fee:${fee}})"
-                  class="ml-auto inline-flex items-center gap-1.5 rounded-lg bg-amber-600 text-white px-3 py-1.5 text-xs font-black shadow hover:bg-amber-700 active:scale-95">
-                  <i data-lucide="send" class="w-3 h-3"></i> Reenviar
-                </button>
-              </div>`;
-            setTimeout(() => {
-              const toastCont = document.querySelector('.toast-container') || document.body;
-              const tmp = document.createElement('div');
-              tmp.innerHTML = retryHTML;
-              const child = tmp.firstElementChild;
-              if (toastCont && child) toastCont.appendChild(child);
-              if (window.lucide && child) lucide.createIcons({ root: child });
-            }, 800);
+          // `payment_plans` es un catálogo por año escolar + nivel +
+          // horario (ver sql/01_base.sql), NO una tabla por estudiante.
+          // Se reutiliza el plan que ya exista para ese nivel/horario.
+          const { data: yearRow } = await supabase
+            .from('school_years')
+            .select('id')
+            .eq('is_current', true)
+            .maybeSingle();
+          let schoolYearId = yearRow?.id;
+          if (!schoolYearId) {
+            const { data: anyYear } = await supabase.from('school_years').select('id').limit(1).maybeSingle();
+            schoolYearId = anyYear?.id;
           }
-        } catch (e) { emailSent = false; console.warn('Email send failed:', e); }
+          if (!schoolYearId) throw new Error('No hay año escolar configurado');
+
+          const { data: existingPlan } = await supabase
+            .from('payment_plans')
+            .select('id')
+            .eq('school_year_id', schoolYearId)
+            .eq('level', levelName)
+            .eq('schedule', scheduleTxt)
+            .is('deleted_at', null)
+            .maybeSingle();
+
+          let planId = existingPlan?.id;
+          if (!planId) {
+            const { data: created, error: plErr } = await supabase
+              .from('payment_plans')
+              .insert({
+                school_year_id: schoolYearId,
+                level: levelName,
+                schedule: scheduleTxt,
+                name: `${levelName} · ${scheduleTxt}`,
+                registration_fee: payload.registration_fee || 0,
+                description: 'Plan generado automáticamente en la admisión',
+              })
+              .select('id')
+              .single();
+            if (plErr) throw plErr;
+            planId = created?.id;
+          }
+
+          // Matrícula en el año escolar (habilita la trazabilidad de
+          // preinscrito → admitido que usa el panel de Dirección).
+          if (planId) {
+            await supabase.from('student_enrollments').insert({
+              student_id: studentId,
+              school_year_id: schoolYearId,
+              classroom_id: payload.classroom_id,
+              payment_plan_id: planId,
+              status: 'admitido',
+              admission_date: new Date().toISOString(),
+            });
+          }
+
+          // Las cuotas cuelgan de `payments` y apuntan al plan.
+          const months = [];
+          const monthsEs = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+          for (let i = 0; i < 12; i++) {
+            const m = new Date(startMonth);
+            m.setMonth(m.getMonth() + i);
+            const due = new Date(m.getFullYear(), m.getMonth(), Math.min(dueDay, 28));
+            months.push({
+              student_id: studentId,
+              payment_plan_id: planId,
+              amount: fee,
+              concept: 'Mensualidad',
+              month_paid: monthsEs[m.getMonth()] + ' ' + m.getFullYear(),
+              due_date: due.toISOString().split('T')[0],
+              installment_number: i + 1,
+              total_installments: 12,
+              status: 'pending',
+              description: 'Cuota mensual — Colegiatura MSC',
+            });
+          }
+          const { error: pmErr } = await supabase.from('payments').insert(months);
+          if (pmErr) console.warn('[srm] no se crearon las cuotas:', pmErr);
+        }
+      } catch (e) {
+        console.warn('[srm] plan de pagos:', e);
+        Helpers.toast('Plan de pagos no creado — configúralo luego en Pagos', 'warning');
       }
+
+      // ── Paso 5: Correo de bienvenida con credenciales ──
+      Helpers.toast('Paso 5/5 — Enviando credenciales...', 'info');
+      try {
+        const subject = `¡Admisión aprobada! ${studentName} — Matrícula ${matricula} · Credenciales de acceso`;
+        const html = this._buildWelcomeEmailTemplate({
+          p1Name, studentName, matricula, classroom: classroomName, level: levelName,
+          schedule: scheduleTxt, email: parentEmail, password: parentPassword,
+          monthlyFee: fee, isTest: false, notificationEmail, planType
+        });
+        const text = this._buildWelcomeEmailText({
+          p1Name, studentName, matricula, classroom: classroomName, level: levelName,
+          schedule: scheduleTxt, email: parentEmail, password: parentPassword,
+          monthlyFee: fee, isTest: false
+        });
+        // Se envía al correo de NOTIFICACIONES de la familia, no al de
+        // login: el institucional es solo para autenticarse.
+        emailSent = await this._sendEmailViaEdge({ to: notificationEmail, subject, html, text });
+        if (emailSent && preId) {
+          await supabase.from('student_preregistrations')
+            .update({ credentials_sent_at: new Date().toISOString() })
+            .eq('id', preId);
+        }
+        if (!emailSent) {
+          if (window.__ADMIT_EMAIL_RETRY__) window.__ADMIT_EMAIL_RETRY__({ parentEmail, studentName, matricula });
+          const retryBtnId = 'retry-email-' + Date.now();
+          const retryHTML = `
+            <div id="${retryBtnId}" style="margin-top:8px" class="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-[12px] text-amber-800 font-bold">
+              <span>Credenciales creadas pero el correo no llegó. Revisa RESEND_API_KEY / FROM_EMAIL en la Edge Function.</span>
+              <button onclick="StudentRecordModal._sendWelcomeEmailRetry({to:'${Helpers.escapeHTML(notificationEmail)}',studentName:'${Helpers.escapeHTML(studentName)}',matricula:'${Helpers.escapeHTML(matricula)}',classroom:'${Helpers.escapeHTML(classroomName)}',level:'${Helpers.escapeHTML(levelName || '')}',schedule:'${Helpers.escapeHTML(scheduleTxt)}',email:'${Helpers.escapeHTML(parentEmail)}',password:'${Helpers.escapeHTML(parentPassword)}',fee:${fee}})"
+                class="ml-auto inline-flex items-center gap-1.5 rounded-lg bg-amber-600 text-white px-3 py-1.5 text-xs font-black shadow hover:bg-amber-700 active:scale-95">
+                <i data-lucide="send" class="w-3 h-3"></i> Reenviar
+              </button>
+            </div>`;
+          setTimeout(() => {
+            const toastCont = document.querySelector('.toast-container') || document.body;
+            const tmp = document.createElement('div');
+            tmp.innerHTML = retryHTML;
+            const child = tmp.firstElementChild;
+            if (toastCont && child) toastCont.appendChild(child);
+            if (window.lucide && child) lucide.createIcons({ root: child });
+          }, 800);
+        }
+      } catch (e) { emailSent = false; console.warn('[srm] email:', e); }
 
       Helpers.toast(
         '¡Admisión exitosa! ' + (emailSent
-          ? 'Correo enviado a ' + parentEmail
-          : (parentEmail ? 'Sin correo de bienvenida – revisa Edge Functions' : 'Sin correo (falta dirección)')),
+          ? 'Credenciales enviadas a ' + notificationEmail
+          : 'Estudiante admitido; el correo no salió — usa Reenviar'),
         'success',
         { duration: 6000 }
       );
@@ -1256,8 +1773,8 @@ export const StudentRecordModal = {
   async _sendWelcomeEmailRetry({ to, studentName, matricula, classroom, level, schedule, email, password, fee }) {
     Helpers.toast('Reenviando correo de bienvenida...', 'info');
     try {
-      const p1Name = document.getElementById('srm-p1name')?.value?.trim() || 'Familia';
-      const subject = `Bienvenido(a) ${studentName} — Matrícula ${matricula} · Credenciales de acceso`;
+      const p1Name = _state.draft['srm-p1name'] || _state.data?.p1_name || 'Familia';
+      const subject = `¡Admisión aprobada! ${studentName} — Matrícula ${matricula} · Credenciales de acceso`;
       const html = this._buildWelcomeEmailTemplate({
         p1Name, studentName, matricula, classroom, level, schedule,
         email: email || to, password, monthlyFee: fee || 0, isTest: false
@@ -1272,7 +1789,7 @@ export const StudentRecordModal = {
         const el = document.querySelector('[onclick*="_sendWelcomeEmailRetry"]')?.closest('[id^="retry-email-"]');
         if (el) el.remove();
       } else {
-        Helpers.toast('No se pudo reenviar – revisa RESEND_API_KEY y FROM_EMAIL', 'error');
+        Helpers.toast('No se pudo reenviar — revisa RESEND_API_KEY y FROM_EMAIL en la Edge Function', 'error');
       }
     } catch (e) {
       Helpers.toast('Error: ' + (e.message || e), 'error');
@@ -1280,45 +1797,99 @@ export const StudentRecordModal = {
   },
 
   genMatricula() {
+    const value = this._generateMatricula();
     const el = document.getElementById('srm-matricula');
-    if (el) {
-      el.value = 'MSC-' + new Date().getFullYear() + '-' + String(Math.floor(Math.random() * 9000) + 1000);
-    }
+    if (el) el.value = value;
+    _state.draft['srm-matricula'] = value;
+    _state.data.matricula = value;
+  },
+
+  /** Matrícula vigente venga de donde venga: input visible, draft o data. */
+  _currentMatricula() {
+    return (
+      document.getElementById('srm-matricula')?.value?.trim() ||
+      _state.draft['srm-matricula'] ||
+      _state.data?.matricula ||
+      ''
+    );
+  },
+
+  /**
+   * Carga la librería QR una sola vez.
+   *
+   * El código anterior creaba el <script> cada vez que se pulsaba el
+   * botón y resolvía la promesa con `s.onload = r` sin `onerror`: si la
+   * ruta era relativa y la página estaba en un subdirectorio, la
+   * petición 404 dejaba la promesa colgada para siempre y el botón
+   * "Generar QR" no respondía.
+   */
+  _ensureQrLib() {
+    if (window.QRCode) return Promise.resolve(window.QRCode);
+    if (this._qrLibPromise) return this._qrLibPromise;
+
+    this._qrLibPromise = new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = new URL('qrcode.min.js', import.meta.url).href;
+      s.async = true;
+      s.onload = () => (window.QRCode ? resolve(window.QRCode) : reject(new Error('QRCode no definido')));
+      s.onerror = () => reject(new Error('No se pudo cargar qrcode.min.js'));
+      document.head.appendChild(s);
+    }).catch((err) => { this._qrLibPromise = null; throw err; });
+
+    return this._qrLibPromise;
   },
 
   async genQR() {
-    const matricula = document.getElementById('srm-matricula')?.value?.trim();
-    if (!matricula) return Helpers.toast('Ingresa una matrícula primero', 'warning');
-    const container = document.getElementById('srm-qr-container');
-    const label = document.getElementById('srm-qr-label');
-    if (!container) return;
-
-    if (!window.QRCode) {
-      await new Promise(r => { const s = document.createElement('script'); s.src = 'js/shared/qrcode.min.js'; s.onload = r; document.head.appendChild(s); });
+    // `srm-matricula` vive en la pestaña Info General. Si el usuario
+    // está en la pestaña Accesos, getElementById devuelve null y el QR
+    // nunca se generaba.
+    const matricula = this._currentMatricula();
+    if (!matricula) {
+      return Helpers.toast('Genera o ingresa una matrícula en la pestaña Info General', 'warning');
     }
-    container.innerHTML = '';
-    label.textContent = matricula;
+
+    const container = document.getElementById('srm-qr-container');
+    if (!container) {
+      return Helpers.toast('Abre la pestaña Accesos para ver el QR', 'warning');
+    }
+    const label = document.getElementById('srm-qr-label');
+    if (label) label.textContent = matricula;
+
+    container.innerHTML = '<p class="text-xs text-slate-400 font-bold text-center">Generando QR...</p>';
+
     try {
-      new window.QRCode(container, { text: matricula, width: 160, height: 160, colorDark: '#1e293b', colorLight: '#ffffff', correctLevel: window.QRCode.CorrectLevel.H });
+      const QRCode = await this._ensureQrLib();
+      container.innerHTML = '';
+      new QRCode(container, {
+        text: matricula,
+        width: 160,
+        height: 160,
+        colorDark: '#1e293b',
+        colorLight: '#ffffff',
+        correctLevel: QRCode.CorrectLevel.H,
+      });
     } catch (e) {
-      container.innerHTML = '<p class="text-xs text-red-500 font-bold">Error al generar QR</p>';
+      console.error('[srm] QR:', e);
+      container.innerHTML = '<p class="text-xs text-rose-500 font-bold text-center">No se pudo generar el QR. Reintenta.</p>';
     }
   },
 
   printCarnet() {
-    const matricula = document.getElementById('srm-matricula')?.value?.trim() || _state.data?.matricula || '';
-    const name = document.getElementById('srm-name')?.value?.trim() || _state.data?.name || '';
+    // Igual que genQR: la matrícula y el nombre pueden estar en otra
+    // pestaña, así que se leen del draft y no solo del DOM.
+    const data = this._collectFormData();
+    const matricula = this._currentMatricula();
+    const name = data.name || '';
     const container = document.getElementById('srm-qr-container');
     const qrImg = container?.querySelector('img')?.src || container?.querySelector('canvas')?.toDataURL();
     if (!qrImg || !matricula) return Helpers.toast('Genera el QR primero', 'warning');
-    const sel = document.getElementById('srm-classroom');
-    const classroom = sel?.options[sel?.selectedIndex]?.text || _state.data?.classrooms?.name || _state.classes?.find(c => String(c.id) === String(_state.data?.classroom_id))?.name || '';
-    const nivel = sel?.options[sel?.selectedIndex]?.dataset?.level || _state.data?.classrooms?.level || _state.classes?.find(c => String(c.id) === String(_state.data?.classroom_id))?.level || '';
-    const p1 = document.getElementById('srm-p1name')?.value?.trim() || _state.data?.p1_name || '';
-    const p2 = document.getElementById('srm-p2name')?.value?.trim() || _state.data?.p2_name || '';
-    const p1phone = document.getElementById('srm-p1phone')?.value?.trim() || _state.data?.p1_phone || '';
-    const p2phone = document.getElementById('srm-p2phone')?.value?.trim() || _state.data?.p2_phone || '';
-    const isActive = document.getElementById('srm-active')?.checked ?? _state.data?.is_active ?? true;
+    const classroom = _state.classes?.find((c) => String(c.id) === String(data.classroom_id))?.name || '';
+    const nivel = _state.classes?.find((c) => String(c.id) === String(data.classroom_id))?.level || data.level_requested || '';
+    const p1 = data.p1_name || '';
+    const p2 = data.p2_name || '';
+    const p1phone = data.p1_phone || '';
+    const p2phone = data.p2_phone || '';
+    const isActive = data.is_active ?? true;
     const win = window.open('', '_blank');
     if (win) {
       win.document.write(Helpers.getQRPrintTemplate(qrImg, name, matricula, {
@@ -1335,34 +1906,48 @@ export const StudentRecordModal = {
   },
 
   async sendCredentials() {
-    const email = document.getElementById('srm-emailuser')?.value?.trim()
-      || document.getElementById('srm-emailnotif')?.value?.trim()
-      || this._v('p1_email');
-    const password = document.getElementById('srm-password')?.value?.trim();
-    if (!email) return Helpers.toast('Ingresa el correo de login', 'warning');
+    this._captureDraft();
+    const data = this._collectFormData();
+    const loginEmail = normalizeLoginEmail(
+      _state.draft['srm-emailuser'] || _state.data?.login_email || data.p1_email,
+      data.p1_cedula
+    );
+    const notificationEmail = _state.draft['srm-emailnotif'] || data.p1_email || '';
+    const password = _state.draft['srm-password'] || '';
+    if (!notificationEmail) return Helpers.toast('Ingresa el correo de notificaciones', 'warning');
     if (!password || password.length < 6) return Helpers.toast('La contraseña debe tener al menos 6 caracteres', 'warning');
-    const p1Name = document.getElementById('srm-p1name')?.value?.trim() || this._v('p1_name') || 'Familia';
-    const studentName = document.getElementById('srm-name')?.value?.trim() || this._v('name') || 'Estudiante';
-    const matricula = document.getElementById('srm-matricula')?.value?.trim() || this._v('matricula') || 'MSC-XXXXXXXX';
-    const sel = document.getElementById('srm-classroom');
-    const classroom = sel?.options?.[sel?.selectedIndex]?.text || this._v('classroom') || 'Aula Asignada';
-    const level = sel?.options?.[sel?.selectedIndex]?.dataset?.level || this._v('level_requested') || '';
-    const schedule = document.getElementById('srm-schedule')?.value || this._v('schedule') || 'Regular';
-    const fee = parseFloat(document.getElementById('srm-monthlyfee')?.value || '0') || 0;
 
-    Helpers.toast('Enviando credenciales a ' + email + '...', 'info');
+    const p1Name = data.p1_name || 'Familia';
+    const studentName = data.name || 'Estudiante';
+    const matricula = data.matricula || 'MSC-XXXXXXXX';
+    const classroom = _state.classes?.find((c) => String(c.id) === String(data.classroom_id))?.name || 'Aula Asignada';
+    const level = normalizeLevel(data.level_requested || '');
+    const schedule = data.schedule || '8:00-12:00';
+    const fee = data.monthly_fee || 0;
+
+    Helpers.toast('Enviando credenciales a ' + notificationEmail + '...', 'info');
     const subject = `Credenciales Portal de Padres · ${studentName} (${matricula})`;
     const html = this._buildWelcomeEmailTemplate({
       p1Name, studentName, matricula, classroom, level, schedule,
-      email, password, monthlyFee: fee, isTest: false
+      email: loginEmail, password, monthlyFee: fee, isTest: false,
+      notificationEmail, planType: data.payment_plan,
     });
     const text = this._buildWelcomeEmailText({
       p1Name, studentName, matricula, classroom, level, schedule,
-      email, password, monthlyFee: fee, isTest: false
+      email: loginEmail, password, monthlyFee: fee, isTest: false
     });
-    const ok = await this._sendEmailViaEdge({ to: email, subject, html, text });
-    if (ok) Helpers.toast('Credenciales enviadas correctamente', 'success');
-    else Helpers.toast('No se pudo enviar – revisa Edge Function / Resend. Puedes reintentar.', 'warning');
+    const ok = await this._sendEmailViaEdge({ to: notificationEmail, subject, html, text });
+    if (ok) {
+      Helpers.toast('Credenciales enviadas a ' + notificationEmail, 'success');
+      const preId = _state.preData?._preId || _state.preData?.id;
+      if (preId) {
+        await supabase.from('student_preregistrations')
+          .update({ credentials_sent_at: new Date().toISOString() })
+          .eq('id', preId);
+      }
+    } else {
+      Helpers.toast('No se pudo enviar — revisa RESEND_API_KEY y FROM_EMAIL', 'warning');
+    }
   },
 
   // ════════════════════════════════════════════════════════════════

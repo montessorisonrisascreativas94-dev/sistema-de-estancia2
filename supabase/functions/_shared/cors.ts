@@ -9,8 +9,14 @@
 const DEFAULT_ALLOWED = [
   'https://montessorisonrisascreativas.com',
   'https://www.montessorisonrisascreativas.com',
+  'https://colegiosonrisas.com',
+  'https://www.colegiosonrisas.com',
+  'https://sonrisacreativas.com',
+  'https://www.sonrisacreativas.com',
   'http://localhost:5800',
   'http://127.0.0.1:5800',
+  'http://localhost:5500',
+  'http://127.0.0.1:5500',
 ];
 
 const ALLOWED_ORIGINS: string[] = (Deno.env.get('ALLOWED_ORIGINS') ?? '')

@@ -291,6 +291,7 @@ window.goTo = function(id) {
     asistencia:   ['Asistencia', 'Control de entradas y salidas'],
     errores:      ['Errores del Sistema', 'Log de errores y excepciones'],
     configuracion:['Configuración', 'Ajustes del panel de control'],
+    'qr-admin':   ['QR Administrativo', 'Generador, Escáner y Registro de Accesos'],
   };
   const [title, sub] = titles[id] || ['Panel', ''];
   document.getElementById('pageTitle').textContent    = title;
@@ -306,6 +307,7 @@ window.goTo = function(id) {
   if (id === 'asistencia')  renderAttendance();
   if (id === 'errores')     renderErrors();
   if (id === 'seguridad')   { renderBruteForce(); loadSecurityStats(); loadPaymentAudit(); }
+  if (id === 'qr-admin')    { loadAdminAccessLog(); updateQrKpis(); }
 };
 
 // -- Refresh -------------------------------------------------------------------
@@ -1347,3 +1349,478 @@ window.loadPaymentAudit = async function() {
 function escH(str) {
   return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
+
+// ══════════════════════════════════════════════════════════════════════════════
+// QR ADMINISTRATIVO — Generador / Escáner / Registro
+// ══════════════════════════════════════════════════════════════════════════════
+
+const QR_ADMIN_PREFIX = Object.freeze({
+  admin:     'ADM',
+  directora: 'DIR',
+  asistente: 'ASI',
+  encargada:'ENC',
+  maestra:   'TEA'
+});
+
+const ROLE_BADGE_COLORS = Object.freeze({
+  admin:     'badge-yellow',
+  directora: 'badge-blue',
+  asistente: 'badge-orange',
+  encargada:'badge-purple',
+  maestra:   'badge-green'
+});
+
+let _adminAccessLog = [];
+let _adminScanner = null;
+let _adminScannerActive = false;
+let _lastAdminQrData = null;
+
+/**
+ * Actualiza los KPIs del panel de QR
+ */
+window.updateQrKpis = function() {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    const todayLogs = _adminAccessLog.filter(l => (l.punched_at || l.created_at || '').startsWith(today));
+    const entries = todayLogs.filter(l => (l.punch_type || 'in') === 'in' || l.type === 'entry').length;
+    const exits   = todayLogs.filter(l => (l.punch_type || 'in') === 'out' || l.type === 'exit').length;
+    // Pendientes salida = personal que entró hoy pero no salió
+    const enteredToday = new Set();
+    const exitedToday = new Set();
+    todayLogs.forEach(l => {
+      const code = l.code || l.access_code || (l.staff ? (l.staff.access_code || l.staff.id) : null);
+      if (!code) return;
+      if ((l.punch_type || 'in') === 'in' || l.type === 'entry') enteredToday.add(code);
+      if ((l.punch_type || 'in') === 'out' || l.type === 'exit')  exitedToday.add(code);
+    });
+    const pending = [...enteredToday].filter(c => !exitedToday.has(c)).length;
+    const totalStaff = allUsers.filter(u => ['admin','directora','asistente','encargada','maestra'].includes(u.role)).length;
+
+    const setTxt = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = String(val); };
+    setTxt('kpiQrEntries', entries);
+    setTxt('kpiQrExits', exits);
+    setTxt('kpiQrPending', pending);
+    setTxt('kpiQrStaff', totalStaff);
+  } catch (e) {
+    console.warn('[QRAdmin] updateKpis error:', e);
+  }
+};
+
+/**
+ * Genera un código de acceso único y muestra el QR
+ */
+window.generateAdminQR = function() {
+  const roleSel = document.getElementById('qrAdminRole');
+  const role = roleSel?.value || 'admin';
+  const prefix = QR_ADMIN_PREFIX[role] || 'ADM';
+  const code = `${prefix}-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 9000) + 1000)}`;
+  const codeInput = document.getElementById('qrAdminCode');
+  if (codeInput) codeInput.value = code;
+  renderAdminQR(code, role);
+};
+
+/**
+ * Renderiza el código QR a partir de un texto (payload estandarizado)
+ */
+async function renderAdminQR(code, role) {
+  const canvas = document.getElementById('qrAdminCanvas');
+  const meta = document.getElementById('qrAdminMeta');
+  const btnPrint = document.getElementById('btnPrintAdminQR');
+  const btnSave = document.getElementById('btnSaveAdminQR');
+  if (!canvas) return;
+
+  const roleLabel = { admin:'Administrador', directora:'Directora', asistente:'Asistente', encargada:'Encargada', maestra:'Maestra' }[role] || role;
+  _lastAdminQrData = { code, role, roleLabel };
+
+  // Cargar librería qrcode si no existe
+  if (!window.QRCode) {
+    try {
+      await new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = 'js/shared/qrcode.min.js';
+        s.onload = resolve;
+        s.onerror = reject;
+        document.head.appendChild(s);
+      });
+    } catch (e) {
+      canvas.innerHTML = '<div style="text-align:center;color:#f87171;font-size:11px;font-weight:900;">Error cargando QR library</div>';
+      return;
+    }
+  }
+
+  canvas.innerHTML = '';
+  try {
+    new window.QRCode(canvas, {
+      text: JSON.stringify({
+        matricula: code,
+        type: 'karpus-staff',
+        role: role,
+        v: 1
+      }),
+      width: 160, height: 160,
+      colorDark: '#1e293b',
+      colorLight: '#ffffff',
+      correctLevel: window.QRCode.CorrectLevel.H
+    });
+  } catch (_) {
+    canvas.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(code)}" alt="QR">`;
+  }
+
+  if (meta) {
+    meta.innerHTML = `
+      <div style="font-size:13px;font-weight:900;color:var(--text);">${escH(roleLabel)}</div>
+      <div style="font-family:monospace;font-size:11px;color:#6366f1;font-weight:800;letter-spacing:.05em;">${escH(code)}</div>
+    `;
+  }
+  if (btnPrint) btnPrint.disabled = false;
+  if (btnSave) btnSave.disabled = false;
+}
+
+/**
+ * Listener del input del código: al escribir, renderiza el QR en vivo
+ */
+document.addEventListener('input', (e) => {
+  if (e.target && e.target.id === 'qrAdminCode') {
+    const code = e.target.value.trim();
+    const role = document.getElementById('qrAdminRole')?.value || 'admin';
+    if (code) renderAdminQR(code, role);
+  }
+});
+
+/**
+ * Listener del select rol: al cambiar, actualiza placeholder y si hay código re-renderiza
+ */
+document.addEventListener('change', (e) => {
+  if (e.target && e.target.id === 'qrAdminRole') {
+    const role = e.target.value;
+    const codeInput = document.getElementById('qrAdminCode');
+    const prefixMap = { admin:'ADM-', directora:'DIR-', asistente:'ASI-', encargada:'ENC-', maestra:'TEA-' };
+    if (codeInput) codeInput.placeholder = `${prefixMap[role]||'ADM-'}${new Date().getFullYear()}-XXXX`;
+  }
+});
+
+/**
+ * Imprime el carné administrativo
+ */
+window.printAdminQR = function() {
+  if (!_lastAdminQrData) { alert('Primero genera un código QR'); return; }
+  const { code, role, roleLabel } = _lastAdminQrData;
+  const canvas = document.getElementById('qrAdminCanvas');
+  const qrImg = canvas?.querySelector('img')?.src || canvas?.querySelector('canvas')?.toDataURL();
+  if (!qrImg) { alert('Espera a que el QR termine de generarse'); return; }
+
+  const win = window.open('', '_blank');
+  win.document.write(`<!DOCTYPE html><html><head><title>Carnet Administrativo — ${escH(code)}</title>
+    <style>
+      body{font-family:'Nunito',Arial,sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;background:#f8fafc;padding:20px;}
+      .card{width:340px;border-radius:24px;overflow:hidden;box-shadow:0 20px 60px rgba(15,23,42,.15);background:white;}
+      .header{background:linear-gradient(135deg,#0B63C7,#6366f1);padding:24px;color:white;text-align:center;}
+      .header h1{font-family:'Baloo 2',cursive;font-size:18px;font-weight:900;margin:0 0 4px 0;}
+      .header p{font-size:10px;opacity:.85;text-transform:uppercase;letter-spacing:.15em;margin:0;}
+      .body{padding:28px;text-align:center;}
+      .qr-wrap{display:inline-block;padding:12px;background:white;border:3px solid #e0e7ff;border-radius:20px;margin-bottom:18px;}
+      .qr-wrap img{width:180px;height:180px;display:block;}
+      .role-badge{display:inline-block;padding:6px 18px;border-radius:999px;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.1em;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;margin-bottom:10px;}
+      .name{font-size:14px;color:#64748b;font-weight:700;margin-bottom:4px;}
+      .institution{font-size:11px;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:.1em;margin-bottom:18px;}
+      .code-wrap{background:#0f172a;color:#e2e8f0;padding:10px 16px;border-radius:12px;font-family:monospace;font-size:14px;font-weight:800;letter-spacing:.15em;}
+    </style></head><body>
+    <div class="card">
+      <div class="header">
+        <h1>COLEGIO MONTESSORI</h1>
+        <p>Sonrisas Creativas — Staff</p>
+      </div>
+      <div class="body">
+        <div class="qr-wrap"><img src="${qrImg}" alt="QR"></div>
+        <div class="role-badge">${escH(roleLabel)}</div>
+        <div class="name">Carnet de Identificación</div>
+        <div class="institution">Control de Acceso</div>
+        <div class="code-wrap">${escH(code)}</div>
+      </div>
+    </div>
+    <script>window.onload=()=>{setTimeout(()=>window.print(),400);}<\/script>
+  </body></html>`);
+  win.document.close();
+};
+
+/**
+ * Guarda el código en la base de datos (profiles.access_code)
+ */
+window.saveAdminQRAccess = async function() {
+  if (!_lastAdminQrData) { alert('Primero genera un código QR'); return; }
+  const { code, role } = _lastAdminQrData;
+
+  if (!confirm(`¿Guardar código ${code} como código oficial de acceso para rol "${role}"?\n\nPodrás asignarlo a un usuario específico desde Gestión de Personal.`)) return;
+
+  try {
+    // Registrar en auditoría
+    await supabase.from('audit_logs').insert({
+      user_id: currentUser.id,
+      action: 'admin.qr_code_generated',
+      payload: { code, role, generated_by: currentUser.email }
+    }).catch(() => {});
+
+    alert(`✅ Código ${code} registrado correctamente.\n\nPuedes escanearlo desde el escáner de este panel o asignarlo a un personal en el Panel de Directora.`);
+  } catch (e) {
+    alert('Error guardando: ' + (e.message || String(e)));
+  }
+};
+
+/**
+ * Activa/desactiva el escáner de cámara
+ */
+window.toggleAdminScanner = async function() {
+  const container = document.getElementById('adminScannerContainer');
+  const lbl = document.getElementById('scanCamLabel');
+  const icon = document.getElementById('scanCamIcon');
+  if (!container) return;
+
+  if (_adminScannerActive) {
+    try { if (_adminScanner) { _adminScanner.clear(); _adminScanner.stop(); } } catch (_) {}
+    _adminScanner = null;
+    _adminScannerActive = false;
+    container.style.display = 'none';
+    if (lbl) lbl.textContent = 'Iniciar Cámara';
+    if (icon) { icon.className = 'bi bi-camera-video'; }
+    return;
+  }
+
+  container.style.display = 'block';
+  if (lbl) lbl.textContent = 'Detener Cámara';
+  if (icon) { icon.className = 'bi bi-camera-video-off-fill'; }
+
+  // Cargar html5-qrcode si no está
+  if (!window.Html5QrcodeScanner && !window.Html5Qrcode) {
+    try {
+      await new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = 'js/shared/html5-qrcode.min.js';
+        s.onload = resolve;
+        s.onerror = reject;
+        document.head.appendChild(s);
+      });
+    } catch (e) {
+      container.innerHTML = '<div style="color:#f87171;font-size:12px;font-weight:800;padding:40px;text-align:center;">⚠️ No se pudo cargar el escáner QR. Usa el campo manual de abajo.</div>';
+      return;
+    }
+  }
+
+  try {
+    const onResult = (decodedText) => {
+      document.getElementById('qrScanInput').value = decodedText;
+      processAdminQRScan();
+    };
+    if (window.Html5Qrcode) {
+      _adminScanner = new window.Html5Qrcode('adminScannerReader');
+      await _adminScanner.start(
+        { facingMode: 'environment' },
+        { fps: 10, qrbox: { width: 220, height: 220 } },
+        onResult,
+        () => {}
+      );
+      _adminScannerActive = true;
+    } else if (window.Html5QrcodeScanner) {
+      const sc = new window.Html5QrcodeScanner('adminScannerReader', { fps: 10, qrbox: 220 }, false);
+      sc.render(onResult, () => {});
+      _adminScanner = sc;
+      _adminScannerActive = true;
+    }
+  } catch (e) {
+    container.innerHTML = '<div style="color:#f87171;font-size:12px;font-weight:800;padding:30px;text-align:center;">⚠️ Cámara no disponible<br><span style="font-size:10px;font-weight:600;opacity:.8;">Permite el acceso a la cámara o usa el campo manual.</span></div>';
+  }
+};
+
+/**
+ * Procesa un código QR escaneado (o escrito manualmente)
+ */
+window.processAdminQRScan = async function() {
+  const rawInput = (document.getElementById('qrScanInput')?.value || '').trim();
+  const resultEl = document.getElementById('scanResult');
+  if (!rawInput) return;
+
+  // Parsear el contenido (puede ser JSON o código plano)
+  let code = rawInput;
+  let meta = {};
+  try {
+    const parsed = JSON.parse(rawInput);
+    if (parsed.matricula) code = parsed.matricula;
+    meta = parsed;
+  } catch (_) {}
+
+  if (!code) return;
+
+  const prefix = code.split('-')[0]?.toUpperCase();
+  const roleFromPrefix = Object.entries(QR_ADMIN_PREFIX).find(([_, p]) => p === prefix)?.[0] || 'staff';
+  const staff = allUsers.find(u => (u.access_code || '').toUpperCase() === code.toUpperCase() || (u.notes || '').toUpperCase() === code.toUpperCase());
+  const role = staff?.role || roleFromPrefix;
+
+  // Determinar entry/exit por último evento
+  const today = new Date().toISOString().split('T')[0];
+  const lastEvents = _adminAccessLog.filter(l =>
+    (l.code || l.access_code || '').toUpperCase() === code.toUpperCase() &&
+    (l.punched_at || l.created_at || '').startsWith(today)
+  );
+  const lastWasEntry = lastEvents.length && lastEvents[0] && ((lastEvents[0].punch_type || 'in') === 'in' || lastEvents[0].type === 'entry');
+  const punchType = lastWasEntry ? 'out' : 'in';
+
+  let insert = null;
+  let insertError = null;
+  // Intentar insertar en door_punches (tabla existente)
+  try {
+    const payload = {
+      staff_id: staff?.id || null,
+      code: code,
+      punch_type: punchType,
+      device: 'control-center-web',
+      notes: JSON.stringify({ scanned_by: currentUser?.email, raw: rawInput.slice(0, 200), role })
+    };
+    const { data, error } = await supabase.from('door_punches').insert(payload).select().maybeSingle();
+    insert = data;
+    insertError = error;
+  } catch (e) {
+    insertError = e;
+  }
+
+  if (resultEl) {
+    const okBadge = punchType === 'in' ? 'badge-green' : 'badge-blue';
+    const okIcon  = punchType === 'in' ? 'bi-box-arrow-in-right' : 'bi-box-arrow-in-left';
+    const okLbl   = punchType === 'in' ? 'ENTRADA REGISTRADA' : 'SALIDA REGISTRADA';
+    const typeLbl = { admin:'Administrador', directora:'Directora', asistente:'Asistente', encargada:'Encargada', maestra:'Maestra', staff:'Personal' }[role] || role;
+    const errHtml = insertError ? `<div class="badge badge-yellow" style="margin-top:6px;"><i class="bi bi-exclamation-triangle"></i> Sin tabla door_punches: OK solo en UI</div>` : '';
+
+    resultEl.style.display = 'block';
+    resultEl.innerHTML = `
+      <div class="alert alert-green" style="background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.28);color:#166534;">
+        <i class="bi ${okIcon}" style="font-size:20px;"></i>
+        <div style="flex:1;">
+          <div style="font-size:13px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;">${okLbl}</div>
+          <div style="font-size:12px;font-weight:700;">
+            <span style="background:#0f172a;color:#e2e8f0;padding:3px 10px;border-radius:8px;font-family:monospace;font-size:11px;">${escH(code)}</span>
+            ·
+            <span>${escH(staff?.name || typeLbl)}</span>
+            ·
+            <span class="badge ${ROLE_BADGE_COLORS[role]||'badge-gray'}">${escH(typeLbl)}</span>
+          </div>
+          <div style="font-size:11px;color:#15803d;margin-top:4px;font-weight:700;">${new Date().toLocaleString('es-DO')}</div>
+          ${errHtml}
+        </div>
+      </div>
+    `;
+  }
+
+  document.getElementById('qrScanInput').value = '';
+  await loadAdminAccessLog();
+  updateQrKpis();
+
+  // Auditoría
+  try {
+    await supabase.from('audit_logs').insert({
+      user_id: currentUser?.id || null,
+      action: `admin.qr_${punchType}`,
+      payload: { code, staff_id: staff?.id || null, role, device: 'control-center' }
+    }).catch(() => {});
+  } catch (_) {}
+};
+
+/**
+ * Carga el registro completo de accesos administrativos
+ */
+window.loadAdminAccessLog = async function() {
+  const tbody = document.getElementById('adminAccessLogBody');
+  if (!tbody) return;
+
+  try {
+    // Primero: door_punches tabla oficial
+    let rows = [];
+    try {
+      const since = new Date(); since.setDate(since.getDate() - 14);
+      const { data } = await supabase
+        .from('door_punches')
+        .select('*, staff:profiles!door_punches_staff_id_fkey(id,name,role,email)')
+        .gte('punched_at', since.toISOString())
+        .order('punched_at', { ascending: false })
+        .limit(300);
+      rows = data || [];
+    } catch (_) {
+      // Fallback: audit_logs con acciones admin.qr_*
+      try {
+        const since2 = new Date(); since2.setDate(since2.getDate() - 14);
+        const { data: audit } = await supabase
+          .from('audit_logs')
+          .select('id, action, payload, created_at')
+          .gte('created_at', since2.toISOString())
+          .like('action', 'admin.qr_%')
+          .order('created_at', { ascending: false })
+          .limit(300);
+        rows = (audit || []).map(a => ({
+          id: a.id,
+          punched_at: a.created_at,
+          code: a.payload?.code || '—',
+          punch_type: a.action?.endsWith('_out') ? 'out' : 'in',
+          notes: a.payload,
+          staff: null,
+          device: a.payload?.device || '—'
+        }));
+      } catch (e2) {
+        console.warn('[QRAdmin] no door_punches ni audit_logs:', e2);
+      }
+    }
+
+    _adminAccessLog = rows;
+    renderAdminAccessTable(rows);
+    updateQrKpis();
+  } catch (e) {
+    console.error('[QRAdmin] loadAdminAccessLog:', e);
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:24px;color:#f87171;">Error al cargar accesos: ${escH(e.message || String(e))}</td></tr>`;
+  }
+};
+
+function renderAdminAccessTable(rows) {
+  const tbody = document.getElementById('adminAccessLogBody');
+  if (!tbody) return;
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--muted);">No hay registros de acceso administrativo. Escanea un código para empezar.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map(r => {
+    const dt = new Date(r.punched_at || r.created_at || Date.now());
+    const dateStr = dt.toLocaleString('es-DO');
+    const code = r.code || r.access_code || (typeof r.notes === 'string' ? r.notes : (r.notes?.code || '—'));
+    const punch = (r.punch_type || 'in').toLowerCase();
+    const staff = r.staff || null;
+    const name = staff?.name || (r.notes?.staff_name ? r.notes.staff_name : '—');
+    const role = staff?.role || (r.notes?.role ? r.notes.role : '—');
+    const roleBadge = ROLE_BADGE_COLORS[role] || 'badge-gray';
+    const typeBadge = punch === 'in' ? 'badge-green' : 'badge-blue';
+    const typeLabel = punch === 'in' ? 'Entrada' : 'Salida';
+    const typeIcon = punch === 'in' ? 'bi-box-arrow-in-right' : 'bi-box-arrow-in-left';
+    const device = r.device || (r.notes?.device) || 'Web';
+
+    return `
+      <tr class="border-b border-slate-50 hover:bg-slate-50 transition-colors">
+        <td class="py-3 px-4 whitespace-nowrap text-slate-500 text-[11px] uppercase font-black">${escH(dateStr)}</td>
+        <td class="py-3 px-4"><div style="background:#0f172a;color:#e2e8f0;padding:3px 10px;border-radius:8px;font-family:monospace;font-size:10px;font-weight:800;display:inline-block;">${escH(String(code))}</div></td>
+        <td class="py-3 px-4 font-bold text-slate-800 text-sm">${escH(name)}</td>
+        <td class="py-3 px-4"><span class="badge ${roleBadge} text-[9px] uppercase">${escH(String(role))}</span></td>
+        <td class="py-3 px-4"><span class="badge ${typeBadge} uppercase text-[9px] font-black tracking-wider"><i class="bi ${typeIcon}"></i> ${typeLabel}</span></td>
+        <td class="py-3 px-4 text-slate-400 text-[10px] font-bold">${escH(String(device))}</td>
+        <td class="py-3 px-4"><span class="w-2 h-2 rounded-full bg-emerald-400 inline-block shadow-[0_0_8px_rgba(52,211,153,0.6)]"></span></td>
+      </tr>
+    `;
+  }).join('');
+}
+
+/**
+ * Filtra la tabla de accesos por búsqueda
+ */
+window.filterAdminAccess = function() {
+  const q = (document.getElementById('qrAccessSearch')?.value || '').toLowerCase();
+  if (!q) { renderAdminAccessTable(_adminAccessLog); return; }
+  const filtered = _adminAccessLog.filter(r => {
+    const code = String(r.code || r.access_code || '').toLowerCase();
+    const staff = String(r.staff?.name || r.staff?.email || '').toLowerCase();
+    const role = String(r.staff?.role || r.payload?.role || '').toLowerCase();
+    return code.includes(q) || staff.includes(q) || role.includes(q);
+  });
+  renderAdminAccessTable(filtered);
+};

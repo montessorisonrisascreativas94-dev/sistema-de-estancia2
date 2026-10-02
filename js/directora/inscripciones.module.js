@@ -55,13 +55,12 @@ const statusBadge = (s) => ({
 })[s] || `<span class="px-2 py-0.5 bg-slate-100 text-slate-600 text-[10px] font-black rounded-full uppercase">${esc(s)}</span>`;
 
 function ageBadge(r) {
-  if (r.age_match === false) {
+  if (r.age_match !== false) {
     return `<span class="inline-flex items-center gap-1 px-2 py-0.5 bg-green-100 text-green-700 text-[10px] font-black rounded-full" title="Edad en rango oficial">
       <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
       Edad OK
     </span>`;
   }
-  if (r.age_match === false || r.age_match === false) {}
   return `<span class="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-100 text-amber-700 text-[10px] font-black rounded-full" title="Edad fuera de rango oficial">
     <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>
     Edad Fuera
@@ -69,10 +68,7 @@ function ageBadge(r) {
 }
 
 function dirAuthBadge(r) {
-  if (!r.age_match) return '';
-  // Edad fuera OK → badge ok
-  if (r.age_match) return '';
-  // Edad fuera → Mostrar estado autorizacion
+  if (r.age_match !== false) return '';
   if (r.director_authorization_requested && r.director_authorization_approved === true) {
     return `<span class="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[10px] font-black rounded-full">
       <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
@@ -167,54 +163,58 @@ export async function loadInscripciones() {
     const ageOutOfRange = data.filter(r => r.age_match === false);
 
     container.innerHTML = `
-      <!-- KPIs -->
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <div class="relative overflow-hidden bg-gradient-to-br from-yellow-50 to-yellow-100 border border-yellow-200 rounded-2xl p-4 text-center">
-          <div class="absolute -top-6 -right-6 w-16 h-16 rounded-full bg-yellow-200/40"></div>
-          <p class="relative text-3xl font-black text-yellow-700">${pending.length}</p>
-          <p class="relative text-xs font-black text-yellow-700 uppercase tracking-wide mt-1">Pendientes</p>
+      <!-- KPIs (más gruesas: +padding, +border, +shadow, +radius) -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-10">
+        <div class="relative overflow-hidden bg-gradient-to-br from-yellow-50 to-yellow-100 border-[3px] border-yellow-300 rounded-[28px] p-6 md:p-7 text-center shadow-[0_14px_36px_rgba(234,179,8,0.14)]">
+          <div class="absolute -top-10 -right-10 w-28 h-28 rounded-full bg-yellow-200/50"></div>
+          <p class="relative text-[2.55rem] leading-none font-black text-yellow-700 tracking-tight">${pending.length}</p>
+          <p class="relative text-[13px] font-black text-yellow-800 uppercase tracking-wider mt-4">Pendientes</p>
+          <div class="mt-4 h-2.5 w-full rounded-full bg-yellow-200 overflow-hidden"><div class="h-full bg-yellow-500 w-2/3 rounded-r-full"></div></div>
         </div>
-        <div class="relative overflow-hidden bg-gradient-to-br from-green-50 to-green-100 border border-green-200 rounded-2xl p-4 text-center">
-          <div class="absolute -top-6 -right-6 w-16 h-16 rounded-full bg-green-200/40"></div>
-          <p class="relative text-3xl font-black text-green-700">${admitted.length}</p>
-          <p class="relative text-xs font-black text-green-700 uppercase tracking-wide mt-1">Admitidos</p>
+        <div class="relative overflow-hidden bg-gradient-to-br from-green-50 to-emerald-100 border-[3px] border-green-400 rounded-[28px] p-6 md:p-7 text-center shadow-[0_14px_36px_rgba(34,197,94,0.14)]">
+          <div class="absolute -top-10 -right-10 w-28 h-28 rounded-full bg-green-200/50"></div>
+          <p class="relative text-[2.55rem] leading-none font-black text-emerald-700 tracking-tight">${admitted.length}</p>
+          <p class="relative text-[13px] font-black text-emerald-800 uppercase tracking-wider mt-4">Admitidos</p>
+          <div class="mt-4 h-2.5 w-full rounded-full bg-emerald-200 overflow-hidden"><div class="h-full bg-emerald-500 w-4/5 rounded-r-full"></div></div>
         </div>
-        <div class="relative overflow-hidden bg-gradient-to-br from-red-50 to-red-100 border border-red-200 rounded-2xl p-4 text-center">
-          <div class="absolute -top-6 -right-6 w-16 h-16 rounded-full bg-red-200/40"></div>
-          <p class="relative text-3xl font-black text-red-700">${rejected.length}</p>
-          <p class="relative text-xs font-black text-red-700 uppercase tracking-wide mt-1">Rechazados</p>
+        <div class="relative overflow-hidden bg-gradient-to-br from-red-50 to-rose-100 border-[3px] border-rose-400 rounded-[28px] p-6 md:p-7 text-center shadow-[0_14px_36px_rgba(244,63,94,0.14)]">
+          <div class="absolute -top-10 -right-10 w-28 h-28 rounded-full bg-rose-200/50"></div>
+          <p class="relative text-[2.55rem] leading-none font-black text-rose-700 tracking-tight">${rejected.length}</p>
+          <p class="relative text-[13px] font-black text-rose-800 uppercase tracking-wider mt-4">Rechazados</p>
+          <div class="mt-4 h-2.5 w-full rounded-full bg-rose-200 overflow-hidden"><div class="h-full bg-rose-500 w-1/4 rounded-r-full"></div></div>
         </div>
-        <div class="relative overflow-hidden bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-200 rounded-2xl p-4 text-center">
-          <div class="absolute -top-6 -right-6 w-16 h-16 rounded-full bg-purple-200/40"></div>
-          <p class="relative text-3xl font-black text-purple-700">${authPending.length}</p>
-          <p class="relative text-xs font-black text-purple-700 uppercase tracking-wide mt-1">Pend. Autoriz.</p>
+        <div class="relative overflow-hidden bg-gradient-to-br from-purple-50 to-violet-100 border-[3px] border-violet-400 rounded-[28px] p-6 md:p-7 text-center shadow-[0_14px_36px_rgba(139,92,246,0.14)]">
+          <div class="absolute -top-10 -right-10 w-28 h-28 rounded-full bg-purple-200/50"></div>
+          <p class="relative text-[2.55rem] leading-none font-black text-violet-700 tracking-tight">${authPending.length}</p>
+          <p class="relative text-[13px] font-black text-violet-800 uppercase tracking-wider mt-4">Pend. Autoriz.</p>
+          <div class="mt-4 h-2.5 w-full rounded-full bg-violet-200 overflow-hidden"><div class="h-full bg-violet-500 w-1/3 rounded-r-full"></div></div>
         </div>
       </div>
 
-      <!-- Filters -->
-      <div class="flex gap-2 mb-4 flex-wrap">
-        <button onclick="InscripcionesModule.filterStatus('all')" class="insc-filter-btn active px-4 py-2 rounded-xl text-xs font-black" data-filter="all">Todos (${data.length})</button>
-        <button onclick="InscripcionesModule.filterStatus('pending')" class="insc-filter-btn px-4 py-2 rounded-xl text-xs font-black" data-filter="pending">Pendientes (${pending.length})</button>
-        <button onclick="InscripcionesModule.filterStatus('admitted')" class="insc-filter-btn px-4 py-2 rounded-xl text-xs font-black" data-filter="admitted">Admitidos (${admitted.length})</button>
-        <button onclick="InscripcionesModule.filterStatus('age-out')" class="insc-filter-btn px-4 py-2 rounded-xl text-xs font-black" data-filter="age-out">Edad Fuera Rango (${ageOutOfRange.length})</button>
-        <button onclick="InscripcionesModule.filterStatus('auth-pending')" class="insc-filter-btn px-4 py-2 rounded-xl text-xs font-black" data-filter="auth-pending">Autoriz. Pendiente (${authPending.length})</button>
+      <!-- Filters (más gruesos: +padding, +tamaño fuente) -->
+      <div class="flex gap-3 mb-7 flex-wrap">
+        <button onclick="InscripcionesModule.filterStatus('all')" class="insc-filter-btn active px-6 py-3.5 rounded-2xl text-[13px] font-black shadow-[0_4px_12px_rgba(15,23,42,0.05)]" data-filter="all">Todos (${data.length})</button>
+        <button onclick="InscripcionesModule.filterStatus('pending')" class="insc-filter-btn px-6 py-3.5 rounded-2xl text-[13px] font-black shadow-[0_4px_12px_rgba(15,23,42,0.05)]" data-filter="pending">Pendientes (${pending.length})</button>
+        <button onclick="InscripcionesModule.filterStatus('admitted')" class="insc-filter-btn px-6 py-3.5 rounded-2xl text-[13px] font-black shadow-[0_4px_12px_rgba(15,23,42,0.05)]" data-filter="admitted">Admitidos (${admitted.length})</button>
+        <button onclick="InscripcionesModule.filterStatus('age-out')" class="insc-filter-btn px-6 py-3.5 rounded-2xl text-[13px] font-black shadow-[0_4px_12px_rgba(15,23,42,0.05)]" data-filter="age-out">Edad Fuera Rango (${ageOutOfRange.length})</button>
+        <button onclick="InscripcionesModule.filterStatus('auth-pending')" class="insc-filter-btn px-6 py-3.5 rounded-2xl text-[13px] font-black shadow-[0_4px_12px_rgba(15,23,42,0.05)]" data-filter="auth-pending">Autoriz. Pendiente (${authPending.length})</button>
       </div>
 
-      <!-- Table -->
-      <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-        <div class="overflow-x-auto">
-          <table class="w-full text-sm" id="inscripcionesTable">
-            <thead class="bg-[#E8F2FF]">
+      <!-- Table (más gruesa: +border, +radius, +padding celdas, +separadores) -->
+      <div class="table-panel">
+        <div class="table-scroll-wrap rounded-[32px] border-[3px] border-slate-200 overflow-hidden bg-white shadow-[0_12px_32px_rgba(15,23,42,0.06)]">
+          <table class="data-table w-full text-sm" id="inscripcionesTable" style="min-width:860px">
+            <thead class="bg-[#0B63C7] text-white sticky top-0 z-10">
               <tr>
-                <th class="px-4 py-3 text-left text-[10px] font-black text-[#0850A0] uppercase tracking-wider">Estudiante</th>
-                <th class="px-4 py-3 text-left text-[10px] font-black text-[#0850A0] uppercase tracking-wider hidden md:table-cell">Sección / Edad</th>
-                <th class="px-4 py-3 text-left text-[10px] font-black text-[#0850A0] uppercase tracking-wider hidden md:table-cell">Tutor</th>
-                <th class="px-4 py-3 text-left text-[10px] font-black text-[#0850A0] uppercase tracking-wider hidden lg:table-cell">Fecha</th>
-                <th class="px-4 py-3 text-center text-[10px] font-black text-[#0850A0] uppercase tracking-wider">Estado</th>
-                <th class="px-4 py-3 text-center text-[10px] font-black text-[#0850A0] uppercase tracking-wider">Acción</th>
+                <th class="px-8 py-5 text-left text-[12px] font-black uppercase tracking-widest">Estudiante</th>
+                <th class="px-8 py-5 text-left text-[12px] font-black uppercase tracking-widest">Sección / Edad</th>
+                <th class="px-8 py-5 text-left text-[12px] font-black uppercase tracking-widest hidden md:table-cell">Tutor Principal</th>
+                <th class="px-8 py-5 text-left text-[12px] font-black uppercase tracking-widest hidden lg:table-cell">Solicitado</th>
+                <th class="px-8 py-5 text-center text-[12px] font-black uppercase tracking-widest">Estado</th>
+                <th class="px-8 py-5 text-center text-[12px] font-black uppercase tracking-widest">Acciones</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-slate-50" id="inscripcionesTbody">
+            <tbody class="divide-y-4 divide-slate-100 bg-white" id="inscripcionesTbody">
               ${data.map(r => _renderRow(r)).join('')}
             </tbody>
           </table>
@@ -246,49 +246,62 @@ function _renderRow(r) {
     ? `<button onclick="InscripcionesModule.openAdmitModal(${r.id})"
          title="${esc(disabledTitle)}"
          ${disabled}
-         class="px-3 py-1.5 bg-[#0B63C7] text-white rounded-xl text-[10px] font-black uppercase ${disabledClass} transition-all shadow-sm">
+         class="px-5 py-2.5 bg-[#0B63C7] text-white rounded-2xl text-[12px] font-black uppercase ${disabledClass} transition-all shadow-[0_6px_18px_rgba(11,99,199,0.28)] hover:-translate-y-0.5 active:translate-y-0">
          Admitir
        </button>`
-    : `<span class="text-[10px] text-slate-400 font-bold">—</span>`;
+    : `<span class="text-[12px] text-slate-400 font-black">—</span>`;
 
   const detailBtn = `
     <button onclick="InscripcionesModule.openPreDetail(${r.id})"
-      class="px-3 py-1.5 bg-slate-100 text-slate-700 rounded-xl text-[10px] font-black uppercase hover:bg-slate-200 transition-all"
+      class="px-5 py-2.5 bg-slate-100 text-slate-700 rounded-2xl text-[12px] font-black uppercase hover:bg-slate-200 hover:-translate-y-0.5 transition-all shadow-[0_4px_12px_rgba(15,23,42,0.06)] border-[2px] border-slate-200"
       title="Ver detalle completo">
       Ver
     </button>`;
 
   const fullName = [r.student_name, r.student_last_name].filter(Boolean).join(' ') || '—';
   const levelParts = [r.level_requested, r.school_year_requested].filter(Boolean);
-  const nivelTag = levelParts.length ? `<span class="px-2 py-0.5 bg-[#E8F2FF] text-[#0B63C7] text-[10px] font-black rounded-full block mb-1">${esc(levelParts.join(' · '))}</span>` : '';
+  const nivelTag = levelParts.length ? `<span class="px-3 py-1 bg-[#E8F2FF] text-[#0B63C7] text-[11px] font-black rounded-2xl block mb-1.5 tracking-wide">${esc(levelParts.join(' · '))}</span>` : '';
   const scheduleTag = r.schedule
-    ? `<span class="px-2 py-0.5 bg-slate-100 text-slate-700 text-[10px] font-black rounded-full block">${esc(r.schedule)}</span>`
+    ? `<span class="px-3 py-1 bg-slate-100 text-slate-700 text-[11px] font-black rounded-2xl block tracking-wide">${esc(r.schedule)}</span>`
+    : '';
+
+  const age = _calcAgeFromBirth(r.birth_date);
+  const ageStr = age ? _fmtHuman(age) : '';
+  const ageTxtTag = ageStr
+    ? `<span class="px-3 py-1 bg-[#FFF7ED] text-orange-700 text-[11px] font-black rounded-2xl block mb-1.5 tracking-wide">${esc(ageStr)}</span>`
     : '';
 
   const dataAgeOut = r.age_match === false ? 'data-age-out="1"' : '';
   const dataAuthPending = (!r.age_match && r.director_authorization_requested && r.director_authorization_approved === null) ? 'data-auth-pending="1"' : '';
 
   return `
-    <tr data-status="${esc(r.status)}" ${dataAgeOut} ${dataAuthPending} class="hover:bg-slate-50 transition-colors">
-      <td class="px-4 py-3">
-        <div class="font-bold text-slate-800">${esc(fullName)}</div>
-        <div class="mt-1 flex flex-wrap gap-1">
-          ${ageBadge(r)}
-          ${dirAuthBadge(r)}
+    <tr data-status="${esc(r.status)}" ${dataAgeOut} ${dataAuthPending} class="hover:bg-[#F8FAFC] transition-colors">
+      <td class="px-8 py-6">
+        <div class="flex items-center gap-4">
+          <div class="w-14 h-14 rounded-[20px] bg-gradient-to-br from-[#0B63C7] to-[#4F46E5] flex items-center justify-center text-white text-[17px] font-black shadow-[0_8px_20px_rgba(11,99,199,0.22)] border-[2px] border-white">
+            ${esc(((r.student_name||'?').charAt(0)).toUpperCase())}
+          </div>
+          <div class="min-w-0">
+            <div class="font-black text-slate-800 text-[16px] leading-tight truncate">${esc(fullName)}</div>
+            <div class="mt-2 flex flex-wrap gap-1.5">
+              ${ageBadge(r)}
+              ${dirAuthBadge(r)}
+            </div>
+          </div>
         </div>
       </td>
-      <td class="px-4 py-3 hidden md:table-cell">
-        ${nivelTag}${scheduleTag}${(!nivelTag && !scheduleTag) ? '<span class="text-slate-400 text-[10px] font-bold">—</span>' : ''}
+      <td class="px-8 py-6">
+        ${ageTxtTag}${nivelTag}${scheduleTag}${(!nivelTag && !scheduleTag && !ageTxtTag) ? '<span class="text-slate-400 text-[12px] font-black">—</span>' : ''}
       </td>
-      <td class="px-4 py-3 hidden md:table-cell">
-        <div class="font-bold text-slate-700 text-xs">${esc(r.p1_name || '—')}</div>
-        <div class="text-[10px] text-slate-400">${esc(r.p1_phone || '')}</div>
-        <div class="text-[10px] text-slate-400 truncate max-w-[160px]">${esc(r.p1_email || '')}</div>
+      <td class="px-8 py-6 hidden md:table-cell">
+        <div class="font-black text-slate-800 text-[14px]">${esc(r.p1_name || '—')}</div>
+        <div class="text-[12px] text-slate-500 font-semibold mt-1.5">${esc(r.p1_phone || '')}</div>
+        <div class="text-[12px] text-slate-500 font-medium mt-1 truncate max-w-[220px]" title="${esc(r.p1_email || '')}">${esc(r.p1_email || '')}</div>
       </td>
-      <td class="px-4 py-3 hidden lg:table-cell text-xs text-slate-500">${fmt(r.created_at)}</td>
-      <td class="px-4 py-3 text-center">${statusBadge(r.status)}</td>
-      <td class="px-4 py-3">
-        <div class="flex items-center justify-center gap-1">
+      <td class="px-8 py-6 hidden lg:table-cell text-[14px] text-slate-600 font-semibold">${fmt(r.created_at)}</td>
+      <td class="px-8 py-6 text-center">${statusBadge(r.status)}</td>
+      <td class="px-8 py-6">
+        <div class="flex items-center justify-center gap-2.5">
           ${detailBtn}
           ${admitBtn}
         </div>

@@ -336,7 +336,7 @@ export const DirectorApi = {
       try {
         const { data, error } = await supabase
           .from(TABLES.CLASSROOMS)
-          .select('id, name, level, capacity, profiles:teacher_id(name), students(count)')
+          .select('id, name, level, capacity, is_live, profiles:teacher_id(name), students(count)')
           .is('deleted_at', null)
           .order('name');
         if (error) throw error;
@@ -419,7 +419,7 @@ export const DirectorApi = {
       if (classroomIds.length > 0) {
         const { data: rooms } = await supabase
           .from('classrooms')
-          .select('id, name')
+.select('id, name, level')
           .in('id', classroomIds);
         (rooms || []).forEach(r => { classroomMap[r.id] = r.name; });
       }
@@ -482,14 +482,16 @@ export const DirectorApi = {
     if (classroomIds.length > 0) {
       const { data: rooms } = await supabase
         .from('classrooms')
-        .select('id, name')
+        .select('id, name, level')
         .in('id', classroomIds);
-      (rooms || []).forEach(r => { classroomMap[r.id] = r.name; });
+      (rooms || []).forEach(r => { classroomMap[r.id] = r; });
     }
     
     const enriched = (data || []).map(s => ({
       ...s,
-      classrooms: s.classroom_id ? { id: s.classroom_id, name: classroomMap[s.classroom_id] || '' } : null
+      classrooms: s.classroom_id
+        ? { ...(classroomMap[s.classroom_id] || { id: s.classroom_id }), name: classroomMap[s.classroom_id]?.name || '' }
+        : null
     }));
     
     return { data: enriched, error, count };
@@ -614,6 +616,7 @@ export const DirectorApi = {
     }
     QueryCache.invalidate('dir_teachers');
     QueryCache.invalidate('classrooms_list');
+    QueryCache.invalidate('dir_classrooms_occ');
     return result;
   },
 

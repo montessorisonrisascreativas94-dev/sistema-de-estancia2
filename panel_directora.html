@@ -47,6 +47,7 @@
   <link rel="stylesheet" href="css/karpus-tailwind.css">
   <link rel="stylesheet" href="css/premium-mobile.css">
   <link rel="stylesheet" href="css/wall-social.css">
+  <link rel="stylesheet" href="css/directora-containers.css">
   <link rel="stylesheet" href="css/student-record-modal.css">
   <link rel="stylesheet" href="css/messenger-chat.css">
   <script src="js/shared/chart.min.js" defer></script>
@@ -1332,19 +1333,43 @@
             </div>
           </div>
 
-          <div class="admin-card role-blue p-4 mb-6 flex flex-col md:flex-row gap-4 items-center justify-between">
-            <div class="flex items-center gap-3 w-full md:w-auto">
-              <div class="relative w-full md:w-64">
-                <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"></i>
-                <input id="searchTeacher" placeholder="Buscar por nombre..." class="admin-input role-blue pl-10 pr-4 py-2.5 rounded-xl text-sm w-full">
+          <div class="admin-card role-blue p-4 mb-6 flex flex-col gap-4">
+            <div class="flex flex-col md:flex-row gap-4 items-center justify-between w-full">
+              <div class="flex items-center gap-3 w-full md:w-auto">
+                <div class="relative w-full md:w-64">
+                  <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"></i>
+                  <input id="searchTeacher" placeholder="Buscar por nombre..." class="admin-input role-blue pl-10 pr-4 py-2.5 rounded-xl text-sm w-full">
+                </div>
+              </div>
+              <div class="flex gap-3 w-full md:w-auto justify-end">
+                <button id="btnAddAssistant" class="admin-btn role-orange-ghost flex items-center gap-2 !bg-orange-50 !text-orange-600 hover:!bg-orange-100">
+                  <i data-lucide="user-plus" class="w-4 h-4"></i> Nuevo Asistente
+                </button>
+                <button id="btnAddEncargada" class="admin-btn role-purple-ghost flex items-center gap-2 !bg-purple-50 !text-purple-600 hover:!bg-purple-100">
+                  <i data-lucide="shield-check" class="w-4 h-4"></i> Nueva Encargada
+                </button>
+                <button onclick="App.teachers.openModal()" class="admin-btn role-blue flex items-center gap-2">
+                  <i data-lucide="plus" class="w-4 h-4"></i> Nuevo Maestro
+                </button>
               </div>
             </div>
-            <div class="flex gap-3 w-full md:w-auto justify-end">
-              <button id="btnAddAssistant" class="admin-btn role-blue-ghost flex items-center gap-2">
-                <i data-lucide="user-plus" class="w-4 h-4"></i> Asistente
+
+            <!-- Tabs separación de roles -->
+            <div class="flex flex-wrap gap-2 border-b border-slate-100 pt-1" id="teacherRoleTabs">
+              <button data-teacher-tab="all" class="teacher-tab-btn teacher-tab--active px-4 py-2.5 rounded-t-2xl text-xs font-black uppercase tracking-wider border-b-2 border-[#0B63C7] text-[#0B63C7] bg-gradient-to-b from-[#E8F2FF]/60 to-transparent transition-all flex items-center gap-2">
+                <i data-lucide="users" class="w-3.5 h-3.5"></i> Todo el Personal <span id="tabCntAll" class="px-2 py-0.5 rounded-full bg-slate-200/70 text-slate-600 text-[10px]">0</span>
               </button>
-              <button onclick="App.teachers.openModal()" class="admin-btn role-blue flex items-center gap-2">
-                <i data-lucide="plus" class="w-4 h-4"></i> Nuevo Maestro
+              <button data-teacher-tab="maestra" class="teacher-tab-btn px-4 py-2.5 rounded-t-2xl text-xs font-black uppercase tracking-wider border-b-2 border-transparent text-slate-500 hover:text-[#28B54D] hover:border-[#28B54D] hover:bg-gradient-to-b from-emerald-50 to-transparent transition-all flex items-center gap-2">
+                <i data-lucide="book-open" class="w-3.5 h-3.5"></i> Maestros <span id="tabCntMaestros" class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[10px]">0</span>
+              </button>
+              <button data-teacher-tab="asistente" class="teacher-tab-btn px-4 py-2.5 rounded-t-2xl text-xs font-black uppercase tracking-wider border-b-2 border-transparent text-slate-500 hover:text-orange-600 hover:border-orange-500 hover:bg-gradient-to-b from-orange-50 to-transparent transition-all flex items-center gap-2">
+                <i data-lucide="clipboard-list" class="w-3.5 h-3.5"></i> Asistentes <span id="tabCntAsistentes" class="px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 text-[10px]">0</span>
+              </button>
+              <button data-teacher-tab="encargada" class="teacher-tab-btn px-4 py-2.5 rounded-t-2xl text-xs font-black uppercase tracking-wider border-b-2 border-transparent text-slate-500 hover:text-purple-600 hover:border-purple-500 hover:bg-gradient-to-b from-purple-50 to-transparent transition-all flex items-center gap-2">
+                <i data-lucide="award" class="w-3.5 h-3.5"></i> Encargadas <span id="tabCntEncargadas" class="px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 text-[10px]">0</span>
+              </button>
+              <button data-teacher-tab="otro" class="teacher-tab-btn px-4 py-2.5 rounded-t-2xl text-xs font-black uppercase tracking-wider border-b-2 border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-400 hover:bg-gradient-to-b from-slate-50 to-transparent transition-all flex items-center gap-2">
+                <i data-lucide="briefcase" class="w-3.5 h-3.5"></i> Otros <span id="tabCntOtros" class="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[10px]">0</span>
               </button>
             </div>
           </div>
@@ -1445,11 +1470,16 @@
       <section id="estudiantes" class="section">
         <div class="section-shell">
           <div class="section-header">
-            <h1 class="section-title">Gestion de estudiantes</h1>
-            <p class="section-subtitle">Vista consolidada de matricula, rendimiento y seguimiento.</p>
+            <div>
+              <h1 class="section-title">
+                <span class="section-title-ico"><i data-lucide="graduation-cap"></i></span>
+                Gestion de estudiantes
+              </h1>
+              <p class="section-subtitle">Vista consolidada de matrícula, rendimiento y seguimiento.</p>
+            </div>
           </div>
 
-          <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 mb-6">
+          <div class="dc-kpi-grid">
             <div class="metric-card metric-card--blue"><div class="metric-label">Total estudiantes</div><div class="metric-value" id="totalStudents">-</div></div>
             <div class="metric-card metric-card--green"><div class="metric-label">Activos</div><div class="metric-value" id="activeStudents">-</div></div>
             <div class="metric-card metric-card--rose"><div class="metric-label">Incidencias</div><div class="metric-value" id="incidents">-</div></div>
@@ -1458,107 +1488,159 @@
             <div class="metric-card metric-card--amber"><div class="metric-label">Asistencia prom.</div><div class="metric-value" id="avgAttendance">-</div></div>
           </div>
 
-          <div class="admin-card role-blue p-4 flex flex-wrap gap-3 items-center mb-6">
-            <div class="relative w-full md:w-64">
-              <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"></i>
-              <input id="searchStudent" placeholder="Buscar estudiante..." class="admin-input role-blue pl-10 pr-3 py-2.5 rounded-xl text-sm w-full" />
-            </div>
-            <div class="ml-auto flex items-center gap-2">
-              <button id="btnExportStudents" class="admin-btn role-blue-ghost flex items-center gap-2">
-                <i data-lucide="sheet" class="w-4 h-4"></i> Excel
-              </button>
-              <button id="btnPrintCarnets" onclick="App.students.printAllCarnets()" class="admin-btn role-purple flex items-center gap-2" title="Imprimir todos los carnets en PDF">
-                <i data-lucide="badge" class="w-4 h-4"></i> Carnets PDF
-              </button>
-              <button id="btnAddStudent" class="admin-btn role-blue flex items-center gap-2">
-                <i data-lucide="user-plus" class="w-4 h-4"></i> Nuevo Estudiante
-              </button>
+          <div class="dc-panel dc-panel--flat">
+            <div class="dc-panel-head">
+              <div style="display:flex;flex-wrap:wrap;align-items:center;gap:.6rem;flex:1;min-width:260px;">
+                <div class="dc-search" style="max-width:320px;width:100%;">
+                  <i data-lucide="search"></i>
+                  <input id="searchStudent" placeholder="Buscar estudiante..." autocomplete="off" />
+                </div>
+                <select id="filterClassroom" class="dc-select" style="max-width:210px;">
+                  <option value="all">Todas las aulas</option>
+                </select>
+                <select id="filterStStatus" class="dc-select" style="max-width:170px;">
+                  <option value="">Todos los estados</option>
+                  <option value="active">Activos</option>
+                  <option value="inactive">Inactivos</option>
+                </select>
+                <select id="filterLevel" class="dc-select" style="max-width:190px;">
+                  <option value="all">Todos los niveles</option>
+                </select>
+              </div>
+              <div class="dc-pick-summary" style="border:0;background:transparent;padding:0;">
+                <button id="btnToggleStuView" class="dc-btn dc-btn--soft dc-btn--sm" type="button">
+                  <i data-lucide="layout-grid"></i> <span data-stu-view-label>Ver tarjetas</span>
+                </button>
+                <button id="btnExportStudents" class="dc-btn dc-btn--ghost dc-btn--sm">
+                  <i data-lucide="sheet"></i> Excel
+                </button>
+                <button id="btnPrintCarnets" onclick="App.students.printAllCarnets()" class="dc-btn dc-btn--ghost dc-btn--sm" title="Imprimir todos los carnets en PDF">
+                  <i data-lucide="badge"></i> Carnets PDF
+                </button>
+                <button id="btnAddStudent" class="dc-btn dc-btn--primary dc-btn--sm">
+                  <i data-lucide="user-plus"></i> Nuevo Estudiante
+                </button>
+              </div>
             </div>
           </div>
 
-          <div id="studentsGrid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6"></div>
-          <div id="studentsTableWrapper" class="hidden table-panel mt-6">
-            <table class="w-full text-left border-collapse">
-              <thead>
-                <tr class="bg-[#E8F2FF]/60 border-b border-blue-100">
-                  <th class="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Estudiante</th>
-                  <th class="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Aula</th>
-                  <th class="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Estado</th>
-                  <th class="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Acciones</th>
-                </tr>
-              </thead>
-              <tbody id="studentsTable"></tbody>
-            </table>
+          <div id="studentsGrid" class="dc-students hidden"></div>
+          <div id="studentsTableWrapper" class="dc-table-panel">
+            <div class="dc-table-wrap">
+              <table class="dc-table">
+                <thead>
+                  <tr>
+                    <th>Estudiante</th>
+                    <th>Aula / Línea</th>
+                    <th>Estado</th>
+                    <th style="text-align:right">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="studentsTable"></tbody>
+              </table>
+            </div>
           </div>
         </div>
       </section>
 
       <!-- AULAS -->
       <section id="aulas" class="section">
-        <!-- Encabezado y acciones -->
-        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-          <div>
-            <h2 class="text-2xl font-bold text-[#1A2340]">Centro Academico</h2>
-            <p class="text-slate-500 text-sm">Vista moderna de aulas con matricas en tiempo real</p>
+        <div class="section-shell">
+          <div class="section-header">
+            <div>
+              <h1 class="section-title">
+                <span class="section-title-ico"><i data-lucide="door-open"></i></span>
+                Centro Académico
+              </h1>
+              <p class="section-subtitle">Cada aula con su línea oficial de color y su barra de capacidad en tiempo real.</p>
+            </div>
+            <div class="section-actions">
+              <button id="btnAddRoom" onclick="App.rooms.openModal()" class="dc-btn dc-btn--primary">
+                <i data-lucide="plus"></i> Nueva Aula
+              </button>
+            </div>
           </div>
-          <div class="flex gap-3">
-            <button id="btnAddRoom" onclick="App.rooms.openModal()" class="px-4 py-2.5 text-white rounded-xl flex items-center gap-2 shadow-md transition-all hover:opacity-90" style="background:#0B63C7;">
-              <i data-lucide="plus" class="w-4 h-4"></i>
-              Nueva Aula
-            </button>
+
+          <div class="dc-kpi-grid">
+            <div class="metric-card metric-card--blue"><div class="metric-label">Aulas</div><div class="metric-value" id="roomsKpiTotal">-</div><div class="metric-foot" id="roomsKpiTotalFoot">catálogo oficial</div></div>
+            <div class="metric-card metric-card--teal"><div class="metric-label">Matrícula</div><div class="metric-value" id="roomsKpiStudents">-</div><div class="metric-foot" id="roomsKpiStudentsFoot">estudiantes asignados</div></div>
+            <div class="metric-card metric-card--violet"><div class="metric-label">Ocupación prom.</div><div class="metric-value" id="roomsKpiOcup">-</div><div class="metric-foot" id="roomsKpiOcupFoot">de la capacidad total</div></div>
+            <div class="metric-card metric-card--green"><div class="metric-label">Con maestra</div><div class="metric-value" id="roomsKpiAssigned">-</div><div class="metric-foot" id="roomsKpiAssignedFoot">aulas cubiertas</div></div>
+            <div class="metric-card metric-card--amber"><div class="metric-label">Sin aula</div><div class="metric-value" id="roomsKpiUnassigned">-</div><div class="metric-foot">estudiantes sin asignar</div></div>
           </div>
-        </div>
 
-        <!-- BLOQUE 1  Tabla de Aulas (sin cambios) -->
-        <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden mb-8">
-          <table class="w-full text-sm">
-            <thead class="bg-[#E8F2FF] text-left text-xs font-black uppercase tracking-wider text-[#0850A0]">
-              <tr>
-                <th class="py-4 px-6">Nombre del Aula</th>
-                <th class="py-4 px-6">Maestra Asignada</th>
-                <th class="py-4 px-6">Ocupacion / Capacidad</th>
-                <th class="py-4 px-6 text-center">Acciones</th>
-              </tr>
-            </thead>
-            <tbody id="roomsTable" class="divide-y divide-slate-100">
-              <!-- Inyectado por JS -->
-            </tbody>
-          </table> 
-        </div>
-
-        <!-- BLOQUE 2  Panel Interno del Aula (Opcional, mantenido para detalle) -->
-        <div id="classroomPanel" class="hidden mt-8">
-          <div class="bg-white rounded-3xl shadow-md border border-slate-100 overflow-hidden">
-            <div class="p-6 bg-gradient-to-r from-[#0B63C7] to-[#0850A0] text-white flex items-center justify-between">
-              <div class="flex items-center gap-4">
-                <img id="cpTeacherPhoto" src="img/1.jpg" class="w-14 h-14 rounded-2xl object-cover border-2 border-white/30" alt="Maestro" loading="lazy" />
-                <div>
-                  <div class="text-xl font-bold" id="cpClassName">Aula</div>
-                  <div class="text-sm text-white/80">Maestro: <span id="cpTeacherName"></span>  Alumnos: <span id="cpTotal">0</span></div>
+          <!-- Filtros -->
+          <div class="dc-panel dc-panel--flat">
+            <div class="dc-panel-head">
+              <div style="display:flex;flex-wrap:wrap;align-items:center;gap:.6rem;flex:1;min-width:240px;">
+                <div class="dc-search" style="max-width:340px;width:100%;">
+                  <i data-lucide="search"></i>
+                  <input type="text" id="roomsSearch" placeholder="Buscar aula o línea..." autocomplete="off">
                 </div>
+                <select id="roomsLineFilter" class="dc-select" style="max-width:210px;">
+                  <option value="">Todas las líneas</option>
+                </select>
+                <select id="roomsStatusFilter" class="dc-select" style="max-width:210px;">
+                  <option value="all">Todos los estados</option>
+                  <option value="free">Con cupos disponibles</option>
+                  <option value="full">Aulas llenas</option>
+                  <option value="teacher">Con maestra asignada</option>
+                  <option value="noteacher">Sin maestra</option>
+                </select>
               </div>
-              <div class="text-right">
-                <div class="text-xs uppercase tracking-wider text-white/70">Promedio general</div>
-                <div class="text-2xl font-black" id="cpAverage">-</div>
-                <div class="text-xs text-white/80">Asistencia semanal: <span id="cpWeekly">-</span></div>
+              <div class="dc-pick-summary" style="border:0;background:transparent;padding:0;">
+                <span class="dc-pick-counter" id="roomsCounter">0 aulas</span>
+                <button id="btnRoomsReset" class="dc-btn dc-btn--ghost dc-btn--sm" type="button">
+                  <i data-lucide="rotate-ccw"></i> Limpiar
+                </button>
               </div>
             </div>
+          </div>
 
-            <div class="p-6 grid grid-cols-1 lg:grid-cols-4 gap-6">
-              <!-- Acciones rpidas -->
-              <div class="lg:col-span-4 bg-slate-50 rounded-2xl p-4 border border-slate-200">
-                <div class="text-xs font-bold text-slate-600 uppercase mb-2">Acciones rapidas</div>
-                <div class="flex flex-wrap gap-2">
-                  <button id="cpQuickAttendance" class="px-4 py-2 text-white rounded-xl text-sm font-bold transition-all hover:opacity-90" style="background:#0B63C7;">Registrar asistencia</button>
-                  <button id="cpQuickCalendar" class="px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold hover:bg-slate-50">Ver calendario</button>
+          <!-- Contenedores de aulas -->
+          <div id="roomsGrid" class="dc-rooms"></div>
+
+          <!-- Estudiantes sin aula -->
+          <div class="dc-panel dc-panel--flat">
+            <div class="dc-panel-head">
+              <h3 class="dc-panel-title"><span class="dc-pip"></span>Estudiantes sin aula asignada</h3>
+              <span class="dc-panel-sub" id="unassignedCount">Cargando...</span>
+            </div>
+            <div id="unassignedStudentsList"></div>
+          </div>
+
+          <!-- BLOQUE 2  Panel Interno del Aula (Opcional, mantenido para detalle) -->
+          <div id="classroomPanel" class="hidden">
+            <div class="dc-panel">
+              <div class="p-6 bg-gradient-to-r from-[#0B63C7] to-[#0850A0] text-white flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                  <img id="cpTeacherPhoto" src="img/1.jpg" class="w-14 h-14 rounded-2xl object-cover border-2 border-white/30" alt="Maestro" loading="lazy" />
+                  <div>
+                    <div class="text-xl font-bold" id="cpClassName">Aula</div>
+                    <div class="text-sm text-white/80">Maestro: <span id="cpTeacherName"></span>  Alumnos: <span id="cpTotal">0</span></div>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <div class="text-xs uppercase tracking-wider text-white/70">Promedio general</div>
+                  <div class="text-2xl font-black" id="cpAverage">-</div>
+                  <div class="text-sm text-white/80">Asistencia semanal: <span id="cpWeekly">-</span></div>
                 </div>
               </div>
-            </div>
 
-            <div class="px-6 pb-6">
-              <h4 class="text-sm font-semibold text-slate-700 mb-3">Historial por alumno</h4>
-              <div id="cpStudentHistory" class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <!-- Inyectado por JS -->
+              <div class="p-6 grid grid-cols-1 lg:grid-cols-4 gap-6">
+                <!-- Acciones rpidas -->
+                <div class="lg:col-span-4 bg-slate-50 rounded-2xl p-4 border border-slate-200">
+                  <div class="text-xs font-bold text-slate-600 uppercase mb-2">Acciones rapidas</div>
+                  <div class="flex flex-wrap gap-2">
+                    <button id="cpQuickAttendance" class="dc-btn dc-btn--primary">Registrar asistencia</button>
+                    <button id="cpQuickCalendar" class="dc-btn dc-btn--ghost">Ver calendario</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="px-6 pb-6">
+                <h4 class="text-sm font-semibold text-slate-700 mb-3">Historial por alumno</h4>
+                <div id="cpStudentHistory" class="dc-students"></div>
               </div>
             </div>
           </div>
@@ -1697,9 +1779,12 @@
               <span class="p-2 bg-indigo-100 text-indigo-600 rounded-2xl"><i data-lucide="graduation-cap" class="w-5 h-5"></i></span>
               Centro de Evaluación Académica
             </h1>
-            <p class="text-slate-500 font-medium mt-1">Boletín Inteligente · selecciona un estudiante para ver su cuadrícula de calificaciones</p>
+            <p class="text-slate-500 font-medium mt-1">Boletín Inteligente · Plan de Estudio Único por Aula · Cuadrícula Áreas × Actividades</p>
           </div>
           <div class="flex gap-2 flex-wrap">
+            <button id="btnClassroomConfig" class="px-5 py-2.5 text-white rounded-xl font-black text-xs uppercase tracking-wider shadow-lg transition-all flex items-center gap-2 active:scale-95 hover:opacity-90" style="background:linear-gradient(135deg,#FF7A00,#F43F5E);box-shadow:0 4px 14px rgba(244,63,94,0.25);">
+              <i data-lucide="settings-2" class="w-4 h-4"></i> ⚙️ Configurar Áreas por Aula
+            </button>
             <select id="gradesFilterPeriod" class="px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 bg-white shadow-sm outline-none focus:ring-2 focus:ring-indigo-400">
               <option value="">Todos los períodos</option>
             </select>
@@ -1953,54 +2038,105 @@
 
       <!-- MURO ESCOLAR UNIFICADO -->
       <section id="muro" class="section">
-        <header class="mb-6 flex items-center justify-between">
-          <div>
-            <h1 class="text-3xl font-black text-slate-800"><i data-lucide="school" class="w-7 h-7 text-blue-600 align-middle mr-2"></i> Muro Escolar</h1>
-            <p class="text-slate-500 font-medium">Comunicación y actualizaciones de la comunidad educativa</p>
-          </div>
-          <button id="btnNewPost" onclick="App.wall.openNewPostModal()" class="px-4 py-2 text-white rounded-lg transition-colors flex items-center gap-2 font-medium shadow-sm hover:opacity-90" style="background:#0B63C7;">
-            <i data-lucide="plus" class="w-5 h-5"></i> Nueva Publicacin
-          </button>
-        </header>
-
-        <div class="max-w-5xl mx-auto">
-          <!-- Composer: ¿Qué quieres compartir? -->
-          <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-3 sm:p-4 flex items-center gap-3 wall-composer cursor-pointer transition-all mb-6" onclick="App.wall.openNewPostModal()">
-            <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center font-black text-blue-600 border-2 border-blue-50 shrink-0 overflow-hidden" id="wallComposerAvatar">
-              <i data-lucide="user" class="w-5 h-5"></i>
+        <div class="section-shell">
+          <div class="section-header">
+            <div>
+              <h1 class="section-title">
+                <span class="section-title-ico"><i data-lucide="school"></i></span>
+                Muro Escolar
+              </h1>
+              <p class="section-subtitle">Comunicación y actualizaciones de la comunidad educativa.</p>
             </div>
-            <div class="flex-1 min-w-0 text-sm font-bold text-slate-400">¿Qué quieres compartir?</div>
-            <div class="hidden sm:flex items-center gap-2 shrink-0">
-              <span class="wall-composer-chip"><i data-lucide="image" class="w-3.5 h-3.5 text-emerald-500"></i> Foto</span>
-              <span class="wall-composer-chip"><i data-lucide="video" class="w-3.5 h-3.5 text-blue-500"></i> Video</span>
-              <span class="wall-composer-chip"><i data-lucide="file-text" class="w-3.5 h-3.5 text-amber-500"></i> Aviso</span>
+            <div class="section-actions">
+              <button id="btnNewPost" onclick="App.wall.openNewPostModal()" class="dc-btn dc-btn--primary">
+                <i data-lucide="plus"></i> Nueva Publicación
+              </button>
             </div>
-            <button class="sm:hidden shrink-0 px-4 py-2.5 rounded-full bg-blue-600 text-white text-xs font-black shadow-md">
-              <i data-lucide="plus" class="w-4 h-4"></i>
-            </button>
           </div>
 
-          <!-- Bsqueda -->
-          <div class="mb-6 flex items-center gap-2">
-            <input type="text" id="wallSearch" placeholder="Buscar posts..." class="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-orange-600">
-            <select id="wallClassroomFilter" class="px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-orange-600">
-              <option value="">Todas las aulas</option>
-              <!-- Opciones cargadas por JS -->
-            </select>
-            <button class="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors">
-              <i data-lucide="search" class="w-5 h-5 text-slate-600"></i>
-            </button>
-          </div>
+          <div class="dc-wall">
+            <!-- Columna principal: feed -->
+            <div class="dc-wall-main">
+              <!-- Composer -->
+              <div class="dc-wall-composer" onclick="App.wall.openNewPostModal()">
+                <div class="dc-wall-composer-av" id="wallComposerAvatar">
+                  <i data-lucide="user"></i>
+                </div>
+                <div class="dc-wall-composer-ph">¿Qué quieres compartir?</div>
+                <div class="dc-wall-composer-tags">
+                  <span class="dc-wall-chip"><i data-lucide="image"></i> Foto</span>
+                  <span class="dc-wall-chip"><i data-lucide="video"></i> Video</span>
+                  <span class="dc-wall-chip"><i data-lucide="file-text"></i> Aviso</span>
+                </div>
+              </div>
 
-          <!-- Grid de posts -->
-          <div id="muroPostsContainer" class="grid grid-cols-1 gap-6">
-            <!-- Cargado por JS -->
-            <div class="col-span-1 py-12 text-center">
-              <div class="animate-pulse">
-                <i data-lucide="loader" class="w-8 h-8 mx-auto text-orange-400 animate-spin mb-2"></i>
-                <p class="text-slate-400">Cargando publicaciones...</p>
+              <!-- Búsqueda -->
+              <div class="dc-wall-searchbar">
+                <div class="dc-search">
+                  <i data-lucide="search"></i>
+                  <input type="text" id="wallSearch" placeholder="Buscar publicaciones..." autocomplete="off">
+                </div>
+                <select id="wallClassroomFilter" class="dc-select" style="max-width:230px">
+                  <option value="">Todas las aulas</option>
+                  <!-- Opciones cargadas por JS -->
+                </select>
+              </div>
+
+              <!-- Feed -->
+              <div id="muroPostsContainer" class="dc-wall-feed">
+                <div class="dc-wall-skel" aria-hidden="true">
+                  <div class="dc-wall-skel-av"></div>
+                  <div style="flex:1"><div class="dc-wall-skel-line" style="width:38%"></div><div class="dc-wall-skel-line" style="width:88%"></div><div class="dc-wall-skel-block"></div></div>
+                </div>
+                <div class="dc-wall-skel" aria-hidden="true">
+                  <div class="dc-wall-skel-av"></div>
+                  <div style="flex:1"><div class="dc-wall-skel-line" style="width:30%"></div><div class="dc-wall-skel-line" style="width:76%"></div><div class="dc-wall-skel-block"></div></div>
+                </div>
               </div>
             </div>
+
+            <!-- Columna lateral -->
+            <aside class="dc-wall-side">
+              <div class="dc-panel">
+                <div class="dc-panel-head">
+                  <h3 class="dc-panel-title"><span class="dc-pip"></span>Filtros</h3>
+                </div>
+                <div class="dc-panel-body">
+                  <div class="dc-search dc-search--block">
+                    <i data-lucide="search"></i>
+                    <input type="text" placeholder="Buscar en el muro..." autocomplete="off" data-wall-search-mirror>
+                  </div>
+                  <label class="dc-side-label">Aula</label>
+                  <select class="dc-select dc-select--block" data-wall-classroom-mirror>
+                    <option value="">Todas las aulas</option>
+                  </select>
+                  <button class="dc-btn dc-btn--ghost dc-btn--block" data-wall-reset>
+                    <i data-lucide="rotate-ccw"></i> Limpiar filtros
+                  </button>
+                </div>
+              </div>
+
+              <div class="dc-panel">
+                <div class="dc-panel-head">
+                  <h3 class="dc-panel-title"><span class="dc-pip dc-pip--green"></span>Resumen</h3>
+                </div>
+                <div class="dc-panel-body">
+                  <ul class="dc-side-stats">
+                    <li><span>Publicaciones</span><b data-wall-total>—</b></li>
+                    <li><span>En el aula</span><b data-wall-class-total>—</b></li>
+                    <li><span>Con imagen</span><b data-wall-media>—</b></li>
+                    <li><span>Última actividad</span><b data-wall-last>—</b></li>
+                  </ul>
+                </div>
+              </div>
+
+              <div class="dc-panel dc-panel--tip">
+                <div class="dc-panel-body">
+                  <h4 class="dc-side-tip-title"><i data-lucide="lightbulb"></i> Consejo</h4>
+                  <p class="dc-side-tip-text">Usa <b>@menciones</b> para avisar a una maestra específica y filtra por aula para cerrar la comunicación a un grupo.</p>
+                </div>
+              </div>
+            </aside>
           </div>
         </div>
       </section>
@@ -2128,7 +2264,7 @@
               <div class="flex flex-col md:flex-row items-start gap-6">
                 <div class="flex-shrink-0">
                   <div class="w-32 h-32 rounded-2xl bg-slate-100 border-2 border-dashed border-slate-300 flex items-center justify-center overflow-hidden">
-                    <img id="confSchoolLogo" src="" alt="Logo de la institucin" class="w-full h-full object-cover hidden">
+                    <img id="confSchoolLogo" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="Logo de la institucin" class="w-full h-full object-cover hidden">
                     <div id="confSchoolLogoPlaceholder" class="text-center p-4">
                       <i data-lucide="upload" class="w-10 h-10 text-slate-400 mx-auto mb-2"></i>
                       <p class="text-xs text-slate-500">Logo</p>
@@ -2234,7 +2370,7 @@
               <div class="w-1 h-8 bg-[#FF7A00] rounded-full"></div>
               <h1 class="text-2xl font-black text-[#1A2340]">Inscripciones</h1>
             </div>
-            <p class="text-slate-500 font-medium ml-4">Solicitudes de preinscripciÃ³n y admisiones pendientes</p>
+            <p class="text-slate-500 font-medium ml-4">Solicitudes de preinscripción y admisiones pendientes</p>
           </div>
           <button onclick="InscripcionesModule.load()"
             class="flex items-center gap-2 px-4 py-2.5 bg-[#E8F2FF] text-[#0B63C7] rounded-xl font-black text-sm hover:bg-[#0B63C7] hover:text-white transition-all">

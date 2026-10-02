@@ -3,10 +3,10 @@
  * de openGlobalModal en directora/main, asistente/main, encargada/main y asistente/payments.
  */
 
-export function openGlobalModal(html, wide = false) {
+export function openGlobalModal(html, wide = false, size = null) {
   const container = document.getElementById('globalModalContainer');
   if (!container) return;
-  const maxW = wide ? 'max-w-4xl' : 'max-w-2xl';
+  const maxW = size || (wide ? 'max-w-4xl' : 'max-w-2xl');
   container.innerHTML = `
     <div id="globalModalInner" class="bg-white rounded-3xl shadow-2xl w-full ${maxW} max-h-[92vh] overflow-y-auto mx-3 my-4 relative animate-scaleIn">
       <button onclick="closeGlobalModal()" class="absolute top-4 right-4 w-10 h-10 flex items-center justify-center rounded-full bg-slate-100 text-slate-400 hover:bg-rose-50 hover:text-rose-500 transition-all z-[110]">

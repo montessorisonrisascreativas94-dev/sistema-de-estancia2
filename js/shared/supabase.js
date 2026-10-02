@@ -27,6 +27,16 @@ const options = {
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, options);
 
+// El proyecto mezcla módulos ES con scripts que invocan Edge Functions
+// vía fetch (student-record-modal.js, helpers.js). Estas variables NO
+// existían: sin ellas, fnBase quedaba en null y TODO envío de correo /
+// creación de usuario devolvía "no-edge-base" sin intentar la llamada.
+if (typeof window !== 'undefined') {
+  window.SUPABASE_URL      = SUPABASE_URL;
+  window.SUPABASE_ANON_KEY = SUPABASE_ANON_KEY;
+  window.__SUPABASE_EDGE_BASE__ = SUPABASE_URL + '/functions/v1';
+}
+
 // ── Auto-refresh: detectar JWT expirado y refrescar sesión ───────────────────
 supabase.auth.onAuthStateChange((event, session) => {
   if (event === 'TOKEN_REFRESHED') console.log('✅ JWT Refrescado');
@@ -314,7 +324,7 @@ export async function ensureRole(requiredRoles) {
   ]);
 
   const [profileRes, termsRes] = await Promise.all([
-    withTimeout(supabase.from('profiles').select('id, role, name, email, avatar_url, phone, bio').eq('id', user.id).maybeSingle()),
+    withTimeout(supabase.from('profiles').select('id, role, name, email, avatar_url, phone, bio, is_temporary_password, notification_email').eq('id', user.id).maybeSingle()),
     withTimeout(supabase.from('terms_acceptance').select('user_id').eq('user_id', user.id).eq('terms_version', TERMS_VERSION).maybeSingle())
   ]).catch(() => [{ data: null, error: new Error('timeout') }, { data: null, error: new Error('timeout') }]);
 
@@ -335,8 +345,10 @@ export async function ensureRole(requiredRoles) {
       id:    user.id,
       email: user.email,
       name:  user.user_metadata?.name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Usuario',
-      role:  safeRole
-    }).select('id, role, name, email, avatar_url, phone, bio').single();
+      role:  safeRole,
+      is_temporary_password: !!user.user_metadata?.is_temporary_password || false,
+      notification_email: user.user_metadata?.notification_email || null
+    }).select('id, role, name, email, avatar_url, phone, bio, is_temporary_password, notification_email').single();
     resolvedProfile = newProfile;
   }
 

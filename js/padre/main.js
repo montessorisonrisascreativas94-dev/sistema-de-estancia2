@@ -45,6 +45,411 @@ const RatingModal = {
 };
 window.RatingModal = RatingModal;
 
+// ═══════════════════════════════════════════════════════════════════
+// 🔐 TEMP PASSWORD GUARD — Cambio obligatorio de contraseña
+// Detecta cuando el padre inicia con la contraseña temporal "sonrisa123"
+// y muestra un modal BLOQUEANTE hasta que la cambie por una segura.
+// ═══════════════════════════════════════════════════════════════════
+const PASSWORD_RULES = {
+  regex: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&.#\-_])[A-Za-z\d@$!%*?&.#\-_]{8,}$/,
+  min: 8,
+  tips: [
+    { id: 'len',    label: 'Mínimo 8 caracteres',         test: (s) => s.length >= 8 },
+    { id: 'lower',  label: 'Al menos 1 minúscula (a-z)',  test: (s) => /[a-z]/.test(s) },
+    { id: 'upper',  label: 'Al menos 1 mayúscula (A-Z)',  test: (s) => /[A-Z]/.test(s) },
+    { id: 'digit',  label: 'Al menos 1 número (0-9)',     test: (s) => /\d/.test(s) },
+    { id: 'spec',   label: 'Al menos 1 símbolo (@ $ ! % * ? & . - _)', test: (s) => /[@$!%*?&.#\-_]/.test(s) },
+    { id: 'notemp', label: 'No puede ser sonrisa123',     test: (s) => String(s).toLowerCase() !== 'sonrisa123' },
+  ]
+};
+
+const TempPasswordGuard = {
+  _user: null,
+  _profile: null,
+  _overlay: null,
+
+  async init({ user, profile }) {
+    this._user = user;
+    this._profile = profile;
+
+    const flagFromProfile = !!profile?.is_temporary_password;
+    const flagFromMeta = !!user?.user_metadata?.is_temporary_password;
+    if (!flagFromProfile && !flagFromMeta) return;
+
+    // Inyectar y mostrar el modal bloqueante
+    this._render();
+    this._show();
+    this._bindEvents();
+
+    // Detener el flujo esperando a que el usuario cambie la contraseña.
+    // Retornamos una promesa que se resuelve cuando cambió OK.
+    return new Promise((resolve) => {
+      this._resolve = resolve;
+    });
+  },
+
+  _render() {
+    const name = (this._profile?.name || this._user?.email || 'Familia').toString().split(' ')[0];
+    const email = this._user?.email || '';
+
+    const overlay = document.createElement('div');
+    overlay.id = 'temp-pw-guard';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-labelledby', 'temp-pw-title');
+    overlay.innerHTML = `
+      <div class="tpw-backdrop" style="
+        position:fixed;inset:0;background:rgba(15,23,42,0.78);backdrop-filter:blur(8px);
+        -webkit-backdrop-filter:blur(8px);z-index:99998;display:flex;align-items:center;justify-content:center;
+        padding:16px;">
+        <div class="tpw-card" style="
+          position:relative;width:100%;max-width:480px;background:white;border-radius:28px;
+          box-shadow:0 30px 80px rgba(2,6,23,0.35);overflow:hidden;animation:tpwPop .35s cubic-bezier(.2,.8,.2,1);
+          border:1px solid rgba(226,232,240,0.8);">
+          <style>
+            @keyframes tpwPop { from { transform: translateY(24px) scale(.96); opacity: 0; } to { transform: none; opacity: 1; } }
+            @keyframes tpwSpin { to { transform: rotate(360deg); } }
+            .tpw-check-icon.ok path { stroke-dashoffset: 0; }
+            .tpw-check-circle.ok { stroke-dashoffset: 0; }
+            .tpw-banner {
+              background: linear-gradient(135deg,#0B63C7 0%,#4F46E5 55%,#7C3AED 100%);
+              color:white;padding:22px 22px 20px 22px;
+            }
+            .tpw-title-font { font-family:'Baloo 2','Nunito',system-ui,sans-serif; }
+            .tpw-input {
+              width:100%;padding:13px 14px;border:2px solid #E2E8F0;border-radius:14px;
+              font-size:14px;font-weight:600;color:#0F172A;background:#F8FAFC;
+              outline:none;transition:all .18s ease;box-sizing:border-box;font-family:inherit;
+            }
+            .tpw-input:focus { border-color:#0B63C7; background:#FFF; box-shadow:0 0 0 4px rgba(11,99,199,0.12); }
+            .tpw-input.error { border-color:#EF4444; background:#FEF2F2; box-shadow:0 0 0 4px rgba(239,68,68,0.1); }
+            .tpw-label { display:block; font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.6px; color:#64748B; margin-bottom:7px; }
+            .tpw-tip { display:flex; align-items:center; gap:8px; font-size:12px; font-weight:700; color:#94A3B8; padding:3px 0; }
+            .tpw-tip.pass { color:#059669; }
+            .tpw-tip .dot { width:16px; height:16px; border-radius:50%; border:2px solid currentColor; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; opacity:.55; }
+            .tpw-tip.pass .dot { opacity:1; background:currentColor; color:#059669; }
+            .tpw-tip .dot svg { width:10px; height:10px; stroke:white; fill:none; stroke-width:3; stroke-linecap:round; stroke-linejoin:round; }
+            .tpw-btn {
+              width:100%;padding:14px 18px;border:none;border-radius:16px;cursor:pointer;
+              font-family:'Baloo 2','Nunito',system-ui,sans-serif;font-size:14px;font-weight:800;
+              text-transform:uppercase;letter-spacing:.3px;transition:all .2s ease;
+            }
+            .tpw-btn-primary {
+              background: linear-gradient(135deg,#0B63C7 0%,#4F46E5 100%);color:white;
+              box-shadow:0 8px 24px rgba(11,99,199,0.3);
+            }
+            .tpw-btn-primary:hover:not(:disabled) { transform:translateY(-1px); box-shadow:0 12px 28px rgba(11,99,199,0.38); }
+            .tpw-btn-primary:active:not(:disabled) { transform:translateY(0); }
+            .tpw-btn-primary:disabled { opacity:.55; cursor:not-allowed; }
+            .tpw-error-msg { color:#DC2626; font-size:12px; font-weight:700; margin-top:6px; min-height:16px; }
+            .tpw-logout-link { color:#94A3B8; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.5px; cursor:pointer; text-decoration:none; }
+            .tpw-logout-link:hover { color:#EF4444; }
+          </style>
+
+          <!-- Banner superior -->
+          <div class="tpw-banner">
+            <div style="display:flex;align-items:center;gap:12px">
+              <div style="width:46px;height:46px;border-radius:16px;background:rgba(255,255,255,0.18);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="color:white"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              </div>
+              <div style="min-width:0">
+                <h2 id="temp-pw-title" class="tpw-title-font" style="margin:0;font-size:20px;line-height:1.15">¡${Helpers.escapeHTML(name)}, bienvenido(a)!</h2>
+                <p style="margin:4px 0 0;font-size:12.5px;font-weight:600;color:rgba(255,255,255,0.88);line-height:1.5">
+                  Estás usando la contraseña temporal del colegio. Cámbiala ahora mismo por una <strong style="color:white">solo tuya y segura</strong>.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Cuerpo -->
+          <div style="padding:22px">
+
+            <!-- Cuenta (solo lectura) -->
+            <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#F1F5F9;border:1.5px solid #E2E8F0;border-radius:14px;margin-bottom:18px">
+              <div style="width:32px;height:32px;border-radius:10px;background:#0B63C7;color:white;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:900;font-size:13px">
+                ${(email.charAt(0) || 'U').toUpperCase()}
+              </div>
+              <div style="min-width:0;flex:1">
+                <p style="margin:0;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.5px;color:#64748B">Tu cuenta</p>
+                <p style="margin:1px 0 0;font-size:12.5px;font-weight:800;color:#0F172A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${Helpers.escapeHTML(email)}</p>
+              </div>
+            </div>
+
+            <!-- Formulario -->
+            <div id="tpw-form">
+              <!-- Actual (solo confirmación visual) -->
+              <div style="margin-bottom:14px">
+                <label class="tpw-label" for="tpw-current">Contraseña Actual (temporal)</label>
+                <input id="tpw-current" type="password" class="tpw-input" placeholder="••••••••••" autocomplete="current-password">
+                <p class="tpw-error-msg" id="tpw-err-current"></p>
+                <p style="margin:6px 0 0;font-size:10.5px;color:#94A3B8;font-weight:700;line-height:1.5">
+                  Es la que te asignó el colegio para tu primer ingreso. Si no la recuerdas, pregunta en recepción.
+                </p>
+              </div>
+
+              <!-- Nueva -->
+              <div style="margin-bottom:14px">
+                <label class="tpw-label" for="tpw-new">Nueva Contraseña</label>
+                <input id="tpw-new" type="password" class="tpw-input" placeholder="Crea una clave segura" autocomplete="new-password">
+              </div>
+
+              <!-- Confirmar -->
+              <div style="margin-bottom:14px">
+                <label class="tpw-label" for="tpw-confirm">Confirmar Nueva Contraseña</label>
+                <input id="tpw-confirm" type="password" class="tpw-input" placeholder="Repite la clave" autocomplete="new-password">
+                <p class="tpw-error-msg" id="tpw-err-confirm"></p>
+              </div>
+
+              <!-- Reglas -->
+              <div style="background:#F8FAFC;border:1.5px solid #E2E8F0;border-radius:14px;padding:12px 14px;margin-bottom:18px">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                  <p style="margin:0;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.5px;color:#475569">Reglas de seguridad</p>
+                </div>
+                <div id="tpw-tips" style="padding-top:2px;display:grid;grid-template-columns:1fr;gap:0">
+                  ${PASSWORD_RULES.tips.map(t => `
+                    <div class="tpw-tip" data-rule="${t.id}">
+                      <span class="dot">
+                        <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                      </span>
+                      <span>${t.label}</span>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+
+              <button id="tpw-submit" class="tpw-btn tpw-btn-primary" disabled>
+                <span id="tpw-btn-label">🔐 Cambiar contraseña y entrar</span>
+              </button>
+
+              <div style="display:flex;align-items:center;justify-content:center;margin-top:14px">
+                <a id="tpw-logout" class="tpw-logout-link" href="#">
+                  ⟵ Cerrar sesión y volver al inicio
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>`;
+    this._overlay = overlay;
+  },
+
+  _show() {
+    document.body.appendChild(this._overlay);
+    document.body.style.overflow = 'hidden';
+    const firstInput = document.getElementById('tpw-current');
+    if (firstInput) setTimeout(() => firstInput.focus(), 120);
+  },
+
+  _bindEvents() {
+    const currentEl = document.getElementById('tpw-current');
+    const newEl = document.getElementById('tpw-new');
+    const confEl  = document.getElementById('tpw-confirm');
+    const submit  = document.getElementById('tpw-submit');
+    const btnLbl  = document.getElementById('tpw-btn-label');
+    const logoutL = document.getElementById('tpw-logout');
+
+    // Validar en cada pulsación
+    const run = () => this._validateLive();
+    newEl?.addEventListener('input', run);
+    confEl?.addEventListener('input', run);
+    currentEl?.addEventListener('input', () => { this._clearError('tpw-err-current'); currentEl?.classList.remove('error'); });
+
+    submit?.addEventListener('click', async (e) => {
+      e.preventDefault();
+      await this._onSubmit();
+    });
+
+    [currentEl, newEl, confEl].forEach(el => el?.addEventListener('keydown', async (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); await this._onSubmit(); }
+    }));
+
+    logoutL?.addEventListener('click', async (e) => {
+      e.preventDefault();
+      try { await supabase.auth.signOut(); } catch (_) {}
+      window.location.href = 'login.html';
+    });
+
+    // Bloquear cierre con ESC / clic fuera — el único camino es cambiar la contraseña.
+    document.addEventListener('keydown', this._keyGuard = (e) => {
+      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); }
+    }, true);
+    const backdrop = this._overlay.querySelector('.tpw-backdrop');
+    backdrop?.addEventListener('click', (e) => {
+      // Solo si hace clic DIRECTAMENTE en el backdrop (no en la tarjeta)
+      // no hacemos nada — debe cambiar la contraseña sí o sí.
+      if (e.target === backdrop) {
+        // Shake ligero en la tarjeta como feedback visual
+        const card = backdrop.querySelector('.tpw-card');
+        if (card) {
+          card.animate(
+            [ { transform: 'translateX(0)' }, { transform: 'translateX(-6px)' }, { transform: 'translateX(6px)' }, { transform: 'translateX(-4px)' }, { transform: 'translateX(0)' } ],
+            { duration: 260, easing: 'ease-out' }
+          );
+        }
+      }
+    });
+  },
+
+  _validateLive() {
+    const newV = document.getElementById('tpw-new')?.value ?? '';
+    const confV = document.getElementById('tpw-confirm')?.value ?? '';
+    const submit = document.getElementById('tpw-submit');
+    const errC = document.getElementById('tpw-err-confirm');
+    const confEl = document.getElementById('tpw-confirm');
+
+    // Check each tip
+    let allPass = true;
+    PASSWORD_RULES.tips.forEach(tip => {
+      const el = this._overlay.querySelector(`[data-rule="${tip.id}"]`);
+      if (!el) return;
+      const ok = tip.test(newV);
+      el.classList.toggle('pass', ok);
+      if (!ok) allPass = false;
+    });
+
+    // Confirm coincidencia
+    let matches = true;
+    if (confV && newV && confV !== newV) {
+      matches = false;
+      confEl?.classList.add('error');
+      if (errC) errC.textContent = 'Las contraseñas no coinciden.';
+    } else {
+      confEl?.classList.remove('error');
+      if (errC) errC.textContent = '';
+    }
+
+    if (submit) submit.disabled = !(allPass && matches && confV.length > 0 && newV.length > 0);
+    return allPass && matches;
+  },
+
+  _setError(fieldId, msg) {
+    const el = document.getElementById(fieldId);
+    if (el) el.textContent = msg;
+  },
+  _clearError(fieldId) { this._setError(fieldId, ''); },
+
+  _setLoading(loading) {
+    const submit = document.getElementById('tpw-submit');
+    const btnLbl = document.getElementById('tpw-btn-label');
+    if (!submit || !btnLbl) return;
+    submit.disabled = loading;
+    if (loading) {
+      submit.dataset.prev = btnLbl.innerHTML;
+      btnLbl.innerHTML = `
+        <span style="display:inline-flex;align-items:center;gap:10px">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="animation:tpwSpin 0.9s linear infinite;color:white">
+            <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+          </svg>
+          Guardando...
+        </span>`;
+    } else if (submit.dataset.prev) {
+      btnLbl.innerHTML = submit.dataset.prev;
+    }
+  },
+
+  async _onSubmit() {
+    const currentEl = document.getElementById('tpw-current');
+    const newEl     = document.getElementById('tpw-new');
+    const confEl    = document.getElementById('tpw-confirm');
+
+    const currentV = currentEl?.value ?? '';
+    const newV     = newEl?.value ?? '';
+    const confV    = confEl?.value ?? '';
+
+    if (currentV.toLowerCase() !== 'sonrisa123') {
+      currentEl?.classList.add('error');
+      this._setError('tpw-err-current', 'Contraseña temporal incorrecta. Si no la recuerdas, habla con el colegio.');
+      currentEl?.focus();
+      return;
+    }
+    currentEl?.classList.remove('error');
+    this._clearError('tpw-err-current');
+
+    const ok = this._validateLive();
+    if (!ok || confV !== newV) {
+      this._setError('tpw-err-confirm', 'Revisa las reglas y que ambas contraseñas coincidan.');
+      return;
+    }
+
+    this._setLoading(true);
+    try {
+      // 1. Actualizar la contraseña en Supabase Auth
+      const { error: upErr } = await supabase.auth.updateUser({ password: newV });
+      if (upErr) {
+        // Puede requerir re-autenticación si la sesión es muy vieja.
+        if (/reauthenticate|auth.*session.*not/i.test(upErr.message || '')) {
+          throw new Error('Tu sesión está demasiado antigua. Por favor cierra sesión y vuelve a entrar para cambiar la contraseña.');
+        }
+        throw upErr;
+      }
+
+      // 2. Actualizar profiles: desactivar flag
+      let profileUpdated = false;
+      try {
+        const { error: pfErr } = await supabase
+          .from('profiles')
+          .update({ is_temporary_password: false })
+          .eq('id', this._user?.id);
+        if (!pfErr) profileUpdated = true;
+      } catch (e) { /* No bloqueamos el flujo si esto falla; el user_metadata también lo quita */ }
+
+      // 3. Quitar el flag también de user_metadata (mejor consistencia)
+      try {
+        await supabase.auth.updateUser({
+          data: { ...(this._user?.user_metadata || {}), is_temporary_password: false, must_change_password: false }
+        });
+      } catch (_) { /* soft */ }
+
+      // 4. Animación de éxito y cerrar
+      await this._animateSuccess();
+
+      // Limpiar restricciones de UI
+      document.removeEventListener('keydown', this._keyGuard, true);
+      document.body.style.overflow = '';
+      this._overlay?.remove();
+
+      // Notificar al usuario
+      Helpers.toast?.('✅ ¡Contraseña actualizada! Ya puedes usar tu Panel de Padres con normalidad.', 'success', 4500);
+
+      // Actualizar el profile en AppState para que el resto del panel lo vea sin flag
+      const cur = AppState.get('profile');
+      if (cur) AppState.set('profile', { ...cur, is_temporary_password: false });
+
+      this._resolve?.(true);
+    } catch (err) {
+      console.error('[TempPasswordGuard] error:', err);
+      this._setError('tpw-err-confirm', 'Error: ' + (err?.message || String(err)));
+      currentEl?.focus();
+    } finally {
+      this._setLoading(false);
+    }
+  },
+
+  async _animateSuccess() {
+    const banner = this._overlay?.querySelector('.tpw-banner');
+    const submit = document.getElementById('tpw-submit');
+    const btnLbl = document.getElementById('tpw-btn-label');
+
+    if (banner) {
+      banner.style.transition = 'background .45s ease';
+      banner.style.background = 'linear-gradient(135deg,#059669 0%,#10B981 55%,#14B8A6 100%)';
+    }
+    if (btnLbl) btnLbl.innerHTML = `
+      <span style="display:inline-flex;align-items:center;gap:10px">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        ¡Listo! Entrando...
+      </span>`;
+    if (submit) {
+      submit.style.background = 'linear-gradient(135deg,#059669 0%,#10B981 100%)';
+      submit.style.boxShadow = '0 8px 24px rgba(5,150,105,0.3)';
+    }
+
+    return new Promise(r => setTimeout(r, 800));
+  }
+};
+window.TempPasswordGuard = TempPasswordGuard;
+
 window.App = {
   feed: FeedModule, payments: PaymentsModule, tasks: TasksModule,
   attendance: AttendanceModule, chat: ChatModule, profile: ProfileModule,
@@ -121,6 +526,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     AppState.set('user', auth.user);
     AppState.set('profile', auth.profile);
     ParentRatingModule.init();
+
+    // 🔐 GUARD DE CONTRASEÑA TEMPORAL — Bloquea el panel hasta que la cambie.
+    // Si es su primer inicio (password sonrisa123) — modal obligatorio.
+    // No queremos bloquear la carga silenciosa de datos, así que corremos
+    // en paralelo y resolvemos cuando el usuario termine el cambio.
+    TempPasswordGuard.init({ user: auth.user, profile: auth.profile }).catch((err) =>
+      console.warn('[padre] TempPasswordGuard falló (continuando sin él):', err?.message || err)
+    );
 
     // ⚡ PREFETCH: Iniciar carga silenciosa de recursos críticos
     Prefetch.start({

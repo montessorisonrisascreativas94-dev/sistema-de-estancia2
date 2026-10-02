@@ -299,13 +299,36 @@
     background:linear-gradient(90deg,var(--orange),var(--yellow),var(--green),var(--blue));
   }
 
-  /* Back link */
+  /* Back link (legacy) */
   .back-link {
     display:inline-flex;align-items:center;gap:6px;
     color:#94A3B8;text-decoration:none;font-weight:700;font-size:.85rem;
     transition:color .3s;margin-bottom:28px;
   }
   .back-link:hover{color:var(--blue)}
+
+  /* Back Home button — bottom of card */
+  .back-home-btn {
+    display:flex;align-items:center;justify-content:center;gap:10px;
+    width:100%;padding:14px 20px;
+    background:var(--gray);
+    color:var(--blue);
+    border:2px solid var(--blue-lt);
+    border-radius:18px;
+    font-family:'Baloo 2',cursive;
+    font-weight:800;
+    font-size:1rem;
+    text-decoration:none;
+    transition:all 0.35s cubic-bezier(.34,1.56,.64,1);
+  }
+  .back-home-btn i { font-size:1.25rem; }
+  .back-home-btn:hover {
+    background:var(--blue);
+    color:white;
+    border-color:var(--blue);
+    transform:translateY(-3px);
+    box-shadow:0 10px 28px rgba(11,99,199,0.28);
+  }
 
   /* Greeting */
   .greeting-emoji {
@@ -496,12 +519,12 @@
     /* Mobile: card takes full width */
       .form-card {
         width:100%;max-width:none;border-radius:28px;
-        padding:28px 18px 100px; /* bottom pad for mobile mascot */
+        padding:28px 18px 170px; /* bottom pad for mobile mascot + back btn */
         margin-top:-40px;box-shadow:0 -8px 40px rgba(11,99,199,.15);
       }
       @media (max-width: 400px) {
         .form-card {
-          padding: 24px 14px 100px;
+          padding: 24px 14px 170px;
         }
       }
     /* Ground line for mobile mascot */
@@ -532,8 +555,9 @@
   .mob-flowers { display:none; }
 
   @media(max-width:480px){
-    .form-card{padding:28px 18px 100px;}
+    .form-card{padding:28px 18px 170px;}
     .greeting-title{font-size:1.45rem;}
+    .back-home-btn{padding:13px 18px;font-size:0.95rem;}
   }
 
   /* ============================================
@@ -806,7 +830,7 @@
   /* Adjust login page to account for banner */
   @media (max-width: 900px) {
     .form-card {
-      padding-bottom: 160px !important;
+      padding-bottom: 230px !important;
     }
   }
   </style>
@@ -993,10 +1017,6 @@
   <div class="form-card">
     <div class="card-stripe"></div>
 
-    <a href="index.html" class="back-link">
-      <i class="bi bi-arrow-left-circle-fill"></i> Volver al inicio
-    </a>
-
     <!-- Greeting -->
     <span class="greeting-emoji" id="greetEmoji">🌞</span>
     <h1 class="greeting-title" id="greetTitle">¡Qué alegría verte!</h1>
@@ -1064,6 +1084,13 @@
     <div class="form-bottom">
       <a href="recuperar.html" class="forgot-link">¿Olvidaste tu contraseña?</a>
     </div>
+
+    <div class="divider" style="margin-top:24px"><hr><span>O</span><hr></div>
+
+    <a href="index.html" class="back-home-btn">
+      <i class="bi bi-arrow-left-circle-fill"></i> Volver al inicio
+    </a>
+
     <noscript>
       <p style="color:#EF4444;font-size:.85rem;text-align:center;margin-top:12px;font-weight:700">⚠️ Este portal requiere JavaScript para funcionar.</p>
     </noscript>

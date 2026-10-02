@@ -81,10 +81,9 @@ export const GradebookGrid = {
       console.warn('[GradebookGrid] boletin_ensure_structure:', err?.message || err);
     }
 
-    const [evalRes, periodsRes, areasRes, studRes] = await Promise.all([
+    const [evalRes, periodsRes, studRes] = await Promise.all([
       supabase.from('eval_evaluations').select('*').eq('id', S.evaluationId).maybeSingle(),
       supabase.from('eval_periods').select('*').eq('evaluation_id', S.evaluationId).is('deleted_at', null).order('sort_order').order('created_at'),
-      supabase.from('eval_areas').select('*').eq('evaluation_id', S.evaluationId).is('deleted_at', null).order('sort_order').order('created_at'),
       supabase.from('students').select('*, classroom:classroom_id(id, name, level)').eq('id', S.student.id).maybeSingle()
     ]);
 
@@ -96,27 +95,48 @@ export const GradebookGrid = {
       ? S.periods.find(p => p.id === Number(S.periodId))
       : S.periods[0];
     S.periodId = S.period.id;
-    S.areas = areasRes.data || [];
+
     if (studRes.data) S.student = { ...S.student, ...studRes.data };
     if (!S.classroom) S.classroom = studRes.data?.classroom || null;
 
-    S.activityLabels = Array.isArray(S.evaluation.activity_labels) && S.evaluation.activity_labels.length
-      ? S.evaluation.activity_labels
-      : [1, 2, 3, 4, 5].map(i => ({ name: `Actividad ${i}`, max_value: 100 }));
+    // ── Plan de Estudio Único por Aula ─────────────────────────────
+    // Si classroomId tiene configuración en scale_config.classroom_configs,
+    // se usa como fuente canónica: define áreas, pesos y actividades (1..n).
+    S.classroomKey = String(S.classroomId || S.classroom?.id || '');
+    S.classroomConfig = null;
+    try {
+      const cfgs = S.evaluation?.scale_config?.classroom_configs;
+      if (cfgs && typeof cfgs === 'object' && S.classroomKey && cfgs[S.classroomKey]) {
+        S.classroomConfig = cfgs[S.classroomKey];
+      }
+    } catch (_) {}
+
+    // Construir activityLabels dinámico a partir de la configuración del aula
+    // (suma de actividades por área). Si no hay config, usamos 5 actividades.
+    S.activityLabels = this._buildActivityLabels(S.classroomConfig, S.evaluation);
+    // Cantidad de actividades por área (según la configuración del aula)
+    S.areaActivityCounts = S.classroomConfig?.areas?.length
+      ? S.classroomConfig.areas.map(a => Math.min(10, Math.max(1, Number(a.activities) || 1)))
+      : null;
     S.scaleConfig = S.evaluation.scale_config && S.evaluation.scale_config.levels
       ? S.evaluation.scale_config
       : { min: 0, max: 100, levels: [
           { label: 'AD', min: 90, max: 100, color: '#10B981' },
-          { label: 'A', min: 80, max: 89, color: '#22C55E' },
-          { label: 'B', min: 70, max: 79, color: '#F59E0B' },
-          { label: 'C', min: 60, max: 69, color: '#F97316' },
-          { label: 'D', min: 0, max: 59, color: '#EF4444' }
+          { label: 'A',  min: 80, max: 89,  color: '#22C55E' },
+          { label: 'B',  min: 70, max: 79,  color: '#F59E0B' },
+          { label: 'C',  min: 60, max: 69,  color: '#F97316' },
+          { label: 'D',  min: 0,  max: 59,  color: '#EF4444' }
         ] };
 
-    const { data: modules } = await supabase.from('eval_modules')
-      .select('*').eq('period_id', S.period.id).is('deleted_at', null).order('sort_order').order('created_at');
-    S.modules = modules || [];
-    const moduleIds = S.modules.map(m => m.id);
+    // ── Preparar Áreas y Módulos a partir de classroom_config ───────
+    // Aseguramos que existan en la DB (eval_areas / eval_modules / eval_activities)
+    // para que las notas se guarden correctamente y alineamos con la config.
+    const { areas, usedModulesByArea, desired } = await this._syncAreaConfig(S);
+    S.areas = areas;
+
+    const periodModules = usedModulesByArea.flat();
+    S.modules = periodModules;
+    const moduleIds = periodModules.map(m => m.id);
 
     const [actsRes, scoresRes, notesRes] = await Promise.all([
       moduleIds.length
@@ -130,6 +150,17 @@ export const GradebookGrid = {
         : { data: [] }
     ]);
 
+    // Alinear cantidad de actividades por módulo según desired
+    await this._ensureActivitiesForModules(S, desired, actsRes.data || []);
+
+    // Recargar actividades tras ensure (pueden haberse creado)
+    let activitiesFull = actsRes.data || [];
+    if (moduleIds.length) {
+      const { data: refetch } = await supabase.from('eval_activities').select('*').in('module_id', moduleIds).is('deleted_at', null).order('sort_order').order('created_at');
+      if (refetch?.length) activitiesFull = refetch;
+    }
+    S.activities = activitiesFull;
+
     let taskRows = [];
     try {
       const { data } = moduleIds.length
@@ -138,7 +169,6 @@ export const GradebookGrid = {
       taskRows = data || [];
     } catch (_) { taskRows = []; }
 
-    S.activities = actsRes.data || [];
     S.scoresMap = buildScoresMap(scoresRes.data || [], S.activities);
     const notesMap = {};
     (notesRes.data || []).forEach(n => { notesMap[`${n.area_id}`] = n; });
@@ -146,6 +176,167 @@ export const GradebookGrid = {
     const taskMap = {};
     taskRows.forEach(t => { if (!taskMap[`${t.eval_module_id}`]) taskMap[`${t.eval_module_id}`] = t.title; });
     S.taskByModule = taskMap;
+  },
+
+  _buildActivityLabels(classroomConfig, evaluation) {
+    if (classroomConfig?.areas?.length) {
+      const labels = [];
+      let global = 0;
+      classroomConfig.areas.forEach(area => {
+        const n = Math.min(10, Math.max(1, Number(area.activities) || 1));
+        for (let i = 0; i < n; i++) {
+          global += 1;
+          labels.push({ name: `${area.name} · A${i + 1}`, short: `A${global}`, max_value: 100 });
+        }
+      });
+      return labels;
+    }
+    if (Array.isArray(evaluation?.activity_labels) && evaluation.activity_labels.length) {
+      return evaluation.activity_labels;
+    }
+    return [1, 2, 3, 4, 5].map(i => ({ name: `Actividad ${i}`, short: `A${i}`, max_value: 100 }));
+  },
+
+  async _syncAreaConfig(S) {
+    const evalId = S.evaluationId;
+    const periodId = S.period.id;
+    const desired = S.classroomConfig?.areas || [];
+
+    // Cargar eval_areas actuales
+    let { data: currAreas } = await supabase
+      .from('eval_areas')
+      .select('*')
+      .eq('evaluation_id', evalId)
+      .is('deleted_at', null)
+      .order('sort_order');
+    currAreas = currAreas || [];
+
+    // Si no hay classroomConfig → comportamiento legacy
+    if (!desired.length) {
+      S.areas = currAreas;
+      const { data: mods } = await supabase
+        .from('eval_modules')
+        .select('*')
+        .eq('period_id', periodId)
+        .is('deleted_at', null)
+        .order('sort_order').order('created_at');
+      const modules = mods || [];
+      const usedModulesByArea = S.areas.map(a =>
+        modules.filter(m => m.area_id === a.id).sort((x, y) => (x.sort_order ?? 0) - (y.sort_order ?? 0))
+      );
+      return { areas: currAreas, usedModulesByArea, desired: [] };
+    }
+
+    // Merge por nombre / posición → crear áreas faltantes y actualizar pesos/colores
+    const uid = await this._currentUid();
+    const finalAreas = [];
+    for (let i = 0; i < desired.length; i++) {
+      const d = desired[i];
+      let area = currAreas.find(a => a.name && a.name.toLowerCase() === String(d.name || '').toLowerCase())
+              || currAreas.find(a => Number(a.sort_order) === i);
+      if (!area) {
+        const { data: created } = await supabase.from('eval_areas').insert({
+          evaluation_id: evalId,
+          name: d.name,
+          weight: Number(d.weight) || 0,
+          color: d.color || '#6366F1',
+          sort_order: i,
+          created_by: uid
+        }).select().maybeSingle();
+        area = created;
+      } else {
+        const patch = {};
+        if (area.weight !== Number(d.weight)) patch.weight = Number(d.weight) || 0;
+        if (area.color !== d.color) patch.color = d.color || '#6366F1';
+        if (Number(area.sort_order) !== i) patch.sort_order = i;
+        if (area.name !== d.name) patch.name = d.name;
+        if (Object.keys(patch).length) {
+          const { data: up } = await supabase.from('eval_areas').update(patch).eq('id', area.id).select().maybeSingle();
+          if (up) area = up;
+        }
+      }
+      if (area) finalAreas.push(area);
+    }
+
+    // Cargar módulos y asegurar 1 módulo por actividad por área en este período
+    const { data: allMods } = await supabase
+      .from('eval_modules')
+      .select('*')
+      .eq('period_id', periodId)
+      .is('deleted_at', null)
+      .order('sort_order').order('created_at');
+    const allModules = allMods || [];
+    const usedModulesByArea = [];
+    for (let i = 0; i < finalAreas.length; i++) {
+      const area = finalAreas[i];
+      const nAct = Math.min(10, Math.max(1, Number(desired[i]?.activities || 1)));
+      let areaMods = allModules
+        .filter(m => m.area_id === area.id)
+        .sort((x, y) => (x.sort_order ?? 0) - (y.sort_order ?? 0));
+      if (areaMods.length < nAct) {
+        const inserts = [];
+        for (let j = areaMods.length; j < nAct; j++) {
+          inserts.push({
+            period_id: periodId,
+            area_id: area.id,
+            name: `${desired[i].name} · A${j + 1}`,
+            sort_order: j,
+            weight: 1,
+            created_by: uid
+          });
+        }
+        if (inserts.length) {
+          const { data: createdMods } = await supabase.from('eval_modules').insert(inserts).select();
+          if (createdMods?.length) areaMods = [...areaMods, ...createdMods].sort((x, y) => (x.sort_order ?? 0) - (y.sort_order ?? 0));
+        }
+      } else if (areaMods.length > nAct) {
+        // Soft-delete excedentes
+        const toDelete = areaMods.slice(nAct).map(m => m.id);
+        if (toDelete.length) {
+          await supabase.from('eval_modules').update({ deleted_at: new Date().toISOString() }).in('id', toDelete);
+          areaMods = areaMods.slice(0, nAct);
+        }
+      }
+      usedModulesByArea.push(areaMods);
+    }
+
+    S.areas = finalAreas;
+    // Reordenar sort_order de áreas si fue necesario
+    return { areas: finalAreas, usedModulesByArea, desired };
+  },
+
+  async _ensureActivitiesForModules(S, desired, currentActivities) {
+    if (!desired.length) return;
+    const byModule = {};
+    (currentActivities || []).forEach(a => {
+      if (!byModule[a.module_id]) byModule[a.module_id] = [];
+      byModule[a.module_id].push(a);
+    });
+    const uid = await this._currentUid();
+    const inserts = [];
+    S.modules.forEach(m => {
+      const acts = byModule[m.id] || [];
+      // Por cada módulo se requiere al menos 1 actividad
+      if (acts.length === 0) {
+        inserts.push({
+          module_id: m.id,
+          name: m.name || 'Actividad',
+          sort_order: 0,
+          max_score: 100,
+          created_by: uid
+        });
+      }
+    });
+    if (inserts.length) {
+      try { await supabase.from('eval_activities').insert(inserts); }
+      catch (e) { console.warn('[GradebookGrid] ensureActivities:', e?.message); }
+    }
+  },
+
+  async _bustClassroomCache() {
+    try {
+      return true;
+    } catch (_) { return false; }
   },
 
   async _reloadScores() {
@@ -161,24 +352,30 @@ export const GradebookGrid = {
   _compute() {
     const S = this.S;
     const periodModules = S.modules.filter(m => m.period_id === S.period.id);
-    const rows = S.areas.map(area => {
+    // Offset global para asignar A1..An secuencialmente (como en activityLabels)
+    let globalActOffset = 0;
+    const rows = S.areas.map((area, ai) => {
+      const nActs = S.areaActivityCounts
+        ? (S.areaActivityCounts[ai] ?? 0)
+        : S.activityLabels.length;
       const areaMods = periodModules
         .filter(m => m.area_id === area.id)
         .slice()
         .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
-      const cells = areaMods.slice(0, S.activityLabels.length).map((m, i) => {
+      const cells = areaMods.slice(0, nActs).map((m, i) => {
         const activity = S.activities.find(a => a.module_id === m.id) || null;
         const score = activity ? S.scoresMap[`${m.id}:${activity.id}:${S.student.id}`] : null;
         const norm = activity ? normalizeScore(m, score) : null;
         const name = S.taskByModule[`${m.id}`] || activity?.name || m.name;
-        return { module: m, activity, score, norm, name, slot: i };
+        return { module: m, activity, score, norm, name, slot: globalActOffset + i };
       });
-      while (cells.length < S.activityLabels.length) {
-        cells.push({ module: null, activity: null, score: null, norm: null, name: null, slot: cells.length });
+      while (cells.length < nActs) {
+        cells.push({ module: null, activity: null, score: null, norm: null, name: null, slot: globalActOffset + cells.length });
       }
+      globalActOffset += nActs;
       const avg = avgOf(cells.map(c => c.norm));
       const note = S.areaNotes[`${area.id}`] || null;
-      return { area, cells, avg, note };
+      return { area, cells, avg, note, nActs };
     });
     const evaluated = rows.filter(r => r.avg != null);
     let overall = null;
@@ -233,11 +430,11 @@ export const GradebookGrid = {
         </div>
 
         <div class="overflow-x-auto rounded-2xl border border-slate-200 mb-5">
-          <table class="w-full text-sm" style="min-width:680px">
+          <table class="w-full text-sm" style="min-width:${560 + S.activityLabels.length * 72}px">
             <thead>
               <tr style="background:#FFFBEB">
                 <th class="px-3 py-2.5 text-left text-[9px] font-black uppercase tracking-wider text-slate-500">Áreas</th>
-                ${S.activityLabels.map((l, i) => `<th class="px-3 py-2.5 text-center text-[9px] font-black uppercase tracking-wider text-slate-500" title="${esc(l.name || '')}">${esc(l.name || 'A' + (i + 1))}</th>`).join('')}
+                ${S.activityLabels.map((l, i) => `<th class="px-3 py-2.5 text-center text-[9px] font-black uppercase tracking-wider text-slate-500" title="${esc(l.name || '')}">${esc(l.short || l.name || 'A' + (i + 1))}</th>`).join('')}
                 <th class="px-3 py-2.5 text-center text-[9px] font-black uppercase tracking-wider text-slate-500">Promedio</th>
                 <th class="px-3 py-2.5 text-center text-[9px] font-black uppercase tracking-wider text-slate-500">Nivel</th>
               </tr>
@@ -293,14 +490,15 @@ export const GradebookGrid = {
     const S = this.S;
     if (cell.norm == null) return '<td class="px-3 py-2.5 text-center"><span class="text-slate-300 font-black">—</span></td>';
     const color = gradeColor(cell.norm);
-    const title = `${cell.name || `A${ci + 1}`} · Nota ${nf(cell.norm)}/100${cell.score?.observation ? ' · ' + esc(cell.score.observation) : ''}`;
+    const globalNum = (cell.slot ?? ci) + 1;
+    const title = `${cell.name || `A${globalNum}`} · Nota ${nf(cell.norm)}/100${cell.score?.observation ? ' · ' + esc(cell.score.observation) : ''}`;
     const action = S.editable ? `GradebookGrid._openEdit(${ai},${ci})` : `GradebookGrid._openDetail(${ai},${ci})`;
     return `
       <td class="px-3 py-2.5 text-center">
         <button onclick="${action}" title="${title}"
           class="inline-flex flex-col items-center justify-center min-w-[52px] px-2 py-1.5 rounded-xl transition-all active:scale-95 ${S.editable ? 'hover:ring-2 hover:ring-green-300 cursor-pointer' : 'cursor-pointer'}">
           <span class="font-black text-sm leading-none" style="color:${color}">${nf(cell.norm)}</span>
-          <span class="text-[8px] font-black uppercase tracking-wide mt-0.5" style="color:${color};opacity:.7">A${ci + 1}</span>
+          <span class="text-[8px] font-black uppercase tracking-wide mt-0.5" style="color:${color};opacity:.7">A${globalNum}</span>
         </button>
       </td>`;
   },

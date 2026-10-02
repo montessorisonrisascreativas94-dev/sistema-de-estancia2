@@ -6,6 +6,7 @@ import { supabase, createClient, SUPABASE_URL, SUPABASE_ANON_KEY } from '../shar
 import { auditLog } from '../shared/db-utils.js';
 import { QueryCache } from '../shared/query-cache.js';
 import { RealtimeManager } from '../shared/realtime-manager.js';
+import { findCanonicalClassroom } from '../shared/constants.js';
 
 // Vista activa: 'table' | 'grid'
 let _view = 'table';
@@ -128,7 +129,11 @@ export const StudentsModule = {
         btnToggleView._bound = true;
         btnToggleView.onclick = () => {
           _view = _view === 'grid' ? 'table' : 'grid';
-          btnToggleView.textContent = _view === 'grid' ? 'Tabla' : 'Grid';
+          const label = btnToggleView.querySelector('[data-stu-view-label]');
+          if (label) label.textContent = _view === 'grid' ? 'Ver tabla' : 'Ver tarjetas';
+          btnToggleView.innerHTML = `<i data-lucide="${_view === 'grid' ? 'table' : 'layout-grid'}"></i> ` +
+            `<span data-stu-view-label>${_view === 'grid' ? 'Ver tabla' : 'Ver tarjetas'}</span>`;
+          if (window.lucide) lucide.createIcons();
           
           const tableWrapper = document.getElementById('studentsTableWrapper');
           const gridWrapper = document.getElementById('studentsGrid');
@@ -250,99 +255,121 @@ export const StudentsModule = {
     const gridContainer = document.getElementById('studentsGrid');
     
     if (!students?.length) {
-      if (tableContainer) tableContainer.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-slate-500">No hay estudiantes.</td></tr>';
-      if (gridContainer) gridContainer.innerHTML = '<div class="col-span-3 text-center py-8 text-slate-500">No hay estudiantes.</div>';
+      if (tableContainer) tableContainer.innerHTML = '<tr><td colspan="4"><div class="dc-empty"><i data-lucide="user-x"></i><span>No hay estudiantes para mostrar.</span></div></td></tr>';
+      if (gridContainer) gridContainer.innerHTML = '<div class="dc-empty"><i data-lucide="user-x"></i><span>No hay estudiantes para mostrar.</span></div>';
+      if (window.lucide) lucide.createIcons();
       return;
     }
 
     const pageStudents = students; // Ya vienen paginados desde el servidor
+    this._roomsById = this._roomsById || new Map();
+    const canonOf = (s) => findCanonicalClassroom(s?.classrooms?.level || s?.classrooms?.name || s?.level_requested || s?.level || '');
 
     // Render Table
     if (tableContainer) {
-      tableContainer.innerHTML = pageStudents.map(s => `
-        <tr class="hover:bg-slate-50 transition-colors border-b border-slate-100 cursor-pointer" ondblclick="App.students.openModal('${s.id}')">
-          <td class="p-4">
-            <div class="flex items-center gap-3">
-              <div class="w-10 h-10 rounded-xl bg-[#E8F2FF] flex items-center justify-center text-sm font-black text-[#0B63C7] overflow-hidden">
-                ${s.avatar_url ? `<img src="${s.avatar_url}" class="w-full h-full object-cover">` : (s.name || '?').charAt(0)}
-              </div>
-              <div>
-                <div class="font-bold text-slate-800">${Helpers.escapeHTML(s.name)}</div>
-                <div class="text-[10px] text-slate-400 font-black uppercase tracking-widest">${s.matricula || 'SIN MATRÍCULA'}</div>
+      tableContainer.innerHTML = pageStudents.map(s => {
+        const canon = canonOf(s);
+        const color = canon?.color || '#0B63C7';
+        const roomName = s.classrooms?.name || 'Sin aula';
+        const avatar = s.avatar_url
+          ? `<img src="${Helpers.escapeHTML(s.avatar_url)}" alt="">`
+          : `<i data-lucide="user"></i>`;
+        return `
+        <tr ondblclick="App.students.openModal('${s.id}')" style="cursor:pointer">
+          <td>
+            <div class="dc-student-top" style="padding-left:.4rem">
+              <div class="dc-student-av" style="--room:${color};width:2.6rem;height:2.6rem;font-size:.9rem">${avatar}</div>
+              <div class="dc-student-id">
+                <span class="dc-student-name">${Helpers.escapeHTML(s.name)}</span>
+                <span class="dc-student-mat">${Helpers.escapeHTML(s.matricula || 'Sin matrícula')}</span>
               </div>
             </div>
           </td>
-          <td class="p-4 text-sm font-medium text-slate-600">
-            <span class="px-3 py-1 bg-slate-100 rounded-full text-[10px] font-black uppercase text-slate-500">
-              ${Helpers.escapeHTML(s.classrooms?.name || 'No asignada')}
+          <td>
+            <div class="dc-student-badges" style="margin-top:0">
+              <span class="dc-badge ${s.classrooms ? 'dc-badge--room' : 'dc-badge--none'}" style="--room:${color}">
+                <i data-lucide="door-open"></i><span>${Helpers.escapeHTML(roomName)}</span>
+              </span>
+              ${canon ? `<span class="dc-badge dc-badge--room" style="--room:${color}"><i></i><span>Línea ${Helpers.escapeHTML(canon.line)}</span></span>` : ''}
+            </div>
+          </td>
+          <td>
+            <span class="dc-badge ${s.is_active ? 'dc-badge--on' : 'dc-badge--off'}">
+              <i data-lucide="${s.is_active ? 'check' : 'pause'}"></i>${s.is_active ? 'Activo' : 'Inactivo'}
             </span>
           </td>
-          <td class="p-4">
-            <span class="px-3 py-1 ${s.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'} rounded-full text-[10px] font-black uppercase tracking-widest">
-              ${s.is_active ? 'Activo' : 'Inactivo'}
-            </span>
-          </td>
-          <td class="p-4 text-right">
-            <div class="flex justify-end gap-2">
-              <button onclick="App.students.openModal('${s.id}')" class="w-9 h-9 flex items-center justify-center bg-[#E8F2FF] text-[#0B63C7] hover:bg-[#0B63C7] hover:text-white rounded-xl transition-all shadow-sm" title="Editar">
-                <i data-lucide="edit-3" class="w-4 h-4"></i>
+          <td>
+            <div class="dc-student-actions" style="justify-content:flex-end">
+              <button class="dc-icon-btn" onclick="event.stopPropagation();App.students.openModal('${s.id}')" title="Editar">
+                <i data-lucide="pencil"></i>
               </button>
-              <button onclick="App.students.delete('${s.id}')" class="w-9 h-9 flex items-center justify-center bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white rounded-xl transition-all shadow-sm" title="Eliminar">
-                <i data-lucide="trash-2" class="w-4 h-4"></i>
+              <button class="dc-icon-btn dc-icon-btn--danger" onclick="event.stopPropagation();App.students.delete('${s.id}')" title="Eliminar">
+                <i data-lucide="trash-2"></i>
               </button>
             </div>
           </td>
-        </tr>`).join('');
+        </tr>`;
+      }).join('');
     }
 
-    // Render Grid
+    // Render tarjetas (contenedores con borde y color de línea del aula)
     if (gridContainer) {
-      gridContainer.innerHTML = pageStudents.map(s => `
-        <div class="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm hover:shadow-md transition-all group relative overflow-hidden">
-          <div class="absolute top-0 right-0 w-24 h-24 bg-[#E8F2FF] rounded-bl-[4rem] -mr-8 -mt-8 transition-transform group-hover:scale-110"></div>
-          
-          <div class="flex items-start gap-4 mb-4 relative">
-            <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#0B63C7] to-[#0850A0] flex items-center justify-center shadow-lg shadow-blue-100">
-              <i data-lucide="user" class="w-8 h-8 text-white"></i>
-            </div>
-            <div class="flex-1">
-              <h3 class="font-black text-slate-800 text-lg leading-tight mb-1">${Helpers.escapeHTML(s.name)}</h3>
-              <p class="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
-                <i data-lucide="home" class="w-3 h-3"></i> ${s.classrooms?.name || 'Sin Aula'}
-              </p>
-            </div>
-            <div class="flex flex-col gap-1">
-               <span class="px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-tighter ${s.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}">
-                 ${s.is_active ? 'Activo' : 'Inactivo'}
-               </span>
+      gridContainer.innerHTML = pageStudents.map(s => {
+        const canon = canonOf(s);
+        const color = canon?.color || '#0B63C7';
+        const roomName = s.classrooms?.name || 'Sin aula';
+        const avatar = s.avatar_url
+          ? `<img src="${Helpers.escapeHTML(s.avatar_url)}" alt="">`
+          : `<i data-lucide="user"></i>`;
+        return `
+        <article class="dc-student ${s.is_active ? '' : 'dc-student--off'}" style="--room:${color}"
+          onclick="App.students.openModal('${s.id}')"
+          onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();App.students.openModal('${s.id}')}"
+          tabindex="0" role="button" aria-label="Abrir ficha de ${Helpers.escapeHTML(s.name || '')}">
+
+          <div class="dc-student-top">
+            <div class="dc-student-av">${avatar}</div>
+            <div class="dc-student-id">
+              <h3 class="dc-student-name">${Helpers.escapeHTML(s.name)}</h3>
+              <span class="dc-student-mat">${Helpers.escapeHTML(s.matricula || 'Sin matrícula')}</span>
+              <div class="dc-student-badges">
+                <span class="dc-badge ${s.classrooms ? 'dc-badge--room' : 'dc-badge--none'}">
+                  <i data-lucide="door-open"></i><span>${Helpers.escapeHTML(roomName)}</span>
+                </span>
+                ${canon ? `<span class="dc-badge dc-badge--room"><i></i><span>Línea ${Helpers.escapeHTML(canon.line)}</span></span>` : ''}
+                <span class="dc-badge ${s.is_active ? 'dc-badge--on' : 'dc-badge--off'}">
+                  <i data-lucide="${s.is_active ? 'check' : 'pause'}"></i>${s.is_active ? 'Activo' : 'Inactivo'}
+                </span>
+              </div>
             </div>
           </div>
 
-          <div class="grid grid-cols-2 gap-3 mb-6 relative">
-            <div class="bg-slate-50 p-3 rounded-2xl">
-              <p class="text-[10px] font-black text-slate-400 uppercase mb-1">Promedio</p>
-              <p class="text-xl font-black text-[#0B63C7]">${s.average_grade || '-'}</p>
+          <div class="dc-student-stats">
+            <div class="dc-student-stat">
+              <span class="dc-student-stat-k">Nivel</span>
+              <span class="dc-student-stat-v" style="color:var(--room)">${Helpers.escapeHTML(s.classrooms?.level || canon?.line || '—')}</span>
             </div>
-            <div class="bg-slate-50 p-3 rounded-2xl">
-              <p class="text-[10px] font-black text-slate-400 uppercase mb-1">Asistencia</p>
-              <p class="text-xl font-black text-emerald-600">${s.attendance || 0}%</p>
+            <div class="dc-student-stat">
+              <span class="dc-student-stat-k">Edad</span>
+              <span class="dc-student-stat-v">${s.age != null ? Helpers.escapeHTML(String(s.age)) + ' ' + Helpers.escapeHTML(s.age_type || 'años') : '—'}</span>
             </div>
           </div>
 
-          <div class="flex items-center justify-between pt-4 border-t border-slate-50">
-            <div class="flex -space-x-2">
-               <div class="w-8 h-8 rounded-full border-2 border-white bg-blue-100 flex items-center justify-center text-[10px]" title="Padre: ${Helpers.escapeHTML(s.p1_name || 'N/A')}"><i data-lucide="user" class="w-3.5 h-3.5 text-blue-500"></i></div>
-            </div>
-            <div class="flex gap-2">
-              <button onclick="App.students.openModal('${s.id}')" class="p-2.5 bg-slate-100 text-slate-600 hover:bg-[#0B63C7] hover:text-white rounded-xl transition-all">
-                <i data-lucide="edit-3" class="w-4 h-4"></i>
+          <div class="dc-student-foot">
+            <span class="dc-student-parent" title="${Helpers.escapeHTML(roomName)}">
+              <i data-lucide="door-open"></i><span>${Helpers.escapeHTML(roomName)}</span>
+            </span>
+            <div class="dc-student-actions">
+              <button class="dc-icon-btn" onclick="event.stopPropagation();App.students.openModal('${s.id}')" title="Editar">
+                <i data-lucide="pencil"></i>
               </button>
-              <button onclick="App.students.delete('${s.id}')" class="p-2.5 bg-slate-100 text-slate-600 hover:bg-rose-600 hover:text-white rounded-xl transition-all">
-                <i data-lucide="trash-2" class="w-4 h-4"></i>
+              <button class="dc-icon-btn dc-icon-btn--danger" onclick="event.stopPropagation();App.students.delete('${s.id}')" title="Eliminar">
+                <i data-lucide="trash-2"></i>
               </button>
             </div>
           </div>
-        </div>`).join('');
+        </article>`;
+      }).join('');
     }
 
     if (window.lucide) lucide.createIcons();

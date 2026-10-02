@@ -6,9 +6,47 @@ import { supabase } from '../shared/supabase.js';
 import { auditLog } from '../shared/db-utils.js';
 import { requireReauth } from '../shared/reauth.js';
 import { QueryCache } from '../shared/query-cache.js';
+import { findCanonicalClassroom } from '../shared/constants.js';
+
+const ROLE_BADGE = Object.freeze({
+  maestra:    'bg-emerald-100 text-emerald-700',
+  asistente:  'bg-orange-100 text-orange-700',
+  encargada: 'bg-purple-100 text-purple-700',
+  directora: 'bg-blue-100 text-blue-700',
+  admin:     'bg-indigo-100 text-indigo-700',
+  padre:     'bg-slate-100 text-slate-600',
+});
+
+const ROLE_LABEL = Object.freeze({
+  maestra:    'Maestro/a',
+  asistente:  'Asistente',
+  encargada: 'Encargada',
+  directora: 'Directora',
+  admin:     'Administrador',
+  padre:     'Padre/Madre',
+});
+
+const QR_PREFIX = Object.freeze({
+  maestra:    'TEA',
+  asistente:  'ASI',
+  encargada: 'ENC',
+  directora: 'DIR',
+  admin:     'ADM',
+});
+
+const THEME_COLOR = Object.freeze({
+  maestra:    { border: 'border-[#28B54D]',    text: 'text-[#28B54D]',    gradient: 'from-emerald-50' },
+  asistente:  { border: 'border-orange-500]',   text: 'text-orange-600',   gradient: 'from-orange-50' },
+  encargada: { border: 'border-purple-500]',   text: 'text-purple-600',   gradient: 'from-purple-50' },
+  directora: { border: 'border-[#0B63C7]',    text: 'text-[#0B63C7]',    gradient: 'from-[#E8F2FF]/60' },
+  admin:     { border: 'border-indigo-500]',   text: 'text-indigo-600',   gradient: 'from-indigo-50' },
+  otro:      { border: 'border-slate-400]',    text: 'text-slate-700',    gradient: 'from-slate-50' },
+  all:       { border: 'border-[#0B63C7]',    text: 'text-[#0B63C7]',    gradient: 'from-[#E8F2FF]/60' },
+});
 
 export const TeachersModule = {
   _listenersBound: false,
+  _currentTab: 'all',
   async init(renderTargetId = 'teachersTableBody') {
     const container = document.getElementById(renderTargetId);
     if (!container) return;
@@ -26,29 +64,72 @@ export const TeachersModule = {
       const assistants = normalized.filter(t => t.role === 'asistente').length;
       const inClass = normalized.filter(t => t.class_ids && t.class_ids.length).length;
 
-      const setTxt = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
+      const setTxt = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
       setTxt('kpiStaffTotal', total);
       setTxt('kpiStaffActive', active);
-      setTxt('kpiStaffInClass', inClass); 
+      setTxt('kpiStaffInClass', inClass);
       setTxt('kpiStaffAssistants', assistants);
+
+      // Contadores para Tabs de roles
+      const cnt = { all: total, maestra: 0, asistente: 0, encargada: 0, otro: 0 };
+      for (const t of normalized) {
+        if (t.role === 'maestra') cnt.maestra++;
+        else if (t.role === 'asistente') cnt.asistente++;
+        else if (t.role === 'encargada') cnt.encargada++;
+        else cnt.otro++;
+      }
+      setTxt('tabCntAll', cnt.all);
+      setTxt('tabCntMaestros', cnt.maestra);
+      setTxt('tabCntAsistentes', cnt.asistente);
+      setTxt('tabCntEncargadas', cnt.encargada);
+      setTxt('tabCntOtros', cnt.otro);
 
       AppState.set('teachers', normalized);
       this.render(normalized, renderTargetId);
 
-      // BUSCADOR EN TIEMPO REAL
-      const searchInput = document.getElementById('searchTeacher');
-      if (searchInput && !this._listenersBound) {
+      // Bindings únicos (solo primera vez)
+      if (!this._listenersBound) {
         this._listenersBound = true;
-        searchInput.addEventListener('input', (e) => {
-          const term = e.target.value.toLowerCase();
-          const allStaff = AppState.get('teachers') || [];
-          const filtered = allStaff.filter(t => 
-            t.name.toLowerCase().includes(term) || 
-            t.email.toLowerCase().includes(term) ||
-            (t.classrooms?.map?.(c => c?.name)?.join(', ') || '').toLowerCase().includes(term)
-          );
-          this.render(filtered);
+
+        // BUSCADOR EN TIEMPO REAL
+        const searchInput = document.getElementById('searchTeacher');
+        if (searchInput) {
+          searchInput.addEventListener('input', () => {
+            const allStaff = AppState.get('teachers') || [];
+            this._applyFilter(allStaff);
+          });
+        }
+
+        // TABS: separación de roles
+        document.querySelectorAll('.teacher-tab-btn').forEach((tab) => {
+          tab.addEventListener('click', () => {
+            const tabName = (tab.getAttribute('data-teacher-tab') || 'all').toString();
+            this._currentTab = tabName;
+            // Resetear estilos de todas las tabs
+            document.querySelectorAll('.teacher-tab-btn').forEach((t) => {
+              t.classList.remove(
+                'teacher-tab--active',
+                'border-[#0B63C7]', 'border-[#28B54D]', 'border-orange-500]', 'border-purple-500]', 'border-slate-400]', 'border-indigo-500]',
+                'text-[#0B63C7]', 'text-[#28B54D]', 'text-orange-600', 'text-purple-600', 'text-slate-700', 'text-indigo-600'
+              );
+              t.classList.add('border-transparent', 'text-slate-500');
+              // Quitar bg
+              t.className = t.className.replace(/bg-gradient-to-b\s+from-\S+/g, '').trim();
+            });
+            // Aplicar estilos a la tab activa
+            const theme = THEME_COLOR[tabName] || THEME_COLOR.all;
+            tab.classList.add('teacher-tab--active', theme.border, theme.text, 'bg-gradient-to-b', theme.gradient, 'to-transparent');
+            tab.classList.remove('border-transparent', 'text-slate-500');
+            const allStaff = AppState.get('teachers') || [];
+            this._applyFilter(allStaff);
+          });
         });
+
+        // Botones creación rápida por rol
+        const btnAddAsst = document.getElementById('btnAddAssistant');
+        if (btnAddAsst) btnAddAsst.addEventListener('click', (e) => { e.preventDefault(); this.openModal(null, 'asistente'); });
+        const btnAddEnc = document.getElementById('btnAddEncargada');
+        if (btnAddEnc) btnAddEnc.addEventListener('click', (e) => { e.preventDefault(); this.openModal(null, 'encargada'); });
       }
 
       if (window.lucide) lucide.createIcons();
@@ -58,21 +139,57 @@ export const TeachersModule = {
     }
   },
 
+  _applyFilter(allStaff) {
+    const search = (document.getElementById('searchTeacher')?.value || '').toLowerCase();
+    let filtered = allStaff;
+    if (search) {
+      filtered = filtered.filter((t) =>
+        (t.name || '').toLowerCase().includes(search) ||
+        (t.email || '').toLowerCase().includes(search) ||
+        ((t.classrooms?.map?.((c) => c?.name)?.join(', ') || '').toLowerCase().includes(search))
+      );
+    }
+    if (this._currentTab && this._currentTab !== 'all') {
+      if (this._currentTab === 'otro') {
+        filtered = filtered.filter((t) => t.role !== 'maestra' && t.role !== 'asistente' && t.role !== 'encargada');
+      } else {
+        filtered = filtered.filter((t) => t.role === this._currentTab);
+      }
+    }
+    this.render(filtered);
+  },
+
   render(staff, renderTargetId = 'teachersTableBody') {
     const container = document.getElementById(renderTargetId);
     if (!container) return;
 
     if (!staff.length) {
-      container.innerHTML = '<tr><td colspan="6" class="text-center py-8 text-slate-500">No hay personal que coincida.</td></tr>';
+      container.innerHTML = '<tr><td colspan="6" class="text-center py-8 text-slate-500">No hay personal que coincida con el filtro actual.</td></tr>';
       return;
     }
-    container.innerHTML = staff.map(t => `
+    container.innerHTML = staff.map((t) => {
+      const roleBadge = ROLE_BADGE[t.role] || 'bg-slate-100 text-slate-600';
+      const roleLbl = ROLE_LABEL[t.role] || t.role || 'Personal';
+      const roleIcon = {
+        maestra:    '<i data-lucide="book-open" class="w-3 h-3"></i>',
+        asistente:  '<i data-lucide="clipboard-list" class="w-3 h-3"></i>',
+        encargada: '<i data-lucide="award" class="w-3 h-3"></i>',
+        directora: '<i data-lucide="shield" class="w-3 h-3"></i>',
+        admin:     '<i data-lucide="briefcase" class="w-3 h-3"></i>',
+      }[t.role] || '<i data-lucide="user" class="w-3 h-3"></i>';
+      const classroomsLbl = (t.classrooms?.map?.((c) => c?.name)?.join(', ') || '').trim() || 'Sin Aula';
+      return `
         <tr class="hover:bg-slate-50 transition-colors cursor-pointer" ondblclick="App.teachers.openModal('${t.id}')">
           <td class="p-4 font-bold text-slate-700">${Helpers.escapeHTML(t.name)}</td>
-          <td class="p-4 text-slate-500">${Helpers.escapeHTML(t.email)}</td>
-          <td class="p-4"><span class="px-3 py-1 bg-slate-100 rounded-full text-[10px] font-black uppercase text-slate-500">${Helpers.escapeHTML((t.classrooms?.map?.(c => c?.name)?.join(', ') || '').trim() || 'Sin Aula')}</span></td>
-          <td class="p-4"><span class="px-3 py-1 bg-[#E8F2FF] text-[#0B63C7] rounded-full text-[10px] font-black uppercase tracking-wider">${Helpers.escapeHTML(t.role)}</span></td>
-          <td class="p-4"><span class="px-3 py-1 ${t.is_active !== false ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-500'} rounded-full text-[10px] font-black uppercase tracking-wider">${t.is_active !== false ? 'Activo' : 'Inactivo'}</span></td>
+          <td class="p-4 text-slate-500">${Helpers.escapeHTML(t.email || '')}</td>
+          <td class="p-4"><span class="px-3 py-1 bg-slate-100 rounded-full text-[10px] font-black uppercase text-slate-500">${Helpers.escapeHTML(classroomsLbl)}</span></td>
+          <td class="p-4"><span class="inline-flex items-center gap-1.5 px-3 py-1 ${roleBadge} rounded-full text-[10px] font-black uppercase tracking-wider">
+            ${roleIcon} ${Helpers.escapeHTML(roleLbl)}
+          </span></td>
+          <td class="p-4"><span class="inline-flex items-center gap-1.5 px-3 py-1 ${t.is_active !== false ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-500'} rounded-full text-[10px] font-black uppercase tracking-wider">
+            <span class="w-1.5 h-1.5 rounded-full ${t.is_active !== false ? 'bg-emerald-500' : 'bg-slate-400'}"></span>
+            ${t.is_active !== false ? 'Activo' : 'Inactivo'}
+          </span></td>
           <td class="p-4 text-right">
             <div class="flex justify-end gap-2">
               <button onclick="App.teachers.openModal('${t.id}')" class="w-9 h-9 flex items-center justify-center bg-[#E8F2FF] text-[#0B63C7] hover:bg-[#0B63C7] hover:text-white rounded-xl transition-all" title="Editar">
@@ -83,7 +200,8 @@ export const TeachersModule = {
               </button>
             </div>
           </td>
-        </tr>`).join('');
+        </tr>`;
+    }).join('');
     if (window.lucide) lucide.createIcons();
   },
 
@@ -248,17 +366,18 @@ export const TeachersModule = {
     }
   },
 
-  async openModal(id = null) {
+  async openModal(id = null, defaultRole = 'maestra') {
     const inputClass = "w-full px-4 py-2.5 border-2 border-slate-100 rounded-2xl outline-none focus:ring-4 focus:ring-blue-100 focus:border-[#0B63C7] bg-slate-50/50 transition-all text-sm font-medium";
     const labelClass = "block text-[11px] font-black text-slate-400 uppercase tracking-wider mb-1.5 ml-1";
+    this._classPickerState = { rooms: [], term: '' };
 
     const modalHTML = `
       <div class="modal-header bg-gradient-to-r from-[#0B63C7] to-[#0850A0] text-white p-6 rounded-t-3xl flex items-center">
         <div class="flex items-center gap-3">
           <div class="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center shadow-inner"><i data-lucide="users" class="w-6 h-6 text-white"></i></div>
           <div>
-            <h3 class="text-xl font-black">${id ? 'Editar Maestra' : 'Gestión de Personal'}</h3>
-            <p class="text-xs text-white/70 font-bold uppercase tracking-widest">Maestras y Asistentes</p>
+            <h3 class="text-xl font-black">${id ? 'Editar Personal' : 'Gestión de Personal'}</h3>
+            <p class="text-xs text-white/70 font-bold uppercase tracking-widest">Maestras, Asistentes y Encargadas</p>
           </div>
         </div>
       </div>
@@ -280,7 +399,7 @@ export const TeachersModule = {
               <div class="w-8 h-8 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center"><i data-lucide="qr-code" class="w-4 h-4"></i></div>
               CÓDIGO QR DE ACCESO (PERSONAL)
             </h4>
-            <p class="text-xs text-orange-600 font-medium leading-relaxed">Este código permite a la maestra/asistente registrar su propia asistencia en el terminal de ponche.</p>
+            <p class="text-xs text-orange-600 font-medium leading-relaxed">Este código permite al personal registrar su propia asistencia en el terminal de ponche.</p>
             
             <div class="bg-white p-6 rounded-3xl border border-orange-100 shadow-sm flex flex-col items-center gap-4">
               <div class="flex gap-2 w-full">
@@ -328,10 +447,22 @@ export const TeachersModule = {
           </div>
           <div>
             <label class="${labelClass}">Aulas asignadas <span class="text-slate-300 normal-case font-normal">(pueden ser varias)</span></label>
-            <select id="tClassroom" multiple size="4" class="${inputClass}">
+            <select id="tClassroom" multiple class="sr-only" aria-hidden="true" tabindex="-1">
               <option value="" disabled>Sin aulas</option>
             </select>
-            <p class="text-[10px] text-slate-400 mt-1 ml-1 font-bold">Selecciona todas las aulas de la maestra (mantén Ctrl para elegir varias en escritorio).</p>
+            <div class="dc-pick" id="tRoomPicker">
+              <div class="dc-pick-head">
+                <div class="dc-search dc-search--sm">
+                  <i data-lucide="search"></i>
+                  <input type="text" id="tRoomSearch" placeholder="Buscar aula o línea..." autocomplete="off" />
+                </div>
+                <span class="dc-pick-counter" id="tRoomCount">0 / 0</span>
+              </div>
+              <div class="dc-pick-list" id="tRoomList">
+                <div class="dc-empty"><span>Cargando aulas...</span></div>
+              </div>
+            </div>
+            <p class="text-[10px] text-slate-400 mt-1 ml-1 font-bold">Marca cada aula de la maestra. El color identifica la línea oficial.</p>
           </div>
           <div class="col-span-2">
             <label class="flex items-center gap-3 p-3 bg-white border border-slate-100 rounded-xl cursor-pointer">
@@ -348,9 +479,11 @@ export const TeachersModule = {
 
     window.openGlobalModal(modalHTML);
 
-    // Función para generar código de acceso del personal
+    // Función para generar código de acceso del personal (prefix dinámico según rol)
     window.genStaffCode = async () => {
-      const prefix = 'TEA';
+      const roleSel = document.getElementById('tRole');
+      const selectedRole = roleSel?.value || defaultRole || 'maestra';
+      const prefix = QR_PREFIX[selectedRole] || 'TEA';
       const code = prefix + '-' + new Date().getFullYear() + '-' + String(Math.floor(Math.random() * 9000) + 1000);
       const input = document.getElementById('tMatricula');
       if (input) {
@@ -370,6 +503,53 @@ export const TeachersModule = {
         }
       }
     };
+
+    // Buscador del selector de aulas
+    const roomSearch = document.getElementById('tRoomSearch');
+    if (roomSearch && !roomSearch._bound) {
+      roomSearch._bound = true;
+      roomSearch.addEventListener('input', Helpers.debounce(() => {
+        this._classPickerState.term = roomSearch.value.trim().toLowerCase();
+        this._renderClassPicker();
+      }, 200));
+    }
+
+    // Pre-seleccionar rol por defecto (creación nueva) y placeholder adaptativo
+    if (!id) {
+      setTimeout(() => {
+        const roleSel = document.getElementById('tRole');
+        if (roleSel) roleSel.value = defaultRole;
+        const matInput = document.getElementById('tMatricula');
+        if (matInput) {
+          const placeholderMap = {
+            maestra: 'Generar ID Maestro...',
+            asistente: 'Generar ID Asistente...',
+            encargada: 'Generar ID Encargada...',
+            directora: 'Generar ID Directora...',
+            admin: 'Generar ID Admin...'
+          };
+          matInput.placeholder = placeholderMap[defaultRole] || 'Generar ID Empleado...';
+        }
+      }, 50);
+    }
+
+    // Listener: al cambiar el rol, actualizar placeholder
+    setTimeout(() => {
+      const roleSel = document.getElementById('tRole');
+      const matInput = document.getElementById('tMatricula');
+      if (roleSel && matInput) {
+        roleSel.addEventListener('change', () => {
+          const placeholderMap = {
+            maestra: 'Generar ID Maestro...',
+            asistente: 'Generar ID Asistente...',
+            encargada: 'Generar ID Encargada...',
+            directora: 'Generar ID Directora...',
+            admin: 'Generar ID Admin...'
+          };
+          matInput.placeholder = placeholderMap[roleSel.value] || 'Generar ID Empleado...';
+        });
+      }
+    }, 100);
 
     window.renderStaffQR = async (code) => {
       const container = document.getElementById('staff-qr-container');
@@ -442,12 +622,18 @@ export const TeachersModule = {
     });
 
     try {
-      const { data: rooms } = await DirectorApi.getClassrooms();
+      const { data: rooms } = await DirectorApi.getClassroomsWithOccupancy();
       const select = document.getElementById('tClassroom');
       if (select && rooms?.length) {
-        select.innerHTML += rooms.map(r => `<option value="${r.id}">${Helpers.escapeHTML((r.name || 'Sin nombre').trim())}</option>`).join('');
+        select.innerHTML = rooms.map(r => `<option value="${r.id}">${Helpers.escapeHTML((r.name || 'Sin nombre').trim())}</option>`).join('');
       }
-    } catch (_) { /* silencioso */ }
+      this._classPickerState = { rooms: rooms || [], term: '' };
+      this._renderClassPicker();
+    } catch (_) {
+      const list = document.getElementById('tRoomList');
+      if (list) list.innerHTML = '<div class="dc-empty"><i data-lucide="alert-triangle"></i><span>No se pudieron cargar las aulas.</span></div>';
+      if (window.lucide) lucide.createIcons();
+    }
 
     if (id) {
       const teachers = AppState.get('teachers') || [];
@@ -481,12 +667,78 @@ export const TeachersModule = {
             });
           }
         }
+        this._renderClassPicker();
         const checkActive = document.getElementById('tActive');
         if(checkActive) checkActive.checked = teacher.is_active !== false;
         // Auto-render QR if has code
         if (code) setTimeout(() => window.renderStaffQR(code), 400);
       }
     }
+    if (window.lucide) lucide.createIcons();
+  },
+
+  /**
+   * Dibuja el selector de aulas (fuente de verdad: <select id="tClassroom">).
+   * Muestra línea oficial, ocupación y cupos libres de cada aula.
+   */
+  _renderClassPicker() {
+    const list = document.getElementById('tRoomList');
+    const sel = document.getElementById('tClassroom');
+    if (!list || !sel) return;
+    const { rooms = [], term = '' } = this._classPickerState || {};
+
+    const selectedIds = new Set(Array.from(sel.selectedOptions).map(o => o.value).filter(Boolean));
+
+    const visible = term
+      ? rooms.filter(r => {
+          const canon = findCanonicalClassroom(r.level || r.name);
+          return `${r.name || ''} ${r.level || ''} ${canon?.line || ''}`.toLowerCase().includes(term);
+        })
+      : rooms;
+
+    const counter = document.getElementById('tRoomCount');
+    if (counter) counter.innerHTML = `<b>${selectedIds.size}</b> de ${rooms.length}`;
+
+    if (!rooms.length) {
+      list.innerHTML = '<div class="dc-empty"><i data-lucide="door-closed"></i><span>Aún no hay aulas registradas.</span></div>';
+    } else if (!visible.length) {
+      list.innerHTML = '<div class="dc-empty"><i data-lucide="search-x"></i><span>Sin coincidencias.</span></div>';
+    } else {
+      list.innerHTML = visible.map(r => {
+        const canon = findCanonicalClassroom(r.level || r.name);
+        const color = canon?.color || '#0B63C7';
+        const occ = Number(r.student_count || 0);
+        const cap = Number(r.capacity || 20);
+        const free = Math.max(0, cap - occ);
+        const pct = cap > 0 ? Math.round((occ / cap) * 100) : 0;
+        const checked = selectedIds.has(r.id);
+        return `<label class="dc-pick-item${checked ? ' is-on' : ''}" style="--room:${color}">
+          <input type="checkbox" class="dc-pick-check" data-room="${r.id}" ${checked ? 'checked' : ''} aria-label="Asignar ${Helpers.escapeHTML(r.name || 'aula')}">
+          <span class="dc-pick-info">
+            <span class="dc-pick-name">${Helpers.escapeHTML(r.name || 'Aula')}</span>
+            <span class="dc-pick-line"><i></i> Línea ${Helpers.escapeHTML(canon?.line || 'General')}</span>
+            <span class="dc-pick-cap">
+              <span class="dc-pick-cap-track"><span class="dc-pick-cap-fill${free === 0 ? ' dc-pick-cap-fill--full' : ''}" style="width:${Math.min(100, pct)}%"></span></span>
+              <span class="dc-pick-cap-num">${occ}/${cap}</span>
+            </span>
+          </span>
+          <span class="dc-pick-avail${free === 0 ? ' is-full' : ''}">${free === 0 ? 'Sin cupos' : free + (free === 1 ? ' libre' : ' libres')}</span>
+        </label>`;
+      }).join('');
+    }
+
+    list.querySelectorAll('input[data-room]').forEach(input => {
+      input.addEventListener('change', () => {
+        const id = input.dataset.room;
+        const opt = [...sel.options].find(o => o.value === id);
+        if (!opt) return;
+        opt.selected = input.checked;
+        input.closest('.dc-pick-item')?.classList.toggle('is-on', input.checked);
+        const c = document.getElementById('tRoomCount');
+        if (c) c.innerHTML = `<b>${Array.from(sel.selectedOptions).filter(o => o.value).length}</b> de ${rooms.length}`;
+      });
+    });
+
     if (window.lucide) lucide.createIcons();
   },
 

@@ -246,21 +246,20 @@ export const WallModule = {
         10 * 60_000 // 10 min TTL — classrooms rarely change
       );
       const select = document.getElementById('wallClassroomFilter');
-      if (select && classrooms) {
-        select.innerHTML = '<option value="">Todas las aulas</option>';
-        classrooms.forEach(c => {
-          const option = document.createElement('option');
-          option.value = c.id;
-          option.textContent = c.name;
-          select.appendChild(option);
-        });
-      }
+      const mirror = document.querySelector('[data-wall-classroom-mirror]');
+      const optionsHtml = '<option value="">Todas las aulas</option>' +
+        classrooms.map(c => `<option value="${Helpers.escapeHTML(c.id || '')}">${Helpers.escapeHTML(c.name || '')}</option>`).join('');
+      if (select) select.innerHTML = optionsHtml;
+      if (mirror) mirror.innerHTML = optionsHtml;
     } catch (_) { /* silencioso */ }
   },
 
   setupFilters() {
     const searchInput = document.getElementById('wallSearch');
     const classroomSelect = document.getElementById('wallClassroomFilter');
+    const searchMirror = document.querySelector('[data-wall-search-mirror]');
+    const classroomMirror = document.querySelector('[data-wall-classroom-mirror]');
+    const resetBtn = document.querySelector('[data-wall-reset]');
 
     // Debounce para búsqueda
     let timeout;
@@ -273,14 +272,74 @@ export const WallModule = {
     if (classroomSelect) {
       classroomSelect.addEventListener('change', () => this.applyFilters());
     }
+
+    // Espejos del sidebar (si existen en el markup de la directora)
+    if (searchMirror) {
+      searchMirror.addEventListener('input', () => {
+        if (searchInput) searchInput.value = searchMirror.value;
+        clearTimeout(timeout);
+        timeout = setTimeout(() => this.applyFilters(), 500);
+      });
+    }
+    if (classroomMirror) {
+      classroomMirror.addEventListener('change', () => {
+        if (classroomSelect) classroomSelect.value = classroomMirror.value;
+        this.applyFilters();
+      });
+    }
+    if (resetBtn) {
+      resetBtn.addEventListener('click', () => {
+        if (searchInput) searchInput.value = '';
+        if (searchMirror) searchMirror.value = '';
+        if (classroomSelect) classroomSelect.value = '';
+        if (classroomMirror) classroomMirror.value = '';
+        this.applyFilters();
+      });
+    }
+  },
+
+  /** Actualiza el resumen del sidebar del muro. */
+  _renderSideSummary(posts) {
+    const set = (attr, value) => {
+      document.querySelectorAll(`[${attr}]`).forEach(el => { el.textContent = value; });
+    };
+    if (!posts || !posts.length) {
+      set('data-wall-total', '0');
+      set('data-wall-class-total', '0');
+      set('data-wall-media', '0');
+      set('data-wall-last', '—');
+      return;
+    }
+    const withMedia = posts.filter(p => p.media_url || p.display_media_url).length;
+    const dates = posts.map(p => p.created_at).filter(Boolean).sort();
+    const last = dates.length ? dates[dates.length - 1] : null;
+
+    set('data-wall-total', String(posts.length));
+    set('data-wall-class-total', String(posts.length));
+    set('data-wall-media', String(withMedia));
+    if (last) {
+      const d = new Date(last);
+      const sameDay = d.toDateString() === new Date().toDateString();
+      set('data-wall-last', sameDay
+        ? d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        : d.toLocaleDateString([], { day: '2-digit', month: 'short' }));
+    } else {
+      set('data-wall-last', '—');
+    }
   },
 
   async applyFilters() {
     const searchInput = document.getElementById('wallSearch');
     const classroomSelect = document.getElementById('wallClassroomFilter');
+    const searchMirror = document.querySelector('[data-wall-search-mirror]');
+    const classroomMirror = document.querySelector('[data-wall-classroom-mirror]');
 
     this._options.searchTerm = searchInput?.value.toLowerCase() || '';
     this._options.classroomId = classroomSelect?.value || null;
+
+    // Mantener el sidebar sincronizado
+    if (searchMirror && searchMirror !== searchInput) searchMirror.value = searchInput?.value || '';
+    if (classroomMirror && classroomMirror !== classroomSelect) classroomMirror.value = classroomSelect?.value || '';
 
     this._page = 0;
     this._hasMore = true;
@@ -401,6 +460,14 @@ export const WallModule = {
       }
 
       const processedPosts = posts.map(p => this._processPost(p, user));
+
+      // Resumen del sidebar del muro
+      if (!append) {
+        this._renderSideSummary(processedPosts);
+      } else {
+        const prev = this._appState?.get('wall_posts_cache') || [];
+        this._renderSideSummary([...prev, ...processedPosts]);
+      }
 
       // Guardar en cache para persistencia instantánea
       if (!append && this._appState) {

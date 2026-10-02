@@ -1,5 +1,13 @@
 import { supabase } from '../../shared/supabase.js';
 import { Helpers } from '../../shared/helpers.js';
+import {
+  CANONICAL_CLASSROOMS,
+  SPECIAL_CLASSROOMS,
+  findCanonicalClassroom,
+  validateAgeForClassroom,
+  suggestClassroomByAge,
+  ageInDays,
+} from '../../shared/constants.js';
 
 export const RoomsModule = {
   async init() {
@@ -233,11 +241,17 @@ export const RoomsModule = {
       return;
     }
 
+    // Mapear name → level canónico (si coincide con catálogo oficial)
+    const canon = findCanonicalClassroom(name);
+    const level = canon ? canon.level : (
+      SPECIAL_CLASSROOMS.includes(name) ? name : name
+    );
+
     const payload = {
       name,
-      capacity,
+      capacity: capacity || 20,
       teacher_id,
-      level: 'General'
+      level,
     };
 
     try {
@@ -251,20 +265,42 @@ export const RoomsModule = {
         savedId = newRoom?.id;
       }
 
-      // Assign checked students to this room
       const modal = document.getElementById('roomModal');
       const checks = modal ? modal.querySelectorAll('.room-student-check') : [];
-      if (checks.length && savedId) {
+      if (checks.length && savedId && level) {
         const roomIdVal = parseInt(savedId, 10);
-        const toAssign   = [...checks].filter(c => c.checked).map(c => parseInt(c.value, 10));
-        const toUnassign = [...checks].filter(c => !c.checked).map(c => parseInt(c.value, 10));
+        const toAssign = [...checks].filter((c) => c.checked).map((c) => parseInt(c.value, 10));
+        const toUnassign = [...checks].filter((c) => !c.checked).map((c) => parseInt(c.value, 10));
 
-        // Helper para actualizar aula de estudiantes
+        // Validar edad de los que vamos a asignar
+        for (const sid of toAssign) {
+          try {
+            const { data: st } = await supabase
+              .from('students')
+              .select('id, name, birth_date')
+              .eq('id', sid)
+              .maybeSingle();
+            if (st?.birth_date) {
+              const days = ageInDays(st.birth_date);
+              const check = validateAgeForClassroom(days, level);
+              if (!check.isSpecial && !check.ok) {
+                const range = check.range?.labelRange || 'rango oficial';
+                const suggest = check.suggestedLevel ? `\nSugerida: ${check.suggestedLevel}` : '';
+                const ok = confirm(
+                  `⚠️ ${st.name} está fuera del rango de edad para "${level}".` +
+                  `\nRango: ${range}${suggest}\n\n¿Autorizar excepción y continuar?`
+                );
+                if (!ok) { this.resetBtn(btn); return; }
+              }
+            }
+          } catch (_) { /* skip validation */ }
+        }
+
         const updateClassroom = async (ids, value) => {
           if (!ids.length) return;
-          const { error } = await supabase.from('students')
-            .update({ classroom_id: value })
-            .in('id', ids);
+          const patch = { classroom_id: value };
+          if (value !== null) patch.level_requested = level;
+          const { error } = await supabase.from('students').update(patch).in('id', ids);
           if (error) throw error;
         };
 
@@ -272,7 +308,7 @@ export const RoomsModule = {
         await updateClassroom(toUnassign, null);
       }
 
-      Helpers.toast(id ? 'Aula actualizada correctamente' : 'Aula creada correctamente');
+      Helpers.toast(id ? 'Aula actualizada correctamente' : 'Aula creada correctamente', 'success');
       this.closeModal();
       await this.loadRooms();
     } catch (_) {

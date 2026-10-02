@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es-DO">
 <head>
   <meta charset="UTF-8" />
@@ -324,26 +324,73 @@
       z-index: 2000;
       flex-direction: column;
       box-shadow: -10px 0 60px rgba(0,0,0,0.2);
-      padding: 80px 24px 24px;
+      padding: 16px 18px 20px;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
     }
     .mobile-menu.active { display: flex; }
     .mobile-close {
       position: absolute;
-      top: 24px;
-      right: 24px;
-      background: none;
+      top: 14px;
+      right: 14px;
+      background: var(--gray-bg);
       border: none;
-      font-size: 32px;
+      font-size: 20px;
       cursor: pointer;
       color: var(--text-dark);
+      width: 38px;
+      height: 38px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s;
+    }
+    .mobile-close:hover { background: var(--orange-light); color: var(--orange); transform: rotate(90deg); }
+    .mobile-menu-header {
+      padding: 18px 6px 16px;
+      margin-bottom: 6px;
+      border-bottom: 2px solid var(--gray-bg);
+    }
+    .mobile-menu-logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .mobile-menu-links {
+      flex: 0 0 auto;
+      padding: 8px 0;
     }
     .mobile-nav-link {
       text-decoration: none;
       color: var(--text-dark);
       font-weight: 700;
-      font-size: 16px;
-      padding: 14px 0;
-      border-bottom: 1px solid #f0f0f0;
+      font-size: 15px;
+      padding: 11px 10px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 2px;
+      transition: all 0.25s;
+      min-height: 44px;
+    }
+    .mobile-nav-link:hover,
+    .mobile-nav-link:active {
+      background: var(--blue-light);
+      color: var(--blue-dark);
+    }
+    .mobile-menu-cta {
+      margin-top: auto;
+      padding-top: 14px;
+      border-top: 2px solid var(--gray-bg);
+    }
+    .btn-mobile-cta {
+      width: 100%;
+      justify-content: center;
+      padding: 13px 20px;
+      font-size: 14px;
+      min-height: 46px;
     }
     .mobile-overlay {
       display: none;
@@ -370,13 +417,13 @@
       .mobile-btn { width: 44px; height: 44px; border-radius: 12px; font-size: 22px; }
       /* Mobile menu full-height drawer */
       .mobile-menu {
-        width: min(300px, 85vw);
-        padding: 72px 20px 24px;
-        overflow-y: auto;
-        -webkit-overflow-scrolling: touch;
+        width: min(280px, 82vw);
+        padding: 12px 14px 16px;
       }
-      .mobile-close { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; font-size: 28px; }
-      .mobile-nav-link { padding: 16px 0; font-size: 17px; min-height: 44px; display: flex; align-items: center; }
+      .mobile-close { width: 36px; height: 36px; top: 12px; right: 12px; font-size: 18px; border-radius: 10px; }
+      .mobile-menu-header { padding: 14px 4px 12px; }
+      .mobile-nav-link { padding: 10px 8px; font-size: 14.5px; min-height: 42px; gap: 10px; border-radius: 10px; }
+      .btn-mobile-cta { padding: 12px 18px; font-size: 13.5px; min-height: 44px; }
       /* Buttons touch-friendly */
       .btn { padding: 14px 28px; font-size: 15px; min-height: 44px; }
       .btn-sm { padding: 11px 20px; font-size: 13px; }
@@ -1717,15 +1764,33 @@
   <div class="mobile-overlay" id="mobileOverlay" aria-hidden="true"></div>
   <nav class="mobile-menu" id="mobileMenu" aria-label="Men mvil" aria-hidden="true">
     <button type="button" class="mobile-close" id="mobileClose" aria-label="Cerrar men"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
-    <a href="#hero" class="mobile-nav-link">Inicio</a>
-    <a href="#why-us" class="mobile-nav-link">Nuestro Colegio</a>
-    <a href="#programs" class="mobile-nav-link">Programas</a>
-    <a href="#schedules" class="mobile-nav-link">Horarios</a>
-    <a href="#tariffs" class="mobile-nav-link">Tarifas</a>
-    <a href="#timeline" class="mobile-nav-link">Admisiones</a>
-    <a href="#contact-form" class="mobile-nav-link">Contacto</a>
-    <a href="preinscripcion.html" class="btn btn-orange" style="margin-top:20px"><i class="bi bi-pencil-square-fill"></i> Iniciar preinscripción</a>
-    <a href="login.html" class="btn" style="background:rgba(255,255,255,0.18);color:white;border:2px solid rgba(255,255,255,0.5);margin-top:12px" rel="noopener">Iniciar Sesin</a>
+    <div class="mobile-menu-header">
+      <div class="mobile-menu-logo">
+        <div class="logo-icon" style="width:40px;height:40px;border-radius:12px;font-size:20px">🌳</div>
+        <div style="display:flex;flex-direction:column">
+          <span style="font-family:'Baloo 2',cursive;font-weight:800;font-size:15px;color:var(--text-dark);line-height:1.1">Sonrisas</span>
+          <span style="font-size:11px;color:var(--text-light);font-weight:700">Creativas</span>
+        </div>
+      </div>
+    </div>
+    <div class="mobile-menu-links">
+      <a href="#hero" class="mobile-nav-link"><i class="bi bi-house-door-fill" style="color:var(--blue);width:22px"></i> Inicio</a>
+      <a href="#why-us" class="mobile-nav-link"><i class="bi bi-mortarboard-fill" style="color:var(--green);width:22px"></i> Nuestro Colegio</a>
+      <a href="#programs" class="mobile-nav-link"><i class="bi bi-collection-play-fill" style="color:var(--orange);width:22px"></i> Programas</a>
+      <a href="#schedules" class="mobile-nav-link"><i class="bi bi-clock-fill" style="color:var(--blue);width:22px"></i> Horarios</a>
+      <a href="#tariffs" class="mobile-nav-link"><i class="bi bi-tags-fill" style="color:var(--orange);width:22px"></i> Tarifas</a>
+      <a href="#timeline" class="mobile-nav-link"><i class="bi bi-calendar-check-fill" style="color:var(--green);width:22px"></i> Admisiones</a>
+      <a href="#contact-form" class="mobile-nav-link"><i class="bi bi-telephone-fill" style="color:var(--blue);width:22px"></i> Contacto</a>
+      <a href="preinscripcion.html" class="mobile-nav-link"><i class="bi bi-pencil-square-fill" style="color:var(--orange);width:22px"></i> Preinscripción</a>
+    </div>
+    <div class="mobile-menu-cta">
+      <a href="login.html" class="btn btn-blue btn-mobile-cta" rel="noopener">
+        <i class="bi bi-box-arrow-in-right"></i> Iniciar Sesión
+      </a>
+      <a href="preinscripcion.html" class="btn btn-orange btn-mobile-cta" style="margin-top:10px">
+        <i class="bi bi-pencil-square-fill"></i> Iniciar preinscripción
+      </a>
+    </div>
   </nav>
 
   <main id="main-content">

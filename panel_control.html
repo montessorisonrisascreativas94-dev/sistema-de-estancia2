@@ -207,6 +207,7 @@
   <button class="nav-item" onclick="goTo('pagos')"><i class="bi bi-credit-card-fill"></i> Pagos</button>
   -->
   <button class="nav-item" onclick="goTo('asistencia')"><i class="bi bi-calendar-check-fill"></i> Asistencia</button>
+  <button class="nav-item" onclick="goTo('qr-admin')"><i class="bi bi-qr-code-scan"></i> QR Administrativo</button>
   <button class="nav-item" onclick="goTo('errores')"><i class="bi bi-bug-fill"></i> Errores del Sistema</button>
 
   <div class="nav-section">Sistema</div>
@@ -643,6 +644,110 @@
           <table class="tbl">
             <thead><tr><th>Año</th><th>Inicio</th><th>Fin</th><th>Estado</th><th>Acciones</th></tr></thead>
             <tbody id="schoolYearsBody"><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted);">Cargando...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════
+         QR ADMINISTRATIVO — Generador / Escáner / Registro
+    ══════════════════════════════════════════════════════ -->
+    <div class="section" id="sec-qr-admin">
+      <!-- KPIs -->
+      <div class="kpi-grid" id="qrKpiGrid">
+        <div class="kpi k-indigo"><div class="kpi-val" id="kpiQrEntries">0</div><div class="kpi-lbl">Entradas Hoy</div><i class="bi bi-box-arrow-in-right kpi-icon"></i></div>
+        <div class="kpi k-green"><div class="kpi-val" id="kpiQrExits">0</div><div class="kpi-lbl">Salidas Hoy</div><i class="bi bi-box-arrow-in-left kpi-icon"></i></div>
+        <div class="kpi k-orange"><div class="kpi-val" id="kpiQrPending">0</div><div class="kpi-lbl">Pendientes Salida</div><i class="bi bi-person-dash-fill kpi-icon"></i></div>
+        <div class="kpi k-blue"><div class="kpi-val" id="kpiQrStaff">0</div><div class="kpi-lbl">Total Personal</div><i class="bi bi-people-fill kpi-icon"></i></div>
+      </div>
+
+      <div class="grid-2" style="margin-bottom:16px;">
+        <!-- Generador QR -->
+        <div class="panel">
+          <div class="panel-hdr">
+            <h3><i class="bi bi-qr-code" style="color:#6366f1;margin-right:6px;"></i>Generar Código QR Administrativo</h3>
+          </div>
+          <div class="panel-body" style="display:flex;flex-direction:column;gap:14px;">
+            <p style="font-size:12px;color:var(--muted);font-weight:700;">Crea credenciales de acceso único para personal administrativo. Sincronizado con los códigos del Panel de Directora.</p>
+
+            <div>
+              <label style="font-size:11px;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;display:block;margin-bottom:6px;">Rol Administrativo</label>
+              <select class="inp" id="qrAdminRole">
+                <option value="admin">Administrador (ADM)</option>
+                <option value="directora">Directora (DIR)</option>
+                <option value="asistente">Asistente (ASI)</option>
+                <option value="encargada">Encargada (ENC)</option>
+                <option value="maestra">Maestra (TEA)</option>
+              </select>
+            </div>
+
+            <div>
+              <label style="font-size:11px;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;display:block;margin-bottom:6px;">Código de Acceso</label>
+              <div style="display:flex;gap:8px;">
+                <input class="inp" id="qrAdminCode" placeholder="ADM-2025-XXXX">
+                <button class="btn btn-primary" onclick="generateAdminQR()" style="flex-shrink:0;"><i class="bi bi-magic"></i> Generar</button>
+              </div>
+            </div>
+
+            <div style="display:flex;flex-direction:column;align-items:center;gap:10px;background:var(--surface2);border-radius:14px;padding:18px;">
+              <div id="qrAdminCanvas" style="background:white;padding:12px;border-radius:12px;border:2px dashed #c7d2fe;min-width:170px;min-height:170px;display:flex;align-items:center;justify-content:center;">
+                <span style="font-size:11px;font-weight:900;color:#94a3b8;text-transform:uppercase;text-align:center;line-height:1.4;">Ingresa un código<br>para ver el QR</span>
+              </div>
+              <div id="qrAdminMeta" style="text-align:center;"></div>
+              <div style="display:flex;gap:8px;width:100%;">
+                <button class="btn btn-ghost" style="flex:1;justify-content:center;" onclick="printAdminQR()" disabled id="btnPrintAdminQR"><i class="bi bi-printer"></i> Imprimir Carnet</button>
+                <button class="btn btn-primary" style="flex:1;justify-content:center;" onclick="saveAdminQRAccess()" disabled id="btnSaveAdminQR"><i class="bi bi-sd-card-fill"></i> Guardar BD</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Escáner QR -->
+        <div class="panel">
+          <div class="panel-hdr">
+            <h3><i class="bi bi-qr-code-scan" style="color:#22c55e;margin-right:6px;"></i>Escáner QR (Ponche Administrativo)</h3>
+            <button class="btn btn-ghost" style="padding:5px 10px;font-size:10px;" onclick="toggleAdminScanner()"><i class="bi bi-camera-video" id="scanCamIcon"></i> <span id="scanCamLabel">Iniciar Cámara</span></button>
+          </div>
+          <div class="panel-body" style="display:flex;flex-direction:column;gap:14px;">
+            <div id="adminScannerContainer" style="display:none;background:#0f172a;border-radius:12px;padding:8px;">
+              <div id="adminScannerReader" style="width:100%;min-height:240px;"></div>
+            </div>
+
+            <div style="display:flex;gap:8px;">
+              <input class="inp" id="qrScanInput" placeholder="O pega el código manualmente aquí (ADM-...)">
+              <button class="btn btn-primary" onclick="processAdminQRScan()"><i class="bi bi-check-circle-fill"></i> Registrar</button>
+            </div>
+
+            <div id="scanResult" style="display:none;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Registro de accesos -->
+      <div class="panel">
+        <div class="panel-hdr">
+          <h3><i class="bi bi-clock-history" style="color:#f97316;margin-right:6px;"></i>Registro de Accesos (Personal Administrativo)</h3>
+          <div style="display:flex;gap:8px;">
+            <input class="inp" id="qrAccessSearch" placeholder="Buscar código, personal..." style="width:220px;" oninput="filterAdminAccess()">
+            <button class="btn btn-ghost" style="padding:5px 10px;font-size:10px;" onclick="loadAdminAccessLog()"><i class="bi bi-arrow-clockwise"></i> Actualizar</button>
+          </div>
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="tbl">
+            <thead>
+              <tr>
+                <th>Fecha/Hora</th>
+                <th>Código</th>
+                <th>Personal</th>
+                <th>Rol</th>
+                <th>Tipo</th>
+                <th>Dispositivo</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody id="adminAccessLogBody">
+              <tr><td colspan="7" style="text-align:center;padding:24px;color:var(--muted);">Cargando accesos...</td></tr>
+            </tbody>
           </table>
         </div>
       </div>
