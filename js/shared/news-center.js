@@ -529,6 +529,29 @@ export const NewsCenter = {
     const els = _els();
     els.modal.classList.add('show');
     els.backdrop.classList.add('show');
+    // Al abrir el centro de novedades el padre ya "las vio". Marcamos
+    // TODO como leído para que la campana y el badge se apaguen AL INSTANTE
+    // (no es necesario que pulse "Marcar todas" para quitar el indicador).
+    // Si el usuario cierra sin leer nada más, las novedades siguen marcadas
+    // como leídas en la BD; el centro mantiene la lista pero sin contador rojo.
+    const unreadArr = _getUnread();
+    if (unreadArr.length) {
+      const ids = unreadArr.map(i => i.id);
+      for (const item of unreadArr) item.isRead = true;
+      _renderList();
+      // Escribir en la BD en background. El update no emite realtime,
+      // así que además refrescamos UnreadMessages (si existe) a mano.
+      if (_state.userId && ids.length) {
+        supabase.from('notifications')
+          .update({ is_read: true })
+          .eq('user_id', _state.userId)
+          .in('id', ids)
+          .then(() => { try { window.UnreadMessages?.refresh(); } catch(_) {} })
+          .catch(() => {});
+      } else {
+        try { window.UnreadMessages?.refresh(); } catch(_) {}
+      }
+    }
     this.refresh();
   },
 

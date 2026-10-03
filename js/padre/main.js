@@ -1163,21 +1163,17 @@ export async function navigateTo(targetId, opts = {}) {
 }
 
 // ── Botón atrás manual ───────────────────────────────────────────────────────
+// IMPORTANTE: NUNCA usar window.history.back() aquí. El historial del navegador
+// contiene páginas ANTERIORES al panel (login.html, preinscripcion.html…),
+// así que un simple "atrás" saca al padre del portal y tiene que volver a
+// autenticarse → pesima experiencia. Este boton es para "volver al inicio".
 function _goBack() {
   const current = AppState.get('currentSection');
   if (current === 'home') return;
-  // Si hay historial propio, ir atrás; si no, ir a home
-  try {
-    if (window.history.length > 1 && window.history.state?.section) {
-      _navSuppressPopstate = true;
-      window.history.back();
-      setTimeout(() => { _navSuppressPopstate = false; }, 80);
-    } else {
-      navigateTo('home');
-    }
-  } catch (_) {
-    navigateTo('home');
-  }
+  // Ir siempre a la home del panel de padres. El boton nativo del navegador
+  // / gesto Android sigue usando popstate y navega entre las secciones con
+  // hash (no sale del panel).
+  navigateTo('home');
 }
 
 // ── Listener global: botón atrás del navegador / gesto Android ───────────────

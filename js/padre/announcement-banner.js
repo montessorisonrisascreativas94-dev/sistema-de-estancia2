@@ -4,13 +4,31 @@ import { NotifyPermission } from '../shared/notify-permission.js';
 
 const STYLE_ID = 'pabStyles';
 const ROOT_ID = 'pabRoot';
+const HOME_BANNER_ID = 'homeGeneralBanner';
 const DISMISS_KEY = 'pab_dismissed';
+const TIPS_LAST_KEY = 'pab_tip_idx';
 const DEFAULT_SETTINGS = {
   check_in_start: '07:30',
   check_in_end: '08:30',
   check_out_start: '16:00',
   check_out_end: '17:30',
 };
+
+/** Tips educativos rotativos — mensajes de "conexion emocional" al padre. */
+const EDU_TIPS = [
+  { minAge: 1,  maxAge: 3,  tip: 'Entre los 1 y 3 años el cerebro multiplica sus conexiones neuronales. Hablarle despacio, con frases cortas y mirándole a los ojos, mejora su comprensión del lenguaje hasta un 40%.' },
+  { minAge: 1,  maxAge: 5,  tip: 'El juego simbólico (jugar a "ser" papá/mamá, maestro/a, medico/a) a los 2-5 años desarrolla la empatía: tu hijo aprende a ponerse en el lugar del otro.' },
+  { minAge: 3,  maxAge: 6,  tip: 'A los 3-6 años, 15 minutos de lectura compartida al día duplican el vocabulario activo del niño antes de entrar a primaria. No importa releer el mismo cuento: la repetición le da seguridad.' },
+  { minAge: 4,  maxAge: 7,  tip: 'Sabías que los niños de 4 a 7 años que manipulan objetos (bloques, plastilina, puzzles) antes de aprender sumas, desarrollan mejor el razonamiento espacial y abstracto? Es la base de las matemáticas futuras.' },
+  { minAge: 5,  maxAge: 8,  tip: 'Entre los 5-8 años, las rutinas consistentes (hora de dormir, cena, baño, lectura) reducen la ansiedad en un 35% y mejoran la atención en clase el día siguiente.' },
+  { minAge: 6,  maxAge: 12, tip: 'A partir de los 6 años, darle al niño una pequeña responsabilidad diaria (regar una planta, poner la mesa, ordenar sus libros) aumenta su autoestima: aprende que "cuento" para el grupo familiar.' },
+  { minAge: 2,  maxAge: 99, tip: 'Un abrazo de 10 segundos después del colegio libera oxitocina: reduce el estrés del día, mejora su sueño y refuerza el vínculo seguro que él necesita para explorar el mundo sin miedo.' },
+  { minAge: 1,  maxAge: 99, tip: '¿Por qué repetimos las mismas canciones y juegos en Montessori? Porque la repetición crea "huellas" en el cerebro: así tu hijo consolida destrezas hasta que las domina por completo. ¡No es aburrimiento, es maestría!' },
+  { minAge: 1,  maxAge: 99, tip: 'Cada vez que le preguntas "¿cómo te has sentido hoy?" y escuchas sin interrumpir, estás entrenando su inteligencia emocional. Los niños que nombran sus emociones se frustran menos.' },
+  { minAge: 1,  maxAge: 99, tip: 'El error es información, no fracaso. En Montessori celebramos el "casi lo consigo": los niños que escuchan "¡vamos a intentarlo de otro modo!" desarrollan una mentalidad de crecimiento.' },
+  { minAge: 3,  maxAge: 99, tip: 'El aburrimiento constructivo es bueno. Dejar espacios sin pantallas ni juguetes planeados hace que tu hijo desarrolle creatividad e imaginación: él inventa su propio juego.' },
+  { minAge: 1,  maxAge: 99, tip: 'Tu estado emocional es su primer termómetro. Si tú llegas tranquilo/a al recogerle, él interpreta "mundo seguro". Si vas con prisas, él percibe "mundo inquieto". Respira hondo 3 veces antes de entrar: él lo nota.' },
+];
 
 /** Tipos que se consideran "anuncio" dentro del banner */
 const ANNOUNCEMENT_TYPES = [
@@ -24,6 +42,7 @@ const ICONS = {
   info: '\u2139\uFE0F', message: '\u{1F4AC}', grade: '\u2B50', payment: '\u{1F4B5}', live: '\u{1F534}',
 };
 
+/** (mantener el STYLE del banner flotante — no lo toco) */
 const CSS = `
 #${ROOT_ID} { position: fixed; top: 10px; left: 50%; transform: translateX(-50%); z-index: 1400; width: min(680px, calc(100vw - 24px)); font-family: inherit; }
 #${ROOT_ID} .pab-card { background: #fff; border: 2px solid #E2E8F0; border-radius: 22px; box-shadow: 0 18px 40px -18px rgba(15, 23, 42, .38); overflow: hidden; animation: pab-in .32s cubic-bezier(.2,.9,.3,1); }
@@ -67,6 +86,139 @@ const CSS = `
   #${ROOT_ID} .pab-warn { flex-wrap: wrap; }
 }
 @media print { #${ROOT_ID} { display: none !important; } }
+
+/* ───────────────────────────────────────────────────────────────────────
+   BANNER GENERAL DINAMICO DEL HOME (no flotante, dentro de #home)
+   ─────────────────────────────────────────────────────────────────────── */
+#${HOME_BANNER_ID} * { box-sizing: border-box; }
+#${HOME_BANNER_ID} .pab-hb { display: flex; flex-direction: column; background: #ffffff; }
+
+/* Cada "cinta" o tarjeta interna */
+#${HOME_BANNER_ID} .pab-hb-stack {
+  display: flex; align-items: center; gap: .9rem;
+  padding: 1.1rem 1.25rem; position: relative; border-bottom: 1px solid rgba(15,23,42,.06);
+}
+#${HOME_BANNER_ID} .pab-hb-stack:last-child { border-bottom: 0; }
+
+/* ── CINTA 1: saludo y estado de asistencia (gradiente azul→morado) ── */
+#${HOME_BANNER_ID} .pab-hb-greet {
+  background: linear-gradient(120deg,#0B63C7 0%, #2563EB 45%, #7C3AED 100%);
+  color: #fff;
+}
+#${HOME_BANNER_ID} .pab-hb-greet-left { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: .35rem; }
+#${HOME_BANNER_ID} .pab-hb-time { font-size: 1rem; font-weight: 800; line-height: 1.2; letter-spacing: -0.01em; }
+#${HOME_BANNER_ID} .pab-hb-status {
+  display: flex; align-items: flex-start; gap: .25rem;
+  font-size: .82rem; font-weight: 600; line-height: 1.45; opacity: .96;
+}
+#${HOME_BANNER_ID} .pab-hb-window {
+  display: grid; grid-template-columns: 1fr 1fr; gap: .55rem; flex: 0 0 auto; width: 13rem;
+}
+#${HOME_BANNER_ID} .pab-hb-win {
+  background: rgba(255,255,255,.18); border: 1px solid rgba(255,255,255,.25);
+  border-radius: .85rem; padding: .45rem .65rem;
+  backdrop-filter: blur(4px);
+  display: flex; flex-direction: column; gap: .1rem;
+}
+#${HOME_BANNER_ID} .pab-hb-win--in  { background: rgba(34,197,94,.22); border-color: rgba(134,239,172,.45); }
+#${HOME_BANNER_ID} .pab-hb-win--out { background: rgba(139,92,246,.22); border-color: rgba(196,181,253,.45); }
+#${HOME_BANNER_ID} .pab-hb-k { font-size: .58rem; font-weight: 900; letter-spacing: .09em; text-transform: uppercase; opacity: .88; }
+#${HOME_BANNER_ID} .pab-hb-v { font-size: .82rem; font-weight: 900; font-variant-numeric: tabular-nums; }
+
+/* ── CINTA 2: fase del día (llevar / recoger) ── */
+#${HOME_BANNER_ID} .pab-hb-phase { background: #FFFFFF; }
+#${HOME_BANNER_ID} .pab-hb-phase-ico {
+  width: 2.6rem; height: 2.6rem; border-radius: 1rem; flex: 0 0 auto;
+  display: flex; align-items: center; justify-content: center; font-size: 1.25rem;
+}
+#${HOME_BANNER_ID} .pab-hb-phase--dropoff {
+  background: linear-gradient(120deg,#ECFDF5 0%, #F0FDF4 100%);
+}
+#${HOME_BANNER_ID} .pab-hb-phase--dropoff .pab-hb-phase-ico { background: #86EFAC; }
+#${HOME_BANNER_ID} .pab-hb-phase--pickup {
+  background: linear-gradient(120deg,#FFF7ED 0%, #FEF3C7 100%);
+}
+#${HOME_BANNER_ID} .pab-hb-phase--pickup  .pab-hb-phase-ico { background: #FDBA74; }
+#${HOME_BANNER_ID} .pab-hb-phase-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: .18rem; }
+#${HOME_BANNER_ID} .pab-hb-phase-title { font-size: .98rem; font-weight: 900; line-height: 1.2; color: #0F172A; }
+#${HOME_BANNER_ID} .pab-hb-phase-sub { font-size: .8rem; font-weight: 600; color: #475569; line-height: 1.45; }
+
+/* ── CINTA 3: push NO activado ── */
+#${HOME_BANNER_ID} .pab-hb-push {
+  background: linear-gradient(120deg, #EFF6FF 0%, #F5F3FF 100%);
+  border-left: 4px solid #6366F1;
+}
+#${HOME_BANNER_ID} .pab-hb-push-ico {
+  width: 2.6rem; height: 2.6rem; border-radius: 1rem; flex: 0 0 auto;
+  display: flex; align-items: center; justify-content: center; font-size: 1.2rem;
+  background: #C7D2FE;
+}
+#${HOME_BANNER_ID} .pab-hb-push-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: .25rem; }
+#${HOME_BANNER_ID} .pab-hb-push-title { font-size: .95rem; font-weight: 900; line-height: 1.2; color: #0F172A; }
+#${HOME_BANNER_ID} .pab-hb-push-sub   { font-size: .78rem; font-weight: 600; color: #475569; line-height: 1.5; }
+#${HOME_BANNER_ID} .pab-hb-push-btn {
+  flex: 0 0 auto; min-width: 8rem;
+  background: #4F46E5; color: #fff;
+  border: 0; border-radius: .85rem;
+  padding: .65rem 1rem;
+  font-size: .78rem; font-weight: 900; letter-spacing: .02em;
+  cursor: pointer; white-space: nowrap;
+  box-shadow: 0 10px 22px -10px rgba(79,70,229,.65);
+  transition: transform .08s ease, background .12s ease;
+}
+#${HOME_BANNER_ID} .pab-hb-push-btn:hover:not([disabled]) { background: #4338CA; }
+#${HOME_BANNER_ID} .pab-hb-push-btn:active:not([disabled]) { transform: translateY(1px) scale(.98); }
+#${HOME_BANNER_ID} .pab-hb-push-btn[disabled] { background: #94A3B8; cursor: not-allowed; box-shadow: none; }
+
+/* ── CINTA 4: anuncio destacado ── */
+#${HOME_BANNER_ID} .pab-hb-ann { background: #ffffff; }
+#${HOME_BANNER_ID} .pab-hb-ann-ico {
+  width: 2.6rem; height: 2.6rem; border-radius: 1rem; flex: 0 0 auto;
+  display: flex; align-items: center; justify-content: center; font-size: 1.15rem;
+  background: #FEF3C7;
+}
+#${HOME_BANNER_ID} .pab-hb-ann-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: .2rem; }
+#${HOME_BANNER_ID} .pab-hb-ann-title { font-size: .92rem; font-weight: 900; line-height: 1.25; color: #0F172A; }
+#${HOME_BANNER_ID} .pab-hb-ann-sub   { font-size: .78rem; font-weight: 600; color: #475569; line-height: 1.5; }
+#${HOME_BANNER_ID} .pab-hb-ann-time  {
+  flex: 0 0 auto; font-size: .68rem; font-weight: 800; color: #64748B;
+  background: #F1F5F9; border-radius: .6rem; padding: .25rem .5rem;
+}
+
+/* ── CINTA 5: tip "Sabias que..." ── */
+#${HOME_BANNER_ID} .pab-hb-tip {
+  background: linear-gradient(120deg, #FDF2F8 0%, #F0F9FF 55%, #F5F3FF 100%);
+}
+#${HOME_BANNER_ID} .pab-hb-tip-ico {
+  width: 2.6rem; height: 2.6rem; border-radius: 1rem; flex: 0 0 auto;
+  display: flex; align-items: center; justify-content: center; font-size: 1.25rem;
+  background: #FBCFE8;
+}
+#${HOME_BANNER_ID} .pab-hb-tip-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: .55rem; }
+#${HOME_BANNER_ID} .pab-hb-tip-head { display: flex; align-items: center; gap: .55rem; flex-wrap: wrap; }
+#${HOME_BANNER_ID} .pab-hb-tip-title { font-size: .95rem; font-weight: 900; line-height: 1.2; color: #831843; }
+#${HOME_BANNER_ID} .pab-hb-tip-tag {
+  font-size: .68rem; font-weight: 900; letter-spacing: .06em; text-transform: uppercase;
+  background: rgba(131,24,67,.12); color: #831843; border-radius: .55rem; padding: .25rem .55rem;
+}
+#${HOME_BANNER_ID} .pab-hb-tip-body {
+  font-size: .83rem; font-weight: 600; color: #334155; line-height: 1.6;
+}
+
+/* Responsive home banner: móvil */
+@media (max-width: 640px) {
+  #${HOME_BANNER_ID} .pab-hb-stack { padding: 1rem; gap: .75rem; }
+  #${HOME_BANNER_ID} .pab-hb-greet,
+  #${HOME_BANNER_ID} .pab-hb-phase,
+  #${HOME_BANNER_ID} .pab-hb-push {
+    flex-direction: column; align-items: flex-start;
+  }
+  #${HOME_BANNER_ID} .pab-hb-window { width: 100%; grid-template-columns: 1fr 1fr; }
+  #${HOME_BANNER_ID} .pab-hb-push-btn { width: 100%; }
+  #${HOME_BANNER_ID} .pab-hb-ann { flex-direction: column; align-items: flex-start; }
+  #${HOME_BANNER_ID} .pab-hb-ann-time { align-self: flex-end; }
+  #${HOME_BANNER_ID} .pab-hb-tip { flex-direction: column; align-items: flex-start; }
+}
 `;
 
 function injectStyle() {
@@ -174,7 +326,10 @@ export const AnnouncementBanner = {
     // Refresca la cuenta regresiva cada minuto
     clearInterval(this._timer);
     this._timer = setInterval(() => {
-      if (this._attendance) this._render();
+      if (this._attendance) {
+        this._render();
+        this._renderHomeBanner();
+      }
     }, 60000);
   },
 
@@ -205,6 +360,7 @@ export const AnnouncementBanner = {
       this._loadNotifications(),
     ]);
     this._render();
+    this._renderHomeBanner();
   },
 
   async _loadSettings() {
@@ -307,6 +463,7 @@ export const AnnouncementBanner = {
       this._notifyDesktop(n);
       this._show();
       this._render();
+      this._renderHomeBanner();
     });
 
     if (this._studentId) {
@@ -316,6 +473,7 @@ export const AnnouncementBanner = {
       }, async () => {
         await this._loadAttendance();
         this._render();
+        this._renderHomeBanner();
       });
     }
 
@@ -388,6 +546,186 @@ export const AnnouncementBanner = {
         ? `${this._studentName} ya ingreso. Todo al d\u00eda.`
         : `La entrega sigue abierta hasta las ${String(this._settings.check_in_end).slice(0, 5)}.`
     };
+  },
+
+  // ── Banner inline del HOME (estático, no flotante) ────────────────────────
+  _greetingByTime() {
+    const h = new Date().getHours();
+    if (h < 6)  return { label: 'Buenas noches', emoji: '\u{1F319}' };
+    if (h < 12) return { label: 'Buenos d\u00edas',   emoji: '\u2600\uFE0F' };
+    if (h < 19) return { label: 'Buenas tardes', emoji: '\u{1F324}\uFE0F' };
+    return { label: 'Buenas noches', emoji: '\u{1F306}' };
+  },
+
+  /** Edad en años (aproximada) a partir de birthday: YYYY-MM-DD o Date */
+  _ageYears() {
+    const b = AppState?.get?.('currentStudent')?.birthday;
+    if (!b) return null;
+    try {
+      const bd = new Date(b);
+      if (isNaN(bd.getTime())) return null;
+      const now = new Date();
+      let age = now.getFullYear() - bd.getFullYear();
+      const m = now.getMonth() - bd.getMonth();
+      if (m < 0 || (m === 0 && now.getDate() < bd.getDate())) age--;
+      return Math.max(0, Math.min(99, age));
+    } catch (_) { return null; }
+  },
+
+  _pickTip() {
+    const age = this._ageYears();
+    const pool = (age == null) ? EDU_TIPS : EDU_TIPS.filter(t => age >= t.minAge && age <= t.maxAge);
+    const list = pool.length ? pool : EDU_TIPS;
+    let idx = 0;
+    try {
+      const raw = parseInt(localStorage.getItem(TIPS_LAST_KEY) || '0', 10) || 0;
+      idx = (raw + 1) % list.length;
+      localStorage.setItem(TIPS_LAST_KEY, String(idx));
+    } catch (_) { /* incógnito */ }
+    return { tip: list[idx].tip, age: age };
+  },
+
+  _renderHomeBanner() {
+    const wrap = document.getElementById(HOME_BANNER_ID);
+    if (!wrap) return;
+
+    const greet = this._greetingByTime();
+    const att = this._attendance;
+    const pushOn = this._pushEnabled();
+    const phase = this._dayPhase();
+    const studentFirst = (this._studentName || 'tu hijo(a)').split(' ')[0];
+    const parentFirst = AppState?.get?.('profile')?.name?.split(' ')[0] || 'Familia';
+
+    // ── Cinta 1: saludo + status asistencia (gradiente azul/morado) ──
+    const hasCheckIn  = !!att?.check_in;
+    const hasCheckOut = !!att?.check_out;
+    const inStart = String(this._settings.check_in_start || DEFAULT_SETTINGS.check_in_start).slice(0, 5);
+    const inEnd   = String(this._settings.check_in_end   || DEFAULT_SETTINGS.check_in_end).slice(0, 5);
+    const outStart= String(this._settings.check_out_start|| DEFAULT_SETTINGS.check_out_start).slice(0, 5);
+    const outEnd  = String(this._settings.check_out_end  || DEFAULT_SETTINGS.check_out_end).slice(0, 5);
+
+    let statusLine = '';
+    let statusIcon = '\u{1F4A1}';
+    if (hasCheckOut) {
+      statusIcon = '\u2705';
+      statusLine = `<b>${escapeHtml(studentFirst)}</b> ya fue entregado(a) a casa. \u00a1Nos vemos ma\u00f1ana!`;
+    } else if (hasCheckIn) {
+      statusIcon = '\u{1F392}';
+      statusLine = `<b>${escapeHtml(studentFirst)}</b> ya est\u00e1 en la escuela aprendiendo hoy. \u00a1Est\u00e1 en buenas manos!`;
+    } else {
+      statusIcon = '\u23F3';
+      statusLine = `Hoy a\u00fan no hay registro de entrada. Ventana de entrega: <b>${escapeHtml(inStart)} \u2013 ${escapeHtml(inEnd)}</b>.`;
+    }
+
+    const saludoRow = `
+      <div class="pab-hb-greet pab-hb-stack">
+        <div class="pab-hb-greet-left">
+          <div class="pab-hb-time">${greet.emoji} ${greet.label}, <b>${escapeHtml(parentFirst)}</b></div>
+          <div class="pab-hb-status">
+            <span style="font-size:1.2rem;margin-right:.3rem">${statusIcon}</span>
+            <span>${statusLine}</span>
+          </div>
+        </div>
+        <div class="pab-hb-window">
+          <div class="pab-hb-win pab-hb-win--in">
+            <span class="pab-hb-k">Entrada</span>
+            <span class="pab-hb-v">${escapeHtml(inStart)}\u2013${escapeHtml(inEnd)}</span>
+          </div>
+          <div class="pab-hb-win pab-hb-win--out">
+            <span class="pab-hb-k">Salida</span>
+            <span class="pab-hb-v">${escapeHtml(outStart)}\u2013${escapeHtml(outEnd)}</span>
+          </div>
+        </div>
+      </div>`;
+
+    // ── Cinta 2: FASE del día (solo si aplica) ──
+    let phaseRow = '';
+    if (phase.tone === 'go') {
+      const toneClass = phase.countdown?.startsWith('hasta') ? 'pickup' : 'dropoff';
+      phaseRow = `
+        <div class="pab-hb-phase pab-hb-phase--${toneClass} pab-hb-stack">
+          <span class="pab-hb-phase-ico">${toneClass === 'pickup' ? '\u{1F697}' : '\u{1F680}'}</span>
+          <div class="pab-hb-phase-txt">
+            <div class="pab-hb-phase-title">${toneClass === 'pickup' ? '\u00a1Ya es hora de recoger!' : '\u00a1Es hora de llevar a la escuela!'}</div>
+            <div class="pab-hb-phase-sub">
+              ${escapeHtml(phase.text)}
+              ${phase.countdown ? ` \u00b7 <b>${escapeHtml(phase.countdown)}</b>` : ''}
+            </div>
+          </div>
+        </div>`;
+    }
+
+    // ── Cinta 3: Push NO activado → botón Activar ──
+    let pushRow = '';
+    if (!pushOn) {
+      const denied = NotifyPermission.isDenied();
+      pushRow = `
+        <div class="pab-hb-push pab-hb-stack">
+          <span class="pab-hb-push-ico">\u{1F514}</span>
+          <div class="pab-hb-push-txt">
+            <div class="pab-hb-push-title">Activa las notificaciones push</div>
+            <div class="pab-hb-push-sub">As\u00ed te avisaremos en tiempo real cuando tu hijo entre, salga o publiquen en el muro sin necesidad de tener el panel abierto.</div>
+          </div>
+          <button type="button" id="hbPushBtn" class="pab-hb-push-btn" ${denied ? 'disabled' : ''}>
+            ${denied ? 'Bloqueado en el navegador' : 'Activar ahora'}
+          </button>
+        </div>`;
+    }
+
+    // ── Cinta 4: Anuncio destacado (último announcement/alert sin leer o con priority) ──
+    const latest = this._items.find(i => (i.type === 'announcement' || i.type === 'alert' || i.type === 'muro') && i.title) || this._items[0];
+    let announcementRow = '';
+    if (latest) {
+      announcementRow = `
+        <div class="pab-hb-ann pab-hb-stack">
+          <span class="pab-hb-ann-ico">${ICONS[latest.type] || '\u{1F4E2}'}</span>
+          <div class="pab-hb-ann-txt">
+            <div class="pab-hb-ann-title">${escapeHtml(latest.title)}</div>
+            ${latest.message ? `<div class="pab-hb-ann-sub">${escapeHtml(String(latest.message).slice(0, 220))}</div>` : ''}
+          </div>
+          <span class="pab-hb-ann-time">${escapeHtml(timeAgo(latest.created_at))}</span>
+        </div>`;
+    }
+
+    // ── Cinta 5: Tip educativo "Sab\u00edas que..." ──
+    const { tip, age } = this._pickTip();
+    const ageTag = (age != null)
+      ? `<span class="pab-hb-tip-tag">\u{1F476} ${age} a\u00f1o${age === 1 ? '' : 's'}</span>`
+      : `<span class="pab-hb-tip-tag">\u{1F4A1} Consejo Montessori</span>`;
+
+    const tipRow = `
+      <div class="pab-hb-tip pab-hb-stack">
+        <span class="pab-hb-tip-ico">\u{1F4AD}</span>
+        <div class="pab-hb-tip-txt">
+          <div class="pab-hb-tip-head">
+            <span class="pab-hb-tip-title">\u00bfSab\u00edas que\u2026?</span>
+            ${ageTag}
+          </div>
+          <div class="pab-hb-tip-body">${escapeHtml(tip)}</div>
+        </div>
+      </div>`;
+
+    wrap.innerHTML = `
+      <div class="pab-hb">
+        ${saludoRow}
+        ${phaseRow}
+        ${pushRow}
+        ${announcementRow}
+        ${tipRow}
+      </div>`;
+
+    // Wire eventos del botón push
+    const btn = document.getElementById('hbPushBtn');
+    if (btn) btn.addEventListener('click', async () => {
+      if (NotifyPermission.isDenied()) return;
+      await NotifyPermission.requestSilent();
+      if (NotifyPermission.isGranted()) {
+        this._renderHomeBanner();
+      } else if (NotifyPermission.isDenied()) {
+        btn.textContent = 'Bloqueado en el navegador';
+        btn.disabled = true;
+      }
+    });
   },
 
   _render() {
