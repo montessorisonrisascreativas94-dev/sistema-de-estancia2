@@ -17,27 +17,8 @@ export const TasksModule = {
   async init(studentId) {
     if (!studentId) return;
     this._studentId = studentId;
-    
-    // Delegación de eventos para filtros
-    const filtersContainer = document.querySelector('.task-filters-container') || document.querySelector('#tasks .flex.bg-white.p-1.rounded-full.shadow-sm.border');
-    if (filtersContainer && !filtersContainer._initialized) {
-      Helpers.delegate(filtersContainer, 'button', 'click', (e, btn) => {
-        const filter = btn.dataset.filter || 'pending';
-        this.loadTasks(filter);
-        
-        // Actualizar UI de botones
-        filtersContainer.querySelectorAll('button').forEach(b => {
-          const isActive = b === btn;
-          b.classList.toggle('bg-[#0B63C7]', isActive);
-          b.classList.toggle('text-white', isActive);
-          b.classList.toggle('font-black', isActive);
-          b.classList.toggle('shadow-md', isActive);
-          b.classList.toggle('text-[#64748B]', !isActive);
-          b.classList.toggle('font-medium', !isActive);
-        });
-      });
-      filtersContainer._initialized = true;
-    }
+
+    this._initFilters();
 
     // Delegación para acciones de tareas (Enviar/Ver) + lightbox
     const list = document.getElementById('tasksList');
@@ -58,6 +39,63 @@ export const TasksModule = {
     }
 
     await this.loadTasks('pending');
+  },
+
+  /**
+   * Segmentado Por hacer / Tarde / Listas.
+   * Antes buscaba un contenedor por clases de Tailwind que ya no existían en el
+   * markup, así que los botones nunca respondían. Ahora se ancla al id estable.
+   */
+  _initFilters() {
+    const bar = document.getElementById('tasksFilters');
+    if (!bar || bar._initialized) return;
+
+    bar.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-filter]');
+      if (!btn || !bar.contains(btn)) return;
+      this._setActiveFilter(btn.dataset.filter || 'pending');
+      this.loadTasks(btn.dataset.filter || 'pending');
+    });
+
+    // Flechas izquierda/derecha para navegar los tabs con teclado
+    bar.addEventListener('keydown', (e) => {
+      if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+      const tabs = [...bar.querySelectorAll('[data-filter]')];
+      const i = tabs.indexOf(document.activeElement);
+      if (i < 0) return;
+      e.preventDefault();
+      const next = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length];
+      next.focus();
+      this._setActiveFilter(next.dataset.filter);
+      this.loadTasks(next.dataset.filter);
+    });
+
+    bar._initialized = true;
+  },
+
+  _setActiveFilter(filter) {
+    const bar = document.getElementById('tasksFilters');
+    if (!bar) return;
+    bar.querySelectorAll('[data-filter]').forEach(b => {
+      const on = b.dataset.filter === filter;
+      b.classList.toggle('is-active', on);
+      b.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+  },
+
+  _updateCounts(evidenceMap, tasks) {
+    const now = new Date();
+    const counts = { pending: 0, overdue: 0, submitted: 0 };
+    (tasks || []).forEach(t => {
+      const delivered = evidenceMap.has(t.id);
+      if (delivered) { counts.submitted++; return; }
+      if (t.due_date && new Date(t.due_date) < now) { counts.overdue++; return; }
+      counts.pending++;
+    });
+    document.querySelectorAll('#tasksFilters [data-count]').forEach(el => {
+      const n = counts[el.dataset.count];
+      if (typeof n === 'number') el.textContent = String(n);
+    });
   },
 
   /**
@@ -322,6 +360,10 @@ export const TasksModule = {
 
       const evidenceMap = new Map((evidences || []).map(e => [e.task_id, e]));
       this._cachedTasks = tasks;
+      this._setActiveFilter(filter);
+      this._updateCounts(evidenceMap, tasks);
+      this._renderSummary(filter, tasks, evidenceMap);
+
       const filtered = this.filterTasks(tasks, evidenceMap, filter);
 
       if (!filtered.length) {
@@ -340,6 +382,40 @@ export const TasksModule = {
       container.innerHTML = Helpers.emptyState('Error al cargar tareas', 'alert-triangle');
       if (window.lucide) lucide.createIcons();
     }
+  },
+
+  /**
+   * Franja de resumen: en móvil va a 2 columnas para no desbordar.
+   */
+  _renderSummary(filter, tasks, evidenceMap) {
+    const el = document.getElementById('tasksSummary');
+    if (!el) return;
+    const now = new Date();
+    let pending = 0, overdue = 0, submitted = 0;
+    (tasks || []).forEach(t => {
+      if (evidenceMap.has(t.id)) { submitted++; return; }
+      if (t.due_date && new Date(t.due_date) < now) { overdue++; return; }
+      pending++;
+    });
+
+    const LABELS = {
+      pending:  { txt: 'Por hacer', total: pending,  cls: 'ts-pending' },
+      overdue:  { txt: 'Tarde',     total: overdue,  cls: 'ts-overdue' },
+      submitted:{ txt: 'Listas',    total: submitted,cls: 'ts-submitted' },
+    };
+    const cur = LABELS[filter] || LABELS.pending;
+
+    el.innerHTML = `
+      <div class="ts-grid">
+        <div class="ts-item ${cur.cls}">
+          <span class="ts-item__label">${cur.txt}</span>
+          <span class="ts-item__value">${cur.total}</span>
+        </div>
+        <div class="ts-item">
+          <span class="ts-item__label">Total del aula</span>
+          <span class="ts-item__value">${(tasks || []).length}</span>
+        </div>
+      </div>`;
   },
 
   /**
@@ -368,42 +444,42 @@ export const TasksModule = {
 
     let statusBadge = '';
     if (isDelivered) {
-      statusBadge = `<span class="px-3 py-1 bg-emerald-100 text-emerald-700 text-[9px] font-black uppercase rounded-full">Entregada</span>`;
+      statusBadge = `<span class="task-status-badge task-status-active">✓ Entregada</span>`;
     } else if (isOverdue) {
-      statusBadge = `<span class="px-3 py-1 bg-rose-100 text-rose-700 text-[9px] font-black uppercase rounded-full">Vencida</span>`;
+      statusBadge = `<span class="task-status-badge task-status-overdue">! Vencida</span>`;
     } else {
-      statusBadge = `<span class="px-3 py-1 bg-blue-100 text-blue-700 text-[9px] font-black uppercase rounded-full">Pendiente</span>`;
+      statusBadge = `<span class="task-status-badge task-status-pending">● Pendiente</span>`;
     }
 
+    const grade = (evidence?.grade_letter || evidence?.stars)
+      ? `<span class="task-card__grade" title="Calificación de la maestra">${escapeHtml(evidence.grade_letter || `${evidence.stars}★`)}</span>`
+      : '';
+
     return `
-      <div class="task-card role-accent role-blue p-5 mb-4 group role-fade-up">
-        <div class="ml-2">
-          <div class="flex justify-between items-start mb-3">
-            <div class="flex items-center gap-3">
-              <div class="w-11 h-11 rounded-xl ${isDelivered ? 'bg-green-100 text-green-700' : 'bg-amber-50 text-amber-600'} flex items-center justify-center text-xl shadow-sm group-hover:scale-110 transition-transform">
-                ${isDelivered ? '\u2705' : '\uD83D\uDCDD'}
+      <div class="task-card role-accent role-blue task-card--body group role-fade-up">
+        <div class="task-card__head">
+          <div class="task-card__lead">
+            <div class="task-card__icon ${isDelivered ? 'is-done' : ''}">${isDelivered ? '\u2705' : '\uD83D\uDCDD'}</div>
+            <div class="task-card__headtext">
+              <div class="task-card__titlerow">
+                <h4 class="task-card__title">${escapeHtml(t.title)}</h4>
+                <span class="role-pill role-blue">Tarea</span>
               </div>
-              <div>
-                <div class="flex items-center gap-2 mb-1">
-                  <h4 class="font-black text-slate-800 text-sm leading-tight">${escapeHtml(t.title)}</h4>
-                  <span class="role-pill role-blue">Tarea</span>
-                </div>
-                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Vence: ${Helpers.formatDate(t.due_date)}</p>
-              </div>
+              <p class="task-card__due">Vence: ${Helpers.formatDate(t.due_date)}</p>
             </div>
-            ${statusBadge}
           </div>
+          <div class="task-card__statuses">${statusBadge}${grade}</div>
+        </div>
 
-          ${t.file_url ? `<div class="mb-3 rounded-xl overflow-hidden border border-slate-100 cursor-zoom-in bg-black" data-lightbox-url="${escapeHtml(t.file_url)}" data-lightbox-type="image"><img src="${escapeHtml(t.file_url)}" class="w-full max-h-64 object-cover" loading="lazy" alt="Imagen de tarea" onerror="this.parentElement.style.display='none'"></div>` : ''}
+        ${t.file_url ? `<div class="task-card__media" data-lightbox-url="${escapeHtml(t.file_url)}" data-lightbox-type="image"><img src="${escapeHtml(t.file_url)}" loading="lazy" alt="Imagen de tarea" onerror="this.parentElement.style.display='none'"></div>` : ''}
 
-          <p class="text-xs text-slate-500 leading-relaxed line-clamp-2 mb-4">${escapeHtml(t.description || 'Sin descripción detallada.')}</p>
+        <p class="task-card__desc">${escapeHtml(t.description || 'Sin descripción detallada.')}</p>
 
-          <div class="flex gap-2">
-            ${isDelivered 
-              ? `<button data-action="view" data-id="${t.id}" class="flex-1 py-2.5 admin-btn role-green" style="text-transform:uppercase;font-size:10px;letter-spacing:.15em">\u2705 Ver Entrega</button>`
-              : `<button data-action="submit" data-id="${t.id}" class="flex-1 py-2.5 admin-btn role-blue" style="text-transform:uppercase;font-size:10px;letter-spacing:.15em">\uD83D\uDE80 Enviar Tarea</button>`
-            }
-          </div>
+        <div class="task-card__actions">
+          ${isDelivered
+            ? `<button data-action="view" data-id="${t.id}" class="task-card__btn is-done">\u2705 Ver Entrega</button>`
+            : `<button data-action="submit" data-id="${t.id}" class="task-card__btn is-send">\uD83D\uDE80 Enviar Tarea</button>`
+          }
         </div>
       </div>
     `;

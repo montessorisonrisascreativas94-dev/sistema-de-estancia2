@@ -3,6 +3,7 @@ import { AppState } from '../state.js';
 import { Helpers } from '../../shared/helpers.js';
 import { QueryCache } from '../../shared/query-cache.js';
 import { ImageLoader } from '../../shared/image-loader.js';
+import { dedupeClassrooms } from '../../shared/constants.js';
 
 export const DashboardModule = {
   _chart: null,
@@ -47,14 +48,15 @@ export const DashboardModule = {
               supabase.from('students').select('*', { count: 'exact', head: true }),
               supabase.from('attendance').select('*', { count: 'exact', head: true })
                 .eq('date', today).in('status', ['present', 'presente']),
-              supabase.from('classrooms').select('id', { count: 'exact', head: true }).eq('is_active', true),
+              supabase.from('classrooms').select('id, name, level').eq('is_active', true).limit(200),
               supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'maestra'),
             ]);
             const get = (r) => r.status === 'fulfilled' ? r.value : {};
+            const clsRaw = get(classroomsRes).data || [];
             return {
               studentsCount:   get(studentsRes).count  || 0,
               attendanceCount: get(attendanceRes).count || 0,
-              classroomsCount: get(classroomsRes).count || 0,
+              classroomsCount: dedupeClassrooms(clsRaw).length,
               teachersCount:   get(teachersRes).count  || 0,
             };
           },

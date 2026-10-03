@@ -24,7 +24,6 @@ import { WizardPayment } from './payment-wizard.js';
 import { RecentActivityModule } from './recent-activity.js';
 import { ClassroomSchedule } from './classroom-schedule.js';
 import { NewsCenter } from '../shared/news-center.js';
-import { AnnouncementBanner } from './announcement-banner.js';
 import { SectionCache } from '../shared/section-cache.js';
 
 // #rating-modal se oculta con style="display:none" inline, pero se abria con
@@ -630,14 +629,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       BadgeSystem.init(auth.user.id);
       // ?? Campanita de novedades (centro de notificaciones)
       NewsCenter.init(auth.user.id);
-      // ?? Banner dinámico "modo anuncio": horarios de entrega/búsqueda del niño
-      //    + avisos del centro de novedades. Funciona aunque el padre NO tenga
-      //    las notificaciones push activadas (el banner es el canal in-app).
-      AnnouncementBanner.init({
-        parentId: auth.user.id,
-        studentId: currentStudent?.id,
-        studentName: currentStudent?.name
-      }).catch(err => console.warn('[padre] announcement-banner no cargó:', err));
       // Navegar a la sección solicitada en la URL (si no es home)
       if (_needsNavTo && document.getElementById(_needsNavTo)) {
         navigateTo(_needsNavTo, { force: true });
@@ -1560,12 +1551,8 @@ async function switchStudent(studentId) {
     if (selected.classroom_id) initLiveClassListener(selected.classroom_id);
     ClassroomSchedule.init();
 
-    // 4b. Refrescar el banner dinámico con los horarios del hijo seleccionado
-    AnnouncementBanner.rebind({
-      parentId: auth.user?.id,
-      studentId: selected.id,
-      studentName: selected.name
-    }).catch(() => {});
+    // 4b. Refrescar los badges del panel con el hijo seleccionado
+    BadgeSystem.init(auth.user?.id);
 
     // 5. Recargar Dashboard y UI
     updateHeaderProfile(AppState.get('profile'), selected, all);

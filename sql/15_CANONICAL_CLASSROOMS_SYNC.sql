@@ -81,45 +81,56 @@ DECLARE
   keep_id int;
   norm_name text;
   norm_level text;
+  existing_id int;   -- fila que YA usa c.canon_disp (si existe)
 BEGIN
   CREATE TEMP TABLE IF NOT EXISTS _canon_lookup (
     canon_norm   text PRIMARY KEY,
+    canon_disp   text NOT NULL,      -- nombre OFICIAL para hacer UPDATE al ganador
     bad_patterns text[] NOT NULL DEFAULT '{}'
   ) ON COMMIT DROP;
   TRUNCATE _canon_lookup;
 
-  INSERT INTO _canon_lookup (canon_norm, bad_patterns) VALUES
-    ('parvulos i',    ARRAY['parvalo i','parvalo 1','parvulo i','maternal i','maternal 1','manternal','parvalo']::text[]),
-    ('parvulos ii',   ARRAY['parvalo ii','parvalo 2','parvulo ii','maternal ii','maternal 2']::text[]),
-    ('parvulos iii',  ARRAY['parvalo iii','parvalo 3','parvulo iii','maternal iii','maternal 3']::text[]),
-    ('pre-kinder',    ARRAY['pre kinder','prekinder','pre-kinder blanca','prekinder blanca']::text[]),
-    ('kinder',        ARRAY['kinder gris','kinder 1','kinder general']::text[]),
-    ('pre-primario',  ARRAY['pre primario','preprimario','pre-primario negra','preprimario negra','pre-primaria']::text[]),
-    ('1 primero',     ARRAY['1ro – linea roja','1ro linea roja','1ro – primero','1ro primero','1ro roja','1 – roja','1ro','1 primaria','1 primer año','primero']::text[]),
-    ('2 segundo',     ARRAY['2do – linea amarilla','2do linea amarilla','2do – segundo','2do segundo','2do amarilla','2 – amarilla','2do','2 primaria','segundo']::text[]),
-    ('3 tercero',     ARRAY['3ro – linea azul','3ro linea azul','3ro – tercero','3ro tercero','3ro azul','3 – azul','3ro','3 primaria','tercero']::text[]),
-    ('4 cuarto',      ARRAY['4to – linea verde','4to linea verde','4to – cuarto','4to cuarto','4to verde','4 – verde','4to','4 primaria','cuarto']::text[]),
-    ('5 quinto',      ARRAY['5to – linea naranja','5to linea naranja','5to – quinto','5to quinto','5to naranja','5 – naranja','5to','5 primaria','quinto']::text[]),
-    ('6 sexto',       ARRAY['6to – linea morado','6to linea morado','6to – sexto','6to sexto','6to morado','6 – morado','6to','6 primaria','sexto']::text[]);
+  INSERT INTO _canon_lookup (canon_norm, canon_disp, bad_patterns) VALUES
+    ('parvulos i',   'Párvulos I',   ARRAY['parvalo i','parvalo 1','parvulo i','maternal i','maternal 1','manternal','parvalo']::text[]),
+    ('parvulos ii',  'Párvulos II',  ARRAY['parvalo ii','parvalo 2','parvulo ii','maternal ii','maternal 2']::text[]),
+    ('parvulos iii', 'Párvulos III', ARRAY['parvalo iii','parvalo 3','parvulo iii','maternal iii','maternal 3']::text[]),
+    ('pre-kinder',   'Pre-Kínder',   ARRAY['pre kinder','prekinder','pre-kinder blanca','prekinder blanca','pre kinder blanca']::text[]),
+    ('kinder',       'Kínder',       ARRAY['kinder gris','kinder 1','kinder general']::text[]),
+    ('pre-primario', 'Pre-Primario', ARRAY['pre primario','preprimario','pre-primario negra','preprimario negra','pre-primaria','pre primaria']::text[]),
+    ('1 primero',    '1° Primero',   ARRAY['1ro – linea roja','1ro linea roja','1ro – primero','1ro primero','1ro roja','1 – roja','1ro','1 primaria','1 primer año','primero','1° primero','1° roja','1 grado','1º primero','1º primario']::text[]),
+    ('2 segundo',    '2° Segundo',   ARRAY['2do – linea amarilla','2do linea amarilla','2do – segundo','2do segundo','2do amarilla','2 – amarilla','2do','2 primaria','segundo','2° segundo','2° amarilla','2 grado','2º segundo','2º primario']::text[]),
+    ('3 tercero',    '3° Tercero',   ARRAY['3ro – linea azul','3ro linea azul','3ro – tercero','3ro tercero','3ro azul','3 – azul','3ro','3 primaria','tercero','3° tercero','3° azul','3 grado','3º tercero','3º primario']::text[]),
+    ('4 cuarto',     '4° Cuarto',    ARRAY['4to – linea verde','4to linea verde','4to – cuarto','4to cuarto','4to verde','4 – verde','4to','4 primaria','cuarto','4° cuarto','4° verde','4 grado','4º cuarto','4º primario']::text[]),
+    ('5 quinto',     '5° Quinto',    ARRAY['5to – linea naranja','5to linea naranja','5to – quinto','5to quinto','5to naranja','5 – naranja','5to','5 primaria','quinto','5° quinto','5° naranja','5 grado','5º quinto','5º primario']::text[]),
+    ('6 sexto',      '6° Sexto',     ARRAY['6to – linea morado','6to linea morado','6to – sexto','6to sexto','6to morado','6 – morado','6to','6 primaria','sexto','6° sexto','6° morado','6 grado','6º sexto','6º primario','6to purpura','6to morada']::text[]);
 
   CREATE TEMP TABLE IF NOT EXISTS _candidate_rows (
     id int, score int, teacher_id uuid, norm text
   ) ON COMMIT DROP;
 
-  FOR c IN SELECT canon_norm, bad_patterns FROM _canon_lookup LOOP
+  FOR c IN SELECT cl.canon_norm, cl.canon_disp, cl.bad_patterns FROM _canon_lookup cl LOOP
     TRUNCATE _candidate_rows;
 
     FOR v IN SELECT id, name, level, teacher_id, deleted_at FROM public.classrooms LOOP
       CONTINUE WHEN v.deleted_at IS NOT NULL;
 
-      norm_name  := translate(lower(COALESCE(v.name,  '')),'áéíóúñäëïöüàèìòùâêîôûãõ–—−-','aeiounaeiouaeiouaeiouao     ');
-      norm_level := translate(lower(COALESCE(v.level, '')),'áéíóúñäëïöüàèìòùâêîôûãõ–—−-','aeiounaeiouaeiouaeiouao     ');
+      -- Normalizar: tildes, ñ, guiones, Y AÑADIMOS ° º ª que faltaban (el bug #1).
+      norm_name  := translate(lower(COALESCE(v.name,  '')),
+                   'áéíóúñäëïöüàèìòùâêîôûãõ–—−-°ºª',
+                   'aeiounaeiouaeiouaeiouao         ');
+      norm_level := translate(lower(COALESCE(v.level, '')),
+                   'áéíóúñäëïöüàèìòùâêîôûãõ–—−-°ºª',
+                   'aeiounaeiouaeiouaeiouao         ');
 
       IF norm_name = c.canon_norm OR norm_level = c.canon_norm
          OR EXISTS (
              SELECT 1 FROM unnest(c.bad_patterns) pat
-             WHERE norm_name  LIKE '%' || translate(lower(pat),'áéíóúñäëïöüàèìòùâêîôûãõ–—−-','aeiounaeiouaeiouaeiouao     ') || '%'
-                OR norm_level LIKE '%' || translate(lower(pat),'áéíóúñäëïöüàèìòùâêîôûãõ–—−-','aeiounaeiouaeiouaeiouao     ') || '%'
+             WHERE norm_name  LIKE '%' || translate(lower(pat),
+                     'áéíóúñäëïöüàèìòùâêîôûãõ–—−-°ºª',
+                     'aeiounaeiouaeiouaeiouao         ') || '%'
+                OR norm_level LIKE '%' || translate(lower(pat),
+                     'áéíóúñäëïöüàèìòùâêîôûãõ–—−-°ºª',
+                     'aeiounaeiouaeiouaeiouao         ') || '%'
          )
       THEN
         INSERT INTO _candidate_rows (id, score, teacher_id, norm)
@@ -144,11 +155,50 @@ BEGIN
        ORDER BY score DESC, id ASC
        LIMIT 1;
 
-      UPDATE public.classrooms
-         SET deleted_at = now(),
-             name = name || ' (variante — canon ' || c.canon_norm || ')'
-       WHERE id IN (SELECT id FROM _candidate_rows WHERE id <> keep_id)
-         AND deleted_at IS NULL;
+      -- ✅ FIX 23505: No renombrar a c.canon_disp si YA EXISTE otra fila
+      --    activa con ese nombre (evita choque ux_classrooms_name_active).
+      --    Si la fila con el nombre correcto ya existe, fusionar a ELLA.
+      existing_id := NULL;
+      SELECT id INTO existing_id
+        FROM public.classrooms
+       WHERE name = c.canon_disp
+         AND deleted_at IS NULL
+       LIMIT 1;
+
+      IF existing_id IS NOT NULL AND existing_id <> keep_id THEN
+        -- Fila con nombre OFICIAL ya existe y NO es la ganadora.
+        -- Transferir teacher_id si el existente no tiene, y borrar el resto.
+        UPDATE public.classrooms
+           SET teacher_id = (SELECT cr.teacher_id
+                               FROM public.classrooms cr
+                              WHERE cr.id = keep_id
+                                AND cr.teacher_id IS NOT NULL)
+         WHERE id = existing_id
+           AND teacher_id IS NULL
+           AND EXISTS (SELECT 1 FROM public.classrooms cc
+                        WHERE cc.id = keep_id AND cc.teacher_id IS NOT NULL);
+
+        UPDATE public.classrooms
+           SET deleted_at = now(),
+               name = name || ' (variante — canon ' || c.canon_norm || ')'
+         WHERE id IN (SELECT id FROM _candidate_rows WHERE id <> existing_id)
+           AND deleted_at IS NULL;
+
+      ELSE
+        -- Sin conflicto: renombrar ganador a canon_disp y borrar variantes.
+        UPDATE public.classrooms
+           SET name  = c.canon_disp,
+               level = c.canon_disp
+         WHERE id = keep_id
+           AND deleted_at IS NULL
+           AND (name IS DISTINCT FROM c.canon_disp OR level IS DISTINCT FROM c.canon_disp);
+
+        UPDATE public.classrooms
+           SET deleted_at = now(),
+               name = name || ' (variante — canon ' || c.canon_norm || ')'
+         WHERE id IN (SELECT id FROM _candidate_rows WHERE id <> keep_id)
+           AND deleted_at IS NULL;
+      END IF;
     END IF;
   END LOOP;
 

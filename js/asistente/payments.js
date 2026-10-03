@@ -6,7 +6,7 @@ import { sendEmail } from '../shared/supabase.js';
 import { processTransferReceipt } from '../shared/ocr-service.js';
 import { calcMora } from '../shared/payment-service.js';
 import { InvoiceModule } from '../shared/invoice.js';
-import { SCHOOL_SETTINGS_ID, MONTH_LABELS } from '../shared/constants.js';
+import { SCHOOL_SETTINGS_ID, MONTH_LABELS, dedupeClassrooms } from '../shared/constants.js';
 import { openGlobalModal } from '../shared/modal.js';
 
 const MONTH_NAMES_ES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
@@ -390,13 +390,14 @@ export const PaymentsModule = {
       '</div>'
     );
     try {
-      const [{ data: students }, { data: rooms }] = await Promise.all([
+      const [{ data: students }, { data: roomsRaw }] = await Promise.all([
         supabase.from('students').select('id, name, monthly_fee, classroom_id').eq('is_active', true).is('deleted_at', null).order('name').limit(200),
         supabase.from('classrooms').select('id, name')
       ]);
       
+      const rooms = dedupeClassrooms(roomsRaw || []);
       const classroomMap = {};
-      (rooms || []).forEach(r => { classroomMap[r.id] = r.name; });
+      rooms.forEach(r => { classroomMap[r.id] = r.name; });
       const enrichedStudents = (students || []).map(s => ({
         ...s,
         classrooms: s.classroom_id ? { name: classroomMap[s.classroom_id] || '' } : null

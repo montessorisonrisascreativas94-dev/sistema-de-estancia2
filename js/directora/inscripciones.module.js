@@ -48,6 +48,30 @@ const fmtDT = (d) => d
   ? new Date(d).toLocaleString('es-DO', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' })
   : '—';
 
+/** Mapa estado de fila → color del degradado del avatar. */
+const AVATAR_TONE = {
+  'is-pending':  'amber',
+  'is-admitted': 'emerald',
+  'is-rejected': 'rose',
+  'is-vauth':    'violet',
+  'is-vok':      'teal',
+  'is-vno':      'red',
+  'is-neutral':  'blue',
+};
+
+/** Foto real del estudiante si el padre la subió; si no, inicial sobre degradado. */
+function avatarHtml(r, { size = 'md', tone = 'is-neutral' } = {}) {
+  const initial = esc(((r.student_name || '?').charAt(0)).toUpperCase());
+  const photo   = r.photo_url || r.student_photo_url || '';
+  const cls     = `insc-avatar insc-avatar--${size} insc-avatar--${AVATAR_TONE[tone] || 'blue'}`;
+  if (!photo) return `<div class="${cls} insc-avatar--empty" aria-hidden="true">${initial}</div>`;
+  return `<div class="${cls}">
+    <span class="insc-avatar__init" aria-hidden="true">${initial}</span>
+    <img src="${esc(photo)}" alt="Foto de ${esc(fullNameSafe(r))}" loading="lazy" decoding="async"
+         onerror="this.remove()">
+  </div>`;
+}
+
 const statusBadge = (s) => ({
   pending:  '<span class="px-2 py-0.5 bg-yellow-100 text-yellow-800 text-[10px] font-black rounded-full uppercase">Pendiente</span>',
   admitted: '<span class="px-2 py-0.5 bg-green-100 text-green-800 text-[10px] font-black rounded-full uppercase">Admitido</span>',
@@ -124,6 +148,10 @@ export async function loadInscripciones() {
         student_name,
         student_last_name,
         birth_date,
+        gender,
+        nationality,
+        photo_url,
+        student_photo_url,
         level_requested,
         school_year_requested,
         schedule,
@@ -216,37 +244,38 @@ export async function loadInscripciones() {
         </div>
       </div>
 
-      <!-- Filters (más gruesos: +padding, +tamaño fuente) -->
-      <div class="flex gap-3 mb-7 flex-wrap">
-        <button onclick="InscripcionesModule.filterStatus('all')" class="insc-filter-btn active px-6 py-3.5 rounded-2xl text-[13px] font-black shadow-[0_4px_12px_rgba(15,23,42,0.05)]" data-filter="all">Todos (${data.length})</button>
-        <button onclick="InscripcionesModule.filterStatus('pending')" class="insc-filter-btn px-6 py-3.5 rounded-2xl text-[13px] font-black shadow-[0_4px_12px_rgba(15,23,42,0.05)]" data-filter="pending">Pendientes (${pending.length})</button>
-        <button onclick="InscripcionesModule.filterStatus('admitted')" class="insc-filter-btn px-6 py-3.5 rounded-2xl text-[13px] font-black shadow-[0_4px_12px_rgba(15,23,42,0.05)]" data-filter="admitted">Admitidos (${admitted.length})</button>
-        <button onclick="InscripcionesModule.filterStatus('age-out')" class="insc-filter-btn px-6 py-3.5 rounded-2xl text-[13px] font-black shadow-[0_4px_12px_rgba(15,23,42,0.05)]" data-filter="age-out">Edad Fuera Rango (${ageOutOfRange.length})</button>
-        <button onclick="InscripcionesModule.filterStatus('auth-pending')" class="insc-filter-btn px-6 py-3.5 rounded-2xl text-[13px] font-black shadow-[0_4px_12px_rgba(15,23,42,0.05)]" data-filter="auth-pending">Autoriz. Pendiente (${authPending.length})</button>
+      <!-- Filters: scroll horizontal en móvil, wrap en escritorio -->
+      <div class="insc-filters" role="group" aria-label="Filtrar preinscripciones">
+        <button type="button" onclick="InscripcionesModule.filterStatus('all')" class="insc-filter-btn active" data-filter="all">Todos <span class="insc-filter-btn__n">${data.length}</span></button>
+        <button type="button" onclick="InscripcionesModule.filterStatus('pending')" class="insc-filter-btn" data-filter="pending">Pendientes <span class="insc-filter-btn__n">${pending.length}</span></button>
+        <button type="button" onclick="InscripcionesModule.filterStatus('admitted')" class="insc-filter-btn" data-filter="admitted">Admitidos <span class="insc-filter-btn__n">${admitted.length}</span></button>
+        <button type="button" onclick="InscripcionesModule.filterStatus('age-out')" class="insc-filter-btn" data-filter="age-out">Edad fuera <span class="insc-filter-btn__n">${ageOutOfRange.length}</span></button>
+        <button type="button" onclick="InscripcionesModule.filterStatus('auth-pending')" class="insc-filter-btn" data-filter="auth-pending">Autoriz. pend. <span class="insc-filter-btn__n">${authPending.length}</span></button>
       </div>
 
-      <!-- Table (más gruesa: +border, +radius, +padding celdas, +separadores) -->
+      <!-- Tabla compacta: avatar del estudiante, celdas reducidas y scroll en móvil -->
       <div class="table-panel">
-        <div class="table-scroll-wrap rounded-[32px] border-[3px] border-slate-200 overflow-hidden bg-white shadow-[0_12px_32px_rgba(15,23,42,0.06)]">
-          <table class="data-table w-full text-sm" id="inscripcionesTable" style="min-width:860px">
-            <thead class="bg-[#0B63C7] text-white sticky top-0 z-10">
+        <div class="insc-table-wrap">
+          <table class="data-table insc-table" id="inscripcionesTable">
+            <thead>
               <tr>
-                <th class="px-8 py-5 text-left text-[12px] font-black uppercase tracking-widest">Estudiante</th>
-                <th class="px-8 py-5 text-left text-[12px] font-black uppercase tracking-widest">Sección / Edad</th>
-                <th class="px-8 py-5 text-left text-[12px] font-black uppercase tracking-widest hidden md:table-cell">Tutor Principal</th>
-                <th class="px-8 py-5 text-left text-[12px] font-black uppercase tracking-widest hidden lg:table-cell">Solicitado</th>
-                <th class="px-8 py-5 text-center text-[12px] font-black uppercase tracking-widest">Estado</th>
-                <th class="px-8 py-5 text-center text-[12px] font-black uppercase tracking-widest">Acciones</th>
+                <th class="insc-th insc-th--student">Estudiante</th>
+                <th class="insc-th">Sección / Edad</th>
+                <th class="insc-th hidden md:table-cell">Tutor</th>
+                <th class="insc-th hidden lg:table-cell">Solicitado</th>
+                <th class="insc-th insc-th--center">Estado</th>
+                <th class="insc-th insc-th--center">Acciones</th>
               </tr>
             </thead>
-            <tbody class="divide-y-4 divide-slate-100 bg-white" id="inscripcionesTbody">
+            <tbody id="inscripcionesTbody">
               ${data.map(r => _renderRow(r)).join('')}
             </tbody>
           </table>
         </div>
+        <p class="insc-table-hint">Desliza la tabla para ver todas las columnas →</p>
       </div>`;
 
-    _attachFilterStyles();
+    _attachStyles();
     _attachPreDetailStyles();
     _subscribeRealtime();
 
@@ -261,114 +290,396 @@ export async function loadInscripciones() {
 }
 
 function _renderRow(r) {
-  const ageMatch = !(r.age_match === false);
   const needsAuth = r.age_match === false && r.director_authorization_approved !== true;
-  const disabled = needsAuth ? 'disabled' : '';
-  const disabledClass = needsAuth ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[#0850A0]';
-  const disabledTitle = needsAuth ? 'Requiere aprobación de Directora' : '';
 
-  const admitBtn = r.status === 'pending'
-    ? `<button onclick="InscripcionesModule.openAdmitModal(${r.id})"
-         title="${esc(disabledTitle)}"
-         ${disabled}
-         class="px-5 py-2.5 bg-[#0B63C7] text-white rounded-2xl text-[12px] font-black uppercase ${disabledClass} transition-all shadow-[0_6px_18px_rgba(11,99,199,0.28)] hover:-translate-y-0.5 active:translate-y-0">
-         Admitir
-       </button>`
-    : `<span class="text-[12px] text-slate-400 font-black">—</span>`;
-
+  /* ── Acciones: cada estado tiene su diseño. Nada de guiones sueltos. ── */
   const detailBtn = `
-    <button onclick="InscripcionesModule.openPreDetail(${r.id})"
-      class="px-5 py-2.5 bg-slate-100 text-slate-700 rounded-2xl text-[12px] font-black uppercase hover:bg-slate-200 hover:-translate-y-0.5 transition-all shadow-[0_4px_12px_rgba(15,23,42,0.06)] border-[2px] border-slate-200"
-      title="Ver detalle completo">
-      Ver
+    <button type="button" onclick="InscripcionesModule.openPreDetail(${r.id})"
+      class="insc-btn insc-btn--ghost" title="Ver expediente completo" aria-label="Ver expediente de ${esc(fullNameSafe(r))}">
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+      <span>Ver</span>
     </button>`;
+
+  let actionCell;
+  if (r.status === 'pending' && needsAuth) {
+    actionCell = `
+      <span class="insc-lock" title="Requiere aprobación de la Directora por edad fuera de rango">
+        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        <span>Aprobar edad</span>
+      </span>`;
+  } else if (r.status === 'pending') {
+    actionCell = `
+      <button type="button" onclick="InscripcionesModule.openAdmitModal(${r.id})"
+        class="insc-btn insc-btn--admit" title="Iniciar el proceso de admisión">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+        <span>Admitir</span>
+      </button>`;
+  } else if (r.status === 'admitted') {
+    actionCell = `
+      <span class="insc-done insc-done--ok" title="Estudiante ya admitido">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+        <span>Admitido</span>
+      </span>`;
+  } else if (r.status === 'rejected') {
+    actionCell = `
+      <span class="insc-done insc-done--no" title="Solicitud rechazada">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>
+        <span>Rechazado</span>
+      </span>`;
+  } else {
+    actionCell = `<span class="insc-done insc-done--wait"><span class="insc-done__dot"></span><span>En revisión</span></span>`;
+  }
 
   const fullName = [r.student_name, r.student_last_name].filter(Boolean).join(' ') || '—';
   const levelParts = [r.level_requested, r.school_year_requested].filter(Boolean);
-  const nivelTag = levelParts.length ? `<span class="px-3 py-1 bg-[#E8F2FF] text-[#0B63C7] text-[11px] font-black rounded-2xl block mb-1.5 tracking-wide">${esc(levelParts.join(' · '))}</span>` : '';
-  const scheduleTag = r.schedule
-    ? `<span class="px-3 py-1 bg-slate-100 text-slate-700 text-[11px] font-black rounded-2xl block tracking-wide">${esc(r.schedule)}</span>`
-    : '';
+  const nivelTag = levelParts.length ? `<span class="insc-chip insc-chip--level">${esc(levelParts.join(' · '))}</span>` : '';
+  const scheduleTag = r.schedule ? `<span class="insc-chip">${esc(r.schedule)}</span>` : '';
 
   const age = _calcAgeFromBirth(r.birth_date);
   const ageStr = age ? _fmtHuman(age) : '';
-  const ageTxtTag = ageStr
-    ? `<span class="px-3 py-1 bg-[#FFF7ED] text-orange-700 text-[11px] font-black rounded-2xl block mb-1.5 tracking-wide">${esc(ageStr)}</span>`
-    : '';
+  const ageTxtTag = ageStr ? `<span class="insc-chip insc-chip--age">${esc(ageStr)}</span>` : '';
 
   const dataAgeOut = r.age_match === false ? 'data-age-out="1"' : '';
   const dataAuthPending = (!r.age_match && r.director_authorization_requested && r.director_authorization_approved === null) ? 'data-auth-pending="1"' : '';
 
   const status = r.status || '';
-  let rowBg = '';
-  let borderL = '';
-  if (status === 'pending') {
-    rowBg = 'bg-gradient-to-r from-yellow-50/70 to-amber-50/30 hover:from-yellow-50 hover:to-amber-100/50';
-    borderL = 'border-l-[6px] border-l-amber-400';
-  } else if (status === 'admitted') {
-    rowBg = 'bg-gradient-to-r from-emerald-50/70 to-green-50/30 hover:from-emerald-50 hover:to-green-100/50';
-    borderL = 'border-l-[6px] border-l-emerald-500';
-  } else if (status === 'rejected') {
-    rowBg = 'bg-gradient-to-r from-rose-50/70 to-pink-50/30 hover:from-rose-50 hover:to-pink-100/50';
-    borderL = 'border-l-[6px] border-l-rose-500';
-  } else {
-    rowBg = 'hover:bg-[#F8FAFC]';
-    borderL = 'border-l-[6px] border-l-slate-200';
-  }
+  let rowTone = 'is-neutral';
+  if (status === 'pending')  rowTone = 'is-pending';
+  if (status === 'admitted') rowTone = 'is-admitted';
+  if (status === 'rejected') rowTone = 'is-rejected';
 
-  if (r.age_match === false && r.director_authorization_approved === null) {
-    borderL = 'border-l-[6px] border-l-violet-500';
-  } else if (r.age_match === false && r.director_authorization_approved === true) {
-    borderL = 'border-l-[6px] border-l-teal-500';
-  } else if (r.age_match === false && r.director_authorization_approved === false) {
-    borderL = 'border-l-[6px] border-l-red-500';
-  }
+  if (r.age_match === false && r.director_authorization_approved === null)      rowTone = 'is-vauth';
+  else if (r.age_match === false && r.director_authorization_approved === true)  rowTone = 'is-vok';
+  else if (r.age_match === false && r.director_authorization_approved === false) rowTone = 'is-vno';
 
+  const p1Email = r.p1_email || '';
   return `
-    <tr data-status="${esc(r.status)}" ${dataAgeOut} ${dataAuthPending} class="${rowBg} ${borderL} border-b-[3px] border-b-white transition-all duration-200">
-      <td class="px-8 py-6">
-        <div class="flex items-center gap-4">
-          <div class="w-14 h-14 rounded-[20px] bg-gradient-to-br from-[#0B63C7] to-[#4F46E5] flex items-center justify-center text-white text-[17px] font-black shadow-[0_10px_24px_rgba(11,99,199,0.28)] border-[3px] border-white">
-            ${esc(((r.student_name||'?').charAt(0)).toUpperCase())}
-          </div>
-          <div class="min-w-0">
-            <div class="font-black text-slate-800 text-[16px] leading-tight truncate">${esc(fullName)}</div>
-            <div class="mt-2 flex flex-wrap gap-1.5">
-              ${ageBadge(r)}
-              ${dirAuthBadge(r)}
-            </div>
+    <tr data-status="${esc(r.status)}" ${dataAgeOut} ${dataAuthPending} class="insc-row ${rowTone}">
+      <td class="insc-td insc-td--student">
+        <div class="insc-student">
+          ${avatarHtml(r, { size: 'md', tone: rowTone })}
+          <div class="insc-student__txt">
+            <div class="insc-student__name" title="${esc(fullName)}">${esc(fullName)}</div>
+            <div class="insc-student__badges">${ageBadge(r)}${dirAuthBadge(r)}</div>
           </div>
         </div>
       </td>
-      <td class="px-8 py-6">
-        ${ageTxtTag}${nivelTag}${scheduleTag}${(!nivelTag && !scheduleTag && !ageTxtTag) ? '<span class="text-slate-400 text-[12px] font-black">—</span>' : ''}
+      <td class="insc-td">
+        <div class="insc-stack">${ageTxtTag}${nivelTag}${scheduleTag}${(!nivelTag && !scheduleTag && !ageTxtTag) ? '<span class="insc-empty">—</span>' : ''}</div>
       </td>
-      <td class="px-8 py-6 hidden md:table-cell">
-        <div class="font-black text-slate-800 text-[14px]">${esc(r.p1_name || '—')}</div>
-        <div class="text-[12px] text-slate-500 font-semibold mt-1.5">${esc(r.p1_phone || '')}</div>
-        <div class="text-[12px] text-slate-500 font-medium mt-1 truncate max-w-[220px]" title="${esc(r.p1_email || '')}">${esc(r.p1_email || '')}</div>
+      <td class="insc-td hidden md:table-cell">
+        <div class="insc-tutor__name">${esc(r.p1_name || '—')}</div>
+        ${r.p1_phone ? `<div class="insc-tutor__meta">${esc(r.p1_phone)}</div>` : ''}
+        ${p1Email ? `<div class="insc-tutor__meta" title="${esc(p1Email)}">${esc(p1Email)}</div>` : ''}
       </td>
-      <td class="px-8 py-6 hidden lg:table-cell text-[14px] text-slate-600 font-semibold">${fmt(r.created_at)}</td>
-      <td class="px-8 py-6 text-center">${statusBadge(r.status)}</td>
-      <td class="px-8 py-6">
-        <div class="flex items-center justify-center gap-2.5">
-          ${detailBtn}
-          ${admitBtn}
-        </div>
+      <td class="insc-td hidden lg:table-cell insc-when">${fmt(r.created_at)}</td>
+      <td class="insc-td insc-td--center">${statusBadge(r.status)}</td>
+      <td class="insc-td insc-td--center">
+        <div class="insc-actions">${detailBtn}${actionCell}</div>
       </td>
     </tr>`;
 }
 
-function _attachFilterStyles() {
-  const style = document.getElementById('_inscFilterStyle');
+function fullNameSafe(r) {
+  return [r.student_name, r.student_last_name].filter(Boolean).join(' ') || 'estudiante';
+}
+
+function _attachStyles() {
+  const style = document.getElementById('_inscStyles');
   if (style) return;
   const s = document.createElement('style');
-  s.id = '_inscFilterStyle';
+  s.id = '_inscStyles';
   s.textContent = `
-    .insc-filter-btn { background:#F1F5F9; color:#64748B; border:none; cursor:pointer; transition:all .2s; }
-    .insc-filter-btn:hover { background:#E8F2FF; color:#0B63C7; }
-    .insc-filter-btn.active { background:#0B63C7; color:white; box-shadow:0 4px 12px rgba(11,99,199,.25); }
-  `;
+/* ═══════════ INSCRIPCIONES — filtros ═══════════ */
+.insc-filters {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 18px;
+  padding-bottom: 4px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.insc-filters::-webkit-scrollbar { display: none; }
+.insc-filter-btn {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 40px;
+  padding: 8px 14px;
+  border: 1px solid #E2E8F0;
+  border-radius: 999px;
+  background: #F8FAFC;
+  color: #475569;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 800;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background .18s ease, color .18s ease, border-color .18s ease, box-shadow .18s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.insc-filter-btn:hover { background: #E8F2FF; color: #0B63C7; border-color: #BFDBFE; }
+.insc-filter-btn.active {
+  background: linear-gradient(135deg, #0B63C7, #2563EB);
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 6px 14px -6px rgba(11,99,199,.55);
+}
+.insc-filter-btn:focus-visible { outline: 3px solid rgba(11,99,199,.3); outline-offset: 2px; }
+.insc-filter-btn__n {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.4rem;
+  height: 1.4rem;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: #E2E8F0;
+  color: #334155;
+  font-size: 10.5px;
+  font-weight: 900;
+  line-height: 1;
+}
+.insc-filter-btn.active .insc-filter-btn__n { background: rgba(255,255,255,.24); color: #fff; }
+
+/* ═══════════ INSCRIPCIONES — tabla compacta ═══════════ */
+.insc-table-wrap {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: 18px;
+  background: #fff;
+  border: 1px solid #E2E8F0;
+  box-shadow: 0 8px 22px -14px rgba(15,23,42,.28);
+}
+.insc-table-wrap .insc-table {
+  width: 100%;
+  min-width: 560px;
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 0;
+  border-radius: 0;
+  background: #fff;
+  font-size: 13px;
+}
+.insc-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  padding: 9px 12px;
+  background: linear-gradient(135deg, #0B63C7 0%, #2563EB 100%);
+  color: #fff;
+  font-size: 10.5px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  text-align: left;
+  white-space: nowrap;
+  border: 0;
+}
+.insc-th--center { text-align: center !important; }
+
+.insc-table .insc-row td {
+  padding: 9px 12px;
+  border-bottom: 1px solid #F1F5F9;
+  vertical-align: middle;
+  color: #334155;
+  font-size: 13px;
+}
+.insc-table .insc-row:last-child td { border-bottom: 0; }
+.insc-td--center { text-align: center; }
+
+/* Tonalidad por estado (sustituye los degradados inline) */
+.insc-row.is-pending  { background: linear-gradient(90deg, #FFFBEB, #fff 55%); box-shadow: inset 3px 0 0 #FBBF24; }
+.insc-row.is-admitted { background: linear-gradient(90deg, #ECFDF5, #fff 55%); box-shadow: inset 3px 0 0 #10B981; }
+.insc-row.is-rejected { background: linear-gradient(90deg, #FFF1F2, #fff 55%); box-shadow: inset 3px 0 0 #F43F5E; }
+.insc-row.is-vauth    { background: linear-gradient(90deg, #F5F3FF, #fff 55%); box-shadow: inset 3px 0 0 #8B5CF6; }
+.insc-row.is-vok      { background: linear-gradient(90deg, #F0FDFA, #fff 55%); box-shadow: inset 3px 0 0 #14B8A6; }
+.insc-row.is-vno      { background: linear-gradient(90deg, #FEF2F2, #fff 55%); box-shadow: inset 3px 0 0 #DC2626; }
+.insc-row.is-neutral  { background: #fff; box-shadow: inset 3px 0 0 #E2E8F0; }
+.insc-table .insc-row:hover td { background: rgba(224,242,254,.55); }
+
+/* ── Estudiante + avatar ── */
+.insc-student { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.insc-student__txt { min-width: 0; }
+.insc-student__name {
+  font-size: 13.5px;
+  font-weight: 900;
+  color: #0F172A;
+  line-height: 1.25;
+  max-width: 190px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.insc-student__badges { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.insc-student__badges > span {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 7px !important;
+  border-radius: 999px !important;
+  font-size: 9.5px !important;
+  font-weight: 900 !important;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.insc-avatar {
+  position: relative;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: linear-gradient(135deg, #0B63C7, #4F46E5);
+  color: #fff;
+  font-weight: 900;
+  font-size: 15px;
+  line-height: 1;
+  box-shadow: 0 4px 10px -5px rgba(11,99,199,.75);
+}
+.insc-avatar--sm { width: 30px; height: 30px; border-radius: 10px; font-size: 12px; }
+.insc-avatar--lg { width: 48px; height: 48px; border-radius: 15px; font-size: 19px; }
+.insc-avatar--amber  { background: linear-gradient(135deg, #F59E0B, #D97706); }
+.insc-avatar--emerald{ background: linear-gradient(135deg, #10B981, #059669); }
+.insc-avatar--rose   { background: linear-gradient(135deg, #FB7185, #E11D48); }
+.insc-avatar--violet { background: linear-gradient(135deg, #A78BFA, #7C3AED); }
+.insc-avatar--teal   { background: linear-gradient(135deg, #2DD4BF, #0D9488); }
+.insc-avatar--red    { background: linear-gradient(135deg, #F87171, #DC2626); }
+.insc-avatar--slate  { background: linear-gradient(135deg, #94A3B8, #64748B); }
+.insc-avatar img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 1;
+}
+.insc-avatar__init { position: relative; z-index: 0; }
+/* Si la foto falla, el <img> se quita y la inicial queda visible */
+.insc-avatar.is-fallback { background: linear-gradient(135deg, #CBD5E1, #94A3B8); }
+
+/* ── Chips de sección / edad ── */
+.insc-stack { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
+.insc-chip {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: #F1F5F9;
+  color: #475569;
+  font-size: 10.5px;
+  font-weight: 800;
+  line-height: 1.6;
+  white-space: nowrap;
+  max-width: 170px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.insc-chip--level { background: #E8F2FF; color: #0B63C7; }
+.insc-chip--age   { background: #FFF7ED; color: #C2410C; }
+.insc-empty { color: #CBD5E1; font-weight: 900; font-size: 12px; }
+
+/* ── Tutor / fecha ── */
+.insc-tutor__name { font-size: 12.5px; font-weight: 800; color: #1E293B; line-height: 1.3; }
+.insc-tutor__meta {
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748B;
+  line-height: 1.4;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.insc-when { font-size: 12px; font-weight: 700; color: #64748B; white-space: nowrap; }
+
+/* ── Acciones ── */
+.insc-actions { display: inline-flex; align-items: center; justify-content: center; gap: 6px; flex-wrap: wrap; }
+.insc-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 34px;
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: transform .15s ease, box-shadow .15s ease, filter .15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.insc-btn--ghost {
+  background: #F1F5F9;
+  color: #475569;
+  box-shadow: inset 0 0 0 1px #E2E8F0;
+}
+.insc-btn--ghost:hover { background: #E2E8F0; color: #1E293B; }
+.insc-btn--admit {
+  background: linear-gradient(135deg, #0B63C7, #0850A0);
+  color: #fff;
+  box-shadow: 0 5px 12px -5px rgba(11,99,199,.85);
+}
+.insc-btn--admit:hover { filter: brightness(1.08); transform: translateY(-1px); }
+.insc-btn:active { transform: translateY(0) scale(.97); }
+.insc-btn:focus-visible { outline: 3px solid rgba(11,99,199,.3); outline-offset: 2px; }
+
+/* Estados finales: pastilla, no un guion suelto */
+.insc-done, .insc-lock {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 30px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  line-height: 1;
+  white-space: nowrap;
+}
+.insc-done--ok   { background: #DCFCE7; color: #15803D; box-shadow: inset 0 0 0 1px #86EFAC; }
+.insc-done--no   { background: #FFE4E6; color: #BE123C; box-shadow: inset 0 0 0 1px #FDA4AF; }
+.insc-done--wait { background: #F1F5F9; color: #64748B; box-shadow: inset 0 0 0 1px #E2E8F0; }
+.insc-done__dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: currentColor; opacity: .6;
+}
+.insc-lock {
+  background: #F5F3FF;
+  color: #6D28D9;
+  box-shadow: inset 0 0 0 1px #DDD6FE;
+  cursor: help;
+}
+
+.insc-table-hint {
+  display: none;
+  margin: 8px 2px 0;
+  font-size: 11px;
+  font-weight: 800;
+  color: #94A3B8;
+}
+@media (max-width: 767px) {
+  .insc-table-hint { display: block; }
+  .insc-student__name { max-width: 130px; }
+  .insc-chip { max-width: 130px; }
+}
+`;
   document.head.appendChild(s);
 }
 
@@ -472,7 +783,7 @@ function _renderPreDetail(r, isDirector) {
     <div class="relative w-full max-w-5xl bg-white rounded-3xl shadow-2xl animate-[fadeIn_.25s_ease] my-auto">
       <div class="flex items-start justify-between p-6 border-b border-slate-100">
         <div class="flex items-center gap-4">
-          <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-2xl font-black">${esc(((r.student_name||'?').charAt(0)))}</div>
+          ${avatarHtml(r, { size: 'lg', tone: r.status === 'admitted' ? 'is-admitted' : (r.status === 'rejected' ? 'is-rejected' : 'is-pending') })}
           <div>
             <h2 class="text-xl font-black text-slate-800">${sName}</h2>
             <div class="flex flex-wrap gap-1.5 mt-2">

@@ -5,6 +5,7 @@
 import { supabase, emitEvent } from '../shared/supabase.js';
 import { Helpers } from '../shared/helpers.js';
 import { WallModule as SharedWallModule } from '../shared/wall.js';
+import { dedupeClassrooms } from '../shared/constants.js';
 
 export const WallModule = {
   ...SharedWallModule,
@@ -90,7 +91,8 @@ export const WallModule = {
 
   async loadClassroomsForPost() {
     try {
-      const { data: classrooms } = await supabase.from('classrooms').select('id, name').order('name');
+      const { data: classroomsRaw } = await supabase.from('classrooms').select('id, name').order('name');
+      const classrooms = dedupeClassrooms(classroomsRaw || []);
       const select = document.getElementById('postClassroom');
       if (select && classrooms) {
         classrooms.forEach(c => {

@@ -6,6 +6,7 @@ import { supabase } from '../shared/supabase.js';
 import { Helpers } from '../shared/helpers.js';
 import { QueryCache } from '../shared/query-cache.js';
 import { RealtimeManager } from '../shared/realtime-manager.js';
+import { dedupeClassrooms } from '../shared/constants.js';
 
 const $el = id => document.getElementById(id);
 const fmtCurrency = n => 'RD$' + Number(n||0).toLocaleString('es-DO',{minimumFractionDigits:2});
@@ -390,7 +391,7 @@ export const AcademicCycleModule = {
     await this._loadYears();
     const {data:pre}=await supabase.from('student_preregistrations').select('*').eq('id',preinscId).single();
     const {data:plans}=await supabase.from('payment_plans').select('id,name,level,schedule,registration_fee').eq('school_year_id',this._currentYear?.id||0).eq('is_active',true).order('name');
-    const {data:rooms}=await supabase.from('classrooms').select('id,name,capacity').order('name');
+    const {data:roomsRaw}=await supabase.from('classrooms').select('id,name,capacity').order('name');
     const {data:lastStudent}=await supabase.from('students').select('id,matricula').order('id',{ascending:false}).limit(1).maybeSingle();
     
     // Generar matrícula automática
@@ -403,7 +404,7 @@ export const AcademicCycleModule = {
     const autoMatricula = `SC-${year}-${String(nextNum).padStart(3, '0')}`;
     
     const po=(plans||[]).map(p=>`<option value="${p.id}">${p.name} — ${p.level} ${p.schedule}</option>`).join('');
-    const ro=(rooms||[]).map(r=>`<option value="${r.id}">${r.name}</option>`).join('');
+    const ro=dedupeClassrooms(roomsRaw||[]).map(r=>`<option value="${r.id}">${r.name}</option>`).join('');
     
     window.openGlobalModal(`<div class="p-6 max-w-2xl">
       <div class="flex items-center justify-between mb-4">

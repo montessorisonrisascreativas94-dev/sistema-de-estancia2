@@ -22,6 +22,7 @@ import { NewsCenter } from '../shared/news-center.js';
 import { openGlobalModal, closeGlobalModal } from '../shared/modal.js';
 import { InvoiceModule } from '../shared/invoice.js';
 import { AssistantChatApp } from './chat_app.js';
+import { dedupeClassrooms } from '../shared/constants.js';
 
 // Exponer globalmente para onclick en HTML
 window.InscripcionesModule = InscripcionesModule;
@@ -237,7 +238,8 @@ async function openNewPostModal() {
 
   // Load classrooms for the select
   try {
-    const { data: classrooms } = await supabase.from('classrooms').select('id, name').order('name');
+    const { data: classroomsRaw } = await supabase.from('classrooms').select('id, name').order('name');
+    const classrooms = dedupeClassrooms(classroomsRaw || []);
     const select = document.getElementById('postClassroom');
     if (select && classrooms) {
       select.innerHTML = '<option value="">General (Todos)</option>';

@@ -1,7 +1,7 @@
 import { supabase, sendEmail } from '../shared/supabase.js';
 import { QueryCache } from '../shared/query-cache.js';
 import { safeHandle } from '../shared/db-utils.js';
-import { SCHOOL_SETTINGS_ID } from '../shared/constants.js';
+import { SCHOOL_SETTINGS_ID, dedupeClassrooms } from '../shared/constants.js';
 
 
 const TABLES = {
@@ -165,10 +165,9 @@ export const DirectorApi = {
       const results = await Promise.allSettled([
         supabase.from('students').select('id', { count: 'exact' }).eq('is_active', true).is('deleted_at', null).limit(100),
         supabase.from('profiles').select('id', { count: 'exact' }).in('role', ['maestra', 'asistente', 'encargada']).is('deleted_at', null).limit(100),
-        supabase.from('classrooms').select('id', { count: 'exact' }).is('deleted_at', null).limit(100),
+        supabase.from('classrooms').select('id, name, level').is('deleted_at', null).limit(200),
         supabase.from('attendance').select('id', { count: 'exact' }).eq('date', today).in('status', ['present', 'late']).limit(100),
         supabase.from('inquiries').select('id', { count: 'exact' }).in('status', ['pending', 'in_progress', 'open']).limit(100),
-        // Para pagos pendientes, vencidos y en revisión, necesitamos la suma de montos
         supabase.from('payments').select('amount').in('status', ['pending', 'overdue', 'review']).limit(1000)
       ]);
 
@@ -177,6 +176,8 @@ export const DirectorApi = {
         if (!v || v.error || !Array.isArray(v.data)) return { count: 0, data: [] };
         return { count: v.count ?? v.data.length, data: v.data };
       };
+
+      const classroomCount = dedupeClassrooms(get(results[2]).data).length;
       const [totalRes, teachersRes, classroomsRes, attendanceRes, inquiriesRes, pendingPayRes] = results.map(get);
 
       const pendingAmount = (pendingPayRes.data || []).reduce((s, p) => s + Number(p.amount || 0), 0);
@@ -186,7 +187,7 @@ export const DirectorApi = {
           active:           totalRes.count || 0,
           total:            totalRes.count || 0,
           teachers:         teachersRes.count    || 0,
-          classrooms:       classroomsRes.count  || 0,
+          classrooms:       classroomCount,
           attendance_today: attendanceRes.count  || 0,
           pending_payments: pendingAmount,
           inquiries:        inquiriesRes.count   || 0

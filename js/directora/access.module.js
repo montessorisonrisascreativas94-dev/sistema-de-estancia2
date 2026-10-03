@@ -1,5 +1,6 @@
 import { supabase } from '../shared/supabase.js';
 import { Helpers } from '../shared/helpers.js';
+import { dedupeClassrooms } from '../shared/constants.js';
 
 export const AccessModule = {
   _chart: null,
@@ -43,7 +44,7 @@ export const AccessModule = {
       
       // Enrich students with classroom names
       const classroomMap = {};
-      (roomsRes.data || []).forEach(r => { classroomMap[r.id] = r.name; });
+      dedupeClassrooms(roomsRes.data || []).forEach(r => { classroomMap[r.id] = r.name; });
       const students = {
         ...studentsRes,
         data: (studentsRes.data || []).map(s => ({
@@ -216,12 +217,12 @@ export const AccessModule = {
   async exportIntelligenceReport() {
     const today = new Date().toISOString().split('T')[0];
     const { data: active } = await supabase.from('students').select('id, name, classroom_id').eq('is_active', true);
-    const { data: rooms } = await supabase.from('classrooms').select('id, name');
+    const { data: roomsRaw } = await supabase.from('classrooms').select('id, name');
     const { data: att } = await supabase.from('attendance').select('student_id').eq('date', today);
     
     // Enrich active with classroom names
     const classroomMap = {};
-    (rooms || []).forEach(r => { classroomMap[r.id] = r.name; });
+    dedupeClassrooms(roomsRaw || []).forEach(r => { classroomMap[r.id] = r.name; });
     const enrichedActive = (active || []).map(s => ({
       ...s,
       classrooms: s.classroom_id ? { name: classroomMap[s.classroom_id] || '' } : null

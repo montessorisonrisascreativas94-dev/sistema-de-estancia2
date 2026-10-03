@@ -731,6 +731,389 @@ body.panel-padre-body .submenu-item.active {
 }
 
 /* ── TASKS — contenedores mejorados ─────────────────────────────── */
+body.panel-padre-body #tasks .cloud-card {
+  padding: 16px;
+}
+@media (min-width: 768px) {
+  body.panel-padre-body #tasks .cloud-card { padding: 24px; }
+}
+
+/* Cabecera: en móvil se apila (columna) para que el título y el segmentado
+   de filtros NUNCA se pisen. En ≥768px vuelve a fila. */
+body.panel-padre-body .tasks-header {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 14px;
+  margin-bottom: 16px;
+  min-width: 0;
+}
+@media (min-width: 768px) {
+  body.panel-padre-body .tasks-header {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    margin-bottom: 22px;
+    flex-wrap: wrap;
+  }
+}
+
+body.panel-padre-body .tasks-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  min-width: 0;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  color: #1A2340;
+  font-size: 1.25rem;
+}
+body.panel-padre-body .tasks-title__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  flex: 0 0 auto;
+  border-radius: 12px;
+  background: #FF7A00;
+  color: #fff;
+  box-shadow: 0 8px 18px -8px rgba(255, 122, 0, .55);
+}
+body.panel-padre-body .tasks-title__text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+body.panel-padre-body .tasks-title__mascot {
+  display: none;
+  flex: 0 0 auto;
+  margin-left: 2px;
+}
+@media (min-width: 400px) {
+  body.panel-padre-body .tasks-title__mascot { display: block; width: 24px; height: 27px; }
+}
+@media (min-width: 768px) {
+  body.panel-padre-body .tasks-title { font-size: 1.75rem; gap: 12px; }
+  body.panel-padre-body .tasks-title__icon { width: 2.5rem; height: 2.5rem; }
+  body.panel-padre-body .tasks-title__mascot { width: 34px; height: 38px; }
+}
+
+/* Segmentado Por hacer / Tarde / Listas.
+   Móvil: grid de 3 columnas iguales → cada botón tiene siempre el mismo ancho
+   y el texto nunca desborda. Escritorio: pills inline-auto. */
+body.panel-padre-body .tasks-filters {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+  width: 100%;
+  min-width: 0;
+  padding: 4px;
+  background: #fff;
+  border: 1px solid #E2E8F0;
+  border-radius: 1rem;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, .04);
+}
+@media (min-width: 768px) {
+  body.panel-padre-body .tasks-filters {
+    display: inline-flex;
+    width: auto;
+    gap: 4px;
+    border-radius: 1.25rem;
+  }
+}
+
+body.panel-padre-body .task-tab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 0;
+  min-height: 44px;
+  padding: 8px 6px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #64748B;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.15;
+  cursor: pointer;
+  transition: background .2s ease, color .2s ease, box-shadow .2s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+@media (min-width: 768px) {
+  body.panel-padre-body .task-tab {
+    min-height: 46px;
+    padding: 10px 18px;
+    font-size: 12px;
+  }
+}
+body.panel-padre-body .task-tab__label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+body.panel-padre-body .task-tab__count {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.35rem;
+  height: 1.35rem;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: #E8F2FF;
+  color: #0B63C7;
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1;
+}
+body.panel-padre-body .task-tab:hover:not(.is-active) {
+  background: #E8F2FF;
+  color: #0B63C7;
+}
+body.panel-padre-body .task-tab.is-active {
+  background: #0B63C7;
+  color: #fff;
+  box-shadow: 0 6px 14px -6px rgba(11, 99, 199, .6);
+}
+body.panel-padre-body .task-tab.is-active .task-tab__count {
+  background: rgba(255, 255, 255, .22);
+  color: #fff;
+}
+body.panel-padre-body .task-tab[data-filter="overdue"].is-active {
+  background: #E11D48;
+  box-shadow: 0 6px 14px -6px rgba(225, 29, 72, .6);
+}
+body.panel-padre-body .task-tab[data-filter="submitted"].is-active {
+  background: #16A34A;
+  box-shadow: 0 6px 14px -6px rgba(22, 163, 74, .6);
+}
+body.panel-padre-body .task-tab:focus-visible {
+  outline: 3px solid rgba(11, 99, 199, .35);
+  outline-offset: 2px;
+}
+
+/* Resumen + lista */
+body.panel-padre-body .tasks-summary {
+  display: block;
+  margin-bottom: 16px;
+  padding: 10px 14px;
+  border: 1px solid #E2E8F0;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, .04);
+  font-size: 13px;
+  font-weight: 800;
+  color: #64748B;
+  overflow-wrap: anywhere;
+}
+body.panel-padre-body .tasks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+/* Franja de resumen — 2 columnas iguales en móvil, auto en escritorio */
+body.panel-padre-body .tasks-summary .ts-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+body.panel-padre-body .tasks-summary .ts-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+}
+body.panel-padre-body .tasks-summary .ts-item__label {
+  min-width: 0;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: #64748B;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+body.panel-padre-body .tasks-summary .ts-item__value {
+  flex: 0 0 auto;
+  font-size: 18px;
+  font-weight: 900;
+  line-height: 1;
+  color: #1A2340;
+}
+body.panel-padre-body .tasks-summary .ts-pending   { background: #EFF6FF; border-color: #BFDBFE; }
+body.panel-padre-body .tasks-summary .ts-pending   .ts-item__value { color: #1D4ED8; }
+body.panel-padre-body .tasks-summary .ts-overdue   { background: #FFF1F2; border-color: #FECDD3; }
+body.panel-padre-body .tasks-summary .ts-overdue   .ts-item__value { color: #E11D48; }
+body.panel-padre-body .tasks-summary .ts-submitted { background: #F0FDF4; border-color: #BBF7D0; }
+body.panel-padre-body .tasks-summary .ts-submitted .ts-item__value { color: #16A34A; }
+
+/* Carta de tarea — responsive real */
+body.panel-padre-body .task-card--body {
+  padding: 14px 14px 14px 18px;
+  margin-top: 0; /* anula .role-accent + .role-accent (el gap lo pone .tasks-list) */
+}
+@media (min-width: 768px) {
+  body.panel-padre-body .task-card--body { padding: 20px 20px 20px 24px; }
+}
+body.panel-padre-body .task-card__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+body.panel-padre-body .task-card__lead {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  flex: 1 1 200px;
+}
+body.panel-padre-body .task-card__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  flex: 0 0 auto;
+  border-radius: 14px;
+  background: #FFFBEB;
+  color: #D97706;
+  font-size: 1.1rem;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, .06);
+  transition: transform .2s ease;
+}
+body.panel-padre-body .task-card__icon.is-done { background: #DCFCE7; color: #15803D; }
+body.panel-padre-body .task-card:hover .task-card__icon { transform: scale(1.08); }
+body.panel-padre-body .task-card__headtext { min-width: 0; flex: 1 1 auto; }
+body.panel-padre-body .task-card__titlerow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 3px;
+}
+body.panel-padre-body .task-card__title {
+  margin: 0;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 900;
+  line-height: 1.25;
+  color: #1E293B;
+  overflow-wrap: anywhere;
+}
+body.panel-padre-body .task-card__due {
+  margin: 0;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: #94A3B8;
+  overflow-wrap: anywhere;
+}
+body.panel-padre-body .task-card__statuses {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+body.panel-padre-body .task-card__grade {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 10px;
+  border-radius: 50px;
+  background: #EDE9FE;
+  color: #6D28D9;
+  font-size: .7rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+body.panel-padre-body .task-card__media {
+  margin-bottom: 12px;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid #F1F5F9;
+  background: #0F172A;
+  cursor: zoom-in;
+}
+body.panel-padre-body .task-card__media img {
+  display: block;
+  width: 100%;
+  max-height: 15rem;
+  object-fit: cover;
+}
+body.panel-padre-body .task-card__desc {
+  margin: 0 0 14px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #64748B;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+body.panel-padre-body .task-card__actions { display: flex; gap: 8px; }
+body.panel-padre-body .task-card__btn {
+  flex: 1 1 auto;
+  min-height: 44px;
+  border: 0;
+  border-radius: 14px;
+  font-family: inherit;
+  font-weight: 900;
+  font-size: 11px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: transform .15s ease, box-shadow .15s ease, filter .15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+body.panel-padre-body .task-card__btn.is-send {
+  background: #0B63C7;
+  color: #fff;
+  box-shadow: 0 6px 16px -8px rgba(11, 99, 199, .8);
+}
+body.panel-padre-body .task-card__btn.is-done {
+  background: #16A34A;
+  color: #fff;
+  box-shadow: 0 6px 16px -8px rgba(22, 163, 74, .8);
+}
+body.panel-padre-body .task-card__btn:active { transform: scale(.97); }
+body.panel-padre-body .task-card__btn:focus-visible {
+  outline: 3px solid rgba(11, 99, 199, .35);
+  outline-offset: 2px;
+}
+
+/* Cartas de tarea: nunca desbordan horizontalmente en móvil */
+body.panel-padre-body .tasks-list .task-card {
+  min-width: 0;
+  overflow: hidden;
+}
+body.panel-padre-body .tasks-list .task-card p,
+body.panel-padre-body .tasks-list .task-card h4 {
+  overflow-wrap: anywhere;
+}
+
 body.panel-padre-body #tasksListContainer .task-card,
 body.panel-padre-body #tasksContainer .task-card,
 body.panel-padre-body [id*="task"] .bg-white {

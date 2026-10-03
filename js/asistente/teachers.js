@@ -1,6 +1,7 @@
 import { supabase, sendEmail } from '../shared/supabase.js';
 import { AssistantApi } from './api.js';
 import { Helpers } from '../shared/helpers.js';
+import { dedupeClassrooms } from '../shared/constants.js';
 
 /**
  * M�dulo de Gesti�n de Maestros para Asistente
@@ -271,9 +272,9 @@ export const TeachersModule = {
 
     // Load classrooms
     try {
-      const { data } = await supabase.from('classrooms').select('id, name').order('name');
+      const { data: clsRaw } = await supabase.from('classrooms').select('id, name').order('name');
       const sel = document.getElementById('teacherClassroom');
-      if (sel && data) data.forEach(c => { const o = document.createElement('option'); o.value = c.id; o.textContent = c.name; sel.appendChild(o); });
+      if (sel && clsRaw) dedupeClassrooms(clsRaw).forEach(c => { const o = document.createElement('option'); o.value = c.id; o.textContent = c.name; sel.appendChild(o); });
     } catch (_) {}
 
     // Prefill if editing
