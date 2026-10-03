@@ -74,6 +74,26 @@ Deno.serve(async (req) => {
     // ✅ Ejecutar migraciones de columnas faltantes
     const migrations = [
       {
+        // Sin esta política el formulario público de preinscripción devuelve
+        // 401 / 42501 ("new row violates row-level security policy") y NO se
+        // guarda ninguna solicitud. Es idempotente.
+        name: 'prereg_public_insert_rls',
+        sql: `ALTER TABLE public.student_preregistrations ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "prereg_public_insert" ON public.student_preregistrations;
+CREATE POLICY "prereg_public_insert" ON public.student_preregistrations
+  FOR INSERT TO anon, authenticated WITH CHECK (true);`
+      },
+      {
+        // Las columnas de control de edad / autorización de Dirección.
+        name: 'prereg_age_control_columns',
+        sql: `ALTER TABLE public.student_preregistrations
+  ADD COLUMN IF NOT EXISTS suggested_level text,
+  ADD COLUMN IF NOT EXISTS age_match boolean DEFAULT true,
+  ADD COLUMN IF NOT EXISTS director_authorization_requested boolean DEFAULT false,
+  ADD COLUMN IF NOT EXISTS director_authorization_note text,
+  ADD COLUMN IF NOT EXISTS director_authorization_approved boolean DEFAULT null;`
+      },
+      {
         name: 'classroom_id',
         sql: 'ALTER TABLE public.students ADD COLUMN IF NOT EXISTS classroom_id bigint REFERENCES public.classrooms(id) ON DELETE SET NULL;'
       },
@@ -216,19 +236,48 @@ CREATE POLICY invoice_items_staff_all ON public.invoice_items FOR ALL
       }
     ];
 
+    // ── Sonda previa: ¿existe la RPC y me deja usarla? ──────────
+    // Antes esta función iteraba las migraciones y, si la RPC faltaba,
+    // registraba un "usando fallback" que NO existía: las 18 migraciones
+    // fallaban y la función devolvía 200 como si nada. Se comprueba antes
+    // de tocar nada y se devuelve un mensaje accionable.
+    // El COMMENT es idempotente: no cambia nada y aun así falla si la
+    // función no existe o si el rol no es directora/admin.
+    const { error: probeError } = await admin.rpc('run_ddl_migration', {
+      ddl: "COMMENT ON FUNCTION public.run_ddl_migration(text) IS 'Ejecuta una sentencia DDL. Solo directora/admin. No permite tocar datos. Usada por la Edge Function run-migration.';"
+    });
+
+    if (probeError) {
+      const missing = /PGRST202|does not exist|schema cache/i.test(probeError.message || '');
+      console.error('[run-migration] Sonda RPC falló:', probeError.message);
+
+      if (missing) {
+        return json({
+          success: false,
+          needs_bootstrap: true,
+          error: 'Falta crear la RPC public.run_ddl_migration(text) en la base de datos.',
+          hint: 'Ejecuta sql/18_run_ddl_migration_rpc.sql una sola vez en el SQL Editor de Supabase. ' +
+                'Es el unico paso que no se puede hacer desde el panel, porque hace falta DDL para poder ejecutar DDL.',
+          detail: probeError.message
+        }, 501, origin);
+      }
+
+      return json({
+        success: false,
+        error: 'La RPC public.run_ddl_migration respondio con error.',
+        hint: 'Revisa que la RPC exista y que tu rol en profiles sea "directora" o "admin".',
+        detail: probeError.message
+      }, 500, origin);
+    }
+
     const results: any[] = [];
 
     for (const migration of migrations) {
       try {
         console.log(`[run-migration] Ejecutando migración: ${migration.name}`);
 
-        // Usar la RPC segura o ejecutar directamente via SQL
-        const { error } = await admin.rpc('run_ddl_migration', { 
-          ddl: migration.sql 
-        }).catch(() => {
-          // Si la RPC no existe, reportar pero continuar
-          console.warn(`RPC run_ddl_migration no disponible, usando fallback`);
-          return { error: { message: 'RPC no disponible' } };
+        const { error } = await admin.rpc('run_ddl_migration', {
+          ddl: migration.sql
         });
 
         if (error) {

@@ -4,8 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Preinscripcion | Colegio Montessori Sonrisas Creativas</title>
+    <link rel="icon" href="logo/favicon.ico" type="image/x-icon">
+    <link rel="icon" type="image/png" sizes="16x16" href="logo/favicon-16x16.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="logo/favicon-32x32.png">
+    <link rel="apple-touch-icon" href="logo/apple-touch-icon.png">
+    <link rel="manifest" href="logo/site.webmanifest">
     <link rel="stylesheet" href="css/bootstrap-icons.min.css">
-    <link href="https://unpkg.com/aos@2.3.4/dist/aos.css" rel="stylesheet">
+    <link href="css/vendor/aos.css" rel="stylesheet">
     <style>
         :root {
             --orange: #FF7A00;
@@ -239,6 +244,13 @@
         .btn-back:hover{border-color:var(--orange);color:var(--orange)}
         .btn:disabled{opacity:.5;cursor:not-allowed;transform:none!important}
 
+        /* ── AOS es opcional ──
+           Si el CSS de unpkg carga pero el JS no (bloqueo del navegador), los
+           elementos con [data-aos] quedan en opacity:0 y el formulario entero
+           se ve en blanco. Esta regla gana en especificidad mientras AOS no se
+           haya inicializado, así que la página nunca queda invisible. */
+        body:not(.aos-ready) [data-aos]{opacity:1!important;transform:none!important}
+
         /* ── Review ── */
         .review-section{
             background:var(--gray-bg);border-radius:var(--radius);
@@ -256,7 +268,7 @@
 
         /* ── Success ── */
         .success-screen{display:none;text-align:center;padding:56px 32px}
-        .success-screen.active{display:block}
+        .success-screen.active{display:block;animation:slideUp .45s cubic-bezier(.2,.9,.3,1)}
         .success-icon{
             width:72px;height:72px;border-radius:50%;background:var(--green-light);
             display:flex;align-items:center;justify-content:center;margin:0 auto 16px;
@@ -265,6 +277,133 @@
         @keyframes popIn{from{transform:scale(0)}50%{transform:scale(1.15)}to{transform:scale(1)}}
         .success-screen h2{font-size:1.4rem;font-weight:900;color:var(--green);margin-bottom:6px}
         .success-screen p{color:var(--gray);max-width:380px;margin:0 auto;font-size:.9rem}
+
+        /* ── Animación de envío: botón con spinner + barrido de brillo ── */
+        .btn-submit.is-sending{
+            position:relative;overflow:hidden;cursor:wait;
+            background:linear-gradient(135deg,#15803D,var(--green),#15803D);
+            background-size:220% 100%;animation:btnPulse 1.6s ease-in-out infinite;
+        }
+        .btn-submit.is-sending::after{
+            content:'';position:absolute;inset:0;
+            background:linear-gradient(105deg,transparent 35%,rgba(255,255,255,.45) 50%,transparent 65%);
+            transform:translateX(-100%);animation:sheen 1.4s ease-in-out infinite;
+        }
+        @keyframes btnPulse{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
+        @keyframes sheen{0%{transform:translateX(-100%)}60%,100%{transform:translateX(100%)}}
+        .btn-submit.is-sending>*{position:relative;z-index:1}
+        .spin{display:inline-block;animation:spin .8s linear infinite}
+        @keyframes spin{to{transform:rotate(360deg)}}
+
+        /* ── Overlay de progreso durante el envío ── */
+        .send-overlay{
+            position:fixed;inset:0;z-index:9999;display:none;
+            align-items:center;justify-content:center;padding:20px;
+            background:rgba(15,23,42,.62);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+        }
+        .send-overlay.active{display:flex;animation:fadeIn .22s ease}
+        @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+        .send-panel{
+            width:100%;max-width:380px;background:#fff;border-radius:22px;padding:26px 24px;
+            box-shadow:0 24px 60px rgba(15,23,42,.35);text-align:center;
+            animation:popIn .35s cubic-bezier(.2,.9,.3,1);
+        }
+        .send-rings{position:relative;width:78px;height:78px;margin:0 auto 16px}
+        .send-rings span{
+            position:absolute;inset:0;border-radius:50%;border:3px solid transparent;
+        }
+        .send-rings span:nth-child(1){border-top-color:var(--green);animation:spin 1s linear infinite}
+        .send-rings span:nth-child(2){inset:9px;border-right-color:var(--orange);animation:spin .75s linear infinite reverse}
+        .send-rings span:nth-child(3){inset:18px;border-bottom-color:var(--blue);animation:spin .55s linear infinite}
+        .send-rings b{
+            position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+            font-size:1.5rem;color:var(--green);animation:popIn .4s ease .1s both;
+        }
+        .send-panel h3{margin:0 0 4px;font-size:1rem;font-weight:900;color:var(--dark)}
+        .send-panel>p{margin:0;font-size:.8rem;color:var(--gray)}
+        .send-steps{list-style:none;margin:18px 0 0;padding:0;text-align:left;display:grid;gap:9px}
+        .send-steps li{
+            display:flex;align-items:center;gap:10px;font-size:.78rem;font-weight:700;
+            color:var(--gray-soft);transition:color .25s ease,transform .25s ease;
+        }
+        .send-steps li .dot{
+            width:20px;height:20px;flex:0 0 20px;border-radius:50%;
+            border:2px solid var(--border);display:flex;align-items:center;justify-content:center;
+            font-size:.6rem;color:#fff;transition:all .25s ease;
+        }
+        .send-steps li.done{color:var(--green)}
+        .send-steps li.done .dot{background:var(--green);border-color:var(--green)}
+        .send-steps li.now{color:var(--dark);transform:translateX(3px)}
+        .send-steps li.now .dot{border-color:var(--orange);border-top-color:transparent;animation:spin .7s linear infinite}
+        .send-bar{height:6px;border-radius:99px;background:var(--border);margin-top:18px;overflow:hidden}
+        .send-bar>i{
+            display:block;height:100%;width:35%;border-radius:99px;
+            background:linear-gradient(90deg,var(--green),var(--orange));
+            animation:indeterminate 1.25s ease-in-out infinite;
+        }
+        @keyframes indeterminate{0%{transform:translateX(-100%)}100%{transform:translateX(320%)}}
+
+        /* ── Check dibujado con SVG al confirmar ── */
+        .success-check{width:96px;height:96px;margin:0 auto 18px;display:block}
+        .success-check circle{
+            fill:none;stroke:var(--green);stroke-width:5;
+            stroke-dasharray:302;stroke-dashoffset:302;
+            animation:drawCircle .55s cubic-bezier(.65,0,.45,1) forwards;
+        }
+        .success-check circle.bg{stroke:var(--green-light);stroke-dasharray:none;stroke-dashoffset:0;animation:none}
+        .success-check path{
+            fill:none;stroke:var(--green);stroke-width:7;stroke-linecap:round;stroke-linejoin='round';
+            stroke-dasharray:80;stroke-dashoffset:80;
+            animation:drawCheck .35s cubic-bezier(.65,0,.45,1) .45s forwards;
+        }
+        @keyframes drawCircle{to{stroke-dashoffset:0}}
+        @keyframes drawCheck{to{stroke-dashoffset:0}}
+        .success-screen.active>*{animation:fadeUp .5s cubic-bezier(.2,.9,.3,1) both}
+        .success-screen.active>*:nth-child(1){animation-delay:.15s}
+        .success-screen.active>*:nth-child(2){animation-delay:.25s}
+        .success-screen.active>*:nth-child(3){animation-delay:.35s}
+        .success-screen.active>*:nth-child(4){animation-delay:.45s}
+        .success-screen.active>*:nth-child(5){animation-delay:.55s}
+        @keyframes fadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+
+        /* ── Confeti de celebración ── */
+        .confetti{position:fixed;top:-14px;width:9px;height:14px;border-radius:2px;z-index:10000;pointer-events:none;will-change:transform,opacity}
+        @keyframes confettiFall{
+            0%{transform:translate3d(0,0,0) rotate(0deg);opacity:1}
+            100%{transform:translate3d(var(--dx,0px),105vh,0) rotate(var(--rot,720deg));opacity:0}
+        }
+
+        /* ── Aviso de error en pantalla (en vez de solo alert) ── */
+        .send-error{
+            display:none;margin:0 0 16px;padding:12px 14px;border-radius:14px;
+            font-size:.8rem;font-weight:700;line-height:1.5;
+            background:#FEF2F2;border:1.5px solid #FECACA;color:#991B1B;text-align:left;
+        }
+        .send-error.active{display:block;animation:shake .4s ease}
+        @keyframes shake{
+            0%,100%{transform:translateX(0)}
+            20%{transform:translateX(-7px)}40%{transform:translateX(7px)}
+            60%{transform:translateX(-4px)}80%{transform:translateX(4px)}
+        }
+        .send-error .err-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+        .send-error button{
+            font:inherit;font-size:.72rem;font-weight:800;cursor:pointer;
+            padding:7px 12px;border-radius:10px;border:1.5px solid #991B1B;
+            background:#fff;color:#991B1B;transition:background .2s ease,color .2s ease;
+        }
+        .send-error button:hover{background:#991B1B;color:#fff}
+        .send-error button.copied{background:#166534;border-color:#166534;color:#fff}
+        .send-error details{margin-top:10px}
+        .send-error summary{
+            cursor:pointer;font-size:.72rem;font-weight:800;opacity:.85;
+            list-style:none;
+        }
+        .send-error summary::-webkit-details-marker{display:none}
+        .send-error pre{
+            margin:8px 0 0;padding:10px;border-radius:10px;overflow-x:auto;
+            background:#fff;color:#0F172A;font-size:.68rem;line-height:1.45;
+            border:1px solid #FECACA;
+        }
 
         /* ── Footer ── */
         .footer{background:var(--dark);color:#fff;padding:36px 0 20px;margin-top:40px}
@@ -636,6 +775,22 @@
                         <p class="step-subtitle">Verifica que la informacion sea correcta antes de enviar</p>
                     </div>
                     <div id="reviewSummary"></div>
+                    <div id="sendError" class="send-error" role="alert">
+                        <span id="sendErrorText"></span>
+                        <div class="err-actions" id="sendErrorActions" style="display:none">
+                            <button type="button" id="checkFixApplied">Comprobar si ya quedó aplicado</button>
+                            <button type="button" id="copyFixSql">Copiar el SQL que lo arregla</button>
+                            <a href="https://wa.me/18095324903?text=Hola%2C%20la%20preinscripci%C3%B3n%20web%20no%20guarda%20las%20solicitudes%20(error%20de%20permisos%20RLS)." target="_blank" rel="noopener"
+                               style="font-size:.72rem;font-weight:800;padding:7px 12px;border-radius:10px;border:1.5px solid #991B1B;text-decoration:none;background:#fff;color:#991B1B;display:inline-flex;align-items:center"
+                               onmouseover="this.style.background='#991B1B';this.style.color='#fff'"
+                               onmouseout="this.style.background='#fff';this.style.color='#991B1B'">Avisar al colegio</a>
+                        </div>
+                        <div id="fixCheckResult" style="display:none;margin-top:10px;padding:10px 12px;border-radius:10px;font-size:.76rem;font-weight:800"></div>
+                        <details id="sendErrorDetails" style="display:none">
+                            <summary>Ver el detalle técnico</summary>
+                            <pre id="sendErrorDetail"></pre>
+                        </details>
+                    </div>
                     <div class="step-btns" style="border-top:none;padding-top:8px">
                         <button type="button" class="btn btn-back" onclick="prevStep(7)"><i class="bi bi-arrow-left"></i> Anterior</button>
                         <button type="submit" class="btn btn-submit" id="submitBtn"><i class="bi bi-send-check"></i> Enviar Preinscripción</button>
@@ -644,7 +799,11 @@
             </form>
 
             <div class="success-screen" id="successScreen">
-                <div class="success-icon"><i class="bi bi-check-lg"></i></div>
+                <svg class="success-check" viewBox="0 0 96 96" aria-hidden="true">
+                    <circle class="bg" cx="48" cy="48" r="46"/>
+                    <circle cx="48" cy="48" r="46" transform="rotate(-90 48 48)"/>
+                    <path d="M30 49 L43 62 L67 36"/>
+                </svg>
                 <h2>¡Preinscripción enviada!</h2>
                 <p>Recibimos tus datos correctamente. Nos pondremos en contacto contigo muy pronto.</p>
                 <p id="successNote" style="display:none;color:#9A3412;background:#FFF7ED;border:1px solid #FED7AA;border-radius:12px;padding:10px 12px;margin-top:12px;font-size:.8rem"></p>
@@ -738,15 +897,98 @@
         <div class="footer-bottom"><p>© 2026 Colegio Montessori Sonrisas Creativas.</p></div>
     </footer>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
+    <script src="js/shared/supabase-js.min.js"></script>
+    <script src="js/vendor/aos.js"></script>
     <script>
         const supabaseUrl='https://yswizaskeftxpcphixiy.supabase.co';
         const supabaseAnonKey='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlzd2l6YXNrZWZ0eHBjcGhpeGl5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIzNDM4NTcsImV4cCI6MjA5NzkxOTg1N30.SQEZzGCCsADmbYTNrpjw6k1uBs8mXnhn8IhzTHH6rto';
-        const sb=window.supabase?window.supabase.createClient(supabaseUrl,supabaseAnonKey):null;
+
+        // El bundle UMD de supabase-js vive en js/shared/ (igual que el resto de
+        // paneles). Antes se cargaba desde cdn.jsdelivr.net y Edge lo bloqueaba
+        // con "Tracking Prevention blocked access to storage", dejando `sb` en
+        // null y el formulario sin poder enviar nada.
+        let sb = null;
+
+        // La preinscripción es un formulario PÚBLICO: nunca debe autenticarse ni
+        // tocar el almacenamiento del navegador. Si `persistSession` queda activo,
+        // supabase-js reutiliza un token viejo que hay en localStorage y lo manda
+        // como Authorization, y PostgREST responde 401 aunque el insert sea
+        // correcto. Con estas opciones la petición va siempre como `anon`.
+        function ensureNoAuthSession(){
+            try{
+                const keysToZap = [];
+                for(let i = 0; i < localStorage.length; i++){
+                    const k = localStorage.key(i);
+                    if(k && /^(sb-|supabase\.auth\.token|preinscripcion_public_anon)/i.test(k)){
+                        keysToZap.push(k);
+                    }
+                }
+                keysToZap.forEach(k => localStorage.removeItem(k));
+                if(window.sessionStorage){
+                    const skeys = [];
+                    for(let i = 0; i < sessionStorage.length; i++){
+                        const k = sessionStorage.key(i);
+                        if(k && /^(sb-|supabase\.auth\.token|preinscripcion_public_anon)/i.test(k)){
+                            skeys.push(k);
+                        }
+                    }
+                    skeys.forEach(k => sessionStorage.removeItem(k));
+                }
+                if(typeof document !== 'undefined' && document.cookie){
+                    document.cookie.split(';').forEach(c => {
+                        const eq = c.indexOf('=');
+                        const name = (eq > -1 ? c.slice(0, eq) : c).trim();
+                        if(/^(sb-|supabase)/i.test(name)){
+                            document.cookie = name + '=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Max-Age=0; SameSite=Lax';
+                        }
+                    });
+                }
+            }catch(_){ /* sin almacenamiento: ignorable */ }
+        }
+
+        function buildSupabaseClient(){
+            if(!window.supabase || typeof window.supabase.createClient !== 'function') return null;
+            if(sb) return sb;
+            // ANTES de crear el cliente, borramos CUALQUIER sesión previa para que
+            // supabase-js no rescate un JWT autenticado de otra pestaña.
+            ensureNoAuthSession();
+            sb = window.supabase.createClient(supabaseUrl, supabaseAnonKey, {
+                auth:{
+                    persistSession:false,
+                    autoRefreshToken:false,
+                    detectSessionInUrl:false,
+                    storageKey:'preinscripcion_public_anon'
+                },
+                global:{ headers:{ 'x-application-name':'preinscripcion-public' } },
+                db:{ schema:'public' }
+            });
+            // Incluso con persistSession:false, si existía una sesión en el momento
+            // de crear el cliente, getSession() la devuelve. La purgamos aquí.
+            if(sb.auth && typeof sb.auth.signOut === 'function'){
+                try{ sb.auth.signOut({ scope:'local' }).catch(()=>{}); }catch(_){}
+            }
+            return sb;
+        }
+        buildSupabaseClient();
+
+        // SIN fallback a CDN a propósito. Este formulario es público y lo usan
+        // padres desde redes con Tracking Prevention (Edge) activo: cualquier
+        // petición a un tercero (cdn.jsdelivr.net / unpkg.com) se marca como
+        // "blocked access to storage" y, cuando el bloqueo arrastra al
+        // almacenamiento del navegador, el SDK queda inutilizable y el envío
+        // falla con 401. Todo lo que el formulario necesita está en local:
+        // js/shared/supabase-js.min.js, js/vendor/aos.js, css/vendor/aos.css.
+
         let currentStep=1,totalSteps=7,authCount=1;
 
-        AOS.init({duration:500,easing:'ease-out-cubic',once:true});
+        if(window.AOS && typeof AOS.init === 'function'){
+            AOS.init({duration:500,easing:'ease-out-cubic',once:true});
+            document.body.classList.add('aos-ready');
+        }else{
+            // Sin AOS no hay animación, pero el contenido debe verse igual:
+            // la regla CSS `body:not(.aos-ready) [data-aos]{opacity:1}` lo asegura.
+            console.warn('[preinscripcion] AOS no disponible; se usan las animaciones CSS propias.');
+        }
 
         // ── AGE + LEVEL VALIDATION (pre.md) ──
         window._precalc = { suggestedLevel: null, ageMatch: true, isSpecial: false, totalDays: 0, tooYoung: false };
@@ -1381,10 +1623,87 @@
                 '<div class="review-section"><h4><i class="bi bi-file-earmark"></i> Documentos</h4><div style="font-size:.82rem;color:var(--gray);line-height:2">'+docs.join('<br>')+'</div></div>';
         }
 
+        // ── Animaciones del envío ─────────────────────────────────────────────
+        function openSendOverlay(step){
+            const ov=document.getElementById('sendOverlay');
+            if(!ov) return;
+            ov.classList.add('active');
+            ov.setAttribute('aria-hidden','false');
+            advanceSendStep(step||0);
+        }
+        function advanceSendStep(active){
+            const items=document.querySelectorAll('#sendSteps li');
+            if(!items.length) return;
+            items.forEach((li,i)=>{
+                li.classList.remove('done','now');
+                if(i < active) li.classList.add('done');
+                else if(i === active) li.classList.add('now');
+            });
+        }
+        function closeSendOverlay(){
+            const ov=document.getElementById('sendOverlay');
+            if(!ov) return;
+            ov.classList.remove('active');
+            ov.setAttribute('aria-hidden','true');
+        }
+        function showSendError(text, technical, fixSql){
+            const box=document.getElementById('sendError');
+            if(!box) { alert(text); return; }
+
+            document.getElementById('sendErrorText').textContent=text;
+
+            const actions=document.getElementById('sendErrorActions');
+            const copyBtn=document.getElementById('copyFixSql');
+            if(fixSql && actions){
+                actions.style.display='flex';
+                copyBtn.dataset.sql=fixSql;
+            }else if(actions){
+                actions.style.display='none';
+            }
+
+            const det=document.getElementById('sendErrorDetails');
+            if(technical && det){
+                document.getElementById('sendErrorDetail').textContent=technical;
+                det.style.display='block';
+                det.open=false;
+            }else if(det){
+                det.style.display='none';
+            }
+
+            box.classList.remove('active');
+            void box.offsetWidth; // reinicia la animación de sacudida
+            box.classList.add('active');
+            box.scrollIntoView({behavior:'smooth',block:'center'});
+        }
+        function launchConfetti(){
+            if(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+            const colors=['#FF7A00','#0B63C7','#16A34A','#FACC15','#EC4899','#8B5CF6'];
+            for(let i=0;i<70;i++){
+                const p=document.createElement('i');
+                p.className='confetti';
+                p.style.left=Math.random()*100+'vw';
+                p.style.background=colors[i % colors.length];
+                p.style.setProperty('--dx',(Math.random()*180-90)+'px');
+                p.style.setProperty('--rot',(360+Math.random()*720)+'deg');
+                p.style.animationDuration=(1.8+Math.random()*1.6)+'s';
+                p.style.animationDelay=(Math.random()*0.5)+'s';
+                document.body.appendChild(p);
+                (function(node,ms){ setTimeout(()=>node.remove(),ms); })(p,4600);
+            }
+        }
+
         // ── SUBMIT ──
         document.getElementById('preinscripcionForm').addEventListener('submit',async function(e){
             e.preventDefault();
             const btn=document.getElementById('submitBtn');
+
+            // El aviso de error anterior no debe quedar pegado al reintentar.
+            const prevErr=document.getElementById('sendError');
+            if(prevErr){
+                prevErr.classList.remove('active');
+                const pr=document.getElementById('fixCheckResult');
+                if(pr) pr.style.display='none';
+            }
 
             // Cerrojo anti doble-envío: sin esto, dos clics rápidos crean dos
             // filas idénticas en la tabla.
@@ -1404,14 +1723,19 @@
                 return;
             }
 
-            if(!sb){
-                alert('No pudimos conectar con el servidor. Revisa tu conexión a internet y recarga la página.');
+            // Nota: el envío NO usa el SDK (ver postPrereg), así que no hace falta
+            // esperar a que `sb` exista. Si aun así no estuviera disponible se
+            // avisa, pero el envío seguirá funcionando porque va por fetch.
+            if(typeof fetch !== 'function'){
+                showSendError('Este navegador no soporta el envío del formulario. Actualízalo o usa Chrome, Edge o Safari.');
                 return;
             }
 
             btn.dataset.sending='1';
             btn.disabled=true;
-            btn.innerHTML='<i class="bi bi-hourglass-split"></i> Enviando...';
+            btn.classList.add('is-sending');
+            btn.innerHTML='<i class="bi bi-arrow-repeat spin"></i> Enviando...';
+            openSendOverlay(0);
             const t0=Date.now();
 
             const f=new FormData(this);const v=n=>f.get(n)||null;
@@ -1473,6 +1797,8 @@
                 }
             }
 
+            advanceSendStep(1);
+
             // Columnas que solo existen si se ejecutó FIX_PREINSCRIPCION_AGE_CONTROL.sql.
         // Si faltan, se reintenta sin ellas en vez de perder la preinscripción:
         // el control de edad es una ayuda, no un requisito para poder matricular.
@@ -1480,25 +1806,88 @@
             'director_authorization_requested','director_authorization_note',
             'director_authorization_approved'];
 
-        async function insertPrereg(data){
-            // .select('id') es imprescindible: sin el id devuelto no se
-            // puede pedir el acuse de recibo a la Edge Function.
-            const {data:rows,error} = await sb.from('student_preregistrations').insert([data]).select('id').single();
-            if(!error && rows) return { ok:true, id:rows.id };
+        /**
+         * Envía la preinscripción.
+         *
+         * Se usa `fetch` CRUDO y NO el SDK de Supabase a propósito.
+         *
+         * Antes el flujo era: primero el SDK, y si devolvía 401/403 se
+         * reintentaba con fetch. El SDK nunca llegó a funcionar porque su
+         * capa de autenticación intenta leer la sesión del almacenamiento del
+         * navegador; con Tracking Prevention de Edge activo ese acceso se
+         * bloquea y la petición sale con un Authorization inválido, así que
+         * PostgREST respondía 401 aunque la petición fuera correcta. Con
+         * Tracking Prevention desactivado funcionaba, que es exactamente el
+         * tipo de fallo dependiente del navegador que hay que eliminar.
+         *
+         * Con fetch se mandan las cabeceras explícitas y no hay nada que
+         * leer del almacenamiento: la petición es siempre la misma y siempre
+         * como `anon`. Verificado contra la API: con estas cabeceras
+         * PostgREST devuelve 400 (pasa RLS y choca con un NOT NULL), nunca 401.
+         */
+        async function postPrereg(payload){
+            const res = await fetch(
+                supabaseUrl + '/rest/v1/student_preregistrations?select=id',
+                {
+                    method:'POST',
+                    headers:{
+                        'Content-Type':'application/json',
+                        'apikey':supabaseAnonKey,
+                        'Authorization':'Bearer ' + supabaseAnonKey,
+                        'Prefer':'return=representation'
+                    },
+                    body: JSON.stringify([payload])
+                }
+            );
+            const txt = await res.text();
+            let parsed = null;
+            try{ parsed = JSON.parse(txt); }catch(_){ parsed = txt; }
 
-            const msg = String(error?.message || '');
-            const faltanColumnas = OPTIONAL_COLS.some(c => new RegExp(c).test(msg)) &&
-                /does not exist|undefined_column|42703/i.test(msg);
-
-            if(faltanColumnas){
-                console.warn('Faltan columnas de control de edad; reintentando sin ellas.');
-                const reduced = {...data};
-                OPTIONAL_COLS.forEach(c => delete reduced[c]);
-                const retry = await sb.from('student_preregistrations').insert([reduced]).select('id').single();
-                if(!retry.error && retry.data) return { ok:true, id:retry.data.id, degraded:true };
-                throw retry.error || error;
+            if((res.status === 200 || res.status === 201) && Array.isArray(parsed) && parsed[0] && parsed[0].id){
+                return { ok:true, id: parsed[0].id };
             }
-            throw error;
+
+            // 401/403 aquí significa que la anon key que tiene el HTML no es la
+            // del proyecto, no un problema de RLS. Se distingue el mensaje.
+            let hint = '';
+            if(res.status === 401 || res.status === 403){
+                hint = 'La clave pública (anon key) del formulario no coincide con el proyecto o fue revocada. ' +
+                       'Regenerarla en Supabase → Project Settings → API y actualizar ' +
+                       'supabaseUrl / supabaseAnonKey en preinscripcion.html.';
+            }
+
+            throw {
+                message: (typeof txt === 'string' ? txt : JSON.stringify(parsed)) || ('HTTP ' + res.status),
+                status: res.status,
+                code: 'HTTP_' + res.status,
+                hint
+            };
+        }
+
+        async function insertPrereg(data){
+            // Por si quedó algún token suelto de otra pestaña o de otro panel
+            // servido en el mismo dominio.
+            ensureNoAuthSession();
+
+            try{
+                return await postPrereg(data);
+            }catch(err){
+                // ÚNICO reintento posible: si la base de datos aún no tiene las
+                // columnas de control de edad (proyecto sin migrar del todo),
+                // se reenvía sin ellas. Son opcionales para poder matricular.
+                const msg = String(err?.message || '');
+                const faltanColumnas = OPTIONAL_COLS.some(c => new RegExp(c).test(msg)) &&
+                    /does not exist|undefined_column|42703/i.test(msg);
+
+                if(faltanColumnas){
+                    console.warn('[preinscripcion] Faltan columnas de control de edad; reintentando sin ellas.');
+                    const reduced = {...data};
+                    OPTIONAL_COLS.forEach(c => delete reduced[c]);
+                    const res = await postPrereg(reduced);
+                    return {...res, degraded:true };
+                }
+                throw err;
+            }
         }
 
         /**
@@ -1533,26 +1922,415 @@
 
         try{
                 const res = await insertPrereg(data);
+                advanceSendStep(2);
                 const ack = await sendAck(res.id, data.p1_email);
+                closeSendOverlay();
                 renderSuccess(res.degraded, ack && ack.ok && !ack.already_sent);
+                launchConfetti();
+                console.info('Preinscripción enviada en',Date.now()-t0,'ms · id',res.id);
             }catch(err){
-                console.error('Error al enviar:',err);
-                const msg = String(err.message || err || '');
-
-                if(/does not exist|undefined_column|column .* does not exist|42703/i.test(msg)){
-                    alert('Error de configuración en la base de datos.\n\nFalta ejecutar el script "FIX_PREINSCRIPCION_AGE_CONTROL.sql" en el Editor SQL de Supabase (agrega las columnas de control de edad y autorización).\n\nDetalle: '+msg);
-                }else if(/PGRST|413|payload|request entity too large|row-level security|42501|403/i.test(msg)){
-                    alert('No pudimos guardar la preinscripción.\n\nPrueba de nuevo en unos minutos. Si el problema continúa, escríbenos por WhatsApp al 809-532-4903.\n\nDetalle: '+msg);
-                }else if(/timeout|failed to fetch|network/i.test(msg)){
-                    alert('Se perdió la conexión al enviar. Revisa tu internet y vuelve a intentar; tus datos siguen en el formulario.\n\nDetalle: '+msg);
-                }else{
-                    alert('Ocurrió un error al enviar la preinscripción.\n\nDetalle: '+msg);
-                }
+                // console.error(err) solo imprimía "Object" cuando el error era
+                // un objeto plano con message/status. Se desempaqueta para que
+                // en consola quede legible cuál fue el fallo de verdad.
+                console.error('[preinscripcion] Error al enviar:',
+                    { status: err?.status, code: err?.code, message: err?.message, hint: err?.hint });
+                closeSendOverlay();
+                const info=describeSubmitError(err);
+                showSendError(info.text, info.detail, info.fix ? info.sql : null);
                 btn.dataset.sending='0';
                 btn.disabled=false;
+                btn.classList.remove('is-sending');
                 btn.innerHTML='<i class="bi bi-send-check"></i> Enviar Preinscripción';
             }
         });
+
+        document.getElementById('copyFixSql').addEventListener('click', async function(){
+            const sql=this.dataset.sql || '';
+            const btn=this;
+            const done=()=>{ btn.textContent='¡Copiado! Pégalo en el SQL Editor'; btn.classList.add('copied');
+                             setTimeout(()=>{ btn.textContent='Copiar el SQL que lo arregla'; btn.classList.remove('copied'); },4000); };
+            try{
+                if(navigator.clipboard && window.isSecureContext){
+                    await navigator.clipboard.writeText(sql);
+                }else{
+                    const ta=document.createElement('textarea');
+                    ta.value=sql; ta.style.position='fixed'; ta.style.opacity='0';
+                    document.body.appendChild(ta); ta.select();
+                    document.execCommand('copy'); ta.remove();
+                }
+                done();
+            }catch(_){
+                // Último recurso: al menos se muestra para copiar a mano.
+                const det=document.getElementById('sendErrorDetails');
+                if(det){
+                    det.open=true;
+                    document.getElementById('sendErrorDetail').textContent=sql;
+                }
+            }
+        });
+
+        // Comprobar en un clic si la política RLS ya quedó aplicada.
+        document.getElementById('checkFixApplied')
+            .addEventListener('click', () => checkPreregPolicyApplied());
+
+        // SQL que desbloquea el INSERT público. Se copia con un botón para que
+        // no haya que buscar el archivo ni adivinar la ruta del dashboard.
+        const SUPABASE_PROJECT_REF = 'yswizaskeftxpcphixiy';
+        const SQL_EDITOR_URL = 'https://supabase.com/dashboard/project/' + SUPABASE_PROJECT_REF + '/sql';
+
+        // SQL QUE DESESTRABA DEFINITIVAMENTE EL INSERT ANÓNIMO.
+        // Contiene TODO: esquema, GRANTs, DROP de TODAS las policies,
+        // 5 policies separadas (una por comando, SIN ANDs), columnas
+        // Age Control + URLs cédulas + índices + comentarios +
+        // comprobación final roja/verde. Copiarlo y pegarlo tal cual.
+        const FIX_PREREG_RLS_SQL = [
+            "-- =============================================================",
+            "-- FIX_FINAL_PREINSCRIPCION_RLS.sql (ERROR 401 / 42501 DEFINITIVO)",
+            "-- =============================================================",
+            "-- PROYECTO: " + SUPABASE_PROJECT_REF + "  (Montessori Sonrisas Creativas)",
+            "-- PEGAR Y EJECUTAR EN:",
+            "--   " + SQL_EDITOR_URL,
+            "--   SQL Editor -> New query -> Seleccionar TODO este texto -> Run",
+            "--",
+            "-- MOTIVO DE QUE LOS FIXES ANTERIORES NO FUNCIONARAN:",
+            "-- PostgreSQL RLS, para comandos INSERT, evalua en MODO AND todas",
+            "-- las policies WITH CHECK que existen sobre la tabla. NO ES OR.",
+            "-- Ademas, A MENUDO falta GRANT USAGE ON SCHEMA public TO anon.",
+            "--",
+            "-- REGLA INQUEBRANTABLE: 1 policy por cada par (rol, comando).",
+            "--   · NUNCA FOR ALL TO authenticated + FOR INSERT TO authenticated",
+            "--     (ambas aplican a INSERT y se mezclan con AND)",
+            "--   · Hacer FOR SELECT + FOR UPDATE + FOR DELETE separadas del INSERT.",
+            "-- =============================================================",
+            "",
+            "",
+            "-- #################################################################",
+            "--  PASO 0 - GRANTs DE SCHEMA (IMPRESCINDIBLES, #1 olvidado)",
+            "-- #################################################################",
+            "GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;",
+            "",
+            "-- #################################################################",
+            "--  PASO 1 - GRANTs DE TABLA Y SECUENCIA",
+            "-- #################################################################",
+            "-- 1a. anon = SOLO insertar y consultar id/status (NUNCA mas)",
+            "GRANT INSERT ON public.student_preregistrations TO anon;",
+            "GRANT SELECT (id, status) ON public.student_preregistrations TO anon;",
+            "GRANT USAGE, SELECT ON SEQUENCE public.student_preregistrations_id_seq TO anon;",
+            "",
+            "-- 1b. authenticated = CRUD completo (lo usan directora/asistente)",
+            "GRANT SELECT, INSERT, UPDATE, DELETE ON public.student_preregistrations TO authenticated;",
+            "GRANT USAGE, SELECT, UPDATE ON SEQUENCE public.student_preregistrations_id_seq TO authenticated;",
+            "",
+            "-- 1c. service_role = todo (por si hay edge functions)",
+            "GRANT ALL ON public.student_preregistrations TO service_role;",
+            "GRANT ALL ON SEQUENCE public.student_preregistrations_id_seq TO service_role;",
+            "",
+            "",
+            "-- #################################################################",
+            "--  PASO 2 - ASEGURAR RLS ACTIVO",
+            "-- #################################################################",
+            "ALTER TABLE public.student_preregistrations ENABLE ROW LEVEL SECURITY;",
+            "",
+            "",
+            "-- #################################################################",
+            "--  PASO 3 - BORRAR TODAS LAS POLICIES (cualquier nombre - evita AND)",
+            "-- #################################################################",
+            "DO $drop_all_policies$",
+            "DECLARE",
+            "  r RECORD;",
+            "BEGIN",
+            "  FOR r IN",
+            "    SELECT policyname",
+            "      FROM pg_policies",
+            "     WHERE schemaname = 'public'",
+            "       AND tablename  = 'student_preregistrations'",
+            "  LOOP",
+            "    EXECUTE format('DROP POLICY IF EXISTS %I ON public.student_preregistrations;', r.policyname);",
+            "    RAISE NOTICE 'Policy BORRADA OK: %', r.policyname;",
+            "  END LOOP;",
+            "END",
+            "$drop_all_policies$;",
+            "",
+            "",
+            "-- #################################################################",
+            "--  PASO 4 - CREAR EXACTAMENTE 5 POLICIES (0 ANDs)",
+            "-- #################################################################",
+            "",
+            "-- 4A. anon -> INSERT sin restricciones (formulario publico).",
+            "CREATE POLICY \"prereg_anon_insert_only\"",
+            "  ON public.student_preregistrations",
+            "  FOR INSERT",
+            "  TO anon",
+            "  WITH CHECK (true);",
+            "",
+            "-- 4B. authenticated -> INSERT sin restricciones (incluso sin perfil).",
+            "CREATE POLICY \"prereg_authenticated_insert_only\"",
+            "  ON public.student_preregistrations",
+            "  FOR INSERT",
+            "  TO authenticated",
+            "  WITH CHECK (true);",
+            "",
+            "-- 4C. authenticated -> SELECT SOLO staff (directora/asistente/admin).",
+            "CREATE POLICY \"prereg_staff_select\"",
+            "  ON public.student_preregistrations",
+            "  FOR SELECT",
+            "  TO authenticated",
+            "  USING (COALESCE(public.get_my_role(), '') IN ('directora','asistente','admin'));",
+            "",
+            "-- 4D. authenticated -> UPDATE SOLO staff.",
+            "CREATE POLICY \"prereg_staff_update\"",
+            "  ON public.student_preregistrations",
+            "  FOR UPDATE",
+            "  TO authenticated",
+            "  USING       (COALESCE(public.get_my_role(), '') IN ('directora','asistente','admin'))",
+            "  WITH CHECK  (COALESCE(public.get_my_role(), '') IN ('directora','asistente','admin'));",
+            "",
+            "-- 4E. authenticated -> DELETE SOLO staff.",
+            "CREATE POLICY \"prereg_staff_delete\"",
+            "  ON public.student_preregistrations",
+            "  FOR DELETE",
+            "  TO authenticated",
+            "  USING (COALESCE(public.get_my_role(), '') IN ('directora','asistente','admin'));",
+            "",
+            "",
+            "-- #################################################################",
+            "--  PASO 5 - COLUMNAS Age Control + URLs cedulas P1/P2",
+            "-- #################################################################",
+            "ALTER TABLE public.student_preregistrations",
+            "  ADD COLUMN IF NOT EXISTS suggested_level                  text,",
+            "  ADD COLUMN IF NOT EXISTS age_match                        boolean DEFAULT true,",
+            "  ADD COLUMN IF NOT EXISTS director_authorization_requested boolean DEFAULT false,",
+            "  ADD COLUMN IF NOT EXISTS director_authorization_note      text,",
+            "  ADD COLUMN IF NOT EXISTS director_authorization_approved  boolean DEFAULT null,",
+            "  ADD COLUMN IF NOT EXISTS p1_cedula_front_url              text,",
+            "  ADD COLUMN IF NOT EXISTS p1_cedula_back_url               text,",
+            "  ADD COLUMN IF NOT EXISTS p2_cedula_front_url              text,",
+            "  ADD COLUMN IF NOT EXISTS p2_cedula_back_url               text;",
+            "",
+            "COMMENT ON COLUMN public.student_preregistrations.suggested_level IS 'Nivel sugerido por edad calculada (12 aulas oficiales).';",
+            "COMMENT ON COLUMN public.student_preregistrations.age_match IS 'TRUE si la edad cae dentro del rango oficial del aula; FALSE requiere revision Directora.';",
+            "COMMENT ON COLUMN public.student_preregistrations.director_authorization_requested IS 'El tutor acepto enviar fuera de rango de edad para revision.';",
+            "COMMENT ON COLUMN public.student_preregistrations.director_authorization_note IS 'Motivo autorizacion (hermanos en aula, ingreso tardio, valoracion de madurez, etc.).';",
+            "COMMENT ON COLUMN public.student_preregistrations.director_authorization_approved IS 'Revision Directora: NULL = pendiente, TRUE = aprobada, FALSE = rechazada.';",
+            "COMMENT ON COLUMN public.student_preregistrations.p1_cedula_front_url IS 'URL storage foto frente cedula Padre/Madre/Tutor 1.';",
+            "COMMENT ON COLUMN public.student_preregistrations.p1_cedula_back_url  IS 'URL storage foto reverso cedula Padre/Madre/Tutor 1.';",
+            "COMMENT ON COLUMN public.student_preregistrations.p2_cedula_front_url IS 'URL storage foto frente cedula Padre/Madre/Tutor 2.';",
+            "COMMENT ON COLUMN public.student_preregistrations.p2_cedula_back_url  IS 'URL storage foto reverso cedula Padre/Madre/Tutor 2.';",
+            "",
+            "CREATE INDEX IF NOT EXISTS idx_student_prereg_age_match ON public.student_preregistrations(age_match) WHERE age_match = false;",
+            "CREATE INDEX IF NOT EXISTS idx_student_prereg_director_auth_pending ON public.student_preregistrations(director_authorization_requested, director_authorization_approved) WHERE director_authorization_requested = true;",
+            "",
+            "",
+            "-- #################################################################",
+            "--  PASO 6 - COMPROBACION ROJA / VERDE (si algo falla, aborta)",
+            "-- #################################################################",
+            "DO $final_check$",
+            "DECLARE",
+            "  v_anon_can_usage_schema   boolean := false;",
+            "  v_anon_can_insert         boolean := false;",
+            "  v_anon_can_select         boolean := false;",
+            "  v_rls_on                  boolean := false;",
+            "  v_cuantas_policies        integer := 0;",
+            "  v_policy_anon_insert      boolean := false;",
+            "  v_policy_authed_insert    boolean := false;",
+            "  v_policy_staff_select     boolean := false;",
+            "  v_policy_staff_update     boolean := false;",
+            "  v_policy_staff_delete     boolean := false;",
+            "  v_roles_in_policies       text    := '';",
+            "  v_col_sugg_level          boolean := false;",
+            "  v_col_age_match           boolean := false;",
+            "  v_col_p1_front            boolean := false;",
+            "  v_col_p1_back             boolean := false;",
+            "  v_col_p2_front            boolean := false;",
+            "  v_col_p2_back             boolean := false;",
+            "BEGIN",
+            "  v_anon_can_usage_schema := has_schema_privilege('anon', 'public', 'USAGE');",
+            "  IF NOT v_anon_can_usage_schema THEN",
+            "    RAISE EXCEPTION '[PASO 0 FALLO] Falta GRANT USAGE ON SCHEMA public TO anon.';",
+            "  END IF;",
+            "",
+            "  v_anon_can_insert := has_table_privilege('anon', 'public.student_preregistrations', 'INSERT');",
+            "  v_anon_can_select := has_table_privilege('anon', 'public.student_preregistrations', 'SELECT');",
+            "  IF NOT v_anon_can_insert THEN",
+            "    RAISE EXCEPTION '[PASO 1 FALLO] Falta GRANT INSERT ON public.student_preregistrations TO anon.';",
+            "  END IF;",
+            "  IF NOT v_anon_can_select THEN",
+            "    RAISE EXCEPTION '[PASO 1 FALLO] Falta GRANT SELECT ON public.student_preregistrations TO anon.';",
+            "  END IF;",
+            "",
+            "  SELECT relrowsecurity INTO v_rls_on",
+            "    FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace",
+            "   WHERE n.nspname = 'public' AND c.relname = 'student_preregistrations';",
+            "  IF NOT v_rls_on THEN",
+            "    RAISE EXCEPTION '[PASO 2 FALLO] RLS sigue DESACTIVADO en student_preregistrations.';",
+            "  END IF;",
+            "",
+            "  SELECT count(*) INTO v_cuantas_policies",
+            "    FROM pg_policies",
+            "   WHERE schemaname = 'public' AND tablename = 'student_preregistrations';",
+            "  IF v_cuantas_policies <> 5 THEN",
+            "    RAISE EXCEPTION '[PASO 3/4 FALLO] Hay % policies activas, deberian ser EXACTAMENTE 5.', v_cuantas_policies;",
+            "  END IF;",
+            "",
+            "  SELECT bool_or(policyname = 'prereg_anon_insert_only'          AND cmd = 'INSERT' AND roles::text[] @> '{anon}'::text[]),",
+            "         bool_or(policyname = 'prereg_authenticated_insert_only' AND cmd = 'INSERT' AND roles::text[] @> '{authenticated}'::text[]),",
+            "         bool_or(policyname = 'prereg_staff_select'               AND cmd = 'SELECT' AND roles::text[] @> '{authenticated}'::text[]),",
+            "         bool_or(policyname = 'prereg_staff_update'               AND cmd = 'UPDATE' AND roles::text[] @> '{authenticated}'::text[]),",
+            "         bool_or(policyname = 'prereg_staff_delete'               AND cmd = 'DELETE' AND roles::text[] @> '{authenticated}'::text[]),",
+            "         string_agg(policyname || '[' || cmd || ']', ' ; ')",
+            "    INTO v_policy_anon_insert, v_policy_authed_insert,",
+            "         v_policy_staff_select, v_policy_staff_update, v_policy_staff_delete,",
+            "         v_roles_in_policies",
+            "    FROM pg_policies",
+            "   WHERE schemaname = 'public' AND tablename = 'student_preregistrations';",
+            "",
+            "  IF NOT v_policy_anon_insert THEN",
+            "    RAISE EXCEPTION '[PASO 4A FALLO] prereg_anon_insert_only. Policies: %', v_roles_in_policies;",
+            "  END IF;",
+            "  IF NOT v_policy_authed_insert THEN",
+            "    RAISE EXCEPTION '[PASO 4B FALLO] prereg_authenticated_insert_only. Policies: %', v_roles_in_policies;",
+            "  END IF;",
+            "  IF NOT v_policy_staff_select THEN",
+            "    RAISE EXCEPTION '[PASO 4C FALLO] prereg_staff_select. Policies: %', v_roles_in_policies;",
+            "  END IF;",
+            "  IF NOT v_policy_staff_update THEN",
+            "    RAISE EXCEPTION '[PASO 4D FALLO] prereg_staff_update. Policies: %', v_roles_in_policies;",
+            "  END IF;",
+            "  IF NOT v_policy_staff_delete THEN",
+            "    RAISE EXCEPTION '[PASO 4E FALLO] prereg_staff_delete. Policies: %', v_roles_in_policies;",
+            "  END IF;",
+            "",
+            "  SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='student_preregistrations' AND column_name='suggested_level') INTO v_col_sugg_level;",
+            "  SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='student_preregistrations' AND column_name='age_match') INTO v_col_age_match;",
+            "  SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='student_preregistrations' AND column_name='p1_cedula_front_url') INTO v_col_p1_front;",
+            "  SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='student_preregistrations' AND column_name='p1_cedula_back_url')  INTO v_col_p1_back;",
+            "  SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='student_preregistrations' AND column_name='p2_cedula_front_url') INTO v_col_p2_front;",
+            "  SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='student_preregistrations' AND column_name='p2_cedula_back_url')  INTO v_col_p2_back;",
+            "  IF NOT v_col_sugg_level OR NOT v_col_age_match THEN",
+            "    RAISE EXCEPTION '[PASO 5 FALLO] Faltan columnas Age Control.';",
+            "  END IF;",
+            "  IF NOT v_col_p1_front OR NOT v_col_p1_back OR NOT v_col_p2_front OR NOT v_col_p2_back THEN",
+            "    RAISE EXCEPTION '[PASO 5 FALLO] Faltan columnas URLs cedulas P1/P2.';",
+            "  END IF;",
+            "",
+            "  RAISE NOTICE 'TODO CORRECTO (5 policies + GRANTs + columnas). Volver a preinscripcion.html y pulsar ENVIAR.';",
+            "END",
+            "$final_check$;"
+        ].join("\n");
+
+        /**
+         * Sonda inocua para saber si la política ya está activa, sin insertar
+         * nada. Se manda un objeto vacío: si la política funciona, la petición
+         * atraviesa RLS y choca únicamente con el NOT NULL de student_name
+         * (23502). Si la política sigue faltando, vuelve 401 / 42501.
+         */
+        async function checkPreregPolicyApplied(){
+            const out=document.getElementById('fixCheckResult');
+            const btn=document.getElementById('checkFixApplied');
+            if(!out) return;
+            out.style.display='block';
+            out.style.background='#fff';
+            out.style.color='#334155';
+            out.textContent='Comprobando…';
+            if(btn) btn.disabled=true;
+            try{
+                const res=await fetch(supabaseUrl+'/rest/v1/student_preregistrations?select=id',{
+                    method:'POST',
+                    headers:{
+                        'Content-Type':'application/json',
+                        'apikey':supabaseAnonKey,
+                        'Authorization':'Bearer '+supabaseAnonKey,
+                        'Prefer':'return=minimal'
+                    },
+                    body:'[{}]'
+                });
+                const body=await res.text();
+                if(res.status === 201 || res.status === 200){
+                    // Solo sería 201 con un INSERT válido; con [{}] no debe pasar.
+                    out.style.background='#FEF2F2'; out.style.color='#991B1B';
+                    out.textContent='La política ya está activa. Vuelve a pulsar Enviar.';
+                }else if(/23502|not-null|null value|violates not-null/i.test(body)){
+                    // 23502 = la fila pasó RLS y solo falló el NOT NULL: la política FUNCIONA.
+                    out.style.background='#ECFDF5'; out.style.color='#065F46';
+                    out.textContent='✔ Ya está aplicado. La base de datos acepta la preinscripción: vuelve a pulsar Enviar.';
+                }else if(/42501|row-level security|permission denied|privilege|sequence|schema|usage|new row violates/i.test(body) ||
+                         res.status === 401 || res.status === 403){
+                    // Cualquier permiso / RLS / secuencia / esquema → todavía NO.
+                    out.style.background='#FEF2F2'; out.style.color='#991B1B';
+                    out.textContent='Todavía NO: falta aplicar el SQL. Copia el SQL de abajo y pégalo en el Editor SQL de Supabase.';
+                }else{
+                    out.textContent='Respuesta inesperada ('+res.status+'): '+body.slice(0,160);
+                }
+            }catch(err){
+                out.style.background='#FFFBEB'; out.style.color='#92400E';
+                out.textContent='No se pudo comprobar por red: '+(err?.message||err);
+            }finally{
+                if(btn) btn.disabled=false;
+            }
+        }
+
+        /**
+         * Traduce el error de PostgREST a un mensaje accionable. El caso más
+         * importante es el 401 con código 42501: NO es un problema de internet
+         * ni de la clave, es que falta la política RLS que permite el INSERT
+         * anónimo (política "prereg_public_insert").
+         */
+        function describeSubmitError(err){
+            const raw = String(err?.message || err || '');
+            const status = Number(err?.status || 0);
+            const technical = 'HTTP ' + (status||'?') + ' · ' + (err?.code||'-') + '\n' + raw;
+
+            const isRlsOrGrant =
+                /row-level security|42501|permission denied|privilege|grant|sequence|USAGE/i.test(raw) ||
+                ((status === 401 || status === 403) && /student_preregistrations|prereg/i.test(raw)) ||
+                /new row violates row-level security/i.test(raw);
+
+            // El 401/403 se comprueba ANTES que lo de RLS. Un 401 aquí nunca es
+            // un problema de políticas (de eso se encarga PostgREST y devuelve
+            // 42501), sino una anon key que no corresponde al proyecto o que fue
+            // revocada. Decirle a la familia que aplique políticas RLS en ese
+            // caso la llevaba a ejecutar un SQL que no iba a arreglar nada.
+            if((status === 401 || status === 403) && !/42501|row-level security/i.test(raw)){
+                return {
+                    fix:false, detail:technical,
+                    text:'La clave pública de este formulario ya no es válida, así que el colegio no puede recibir la preinscripción por esta vía. '
+                       + 'Avisa a la dirección del colegio para que lo corrija. Tus datos siguen intactos en el formulario.'
+                };
+            }
+
+            if(isRlsOrGrant){
+                return {
+                    fix:true,
+                    sql:FIX_PREREG_RLS_SQL,
+                    detail:technical,
+                    text:'No pudimos guardar la preinscripción por permisos de la base de datos (RLS o GRANTs). '
+                       + 'Esto se arregla una sola vez, ejecutando el SQL de abajo en el Editor SQL de Supabase '
+                       + '(Supabase Dashboard → SQL Editor → New query → Run). '
+                       + 'Tus datos siguen intactos en el formulario: cuando lo apliques, solo vuelve a pulsar Enviar.'
+                };
+            }
+            if(/does not exist|undefined_column|42703/i.test(raw)){
+                return {
+                    fix:true,
+                    sql:FIX_PREREG_RLS_SQL,
+                    detail:technical,
+                    text:'Faltan columnas de control (control de edad o URLs de cédulas). Ejecuta el SQL adjunto en el Editor SQL de Supabase y vuelve a pulsar Enviar.'
+                };
+            }
+            if(/PGRST|413|payload|request entity too large/i.test(raw)){
+                return {
+                    fix:false, detail:technical,
+                    text:'La solicitud era demasiado grande para el servidor. Quita algún documento y vuelve a intentar.'
+                };
+            }
+            if(/Failed to fetch|NetworkError|timeout|fetch failed/i.test(raw)){
+                return {
+                    fix:false, detail:technical,
+                    text:'Se perdió la conexión al enviar. Revisa tu internet y vuelve a intentar; tus datos siguen en el formulario.'
+                };
+            }
+            return { fix:false, detail:technical, text:'Ocurrió un error al enviar la preinscripción.' };
+        }
 
         function renderSuccess(degraded, ackSent){
             const card=document.getElementById('wizardCard');
@@ -1582,5 +2360,20 @@
 
         document.getElementById('sigDate').textContent=new Date().toLocaleDateString('es-DO',{year:'numeric',month:'long',day:'numeric'});
     </script>
+
+    <!-- Overlay de envío: cubre la pantalla mientras se registra la solicitud -->
+    <div class="send-overlay" id="sendOverlay" role="status" aria-live="polite" aria-hidden="true">
+        <div class="send-panel">
+            <div class="send-rings"><span></span><span></span><span></span><b><i class="bi bi-paper-plane"></i></b></div>
+            <h3>Enviando tu preinscripción</h3>
+            <p>Esto toma solo unos segundos. No cierres esta ventana.</p>
+            <ul class="send-steps" id="sendSteps">
+                <li data-step="0"><span class="dot"><i class="bi bi-check-lg"></i></span> Comprimiendo tus documentos</li>
+                <li data-step="1"><span class="dot"><i class="bi bi-check-lg"></i></span> Guardando los datos del menor</li>
+                <li data-step="2"><span class="dot"><i class="bi bi-check-lg"></i></span> Enviando la confirmación por correo</li>
+            </ul>
+            <div class="send-bar"><i></i></div>
+        </div>
+    </div>
 </body>
 </html>

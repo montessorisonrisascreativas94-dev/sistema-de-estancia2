@@ -1225,6 +1225,7 @@
             <button data-section="inscripciones" class="kk-nav-sub-item">
               <i data-lucide="clipboard-list" class="w-3.5 h-3.5 text-teal-200 shrink-0"></i>
               <span>Inscripciones</span>
+              <span id="badge-ciclo" class="hidden kk-badge ml-auto">0</span>
             </button>
           </div>
         </div>
@@ -2344,6 +2345,27 @@
               <div id="schedulePreview" class="p-3 bg-[#E8F2FF] rounded-xl border border-blue-200 text-xs font-bold text-[#0850A0] text-center hidden">
                 <!-- Generado por JS -->
               </div>
+            </div>
+
+            <!-- MANTENIMIENTO DE LA BASE DE DATOS -->
+            <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-6">
+              <h3 class="text-sm font-black text-slate-800 mb-2 flex items-center gap-2">
+                <span class="w-8 h-8 bg-amber-100 text-amber-700 rounded-xl flex items-center justify-center"><i data-lucide="wrench" class="w-4 h-4"></i></span>
+                Mantenimiento de la base de datos
+              </h3>
+              <p class="text-xs text-slate-500 mb-4 leading-relaxed">
+                Aplica en un clic las correcciones de esquema pendientes (columnas que faltan,
+                permisos RLS, políticas). Es seguro repetirlo: todas las migraciones usan
+                <span class="font-mono font-bold">IF NOT EXISTS</span> y son idempotentes.
+              </p>
+
+              <button id="btnRunMigrations" type="button"
+                class="w-full py-2.5 bg-[#0B63C7] text-white rounded-xl font-black text-xs uppercase tracking-wider hover:bg-[#0850A0] transition-colors flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-wait">
+                <i data-lucide="play" class="w-4 h-4"></i>
+                <span id="btnRunMigrationsLabel">Aplicar correcciones pendientes</span>
+              </button>
+
+              <div id="migrationResult" class="hidden mt-4 rounded-xl border p-3 text-xs"></div>
             </div>
           </div>
 

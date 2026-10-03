@@ -236,6 +236,7 @@ export function goToSection(sectionId) {
       case 'configuracion':
         loadProfile();
         import('../shared/notify-permission.js').then(m => m.NotifyPermission.requestIfNeeded());
+        import('./maintenance.module.js').then(m => m.initMaintenance()).catch(err => console.error('[Mantenimiento] No se pudo iniciar:', err));
         break;
     }
 
@@ -499,10 +500,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Centro de Novedades (campana dorada con todos los eventos del panel)
     NewsCenter.init(auth.user.id);
 
-    // Feature flags de configuración del Panel Directora (producción ready).
-    // Cambiar a true solo cuando la tabla exista en Supabase y se desee reactivar.
+    // Feature flags de configuración del Panel Directora.
+    // `student_preregistrations` SÍ existe (verificado en la BD), así que el
+    // badge y el realtime de pre-inscripciones quedan activos. Antes estaba en
+    // `false` con el comentario "la tabla NO existe" y eso dejaba el contador
+    // de pendientes permanentemente invisible para Dirección.
     const APP_CONFIG = Object.freeze({
-      ENABLE_STUDENT_PREREG_TABLE: false, // La tabla `student_preregistrations` NO existe → 0 peticiones HTTP = 0 404
+      ENABLE_STUDENT_PREREG_TABLE: true,
     });
 
     // Cargar badge de pre-inscripciones pendientes.
@@ -510,7 +514,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     const loadPreBadge = async () => {
       if (!APP_CONFIG.ENABLE_STUDENT_PREREG_TABLE) return;
       try {
-        const { count = 0 } = await supabase.from('student_preregistrations').select('id',{count:'exact',head:true}).eq('status','pending');
+        const { count = 0, error } = await supabase
+          .from('student_preregistrations')
+          .select('id', { count: 'exact', head: true })
+          .eq('status', 'pending');
+        if (error) { console.warn('[directora] badge preinscripciones:', error.message); return; }
         const b = document.getElementById('badge-ciclo');
         if (b) {
           if (count > 0) {
@@ -520,7 +528,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             b.classList.add('hidden');
           }
         }
-      } catch (_) {}
+      } catch (err) { console.warn('[directora] badge preinscripciones:', err?.message || err); }
     };
     loadPreBadge();
 
