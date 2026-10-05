@@ -211,7 +211,7 @@ export function findCanonicalClassroom(levelOrName) {
     .replace(/[–—−]/g, '-').replace(/\s+/g, ' ')
     .replace(/\s*-\s*linea\s*.*/g, '')
     .replace(/\s*linea\s*.*/g, '')
-    .replace(/\b(\d{1,2})(?:[ro]s?|°)\b/gi, (_, n) => n)
+    .replace(/\b(\d{1,2})(?:[rdt][oa]s?|°|º)\b/gi, (_, n) => n)
     .replace(/\b(primero|segundo|tercero|cuarto|quinto|sexto|septimo|octavo|noveno|decimo)\b/gi, (m) => {
       const map = {primero:1,segundo:2,tercero:3,cuarto:4,quinto:5,sexto:6,septimo:7,octavo:8,noveno:9,decimo:10};
       return String(map[m.toLowerCase()] || m);
@@ -326,4 +326,117 @@ export function isValidPaymentStatus(status) {
  */
 export function isValidInquiryStatus(status) {
   return Object.values(INQUIRY_STATUS).includes(status);
+}
+
+/**
+ * 🏫 DEDUPLICADOR DE AULAS (fuente única de verdad)
+ * Agrupa aulas por: 1) CANÓNICA (por findCanonicalClassroom + level/name)
+ *                  2) ESPECIAL (por findSpecialClassroom)
+ *                  3) key custom: special | canonKey | `${name}__${level}`
+ *
+ * Reglas de scoring por grupo (mayor gana):
+ *   +10000 → NO contiene "línea"/"linea" en name ni en level (prioridad máxima)
+ *   +1000  → name coincide exactamente con el nombre canónico oficial
+ *   +5000  → NO es especial (especiales solo ganan en su propio grupo)
+ *   +100   → tiene teacher_id (tiene maestra asignada)
+ *   +10    → tiene is_special=false (aula regular)
+ *   tie-breaker: menor id
+ *
+ * Fusiona: suma student_count a la ganadora si estaba dispersa.
+ *
+ * @param {Array<any>} rows  lista de aulas (BD)
+ * @returns {Array<any>}     array dedupeado (mismo orden canónico luego especiales)
+ */
+export function dedupeClassrooms(rows) {
+  if (!Array.isArray(rows) || rows.length === 0) return [];
+
+  const groups = new Map();
+
+  for (const row of rows) {
+    if (!row) continue;
+    if (row.deleted_at) continue; // excluir soft-deleted por si acaso
+
+    let groupKey = null;
+    let canonicalMeta = null;
+    const canon = findCanonicalClassroom(row.level || row.name || '');
+    if (canon) {
+      groupKey = `canon:${canon.id}`;
+      canonicalMeta = canon;
+    } else {
+      const spec = findSpecialClassroom(row.name) || findSpecialClassroom(row.level);
+      if (spec) {
+        groupKey = `spec:${spec.key}`;
+      }
+    }
+    if (!groupKey) {
+      const n = String(row.name || '').trim().toLowerCase();
+      const l = String(row.level || '').trim().toLowerCase();
+      groupKey = `custom:${n}__${l}`;
+    }
+
+    if (!groups.has(groupKey)) {
+      groups.set(groupKey, {
+        groupKey,
+        canonicalMeta,
+        items: [],
+      });
+    }
+    groups.get(groupKey).items.push(row);
+  }
+
+  const result = [];
+  const hasLinePattern = (s) => /linea/i.test(String(s ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, ''));
+
+  for (const { groupKey, canonicalMeta, items } of groups.values()) {
+    if (items.length === 1) {
+      result.push({ ...items[0] });
+      continue;
+    }
+
+    // Scoring
+    let best = null;
+    let bestScore = -Infinity;
+    let totalCount = 0;
+
+    for (const it of items) {
+      let score = 0;
+      if (!hasLinePattern(it.name) && !hasLinePattern(it.level)) score += 10000;
+      if (canonicalMeta && (it.name === canonicalMeta.name || it.level === canonicalMeta.level)) score += 1000;
+      if (groupKey.startsWith('spec:')) score += 0;
+      else if (!groupKey.startsWith('spec:')) score += 5000;
+      if (it.teacher_id) score += 100;
+      if (it.is_special === false) score += 10;
+      score -= (it.id ?? 0) * 0.0001; // menor id gana empates
+
+      if (score > bestScore) {
+        bestScore = score;
+        best = it;
+      }
+
+      if (typeof it.student_count === 'number') totalCount += it.student_count;
+    }
+
+    const winner = { ...best };
+    if (totalCount > 0 && typeof best.student_count === 'number') {
+      winner.student_count = totalCount;
+    } else if (totalCount > 0) {
+      winner.student_count = totalCount;
+    }
+    result.push(winner);
+  }
+
+  // Orden estable: canónicas primero en su orden natural, luego especiales, luego custom
+  return result.sort((a, b) => {
+    const ca = findCanonicalClassroom(a.level || a.name || '');
+    const cb = findCanonicalClassroom(b.level || b.name || '');
+    if (ca && cb) return ca.id - cb.id;
+    if (ca) return -1;
+    if (cb) return 1;
+    const sa = findSpecialClassroom(a.name) || findSpecialClassroom(a.level);
+    const sb = findSpecialClassroom(b.name) || findSpecialClassroom(b.level);
+    if (sa && sb) return String(sa.key).localeCompare(String(sb.key));
+    if (sa) return -1;
+    if (sb) return 1;
+    return (a.id ?? 0) - (b.id ?? 0);
+  });
 }
