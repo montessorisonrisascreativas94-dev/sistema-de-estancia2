@@ -533,8 +533,10 @@ export const RoomsModule = {
     );
 
     // Validación de edad: si NO hay excepción, validar cada estudiante marcado
+    // ✅ SÓLO considerar checkboxes ACTIVOS (no disabled). Los disabled están en
+    //    otra aula y NO participan en la modificación de esta aula.
     if (!ageException) {
-      const checks = document.querySelectorAll('.room-student-check:checked');
+      const checks = document.querySelectorAll('.room-student-check:checked:not(:disabled)');
       for (const c of checks) {
         const sid = parseInt(c.value, 10);
         const meta = window.__roomStudentsMeta?.get?.(sid);
@@ -583,8 +585,19 @@ export const RoomsModule = {
       const checks = document.querySelectorAll('.room-student-check');
       if (checks.length > 0 && savedId) {
         const roomIdNum = parseInt(savedId, 10);
-        const toAssign   = [...checks].filter(c => c.checked).map(c => parseInt(c.value, 10));
-        const toUnassign = [...checks].filter(c => !c.checked).map(c => parseInt(c.value, 10));
+        // ✅ IMPORTANTE: OMITIR checkboxes DISABLED (son estudiantes YA ASIGNADOS a OTRA aula
+        //    diferente a la que estamos editando). Tocarlos causaría quitarles su aula
+        //    correcta y "mover" estudiantes entre aulas sin querer al guardar.
+        const activeChecks = [...checks].filter(c => !c.disabled);
+
+        const toAssign   = activeChecks
+          .filter(c => c.checked)
+          .map(c => parseInt(c.value, 10))
+          .filter(Boolean);
+        const toUnassign = activeChecks
+          .filter(c => !c.checked)
+          .map(c => parseInt(c.value, 10))
+          .filter(Boolean);
 
         if (toAssign.length) {
           const { error } = await supabase
