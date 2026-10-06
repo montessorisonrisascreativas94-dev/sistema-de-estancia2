@@ -167,6 +167,9 @@ export function goToSection(sectionId) {
       case 'aulas':
         import('./rooms.module.js').then(m => m.RoomsModule.init());
         break;
+      case 'organigrama-estancia':
+        import('../shared/classroom-organigram.module.js').then(m => m.ClassroomOrganigramModule.init('organigramaDirectoraContainer', { role: 'directora' }));
+        break;
       case 'asistencia':
         import('./attendance.module.js').then(m => m.AttendanceModule.init());
         break;
