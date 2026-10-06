@@ -1192,6 +1192,22 @@ export async function _legacyAdmitStudent(preregId) {
       const currentSection = document.querySelector('.section.active')?.id;
       if (currentSection === 'estudiantes') window.App.students.init();
     }
+    try {
+      if (typeof window.refreshPreBadge === 'function') {
+        window.refreshPreBadge();
+      } else {
+        const ids = ['badge-ciclo-group', 'badge-inscripciones', 'badge-ciclo'];
+        ids.forEach((bid) => {
+          const b = document.getElementById(bid);
+          if (!b) return;
+          supabase.from('student_preregistrations').select('id', { count: 'exact', head: true }).eq('status', 'pending')
+            .then(({ count = 0 }) => {
+              if (count > 0) { b.textContent = count > 99 ? '99+' : String(count); b.classList.remove('hidden'); }
+              else { b.classList.add('hidden'); }
+            }).catch(() => {});
+        });
+      }
+    } catch (_) {}
 
   } catch (err) {
     console.error('[Inscripciones] admitStudent error:', err);

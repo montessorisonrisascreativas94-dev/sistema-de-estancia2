@@ -82,6 +82,76 @@ export const RoomsModule = {
       const classrooms = Array.from(dedup.values());
 
       this._rooms = [...classrooms];
+
+      CANONICAL_CLASSROOMS.forEach((canon) => {
+        const exists = this._rooms.some((r) => {
+          const cr = findCanonicalClassroom(r.level || r.name);
+          return cr && cr.id === canon.id;
+        });
+        if (exists) return;
+        this._rooms.push({
+          id: null,
+          __canonicalPlaceholder: true,
+          name: canon.displayLevel || canon.name,
+          level: canon.level,
+          capacity: 20,
+          student_count: 0,
+          color: canon.color,
+          is_live: true,
+          profiles: null,
+          teacher_id: null,
+          __canonId: canon.id,
+          line: canon.line,
+          minAge: canon.minAge,
+          maxAge: canon.maxAge,
+          labelRange: canon.labelRange
+        });
+      });
+
+      try {
+        this._rooms.sort((a, b) => {
+          const ca = findCanonicalClassroom(a.level || a.name);
+          const cb = findCanonicalClassroom(b.level || b.name);
+          const ia = ca ? ca.id : 9000;
+          const ib = cb ? cb.id : 9000;
+          if (ia !== ib) return ia - ib;
+          return String(a.name || '').localeCompare(String(b.name || ''));
+        });
+      } catch (_) {}
+
+      const missingCanon = CANONICAL_CLASSROOMS.filter((c) => !classrooms.some((r) => {
+        const f = findCanonicalClassroom(r.level || r.name);
+        return f && f.id === c.id;
+      }));
+      if (missingCanon.length) {
+        try {
+          supabase.from('classrooms').select('id,level,name').is('deleted_at', null).then(async ({ data: rows = [] }) => {
+            const toInsert = [];
+            missingCanon.forEach((c) => {
+              const already = rows.some((r) => {
+                const f = findCanonicalClassroom(r.level || r.name);
+                return f && f.id === c.id;
+              });
+              if (!already) {
+                toInsert.push({
+                  name: c.name,
+                  level: c.level,
+                  capacity: 20,
+                  is_live: true,
+                  color: c.color,
+                  created_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString()
+                });
+              }
+            });
+            if (toInsert.length) {
+              const { error } = await supabase.from('classrooms').insert(toInsert, { defaultToNull: true }).select().maybeSingle();
+              if (!error) QueryCache.invalidate('dir_classrooms_occ');
+            }
+          }).catch(() => {});
+        } catch (_) {}
+      }
+
       SPECIAL_CLASSROOMS_META.forEach(meta => {
         const exists = this._rooms.some(r => {
           const key = r.level || r.name || '';

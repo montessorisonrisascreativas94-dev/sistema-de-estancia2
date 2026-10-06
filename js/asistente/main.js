@@ -78,7 +78,11 @@ window.App = {
   teachers: {
     openModal:     (id)         => TeachersModule.openModal(id),
     deleteTeacher: (id, name)   => TeachersModule.deleteTeacher(id, name)
-  }
+  },
+  inscripciones: {
+    ...InscripcionesModule,
+    init: () => InscripcionesModule.load(),
+  },
 };
 
 /**

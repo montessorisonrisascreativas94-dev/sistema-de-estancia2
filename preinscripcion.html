@@ -266,17 +266,213 @@
         .review-item .rv{font-size:.85rem;font-weight:600;color:var(--dark)}
         .review-item .rv.empty{color:#CBD5E1;font-style:italic}
 
-        /* ── Success ── */
-        .success-screen{display:none;text-align:center;padding:56px 32px}
-        .success-screen.active{display:block;animation:slideUp .45s cubic-bezier(.2,.9,.3,1)}
-        .success-icon{
-            width:72px;height:72px;border-radius:50%;background:var(--green-light);
-            display:flex;align-items:center;justify-content:center;margin:0 auto 16px;
-            font-size:2rem;color:var(--green);animation:popIn .5s ease;
+        /* ── Success: nuevo diseño de 5 bloques ── */
+        .success-screen{display:none;padding:36px 28px 48px;animation:slideUp .45s cubic-bezier(.2,.9,.3,1)}
+        .success-screen.active{display:block}
+        .success-blocks{
+            max-width:780px;margin:0 auto;
+            display:flex;flex-direction:column;gap:18px;
         }
-        @keyframes popIn{from{transform:scale(0)}50%{transform:scale(1.15)}to{transform:scale(1)}}
-        .success-screen h2{font-size:1.4rem;font-weight:900;color:var(--green);margin-bottom:6px}
-        .success-screen p{color:var(--gray);max-width:380px;margin:0 auto;font-size:.9rem}
+        .sc-block{
+            position:relative;background:#fff;border:3px solid var(--border);
+            border-radius:28px;padding:24px 26px;
+            box-shadow:0 14px 36px rgba(15,23,42,.06);
+            animation:fadeUp .55s cubic-bezier(.2,.9,.3,1) both;
+        }
+        .sc-block:nth-child(1){animation-delay:.12s}
+        .sc-block:nth-child(2){animation-delay:.22s}
+        .sc-block:nth-child(3){animation-delay:.32s}
+        .sc-block:nth-child(4){animation-delay:.42s}
+        .sc-block:nth-child(5){animation-delay:.52s}
+        @keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+
+        /* Bloque 1: Confirmación */
+        .sc-confirm{
+            text-align:center;border-color:#BBF7D0;
+            background:linear-gradient(160deg,#F0FDF4 0%,#fff 55%,#ECFEFF 100%);
+            box-shadow:0 18px 44px rgba(22,163,74,.10);
+        }
+        .sc-icon-wrap{
+            display:flex;justify-content:center;margin-bottom:6px;
+        }
+        .sc-title{
+            font-size:1.55rem;font-weight:900;
+            background:linear-gradient(135deg,#16A34A 0%,#0B63C7 100%);
+            -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+            margin-bottom:8px;line-height:1.25;
+        }
+        .sc-subtitle{font-size:.92rem;color:var(--gray);max-width:520px;margin:0 auto 12px;line-height:1.55}
+        .sc-note{
+            display:inline-block;margin-top:8px;border-radius:14px;padding:10px 16px;
+            font-size:.82rem;font-weight:700;line-height:1.5;text-align:left;border-width:1.5px;border-style:solid;
+        }
+        .sc-note-ok{color:#065F46;background:#ECFDF5;border-color:#A7F3D0}
+        .sc-note-warn{color:#9A3412;background:#FFF7ED;border-color:#FED7AA}
+
+        /* Bloques 2-4: ícono + contenido (fila) */
+        .sc-email,.sc-deadline,.sc-status{
+            display:flex;align-items:flex-start;gap:16px;
+        }
+        .sc-block-icon{
+            flex:0 0 54px;width:54px;height:54px;border-radius:18px;
+            display:flex;align-items:center;justify-content:center;font-size:1.45rem;color:#fff;
+            box-shadow:0 6px 16px rgba(0,0,0,.08);
+        }
+        .sc-icon-mail{background:linear-gradient(135deg,#0B63C7,#0EA5E9);box-shadow:0 8px 20px rgba(11,99,199,.28)}
+        .sc-icon-clock{background:linear-gradient(135deg,#FF7A00,#F59E0B);box-shadow:0 8px 20px rgba(255,122,0,.28)}
+        .sc-icon-status{background:linear-gradient(135deg,#7C3AED,#0EA5E9);box-shadow:0 8px 20px rgba(124,58,237,.28)}
+
+        .sc-block-content{flex:1;min-width:0}
+        .sc-block-label{
+            font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.55px;
+            color:var(--gray-soft);margin-bottom:4px;
+        }
+        .sc-block-value{
+            font-size:1rem;font-weight:800;color:var(--dark);
+            word-break:break-word;line-height:1.35;
+        }
+        .sc-block-hint{
+            margin-top:6px;font-size:.78rem;color:var(--gray);line-height:1.5;font-weight:500;
+        }
+
+        /* Email específico */
+        .sc-email{border-color:#BFDBFE}
+
+        /* Deadline específico */
+        .sc-deadline{border-color:#FED7AA}
+        .sc-deadline-days{
+            display:inline-block;background:linear-gradient(135deg,#FFF7ED,#FEF3C7);
+            color:#9A3412;padding:4px 12px;border-radius:999px;border:2px solid #FED7AA;
+            font-weight:900;font-size:.92rem;
+        }
+
+        /* Status badge */
+        .sc-status{border-color:#DDD6FE}
+        .sc-status-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+        .status-badge{
+            display:inline-flex;align-items:center;gap:8px;
+            padding:7px 16px 7px 12px;border-radius:999px;
+            font-weight:800;font-size:.78rem;letter-spacing:.2px;
+            border-width:2.5px;border-style:solid;
+        }
+        .status-pending{
+            background:linear-gradient(135deg,#FEF3C7 0%,#FDE68A 100%);
+            color:#854D0E;border-color:#F59E0B;
+            box-shadow:0 6px 14px rgba(245,158,11,.22);
+        }
+        .status-badge .status-dot{
+            width:8px;height:8px;border-radius:50%;
+            background:currentColor;
+            box-shadow:0 0 0 3px rgba(245,158,11,.22);
+            animation:pulseDot 1.6s ease-in-out infinite;
+        }
+        @keyframes pulseDot{
+            0%,100%{transform:scale(1);box-shadow:0 0 0 3px rgba(245,158,11,.22)}
+            50%{transform:scale(1.25);box-shadow:0 0 0 5px rgba(245,158,11,.10)}
+        }
+        .sc-status-id{
+            font-family:ui-monospace,Menlo,Consolas,monospace;
+            font-weight:900;font-size:.85rem;color:#4F46E5;
+            background:#EEF2FF;padding:4px 10px;border-radius:10px;border:1.5px solid #C7D2FE;
+        }
+
+        /* Bloque 5: Gracias + Credenciales */
+        .sc-thanks{
+            text-align:center;border-color:#FBCFE8;
+            background:linear-gradient(160deg,#FFF1F2 0%,#fff 40%,#EFF6FF 100%);
+        }
+        .sc-thanks-ico{
+            width:56px;height:56px;margin:0 auto 10px;border-radius:50%;
+            background:linear-gradient(135deg,#F43F5E,#FF7A00);
+            display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.5rem;
+            box-shadow:0 10px 24px rgba(244,63,94,.28);
+            animation:heartPop .7s cubic-bezier(.2,.9,.3,1) .65s both;
+        }
+        @keyframes heartPop{from{transform:scale(0)}50%{transform:scale(1.18)}to{transform:scale(1)}}
+        .sc-thanks-title{
+            font-size:1.2rem;font-weight:900;color:#BE123C;margin-bottom:8px;
+        }
+        .sc-thanks-text{
+            font-size:.88rem;color:var(--gray);max-width:620px;margin:0 auto 22px;line-height:1.65;
+        }
+        .sc-thanks-text strong{color:#881337}
+
+        /* Credentials card */
+        .sc-credentials-card{
+            text-align:left;
+            background:linear-gradient(135deg,#EFF6FF 0%,#F5F3FF 45%,#ECFDF5 100%);
+            border:3px solid #BFDBFE;border-radius:26px;padding:22px;
+            box-shadow:0 14px 36px rgba(14,116,144,.08);
+            margin-bottom:20px;
+        }
+        .scc-header{display:flex;align-items:flex-start;gap:12px;margin-bottom:16px}
+        .scc-icon{
+            width:42px;height:42px;border-radius:14px;background:linear-gradient(135deg,#0B63C7,#4F46E5);
+            display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.1rem;flex:0 0 42px;
+        }
+        .scc-title{font-size:.95rem;font-weight:900;color:#0F172A;line-height:1.25}
+        .scc-sub{font-size:.72rem;color:#475569;font-weight:600;margin-top:3px}
+        .scc-grid{
+            display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px;
+        }
+        .scc-item{
+            background:#fff;border-radius:18px;padding:14px 16px;
+            border:2px solid var(--border);
+        }
+        .scc-user{border-color:#BFDBFE}
+        .scc-pass{border-color:#BBF7D0}
+        .scc-domain{border-color:#C7D2FE}
+        .scc-mail-notify{border-color:#FDE68A}
+        .scc-label{
+            font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.45px;
+            color:#0B63C7;margin-bottom:6px;
+        }
+        .scc-pass .scc-label{color:#059669}
+        .scc-domain .scc-label{color:#4F46E5}
+        .scc-mail-notify .scc-label{color:#B45309}
+        .scc-value{
+            font-size:.9rem;font-weight:800;color:var(--dark);line-height:1.35;
+            word-break:break-word;
+        }
+        .scc-value.mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88rem}
+        .scc-domain{color:var(--dark)}
+        .scc-domain .scc-value{color:#1E293B}
+        .scc-pass-box{
+            display:inline-block;background:#F0FDF4;padding:4px 10px;border-radius:10px;
+            border:2px solid #86EFAC;letter-spacing:1px;
+        }
+        .scc-domain .scc-value{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.9rem;color:#1E293B}
+        .scc-hint{margin-top:8px;font-size:.68rem;color:#64748B;font-weight:600;line-height:1.5}
+        .scc-hint .scc-chip{
+            background:#EFF6FF;padding:1px 7px;border-radius:7px;color:#0B63C7;font-weight:800;
+            font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.72rem;
+            display:inline-block;margin-top:2px;
+        }
+        .scc-domain-value{font-family:ui-monospace,Menlo,Consolas,monospace;color:#1E293B}
+        .scc-warn{
+            margin-top:16px;padding:14px 16px;background:#FEF3C7;border:2px solid #FCD34D;border-radius:16px;
+            display:flex;gap:10px;align-items:flex-start;
+        }
+        .scc-warn > i{font-size:1rem;color:#B45309;margin-top:2px;flex:0 0 auto}
+        .scc-warn > div{font-size:.72rem;color:#92400E;font-weight:600;line-height:1.6}
+        .scc-warn > div strong{font-size:.78rem;color:#78350F}
+        .scc-warn ul{margin:6px 0 0;padding-left:18px}
+        .sc-home-btn{margin-top:4px}
+
+        /* Responsive */
+        @media(max-width:640px){
+            .success-screen{padding:24px 14px 40px}
+            .sc-block{border-radius:22px;padding:20px 18px}
+            .sc-title{font-size:1.2rem}
+            .sc-subtitle{font-size:.85rem}
+            .sc-block-icon{flex:0 0 46px;width:46px;height:46px;border-radius:14px;font-size:1.15rem}
+            .scc-grid{grid-template-columns:1fr}
+            .sc-block-value{font-size:.92rem}
+            .sc-deadline-days{font-size:.82rem}
+            .sc-status-id{font-size:.78rem}
+            .scc-header{flex-direction:column;align-items:flex-start}
+            .sc-status-row{gap:10px}
+        }
 
         /* ── Animación de envío: botón con spinner + barrido de brillo ── */
         .btn-submit.is-sending{
@@ -799,84 +995,117 @@
             </form>
 
             <div class="success-screen" id="successScreen">
-                <svg class="success-check" viewBox="0 0 96 96" aria-hidden="true">
-                    <circle class="bg" cx="48" cy="48" r="46"/>
-                    <circle cx="48" cy="48" r="46" transform="rotate(-90 48 48)"/>
-                    <path d="M30 49 L43 62 L67 36"/>
-                </svg>
-                <h2>¡Preinscripción enviada!</h2>
-                <p>Recibimos tus datos correctamente. Nos pondremos en contacto contigo muy pronto.</p>
-                <p id="successNote" style="display:none;color:#9A3412;background:#FFF7ED;border:1px solid #FED7AA;border-radius:12px;padding:10px 12px;margin-top:12px;font-size:.8rem"></p>
+                <div class="success-blocks">
 
-                <!-- PANEL DE CREDENCIALES (reglas que se aplicarán CUANDO seas admitido/a) -->
-                <div style="margin-top:28px;text-align:left;background:linear-gradient(135deg,#EFF6FF 0%,#F5F3FF 45%,#ECFDF5 100%);border:2px solid #BFDBFE;border-radius:20px;padding:22px;box-shadow:0 12px 30px rgba(14,116,144,0.08)">
-                  <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
-                    <div style="width:40px;height:40px;border-radius:12px;background:#0B63C7;display:flex;align-items:center;justify-content:center;color:#fff">
-                      <i class="bi bi-key-fill" style="font-size:18px"></i>
-                    </div>
-                    <div>
-                      <h3 style="margin:0;font-size:16px;font-weight:800;color:#0F172A;font-family:'Baloo 2',cursive">Cómo serán tus credenciales</h3>
-                      <p style="margin:2px 0 0;font-size:11px;color:#475569;font-weight:600">Se asignarán automáticamente cuando la Directora apruebe la admisión</p>
-                    </div>
-                  </div>
-
-                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px">
-                    <div style="background:#fff;border:1.5px solid #BFDBFE;border-radius:14px;padding:12px 14px">
-                      <p style="margin:0;font-size:10px;font-weight:800;color:#0B63C7;text-transform:uppercase;letter-spacing:.5px">👤 Usuario de Login (fijo)</p>
-                      <p style="margin:6px 0 0;font-size:14px;font-weight:800;color:#1E293B;font-family:ui-monospace,Menlo,Consolas,monospace">
-                        primer_nombre.primer_apellido<br>
-                        <span style="color:#0B63C7">@sonrisacreativas.com</span>
-                      </p>
-                      <p style="margin:8px 0 0;font-size:10px;color:#64748B;font-weight:600;line-height:1.4">
-                        Ejemplo: si tu hijo/a se llama <strong>Juan Pérez Cabrera</strong> ➜ <span style="background:#EFF6FF;padding:1px 6px;border-radius:6px;color:#0B63C7;font-weight:800">juan.perez@sonrisacreativas.com</span>
-                      </p>
+                    <div class="sc-block sc-confirm">
+                        <div class="sc-icon-wrap">
+                            <svg class="success-check" viewBox="0 0 96 96" aria-hidden="true">
+                                <circle class="bg" cx="48" cy="48" r="46"/>
+                                <circle cx="48" cy="48" r="46" transform="rotate(-90 48 48)"/>
+                                <path d="M30 49 L43 62 L67 36"/>
+                            </svg>
+                        </div>
+                        <h2 class="sc-title">¡Preinscripción enviada correctamente! 🎉</h2>
+                        <p class="sc-subtitle">Recibimos tu solicitud exitosamente. Nuestro equipo de admisiones ya la está revisando.</p>
+                        <div id="successNote" class="sc-note" style="display:none"></div>
                     </div>
 
-                    <div style="background:#fff;border:1.5px solid #BBF7D0;border-radius:14px;padding:12px 14px">
-                      <p style="margin:0;font-size:10px;font-weight:800;color:#059669;text-transform:uppercase;letter-spacing:.5px">🔐 Contraseña Temporal</p>
-                      <p style="margin:6px 0 0;font-size:16px;font-weight:900;color:#1E293B;letter-spacing:1px;font-family:ui-monospace,Menlo,Consolas,monospace;background:#F0FDF4;display:inline-block;padding:4px 10px;border-radius:10px;border:1.5px solid #86EFAC">sonrisa123</p>
-                      <p style="margin:8px 0 0;font-size:10px;color:#64748B;font-weight:600;line-height:1.4">
-                        Siempre es la misma para tu primer ingreso. Todo en minúsculas, sin espacios.
-                      </p>
+                    <div class="sc-block sc-email">
+                        <div class="sc-block-icon sc-icon-mail">
+                            <i class="bi bi-envelope-paper-fill"></i>
+                        </div>
+                        <div class="sc-block-content">
+                            <div class="sc-block-label">Correo de contacto registrado</div>
+                            <div class="sc-block-value" id="scEmailValue">—</div>
+                            <div class="sc-block-hint" id="scEmailHint">Te enviaremos todas las comunicaciones a esta dirección</div>
+                        </div>
                     </div>
 
-                    <div style="background:#fff;border:1.5px solid #C7D2FE;border-radius:14px;padding:12px 14px">
-                      <p style="margin:0;font-size:10px;font-weight:800;color:#4F46E5;text-transform:uppercase;letter-spacing:.5px">🌐 Dominio Fijo</p>
-                      <p style="margin:6px 0 0;font-size:14px;font-weight:800;color:#1E293B">@sonrisacreativas.com</p>
-                      <p style="margin:8px 0 0;font-size:10px;color:#64748B;font-weight:600;line-height:1.4">
-                        Todas las familias usan este dominio oficial del colegio para iniciar sesión.
-                      </p>
+                    <div class="sc-block sc-deadline">
+                        <div class="sc-block-icon sc-icon-clock">
+                            <i class="bi bi-clock-history"></i>
+                        </div>
+                        <div class="sc-block-content">
+                            <div class="sc-block-label">Plazo estimado de respuesta</div>
+                            <div class="sc-block-value">
+                                <span class="sc-deadline-days">2 a 5 días hábiles</span>
+                            </div>
+                            <div class="sc-block-hint">Nuestra directora revisará la documentación y te contactará por correo o WhatsApp para finalizar la admisión.</div>
+                        </div>
                     </div>
 
-                    <div style="background:#fff;border:1.5px solid #FCD34D;border-radius:14px;padding:12px 14px">
-                      <p style="margin:0;font-size:10px;font-weight:800;color:#B45309;text-transform:uppercase;letter-spacing:.5px">📧 Correo de Notificaciones</p>
-                      <p style="margin:6px 0 0;font-size:13px;font-weight:700;color:#1E293B">Tu correo personal</p>
-                      <p style="margin:8px 0 0;font-size:10px;color:#64748B;font-weight:600;line-height:1.4">
-                        Ahí llegan acuses, cuotas mensuales y avisos importantes de la maestra.
-                      </p>
+                    <div class="sc-block sc-status">
+                        <div class="sc-block-icon sc-icon-status">
+                            <i class="bi bi-clipboard2-check-fill"></i>
+                        </div>
+                        <div class="sc-block-content">
+                            <div class="sc-block-label">Estado actual de tu solicitud</div>
+                            <div class="sc-block-value sc-status-row">
+                                <span class="status-badge status-pending">
+                                    <span class="status-dot"></span>
+                                    En revisión
+                                </span>
+                                <span class="sc-status-id" id="scStatusId">—</span>
+                            </div>
+                            <div class="sc-block-hint">Tu número de preinscripción aparece arriba. Guárdalo para cualquier consulta futura.</div>
+                        </div>
                     </div>
-                  </div>
 
-                  <div style="margin-top:16px;padding:14px 16px;background:#FEF3C7;border:1.5px solid #FCD34D;border-radius:14px">
-                    <div style="display:flex;align-items:flex-start;gap:10px">
-                      <i class="bi bi-info-circle-fill" style="font-size:18px;color:#B45309;margin-top:1px"></i>
-                      <div style="font-size:11px;color:#92400E;font-weight:600;line-height:1.6">
-                        <strong style="font-size:12px;color:#78350F">Al primer ingreso al Panel de Padres</strong>
-                        te pediremos <strong>CAMBIAR LA CONTRASEÑA OBLIGATORIAMENTE</strong>
-                        por una segura con estas reglas:
-                        <ul style="margin:8px 0 0;padding-left:18px">
-                          <li>Mínimo 8 caracteres</li>
-                          <li>Al menos 1 letra mayúscula (A-Z)</li>
-                          <li>Al menos 1 letra minúscula (a-z)</li>
-                          <li>Al menos 1 número (0-9)</li>
-                          <li>Al menos 1 símbolo (@ $ ! % * ? &amp; # . - _)</li>
-                        </ul>
-                      </div>
+                    <div class="sc-block sc-thanks">
+                        <div class="sc-thanks-ico">
+                            <i class="bi bi-heart-fill"></i>
+                        </div>
+                        <div class="sc-thanks-title">¡Gracias por confiar en nosotros!</div>
+                        <div class="sc-thanks-text">
+                            En <strong>Colegio Montessori Sonrisas Creativas</strong> estamos emocionados de iniciar este proceso contigo.
+                            Cada niño es único y nuestro equipo trabaja con mucho amor para darle la bienvenida a nuestra familia.
+                        </div>
+                        <div class="sc-credentials-card">
+                            <div class="scc-header">
+                                <div class="scc-icon"><i class="bi bi-key-fill"></i></div>
+                                <div>
+                                    <div class="scc-title">Cómo serán tus credenciales (cuando seas admitido/a)</div>
+                                    <div class="scc-sub">Se crearán automáticamente cuando la Directora apruebe la admisión</div>
+                                </div>
+                            </div>
+                            <div class="scc-grid">
+                                <div class="scc-item scc-user">
+                                    <div class="scc-label">👤 Usuario de Login (fijo)</div>
+                                    <div class="scc-value mono">primer_nombre.primer_apellido<span class="scc-domain">@sonrisacreativas.com</span></div>
+                                    <div class="scc-hint">Ej: <strong>Juan Pérez Cabrera</strong> → <span class="scc-chip">juan.perez@sonrisacreativas.com</span></div>
+                                </div>
+                                <div class="scc-item scc-pass">
+                                    <div class="scc-label">🔐 Contraseña Temporal</div>
+                                    <div class="scc-value mono scc-pass-box">sonrisa123</div>
+                                    <div class="scc-hint">Siempre la misma en el primer ingreso. Todo en minúsculas, sin espacios.</div>
+                                </div>
+                                <div class="scc-item scc-domain">
+                                    <div class="scc-label">🌐 Dominio Fijo</div>
+                                    <div class="scc-value">@sonrisacreativas.com</div>
+                                    <div class="scc-hint">Todas las familias usan este dominio oficial.</div>
+                                </div>
+                                <div class="scc-item scc-mail-notify">
+                                    <div class="scc-label">📧 Correo de Notificaciones</div>
+                                    <div class="scc-value" id="sccNotifyMail">Tu correo personal</div>
+                                    <div class="scc-hint">Avisos importantes, cuotas y comunicaciones de la maestra.</div>
+                                </div>
+                            </div>
+                            <div class="scc-warn">
+                                <i class="bi bi-info-circle-fill"></i>
+                                <div>
+                                    <strong>Al primer ingreso al Panel de Padres</strong> deberás
+                                    <strong>cambiar la contraseña obligatoriamente</strong> por una segura:
+                                    <ul>
+                                        <li>Mínimo 8 caracteres · 1 mayúscula · 1 minúscula</li>
+                                        <li>Al menos 1 número y 1 símbolo (@ $ ! % * ? &amp; # . - _)</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        <a href="index.html" class="btn btn-next sc-home-btn"><i class="bi bi-house-fill"></i> Volver al Inicio</a>
                     </div>
-                  </div>
+
                 </div>
-
-                <a href="index.html" class="btn btn-next" style="margin-top:24px"><i class="bi bi-house"></i> Volver al Inicio</a>
             </div>
         </div>
     </div>
@@ -1943,7 +2172,7 @@
                 advanceSendStep(2);
                 const ack = await sendAck(res.id, data.p1_email);
                 closeSendOverlay();
-                renderSuccess(res.degraded, ack && ack.ok && !ack.already_sent);
+                renderSuccess(res.degraded, ack && ack.ok && !ack.already_sent, res.id, data);
                 launchConfetti();
                 console.info('Preinscripción enviada en',Date.now()-t0,'ms · id',res.id);
             }catch(err){
@@ -2562,30 +2791,67 @@
             return { fix:false, detail:technical, text:'Ocurrió un error al enviar la preinscripción.' };
         }
 
-        function renderSuccess(degraded, ackSent){
+        function renderSuccess(degraded, ackSent, preId, formData){
             const card=document.getElementById('wizardCard');
-            card.querySelector('.progress-bar').style.display='none';
-            card.querySelector('form').style.display='none';
+            const pb=card.querySelector('.progress-bar'); if(pb) pb.style.display='none';
+            const frm=card.querySelector('form'); if(frm) frm.style.display='none';
             const ok=document.getElementById('successScreen');
             ok.classList.add('active');
 
+            const p1=(formData && formData.p1_email) || '';
+            const p2=(formData && formData.p2_email) || '';
+            const primaryEmail = p1 || p2 || '';
+            const secondaryEmail = (p1 && p2 && p1 !== p2) ? p2 : '';
+
+            const emailEl=document.getElementById('scEmailValue');
+            if(emailEl){
+                if(primaryEmail && secondaryEmail){
+                    emailEl.innerHTML = `<div style="font-size:.92rem"><strong>${escapeHtml(primaryEmail)}</strong></div>
+                        <div style="font-size:.78rem;margin-top:3px;color:#64748B;font-weight:600">Copia: ${escapeHtml(secondaryEmail)}</div>`;
+                }else if(primaryEmail){
+                    emailEl.textContent = primaryEmail;
+                }
+            }
+            const notifyMail=document.getElementById('sccNotifyMail');
+            if(notifyMail && primaryEmail) notifyMail.textContent = primaryEmail;
+
+            const emailHint=document.getElementById('scEmailHint');
+            if(emailHint){
+                if(ackSent){
+                    emailHint.innerHTML = '<i class="bi bi-check2-circle" style="color:#16A34A;margin-right:4px"></i>Te enviamos un correo de confirmación. Revisa también la carpeta de spam.';
+                }else{
+                    emailHint.textContent = 'Te enviaremos todas las comunicaciones a esta dirección';
+                }
+            }
+
+            const idEl=document.getElementById('scStatusId');
+            if(idEl){
+                idEl.textContent = preId ? `#PRE-${String(preId).padStart(6,'0')}` : '';
+            }
+
             const n=document.getElementById('successNote');
-            if(n && ackSent){
-                n.style.display='block';
-                n.style.color='#065F46';
-                n.style.background='#ECFDF5';
-                n.style.borderColor='#A7F3D0';
-                n.textContent='Te enviamos un correo de confirmación con el número de preinscripción. Revisa también la carpeta de spam.';
-            }else if(n && degraded){
-                n.style.display='block';
-                n.textContent='Tu solicitud se registró. El colegio la revisará junto al resto de las preinscripciones.';
-            }else if(n){
-                n.style.display='block';
-                n.textContent='Tu solicitud quedó registrada, pero no pudimos enviar el correo de confirmación. No hace falta que hagas nada: el colegio la revisará y te contactará.';
+            if(n){
+                if(ackSent){
+                    n.className='sc-note sc-note-ok';
+                    n.style.display='block';
+                    n.innerHTML='<i class="bi bi-envelope-check-fill" style="margin-right:6px"></i>Te enviamos un correo de confirmación con el número de preinscripción. Revisa también la carpeta de spam.';
+                }else if(degraded){
+                    n.className='sc-note sc-note-warn';
+                    n.style.display='block';
+                    n.innerHTML='<i class="bi bi-info-circle-fill" style="margin-right:6px"></i>Tu solicitud se registró correctamente. El colegio la revisará junto al resto de las preinscripciones y te contactará pronto.';
+                }else{
+                    n.className='sc-note sc-note-warn';
+                    n.style.display='block';
+                    n.innerHTML='<i class="bi bi-exclamation-triangle-fill" style="margin-right:6px"></i>Tu solicitud quedó registrada, pero no pudimos enviar el correo de confirmación. No hace falta que hagas nada: el colegio la revisará y te contactará.';
+                }
             }
 
             if(window.AOS && typeof AOS.refreshHard === 'function') AOS.refreshHard();
-            window.scrollTo({top:0,behavior:'smooth'});
+            setTimeout(()=>window.scrollTo({top:0,behavior:'smooth'}), 120);
+        }
+
+        function escapeHtml(str){
+            return String(str||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
         }
 
         document.getElementById('sigDate').textContent=new Date().toLocaleDateString('es-DO',{year:'numeric',month:'long',day:'numeric'});

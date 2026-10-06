@@ -67,6 +67,10 @@ window.App = {
   chat: ChatModule,
   academic:   AcademicCycleModule,
   caja:       CajaCobroV2,
+  inscripciones: {
+    ...InscripcionesModule,
+    init: () => InscripcionesModule.load(),
+  },
   cuentasCobrar: { init: () => import('./cuentas-cobrar.module.js').then(m => m.CuentasCobrarModule.init()), remindStudent: (id) => import('./cuentas-cobrar.module.js').then(m=>m.CuentasCobrarModule.remindStudent(id)), applyFilter: (v) => import('./cuentas-cobrar.module.js').then(m=>m.CuentasCobrarModule.applyFilter(v)) },
   wall: {
     toggleCommentSection: (pid) => WallModule.toggleCommentSection(pid),
@@ -519,17 +523,22 @@ document.addEventListener('DOMContentLoaded', async () => {
           .select('id', { count: 'exact', head: true })
           .eq('status', 'pending');
         if (error) { console.warn('[directora] badge preinscripciones:', error.message); return; }
-        const b = document.getElementById('badge-ciclo');
-        if (b) {
-          if (count > 0) {
-            b.textContent = count > 99 ? '99+' : String(count);
+        const applyBadge = (id, c) => {
+          const b = document.getElementById(id);
+          if (!b) return;
+          if (c > 0) {
+            b.textContent = c > 99 ? '99+' : String(c);
             b.classList.remove('hidden');
           } else {
             b.classList.add('hidden');
           }
-        }
+        };
+        applyBadge('badge-ciclo', count);
+        applyBadge('badge-inscripciones', count);
+        applyBadge('badge-ciclo-group', count);
       } catch (err) { console.warn('[directora] badge preinscripciones:', err?.message || err); }
     };
+    window.refreshPreBadge = loadPreBadge;
     loadPreBadge();
 
     // Suscripción Realtime a preinscripciones (solo si el feature-flag está activo).

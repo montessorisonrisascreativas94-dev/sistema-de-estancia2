@@ -1969,9 +1969,30 @@ let _state = { mode: 'new', studentId: null, preData: null, activeTab: 'info', d
         try { if (window.App?.students?.init) window.App.students.init(); } catch (_) {}
         try { if (window.App?.inscripciones?.init) window.App.inscripciones.init(); } catch (_) {}
         try { if (window.App?.payments?.init) window.App.payments.init(); } catch (_) {}
-      } else if (typeof window.InscripcionesModule !== 'undefined' && typeof window.InscripcionesModule.init === 'function') {
-        window.InscripcionesModule.init();
+      } else if (typeof window.InscripcionesModule !== 'undefined') {
+        if (typeof window.InscripcionesModule.load === 'function') {
+          window.InscripcionesModule.load();
+        } else if (typeof window.InscripcionesModule.init === 'function') {
+          window.InscripcionesModule.init();
+        }
       }
+
+      try {
+        if (typeof window.refreshPreBadge === 'function') {
+          window.refreshPreBadge();
+        } else {
+          const ids = ['badge-ciclo-group', 'badge-inscripciones', 'badge-ciclo'];
+          ids.forEach((bid) => {
+            const b = document.getElementById(bid);
+            if (!b) return;
+            supabase.from('student_preregistrations').select('id', { count: 'exact', head: true }).eq('status', 'pending')
+              .then(({ count = 0 }) => {
+                if (count > 0) { b.textContent = count > 99 ? '99+' : String(count); b.classList.remove('hidden'); }
+                else { b.classList.add('hidden'); }
+              }).catch(() => {});
+          });
+        }
+      } catch (_) {}
 
     } catch (e) {
       this._setButtonLoading(admitBtn, false);
