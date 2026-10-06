@@ -443,7 +443,7 @@ async function loadStudents() {
 async function loadClassrooms() {
   try {
     console.log('[loadClassrooms] Cargando aulas...');
-    const { data } = await supabase.from('classrooms').select('id, name, teacher_id');
+    const { data } = await supabase.from('classrooms').select('id, name, teacher_id').is('deleted_at', null);
     allClassrooms = data || [];
     console.log('[loadClassrooms] OK:', allClassrooms.length);
   } catch (err) { 

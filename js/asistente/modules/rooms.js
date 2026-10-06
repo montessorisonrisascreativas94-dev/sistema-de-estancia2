@@ -9,6 +9,9 @@ import {
   validateAgeForClassroom,
   suggestClassroomByAge,
   ageInDays,
+  dedupeClassrooms,
+  sanitizeClassroomDisplayName,
+  formatClassroomFullName,
 } from '../../shared/constants.js';
 
 export const RoomsModule = {
@@ -103,38 +106,45 @@ export const RoomsModule = {
     if (grid) grid.innerHTML = `<div class="col-span-full py-8 text-center"><div class="animate-spin rounded-full h-6 w-6 border-b-2 border-teal-600 mx-auto"></div></div>`;
 
     try {
-      const { data: rawRooms, error } = await supabase
+      const { data: rawRoomsRaw, error } = await supabase
         .from('classrooms')
-        .select('id, name, level, capacity, teacher:teacher_id(name), students(count)')
+        .select('id, name, level, capacity, teacher:teacher_id(name), students(count), teacher_id, is_special, is_live, color')
         .is('deleted_at', null)
         .order('name');
       if (error) throw error;
 
       // ==========================================================
-      // DEDUPLICACIÓN DEFENSIVA (mismo algoritmo que directora).
+      // SANITIZAR + NORMALIZAR para dedupeClassrooms
       // ==========================================================
-      const dedup = new Map();
-      (rawRooms || []).forEach((r) => {
-        const canon = findCanonicalClassroom(r.level || r.name);
-        const special = canon ? null : (findSpecialClassroom(r.name) || findSpecialClassroom(r.level));
-        const key = canon
-          ? `canon:${canon.id}`
-          : special
-            ? `special:${special.key}`
-            : `custom:${(r.level || r.name || r.id).toString().toLowerCase()}`;
-
-        if (!dedup.has(key)) {
-          dedup.set(key, r);
-          return;
-        }
-        const prev = dedup.get(key);
-        const scorePrev = (prev.teacher_id ? 1000 : 0) + Number(prev.id || 0);
-        const scoreNew  = (r.teacher_id ? 1000 : 0) + Number(r.id || 0);
-        if (scoreNew > scorePrev) {
-          dedup.set(key, r);
-        }
+      const rawRooms = (rawRoomsRaw || []).map((r) => {
+        const n = sanitizeClassroomDisplayName(r.name);
+        const l = sanitizeClassroomDisplayName(r.level);
+        const canon = findCanonicalClassroom(l || n);
+        const special = canon ? null : (findSpecialClassroom(n) || findSpecialClassroom(l));
+        const studentCount = r.students?.[0]?.count || 0;
+        return {
+          ...r,
+          name:  canon?.displayLevel || special?.displayName || n,
+          level: canon?.level || special?.key || l,
+          color: r.color || canon?.color || special?.color || '#0B63C7',
+          capacity: r.capacity || canon?.capacity || 20,
+          student_count: studentCount,
+          __students: r.students,
+        };
       });
-      let rooms = Array.from(dedup.values());
+
+      // ==========================================================
+      // DEDUPLICACIÓN OFICIAL (constants.js)
+      // ==========================================================
+      let rooms = dedupeClassrooms(rawRooms).map((r) => {
+        // Restaurar estructura students: [ { count } ] (como Supabase la devuelve)
+        const count = typeof r.student_count === 'number' ? r.student_count : (r.__students?.[0]?.count || 0);
+        return {
+          ...r,
+          students: [{ count }],
+          name: formatClassroomFullName(r.name, r.level),
+        };
+      });
 
       // Inyectar clases especiales que no estén aún en la BD (fallback)
       SPECIAL_CLASSROOMS_META.forEach((meta) => {

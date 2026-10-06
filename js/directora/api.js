@@ -1,7 +1,14 @@
 import { supabase, sendEmail } from '../shared/supabase.js';
 import { QueryCache } from '../shared/query-cache.js';
 import { safeHandle } from '../shared/db-utils.js';
-import { SCHOOL_SETTINGS_ID, dedupeClassrooms } from '../shared/constants.js';
+import {
+  SCHOOL_SETTINGS_ID,
+  dedupeClassrooms,
+  findCanonicalClassroom,
+  findSpecialClassroom,
+  formatClassroomFullName,
+  sanitizeClassroomDisplayName,
+} from '../shared/constants.js';
 
 
 const TABLES = {
@@ -332,6 +339,20 @@ export const DirectorApi = {
   },
 
   // --- CLASSROOMS ---
+  // Normaliza name/level al canónico (mata "parvalo 2 (variante — canon …)").
+  _displayRoom(r) {
+    if (!r) return r;
+    const n = sanitizeClassroomDisplayName(r.name || '');
+    const l = sanitizeClassroomDisplayName(r.level || '');
+    const canon = findCanonicalClassroom(l || n);
+    const spec = canon ? null : (findSpecialClassroom(n) || findSpecialClassroom(l));
+    return {
+      ...r,
+      name:  canon?.displayLevel || spec?.displayName || formatClassroomFullName(n, l) || r.name,
+      level: canon?.level || spec?.key || l || r.level,
+    };
+  },
+
   async getClassroomsWithOccupancy() {
     return QueryCache.get('dir_classrooms_occ', async () => {
       try {
@@ -341,7 +362,7 @@ export const DirectorApi = {
           .is('deleted_at', null)
           .order('name');
         if (error) throw error;
-        const normalized = (data || []).map(r => ({
+        const normalized = (data || []).map(r => this._displayRoom({
           ...r,
           student_count: r.students?.[0]?.count || 0
         }));
@@ -420,9 +441,9 @@ export const DirectorApi = {
       if (classroomIds.length > 0) {
         const { data: rooms } = await supabase
           .from('classrooms')
-.select('id, name, level')
+          .select('id, name, level')
           .in('id', classroomIds);
-        (rooms || []).forEach(r => { classroomMap[r.id] = r.name; });
+        (rooms || []).forEach(r => { classroomMap[r.id] = this._displayRoom(r).name; });
       }
 
       const enriched = (students || []).map(s => ({
@@ -481,20 +502,84 @@ export const DirectorApi = {
     const classroomIds = [...new Set((data || []).map(s => s.classroom_id).filter(Boolean))];
     let classroomMap = {};
     if (classroomIds.length > 0) {
-      const { data: rooms } = await supabase
+      // ✅ 1) Buscar aulas ACTIVAS primero
+      const { data: activeRooms } = await supabase
         .from('classrooms')
         .select('id, name, level')
-        .in('id', classroomIds);
-      (rooms || []).forEach(r => { classroomMap[r.id] = r; });
+        .in('id', classroomIds)
+        .is('deleted_at', null);
+      (activeRooms || []).forEach(r => { classroomMap[r.id] = r; });
+
+      // ✅ 2) Para classroom_id que no están activos,
+      //       buscar aula ACTIVA canónica equivalente (sanitizar nombre / canónica)
+      const unresolved = classroomIds.filter(id => !classroomMap[id]);
+      if (unresolved.length) {
+        // Todas las aulas activas para lookup canónico
+        const { data: allActiveRooms } = await supabase
+          .from('classrooms')
+          .select('id, name, level')
+          .is('deleted_at', null);
+        const activeList = allActiveRooms || [];
+        const { data: deletedRooms } = await supabase
+          .from('classrooms')
+          .select('id, name, level')
+          .in('id', unresolved);
+        (deletedRooms || []).forEach(dr => {
+          const sanitizedName = sanitizeClassroomDisplayName(dr.name);
+          const sanitizedLevel = sanitizeClassroomDisplayName(dr.level);
+          // Buscar por canónica
+          const canon = findCanonicalClassroom(sanitizedLevel || sanitizedName);
+          let target = null;
+          if (canon) {
+            target = activeList.find(ar => {
+              const ca = findCanonicalClassroom(ar.level || ar.name);
+              return ca && ca.id === canon.id;
+            });
+          }
+          if (!target) {
+            const spec = findSpecialClassroom(sanitizedName) || findSpecialClassroom(sanitizedLevel);
+            if (spec) {
+              target = activeList.find(ar =>
+                !!findSpecialClassroom(ar.name) || !!findSpecialClassroom(ar.level) ||
+                String(ar.name) === spec.displayName || String(ar.level) === spec.key
+              );
+            }
+          }
+          if (target) {
+            classroomMap[dr.id] = {
+              id: target.id,
+              name: formatClassroomFullName(target.name, target.level),
+              level: target.level,
+              __remappedFrom: dr.id,
+            };
+          } else {
+            // Fallback: mostrar nombre limpio sin remapear
+            classroomMap[dr.id] = {
+              id: dr.id,
+              name: formatClassroomFullName(sanitizedName, sanitizedLevel),
+              level: sanitizedLevel || dr.level,
+            };
+          }
+        });
+      }
     }
-    
-    const enriched = (data || []).map(s => ({
-      ...s,
-      classrooms: s.classroom_id
-        ? { ...(classroomMap[s.classroom_id] || { id: s.classroom_id }), name: classroomMap[s.classroom_id]?.name || '' }
-        : null
-    }));
-    
+
+    const enriched = (data || []).map(s => {
+      if (!s.classroom_id) {
+        return { ...s, classrooms: null };
+      }
+      const mapped = classroomMap[s.classroom_id] || null;
+      if (!mapped) return { ...s, classrooms: null };
+      return {
+        ...s,
+        classrooms: {
+          id: mapped.id,
+          name: formatClassroomFullName(mapped.name, mapped.level),
+          level: mapped.level,
+        },
+      };
+    });
+
     return { data: enriched, error, count };
   },
 
@@ -571,18 +656,25 @@ export const DirectorApi = {
       try {
         const { data, error } = await withTimeout(() =>
           supabase.from(TABLES.PROFILES)
-            .select('id, name, role, email, phone, avatar_url, is_active, classrooms!classrooms_teacher_id_fkey(id, name)')
+            .select('id, name, role, email, phone, avatar_url, is_active, classrooms!classrooms_teacher_id_fkey(id, name, level, deleted_at)')
             .in('role', ['maestra', 'asistente', 'encargada'])
             .is('deleted_at', null)
             .order('name')
         );
         if (error) throw error;
-        const normalized = (data || []).map(t => ({
-          ...t,
-          class_ids: (t.classrooms || []).map(c => c ? c.id : null).filter(Boolean),
-          classroom_id: t.classrooms?.[0]?.id || t.classrooms?.id || null,
-          classrooms: t.classrooms || []
-        }));
+        const normalized = (data || []).map(t => {
+          // Excluir aulas soft-deleted (la variante "parvalo 2 (variante …)")
+          // y normalizar nombre/nivel al canónico.
+          const rooms = (Array.isArray(t.classrooms) ? t.classrooms : [])
+            .filter((c) => c && !c.deleted_at)
+            .map((c) => this._displayRoom(c));
+          return {
+            ...t,
+            class_ids: rooms.map((c) => c.id).filter(Boolean),
+            classroom_id: rooms[0]?.id || null,
+            classrooms: rooms
+          };
+        });
         return { data: normalized, error: null };
       } catch (e) { return logError('getTeachers', e); }
     }, 5 * 60_000);
@@ -590,15 +682,30 @@ export const DirectorApi = {
 
   async updateTeacher(id, data) {
     const { classroom_ids, classroom_id, ...profileData } = data;
-    let ids = Array.isArray(classroom_ids)
+    const idsRaw = Array.isArray(classroom_ids)
       ? classroom_ids
       : (classroom_id !== undefined && classroom_id !== null ? [classroom_id] : undefined);
+    // ✅ Filtrar IDs: solo números (cast seguro) y no vacíos (evita 400 Bad Request)
+    const ids = Array.isArray(idsRaw)
+      ? idsRaw
+          .filter((x) => x !== null && x !== undefined && x !== '')
+          .map((x) => {
+            const n = Number(x);
+            return Number.isFinite(n) && Number.isInteger(n) && n > 0 ? n : null;
+          })
+          .filter((x) => x !== null)
+      : undefined;
+
     if (ids !== undefined) {
       // Desasignar TODAS las aulas de la maestra y reasignar las seleccionadas (soporta varios aulas)
-      await supabase.from(TABLES.CLASSROOMS).update({ teacher_id: null }).eq('teacher_id', id);
-      const target = (ids || []).filter(Boolean).map(String);
-      if (target.length) {
-        await supabase.from(TABLES.CLASSROOMS).update({ teacher_id: id }).in('id', target);
+      const { error: unassignErr } = await supabase.from(TABLES.CLASSROOMS).update({ teacher_id: null }).eq('teacher_id', id);
+      if (unassignErr) console.warn('[updateTeacher] unassign classrooms failed:', unassignErr);
+      if (ids.length) {
+        const { error: assignErr } = await supabase.from(TABLES.CLASSROOMS).update({ teacher_id: id }).in('id', ids);
+        if (assignErr) {
+          console.error('[updateTeacher] assign classrooms failed:', assignErr);
+          return { data: null, error: assignErr };
+        }
       }
     }
     // Only send columns that exist in profiles table
@@ -628,6 +735,7 @@ export const DirectorApi = {
           supabase.from(TABLES.CLASSROOMS).select('id, name, level, capacity, teacher:teacher_id(name)').is('deleted_at', null).order('name')
         );
         if (res?.error) throw res.error; // no cachear errores (evita 401 persistente 5 min)
+        if (res?.data) res.data = res.data.map((r) => this._displayRoom(r));
         return res;
       }, 5 * 60_000);
     } catch (e) {

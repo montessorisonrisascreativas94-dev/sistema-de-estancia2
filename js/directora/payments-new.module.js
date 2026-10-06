@@ -3,6 +3,7 @@ import { Helpers } from '../shared/helpers.js';
 import { Security } from '../shared/security.js';
 import { InvoicingModule } from './invoicing.module.js';
 import { processTransferReceipt } from '../shared/ocr-service.js';
+import { formatClassroomFullName } from '../shared/constants.js';
 
 const CURRENCY = 'RD$';
 const fmt = (n) => `${CURRENCY} ${Number(n || 0).toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -71,8 +72,8 @@ export const NewPaymentsModule = {
       const classroomIds = [...new Set((students || []).map(s => s.classroom_id).filter(Boolean))];
       let classroomMap = {};
       if (classroomIds.length > 0) {
-        const { data: rooms } = await supabase.from('classrooms').select('id,name').in('id', classroomIds);
-        (rooms || []).forEach(r => { classroomMap[r.id] = r.name; });
+        const { data: rooms } = await supabase.from('classrooms').select('id,name,level').in('id', classroomIds);
+        (rooms || []).forEach(r => { classroomMap[r.id] = formatClassroomFullName(r.name, r.level); });
       }
       const parentIds = [...new Set((students || []).map(s => s.parent_id).filter(Boolean))];
       let parentMap = {};

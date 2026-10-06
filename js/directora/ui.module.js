@@ -132,10 +132,15 @@ const DirectorUI = {
       || special?.displayName
       || formatClassroomFullName(r.name, r.level)
       || 'Sin nivel';
+    const name = canon?.displayLevel || special?.displayName
+      || formatClassroomFullName(r.name, r.level) || r.name || 'Aula';
     return {
       canon,
       special,
       display,
+      name,
+      // "Línea Rosa" solo cuando aporta info (el nombre ya está en el título)
+      line: canon?.line ? 'Línea ' + canon.line : '',
       color: canon?.color || special?.color || classroomColorFor(r.name, r.level),
       emoji: special?.emoji || '',
       labelRange: canon?.labelRange || '',
@@ -159,6 +164,11 @@ const DirectorUI = {
     const initial   = (teacher.trim()[0] || '?').toUpperCase();
     const labelRange = m.labelRange || (m.special ? 'Clase especial' : 'Sin rango de edad');
 
+    // ✅ Sin triple "Párvulos I": título = nombre oficial; subtítulo SOLO si
+    //    aporta info distinta; chip = línea de color (no repite el nivel).
+    const subtitle = (m.display && m.display !== m.name) ? m.display : '';
+    const chipText = m.line || (m.special && m.display !== m.name ? m.display : '');
+
     const freeCls = full ? 'dc-cap-free--full' : free <= 3 ? 'dc-cap-free--tight' : 'dc-cap-free';
 
     // Las clases especiales se inyectan como filas virtuales (id === null):
@@ -167,14 +177,14 @@ const DirectorUI = {
     const openAttrs  = isVirtual ? '' :
       ' onclick="App.rooms.openModal(\'' + r.id + '\')"' +
       ' onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();App.rooms.openModal(\'' + r.id + '\')}"' +
-      ' tabindex="0" role="button" aria-label="Abrir aula ' + Helpers.escapeHTML(r.name || '') + '"';
+      ' tabindex="0" role="button" aria-label="Abrir aula ' + Helpers.escapeHTML(m.name || '') + '"';
     const actions   = isVirtual ?
       '<span class="dc-badge dc-badge--room" style="--room:' + color + '"><i></i><span>Especial</span></span>' :
       '<div class="dc-room-actions">' +
         '<button class="dc-icon-btn" onclick="event.stopPropagation();App.rooms.openModal(\'' + r.id + '\')" title="Editar aula">' +
           '<i data-lucide="pencil"></i>' +
         '</button>' +
-        '<button class="dc-icon-btn dc-icon-btn--danger" onclick="event.stopPropagation();App.rooms.deleteRoom(\'' + r.id + '\',\'' + Helpers.escapeHTML(r.name || '') + '\')" title="Eliminar aula">' +
+        '<button class="dc-icon-btn dc-icon-btn--danger" onclick="event.stopPropagation();App.rooms.deleteRoom(\'' + r.id + '\',\'' + Helpers.escapeHTML(m.name) + '\')" title="Eliminar aula">' +
           '<i data-lucide="trash-2"></i>' +
         '</button>' +
       '</div>';
@@ -185,14 +195,14 @@ const DirectorUI = {
 
         '<div class="dc-room-top">' +
           '<div style="min-width:0">' +
-            '<h3 class="dc-room-name">' + Helpers.escapeHTML(r.name || 'Aula') + '</h3>' +
-            '<p class="dc-room-level">' + (m.emoji ? m.emoji + ' ' : '') + Helpers.escapeHTML(m.display) + '</p>' +
+            '<h3 class="dc-room-name">' + Helpers.escapeHTML(m.name) + '</h3>' +
+            (subtitle ? '<p class="dc-room-level">' + (m.emoji ? m.emoji + ' ' : '') + Helpers.escapeHTML(subtitle) + '</p>' : '') +
           '</div>' +
           actions +
         '</div>' +
 
-        // Indicador del aula: punto + nivel, en el color oficial del aula
-        '<span class="dc-line-chip"><i></i>' + Helpers.escapeHTML(m.display) + '</span>' +
+        // Indicador del aula: punto + línea de color (no repite el nombre)
+        (chipText ? '<span class="dc-line-chip"><i></i>' + Helpers.escapeHTML(chipText) + '</span>' : '') +
 
         // Línea de capacidad
         '<div class="dc-cap">' +
@@ -243,7 +253,7 @@ const DirectorUI = {
           '<button onclick="App.rooms.openModal(\'' + r.id + '\')" class="dc-icon-btn" title="Editar">' +
             '<i data-lucide="pencil"></i>' +
           '</button>' +
-          '<button onclick="App.rooms.deleteRoom(\'' + r.id + '\',\'' + Helpers.escapeHTML(r.name) + '\')" class="dc-icon-btn dc-icon-btn--danger" title="Eliminar">' +
+          '<button onclick="App.rooms.deleteRoom(\'' + r.id + '\',\'' + Helpers.escapeHTML(m.name) + '\')" class="dc-icon-btn dc-icon-btn--danger" title="Eliminar">' +
             '<i data-lucide="trash-2"></i>' +
           '</button>' +
         '</div>';
@@ -251,13 +261,14 @@ const DirectorUI = {
     return (
       '<tr class="hover:bg-slate-50 transition-colors' + (isVirtual ? '' : ' cursor-pointer') + '"' + rowOpen + '>' +
         '<td class="py-4 px-6" style="border-left:6px solid ' + color + '">' +
-          '<div class="font-bold text-slate-800">' + Helpers.escapeHTML(r.name) + '</div>' +
+          '<div class="font-bold text-slate-800">' + Helpers.escapeHTML(m.name) + '</div>' +
           '<div class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">' +
             Helpers.escapeHTML(m.labelRange || (m.special ? 'Clase especial' : 'General')) +
           '</div>' +
         '</td>' +
         '<td class="py-4 px-6">' +
-          '<span class="dc-line-chip" style="--room:' + color + ';display:inline-flex"><i></i>' + Helpers.escapeHTML(m.display) + '</span>' +
+          '<span class="dc-line-chip" style="--room:' + color + ';display:inline-flex"><i></i>' +
+            Helpers.escapeHTML(m.line || m.display) + '</span>' +
         '</td>' +
         '<td class="py-4 px-6">' +
           '<div class="flex items-center gap-4">' +

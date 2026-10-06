@@ -15,6 +15,8 @@ import {
   validateAgeForClassroom,
   suggestClassroomByAge,
   ageInDays,
+  dedupeClassrooms,
+  sanitizeClassroomDisplayName,
 } from '../shared/constants.js';
 
 export const RoomsModule = {
@@ -40,46 +42,28 @@ export const RoomsModule = {
 
     try {
       const res = await DirectorApi.getClassroomsWithOccupancy();
-      const rawRooms = res?.data || [];
+      const rawRooms = (res?.data || []).map((r) => ({
+        ...r,
+        name:  sanitizeClassroomDisplayName(r.name),
+        level: sanitizeClassroomDisplayName(r.level),
+      }));
       if (res?.error) throw new Error(res.error);
 
       // ============================================================
-      // DEDUPLICACIÓN DEFENSIVA (en caso de que el SQL no se haya
-      // ejecutado o aún existan duplicados en la BD).
-      // Dos aulas que correspondan a la MISMA aula canónica se
-      // fusionan: se queda la que tenga teacher_id / mayor id.
+      // DEDUPLICACIÓN DEFENSIVA usando la función oficial dedupeClassrooms
+      // (scoring profesional, fusiona student_count, elimina duplicados).
       // ============================================================
-      const dedup = new Map();
-      rawRooms.forEach((r) => {
+      const classrooms = dedupeClassrooms(rawRooms).map((r) => {
         const canon = findCanonicalClassroom(r.level || r.name);
         const special = canon ? null : (findSpecialClassroom(r.name) || findSpecialClassroom(r.level));
-        const key = canon
-          ? `canon:${canon.id}`
-          : special
-            ? `special:${special.key}`
-            : `custom:${(r.level || r.name || r.id).toString().toLowerCase()}`;
-
-        if (!dedup.has(key)) {
-          dedup.set(key, r);
-          return;
-        }
-        const prev = dedup.get(key);
-        // Score: elige la fila más "útil".
-        const scorePrev = (prev.teacher_id ? 1000 : 0) + (prev.is_special ? 500 : 0) + Number(prev.id || 0);
-        const scoreNew  = (r.teacher_id ? 1000 : 0) + (r.is_special ? 500 : 0) + Number(r.id || 0);
-        if (scoreNew > scorePrev) {
-          // Fusionar occupancy: prev.student_count a r si r no lo tiene.
-          if (r.student_count == null && prev.student_count != null) {
-            r.student_count = prev.student_count;
-          }
-          dedup.set(key, r);
-        } else {
-          if (prev.student_count == null && r.student_count != null) {
-            prev.student_count = r.student_count;
-          }
-        }
+        return {
+          ...r,
+          name: canon?.displayLevel || special?.displayName || r.name,
+          level: canon?.level || special?.key || r.level,
+          capacity: r.capacity || canon?.capacity || 20,
+          color: r.color || canon?.color || special?.color || '#0B63C7',
+        };
       });
-      const classrooms = Array.from(dedup.values());
 
       this._rooms = [...classrooms];
 

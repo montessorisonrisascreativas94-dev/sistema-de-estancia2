@@ -1,6 +1,12 @@
 import { supabase, createClient, SUPABASE_URL, SUPABASE_ANON_KEY } from '../../shared/supabase.js';
 import { Helpers } from '../../shared/helpers.js';
 import { RealtimeManager } from '../../shared/realtime-manager.js';
+import {
+  findCanonicalClassroom,
+  findSpecialClassroom,
+  formatClassroomFullName,
+  sanitizeClassroomDisplayName,
+} from '../../shared/constants.js';
 
 const IC = 'w-full px-4 py-2.5 border-2 border-slate-100 rounded-2xl outline-none focus:ring-4 focus:ring-teal-100 focus:border-teal-400 bg-slate-50/50 transition-all text-sm font-medium';
 const LC = 'block text-[11px] font-black text-slate-400 uppercase tracking-wider mb-1.5 ml-1';
@@ -371,12 +377,79 @@ export const StudentsModule = {
     try {
       const { data: students, error } = await supabase
         .from('students')
-        .select('id, name, is_active, p1_name, p1_phone, classroom_id, matricula, avatar_url, classrooms:classroom_id(name)')
+        .select('id, name, is_active, p1_name, p1_phone, classroom_id, matricula, avatar_url')
         .order('name')
         .limit(500);
       if (error) throw error;
 
-      this._allStudents = students || [];
+      // ✅ Resolver classrooms (igual que directora): filtrar activas, sanitizar, resolver canónica
+      let enrichedStudents = students || [];
+      const classroomIds = [...new Set(enrichedStudents.map(s => s.classroom_id).filter(Boolean))];
+      if (classroomIds.length) {
+        const [{ data: activeRooms }, { data: allActiveRooms }] = await Promise.all([
+          supabase.from('classrooms').select('id, name, level').in('id', classroomIds).is('deleted_at', null),
+          supabase.from('classrooms').select('id, name, level').is('deleted_at', null),
+        ]);
+        const classroomMap = {};
+        (activeRooms || []).forEach(r => { classroomMap[r.id] = r; });
+        const unresolved = classroomIds.filter(id => !classroomMap[id]);
+        if (unresolved.length) {
+          const { data: deletedRooms } = await supabase
+            .from('classrooms')
+            .select('id, name, level')
+            .in('id', unresolved);
+          const activeList = allActiveRooms || [];
+          (deletedRooms || []).forEach(dr => {
+            const sanitizedName = sanitizeClassroomDisplayName(dr.name);
+            const sanitizedLevel = sanitizeClassroomDisplayName(dr.level);
+            const canon = findCanonicalClassroom(sanitizedLevel || sanitizedName);
+            let target = null;
+            if (canon) {
+              target = activeList.find(ar => {
+                const ca = findCanonicalClassroom(ar.level || ar.name);
+                return ca && ca.id === canon.id;
+              });
+            }
+            if (!target) {
+              const spec = findSpecialClassroom(sanitizedName) || findSpecialClassroom(sanitizedLevel);
+              if (spec) {
+                target = activeList.find(ar =>
+                  !!findSpecialClassroom(ar.name) || !!findSpecialClassroom(ar.level) ||
+                  String(ar.name) === spec.displayName || String(ar.level) === spec.key
+                );
+              }
+            }
+            if (target) {
+              classroomMap[dr.id] = {
+                id: target.id,
+                name: formatClassroomFullName(target.name, target.level),
+                level: target.level,
+              };
+            } else {
+              classroomMap[dr.id] = {
+                id: dr.id,
+                name: formatClassroomFullName(sanitizedName, sanitizedLevel),
+                level: sanitizedLevel || dr.level,
+              };
+            }
+          });
+        }
+        enrichedStudents = enrichedStudents.map(s => {
+          if (!s.classroom_id) return { ...s, classrooms: null };
+          const mapped = classroomMap[s.classroom_id] || null;
+          if (!mapped) return { ...s, classrooms: null };
+          return {
+            ...s,
+            classrooms: {
+              id: mapped.id,
+              name: formatClassroomFullName(mapped.name, mapped.level),
+              level: mapped.level,
+            },
+          };
+        });
+      }
+
+      this._allStudents = enrichedStudents;
       this._page = 1;
       await this._loadAttendance(this._allStudents);
       this._renderPage(query);

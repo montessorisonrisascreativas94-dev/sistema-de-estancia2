@@ -38,7 +38,7 @@ export const AccessModule = {
       const [staff, studentsRes, roomsRes, doorPunches] = await Promise.all([
         supabase.from('profiles').select('id, name, role, matricula').in('role', ['maestra', 'asistente', 'directora']),
         supabase.from('students').select('id, name, matricula, classroom_id'),
-        supabase.from('classrooms').select('id, name'),
+        supabase.from('classrooms').select('id, name').is('deleted_at', null),
         supabase.from('door_punches').select('student_id, staff_id, punch_type, punched_at').gte('date', from).lte('date', to)
       ]);
       
@@ -217,7 +217,7 @@ export const AccessModule = {
   async exportIntelligenceReport() {
     const today = new Date().toISOString().split('T')[0];
     const { data: active } = await supabase.from('students').select('id, name, classroom_id').eq('is_active', true);
-    const { data: roomsRaw } = await supabase.from('classrooms').select('id, name');
+    const { data: roomsRaw } = await supabase.from('classrooms').select('id, name').is('deleted_at', null);
     const { data: att } = await supabase.from('attendance').select('student_id').eq('date', today);
     
     // Enrich active with classroom names

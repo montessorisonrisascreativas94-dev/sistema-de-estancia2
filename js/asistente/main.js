@@ -242,7 +242,7 @@ async function openNewPostModal() {
 
   // Load classrooms for the select
   try {
-    const { data: classroomsRaw } = await supabase.from('classrooms').select('id, name').order('name');
+    const { data: classroomsRaw } = await supabase.from('classrooms').select('id, name').is('deleted_at', null).order('name');
     const classrooms = dedupeClassrooms(classroomsRaw || []);
     const select = document.getElementById('postClassroom');
     if (select && classrooms) {

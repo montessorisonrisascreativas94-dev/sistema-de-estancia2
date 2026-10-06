@@ -48,7 +48,7 @@ export const DashboardModule = {
               supabase.from('students').select('*', { count: 'exact', head: true }),
               supabase.from('attendance').select('*', { count: 'exact', head: true })
                 .eq('date', today).in('status', ['present', 'presente']),
-              supabase.from('classrooms').select('id, name, level').eq('is_active', true).limit(200),
+              supabase.from('classrooms').select('id, name, level').is('deleted_at', null).limit(200),
               supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'maestra'),
             ]);
             const get = (r) => r.status === 'fulfilled' ? r.value : {};

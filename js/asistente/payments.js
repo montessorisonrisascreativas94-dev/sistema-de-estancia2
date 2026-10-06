@@ -392,7 +392,7 @@ export const PaymentsModule = {
     try {
       const [{ data: students }, { data: roomsRaw }] = await Promise.all([
         supabase.from('students').select('id, name, monthly_fee, classroom_id').eq('is_active', true).is('deleted_at', null).order('name').limit(200),
-        supabase.from('classrooms').select('id, name')
+        supabase.from('classrooms').select('id, name').is('deleted_at', null)
       ]);
       
       const rooms = dedupeClassrooms(roomsRaw || []);

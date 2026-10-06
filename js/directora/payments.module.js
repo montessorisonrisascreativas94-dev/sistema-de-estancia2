@@ -8,6 +8,7 @@ import { requireReauth } from '../shared/reauth.js';
 import { RealtimeManager } from '../shared/realtime-manager.js';
 import { InvoicingModule } from './invoicing.module.js';
 import { InvoiceModule } from '../shared/invoice.js';
+import { formatClassroomFullName } from '../shared/constants.js';
 import { processTransferReceipt } from '../shared/ocr-service.js';
 import { createTokenBucket } from '../shared/token-bucket.js';
 
@@ -157,8 +158,8 @@ export const PaymentsModule = {
         const cids = [...new Set((students || []).map(s => s.classroom_id).filter(Boolean))];
         const roomMap = {};
         if (cids.length) {
-          const { data: rooms } = await supabase.from('classrooms').select('id, name').in('id', cids);
-          (rooms || []).forEach(r => { roomMap[r.id] = r.name; });
+          const { data: rooms } = await supabase.from('classrooms').select('id, name, level').in('id', cids);
+          (rooms || []).forEach(r => { roomMap[r.id] = formatClassroomFullName(r.name, r.level); });
         }
         const stMap = {};
         (students || []).forEach(s => { stMap[s.id] = { name: s.name, aula: roomMap[s.classroom_id] || 'Sin aula' }; });

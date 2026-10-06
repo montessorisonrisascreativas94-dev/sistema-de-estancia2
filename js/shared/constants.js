@@ -144,6 +144,24 @@ export function findSpecialClassroom(nameOrKey) {
   return SPECIAL_CLASSROOMS_META.find(m => m.key === k || m.short === k || m.displayName === k) || null;
 }
 
+/**
+ * 🧼 Limpia nombres de aula que tienen sufijos de soft-delete:
+ *   "... (variante — canon parvulos i)",
+ *   "... (duplicado #123)",
+ *   "... (duplicado — 20261001)"
+ * Usar siempre ANTES de normalizar / buscar canónica.
+ */
+export function sanitizeClassroomDisplayName(raw) {
+  if (!raw) return '';
+  return String(raw)
+    .trim()
+    .replace(/\s*\(variante[^\)]*\)/gi, '')
+    .replace(/\s*\(duplicado[^\)]*\)/gi, '')
+    .replace(/\s*\(dup[^\)]*\)/gi, '')
+    .replace(/\s*,\s*$/, '')
+    .trim();
+}
+
 function _ordinalES(n) {
   const num = Number(n);
   if (!Number.isFinite(num) || num <= 0) return String(n);
@@ -160,7 +178,7 @@ function _wordES(n) {
 
 export function formatClassroomLevel(levelOrName) {
   if (!levelOrName) return '';
-  const raw = String(levelOrName);
+  const raw = sanitizeClassroomDisplayName(String(levelOrName));
   const canon = findCanonicalClassroom(raw);
   if (canon?.displayLevel) return canon.displayLevel;
   const special = findSpecialClassroom(raw);
@@ -181,19 +199,22 @@ export function formatClassroomLevel(levelOrName) {
 }
 
 export function formatClassroomFullName(name, level) {
-  const n = String(name || '').trim();
-  const canon = findCanonicalClassroom(level || n);
+  const n = sanitizeClassroomDisplayName(String(name || '')).trim();
+  const l = sanitizeClassroomDisplayName(String(level || '')).trim();
+  const canon = findCanonicalClassroom(l || n);
   if (canon?.displayLevel) return canon.displayLevel;
-  const special = findSpecialClassroom(n) || findSpecialClassroom(level);
+  const special = findSpecialClassroom(n) || findSpecialClassroom(l);
   if (special) return special.displayName;
-  const disp = formatClassroomLevel(n || level || '');
+  const disp = formatClassroomLevel(n || l || '');
   return disp || n || 'Sin aula';
 }
 
 export function classroomColorFor(name, level) {
-  const canon = findCanonicalClassroom(level || name);
+  const n = sanitizeClassroomDisplayName(name);
+  const l = sanitizeClassroomDisplayName(level);
+  const canon = findCanonicalClassroom(l || n);
   if (canon?.color) return canon.color;
-  const special = findSpecialClassroom(name) || findSpecialClassroom(level);
+  const special = findSpecialClassroom(n) || findSpecialClassroom(l);
   if (special?.color) return special.color;
   return '#0B63C7';
 }
@@ -205,13 +226,14 @@ export const CANONICAL_CLASSROOM_LEVELS = Object.freeze(
 /** Busca un aula canónica por nombre/level (normaliza acentos, detecta "Línea Color", "1ro", ordinales). */
 export function findCanonicalClassroom(levelOrName) {
   if (!levelOrName) return null;
+  const input = sanitizeClassroomDisplayName(String(levelOrName));
   const normalize = (s) => String(s ?? '')
     .toLowerCase()
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .replace(/[–—−]/g, '-').replace(/\s+/g, ' ')
     .replace(/\s*-\s*linea\s*.*/g, '')
     .replace(/\s*linea\s*.*/g, '')
-    .replace(/\b(\d{1,2})(?:[rdt][oa]s?|°|º)\b/gi, (_, n) => n)
+    .replace(/\b(\d{1,2})(?:[rdt][oa]s?|°|º|ª)\b/gi, (_, n) => n)
     .replace(/\b(primero|segundo|tercero|cuarto|quinto|sexto|septimo|octavo|noveno|decimo)\b/gi, (m) => {
       const map = {primero:1,segundo:2,tercero:3,cuarto:4,quinto:5,sexto:6,septimo:7,octavo:8,noveno:9,decimo:10};
       return String(map[m.toLowerCase()] || m);
@@ -220,24 +242,33 @@ export function findCanonicalClassroom(levelOrName) {
     .replace(/pre[ -]*primario/gi, 'pre-primario')
     .replace(/maternal/gi, 'parvulos')
     .replace(/manternal/gi, 'parvulos')
-    .replace(/parvalo/gi, 'parvulos')
-    .replace(/parvulos\s*[ivx123]+/gi, (m) => {
-      const roman = m.match(/[ivx123]+/i);
-      if (!roman) return m;
+    .replace(/parvalo(?!s)|parvulo(?!s)/gi, 'parvulos')
+    .replace(/parvulos\s*([ivx123]+|\b[123]\b)/gi, (m, n) => {
+      if (!n) return m;
+      const tok = String(n).toLowerCase();
       const map = {i:1,ii:2,iii:3,iv:4,v:5,x:10,'1':1,'2':2,'3':3};
-      const n = map[roman[0].toLowerCase()];
-      return n ? `parvulos ${n}` : m;
+      const num = map[tok];
+      return num ? `parvulos ${num}` : m;
     })
     .replace(/\s+/g, ' ').trim();
-  const key = normalize(levelOrName);
-  return CANONICAL_CLASSROOMS.find((c) => {
-    const ck1 = normalize(c.level);
-    const ck2 = normalize(c.name);
-    const ck3 = normalize(`${c.id} ${c.line}`);
-    return ck1 === key || ck2 === key || ck3 === key
-      || ck1.includes(key) || key.includes(ck1)
-      || ck2.includes(key) || key.includes(ck2);
-  }) || null;
+  const key = normalize(input);
+  if (!key) return null;
+  const norm = (c) => [normalize(c.level), normalize(c.name), normalize(`${c.id} ${c.line}`)];
+  // 1ª pasada: igualdad exacta (evita que "Párvulos II" caiga en "Párvulos I"
+  // o "kinder" en "Pre-Kínder" por match de subcadena).
+  const exact = CANONICAL_CLASSROOMS.find((c) => { const ks = norm(c); return ks[0] === key || ks[1] === key || ks[2] === key; });
+  if (exact) return exact;
+  // 2ª pasada: subcadena, eligiendo la canónica MÁS CORTA (más específica).
+  // Sin esto, la clave corta "1" (de "1ro") cae en "parvulos 1" (Párvulos I)
+  // en vez de "1 1" (1° Primero).
+  let best = null, bestLen = Infinity;
+  for (const c of CANONICAL_CLASSROOMS) {
+    const ks = norm(c);
+    if (!ks.some((ck) => ck.includes(key) || key.includes(ck))) continue;
+    const len = Math.min(...ks.filter((ck) => ck.includes(key) || key.includes(ck)).map((ck) => ck.length));
+    if (len < bestLen) { best = c; bestLen = len; }
+  }
+  return best;
 }
 
 /** Calcula edad total en días desde una fecha de nacimiento. */
@@ -401,7 +432,8 @@ export function dedupeClassrooms(rows) {
     for (const it of items) {
       let score = 0;
       if (!hasLinePattern(it.name) && !hasLinePattern(it.level)) score += 10000;
-      if (canonicalMeta && (it.name === canonicalMeta.name || it.level === canonicalMeta.level)) score += 1000;
+      if (canonicalMeta && it.name === canonicalMeta.name) score += 2000;   // fila ya oficial → carga su id
+      else if (canonicalMeta && it.level === canonicalMeta.level) score += 1000;
       if (groupKey.startsWith('spec:')) score += 0;
       else if (!groupKey.startsWith('spec:')) score += 5000;
       if (it.teacher_id) score += 100;
@@ -421,6 +453,16 @@ export function dedupeClassrooms(rows) {
       winner.student_count = totalCount;
     } else if (totalCount > 0) {
       winner.student_count = totalCount;
+    }
+    // ✅ El ganador adopta el nombre/nivel OFICIAL: una fila variante con
+    //    maestra puede ganar el scoring, y no debe pintarse con su nombre sucio.
+    if (canonicalMeta) {
+      winner.name  = canonicalMeta.name;
+      winner.level = canonicalMeta.level;
+      if (!winner.teacher_id) {
+        const withTeacher = items.find((it) => it.teacher_id);
+        if (withTeacher) winner.teacher_id = withTeacher.teacher_id;
+      }
     }
     result.push(winner);
   }

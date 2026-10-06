@@ -199,7 +199,7 @@ let _state = { mode: 'new', studentId: null, preData: null, activeTab: 'info', d
   },
 
   async _loadClasses() {
-    const { data } = await supabase.from('classrooms').select('id, name, level, capacity').order('name');
+    const { data } = await supabase.from('classrooms').select('id, name, level, capacity').is('deleted_at', null).order('name');
     return data || [];
   },
 

@@ -240,7 +240,7 @@ export const WallModule = {
       const classrooms = await QueryCache.get(
         'classrooms_list',
         async () => {
-          const { data } = await supabase.from('classrooms').select('id, name').order('name');
+          const { data } = await supabase.from('classrooms').select('id, name').is('deleted_at', null).order('name');
           return data || [];
         },
         10 * 60_000 // 10 min TTL — classrooms rarely change

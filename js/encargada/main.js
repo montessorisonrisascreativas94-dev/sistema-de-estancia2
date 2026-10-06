@@ -140,7 +140,7 @@ async function loadDashboard() {
       { data: students }
     ] = await Promise.all([
       supabase.from('profiles').select('*').eq('role', 'maestra'),
-      supabase.from('classrooms').select('*'),
+      supabase.from('classrooms').select('*').is('deleted_at', null),
       supabase.from('students').select('*')
     ]);
     const totalTeachers = teachers?.length || 0;
@@ -622,7 +622,7 @@ async function loadAlerts() {
 
     // Check today's daily logs for missing routines
     try {
-      const { count: classroomsCount } = await supabase.from('classrooms').select('*', { count: 'exact', head: true });
+      const { count: classroomsCount } = await supabase.from('classrooms').select('*', { count: 'exact', head: true }).is('deleted_at', null);
       const { count: logsToday } = await supabase.from('daily_logs')
         .select('*', { count: 'exact', head: true })
         .eq('date', todayStr);
@@ -903,7 +903,7 @@ async function loadReportesCumplimiento() {
     const teachers = profiles || [];
 
     const { data: classrooms } = await supabase.from('classrooms')
-      .select('id, name, teacher_id');
+      .select('id, name, teacher_id').is('deleted_at', null);
     const cls = classrooms || [];
 
     const last7 = new Date(Date.now() - 7*86400000).toISOString().split('T')[0];
@@ -982,7 +982,7 @@ async function loadControlRutinas() {
   if (window.lucide) lucide.createIcons();
   try {
     const today = new Date().toISOString().split('T')[0];
-    const { data: classrooms } = await supabase.from('classrooms').select('id, name').order('name');
+    const { data: classrooms } = await supabase.from('classrooms').select('id, name').is('deleted_at', null).order('name');
     const cls = classrooms || [];
 
     let logs = [];
@@ -1116,7 +1116,7 @@ async function loadComparativoAulas() {
   if (window.lucide) lucide.createIcons();
   try {
     const { data: classrooms } = await supabase.from('classrooms')
-      .select('id, name, teacher_id, profiles:teacher_id(name)');
+      .select('id, name, teacher_id, profiles:teacher_id(name)').is('deleted_at', null);
     const cls = classrooms || [];
 
     const last7 = new Date(Date.now() - 7*86400000).toISOString().split('T')[0];
@@ -1235,7 +1235,7 @@ async function loadMuroEscolar() {
   el.innerHTML = '<div class="text-center py-8 text-slate-400"><i data-lucide="loader-2" class="w-6 h-6 animate-spin mx-auto mb-2"></i>Cargando muro...</div>';
   if (window.lucide) lucide.createIcons();
   try {
-    const { data: classrooms } = await supabase.from('classrooms').select('id, name').order('name');
+    const { data: classrooms } = await supabase.from('classrooms').select('id, name').is('deleted_at', null).order('name');
     const cls = classrooms || [];
 
     let posts = [];

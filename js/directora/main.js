@@ -89,7 +89,134 @@ window.closeGlobalModal = closeGlobalModal;
 if (window.App?.ui) window.App.ui.closeModal = closeGlobalModal;
 
 /**
- * ?? Navegaci�n Global
+ * 🎯 Indicador visual sidebar — actualiza clase activa, aria-current,
+ *    abre grupo padre y resalta el kk-nav-group-toggle correspondiente.
+ *    Funciona para kk-nav-item (botones principales + toggles de grupo)
+ *    y para kk-nav-sub-item (ítems secundarios dentro de grupos).
+ */
+export function setSidebarActive(sectionId) {
+  if (!sectionId) return;
+
+  // Mapear sub-secciones a su botón padre/grupo en el sidebar
+  const _parentSection = {
+    maestros:'gestion-academica', estudiantes:'gestion-academica',
+    aulas:'gestion-academica',    asistencia:'gestion-academica',
+    calificaciones:'gestion-academica', videoconferencia:'gestion-academica',
+    'ciclo-academico':'ciclo-escolar', 'staff-permits':'ciclo-escolar',
+    'inscripciones':'ciclo-escolar', 'ciclo-escolar-config':'ciclo-escolar',
+    accesos:'gestion-academica',
+    caja:'finanzas', pagos:'finanzas', contabilidad:'finanzas',
+    'cuentas-cobrar':'finanzas', catalogo:'finanzas',
+    muro:'comunicacion', reportes:'comunicacion', comunicacion:'comunicacion',
+  };
+  const parentGroupId = _parentSection[sectionId] || null;
+  // Mapear sección al grupo acordeón DOM (data-group)
+  const _sectionToGroup = {
+    'gestion-academica':'academica',
+    'ciclo-escolar':'ciclo',
+    'comunicacion':'comunicacion',
+    'finanzas':'finanzas',
+  };
+  const accordionGroupKey = _sectionToGroup[parentGroupId] || _sectionToGroup[sectionId] || null;
+
+  // 1) Limpiar ESTADO ACTIVO ANTERIOR de TODOS los botones
+  document.querySelectorAll('.kk-nav-item, .kk-nav-sub-item, [data-section]').forEach(btn => {
+    btn.classList.remove('active');
+    btn.classList.remove('bg-white/20');
+    btn.removeAttribute('aria-current');
+  });
+
+  // 2) Aplicar ACTIVO al botón de la sección concreta (por data-section)
+  const primaryBtns = document.querySelectorAll(
+    `.kk-nav-item[data-section="${sectionId}"], .kk-nav-sub-item[data-section="${sectionId}"]`
+  );
+  primaryBtns.forEach(btn => {
+    btn.classList.add('active');
+    btn.setAttribute('aria-current', 'page');
+  });
+
+  // 3) Si es sub-sección → activar también el kk-nav-group-toggle padre
+  //    y ABRIR el acordeón para que se vea el ítem seleccionado.
+  if (accordionGroupKey) {
+    const groupToggle = document.querySelector(
+      `.kk-nav-group-toggle[data-group="${accordionGroupKey}"]`
+    );
+    const navGroup = groupToggle?.closest('.kk-nav-group');
+    const submenu  = navGroup?.querySelector('.kk-nav-sub');
+    if (groupToggle) {
+      groupToggle.classList.add('active');
+      groupToggle.setAttribute('aria-current', 'page');
+    }
+    if (navGroup) navGroup.classList.add('open');
+    if (groupToggle) groupToggle.classList.add('open');
+    if (submenu) submenu.style.display = 'block';
+  }
+
+  // 4) Highlight alternativo: si la sección NO coincide con un botón primario
+  //    pero SÍ coincide con el id de un grupo (ej: gestión-academica), marcar
+  //    explícitamente su kk-nav-group-toggle como activo.
+  const groupToggleDirect = document.querySelector(
+    `.kk-nav-group-toggle[data-group="${_sectionToGroup[sectionId] || ''}"]`
+  );
+  if (groupToggleDirect && !groupToggleDirect.classList.contains('active')) {
+    groupToggleDirect.classList.add('active');
+    groupToggleDirect.setAttribute('aria-current', 'page');
+  }
+
+  // 5) Actualizar Bottom Nav si existe
+  document.querySelectorAll('.nav-item').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.section === sectionId);
+  });
+}
+
+/**
+ * ⚓ Enlaza clicks de botones sidebar + botones con data-section al router.
+ *    + Maneja History API + popstate para botón atrás móvil/navegador.
+ */
+export function setupNavigationRouter(defaultSection = 'dashboard') {
+  const routeFromHash = () => {
+    const h = (window.location.hash || '').replace(/^#\/?/, '').trim();
+    return h || defaultSection;
+  };
+
+  const bindClick = (btn) => {
+    if (btn.__dirNavBound) return;
+    btn.__dirNavBound = true;
+    btn.addEventListener('click', (e) => {
+      const sec = btn.dataset.section;
+      if (!sec) return;
+      // Menús acordeón NO navegables como sección (no tienen data-section válida)
+      if (btn.classList.contains('kk-nav-group-toggle') && !sec) return;
+      e.preventDefault();
+      e.stopPropagation();
+      try { window.history.pushState({ section: sec }, '', `#/${sec}`); } catch(_) {}
+      goToSection(sec);
+    });
+  };
+
+  // Click handlers para sidebar y cualquier botón con data-section
+  document.querySelectorAll('[data-section]').forEach(bindClick);
+  document.querySelectorAll('.kk-nav-sub-item, .kk-nav-item').forEach((btn) => {
+    if (btn.dataset && btn.dataset.section) bindClick(btn);
+  });
+
+  // Back/Forward button + hashchange (SPA navigation)
+  window.addEventListener('popstate', () => {
+    const sec = routeFromHash();
+    goToSection(sec);
+  }, { passive: true });
+  window.addEventListener('hashchange', () => {
+    const sec = routeFromHash();
+    if (sec !== AppState.get('currentSection')) goToSection(sec);
+  }, { passive: true });
+
+  // Navegación inicial según URL (si el usuario recargó con #/seccion)
+  const initial = routeFromHash();
+  return initial;
+}
+
+/**
+ * 🚀 Navegación Global (SPAs)
  */
 const FINANCIAL_SECTIONS = new Set(['finanzas', 'pagos', 'caja', 'contabilidad', 'cuentas-cobrar', 'catalogo', 'nomina', 'dgii']);
 
@@ -104,10 +231,6 @@ export function goToSection(sectionId) {
   Helpers.vibrate?.('light');
 
   // ✅ LIMPIEZA DE REALTIME: Eliminar canales al cambiar de sección
-  // Conserva los canales globales. OJO: los keep-lists usan nombres que no
-  // existían ('notifications' en vez de 'badges_<uid>' / 'notif_<uid>'), así que
-  // esta llamada mataba el único canal que escuchaba INSERT en `messages` en
-  // cada cambio de sección, sin ninguna resuscripción después.
   const _uid = AppState.get('user')?.id;
   const _keepChannels = _uid ? ['badges_' + _uid, 'news-center_' + _uid, 'notif_' + _uid] : [];
   RealtimeManager.unsubscribeAll(_keepChannels);
@@ -123,7 +246,6 @@ export function goToSection(sectionId) {
       if (AccessModule?.stopScanner) {
         AccessModule.stopScanner();
       }
-      // Lazy QR: Limpiar QRs generados para ahorrar memoria
       const qrContainer = document.getElementById('accesos-content');
       if (qrContainer) qrContainer.innerHTML = '';
     } catch (_) {}
@@ -152,6 +274,13 @@ export function goToSection(sectionId) {
     switch (sectionId) {
       case 'dashboard':
         renderDashboardV2();
+        break;
+
+      // ── CENTRO ESCOLAR (Centro de Gestión Escolar) ──────────────────
+      case 'centro-escolar':
+        import('./school-center.module.js')
+          .then(m => m.SchoolCenterModule.init())
+          .catch(err => console.error('[CentroEscolar] No se pudo iniciar:', err));
         break;
 
       // ── GESTIÓN ACADÉMICA (hub) ──────────────────────────────────────
@@ -248,31 +377,8 @@ export function goToSection(sectionId) {
     BadgeSystem.mark(sectionId);
   }
 
-  // Mapear sub-secciones a su botón padre en el sidebar
-  const _parentSection = {
-    maestros:'gestion-academica', estudiantes:'gestion-academica',
-    aulas:'gestion-academica',    asistencia:'gestion-academica',
-    calificaciones:'gestion-academica', videoconferencia:'gestion-academica',
-    'ciclo-academico':'ciclo-escolar', 'staff-permits':'ciclo-escolar',
-    'inscripciones':'ciclo-escolar',
-    accesos:'ciclo-escolar',
-    caja:'finanzas', pagos:'finanzas', contabilidad:'finanzas',
-    'cuentas-cobrar':'finanzas', catalogo:'finanzas',
-    muro:'comunicacion', reportes:'comunicacion',
-  };
-  const activeSidebarId = _parentSection[sectionId] || sectionId;
-
-  // Actualizar Botones Nav (Sidebar)
-  document.querySelectorAll('[data-section]').forEach(btn => {
-    const match = btn.dataset.section === activeSidebarId || btn.dataset.section === sectionId;
-    btn.classList.toggle('bg-white/20', match);
-    btn.classList.toggle('active', match);
-  });
-
-  // Actualizar Bottom Nav si existe
-  document.querySelectorAll('.nav-item').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.section === sectionId);
-  });
+  // 🎯 INDICADOR VISUAL SIDEBAR (unificado, robusto)
+  setSidebarActive(sectionId);
 
   // Cerrar sidebar en móvil si está abierto
   const sidebar = document.getElementById('sidebar');
@@ -282,8 +388,7 @@ export function goToSection(sectionId) {
     if (overlay) { overlay.style.display = 'none'; }
   }
 
-  // FIX setTimeout→requestAnimationFrame: icons are in the DOM at this point,
-  // rAF guarantees paint before re-processing — no arbitrary 50ms guess needed.
+  // rAF garantiza paint antes de re-procesar íconos
   if (window.lucide) requestAnimationFrame(() => lucide.createIcons());
 }
 
@@ -451,8 +556,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 4. Cargar Perfil Inicial
     loadProfile();
 
-    // 5. Iniciar Dashboard por defecto
-    goToSection('dashboard');
+    // 5. ROUTER: enlaza clicks sidebar + hash/popstate, luego navega a la
+    //    sección inicial (dashboard por defecto o la que venga en URL #/xxx)
+    const initialSection = setupNavigationRouter('dashboard');
+    goToSection(initialSection);
+    setSidebarActive(initialSection);
 
     // Cargar ciclos escolares en los selectores del sidebar y header
     _loadCycleSelectors();

@@ -6,7 +6,14 @@ import { supabase } from '../shared/supabase.js';
 import { auditLog } from '../shared/db-utils.js';
 import { requireReauth } from '../shared/reauth.js';
 import { QueryCache } from '../shared/query-cache.js';
-import { findCanonicalClassroom, formatClassroomLevel } from '../shared/constants.js';
+import {
+  findCanonicalClassroom,
+  findSpecialClassroom,
+  formatClassroomLevel,
+  formatClassroomFullName,
+  sanitizeClassroomDisplayName,
+  dedupeClassrooms,
+} from '../shared/constants.js';
 
 const ROLE_BADGE = Object.freeze({
   maestra:    'bg-emerald-100 text-emerald-700',
@@ -240,8 +247,25 @@ export const TeachersModule = {
         directora: '<i data-lucide="shield" class="w-3 h-3"></i>',
         admin:     '<i data-lucide="briefcase" class="w-3 h-3"></i>',
       }[t.role] || '<i data-lucide="user" class="w-3 h-3"></i>';
-      const classroomsLbl = (t.classrooms?.map?.((c) => c?.name)?.join(', ') || '').trim() || 'Sin Aula';
-      const canon = findCanonicalClassroom(t.classrooms?.map?.((c) => c?.level || c?.name)?.join(' ') || '');
+
+      // ✅ Deduplicar aulas + sanitizar nombres (evita "parvalo 2 (variante — canon parvulos i), Párvulos I")
+      const rawRooms = Array.isArray(t.classrooms) ? t.classrooms.filter(Boolean) : [];
+      const sanitizedRooms = rawRooms.map((c) => {
+        const n = sanitizeClassroomDisplayName(c?.name || '');
+        const l = sanitizeClassroomDisplayName(c?.level || '');
+        const canon = findCanonicalClassroom(l || n);
+        const spec = canon ? null : (findSpecialClassroom(n) || findSpecialClassroom(l));
+        return {
+          ...(c || {}),
+          name:  canon?.displayLevel || spec?.displayName || formatClassroomFullName(n, l),
+          level: canon?.level || spec?.key || l,
+        };
+      });
+      const deduped = dedupeClassrooms(sanitizedRooms);
+      const classroomsLbl = deduped.length
+        ? deduped.map((c) => String(c.name || '').trim()).filter(Boolean).join(', ')
+        : 'Sin Aula';
+      const canon = findCanonicalClassroom(deduped.map((c) => c?.level || c?.name).join(' '));
       return { roleBadge, roleLbl, roleIcon, classroomsLbl, canon, color: canon?.color || '#0B63C7' };
     };
 
@@ -754,7 +778,7 @@ export const TeachersModule = {
       const { data: rooms } = await DirectorApi.getClassroomsWithOccupancy();
       const select = document.getElementById('tClassroom');
       if (select && rooms?.length) {
-        select.innerHTML = rooms.map(r => `<option value="${r.id}">${Helpers.escapeHTML((r.name || 'Sin nombre').trim())}</option>`).join('');
+        select.innerHTML = rooms.map(r => `<option value="${r.id}">${Helpers.escapeHTML(formatClassroomFullName(r.name, r.level).trim())}</option>`).join('');
       }
       this._classPickerState = { rooms: rooms || [], term: '' };
       this._renderClassPicker();
@@ -844,8 +868,8 @@ export const TeachersModule = {
         return `<label class="dc-pick-item${checked ? ' is-on' : ''}" style="--room:${color}">
           <input type="checkbox" class="dc-pick-check" data-room="${r.id}" ${checked ? 'checked' : ''} aria-label="Asignar ${Helpers.escapeHTML(r.name || 'aula')}">
           <span class="dc-pick-info">
-            <span class="dc-pick-name">${Helpers.escapeHTML(r.name || 'Aula')}</span>
-            <span class="dc-pick-line"><i></i> ${Helpers.escapeHTML(canon?.displayLevel || formatClassroomLevel(r.level) || 'General')}</span>
+            <span class="dc-pick-name">${Helpers.escapeHTML(formatClassroomFullName(r.name, r.level))}</span>
+            <span class="dc-pick-line"><i></i> ${Helpers.escapeHTML(canon?.line ? 'Línea ' + canon.line : (canon?.displayLevel || formatClassroomLevel(r.level) || 'General'))}</span>
             <span class="dc-pick-cap">
               <span class="dc-pick-cap-track"><span class="dc-pick-cap-fill${free === 0 ? ' dc-pick-cap-fill--full' : ''}" style="width:${Math.min(100, pct)}%"></span></span>
               <span class="dc-pick-cap-num">${occ}/${cap}</span>

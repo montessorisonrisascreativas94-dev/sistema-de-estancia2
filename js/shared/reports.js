@@ -219,7 +219,8 @@ export async function getClassrooms() {
   try {
     const { data, error } = await supabase
       .from('classrooms')
-      .select('id, name');
+      .select('id, name')
+      .is('deleted_at', null);
 
     if (error) throw error;
     return data || [];

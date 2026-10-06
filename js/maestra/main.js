@@ -24,6 +24,14 @@ import { UI } from './modules/ui.js';
 import { UIPremium } from '../shared/ui-premium.js';
 import { NewsCenter } from '../shared/news-center.js';
 import { SectionCache } from '../shared/section-cache.js';
+import {
+  findCanonicalClassroom,
+  findSpecialClassroom,
+  formatClassroomFullName,
+  classroomColorFor,
+  dedupeClassrooms,
+  sanitizeClassroomDisplayName,
+} from '../shared/constants.js';
 
 window.safeToast = UI.safeToast;
 window.UI = UI;
@@ -32,6 +40,24 @@ const { safeToast, safeEscapeHTML, safeUrl, safeJS, Modal } = UI;
 // Exponer Modal globalmente ANTES de cualquier interacción del usuario
 // Los onclick inline en HTML dinámico necesitan window.Modal disponible de inmediato
 window.Modal = Modal;
+
+/**
+ * 🧼 Normaliza una fila de aula para PANTALLA: nombre/nivel al canónico
+ *    (elimina "parvalo 2 (variante — canon parvulos i)" y alias).
+ */
+function _sanitizeClassroomRow(r) {
+  if (!r) return r;
+  const n = sanitizeClassroomDisplayName(r.name);
+  const l = sanitizeClassroomDisplayName(r.level);
+  const canon = findCanonicalClassroom(l || n);
+  const special = canon ? null : (findSpecialClassroom(n) || findSpecialClassroom(l));
+  return {
+    ...r,
+    name:  canon?.displayLevel || special?.displayName || formatClassroomFullName(n, l),
+    level: canon?.level || special?.key || l,
+    color: r.color || canon?.color || special?.color || classroomColorFor(n, l),
+  };
+}
 const { initAttendance, markAllPresent, registerAttendance } = Attendance;
 const { initRoutine, openStudentRoutine, openBulkRoutineModal, markWholeClassRoutine } = Routine;
 const { initTasks, openEditTaskModal, deleteTask, openNewTaskModal, viewTaskSubmissions, submitGrade } = Tasks;
@@ -381,13 +407,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   try {
-    const { data: classrooms, error } = await supabase
+    const { data: rawRooms, error } = await supabase
       .from('classrooms')
-      .select('id, name, level, capacity, teacher_id, is_live')
+      .select('id, name, level, capacity, teacher_id, is_live, is_special, color')
       .eq('teacher_id', auth.user.id)
+      .is('deleted_at', null)
       .order('name');
 
     if (error) throw error;
+
+    // ✅ Sanitizar + deduplicar aulas (evita "parvalo 2 (variante — canon parvulos i)" y duplicados)
+    const sanitized = (rawRooms || []).map(_sanitizeClassroomRow);
+    const classrooms = dedupeClassrooms(sanitized);
+
     if (!classrooms?.length) {
       safeToast('No tienes un aula asignada.', 'warning');
       return;
@@ -713,6 +745,7 @@ async function initDashboard() {
         .from('classrooms')
         .select('id', { count: 'exact', head: true })
         .eq('teacher_id', AppState.get('user').id)
+        .is('deleted_at', null)
     ]);
 
     AppState.set('students', students || []);
@@ -1081,16 +1114,27 @@ function initNavigation() {
         const [classroomRes, studentsRes] = await Promise.all([
           supabase.from('classrooms')
             .select('id, name, level, capacity, teacher_id, is_live')
-            .eq('id', classroomId).maybeSingle(),
+            .eq('id', classroomId)
+            .is('deleted_at', null)
+            .maybeSingle(),
           MaestraApi.getStudentsByClassroom(classroomId)
         ]);
 
         if (classroomRes.data) {
-          classroom = classroomRes.data;
+          // ✅ Sanitizar: nunca pintar "parvalo 2 (variante — canon …)"
+          classroom = _sanitizeClassroomRow(classroomRes.data);
           AppState.set('classroom', classroom);
+        } else {
+          // Aula borrada/inexistente (localStorage viejo): volver al aula real
+          localStorage.removeItem('maestra_last_classroom');
+          classroom = AppState.get('classroom') || null;
+          if (classroom) {
+            classroomId = classroom.id;
+            students = null; // los estudiantes del id viejo no aplican
+          }
         }
         
-        if (studentsRes) {
+        if (studentsRes && studentsRes !== undefined && classroomRes.data) {
           students = studentsRes;
           AppState.set('students', studentsRes);
         }
@@ -1098,9 +1142,16 @@ function initNavigation() {
 
       if (!classroom) return safeToast('Aula no encontrada', 'error');
 
+      // Si el aula cambió por fallback, recargar sus estudiantes
+      if (!students) {
+        const fallbackStudents = await MaestraApi.getStudentsByClassroom(classroom.id);
+        students = fallbackStudents || [];
+        AppState.set('students', students);
+      }
+
       // Guardar para persistencia
       localStorage.setItem('maestra_last_section', 't-class-detail');
-      localStorage.setItem('maestra_last_classroom', classroomId);
+      localStorage.setItem('maestra_last_classroom', classroom.id);
 
       // 2. Actualizar UI del detalle
       const nameEl = document.getElementById('currentClassName');

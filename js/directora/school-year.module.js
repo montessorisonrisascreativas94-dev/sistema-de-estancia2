@@ -40,8 +40,8 @@ export const SchoolYearModule = {
     try {
       const [enr, cls, tea, per] = await Promise.all([
         supabase.from('student_enrollments').select('id', { count: 'exact', head: true }).eq('school_year_id', yearId).in('status', ['activo','inscrito','admitido','reinscrito']),
-        supabase.from('classrooms').select('id', { count: 'exact', head: true }),
-        supabase.from('classrooms').select('teacher_id').not('teacher_id', 'is', null),
+        supabase.from('classrooms').select('id', { count: 'exact', head: true }).is('deleted_at', null),
+        supabase.from('classrooms').select('teacher_id').not('teacher_id', 'is', null).is('deleted_at', null),
         supabase.from('periods').select('status').eq('school_year_id', yearId)
       ]);
       const kpi = this.state.dashboard.kpi;

@@ -272,7 +272,7 @@ export const TeachersModule = {
 
     // Load classrooms
     try {
-      const { data: clsRaw } = await supabase.from('classrooms').select('id, name').order('name');
+      const { data: clsRaw } = await supabase.from('classrooms').select('id, name').is('deleted_at', null).order('name');
       const sel = document.getElementById('teacherClassroom');
       if (sel && clsRaw) dedupeClassrooms(clsRaw).forEach(c => { const o = document.createElement('option'); o.value = c.id; o.textContent = c.name; sel.appendChild(o); });
     } catch (_) {}

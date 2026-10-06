@@ -391,7 +391,7 @@ export const AcademicCycleModule = {
     await this._loadYears();
     const {data:pre}=await supabase.from('student_preregistrations').select('*').eq('id',preinscId).single();
     const {data:plans}=await supabase.from('payment_plans').select('id,name,level,schedule,registration_fee').eq('school_year_id',this._currentYear?.id||0).eq('is_active',true).order('name');
-    const {data:roomsRaw}=await supabase.from('classrooms').select('id,name,capacity').order('name');
+    const {data:roomsRaw}=await supabase.from('classrooms').select('id,name,capacity').is('deleted_at', null).order('name');
     const {data:lastStudent}=await supabase.from('students').select('id,matricula').order('id',{ascending:false}).limit(1).maybeSingle();
     
     // Generar matrícula automática

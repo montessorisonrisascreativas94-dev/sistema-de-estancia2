@@ -91,9 +91,9 @@ BEGIN
   TRUNCATE _canon_lookup;
 
   INSERT INTO _canon_lookup (canon_norm, canon_disp, bad_patterns) VALUES
-    ('parvulos i',   'Párvulos I',   ARRAY['parvalo i','parvalo 1','parvulo i','maternal i','maternal 1','manternal','parvalo']::text[]),
+    ('parvulos i',   'Párvulos I',   ARRAY['parvalo i','parvalo 1','parvulo i','maternal i','maternal 1','manternal']::text[]),
     ('parvulos ii',  'Párvulos II',  ARRAY['parvalo ii','parvalo 2','parvulo ii','maternal ii','maternal 2']::text[]),
-    ('parvulos iii', 'Párvulos III', ARRAY['parvalo iii','parvalo 3','parvulo iii','maternal iii','maternal 3']::text[]),
+    ('parvulos iii', 'Párvulos III', ARRAY['parvalo iii','parvalo 3','parvulo iii','maternal iii','maternal 3','parvalo']::text[]),
     ('pre-kinder',   'Pre-Kínder',   ARRAY['pre kinder','prekinder','pre-kinder blanca','prekinder blanca','pre kinder blanca']::text[]),
     ('kinder',       'Kínder',       ARRAY['kinder gris','kinder 1','kinder general']::text[]),
     ('pre-primario', 'Pre-Primario', ARRAY['pre primario','preprimario','pre-primario negra','preprimario negra','pre-primaria','pre primaria']::text[]),
@@ -178,6 +178,12 @@ BEGIN
            AND EXISTS (SELECT 1 FROM public.classrooms cc
                         WHERE cc.id = keep_id AND cc.teacher_id IS NOT NULL);
 
+        -- ✅ REASIGNAR ESTUDIANTES: moverlos de las variantes → existing_id (canónica oficial)
+        UPDATE public.students
+           SET classroom_id = existing_id
+         WHERE classroom_id IN (SELECT id FROM _candidate_rows WHERE id <> existing_id)
+           AND classroom_id IS NOT NULL;
+
         UPDATE public.classrooms
            SET deleted_at = now(),
                name = name || ' (variante — canon ' || c.canon_norm || ')'
@@ -193,6 +199,12 @@ BEGIN
            AND deleted_at IS NULL
            AND (name IS DISTINCT FROM c.canon_disp OR level IS DISTINCT FROM c.canon_disp);
 
+        -- ✅ REASIGNAR ESTUDIANTES: moverlos de las variantes → keep_id (ganadora / canónica)
+        UPDATE public.students
+           SET classroom_id = keep_id
+         WHERE classroom_id IN (SELECT id FROM _candidate_rows WHERE id <> keep_id)
+           AND classroom_id IS NOT NULL;
+
         UPDATE public.classrooms
            SET deleted_at = now(),
                name = name || ' (variante — canon ' || c.canon_norm || ')'
@@ -204,6 +216,81 @@ BEGIN
 
   DROP TABLE IF EXISTS _candidate_rows;
   DROP TABLE IF EXISTS _canon_lookup;
+END $$;
+
+-- ================================================================
+-- 3.3 LIMPIEZA FINAL: cualquier estudiante que apunte a un aula
+--     SOFT-DELETED (deleted_at IS NOT NULL) se reasigna a la fila
+--     ACTIVA con el mismo nombre canónico / nivel o se pone NULL.
+-- ================================================================
+DO $$
+DECLARE
+  r RECORD;
+  new_id int;
+BEGIN
+  FOR r IN
+    SELECT DISTINCT s.classroom_id AS old_id, c.name AS old_name, c.level AS old_level
+    FROM public.students s
+    JOIN public.classrooms c ON c.id = s.classroom_id
+    WHERE c.deleted_at IS NOT NULL
+      AND s.classroom_id IS NOT NULL
+  LOOP
+    -- Buscar aula activa que corresponda al mismo nivel canónico (por name o level)
+    new_id := NULL;
+    SELECT cl.id INTO new_id
+      FROM public.classrooms cl
+     WHERE cl.deleted_at IS NULL
+       AND (
+         cl.name  = REGEXP_REPLACE(r.old_name, '\s*\(variante.*$', '', 'i')
+         OR cl.level = REGEXP_REPLACE(COALESCE(r.old_level, r.old_name), '\s*\(variante.*$', '', 'i')
+       )
+     ORDER BY cl.id ASC
+     LIMIT 1;
+
+    IF new_id IS NULL THEN
+      -- Si no hay match exacto, buscar por nombre normalizado
+      SELECT cl.id INTO new_id
+        FROM public.classrooms cl
+       WHERE cl.deleted_at IS NULL
+       ORDER BY
+         CASE WHEN TRANSLATE(LOWER(COALESCE(cl.name,'')), 'áéíóúñ','aeioun')
+                   LIKE '%' || TRANSLATE(LOWER(REGEXP_REPLACE(COALESCE(r.old_name,''), '\s*\(.*$', '')), 'áéíóúñ','aeioun') || '%'
+              THEN 0 ELSE 1 END,
+         cl.id ASC
+       LIMIT 1;
+    END IF;
+
+    IF new_id IS NOT NULL AND new_id <> r.old_id THEN
+      UPDATE public.students SET classroom_id = new_id WHERE classroom_id = r.old_id;
+    END IF;
+  END LOOP;
+END $$;
+
+-- ================================================================
+-- 3.4 LIMPIEZA DE DUPLICADOS NAME-level exactos (por si acaso)
+--     Conserva la de MENOR id y mueve estudiantes a ella.
+-- ================================================================
+DO $$
+DECLARE
+  grp RECORD;
+  keep int;
+BEGIN
+  FOR grp IN
+    SELECT name, level, MIN(id) AS keep_me, ARRAY_AGG(id ORDER BY id) AS ids
+    FROM public.classrooms
+    WHERE deleted_at IS NULL AND name IS NOT NULL AND level IS NOT NULL
+    GROUP BY name, level
+    HAVING COUNT(*) > 1
+  LOOP
+    keep := grp.keep_me;
+    UPDATE public.students
+       SET classroom_id = keep
+     WHERE classroom_id = ANY(grp.ids) AND classroom_id <> keep;
+    UPDATE public.classrooms
+       SET deleted_at = now(),
+           name = name || ' (duplicado #' || id || ')'
+     WHERE id = ANY(grp.ids) AND id <> keep AND deleted_at IS NULL;
+  END LOOP;
 END $$;
 
 -- ================================================================

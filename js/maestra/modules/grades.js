@@ -15,6 +15,13 @@ import {
   gradeColor, gradeToLevel, avgOf, moduleAvg
 } from '../../shared/eval-utils.js';
 import { GradebookGrid } from '../../shared/gradebook-grid.module.js';
+import {
+  findCanonicalClassroom,
+  findSpecialClassroom,
+  formatClassroomFullName,
+  dedupeClassrooms,
+  sanitizeClassroomDisplayName,
+} from '../../shared/constants.js';
 
 const ACTIVITY_TYPES = [
   { value: 'actividad',  label: 'Actividad',    icon: 'sparkles' },
@@ -89,10 +96,24 @@ export async function initGradesCenter() {
 
   const uid = await _currentUserId();
 
-  const { data: classrooms } = await supabase
+  const { data: rawRooms } = await supabase
     .from('classrooms').select('id, name, level')
     .eq('teacher_id', uid)
     .is('deleted_at', null);
+
+  // ✅ Sanitizar + deduplicar
+  const sanitized = (rawRooms || []).map((r) => {
+    const n = sanitizeClassroomDisplayName(r.name);
+    const l = sanitizeClassroomDisplayName(r.level);
+    const canon = findCanonicalClassroom(l || n);
+    const special = canon ? null : (findSpecialClassroom(n) || findSpecialClassroom(l));
+    return {
+      ...r,
+      name:  canon?.displayLevel || special?.displayName || formatClassroomFullName(n, l),
+      level: canon?.level || special?.key || l,
+    };
+  });
+  const classrooms = dedupeClassrooms(sanitized);
 
   if (!classrooms?.length) {
     container.innerHTML = _emptyState('No tienes aulas asignadas', '🏫');
@@ -124,7 +145,7 @@ async function _loadEvalBase() {
 
 function _buildLayout(classrooms) {
   const classOpts = classrooms.map(c =>
-    `<option value="${c.id}">${esc(c.name)} (${esc(c.level || '')})</option>`
+    `<option value="${c.id}">${esc(c.name)}</option>`
   ).join('');
 
   return `
