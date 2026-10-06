@@ -110,6 +110,12 @@ export function goToSection(sectionId) {
       case 'accesos-qr':
         if (fresh('accesos-qr')) { loadAccesosQR(); done('accesos-qr'); }
         break;
+      case 'organigrama-estancia':
+        if (fresh('organigrama-estancia')) {
+          import('../shared/classroom-organigram.module.js').then(m => m.ClassroomOrganigramModule.init('organigramaEncargadaContainer', { role: 'encargada' }));
+          done('organigrama-estancia');
+        }
+        break;
       case 'control-rutinas-cumplimiento':
         if (fresh('control-rutinas-cumplimiento')) { loadControlRutinas(); loadReportesCumplimiento(); done('control-rutinas-cumplimiento'); }
         break;
