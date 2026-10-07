@@ -79,8 +79,27 @@ const _OPTIONAL_ENDPOINTS = [
   '/functions/v1/send-push',
 ];
 
+// Desregistrar SWs orfanados que puedan interceptar URLs malformadas en file://
+if (typeof navigator !== 'undefined' && navigator.serviceWorker) {
+  const proto = (window.location.protocol || '').toLowerCase();
+  const host = window.location.hostname;
+  if (proto === 'file:' || host === 'localhost' || host === '127.0.0.1' || host === '') {
+    navigator.serviceWorker.getRegistrations?.()
+      .then((regs) => Promise.all(regs.map(r => r.unregister().catch(() => {}))))
+      .catch(() => {});
+  }
+}
+
 window.fetch = async function(...args) {
   const url = typeof args[0] === 'string' ? args[0] : args[0]?.url;
+  // Guard contra URLs malformadas tipo /C:/... (ruta Windows absoluta) — evitar 400 ruidoso
+  if (typeof url === 'string' && url.length > 3) {
+    const hasDrive = /^\/?[a-zA-Z]:[\\/]/.test(url) || /^\/[a-zA-Z]:\//.test(url);
+    if (hasDrive) {
+      console.warn('[supabase/fetch] Bloqueada URL con ruta de unidad malformada:', url);
+      return new Response('', { status: 200, statusText: 'OK', headers: { 'Content-Type': 'text/plain' } });
+    }
+  }
   const isSupabase = url && url.includes(SUPABASE_URL);
 
   // ── Feedback empático en cargas lentas (peticiones Supabase > 3s) ──────────

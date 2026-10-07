@@ -14,9 +14,10 @@
  *    5. Reportes    → reporte semanal por aula + exportación PDF
  * ════════════════════════════════════════════════════════════════════
  */
-import { supabase } from '../shared/supabase.js';
+import { supabase, sendPush as _scSendPush } from '../shared/supabase.js';
 import { Helpers } from '../shared/helpers.js';
 import { StudentRecordModal } from '../shared/student-record-modal.js';
+import { openGlobalModal, closeGlobalModal as _scCloseModal } from '../shared/modal.js';
 import {
   CANONICAL_CLASSROOMS,
   SPECIAL_CLASSROOMS_META,
@@ -141,6 +142,7 @@ export const SchoolCenterModule = {
   },
 
   _action(action, el) {
+    const crId = el?.dataset?.kscClassroom;
     switch (action) {
       case 'back':          this.back(); break;
       case 'refresh':       this.refresh(); break;
@@ -156,6 +158,16 @@ export const SchoolCenterModule = {
         if (rid && !String(rid).startsWith('__')) window.App?.rooms?.openModal?.(rid);
         break;
       }
+      case 'replyMsgs':
+      case 'replyMsgsFromChip':
+        if (crId && crId !== 'undefined' && crId !== '') this.openReplyMessagesModal(crId);
+        break;
+      case 'newPost':
+        if (crId && crId !== 'undefined' && crId !== '') this.openNewPostModal(crId);
+        break;
+      case 'newEvent':
+        if (crId && crId !== 'undefined' && crId !== '') this.openNewEventModal(crId);
+        break;
       default: break;
     }
   },
@@ -774,6 +786,17 @@ export const SchoolCenterModule = {
         <div class="ksc-bar-track"><div class="ksc-bar-fill" style="--c:${h.status === 'ok' ? '#16A34A' : h.status === 'warn' ? '#F59E0B' : '#EF4444'};width:${Math.max(3, h.pct || 0)}%"></div></div>
       </div>`).join('');
 
+    const secondaryCta = (a) => {
+      if (!a.aula) return '';
+      let act = null, lbl = null, icon = null;
+      if (a.icon === 'message-square')       { act = 'replyMsgs';  lbl = 'Responder ahora';   icon = 'message-square-reply'; }
+      else if (a.icon === 'megaphone')       { act = 'newPost';    lbl = 'Publicar ahora';    icon = 'megaphone'; }
+      else if (a.icon === 'list-checks')     { act = 'newEvent';   lbl = 'Registrar evento';  icon = 'calendar-plus'; }
+      else if (a.icon === 'alert-triangle')  { act = 'newEvent';   lbl = 'Registrar evento';  icon = 'calendar-plus'; }
+      else if (a.icon === 'user-check')      { act = 'openAula';   lbl = 'Abrir aula';        icon = 'door-open'; }
+      if (!act) return '';
+      return `<button type="button" class="ksc-alert-cta-secondary" data-ksc-action="${esc(act)}" data-ksc-classroom="${esc(a.aula)}" data-ksc-open-aula="${act==='openAula'?esc(a.aula):''}" ${act==='openAula'?'data-ksc-action-override=""':''}><i data-lucide="${esc(icon)}"></i> ${esc(lbl)}</button>`;
+    };
     const alerts = D.alerts.length
       ? D.alerts.map((a, i) => `
         <div class="ksc-alert ksc-alert--${a.sev}">
@@ -781,6 +804,7 @@ export const SchoolCenterModule = {
           <div class="ksc-alert-txt">
             <div class="ksc-alert-title">${esc(a.title)}</div>
             <div class="ksc-alert-desc">${esc(a.desc)}</div>
+            ${secondaryCta(a)}
           </div>
           <button class="ksc-alert-cta" data-ksc-alert="${esc(a.go)}" data-ksc-aula="${a.aula ?? ''}" type="button">Ver</button>
         </div>`).join('')
@@ -1099,6 +1123,8 @@ export const SchoolCenterModule = {
           <button class="ksc-mini-btn" data-ksc-action="back" type="button"><i data-lucide="arrow-left"></i> Volver</button>
         </div>
       </div>
+
+      ${a.id && !String(a.id).startsWith('__') ? this._renderQuickActionsBar(a) : ''}
 
       <div class="ksc-stats">
         ${stats.map(s => `
@@ -1712,6 +1738,908 @@ export const SchoolCenterModule = {
     const h = Math.floor(min / 60);
     const rest = min % 60;
     return rest ? `${h} h ${rest} min` : `${h} h`;
+  },
+
+  /* ══════════════ SPA HELPER: Actualización Parcial Sin Rebuild ══════════════ */
+  _refreshAfterAction(classroomId, deltas = {}) {
+    if (!this._data) return;
+    const idStr = classroomId != null ? String(classroomId) : null;
+
+    const target = idStr
+      ? (this._data.aulas.find(a => String(a.id) === idStr) ||
+         this._data.pool.find(a => String(a.id) === idStr))
+      : null;
+
+    if (target && target.m) {
+      const m = target.m;
+      if (deltas.decPendingMsgs && m.msgsPending.length) {
+        m.msgsPending.splice(0, Math.min(Number(deltas.decPendingMsgs) || 1, m.msgsPending.length));
+      }
+      if (deltas.incPostsToday) m.postsToday = (m.postsToday || 0) + Number(deltas.incPostsToday);
+      if (deltas.incPostsWeek)  m.postsWeek  = (m.postsWeek  || 0) + Number(deltas.incPostsWeek);
+      if (deltas.incEventsToday) {
+        const added = Number(deltas.incEventsToday) || 1;
+        m.logs = (m.logs || 0) + added;
+        const base = m.present > 0 ? m.present : m.nStudents;
+        m.routinePct = base > 0 ? Math.min(100, Math.round((m.logs / base) * 100)) : 0;
+      }
+      if (deltas.recomputeRoutine && target.m.nStudents > 0) {
+        const base = target.m.present > 0 ? target.m.present : target.m.nStudents;
+        target.m.routinePct = base > 0 ? Math.min(100, Math.round((target.m.logs / base) * 100)) : 0;
+      }
+
+      const started = target.m.attRecords > 0;
+      let s = 'ok';
+      if (!target.id) s = 'muted';
+      else if (!target.teacher_id && target.m.nStudents > 0) s = 'danger';
+      else if (started && target.m.noRecord > 0) s = 'danger';
+      else if (target.m.msgsPending.length >= 3) s = 'danger';
+      else if (target.m.incidents.length > 0) s = 'danger';
+      else if ((started && target.m.routinePct < 100) || target.m.msgsPending.length > 0 ||
+               (this._data.isWeekend ? false : (target.m.postsToday === 0 && new Date().getHours() >= 11 && target.m.nStudents > 0))) s = 'warn';
+      else if (!target.id) s = 'muted';
+      target.status = s;
+    }
+
+    const D = this._data;
+    D.kpis = D.kpis || {};
+    if (target) {
+      if (deltas.incPostsToday || deltas.incPostsWeek) {
+        D.kpis.publicaciones = D.aulas.reduce((n, a) => n + (a.m?.postsWeek || 0), 0);
+        D.kpis.publicadasHoy = D.aulas.filter(a => a.id && (a.m?.postsToday || 0) > 0).length;
+      }
+      if (deltas.incEventsToday || deltas.recomputeRoutine) {
+        const real = D.aulas.filter(a => a.id);
+        D.kpis.rutinas = avg(real.filter(a => a.m?.nStudents > 0).map(a => a.m.routinePct));
+      }
+      if (deltas.decPendingMsgs) {
+        D.kpis.mensajes = D.aulas.reduce((n, a) => n + (a.m?.msgsPending?.length || 0), 0);
+      }
+      D.health = [
+        { label: 'Aulas activas',   value: `${D.aulas.filter(a=>a.id&&a.teacher_id).length}/${D.aulas.filter(a=>a.id).length}`, pct: D.aulas.filter(a=>a.id).length ? Math.round((D.aulas.filter(a=>a.id&&a.teacher_id).length/D.aulas.filter(a=>a.id).length)*100) : 100 },
+        { label: 'Maestras activas',value: String(D.kpis.maestras||0), pct: (D.kpis.maestras||0) ? 100 : 0 },
+        { label: 'Rutinas',         value: (D.kpis.rutinas||0)+'%', pct: D.kpis.rutinas||0 },
+        { label: 'Mensajes respondidos', value: D.kpis.mensajes!=null ? (100-D.kpis.mensajes)+'%' : '—', pct: 100-Math.min(100,D.kpis.mensajes||0) },
+        { label: 'Publicaciones',   value: D.aulas.filter(a=>a.m?.nStudents>0).length ? Math.round(((D.kpis.publicadasHoy||0)/D.aulas.filter(a=>a.m?.nStudents>0).length)*100)+'%' : '—', pct: D.aulas.filter(a=>a.m?.nStudents>0).length ? Math.min(100,Math.round(((D.kpis.publicadasHoy||0)/D.aulas.filter(a=>a.m?.nStudents>0).length)*100)) : 100 },
+        { label: 'Asistencia',      value: '—', pct: 100 },
+        { label: 'Actividades',     value: D.kpis.actividades? D.kpis.actividades+' pend.' : '100%', pct: D.kpis.actividades ? 60 : 100 },
+      ].map(h => ({ ...h, status: h.pct >= 90 ? 'ok' : h.pct >= 70 ? 'warn' : 'danger' }));
+
+      const newAlerts = [];
+      D.aulas.forEach(a => {
+        if (!a.id || a.__placeholder || a.__special) return;
+        const mm = a.m;
+        if (!a.teacher_id && mm.nStudents > 0) newAlerts.push({ sev: 'danger', icon: 'user-x', title: a.name, desc: 'Aula sin maestra asignada.', aula: a.id, go: 'maestros' });
+        if (mm.attRecords > 0 && mm.noRecord > 0) newAlerts.push({ sev: 'danger', icon: 'user-check', title: a.name, desc: `${mm.noRecord} estudiante${mm.noRecord>1?'s':''} sin registro de asistencia hoy.`, aula: a.id, go: 'aula' });
+        if (mm.msgsPending.length >= 3) newAlerts.push({ sev: 'danger', icon: 'message-square', title: a.name, desc: `${mm.msgsPending.length} mensajes de padres sin responder.`, aula: a.id, go: 'aula' });
+        if (mm.msgsPending.length > 0 && mm.msgsPending.length < 3) newAlerts.push({ sev: 'warn', icon: 'message-square', title: a.name, desc: `${mm.msgsPending.length} mensaje${mm.msgsPending.length>1?'s':''} pendiente${mm.msgsPending.length>1?'s':''} de respuesta.`, aula: a.id, go: 'aula' });
+        if (mm.incidents.length > 0) newAlerts.push({ sev: 'danger', icon: 'alert-triangle', title: a.name, desc: `${mm.incidents.length} incidencia${mm.incidents.length>1?'s':''} abierta${mm.incidents.length>1?'s':''}.`, aula: a.id, go: 'aula' });
+        if (mm.attRecords > 0 && mm.routinePct < 100) newAlerts.push({ sev: 'warn', icon: 'list-checks', title: a.name, desc: `Rutina del día incompleta (${mm.routinePct}% de bitácora).`, aula: a.id, go: 'aula' });
+        if (!D.isWeekend && mm.nStudents > 0 && mm.postsToday === 0 && new Date().getHours() >= 11) newAlerts.push({ sev: 'warn', icon: 'megaphone', title: a.name, desc: 'Sin publicación de actividad hoy.', aula: a.id, go: 'muro' });
+      });
+      const o = { danger: 0, warn: 1, info: 2 };
+      newAlerts.sort((x, y) => (o[x.sev]||0) - (o[y.sev]||0));
+      D.alerts = newAlerts;
+
+      const reds = newAlerts.filter(a => a.sev === 'danger').length;
+      const warns = newAlerts.filter(a => a.sev === 'warn').length;
+      D.level = reds > 0 ? 'danger' : (warns > 0 ? 'warn' : 'ok');
+      D.semText = D.level === 'ok' ? 'Estancia operando normalmente'
+        : D.level === 'warn' ? 'Requiere atención' : 'Requiere intervención';
+    }
+
+    this._rePaintHero();
+    if (idStr) this._rePaintClassroomRow(idStr);
+    this._rePaintSidebarBadge();
+    if (this._tab === 'aula' && this._aulaId && String(this._aulaId) === idStr) {
+      this._rePaintAulaStats(idStr);
+    }
+  },
+
+  _rePaintHero() {
+    const D = this._data;
+    if (!D) return;
+    const sem = document.getElementById('kscSem');
+    if (sem) {
+      sem.className = `ksc-sem ksc-sem--${D.level==='ok'?'ok':D.level==='warn'?'warn':'danger'}`;
+      sem.innerHTML = `<i></i><span>${esc(D.semText)}</span>`;
+    }
+    const kpis = document.getElementById('kscKpis');
+    if (kpis && D.kpis) {
+      const K = D.kpis;
+      const cards = [
+        { v: K.aulas },
+        { v: K.estudiantes },
+        { v: K.maestras },
+        { v: (K.rutinas ?? 0) + '%' },
+        { v: K.publicaciones },
+        { v: K.mensajes, alert: (K.mensajes||0) > 0 },
+        { v: K.actividades },
+      ];
+      kpis.querySelectorAll('.ksc-kpi').forEach((node, i) => {
+        const valEl = node.querySelector('.ksc-kpi-value');
+        if (valEl && cards[i]) valEl.textContent = String(cards[i].v ?? '');
+        if (typeof cards[i].alert === 'boolean') node.classList.toggle('ksc-kpi--alert', cards[i].alert);
+      });
+    }
+  },
+
+  _rePaintClassroomRow(idStr) {
+    const target = this._data?.aulas?.find(a => String(a.id) === idStr) ||
+                   this._data?.pool?.find(a => String(a.id) === idStr);
+    if (!target) return;
+    const tr = document.querySelector(`tr[data-ksc-open-aula="${CSS.escape ? CSS.escape(idStr) : idStr}"]`);
+    if (!tr || !target.m) return;
+    const m = target.m;
+    const att = m.attRecords > 0
+      ? `<span class="ksc-chip ${m.noRecord===0?'ksc-chip--ok':'ksc-chip--warn'}">${m.present}/${m.nStudents}${m.noRecord?` · ${m.noRecord} sin registro`:''}</span>`
+      : `<span class="ksc-chip ksc-chip--muted">—</span>`;
+    const rut = m.nStudents === 0
+      ? '<span class="ksc-chip ksc-chip--muted">—</span>'
+      : `<span class="ksc-chip ${m.routinePct>=100?'ksc-chip--ok':m.routinePct>0?'ksc-chip--warn':'ksc-chip--danger'}">${m.routinePct}%</span>`;
+    const pub = `<span class="ksc-chip ${m.postsToday>0?'ksc-chip--ok':m.postsWeek>0?'ksc-chip--warn':'ksc-chip--danger'}">${m.postsToday} hoy</span>`;
+    const msg = m.msgsPending.length
+      ? `<button type="button" class="ksc-chip ksc-chip--${m.msgsPending.length>=3?'danger':'warn'} ksc-chip--clickable" data-ksc-action="replyMsgsFromChip" data-ksc-classroom="${esc(target.id)}">${m.msgsPending.length} pend.</button>`
+      : '<span class="ksc-chip ksc-chip--ok">0</span>';
+    const cells = tr.querySelectorAll('td');
+    if (cells[2]) cells[2].innerHTML = att;
+    if (cells[3]) cells[3].innerHTML = rut;
+    if (cells[4]) cells[4].innerHTML = pub;
+    if (cells[5]) cells[5].innerHTML = msg;
+    if (cells[6] && m.lastActivity) cells[6].textContent = this._relTime(m.lastActivity);
+    if (window.lucide) requestAnimationFrame(() => lucide.createIcons());
+  },
+
+  _rePaintAulaStats(idStr) {
+    const target = this._data?.aulas?.find(a => String(a.id) === idStr) ||
+                   this._data?.pool?.find(a => String(a.id) === idStr);
+    if (!target || !target.m) return;
+    const view = document.getElementById('kscView');
+    if (!view) return;
+    const statEls = view.querySelectorAll('.ksc-stat');
+    const m = target.m;
+    const statValues = [
+      m.nStudents,
+      m.attRecords ? `${m.present}/${m.nStudents}` : '—',
+      m.routinePct + '%',
+      m.postsWeek,
+      m.msgsPending.length,
+      m.tasksWeek,
+      m.incidents.length,
+      m.lastActivity ? this._fmtTime(m.lastActivity) : '—',
+    ];
+    statEls.forEach((el, i) => {
+      const val = el.querySelector('.ksc-stat-value');
+      if (val && statValues[i] != null) val.textContent = String(statValues[i]);
+    });
+    if (window.lucide) requestAnimationFrame(() => lucide.createIcons());
+  },
+
+  _rePaintSidebarBadge() {
+    const n = this._data?.alerts?.length || 0;
+    const b = document.getElementById('badge-ksc');
+    if (!b) return;
+    if (n > 0) {
+      b.textContent = n > 99 ? '99+' : String(n);
+      b.classList.remove('hidden');
+      b.style.display = '';
+    } else {
+      b.classList.add('hidden');
+      b.style.display = 'none';
+    }
+  },
+
+  /* ══════════════ BARRA DE ACCIONES RÁPIDAS (Ficha de Aula) ══════════════ */
+  _renderQuickActionsBar(a) {
+    const role = this._currentRole();
+    const accent = role === 'asistente' ? '#0d9488' : role === 'encargada' ? '#8B5CF6' : '#0B63C7';
+    const m = a.m || {};
+    const pendMsgs = m.msgsPending?.length || 0;
+    const btn = (k, icon, label, badge, badgeCls) => `
+      <button type="button" class="ksc-qa-btn" data-ksc-action="${k}" data-ksc-classroom="${esc(a.id)}" style="--accent:${accent}">
+        <span class="ksc-qa-icon"><i data-lucide="${icon}"></i></span>
+        <span class="ksc-qa-label">${esc(label)}</span>
+        ${badge != null ? `<span class="ksc-qa-badge ${badgeCls || ''}">${esc(badge)}</span>` : ''}
+      </button>`;
+    return `
+      <div class="ksc-quick-actions" style="--accent:${accent}">
+        ${btn('replyMsgs', 'message-square-reply', 'Responder mensajes', pendMsgs > 0 ? pendMsgs : null, pendMsgs >= 3 ? 'is-danger' : pendMsgs > 0 ? 'is-warn' : '')}
+        ${btn('newPost', 'megaphone', 'Publicar en muro', null)}
+        ${btn('newEvent', 'calendar-plus', 'Crear / Agendar evento', null)}
+      </div>`;
+  },
+
+  /* ══════════════ USUARIO ACTUAL ══════════════ */
+  async _getCurrentUser() {
+    if (this._cachedUser?.id) return this._cachedUser;
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
+      let profile = null;
+      try {
+        const { data } = await supabase.from('profiles').select('id,name,role,avatar_url').eq('id', user.id).maybeSingle();
+        profile = data || null;
+      } catch (_) { profile = null; }
+      this._cachedUser = { id: user.id, email: user.email, profile };
+      return this._cachedUser;
+    } catch (e) {
+      console.warn('[CentroEscolar] _getCurrentUser error', e);
+      return null;
+    }
+  },
+
+  /* ══════════════ MODAL #1 — RESPONDER MENSAJES (T4/T5) ══════════════ */
+  _scModalActive: null,
+  openReplyMessagesModal(classroomId) {
+    const aula = this._data?.aulas.find(x => x.id && String(x.id) === String(classroomId)) ||
+                 this._data?.pool.find(x => x.id && String(x.id) === String(classroomId));
+    if (!aula) return Helpers.toast('Aula no encontrada', 'error');
+    this._scModalActive = { type: 'reply', classroomId, originTab: this._tab };
+    const pend = aula.m?.msgsPending || [];
+    const role = this._currentRole();
+    const accent = role === 'asistente' ? '#0d9488' : role === 'encargada' ? '#8B5CF6' : '#0B63C7';
+    const header = `
+      <div class="ksc-modal-header" style="--accent:${accent}">
+        <div class="ksc-modal-head-left">
+          <div class="ksc-modal-avatar"><i data-lucide="message-square-reply"></i></div>
+          <div>
+            <h3>Responder mensajes</h3>
+            <p><b>${esc(aula.name)}</b> · ${pend.length} pendiente${pend.length===1?'':'s'} · ${esc(aula.teacher?.name||'Sin maestra asignada')}</p>
+          </div>
+        </div>
+        <button type="button" class="ksc-modal-close" data-ksc-modal-close aria-label="Cerrar"><i data-lucide="x"></i></button>
+      </div>`;
+    const body = this._renderReplyBody(aula);
+    const footer = `
+      <div class="ksc-modal-footer" id="ksc-reply-footer" style="display:none">
+        <textarea id="ksc-reply-input" rows="2" placeholder="Escribe tu respuesta… (Enter para enviar, Shift+Enter para nueva línea)"></textarea>
+        <div class="ksc-reply-actions">
+          <button type="button" class="ksc-qa-btn ksc-qa-btn--ghost" data-ksc-modal-close>Cancelar</button>
+          <button type="button" class="ksc-qa-btn ksc-qa-btn--primary" id="ksc-reply-send" style="--accent:${accent}"><i data-lucide="send"></i> Enviar</button>
+        </div>
+      </div>`;
+    const content = `
+      <div class="ksc-modal" data-ksc-modal="replyMsgs" style="--accent:${accent}">
+        ${header}
+        <div class="ksc-modal-body">${body}</div>
+        ${footer}
+      </div>`;
+    openGlobalModal(content, { width: 'min(1080px, 94vw)', maxHeight: '88vh' });
+    this._bindReplyModal(classroomId, aula);
+    if (window.lucide) requestAnimationFrame(() => lucide.createIcons());
+  },
+
+  _renderReplyBody(aula) {
+    const pend = aula.m?.msgsPending || [];
+    const listHtml = pend.length ? pend.map((m, idx) => `
+      <div class="ksc-msg-item" data-ksc-msg-id="${esc(m.id)}" data-ksc-receiver="${esc(m.sender_id)}" data-ksc-index="${idx}">
+        <div class="ksc-msg-av">${esc(((m.sender?.name||'?').charAt(0)).toUpperCase())}</div>
+        <div class="ksc-msg-main">
+          <div class="ksc-msg-title"><b>${esc(m.sender?.name||'Padre/Madre')}</b> <span class="ksc-msg-role">${esc(m.sender?.role || 'padre')}</span></div>
+          <div class="ksc-msg-preview">${esc((m.content||'').slice(0, 140))}${m.content && m.content.length>140?'…':''}</div>
+          <div class="ksc-msg-time">${esc(this._relTime(m.created_at))}</div>
+        </div>
+        <span class="ksc-chip ksc-chip--danger">sin leer</span>
+      </div>`).join('')
+      : `<div class="ksc-empty"><i data-lucide="check-circle-2"></i><div>¡Todo respondido en este aula!</div></div>`;
+    return `
+      <div class="ksc-reply-grid">
+        <aside class="ksc-msg-list">
+          <div class="ksc-msg-list-head">
+            <div class="ksc-msg-list-title">Mensajes pendientes</div>
+            <span class="ksc-chip ksc-chip--warn">${pend.length}</span>
+          </div>
+          <div class="ksc-msg-list-body" id="ksc-msg-list-body">${listHtml}</div>
+        </aside>
+        <section class="ksc-msg-thread" id="ksc-msg-thread">
+          <div class="ksc-empty"><i data-lucide="messages-square"></i><div>Selecciona un mensaje de la izquierda para ver el hilo y responder.</div></div>
+        </section>
+      </div>`;
+  },
+
+  _bindReplyModal(classroomId, aula) {
+    const modal = document.querySelector('[data-ksc-modal="replyMsgs"]');
+    if (!modal) return;
+    const close = () => {
+      const origin = this._scModalActive?.originTab;
+      this._scModalActive = null;
+      this._scPendingAttachReply = null;
+      _scCloseModal();
+      if (origin && origin !== 'aula' && origin !== this._tab) this.go(origin);
+    };
+    modal.querySelectorAll('[data-ksc-modal-close]').forEach(b => b.addEventListener('click', close));
+    Helpers.delegate(modal, '.ksc-msg-item', 'click', (_e, el) => this._openReplyThread(classroomId, aula, el));
+    const input = document.getElementById('ksc-reply-input');
+    const sendBtn = document.getElementById('ksc-reply-send');
+    if (input) {
+      input.addEventListener('input', () => {
+        input.style.height = 'auto';
+        input.style.height = Math.min(input.scrollHeight, 140) + 'px';
+      });
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendBtn?.click(); }
+      });
+    }
+    sendBtn?.addEventListener('click', () => this.sendReplyFromModal(classroomId, aula));
+  },
+
+  _openReplyThread(classroomId, aula, rowEl) {
+    const receiverId = rowEl?.dataset?.kscReceiver;
+    const msgId = rowEl?.dataset?.kscMsgId;
+    if (!receiverId) return;
+    document.querySelectorAll('.ksc-msg-item').forEach(x => x.classList.remove('active'));
+    rowEl.classList.add('active');
+    const threadEl = document.getElementById('ksc-msg-thread');
+    const footer = document.getElementById('ksc-reply-footer');
+    footer.style.display = 'flex';
+    threadEl.innerHTML = `<div class="ksc-loading"><i data-lucide="loader-2"></i> Cargando hilo…</div>`;
+    if (window.lucide) requestAnimationFrame(() => lucide.createIcons());
+    this._scPendingAttachReply = { classroomId, aula, receiverId, msgId };
+    this._loadThreadAndRender(receiverId, aula);
+  },
+
+  async _loadThreadAndRender(receiverId, aula) {
+    const me = await this._getCurrentUser();
+    const threadEl = document.getElementById('ksc-msg-thread');
+    if (!threadEl) return;
+    const pair = [me?.id, receiverId].filter(Boolean);
+    let conv = [];
+    try {
+      const { data, error } = await supabase.from('messages')
+        .select('id,sender_id,receiver_id,content,created_at,is_read')
+        .or(`and(sender_id.eq.${pair[0]},receiver_id.eq.${pair[1]}),and(sender_id.eq.${pair[1]},receiver_id.eq.${pair[0]})`)
+        .order('created_at', { ascending: false })
+        .limit(100);
+      if (!error) conv = (data || []).slice().reverse();
+    } catch (_) { conv = []; }
+    const bubbles = conv.map(m => {
+      const mine = me && String(m.sender_id) === String(me.id);
+      const name = aula.m?.msgsPending?.find(x => String(x.sender_id) === String(m.sender_id))?.sender?.name ||
+                   (mine ? 'Tú' : 'Padre/Madre');
+      return `<div class="ksc-bubble ${mine?'ksc-bubble--mine':'ksc-bubble--them'}">
+        <div class="ksc-bubble-meta">${mine ? 'Tú' : esc(name)} · ${esc(this._fmtTime(m.created_at))}${m.is_read && !mine ? ' · ✔️ leído' : (!m.is_read && !mine ? ' · enviado' : '')}</div>
+        <div class="ksc-bubble-body">${esc(m.content || '')}</div>
+      </div>`;
+    }).join('') || `<div class="ksc-empty"><i data-lucide="message-circle"></i><div>Aún no hay hilo. Escribe tu primera respuesta a continuación.</div>`;
+    threadEl.innerHTML = `<div class="ksc-thread-head"><i data-lucide="users"></i> Conversación · ${esc(aula.name)}</div><div class="ksc-thread-bubbles" id="ksc-thread-bubbles">${bubbles}</div>`;
+    const last = document.getElementById('ksc-thread-bubbles');
+    if (last) requestAnimationFrame(() => { last.scrollTop = last.scrollHeight; });
+    const inp = document.getElementById('ksc-reply-input');
+    if (inp) setTimeout(() => inp.focus(), 50);
+    if (window.lucide) requestAnimationFrame(() => lucide.createIcons());
+  },
+
+  async sendReplyFromModal(classroomId, aula) {
+    const inp = document.getElementById('ksc-reply-input');
+    const content = (inp?.value || '').trim();
+    const attach = this._scPendingAttachReply;
+    if (!content) { Helpers.toast('Escribe un mensaje primero', 'warn'); inp?.focus(); return; }
+    if (!attach?.receiverId) { Helpers.toast('Selecciona un mensaje para responder', 'warn'); return; }
+    const me = await this._getCurrentUser();
+    if (!me) return Helpers.toast('Sesión no válida', 'error');
+    const payload = { sender_id: me.id, receiver_id: attach.receiverId, content, created_at: new Date().toISOString(), is_read: false };
+    const sendSdk = () => supabase.from('messages').insert(payload).select().maybeSingle();
+    let result = null;
+    try {
+      const r = await sendSdk();
+      if (r?.error && ['401','403','42501','PGRST'].some(x => String(r.error?.code || r.error?.message || '').includes(x))) throw r.error;
+      result = r?.data || null;
+    } catch (eSdk) {
+      try {
+        const anonKey = window.__sc_anon_key || (supabase.supabaseUrl ? (supabase.auth.session?.()?.access_token) : null);
+        const cfg = supabase;
+        const url = `${cfg.supabaseUrl || (window.__scUrl||'')}/rest/v1/messages`;
+        const headers = {
+          'Content-Type': 'application/json',
+          'apikey': cfg.supabaseAnonKey || window.__scAnonKey || '',
+          'Authorization': `Bearer ${cfg.supabaseAnonKey || window.__scAnonKey || ''}`,
+          'Prefer': 'return=representation',
+        };
+        const raw = await fetch(url, { method: 'POST', headers, body: JSON.stringify(payload) });
+        if (raw.ok) result = (await raw.json())[0] || payload;
+      } catch (eFb) {
+        console.warn('[CentroEscolar] fallback also failed', eFb);
+      }
+    }
+    if (!result) return Helpers.toast('No se pudo enviar la respuesta. Intenta de nuevo.', 'error');
+    Helpers.toast('Respuesta enviada ✔️', 'success');
+    inp.value = ''; inp.style.height = 'auto';
+    try {
+      if (window.UnreadMessages && typeof window.UnreadMessages.recalcBadge === 'function') window.UnreadMessages.recalcBadge();
+      else if (window.BadgeSystem) try { window.BadgeSystem.refresh('chat'); } catch(_){}
+    } catch(_) {}
+    try { _scSendPush && _scSendPush({ include_player_ids: [attach.receiverId], headings: { en: 'Nuevo mensaje' }, contents: { en: content.slice(0, 120) } }); } catch(_) {}
+    this._refreshAfterAction(classroomId, { decPendingMsgs: 1 });
+    const listEl = document.getElementById('ksc-msg-list-body');
+    if (listEl && aula) {
+      const a = this._data?.aulas.find(x=>x.id&&String(x.id)===String(classroomId)) || this._data?.pool.find(x=>x.id&&String(x.id)===String(classroomId));
+      const pend = a?.m?.msgsPending || [];
+      listEl.innerHTML = pend.length ? pend.map((m, idx) => `
+        <div class="ksc-msg-item ${attach.msgId===m.id?'':''}" data-ksc-msg-id="${esc(m.id)}" data-ksc-receiver="${esc(m.sender_id)}" data-ksc-index="${idx}">
+          <div class="ksc-msg-av">${esc(((m.sender?.name||'?').charAt(0)).toUpperCase())}</div>
+          <div class="ksc-msg-main">
+            <div class="ksc-msg-title"><b>${esc(m.sender?.name||'Padre/Madre')}</b> <span class="ksc-msg-role">${esc(m.sender?.role || 'padre')}</span></div>
+            <div class="ksc-msg-preview">${esc((m.content||'').slice(0,140))}${m.content && m.content.length>140?'…':''}</div>
+            <div class="ksc-msg-time">${esc(this._relTime(m.created_at))}</div>
+          </div>
+          <span class="ksc-chip ksc-chip--danger">sin leer</span>
+        </div>`).join('')
+      : `<div class="ksc-empty"><i data-lucide="check-circle-2"></i><div>¡Todo respondido en este aula!</div></div>`;
+    }
+    this._loadThreadAndRender(attach.receiverId, aula);
+    if (window.lucide) requestAnimationFrame(() => lucide.createIcons());
+  },
+
+  /* ══════════════ MODAL #2 — PUBLICAR EN MURO (T7/T8) ══════════════ */
+  openNewPostModal(classroomId) {
+    const aula = this._data?.aulas.find(x => x.id && String(x.id) === String(classroomId)) ||
+                 this._data?.pool.find(x => x.id && String(x.id) === String(classroomId));
+    if (!aula) return Helpers.toast('Aula no encontrada', 'error');
+    this._scModalActive = { type: 'post', classroomId, originTab: this._tab };
+    const role = this._currentRole();
+    const accent = role === 'asistente' ? '#0d9488' : role === 'encargada' ? '#8B5CF6' : '#0B63C7';
+    const canGlobal = ['directora','encargada','admin'].includes(role);
+    const header = `
+      <div class="ksc-modal-header" style="--accent:${accent}">
+        <div class="ksc-modal-head-left">
+          <div class="ksc-modal-avatar"><i data-lucide="megaphone"></i></div>
+          <div>
+            <h3>Nueva publicación</h3>
+            <p>Aula fijada: <b>${esc(aula.name)}</b> · ${new Date().toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</p>
+          </div>
+        </div>
+        <button type="button" class="ksc-modal-close" data-ksc-modal-close aria-label="Cerrar"><i data-lucide="x"></i></button>
+      </div>`;
+    const content = `
+      <div class="ksc-modal" data-ksc-modal="newPost" style="--accent:${accent}">
+        ${header}
+        <div class="ksc-modal-body">
+          <div class="ksc-composer">
+            <div class="ksc-composer-tags">
+              <span class="ksc-chip" style="background:${esc(aula.color)}1f;color:${esc(aula.color)};border:3px solid ${esc(aula.color)}33;border-radius:18px;padding:6px 14px;">
+                <i data-lucide="school"></i> Aula · ${esc(aula.name)} <i data-lucide="lock"></i>
+              </span>
+              ${canGlobal ? `
+                <label class="ksc-composer-global">
+                  <input type="checkbox" id="ksc-post-is-global">
+                  <span>Publicar también como <b>anuncio general</b> (muro de todas las familias)</span>
+                </label>` : ''}
+            </div>
+            <input type="text" id="ksc-post-title" class="ksc-inp" placeholder="Título (opcional) · ejemplo: Actividad de la semana del libro" maxlength="120">
+            <textarea id="ksc-post-content" rows="5" class="ksc-inp ksc-inp--area" placeholder="Cuéntale a las familias cómo va el día, la actividad de hoy, fotos, recordatorios…" maxlength="4000"></textarea>
+            <div class="ksc-composer-tools">
+              <label class="ksc-tool-btn" title="Agregar fotos/videos">
+                <i data-lucide="image-plus"></i> Adjuntar medios
+                <input type="file" id="ksc-post-files" accept="image/*,video/*" multiple hidden>
+              </label>
+              <div id="ksc-post-preview" class="ksc-post-preview"></div>
+            </div>
+          </div>
+        </div>
+        <div class="ksc-modal-footer">
+          <div style="flex:1;color:#64748B;font-size:12px;font-weight:600" id="ksc-post-counter">0 caracteres</div>
+          <button type="button" class="ksc-qa-btn ksc-qa-btn--ghost" data-ksc-modal-close>Cancelar</button>
+          <button type="button" class="ksc-qa-btn ksc-qa-btn--primary" id="ksc-post-submit" style="--accent:${accent}"><i data-lucide="send"></i> Publicar</button>
+        </div>
+      </div>`;
+    openGlobalModal(content, { width: 'min(880px, 94vw)', maxHeight: '88vh' });
+    this._bindNewPostModal(classroomId, aula);
+    if (window.lucide) requestAnimationFrame(() => lucide.createIcons());
+  },
+
+  _bindNewPostModal(classroomId, aula) {
+    const modal = document.querySelector('[data-ksc-modal="newPost"]');
+    if (!modal) return;
+    const close = () => {
+      const origin = this._scModalActive?.originTab;
+      this._scModalActive = null;
+      this._scPendingPostFiles = null;
+      _scCloseModal();
+      if (origin && origin !== 'aula' && origin !== this._tab) this.go(origin);
+    };
+    modal.querySelectorAll('[data-ksc-modal-close]').forEach(b => b.addEventListener('click', close));
+    const content = document.getElementById('ksc-post-content');
+    const counter = document.getElementById('ksc-post-counter');
+    const files = document.getElementById('ksc-post-files');
+    const preview = document.getElementById('ksc-post-preview');
+    const submit = document.getElementById('ksc-post-submit');
+    if (content) {
+      content.addEventListener('input', () => {
+        counter.textContent = `${content.value.length} caracteres${content.value.length>=3500?` · ${4000-content.value.length} restantes`:''}`;
+        submit.disabled = content.value.trim().length === 0;
+        submit.style.opacity = content.value.trim().length === 0 ? '0.55' : '1';
+        submit.style.cursor = content.value.trim().length === 0 ? 'not-allowed' : 'pointer';
+      });
+    }
+    if (submit) submit.disabled = true;
+    this._scPendingPostFiles = [];
+    if (files) files.addEventListener('change', async (e) => {
+      const chosen = Array.from(e.target.files || []).slice(0, 4);
+      preview.innerHTML = '';
+      this._scPendingPostFiles = [];
+      for (const f of chosen) {
+        const url = URL.createObjectURL(f);
+        const isVideo = f.type.startsWith('video');
+        const div = document.createElement('div');
+        div.className = 'ksc-preview-item';
+        div.innerHTML = isVideo
+          ? `<video src="${url}" controls muted></video><button type="button" class="ksc-preview-x" title="Quitar"><i data-lucide="x"></i></button>`
+          : `<img src="${url}" alt="preview"><button type="button" class="ksc-preview-x" title="Quitar"><i data-lucide="x"></i></button>`;
+        preview.appendChild(div);
+        this._scPendingPostFiles.push(f);
+        div.querySelector('.ksc-preview-x').addEventListener('click', () => {
+          const idx = this._scPendingPostFiles.indexOf(f);
+          if (idx >= 0) this._scPendingPostFiles.splice(idx, 1);
+          div.remove();
+        });
+        if (window.lucide) requestAnimationFrame(() => lucide.createIcons());
+      }
+    });
+    submit?.addEventListener('click', () => this.submitPostFromCenter(classroomId, aula));
+  },
+
+  async submitPostFromCenter(classroomId, aula) {
+    const title = (document.getElementById('ksc-post-title')?.value || '').trim();
+    const content = (document.getElementById('ksc-post-content')?.value || '').trim();
+    const isGlobal = !!document.getElementById('ksc-post-is-global')?.checked;
+    const submit = document.getElementById('ksc-post-submit');
+    if (!content) { Helpers.toast('Contenido requerido', 'warn'); return; }
+    if (submit) { submit.disabled = true; submit.textContent = 'Publicando…'; }
+    const me = await this._getCurrentUser();
+    if (!me) { Helpers.toast('Sesión no válida', 'error'); if (submit) submit.disabled=false; return; }
+    let mediaUrls = [];
+    const pendingFiles = this._scPendingPostFiles || [];
+    if (pendingFiles.length) {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token || '';
+        for (let i = 0; i < pendingFiles.length; i++) {
+          const f = pendingFiles[i];
+          const ext = (f.name.split('.').pop() || 'jpg').toLowerCase();
+          const key = `posts/classroom_${classroomId}/${Date.now()}_${i}_${Math.random().toString(36).slice(2,6)}.${ext}`;
+          const cfg = supabase;
+          const uploadUrl = `${cfg.supabaseUrl || window.__scUrl || ''}/storage/v1/object/public/class-media/${key}`;
+          try {
+            const r = await supabase.storage.from('class-media').upload(key, f, { cacheControl: '3600', upsert: true });
+            if (r?.error) throw r.error;
+            mediaUrls.push(uploadUrl);
+          } catch (e) {
+            try {
+              const res = await fetch(uploadUrl, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': f.type }, body: f });
+              if (res.ok) mediaUrls.push(uploadUrl);
+            } catch (efb) { console.warn('[CentroEscolar] media fallback failed', efb); }
+          }
+        }
+      } catch (eU) { console.warn('[CentroEscolar] media upload error', eU); }
+    }
+    const target = isGlobal ? null : classroomId;
+    const payload = {
+      classroom_id: target, teacher_id: me.id, teacher_name: me.profile?.name || 'Dirección',
+      title: title || null, content, media_urls: mediaUrls.length ? mediaUrls : null,
+      created_at: new Date().toISOString(),
+    };
+    let row = null;
+    try {
+      const r = await supabase.from('posts').insert(payload).select().maybeSingle();
+      if (r?.error && ['401','403','42501','PGRST'].some(x => String(r.error?.code || r.error?.message || '').includes(x))) throw r.error;
+      row = r?.data || null;
+    } catch (eSdk) {
+      try {
+        const cfg = supabase;
+        const url = `${cfg.supabaseUrl || window.__scUrl || ''}/rest/v1/posts`;
+        const headers = {
+          'Content-Type': 'application/json',
+          'apikey': cfg.supabaseAnonKey || window.__scAnonKey || '',
+          'Authorization': `Bearer ${cfg.supabaseAnonKey || window.__scAnonKey || ''}`,
+          'Prefer': 'return=representation',
+        };
+        const raw = await fetch(url, { method: 'POST', headers, body: JSON.stringify(payload) });
+        if (raw.ok) row = (await raw.json())[0] || payload;
+      } catch (eFb) { console.warn('[CentroEscolar] post fallback failed', eFb); }
+    }
+    if (!row) { Helpers.toast('No se pudo publicar. Intenta de nuevo.', 'error'); if (submit) { submit.disabled=false; submit.textContent='Publicar'; } return; }
+    if (this._postsCache && !Array.isArray(this._postsCache)) this._postsCache = [];
+    if (Array.isArray(this._postsCache)) this._postsCache.unshift({ ...row, teacher: { name: row.teacher_name || me.profile?.name } });
+    this._refreshAfterAction(classroomId, { incPostsToday: 1, incPostsWeek: 1 });
+    this._injectFeedItem({
+      ts: new Date(row.created_at || Date.now()).getTime(), icon: 'megaphone', color: '#16A34A',
+      title: `${esc(aula.name)} publicó actividad`, meta: `${this._fmtTime(row.created_at || new Date().toISOString())} · ${esc(title || content).slice(0,60)}`,
+    });
+    Helpers.toast('Publicación creada ✔️', 'success');
+    const origin = this._scModalActive?.originTab;
+    this._scModalActive = null; this._scPendingPostFiles = null; _scCloseModal();
+    if (origin && origin !== 'aula' && origin !== this._tab) this.go(origin);
+    if (window.lucide) requestAnimationFrame(() => lucide.createIcons());
+  },
+
+  _injectFeedItem(item) {
+    const view = document.getElementById('kscView');
+    if (!view) return;
+    const feed = view.querySelector('.ksc-feed');
+    if (!feed) return;
+    const node = document.createElement('div');
+    node.className = 'ksc-feed-item';
+    node.style.animation = 'fadeUp .35s ease both';
+    node.innerHTML = `
+      <div class="ksc-feed-dot" style="--c:${esc(item.color||'#0B63C7')}"><i data-lucide="${esc(item.icon||'zap')}"></i></div>
+      <div class="ksc-feed-txt">
+        <div class="ksc-feed-title">${item.title||''}</div>
+        <div class="ksc-feed-meta">${item.meta||''}</div>
+      </div>`;
+    feed.insertBefore(node, feed.firstChild);
+    const limit = 16;
+    while (feed.childElementCount > limit) feed.removeChild(feed.lastChild);
+    if (window.lucide) requestAnimationFrame(() => lucide.createIcons());
+  },
+
+  /* ══════════════ MODAL #3 — CREAR / AGENDAR EVENTO (T9/T10) ══════════════ */
+  openNewEventModal(classroomId) {
+    const aula = this._data?.aulas.find(x => x.id && String(x.id) === String(classroomId)) ||
+                 this._data?.pool.find(x => x.id && String(x.id) === String(classroomId));
+    if (!aula) return Helpers.toast('Aula no encontrada', 'error');
+    this._scModalActive = { type: 'event', classroomId, originTab: this._tab };
+    this._scEventCache = { selectedType: null, tab: 'now' };
+    const role = this._currentRole();
+    const accent = role === 'asistente' ? '#0d9488' : role === 'encargada' ? '#8B5CF6' : '#0B63C7';
+    const types = Object.entries(EVENT_META || {}).map(([key, m]) => ({ key, ...m }));
+    const students = aula.m?.students || [];
+    const todayStr = this._todayISO();
+    const now = new Date();
+    const timeStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+    const header = `
+      <div class="ksc-modal-header" style="--accent:${accent}">
+        <div class="ksc-modal-head-left">
+          <div class="ksc-modal-avatar"><i data-lucide="calendar-plus"></i></div>
+          <div>
+            <h3>Crear / Agendar Evento</h3>
+            <p>Aula · <b>${esc(aula.name)}</b> · ${students.length} estudiante${students.length===1?'':'s'}</p>
+          </div>
+        </div>
+        <button type="button" class="ksc-modal-close" data-ksc-modal-close aria-label="Cerrar"><i data-lucide="x"></i></button>
+      </div>`;
+    const typeChips = types.map(t => `
+      <button type="button" class="ksc-type-chip" data-ksc-event-type="${esc(t.key)}" style="--c:${esc(t.color)}">
+        <i data-lucide="${esc(t.icon||'zap')}"></i>
+        <span>${esc(t.label)}</span>
+      </button>`).join('');
+    const studentRows = students.length ? students.map(s => `
+      <label class="ksc-student-row">
+        <input type="checkbox" class="ksc-student-check" data-ksc-student="${esc(s.id)}" checked>
+        <div class="ksc-student-av">${esc(((s.name||'?').charAt(0)).toUpperCase())}</div>
+        <div class="ksc-student-name">${esc(s.name)}</div>
+      </label>`).join('')
+      : `<div class="ksc-empty"><i data-lucide="users"></i><div>Este aula no tiene estudiantes registrados.</div></div>`;
+    const content = `
+      <div class="ksc-modal" data-ksc-modal="newEvent" style="--accent:${accent}">
+        ${header}
+        <div class="ksc-tabs">
+          <button type="button" class="ksc-tab ksc-tab--sm active" data-ksc-event-tab="now"><i data-lucide="zap"></i> Registrar ahora</button>
+          <button type="button" class="ksc-tab ksc-tab--sm" data-ksc-event-tab="future"><i data-lucide="calendar-clock"></i> Agendar futuro</button>
+        </div>
+        <div class="ksc-modal-body">
+          <div class="ksc-event-type-head"><span class="ksc-event-type-label">Tipo de evento</span><span id="ksc-event-type-sel" style="color:#64748B;font-weight:600;font-size:12px">elige uno</span></div>
+          <div class="ksc-type-grid" id="ksc-type-grid">${typeChips}</div>
+          <div class="ksc-event-date-row" id="ksc-event-date-row" style="display:none">
+            <label><span>Fecha</span><input type="date" id="ksc-event-date" value="${esc(todayStr)}" class="ksc-inp"></label>
+            <label><span>Hora</span><input type="time" id="ksc-event-time" value="${esc(timeStr)}" class="ksc-inp"></label>
+          </div>
+          <textarea id="ksc-event-notes" rows="2" class="ksc-inp ksc-inp--area" placeholder="Notas / detalles (opcional) — temperatura, síntomas, observaciones de medicación, etc."></textarea>
+          <div class="ksc-students-head">
+            <label class="ksc-checkall">
+              <input type="checkbox" id="ksc-check-all" checked>
+              <span>Aplicar a todo el grupo (${students.length})</span>
+            </label>
+            <span class="ksc-chip ksc-chip--info" id="ksc-selected-count">${students.length} seleccionados</span>
+          </div>
+          <div class="ksc-student-list">${studentRows}</div>
+        </div>
+        <div class="ksc-modal-footer">
+          <button type="button" class="ksc-qa-btn ksc-qa-btn--ghost" data-ksc-modal-close>Cancelar</button>
+          <button type="button" class="ksc-qa-btn ksc-qa-btn--primary" id="ksc-event-submit" style="--accent:${accent}" disabled><i data-lucide="save"></i> Guardar evento</button>
+        </div>
+      </div>`;
+    openGlobalModal(content, { width: 'min(1000px, 94vw)', maxHeight: '90vh' });
+    this._bindNewEventModal(classroomId, aula, students.length);
+    if (window.lucide) requestAnimationFrame(() => lucide.createIcons());
+  },
+
+  _bindNewEventModal(classroomId, aula, totalStudents) {
+    const modal = document.querySelector('[data-ksc-modal="newEvent"]');
+    if (!modal) return;
+    const close = () => {
+      const origin = this._scModalActive?.originTab;
+      this._scModalActive = null;
+      _scCloseModal();
+      if (origin && origin !== 'aula' && origin !== this._tab) this.go(origin);
+    };
+    modal.querySelectorAll('[data-ksc-modal-close]').forEach(b => b.addEventListener('click', close));
+    const dateRow = document.getElementById('ksc-event-date-row');
+    const selTypeText = document.getElementById('ksc-event-type-sel');
+    const submit = document.getElementById('ksc-event-submit');
+    const updSubmit = () => {
+      const ok = !!this._scEventCache?.selectedType && this._getSelectedStudents().length > 0;
+      if (submit) { submit.disabled = !ok; submit.style.opacity = ok ? '1' : '0.55'; submit.style.cursor = ok ? 'pointer' : 'not-allowed'; }
+    };
+    modal.querySelectorAll('[data-ksc-event-tab]').forEach(b => b.addEventListener('click', () => {
+      modal.querySelectorAll('[data-ksc-event-tab]').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      const tab = b.dataset.kscEventTab;
+      this._scEventCache.tab = tab;
+      if (dateRow) dateRow.style.display = tab === 'future' ? 'flex' : 'none';
+    }));
+    modal.querySelectorAll('.ksc-type-chip').forEach(chip => chip.addEventListener('click', () => {
+      modal.querySelectorAll('.ksc-type-chip').forEach(x => x.classList.remove('active'));
+      chip.classList.add('active');
+      const type = chip.dataset.kscEventType;
+      this._scEventCache.selectedType = type;
+      const meta = EVENT_META?.[type] || { label: type };
+      if (selTypeText) { selTypeText.innerHTML = `<span style="color:${esc(meta.color||'#0B63C7')};font-weight:800">✔ ${esc(meta.label||type)}</span>`; }
+      updSubmit();
+    }));
+    const allCheck = document.getElementById('ksc-check-all');
+    const count = document.getElementById('ksc-selected-count');
+    const recalcCount = () => {
+      const n = this._getSelectedStudents().length;
+      if (count) count.textContent = `${n} seleccionado${n===1?'':'s'}`;
+      if (allCheck) allCheck.checked = totalStudents > 0 && n === totalStudents;
+      updSubmit();
+    };
+    if (allCheck) allCheck.addEventListener('change', () => {
+      modal.querySelectorAll('.ksc-student-check').forEach(cb => { cb.checked = allCheck.checked; });
+      recalcCount();
+    });
+    Helpers.delegate(modal, '.ksc-student-check', 'change', recalcCount);
+    submit?.addEventListener('click', () => this.recordEventFromCenter(classroomId, aula));
+  },
+
+  _getSelectedStudents() {
+    const nodes = document.querySelectorAll('.ksc-student-check:checked');
+    return Array.from(nodes).map(x => x.dataset.kscStudent).filter(Boolean);
+  },
+
+  async recordEventFromCenter(classroomId, aula) {
+    const type = this._scEventCache?.selectedType;
+    if (!type) return Helpers.toast('Elige un tipo de evento', 'warn');
+    const studentIds = this._getSelectedStudents();
+    if (!studentIds.length) return Helpers.toast('Selecciona al menos un estudiante', 'warn');
+    const tab = this._scEventCache?.tab || 'now';
+    let dateISO, timeStr;
+    if (tab === 'future') {
+      dateISO = (document.getElementById('ksc-event-date')?.value || this._todayISO());
+      timeStr = (document.getElementById('ksc-event-time')?.value || '12:00');
+    } else {
+      const now = new Date();
+      dateISO = this._todayISO();
+      timeStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+    }
+    const notes = (document.getElementById('ksc-event-notes')?.value || '').trim();
+    const me = await this._getCurrentUser();
+    if (!me) return Helpers.toast('Sesión no válida', 'error');
+    const submit = document.getElementById('ksc-event-submit');
+    if (submit) { submit.disabled = true; submit.textContent = 'Guardando…'; }
+    const eventTimeIso = `${dateISO}T${timeStr}:00`;
+    const payload = {
+      classroom_id: classroomId, teacher_id: me.id, event_type: type, event_date: dateISO, event_time: eventTimeIso,
+    };
+    let eventRow = null;
+    try {
+      const r = await supabase.from('classroom_events').insert(payload).select().maybeSingle();
+      if (r?.error && ['401','403','42501','PGRST'].some(x => String(r.error?.code || r.error?.message || '').includes(x))) throw r.error;
+      eventRow = r?.data || null;
+    } catch (eSdk) {
+      try {
+        const cfg = supabase;
+        const url = `${cfg.supabaseUrl || window.__scUrl || ''}/rest/v1/classroom_events`;
+        const headers = {
+          'Content-Type': 'application/json',
+          'apikey': cfg.supabaseAnonKey || window.__scAnonKey || '',
+          'Authorization': `Bearer ${cfg.supabaseAnonKey || window.__scAnonKey || ''}`,
+          'Prefer': 'return=representation',
+        };
+        const raw = await fetch(url, { method: 'POST', headers, body: JSON.stringify(payload) });
+        if (raw.ok) eventRow = (await raw.json())[0] || payload;
+      } catch (eFb) { console.warn('[CentroEscolar] event fallback failed', eFb); }
+    }
+    if (!eventRow) { Helpers.toast('No se pudo crear el evento', 'error'); if (submit){ submit.disabled=false; submit.textContent='Guardar evento';} return; }
+    const eid = eventRow.id;
+    const participants = studentIds.map(sid => ({
+      event_id: eid, student_id: sid, status: 'present', extra_data: notes ? { notes } : null,
+    }));
+    let participantsOk = true;
+    try {
+      const rp = await supabase.from('event_participants').insert(participants);
+      if (rp?.error) throw rp.error;
+    } catch (eP) {
+      try {
+        const cfg = supabase;
+        const url = `${cfg.supabaseUrl || window.__scUrl || ''}/rest/v1/event_participants`;
+        const headers = {
+          'Content-Type': 'application/json',
+          'apikey': cfg.supabaseAnonKey || window.__scAnonKey || '',
+          'Authorization': `Bearer ${cfg.supabaseAnonKey || window.__scAnonKey || ''}`,
+          'Prefer': 'return=minimal',
+        };
+        const raw = await fetch(url, { method: 'POST', headers, body: JSON.stringify(participants) });
+        participantsOk = raw.ok;
+      } catch (eFb2) { participantsOk = false; }
+    }
+    const meta = evMeta(type);
+    const delta = dateISO === this._todayISO() ? 1 : 0;
+    this._refreshAfterAction(classroomId, { incEventsToday: delta, recomputeRoutine: !!delta });
+    if (delta) {
+      const target = this._data?.aulas.find(x=>x.id&&String(x.id)===String(classroomId)) || this._data?.pool.find(x=>x.id&&String(x.id)===String(classroomId));
+      if (target?.m?.eventsToday && eventRow) target.m.eventsToday.push({ ...eventRow, _inline: true });
+      this._injectFeedItem({
+        ts: new Date(eventTimeIso).getTime(), icon: meta.icon, color: meta.color,
+        title: `${esc(meta.label||'Evento')} · ${esc(aula.name)}`,
+        meta: `${this._fmtTime(eventTimeIso)} · ${participants.length} estudiante${participants.length===1?'':'s'}`,
+      });
+    }
+    this._showEventUndoBanner(eid, type, participantCountOk => {
+      if (participantCountOk) {
+        this._refreshAfterAction(classroomId, { recomputeRoutine: true });
+        Helpers.toast(`${esc(meta.label||'Evento')} registrado ✔️`, 'success');
+      } else {
+        Helpers.toast('Evento creado (participantes no guardados)', 'warn');
+      }
+      const origin = this._scModalActive?.originTab;
+      this._scModalActive = null; _scCloseModal();
+      if (origin && origin !== 'aula' && origin !== this._tab) this.go(origin);
+    }, participantsOk);
+    if (window.lucide) requestAnimationFrame(() => lucide.createIcons());
+  },
+
+  _showEventUndoBanner(eventId, eventType, done, participantsOk) {
+    this._hideEventUndoBanner();
+    const meta = evMeta(eventType);
+    const container = document.createElement('div');
+    container.id = 'ksc-undo-banner';
+    container.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:white;border:3px solid #DBEAFE;border-radius:28px;box-shadow:0 14px 36px rgba(15,23,42,.10);padding:10px 16px;display:flex;align-items:center;gap:12px;z-index:99999;animation:fadeUp .3s ease both;';
+    container.innerHTML = `
+      <span style="color:#16A34A;font-weight:800;display:flex;align-items:center;gap:6px;font-size:13px;">
+        <i data-lucide="check-circle"></i> ${esc(meta.label||'Evento')} registrado
+      </span>
+      <button id="ksc-undo-btn" type="button" style="background:#0B63C7;color:white;border:none;padding:7px 14px;border-radius:50px;font-weight:700;cursor:pointer;font-size:12px;letter-spacing:.03em;">DESHACER</button>
+      <span id="ksc-undo-timer" style="color:#94A3B8;font-size:12px;font-weight:600;">10s</span>`;
+    document.body.appendChild(container);
+    let remaining = 10;
+    let cancelled = false;
+    const t = setInterval(() => {
+      remaining--;
+      const el = document.getElementById('ksc-undo-timer');
+      if (el) el.textContent = `${remaining}s`;
+      if (remaining <= 0) {
+        clearInterval(t);
+        if (!cancelled && !container._removed) { container._removed = true; try { document.body.removeChild(container); } catch(_){} done(participantsOk); }
+      }
+    }, 1000);
+    document.getElementById('ksc-undo-btn').addEventListener('click', async () => {
+      cancelled = true; clearInterval(t);
+      try { await supabase.from('classroom_events').delete().eq('id', eventId); Helpers.toast('Evento deshecho', 'success'); }
+      catch(_) { try {
+        const cfg = supabase;
+        const url = `${cfg.supabaseUrl || window.__scUrl || ''}/rest/v1/classroom_events?id=eq.${eventId}`;
+        const headers = { 'Content-Type':'application/json', 'apikey': cfg.supabaseAnonKey || window.__scAnonKey || '', 'Authorization': `Bearer ${cfg.supabaseAnonKey || window.__scAnonKey || ''}` };
+        const r = await fetch(url, { method: 'DELETE', headers }); if (!r.ok) throw new Error(); Helpers.toast('Evento deshecho', 'success');
+      } catch(_2){ Helpers.toast('No se pudo deshacer (ya fue aplicado)', 'warn'); } }
+      try { if (!container._removed) { container._removed = true; document.body.removeChild(container); } } catch(_){}
+      const origin = this._scModalActive?.originTab;
+      this._scModalActive = null; _scCloseModal();
+      if (origin && origin !== 'aula' && origin !== this._tab) this.go(origin);
+    });
+    if (window.lucide) requestAnimationFrame(() => lucide.createIcons());
+  },
+
+  _hideEventUndoBanner() {
+    const b = document.getElementById('ksc-undo-banner'); if (b && !b._removed) { b._removed = true; try { document.body.removeChild(b); } catch(_){} }
+  },
+
+  /* ══════════════ DETECCIÓN DE ROL Y PANEL ACTUAL ══════════════ */
+  _currentRole() {
+    const path = (window.location.pathname || '').toLowerCase();
+    if (/panel_asistente/.test(path)) return 'asistente';
+    if (/panel_control|panel_encargada/.test(path)) return 'encargada';
+    return 'directora';
   },
 };
 

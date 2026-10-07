@@ -26,6 +26,7 @@
     <link rel="stylesheet" href="css/wall-social.css">
   <link rel="stylesheet" href="css/student-record-modal.css">
   <link rel="stylesheet" href="css/messenger-chat.css">
+  <link rel="stylesheet" href="css/school-center.css">
   <script src="js/shared/chart.min.js"></script>
   <style>
     /* =========================================
@@ -287,6 +288,13 @@
           ...
         </div>
         -->
+
+        <!-- Centro Escolar (flat) → Operaciones del centro -->
+        <button data-section="centro-escolar" class="nav-btn kk-nav-item" data-tooltip="Centro Escolar">
+          <i data-lucide="layout-grid" class="text-emerald-200 shrink-0"></i>
+          <span class="label">🏫 Centro Escolar</span>
+          <span id="badge-ksc" class="hidden kk-badge ml-auto">0</span>
+        </button>
 
         <!-- Perfil (flat) -->
         <button data-section="perfil" class="nav-btn kk-nav-item" data-tooltip="Mi Perfil">
@@ -936,6 +944,17 @@
             </div>
           </aside>
         </div>
+      </section>
+
+      <!-- CENTRO ESCOLAR (nuevo) -->
+      <section id="centro-escolar" class="section hidden">
+        <header class="mb-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h1 class="text-3xl font-black text-slate-800 flex items-center gap-2">🏫 Centro Escolar</h1>
+            <p class="text-slate-500 font-medium">Panel de intervención rápida: responder mensajes, publicar en muro y registrar eventos por aula.</p>
+          </div>
+        </header>
+        <div id="kscRoot" class="ksc"></div>
       </section>
 
       <!-- MURO ESCOLAR UNIFICADO -->

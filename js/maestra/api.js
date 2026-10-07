@@ -1,8 +1,19 @@
 import { supabase } from '../shared/supabase.js';
 import { TABLES } from '../shared/constants.js';
 
-function handleError(error) {
-  if (error) throw error;
+function handleError(error, fallback = null) {
+  if (error) {
+    console.warn('[MaestraApi] Error capturado (modo resiliente):', error?.message || error);
+    try { window.dispatchEvent(new CustomEvent('karpus:db-error', { detail: { message: error?.message || String(error) } })); } catch(_){}
+    return fallback;
+  }
+  return null;
+}
+
+function _isColumnError(error) {
+  if (!error) return false;
+  const msg = (error.message || error.code || String(error)).toLowerCase();
+  return msg.includes('column') && (msg.includes('does not exist') || msg.includes('no existe') || msg.includes('pgrst301'));
 }
 
 const _cache = new Map();
@@ -29,15 +40,28 @@ export const MaestraApi = {
     const cached = _getCache('getStudents', classroomId);
     if (cached) return cached;
 
-    const { data, error } = await supabase
+    const FULL_COLS = 'id, name, avatar_url, matricula, allergies, blood_type, p1_name, p1_phone, p1_email, parent_id, age, age_type';
+    const MIN_COLS  = 'id, name, avatar_url, parent_id';
+
+    let res = await supabase
       .from(TABLES.STUDENTS)
-      .select('id, name, avatar_url, matricula, allergies, blood_type, p1_name, p1_phone, p1_email, parent_id, age, age_type')
+      .select(FULL_COLS)
       .eq('classroom_id', classroomId)
       .eq('is_active', true)
       .order('name');
 
-    handleError(error);
-    const result = data || [];
+    if (_isColumnError(res.error)) {
+      console.warn('[MaestraApi] Reintentando getStudents con columnas mínimas');
+      res = await supabase
+        .from(TABLES.STUDENTS)
+        .select(MIN_COLS)
+        .eq('classroom_id', classroomId)
+        .eq('is_active', true)
+        .order('name');
+    }
+
+    const fb = handleError(res.error, []);
+    const result = fb !== null ? fb : (res.data || []);
     _setCache('getStudents', result, 60000, classroomId);
     return result;
   },
@@ -46,14 +70,26 @@ export const MaestraApi = {
     const cached = _getCache('getAttendance', classroomId, date);
     if (cached) return cached;
 
-    const { data, error } = await supabase
+    const FULL_COLS = 'id, student_id, status, check_in, check_out, date';
+    const MIN_COLS  = 'id, student_id, status, date';
+
+    let res = await supabase
       .from(TABLES.ATTENDANCE)
-      .select('id, student_id, status, check_in, check_out, date')
+      .select(FULL_COLS)
       .eq('classroom_id', classroomId)
       .eq('date', date);
 
-    handleError(error);
-    const result = data || [];
+    if (_isColumnError(res.error)) {
+      console.warn('[MaestraApi] Reintentando getAttendance con columnas mínimas');
+      res = await supabase
+        .from(TABLES.ATTENDANCE)
+        .select(MIN_COLS)
+        .eq('classroom_id', classroomId)
+        .eq('date', date);
+    }
+
+    const fb = handleError(res.error, []);
+    const result = fb !== null ? fb : (res.data || []);
     _setCache('getAttendance', result, 30000, classroomId, date);
     return result;
   },
@@ -66,7 +102,8 @@ export const MaestraApi = {
       .eq('date', record.date)
       .maybeSingle();
 
-    handleError(findError);
+    const fb = handleError(findError, null);
+    if (fb !== null) return null;
 
     const query = existing
       ? supabase
@@ -79,21 +116,34 @@ export const MaestraApi = {
 
     const { data, error } = await query.select().maybeSingle();
 
-    handleError(error);
+    const fb2 = handleError(error, null);
+    if (fb2 !== null) return null;
     invalidateCache('getAttendance');
     return data;
   },
 
   async getTasksByClassroom(classroomId) {
-    const { data, error } = await supabase
+    const FULL_COLS = 'id, title, description, due_date, grading_system, file_url, created_at, period_id';
+    const MIN_COLS  = 'id, title, description, due_date, created_at';
+
+    let res = await supabase
       .from('tasks')
-      .select('id, title, description, due_date, grading_system, file_url, created_at, period_id')
+      .select(FULL_COLS)
       .eq('classroom_id', classroomId)
       .order('created_at', { ascending: false })
       .limit(50);
 
-    handleError(error);
-    return data || [];
+    if (_isColumnError(res.error)) {
+      res = await supabase
+        .from('tasks')
+        .select(MIN_COLS)
+        .eq('classroom_id', classroomId)
+        .order('created_at', { ascending: false })
+        .limit(50);
+    }
+
+    const fb = handleError(res.error, []);
+    return fb !== null ? fb : (res.data || []);
   },
 
   async getDailyRoutine(classroomId, date) {
@@ -102,15 +152,27 @@ export const MaestraApi = {
     const cached = _getCache('getDailyRoutine', cacheKey);
     if (cached) return cached;
 
-    const { data, error } = await supabase
+    const FULL_COLS = 'id, student_id, date, mood, food, nap, eating, sleeping, activities, notes, infant_data, status, created_at';
+    const MIN_COLS  = 'id, student_id, date, notes, status, created_at';
+
+    let res = await supabase
       .from('daily_logs')
-      .select('id, student_id, date, mood, food, nap, eating, sleeping, activities, notes, infant_data, status, created_at')
+      .select(FULL_COLS)
       .eq('classroom_id', classroomId)
       .eq('date', today)
       .order('created_at', { ascending: true });
 
-    handleError(error);
-    const result = data || [];
+    if (_isColumnError(res.error)) {
+      res = await supabase
+        .from('daily_logs')
+        .select(MIN_COLS)
+        .eq('classroom_id', classroomId)
+        .eq('date', today)
+        .order('created_at', { ascending: true });
+    }
+
+    const fb = handleError(res.error, []);
+    const result = fb !== null ? fb : (res.data || []);
     _setCache('getDailyRoutine', result, 15000, cacheKey);
     return result;
   },
@@ -126,7 +188,8 @@ export const MaestraApi = {
       .eq('date', cleanPayload.date)
       .maybeSingle();
 
-    handleError(findError);
+    const fb = handleError(findError, null);
+    if (fb !== null) return null;
 
     if (cleanPayload.infant_event) {
       const newEvent = cleanPayload.infant_event;
@@ -153,7 +216,8 @@ export const MaestraApi = {
 
     const { data, error } = await query.select().maybeSingle();
 
-    handleError(error);
+    const fb2 = handleError(error, null);
+    if (fb2 !== null) return null;
     invalidateCache('getDailyRoutine');
     return data;
   },
@@ -165,7 +229,8 @@ export const MaestraApi = {
       .update({ status: 'published' })
       .in('id', logIds);
 
-    handleError(error);
+    const fb = handleError(error, null);
+    if (fb !== null) return null;
     invalidateCache('getDailyRoutine');
     return data;
   },
@@ -183,7 +248,8 @@ export const MaestraApi = {
       .select()
       .maybeSingle();
 
-    handleError(error);
+    const fb = handleError(error, null);
+    if (fb !== null) return null;
     return data;
   },
 
@@ -193,9 +259,10 @@ export const MaestraApi = {
       .update(payload)
       .eq('id', taskId)
       .select()
-      .single();
+      .maybeSingle();
 
-    handleError(error);
+    const fb = handleError(error, null);
+    if (fb !== null) return null;
     return data;
   },
 
@@ -205,12 +272,12 @@ export const MaestraApi = {
       .delete()
       .eq('id', taskId);
 
-    handleError(error);
-    return { success: !error };
+    const fb = handleError(error, null);
+    return { success: fb === null };
   },
 
   async gradeTask(taskId, studentId, gradeLetter, stars, feedback, numericScore = null) {
-    if (!taskId || !studentId) throw new Error('Task ID and Student ID are required');
+    if (!taskId || !studentId) return null;
 
     const starsVal   = parseInt(stars) || null;
     const validStars = (starsVal && starsVal >= 1 && starsVal <= 5) ? starsVal : null;
@@ -247,7 +314,8 @@ export const MaestraApi = {
         .maybeSingle();
     }
 
-    handleError(result.error);
+    const fb = handleError(result.error, null);
+    if (fb !== null) return null;
     return result.data;
   },
 
@@ -264,7 +332,8 @@ export const MaestraApi = {
       .select()
       .maybeSingle();
 
-    handleError(error);
+    const fb = handleError(error, null);
+    if (fb !== null) return null;
     return data;
   }
 };

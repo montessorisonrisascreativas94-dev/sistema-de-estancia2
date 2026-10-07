@@ -6,11 +6,59 @@ export const safeToast = (message, type = 'success') => {
   if (!message) return;
   try {
     if (window.Helpers && typeof window.Helpers.toast === 'function') {
-      return window.Helpers.toast(message, type);
+      const r = window.Helpers.toast(message, type);
+      if (r !== undefined && r !== null) return r;
     }
-  } catch (_) {
-    // silencioso
-  }
+  } catch (_) {}
+  try {
+    if (window.SmartLoader && typeof window.SmartLoader.toast === 'function') {
+      return window.SmartLoader.toast(message, type);
+    }
+  } catch (_) {}
+
+  const palette = {
+    success: { bg: 'linear-gradient(135deg,#10B981,#059669)', icon: '✓' },
+    error:   { bg: 'linear-gradient(135deg,#EF4444,#DC2626)', icon: '✕' },
+    warning: { bg: 'linear-gradient(135deg,#F59E0B,#D97706)', icon: '!' },
+    info:    { bg: 'linear-gradient(135deg,#3B82F6,#2563EB)', icon: 'i' }
+  };
+  const p = palette[type] || palette.success;
+  const id = 'nt_' + Math.random().toString(36).slice(2, 9);
+  const el = document.createElement('div');
+  el.id = id;
+  el.setAttribute('role', 'status');
+  el.style.cssText = [
+    'position:fixed', 'top:24px', 'right:24px', 'z-index:2147483647',
+    'display:flex', 'align-items:center', 'gap:12px',
+    'padding:14px 20px 14px 16px', 'min-width:260px', 'max-width:420px',
+    'border-radius:20px', 'color:#fff',
+    'font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif',
+    'font-weight:700', 'font-size:14px', 'line-height:1.4',
+    'background:' + p.bg,
+    'box-shadow:0 18px 40px rgba(15,23,42,.22),0 6px 16px rgba(15,23,42,.14)',
+    'border:1px solid rgba(255,255,255,.18)',
+    'backdrop-filter:blur(8px)',
+    'transform:translateY(-8px)', 'opacity:0',
+    'transition:transform .28s cubic-bezier(.34,1.56,.64,1),opacity .22s ease'
+  ].join(';');
+  el.innerHTML = `
+    <span style="display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;width:28px;height:28px;border-radius:10px;background:rgba(255,255,255,.18);font-weight:900;font-size:14px;">${p.icon}</span>
+    <span style="flex:1;word-break:break-word;">${String(message).replace(/[&<>]/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[s]))}</span>
+    <button type="button" aria-label="Cerrar" style="flex-shrink:0;width:24px;height:24px;border:none;background:rgba(255,255,255,.15);color:#fff;border-radius:8px;cursor:pointer;font-weight:900;line-height:1;">×</button>
+  `;
+  document.body.appendChild(el);
+  requestAnimationFrame(() => {
+    el.style.transform = 'translateY(0)';
+    el.style.opacity = '1';
+  });
+  const dismiss = () => {
+    el.style.transform = 'translateY(-12px)';
+    el.style.opacity = '0';
+    setTimeout(() => el.remove(), 260);
+  };
+  el.querySelector('button').addEventListener('click', dismiss);
+  setTimeout(dismiss, 4200);
+  return el;
 };
 
 export const safeEscapeHTML = (str = '') => {

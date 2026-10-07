@@ -23,6 +23,7 @@ import { openGlobalModal, closeGlobalModal } from '../shared/modal.js';
 import { InvoiceModule } from '../shared/invoice.js';
 import { AssistantChatApp } from './chat_app.js';
 import { dedupeClassrooms } from '../shared/constants.js';
+import { SchoolCenterModule } from '../directora/school-center.module.js';
 
 // Exponer globalmente para onclick en HTML
 window.InscripcionesModule = InscripcionesModule;
@@ -82,6 +83,9 @@ window.App = {
   inscripciones: {
     ...InscripcionesModule,
     init: () => InscripcionesModule.load(),
+  },
+  schoolCenter: {
+    init: () => SchoolCenterModule.init(),
   },
 };
 
@@ -486,6 +490,9 @@ function initNavigation() {
             }).catch(() => {});
             break;
           }
+          case 'centro-escolar':
+            SchoolCenterModule.init();
+            break;
           case 'perfil':
             initProfile();
             import('../shared/notify-permission.js').then(m => m.NotifyPermission.requestIfNeeded());
@@ -499,6 +506,7 @@ function initNavigation() {
     } else {
       // Re-cargar datos frescos al volver a una secci�n ya visitada
       switch (target) {
+        case 'centro-escolar': try { SchoolCenterModule.refresh?.(); } catch(_){} break;
         case 'maestros':   TeachersModule.loadTeachers?.(); break;
         case 'estudiantes': StudentsModule.loadStudents?.(); break;
         case 'aulas':      RoomsModule.loadRooms?.(); break;

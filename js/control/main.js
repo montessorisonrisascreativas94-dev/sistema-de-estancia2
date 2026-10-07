@@ -1,6 +1,9 @@
 import { supabase, ensureRole } from '../shared/supabase.js';
 import { logError, auditLog } from '../shared/db-utils.js';
 import { NewsCenter } from '../shared/news-center.js';
+import { SchoolCenterModule } from '../directora/school-center.module.js';
+
+const _kscLoaded = { done: false };
 
 // Bloquear redirección por SIGNED_OUT desde el primer momento
 // (antes de DOMContentLoaded, para que onAuthStateChange no interrumpa el init)
@@ -292,6 +295,7 @@ window.goTo = function(id) {
     errores:      ['Errores del Sistema', 'Log de errores y excepciones'],
     configuracion:['Configuración', 'Ajustes del panel de control'],
     'qr-admin':   ['QR Administrativo', 'Generador, Escáner y Registro de Accesos'],
+    'centro-escolar': ['🏫 Centro Escolar', 'Intervención rápida: mensajes, publicaciones y eventos por aula'],
   };
   const [title, sub] = titles[id] || ['Panel', ''];
   document.getElementById('pageTitle').textContent    = title;
@@ -308,6 +312,14 @@ window.goTo = function(id) {
   if (id === 'errores')     renderErrors();
   if (id === 'seguridad')   { renderBruteForce(); loadSecurityStats(); loadPaymentAudit(); }
   if (id === 'qr-admin')    { loadAdminAccessLog(); updateQrKpis(); }
+  if (id === 'centro-escolar') {
+    if (!_kscLoaded.done) {
+      try { SchoolCenterModule.init(); _kscLoaded.done = true; }
+      catch (e) { console.warn('[control] CentroEscolar init error', e); }
+    } else {
+      try { SchoolCenterModule.refresh?.(); } catch(_){}
+    }
+  }
 };
 
 // -- Refresh -------------------------------------------------------------------

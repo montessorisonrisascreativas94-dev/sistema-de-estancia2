@@ -108,7 +108,7 @@ export const RoomsModule = {
     try {
       const { data: rawRoomsRaw, error } = await supabase
         .from('classrooms')
-        .select('id, name, level, capacity, teacher:teacher_id(name), students(count), teacher_id, is_special, is_live, color')
+        .select('id, name, level, capacity, teacher:teacher_id(name), students(count), teacher_id, is_live')
         .is('deleted_at', null)
         .order('name');
       if (error) throw error;

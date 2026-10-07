@@ -316,6 +316,11 @@ function _renderRow(r) {
       </button>`;
   } else if (r.status === 'admitted') {
     actionCell = `
+      <button type="button" onclick="InscripcionesModule.printExpediente(${r.id})"
+        class="insc-btn insc-btn--print" title="Imprimir expediente del estudiante admitido" aria-label="Imprimir expediente de ${esc(fullNameSafe(r))}">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+        <span>Imprimir</span>
+      </button>
       <span class="insc-done insc-done--ok" title="Estudiante ya admitido">
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
         <span>Admitido</span>
@@ -634,6 +639,12 @@ function _attachStyles() {
   box-shadow: 0 5px 12px -5px rgba(11,99,199,.85);
 }
 .insc-btn--admit:hover { filter: brightness(1.08); transform: translateY(-1px); }
+.insc-btn--print {
+  background: #ECFDF5;
+  color: #15803D;
+  box-shadow: inset 0 0 0 1px #86EFAC;
+}
+.insc-btn--print:hover { background: #DCFCE7; color: #166534; transform: translateY(-1px); }
 .insc-btn:active { transform: translateY(0) scale(.97); }
 .insc-btn:focus-visible { outline: 3px solid rgba(11,99,199,.3); outline-offset: 2px; }
 
@@ -740,6 +751,209 @@ export async function openPreDetail(preregId) {
     if (window.lucide) lucide.createIcons();
   } catch (e) {
     Helpers.toast('Error: ' + e.message, 'error');
+  }
+}
+
+function _expField(label, value) {
+  const empty = value === null || value === undefined || value === '';
+  return `<div class="ef"><span class="ef-label">${esc(label)}</span><span class="ef-value">${empty ? '—' : esc(String(value))}</span></div>`;
+}
+
+/**
+ * 🖨️ Expediente imprimible del estudiante admitido.
+ * Genera un documento A4 con todos los datos de la preinscripción,
+ * el aula/matrícula asignada y las firmas de conformidad.
+ */
+function _buildExpedienteHtml(r, student, school) {
+  const age     = _calcAgeFromBirth(r.birth_date);
+  const ageStr  = _fmtHuman(age);
+  const fullName = [r.student_name, r.student_last_name].filter(Boolean).join(' ') || '—';
+  const auths   = Array.isArray(r.authorized_persons) ? r.authorized_persons : [];
+  const statusLabel = r.status === 'admitted' ? 'ADMITIDO' : (r.status === 'rejected' ? 'RECHAZADO' : 'PENDIENTE');
+  const aulaTxt = student?.classrooms?.name
+    ? `${student.classrooms.name}${student.classrooms.level ? ` (${student.classrooms.level})` : ''}`
+    : (r.level_requested || '');
+
+  const docs = [
+    ['Foto del estudiante', r.student_photo_url || r.photo_url],
+    ['Certificado de nacimiento', r.birth_certificate_url],
+    ['Cédula (frente)', r.cedula_front_url],
+    ['Cédula (reverso)', r.cedula_back_url],
+  ];
+  const docsHtml = docs.map(([label, url]) => `
+    <div class="ef ef-doc"><span class="ef-label">${esc(label)}</span><span class="ef-value">${url ? '✔ Recibido' : '— Falta'}</span></div>`).join('');
+
+  const authHtml = auths.length
+    ? auths.map(a => `
+        <div class="auth-item">
+          <b>${esc(a.name || '')}</b>
+          <span>${esc(a.relationship || '')}${a.phone ? ' • ' + esc(a.phone) : ''}</span>
+        </div>`).join('')
+    : '<p class="muted">No hay personas registradas</p>';
+
+  return `<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Expediente — ${esc(fullName)}</title>
+<style>
+  @page { size: A4; margin: 12mm; }
+  * { box-sizing: border-box; }
+  body { font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; color: #0f172a; margin: 0; font-size: 11px; }
+  .head { display: flex; align-items: center; gap: 14px; border-bottom: 3px solid #0B63C7; padding-bottom: 10px; margin-bottom: 12px; }
+  .logo img { width: 64px; height: 64px; object-fit: contain; }
+  .logo-fallback { width: 64px; height: 64px; display: flex; align-items: center; justify-content: center; font-size: 30px; background: #eff6ff; border-radius: 12px; }
+  .head-txt { flex: 1; }
+  .head-txt h1 { font-size: 18px; margin: 0; color: #1e293b; }
+  .head-txt h2 { font-size: 12px; margin: 2px 0 0; color: #0B63C7; text-transform: uppercase; letter-spacing: 1px; }
+  .head-txt .sub { font-size: 10px; color: #64748b; margin-top: 2px; }
+  .stamp { text-align: center; border: 2px solid #0B63C7; color: #0B63C7; border-radius: 10px; padding: 6px 10px; font-weight: 900; font-size: 12px; letter-spacing: 1px; }
+  .stamp.ok { border-color: #16a34a; color: #16a34a; }
+  .stamp.no { border-color: #dc2626; color: #dc2626; }
+  h3 { font-size: 11px; text-transform: uppercase; letter-spacing: .6px; color: #0B63C7; border-bottom: 1.5px solid #dbeafe; padding-bottom: 3px; margin: 14px 0 7px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 18px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px 18px; }
+  .ef { display: flex; gap: 6px; border-bottom: 1px dotted #cbd5e1; padding: 3px 0; }
+  .ef-label { color: #64748b; font-weight: 700; min-width: 96px; }
+  .ef-value { color: #0f172a; font-weight: 700; flex: 1; }
+  .ef-doc .ef-value { text-align: right; }
+  .auth-item { border: 1px solid #e2e8f0; border-radius: 8px; padding: 5px 8px; margin-bottom: 4px; }
+  .auth-item span { display: block; color: #64748b; font-size: 10px; }
+  .muted { color: #94a3b8; font-style: italic; }
+  .note { border: 1px solid #e2e8f0; border-radius: 8px; padding: 6px 9px; white-space: pre-wrap; }
+  .sign { margin-top: 26px; display: flex; justify-content: space-between; gap: 24px; }
+  .sign-box { flex: 1; text-align: center; font-size: 10px; color: #64748b; }
+  .sign-box .line { border-top: 1.5px solid #94a3b8; margin-bottom: 5px; height: 38px; }
+  .foot { margin-top: 10px; font-size: 8.5px; color: #94a3b8; text-align: right; }
+</style>
+</head>
+<body>
+  <header class="head">
+    <div class="logo">${school.logo_url ? `<img src="${esc(school.logo_url)}" alt="logo">` : '<div class="logo-fallback">🏫</div>'}</div>
+    <div class="head-txt">
+      <h1>${esc(school.school_name)}</h1>
+      <h2>Expediente del Estudiante</h2>
+      <div class="sub">Ficha de inscripción / admisión</div>
+    </div>
+    <div class="stamp ${r.status === 'admitted' ? 'ok' : (r.status === 'rejected' ? 'no' : '')}">${statusLabel}</div>
+  </header>
+
+  <h3>Datos del Estudiante</h3>
+  <div class="grid">
+    ${_expField('Nombres', r.student_name)}
+    ${_expField('Apellidos', r.student_last_name)}
+    ${_expField('Fecha de Nacimiento', fmt(r.birth_date))}
+    ${_expField('Edad', ageStr)}
+    ${_expField('Sexo', r.gender)}
+    ${_expField('Nacionalidad', r.nationality)}
+    ${_expField('Nivel Solicitado', r.level_requested)}
+    ${_expField('Año Escolar', r.school_year_requested)}
+    ${_expField('Horario', r.schedule)}
+    ${_expField('Ingreso Estimado', fmt(r.estimated_entry_date))}
+  </div>
+
+  <h3>Datos de Admisión</h3>
+  <div class="grid-3">
+    ${_expField('Estado', statusLabel)}
+    ${_expField('Matrícula', student?.matricula)}
+    ${_expField('Aula Asignada', aulaTxt)}
+    ${_expField('Preinscripción', fmtDT(r.created_at))}
+    ${_expField('Admitido', fmtDT(r.admitted_at || r.reviewed_at))}
+    ${_expField('Referencia', r.reference)}
+  </div>
+
+  <h3>Familiares y Contactos</h3>
+  <div class="grid">
+    <div>
+      ${_expField('Tutor Principal', r.p1_name)}
+      ${_expField('Parentesco', r.p1_relationship)}
+      ${_expField('Cédula', r.p1_cedula)}
+      ${_expField('Teléfono', r.p1_phone)}
+      ${_expField('Correo', r.p1_email)}
+      ${_expField('Dirección', r.p1_address)}
+    </div>
+    <div>
+      ${_expField('Tutor Secundario', r.p2_name)}
+      ${_expField('Parentesco', r.p2_relationship)}
+      ${_expField('Cédula', r.p2_cedula)}
+      ${_expField('Teléfono', r.p2_phone)}
+      ${_expField('Correo', r.p2_email)}
+    </div>
+  </div>
+
+  <h3>Contacto de Emergencia</h3>
+  <div class="grid-3">
+    ${_expField('Nombre', r.emergency_name)}
+    ${_expField('Parentesco', r.emergency_relationship)}
+    ${_expField('Teléfono', r.emergency_phone)}
+  </div>
+
+  <h3>Personas Autorizadas a Recoger</h3>
+  ${authHtml}
+
+  <h3>Información Médica</h3>
+  <div class="grid">
+    ${_expField('Tipo de Sangre', r.blood_type)}
+    ${_expField('Alergias', r.allergies)}
+    ${_expField('Condiciones Médicas', r.medical_conditions)}
+    ${_expField('Medicamentos', r.medications)}
+    ${_expField('Restricciones Alimentarias', r.food_restrictions)}
+  </div>
+  ${r.medical_notes ? `<div style="margin-top:6px"><span class="ef-label" style="display:block;margin-bottom:3px">Notas médicas</span><div class="note">${esc(r.medical_notes)}</div></div>` : ''}
+
+  <h3>Documentos</h3>
+  <div class="grid">${docsHtml}</div>
+
+  <div class="sign">
+    <div class="sign-box"><div class="line"></div>Padre / Madre / Tutor</div>
+    <div class="sign-box"><div class="line"></div>Directora</div>
+    <div class="sign-box"><div class="line"></div>Sello</div>
+  </div>
+  <div class="foot">Expediente generado el ${new Date().toLocaleString('es-DO')} · ${esc(school.school_name)}</div>
+</body>
+</html>`;
+}
+
+export async function printExpediente(preregId) {
+  if (!preregId) return;
+  try {
+    const { data: r, error } = await supabase
+      .from('student_preregistrations')
+      .select('*')
+      .eq('id', preregId)
+      .single();
+    if (error || !r) throw new Error('Registro no encontrado');
+
+    // Estudiante generado por esta admisión (matrícula / aula asignada)
+    let student = null;
+    try {
+      const { data: st } = await supabase
+        .from('students')
+        .select('id, name, matricula, classroom_id, classrooms:classroom_id(name, level)')
+        .eq('pre_registration_id', preregId)
+        .maybeSingle();
+      student = st || null;
+    } catch (_) { /* columna/relación no disponible: se omite */ }
+
+    // Datos del centro educativo
+    let school = { school_name: 'Colegio Montessori Sonrisas Creativas', logo_url: null };
+    try {
+      const { data: sc } = await supabase
+        .from('school_settings')
+        .select('school_name, logo_url')
+        .eq('id', SCHOOL_SETTINGS_ID || 1)
+        .maybeSingle();
+      if (sc) school = { school_name: sc.school_name || school.school_name, logo_url: sc.logo_url || null };
+    } catch (_) {}
+
+    const html = _buildExpedienteHtml(r, student, school);
+    const w = window.open('', '_blank', 'width=900,height=1150');
+    if (!w) { Helpers.toast('Permite las ventanas emergentes para imprimir', 'warning'); return; }
+    w.document.write(html);
+    w.document.close();
+    setTimeout(() => { w.focus(); w.print(); }, 400);
+  } catch (e) {
+    Helpers.toast('No se pudo imprimir el expediente: ' + e.message, 'error');
   }
 }
 
@@ -941,11 +1155,19 @@ function _renderPreDetail(r, isDirector) {
 
       <div class="flex justify-between items-center p-5 border-t border-slate-100 bg-slate-50/50 rounded-b-3xl">
         <button id="pred-close2" class="px-5 py-2.5 text-slate-500 font-black text-xs uppercase hover:bg-slate-100 rounded-xl transition-all">Cerrar</button>
-        ${r.status === 'pending' ? `
-          <button id="pred-admit" class="px-5 py-2.5 bg-gradient-to-r from-[#0B63C7] to-[#0850A0] text-white font-black text-xs uppercase rounded-xl shadow-md hover:shadow-lg transition-all ${r.age_match === false && r.director_authorization_approved !== true ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''}">
-            ${r.age_match === false && r.director_authorization_approved !== true ? '🔒 Requiere Autorización' : 'Ir a Admitir →'}
-          </button>
-        ` : ''}
+        <div class="flex items-center gap-2">
+          ${r.status === 'admitted' ? `
+            <button id="pred-print" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase rounded-xl shadow-md hover:shadow-lg transition-all flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+              Imprimir Expediente
+            </button>
+          ` : ''}
+          ${r.status === 'pending' ? `
+            <button id="pred-admit" class="px-5 py-2.5 bg-gradient-to-r from-[#0B63C7] to-[#0850A0] text-white font-black text-xs uppercase rounded-xl shadow-md hover:shadow-lg transition-all ${r.age_match === false && r.director_authorization_approved !== true ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''}">
+              ${r.age_match === false && r.director_authorization_approved !== true ? '🔒 Requiere Autorización' : 'Ir a Admitir →'}
+            </button>
+          ` : ''}
+        </div>
       </div>
     </div>
   </div>`;
@@ -961,6 +1183,7 @@ function _bindPreDetailEvents(r, isDirector) {
   if (overlay) overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
   bindId('pred-close', close);
   bindId('pred-close2', close);
+  bindId('pred-print', () => { close(); printExpediente(r.id); });
   bindId('pred-admit', () => {
     close();
     openAdmitModal(r.id);
@@ -1239,5 +1462,6 @@ export const InscripcionesModule = {
   filterStatus,
   openAdmitModal,
   openPreDetail,
-  admitStudent
+  admitStudent,
+  printExpediente
 };

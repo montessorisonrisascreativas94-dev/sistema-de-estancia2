@@ -409,7 +409,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   try {
     const { data: rawRooms, error } = await supabase
       .from('classrooms')
-      .select('id, name, level, capacity, teacher_id, is_live, is_special, color')
+      .select('id, name, level, capacity, teacher_id, is_live, is_special')
       .eq('teacher_id', auth.user.id)
       .is('deleted_at', null)
       .order('name');
@@ -431,13 +431,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Switcher de aulas (para maestras con varias aulas)
     _initClassroomSwitcher(classrooms);
 
-    // Inicializar Módulos
-    await Promise.all([
+    // Inicializar Módulos — allSettled: el fallo de 1 no mata el resto
+    const bootResults = await Promise.allSettled([
       initDashboard(),
       initAttendance(),
       initNavigation(),
       initChat()
     ]);
+    bootResults.forEach((r, i) => {
+      if (r.status === 'rejected') {
+        const names = ['initDashboard','initAttendance','initNavigation','initChat'];
+        console.warn(`[maestra] ${names[i]} falló en el arranque:`, r.reason);
+        _reportError('boot_init', r.reason, { module: names[i] });
+      }
+    });
     
     initRealtimeUpdates(classrooms[0].id);
 
@@ -731,8 +738,8 @@ async function initDashboard() {
     const startOfDay = `${today}T00:00:00Z`;
     const endOfDay   = `${today}T23:59:59Z`;
 
-    // 1. Carga paralela de datos críticos
-    const [students, attendance, incidentRes, classesRes] = await Promise.all([
+    // 1. Carga paralela de datos críticos — allSettled: el fallo de 1 query no mata el grid
+    const raw = await Promise.allSettled([
       MaestraApi.getStudentsByClassroom(classroom.id),
       MaestraApi.getAttendance(classroom.id, today),
       supabase
@@ -747,6 +754,19 @@ async function initDashboard() {
         .eq('teacher_id', AppState.get('user').id)
         .is('deleted_at', null)
     ]);
+    const extract = (r, fb) => r.status === 'fulfilled' ? (r.value ?? fb) : fb;
+    const students     = extract(raw[0], []);
+    const attendance   = extract(raw[1], []);
+    const incidentRes  = extract(raw[2], { count: 0 });
+    const classesRes   = extract(raw[3], { count: 0 });
+
+    raw.forEach((r, i) => {
+      if (r.status === 'rejected') {
+        const names = ['getStudentsByClassroom','getAttendance','count_incidents','count_classes'];
+        console.warn(`[maestra:dashboard] ${names[i]} falló:`, r.reason);
+        _reportError('dashboard_query', r.reason, { query: names[i] });
+      }
+    });
 
     AppState.set('students', students || []);
 
@@ -1102,16 +1122,12 @@ function initNavigation() {
    * 🏫 Mostrar Detalle de Aula
    */
   async function showClassroomDetail(classroomId, options = {}) {
-    // 1. Carga eficiente y paralela (Optimización de Datos)
     try {
-      // Intentamos obtener del AppState primero para velocidad instantánea
       let classroom = AppState.get('classroom');
       let students = AppState.get('students');
 
-      // Si no tenemos los datos o el ID es diferente, cargamos en paralelo
-      if (!classroom || classroom.id != classroomId || !students) {
-      // FIX select('*'): only fetch required columns
-        const [classroomRes, studentsRes] = await Promise.all([
+      if (!classroom || String(classroom.id) !== String(classroomId) || !students) {
+        const raw = await Promise.allSettled([
           supabase.from('classrooms')
             .select('id, name, level, capacity, teacher_id, is_live')
             .eq('id', classroomId)
@@ -1120,44 +1136,57 @@ function initNavigation() {
           MaestraApi.getStudentsByClassroom(classroomId)
         ]);
 
-        if (classroomRes.data) {
-          // ✅ Sanitizar: nunca pintar "parvalo 2 (variante — canon …)"
+        const classroomRes = raw[0].status === 'fulfilled' ? raw[0].value : { data: null, error: raw[0].reason };
+        const studentsRes  = raw[1].status === 'fulfilled' ? raw[1].value : [];
+
+        if (classroomRes?.error) {
+          console.warn('[maestra:classDetail] Error cargando aula:', classroomRes.error);
+          _reportError('classroom_fetch', classroomRes.error, { classroom_id: classroomId });
+        }
+
+        if (classroomRes?.data) {
           classroom = _sanitizeClassroomRow(classroomRes.data);
           AppState.set('classroom', classroom);
         } else {
-          // Aula borrada/inexistente (localStorage viejo): volver al aula real
           localStorage.removeItem('maestra_last_classroom');
-          classroom = AppState.get('classroom') || null;
-          if (classroom) {
+          const fallback = AppState.get('classroom');
+          if (fallback) {
+            classroom = fallback;
             classroomId = classroom.id;
-            students = null; // los estudiantes del id viejo no aplican
+            students = null;
+          } else {
+            classroom = null;
           }
         }
-        
-        if (studentsRes && studentsRes !== undefined && classroomRes.data) {
+
+        if (classroom && Array.isArray(studentsRes)) {
           students = studentsRes;
           AppState.set('students', studentsRes);
         }
       }
 
-      if (!classroom) return safeToast('Aula no encontrada', 'error');
-
-      // Si el aula cambió por fallback, recargar sus estudiantes
-      if (!students) {
-        const fallbackStudents = await MaestraApi.getStudentsByClassroom(classroom.id);
-        students = fallbackStudents || [];
-        AppState.set('students', students);
+      if (!classroom) {
+        safeToast('Aula no encontrada', 'error');
+        return;
       }
 
-      // Guardar para persistencia
+      if (!students || !students.length) {
+        try {
+          const fallbackStudents = await MaestraApi.getStudentsByClassroom(classroom.id);
+          students = fallbackStudents || [];
+          AppState.set('students', students);
+        } catch (e) {
+          console.warn('[maestra:classDetail] Fallback de estudiantes falló:', e);
+          students = [];
+        }
+      }
+
       localStorage.setItem('maestra_last_section', 't-class-detail');
       localStorage.setItem('maestra_last_classroom', classroom.id);
 
-      // 2. Actualizar UI del detalle
       const nameEl = document.getElementById('currentClassName');
       if (nameEl) nameEl.textContent = classroom.name;
 
-      // 3. Cambiar a la sección de detalle
       const layoutShell = document.getElementById('layoutShell');
       if (layoutShell) layoutShell.scrollTop = 0;
 
@@ -1168,16 +1197,17 @@ function initNavigation() {
         document.getElementById('t-class-detail')?.classList.add('active');
       }
 
-      // 4. Inicializar tabs del aula
-      WallModule.init('muroPostsContainer', { 
+      WallModule.init('muroPostsContainer', {
         accentColor: 'blue',
         likeColor: 'blue',
-        classroomId: classroom.id 
+        classroomId: classroom.id
       }, AppState);
 
       initClassTabs(options.activeTab);
 
     } catch (error) {
+      console.error('[maestra:classDetail] Error no manejado:', error);
+      _reportError('classroom_detail', error, { classroom_id: classroomId });
       safeToast('Error al cargar datos del aula', 'error');
     }
 }
