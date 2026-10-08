@@ -113,6 +113,14 @@ export function goToSection(sectionId) {
       case 'control-rutinas-cumplimiento':
         if (fresh('control-rutinas-cumplimiento')) { loadControlRutinas(); loadReportesCumplimiento(); done('control-rutinas-cumplimiento'); }
         break;
+      case 'actividades':
+        if (fresh('actividades')) {
+          import('../shared/school-activities.module.js')
+            .then(m => m.SchoolActivitiesModule.init({ mode: 'admin', containerId: 'actividadesContent' }))
+            .catch(() => {});
+          done('actividades');
+        }
+        break;
 
     }
   }

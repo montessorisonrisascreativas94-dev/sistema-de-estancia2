@@ -1094,6 +1094,11 @@ function _showOnlySection(targetId) {
       break;
     }
     case 'tasks':           need('tasks', () => TasksModule.init(student?.id)); break;
+    case 'actividades':     need('actividades', () => {
+      import('../shared/school-activities.module.js')
+        .then(m => m.SchoolActivitiesModule.init({ mode: 'parent', containerId: 'actividadesContent' }))
+        .catch(() => {});
+    }); break;
     case 'live-attendance':  need('live-attendance', () => AttendanceModule.init(student?.id)); break;
     case 'notifications':   ChatModule.init(); break;
     case 'class':           need('class', () => FeedModule.init(student?.classroom_id)); break;

@@ -26,7 +26,8 @@
     <link rel="stylesheet" href="css/wall-social.css">
   <link rel="stylesheet" href="css/student-record-modal.css">
   <link rel="stylesheet" href="css/messenger-chat.css">
-  <link rel="stylesheet" href="css/school-center.css">
+  <link rel="stylesheet" href="css/school-center.css">       
+  <link rel="stylesheet" href="css/supervision.css">
   <script src="js/shared/chart.min.js"></script>
   <style>
     /* =========================================
@@ -294,6 +295,12 @@
           <i data-lucide="layout-grid" class="text-emerald-200 shrink-0"></i>
           <span class="label">🏫 Centro Escolar</span>
           <span id="badge-ksc" class="hidden kk-badge ml-auto">0</span>
+        </button>
+
+        <!-- Actividades (Calendario Pedagógico) -->
+        <button data-section="actividades" class="nav-btn kk-nav-item" data-tooltip="Actividades">
+          <i data-lucide="calendar-heart" class="text-amber-200 shrink-0"></i>
+          <span class="label">Actividades</span>
         </button>
 
         <!-- Perfil (flat) -->
@@ -955,6 +962,11 @@
           </div>
         </header>
         <div id="kscRoot" class="ksc"></div>
+      </section>
+
+      <!-- ACTIVIDADES / CALENDARIO PEDAGÓGICO -->
+      <section id="actividades" class="section hidden">
+        <div id="actividadesContent" class="space-y-6"></div>
       </section>
 
       <!-- MURO ESCOLAR UNIFICADO -->

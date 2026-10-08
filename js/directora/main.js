@@ -283,6 +283,13 @@ export function goToSection(sectionId) {
           .catch(err => console.error('[CentroEscolar] No se pudo iniciar:', err));
         break;
 
+      // ── ACTIVIDADES / CALENDARIO PEDAGÓGICO ─────────────────────────
+      case 'actividades':
+        import('../shared/school-activities.module.js')
+          .then(m => m.SchoolActivitiesModule.init({ mode: 'admin', containerId: 'actividadesContent' }))
+          .catch(err => console.error('[Actividades] No se pudo iniciar:', err));
+        break;
+
       // ── GESTIÓN ACADÉMICA (hub) ──────────────────────────────────────
       case 'gestion-academica':
         _renderGestionAcademica();

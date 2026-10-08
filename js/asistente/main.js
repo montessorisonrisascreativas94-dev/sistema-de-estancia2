@@ -493,6 +493,11 @@ function initNavigation() {
           case 'centro-escolar':
             SchoolCenterModule.init();
             break;
+          case 'actividades':
+            import('../shared/school-activities.module.js')
+              .then(m => m.SchoolActivitiesModule.init({ mode: 'admin', containerId: 'actividadesContent' }))
+              .catch(() => {});
+            break;
           case 'perfil':
             initProfile();
             import('../shared/notify-permission.js').then(m => m.NotifyPermission.requestIfNeeded());
@@ -507,6 +512,7 @@ function initNavigation() {
       // Re-cargar datos frescos al volver a una secci�n ya visitada
       switch (target) {
         case 'centro-escolar': try { SchoolCenterModule.refresh?.(); } catch(_){} break;
+        case 'actividades': import('../shared/school-activities.module.js').then(m => m.SchoolActivitiesModule.refresh?.()).catch(()=>{}); break;
         case 'maestros':   TeachersModule.loadTeachers?.(); break;
         case 'estudiantes': StudentsModule.loadStudents?.(); break;
         case 'aulas':      RoomsModule.loadRooms?.(); break;

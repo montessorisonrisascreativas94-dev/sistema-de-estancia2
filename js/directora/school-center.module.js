@@ -14,10 +14,11 @@
  *    5. Reportes    → reporte semanal por aula + exportación PDF
  * ════════════════════════════════════════════════════════════════════
  */
-import { supabase, sendPush as _scSendPush } from '../shared/supabase.js';
+import { supabase, sendPush as _scSendPush, fetchPostgREST, forceRefreshToken } from '../shared/supabase.js';
 import { Helpers } from '../shared/helpers.js';
 import { StudentRecordModal } from '../shared/student-record-modal.js';
 import { openGlobalModal, closeGlobalModal as _scCloseModal } from '../shared/modal.js';
+import SupervisionEngine from '../shared/supervision.js';
 import {
   CANONICAL_CLASSROOMS,
   SPECIAL_CLASSROOMS_META,
@@ -28,12 +29,17 @@ import {
 } from '../shared/constants.js';
 
 const esc = (v) => Helpers.escapeHTML(v == null ? '' : String(v));
+
+// 👁️ Motor de supervisión expuesto globalmente (disponible en todo el panel)
+window.SupervisionEngine = SupervisionEngine;
+
 const TABS = [
   { id: 'resumen',     label: 'Resumen',     icon: 'gauge' },
   { id: 'organizacion',label: 'Organización',icon: 'network' },
   { id: 'calendario',  label: 'Calendario',  icon: 'calendar' },
   { id: 'monitoreo',   label: 'Monitoreo',   icon: 'activity' },
   { id: 'reportes',    label: 'Reportes',    icon: 'file-text' },
+  { id: 'intervenciones', label: 'Intervenciones', icon: 'siren' },
 ];
 
 /** Metadatos de los eventos de rutina (enum event_type) */
@@ -66,6 +72,10 @@ export const SchoolCenterModule = {
   _reportId: null,
   _attIndex: null,
   _postsCache: [],
+  _intFilter: 'open',
+  _intList: [],
+  _intNames: { rooms: {}, profs: {} },
+  _intPromise: null,
 
   /* ════════════════════════ CICLO DE VIDA ════════════════════════ */
 
@@ -168,40 +178,714 @@ export const SchoolCenterModule = {
       case 'newEvent':
         if (crId && crId !== 'undefined' && crId !== '') this.openNewEventModal(crId);
         break;
+      case 'superviseAula':
+      case 'superviseAulaFromAlert': {
+        if (!crId || crId === 'undefined' || crId === '') {
+          Helpers.toast('Aula inválida para supervisión', 'error');
+          break;
+        }
+        const aula = this._locateAula(crId);
+        if (!aula) {
+          Helpers.toast('Aula no encontrada en Centro Escolar', 'error');
+          break;
+        }
+        const alertType  = el?.dataset?.kscAlertType  || null;
+        const alertText  = el?.dataset?.kscAlertText  || null;
+        const sectionJump = this._sectionJumpForAlert(alertType, el?.dataset?.kscGo);
+        try {
+          if (typeof window !== 'undefined') window.SupervisionEngine = SupervisionEngine;
+        } catch (_) {}
+        SupervisionEngine.enter({
+          classroomId:   aula.id,
+          classroomName: aula.name,
+          teacherId:     aula.teacher_id || null,
+          teacherName:   aula.teacher?.name || null,
+          moduleOrigin:  action === 'superviseAulaFromAlert' ? `alerta:${alertType || 'sem'}` : 'centro-escolar',
+          jumpToSection: sectionJump,
+          alertType,
+          alertText,
+          source:        action
+        }).then((ok) => {
+          if (!ok) return;
+          const ctx = SupervisionEngine.getContext();
+          const qp = new URLSearchParams({
+            supervision:   'true',
+            classroomId:   String(ctx.classroomId || ''),
+            classroomName: ctx.classroomName || '',
+            teacherId:     ctx.teacherId ? String(ctx.teacherId) : '',
+            teacherName:   ctx.teacherName || '',
+            originModule:  ctx.moduleOrigin || 'centro-escolar'
+          });
+          if (sectionJump) qp.set('jumpTo', sectionJump);
+          if (alertType)  qp.set('alertType', alertType);
+          if (alertText)  qp.set('alertText', alertText);
+          window.location.href = 'panel-maestra.html?' + qp.toString();
+        });
+        break;
+      }
+      case 'int-filter': {
+        this._intFilter = el.dataset.kscIntFilter || 'open';
+        this._render();
+        break;
+      }
+      case 'int-create': {
+        if (window.SupervisionEngine?.isActive?.()) {
+          window.SupervisionEngine.openInterventionModal({});
+        } else {
+          Helpers.toast('Inicia el modo supervisión desde una ficha de aula para crear intervenciones.', 'info');
+        }
+        break;
+      }
+      case 'int-open':
+      case 'int-close': {
+        const rid = el?.dataset?.kscIntId;
+        if (rid) this._openInterventionDetail(rid);
+        break;
+      }
+      case 'new-activity': {
+        const iso = el?.dataset?.kscDate || this._calSelected || this._todayISO();
+        this.openNewActivityModal({ scheduled_date: iso });
+        break;
+      }
+      case 'save-activity': {
+        this._submitActivityModal();
+        break;
+      }
       default: break;
     }
   },
 
-  /* ════════════════════════ CARGA DE DATOS ════════════════════════ */
+  /* ── Actividades Escolares (Planificación Central Staff) ── */
 
-  /** Ejecuta una consulta sin tumbar todo el módulo si falla. */
-  _q(query, fallback = []) {
-    return query
-      .then(r => (r?.error ? (console.warn('[CentroEscolar] query', r.error), fallback) : (r?.data ?? fallback)))
-      .catch(e => (console.warn('[CentroEscolar] query excepción', e), fallback));
+  /**
+   * Abre el modal "Nueva Actividad" SaaS Premium.
+   * Diseñado para Directora / Asistente / Encargada — ellos crean/planifican,
+   * Maestra solo visualiza y registra evidencia individual (aunque ese
+   * detalle del registro individual irá en su panel maestra).
+   */
+  openNewActivityModal(prefill = {}) {
+    const D = this._data || {};
+    const rooms = (D.aulas || []).filter(a => a.id);
+    const staff = (D.staff || []).filter(s => s.role === 'maestra');
+    const today = prefill.scheduled_date || this._todayISO();
+
+    const typeOpts = [
+      ['academica',        'Académica',         'book-open',        '#0B63C7'],
+      ['extracurricular',  'Extracurricular',   'sparkles',         '#7C3AED'],
+      ['cierre_periodo',   'Cierre Periodo',    'flag',             '#DB2777'],
+      ['evaluacion',       'Evaluación',        'clipboard-check',  '#EA580C'],
+      ['reunion_padres',   'Reunión Padres',    'users',            '#F59E0B'],
+      ['excursion',        'Excursión',         'bus',              '#0891B2'],
+      ['admin',            'Administrativa',    'file-cog',         '#64748B'],
+      ['otra',             'Otra',              'pin',              '#475569'],
+    ];
+    const audienceOpts = [
+      ['aula',            'Solo aula'],
+      ['nivel',           'Nivel completo'],
+      ['todo_el_centro',  'Todo el centro'],
+      ['staff',           'Solo staff'],
+    ];
+    const priorityOpts = [
+      ['baja',     'Baja',     '#22C55E'],
+      ['media',    'Media',    '#F59E0B'],
+      ['alta',     'Alta',     '#EF4444'],
+      ['critica',  'Crítica',  '#B91C1C'],
+    ];
+    const statusOpts = [
+      ['scheduled', 'Programada'],
+      ['published', 'Publicada (visible padres)'],
+      ['draft',     'Borrador'],
+    ];
+
+    const modalId = 'ksc_newActivity';
+    const html = `
+    <div class="spv-modal-backdrop" id="${modalId}_backdrop" data-ksc-close-activity="1">
+      <div class="spv-modal spv-modal--xl" onclick="event.stopPropagation()" role="dialog" aria-modal="true"
+           style="max-width:980px;border-radius:28px;border:3px solid rgba(13,71,161,.08);
+                  box-shadow:0 24px 60px rgba(15,23,42,.28);overflow:hidden;background:var(--ksc-bg)">
+        <!-- 🔝 HEADER GRADIENTE SAAS PREMIUM -->
+        <div style="position:relative;padding:2.2rem 2.4rem 1.8rem;background:linear-gradient(135deg,#6D28D9 0%,#0B63C7 100%);color:#fff">
+          <button type="button" class="spv-close" data-ksc-close-activity="1" aria-label="Cerrar">×</button>
+          <div style="display:flex;align-items:center;gap:1.1rem;flex-wrap:wrap">
+            <div style="width:56px;height:56px;border-radius:18px;background:rgba(255,255,255,.15);
+                        display:flex;align-items:center;justify-content:center;backdrop-filter: blur(6px);
+                        box-shadow:inset 0 0 0 1px rgba(255,255,255,.18)">
+              <i data-lucide="calendar-plus" style="width:28px;height:28px;color:#fff"></i>
+            </div>
+            <div style="flex:1;min-width:220px">
+              <h2 style="margin:0;font-size:1.6rem;font-weight:800;letter-spacing:-.3px">Nueva Actividad Escolar</h2>
+              <p style="margin:.35rem 0 0;color:rgba(255,255,255,.86);font-size:.96rem">
+                Planificación central del Staff. Las actividades publicadas se mostrarán en el panel de la maestra y serán visibles solo lectura en el panel del padre.
+              </p>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.6rem;min-width:420px">
+              <div class="spv-kpi-sp" style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.16)">
+                <span>📚 Total aulas</span><b>${rooms.length}</b>
+              </div>
+              <div class="spv-kpi-sp" style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.16)">
+                <span>👩‍🏫 Maestras</span><b>${staff.length}</b>
+              </div>
+              <div class="spv-kpi-sp" style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.16)">
+                <span>📅 Fecha</span><b>${this._fmtShortDate(today)}</b>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 📋 BODY -->
+        <div style="padding:1.8rem 2.4rem 2rem;display:flex;flex-direction:column;gap:1.5rem">
+
+          <!-- Fila 1: Título + Tipo -->
+          <div style="display:grid;grid-template-columns:2fr 1fr;gap:1.2rem">
+            <label class="spv-field">
+              <span><i data-lucide="type"></i> Título de la actividad <em>*</em></span>
+              <input type="text" id="kscAct_title" maxlength="180" placeholder="Ej: Exposición de ciencias de Párvulos"
+                     value="${esc(prefill.title || '')}">
+            </label>
+            <label class="spv-field">
+              <span><i data-lucide="tag"></i> Tipo de actividad</span>
+              <select id="kscAct_type">
+                ${typeOpts.map(([v,l,i,c]) => `<option value="${v}" ${prefill.activity_type===v?'selected':''}>${l}</option>`).join('')}
+              </select>
+            </label>
+          </div>
+
+          <!-- Fila 2: Aula / Audiencia + Responsable -->
+          <div style="display:grid;grid-template-columns:1.2fr 1.1fr 1fr;gap:1.2rem">
+            <label class="spv-field">
+              <span><i data-lucide="school"></i> Aula asignada <small>(vacío = todo el centro)</small></span>
+              <select id="kscAct_classroom">
+                <option value="">— Todo el centro / Sin aula —</option>
+                ${rooms.map(r => `<option value="${r.id}" ${String(prefill.classroom_id||'')===String(r.id)?'selected':''}>${esc(r.name)} ${r.level ? '· ' + esc(r.level) : ''}</option>`).join('')}
+              </select>
+            </label>
+            <label class="spv-field">
+              <span><i data-lucide="users"></i> Audiencia</span>
+              <select id="kscAct_audience">
+                ${audienceOpts.map(([v,l]) => `<option value="${v}" ${prefill.target_audience===v?'selected':''}>${l}</option>`).join('')}
+              </select>
+            </label>
+            <label class="spv-field">
+              <span><i data-lucide="user-check"></i> Maestra responsable</span>
+              <select id="kscAct_assigned">
+                <option value="">— Sin asignar —</option>
+                ${staff.map(s => `<option value="${s.id}" ${String(prefill.assigned_to||'')===String(s.id)?'selected':''}>${esc(s.name)}</option>`).join('')}
+              </select>
+            </label>
+          </div>
+
+          <!-- Fila 3: Fecha + Hora + Duración + Ubicación -->
+          <div style="display:grid;grid-template-columns:1fr .8fr .8fr 1fr;gap:1.2rem">
+            <label class="spv-field">
+              <span><i data-lucide="calendar"></i> Fecha programada <em>*</em></span>
+              <input type="date" id="kscAct_date" value="${today}">
+            </label>
+            <label class="spv-field">
+              <span><i data-lucide="clock"></i> Hora inicio</span>
+              <input type="time" id="kscAct_time" value="${prefill.scheduled_time || '08:00'}">
+            </label>
+            <label class="spv-field">
+              <span><i data-lucide="hourglass"></i> Duración (min)</span>
+              <input type="number" id="kscAct_dur" min="5" max="720" step="5" placeholder="60" value="${prefill.duration_minutes || 60}">
+            </label>
+            <label class="spv-field">
+              <span><i data-lucide="map-pin"></i> Ubicación</span>
+              <input type="text" id="kscAct_loc" maxlength="120" placeholder="Aula / Salón / Patio / Remoto" value="${esc(prefill.location || '')}">
+            </label>
+          </div>
+
+          <!-- Fila 4: Prioridad + Estado -->
+          <div style="display:grid;grid-template-columns:1.2fr 1.5fr .8fr;gap:1.2rem;align-items:end">
+            <label class="spv-field">
+              <span><i data-lucide="zap"></i> Prioridad</span>
+              <div class="spv-chiprow" id="kscAct_priorityRow">
+                ${priorityOpts.map(([v,l,c], i) => `
+                  <button type="button" class="spv-chip-btn${(prefill.priority||'media')===v?' active':''}"
+                          data-val="${v}" style="${v!=='media'?'':'--bc:#F59E0B'}" data-pri="${v}">
+                    <span class="spv-chip-dot" style="background:${c}"></span>${l}
+                  </button>`).join('')}
+              </div>
+              <input type="hidden" id="kscAct_priority" value="${prefill.priority || 'media'}">
+            </label>
+            <label class="spv-field">
+              <span><i data-lucide="file-text"></i> Descripción</span>
+              <textarea id="kscAct_desc" rows="2" maxlength="600" placeholder="Instrucciones para la maestra. Las actividades publicadas se muestran a padres en modo solo lectura.">${esc(prefill.description || '')}</textarea>
+            </label>
+            <label class="spv-field">
+              <span><i data-lucide="eye"></i> Estado</span>
+              <select id="kscAct_status">
+                ${statusOpts.map(([v,l]) => `<option value="${v}" ${(prefill.status||'scheduled')===v?'selected':''}>${l}</option>`).join('')}
+              </select>
+            </label>
+          </div>
+
+          <!-- Errores -->
+          <div id="kscAct_errors" style="display:none;margin:0;padding:.8rem 1rem;border-radius:16px;border:2px solid #FECACA;background:#FEF2F2;color:#991B1B;font-size:.92rem"></div>
+
+          <!-- Footer -->
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;margin-top:.4rem">
+            <div class="spv-footnote">
+              <i data-lucide="info"></i>
+              Al publicar, los padres podrán ver solo la información de la actividad. Solo la maestra registra la evidencia por estudiante en su panel.
+            </div>
+            <div style="display:flex;gap:.8rem">
+              <button type="button" class="spv-btn spv-btn--ghost" data-ksc-close-activity="1">Cancelar</button>
+              <button type="button" class="spv-btn spv-btn--primary" data-ksc-action="save-activity" id="kscAct_saveBtn">
+                <i data-lucide="send"></i> Guardar actividad
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>`;
+
+    // ── Montar en DOM ──
+    let wrap = document.getElementById(modalId + '_mount');
+    if (!wrap) {
+      wrap = document.createElement('div');
+      wrap.id = modalId + '_mount';
+      document.body.appendChild(wrap);
+    }
+    wrap.innerHTML = html;
+
+    // ── Inyección de dependencias ──
+    if (window.lucide) requestAnimationFrame(() => lucide.createIcons({ root: wrap }));
+    this._activityModalPriorityBinder();
+
+    const close = () => { wrap.innerHTML = ''; document.removeEventListener('keydown', onEsc); };
+    const onEsc = (e) => { if (e.key === 'Escape') close(); };
+    document.addEventListener('keydown', onEsc);
+    wrap.querySelectorAll('[data-ksc-close-activity]').forEach(b => b.addEventListener('click', close));
   },
 
-  /** Estudiantes: reintenta sin birth_date si esa columna no existe en la BD. */
+  /** Vincula chips de prioridad al input oculto */
+  _activityModalPriorityBinder() {
+    const row = document.getElementById('kscAct_priorityRow');
+    if (!row) return;
+    const hidden = document.getElementById('kscAct_priority');
+    row.querySelectorAll('.spv-chip-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const v = btn.dataset.pri;
+        if (hidden) hidden.value = v;
+        row.querySelectorAll('.spv-chip-btn').forEach(x => x.classList.remove('active'));
+        btn.classList.add('active');
+      });
+    });
+  },
+
+  /** Valida y envía el formulario de actividad a Supabase */
+  async _submitActivityModal() {
+    const errEl = document.getElementById('kscAct_errors');
+    const saveBtn = document.getElementById('kscAct_saveBtn');
+    const showError = (m) => { if (!errEl) return; errEl.style.display = 'block'; errEl.textContent = m; };
+
+    const title    = (document.getElementById('kscAct_title')?.value || '').trim();
+    const type     =  document.getElementById('kscAct_type')?.value  || 'academica';
+    const aud      =  document.getElementById('kscAct_audience')?.value || 'aula';
+    const crIdRaw  =  document.getElementById('kscAct_classroom')?.value || '';
+    const crId     =  crIdRaw ? Number(crIdRaw) : null;
+    const assign   =  document.getElementById('kscAct_assigned')?.value || null;
+    const dateStr  = (document.getElementById('kscAct_date')?.value || '').trim();
+    const timeStr  = (document.getElementById('kscAct_time')?.value || '').trim();
+    const durRaw   = (document.getElementById('kscAct_dur')?.value || '').toString();
+    const dur      = durRaw ? Number(durRaw) : null;
+    const loc      = (document.getElementById('kscAct_loc')?.value || '').trim();
+    const desc     = (document.getElementById('kscAct_desc')?.value || '').trim();
+    const prio     =  document.getElementById('kscAct_priority')?.value || 'media';
+    const status   =  document.getElementById('kscAct_status')?.value || 'scheduled';
+
+    // Validaciones
+    if (title.length < 3) return showError('El título debe tener al menos 3 caracteres.');
+    if (!dateStr) return showError('Selecciona una fecha programada.');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return showError('Fecha inválida.');
+    if (dur && (Number.isNaN(dur) || dur < 5 || dur > 1440)) return showError('Duración debe estar entre 5 y 1440 minutos.');
+
+    // Obtener el current user
+    let uid = null;
+    try {
+      const { data } = await supabase.auth.getUser();
+      uid = data?.user?.id || null;
+    } catch (_) {}
+    if (!uid) return showError('Sesión no válida. Actualiza la página.');
+
+    if (saveBtn) { saveBtn.disabled = true; saveBtn.style.opacity = '.6'; }
+    showError('');
+
+    // Audience se resuelve según aula
+    let finalAud = aud;
+    if (!crId && aud === 'aula') finalAud = 'todo_el_centro';
+    else if (crId && aud === 'todo_el_centro') finalAud = 'aula';
+
+    const payload = {
+      title, activity_type: type, target_audience: finalAud,
+      description: desc, priority: prio, status,
+      scheduled_date: dateStr, scheduled_time: timeStr || null,
+      duration_minutes: (dur && dur > 0) ? dur : null,
+      location: loc || null, created_by: uid,
+      classroom_id: (crId && Number.isFinite(crId)) ? crId : null,
+      assigned_to: assign || null,
+    };
+    if (payload.status === 'published') payload.published_at = new Date().toISOString();
+
+    try {
+      const r = await supabase.from('school_activities').insert(payload).select().maybeSingle();
+      if (r.error) throw r.error;
+
+      const modalMount = document.getElementById('ksc_newActivity_mount');
+      if (modalMount) modalMount.innerHTML = '';
+
+      Helpers.toast('✅ Actividad guardada · ' + (r.data?.code || ''), 'success');
+
+      // Notificación push hacia la maestra responsable si hay
+      try {
+        if (r.data?.assigned_to) {
+          const targetProfiles = [r.data.assigned_to];
+          sendPush({
+            target_ids: targetProfiles,
+            heading:  'Nueva actividad planificada',
+            content:  `${title} · ${this._fmtShortDate(dateStr)}${timeStr?` · ${timeStr}`:''}`,
+            url:      'panel-maestra.html?goto=t-actividades',
+            data:     { kind: 'school_activity', id: String(r.data.id || '') },
+          });
+        }
+      } catch (_) {}
+
+      // Refrescar calendario inmediatamente (SPA update, no full reload)
+      try { await this.refresh(); } catch (_) { if (window.lucide) lucide.createIcons(); }
+    } catch (err) {
+      console.warn('[CentroEscolar] save activity error:', err);
+      showError('No se pudo guardar la actividad: ' + (err?.message || err?.code || 'error desconocido'));
+    } finally {
+      if (saveBtn) { saveBtn.disabled = false; saveBtn.style.opacity = '1'; }
+    }
+  },
+
+  /* ── Intervenciones: acciones ─────────────────────────────── */
+  _intStatusMeta(st) {
+    const m = {
+      open:        { label: 'Abierta',   color: '#EF4444', bg: 'rgba(239,68,68,.12)' },
+      in_progress: { label: 'En curso',  color: '#F59E0B', bg: 'rgba(245,158,11,.15)' },
+      resolved:    { label: 'Resuelta',  color: '#22C55E', bg: 'rgba(34,197,94,.12)' },
+      closed:      { label: 'Cerrada',   color: '#64748B', bg: 'rgba(100,116,139,.14)' },
+    };
+    return m[st] || { label: st || '—', color: '#64748B', bg: 'rgba(100,116,139,.14)' };
+  },
+  _intPriorityColor(prio) {
+    return { baja: '#22C55E', media: '#F59E0B', alta: '#EF4444', critica: '#B91C1C' }[prio] || '#64748B';
+  },
+  _intPriorityLabel(prio) {
+    return { baja: 'Baja', media: 'Media', alta: 'Alta', critica: 'Crítica' }[prio] || (prio || '—');
+  },
+  _intDate(ts) {
+    try {
+      return new Date(ts).toLocaleDateString('es-ES', {
+        day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
+      });
+    } catch (_) { return ''; }
+  },
+  async _loadIntervenciones() {
+    try {
+      const sup = supabase;
+      const { data: rows, error } = await sup
+        .from('interventions')
+        .select('id, code, created_by, classroom_id, teacher_id, student_id, modulo, submodulo, situacion, prioridad, observacion, status, assigned_to, resolved_by, closed_at, created_at, session_id, metadata_jsonb')
+        .order('created_at', { ascending: false })
+        .limit(400);
+      if (error) throw error;
+
+      const roomIds = [...new Set((rows || []).map(r => r.classroom_id).filter(Boolean).map(String))];
+      const profIds = [...new Set((rows || []).flatMap(r => [r.created_by, r.teacher_id, r.assigned_to, r.resolved_by]).filter(Boolean).map(String))];
+
+      const [roomsRes, profsRes] = await Promise.all([
+        roomIds.length ? sup.from('classrooms').select('id, name').in('id', roomIds) : Promise.resolve({ data: [] }),
+        profIds.length ? sup.from('profiles').select('id, name').in('id', profIds) : Promise.resolve({ data: [] }),
+      ]);
+
+      this._intList = rows || [];
+      this._intNames = {
+        rooms: Object.fromEntries((roomsRes.data || []).map(r => [String(r.id), r.name])),
+        profs: Object.fromEntries((profsRes.data || []).map(p => [String(p.id), p.name])),
+      };
+      if (this._tab === 'intervenciones') this._render();
+    } catch (e) {
+      console.warn('[KSC] No se pudieron cargar las intervenciones:', e?.message || e);
+      this._intList = [];
+    }
+  },
+  _ensureIntervencionesLoaded() {
+    if (this._intPromise || this._intList.length) return;
+    this._intPromise = this._loadIntervenciones().finally(() => { this._intPromise = null; });
+  },
+  _renderIntervenciones() {
+    if (!this._intList.length) {
+      return `
+        <div class="ksc-int-toolbar">
+          <div class="ksc-int-filters">${this._intFilterChips()}</div>
+          <button type="button" class="spv-btn spv-btn--primary" data-ksc-action="int-create"><i data-lucide="siren"></i> Nueva intervención</button>
+        </div>
+        <div class="ksc-int-empty">Cargando intervenciones…</div>`;
+    }
+    const filtered = this._intFilter === 'todas'
+      ? this._intList
+      : this._intList.filter(r => r.status === this._intFilter);
+    const cards = filtered.length
+      ? filtered.map(r => this._intCard(r)).join('')
+      : `<div class="ksc-int-empty">Sin intervenciones ${this._intFilter === 'todas' ? '' : this._intStatusMeta(this._intFilter).label.toLowerCase() + 's'}.</div>`;
+
+    return `
+      <div class="ksc-int-toolbar">
+        <div class="ksc-int-filters">${this._intFilterChips()}</div>
+        <button type="button" class="spv-btn spv-btn--primary" data-ksc-action="int-create"><i data-lucide="siren"></i> Nueva intervención</button>
+      </div>
+      <div class="ksc-int-grid">${cards}</div>`;
+  },
+  _intFilterChips() {
+    const countFor = (st) => st === 'todas' ? this._intList.length : this._intList.filter(r => r.status === st).length;
+    const opts = [['todas', 'Todas'], ['open', 'Abiertas'], ['in_progress', 'En curso'], ['resolved', 'Resueltas'], ['closed', 'Cerradas']];
+    return opts.map(([key, label]) => {
+      const st = this._intStatusMeta(key);
+      const active = this._intFilter === key;
+      return `<button type="button" class="ksc-int-filter${active ? ' active' : ''}" data-ksc-action="int-filter" data-ksc-int-filter="${key}" style="${key !== 'todas' ? `--ic:${st.color}` : ''}">${esc(label)} <b>${countFor(key)}</b></button>`;
+    }).join('');
+  },
+  _intCard(r) {
+    const st = this._intStatusMeta(r.status);
+    const prio = this._intPriorityColor(r.prioridad);
+    const aula = this._intNames.rooms[String(r.classroom_id)] || ('Aula #' + r.classroom_id);
+    const maestra = r.teacher_id ? (this._intNames.profs[String(r.teacher_id)] || 'Maestra') : 'Sin asignar';
+    return `
+      <div class="ksc-int-card">
+        <div class="ksc-int-top">
+          <span class="ksc-int-code">${esc(r.code || ('INT-' + r.id))}</span>
+          <span class="ksc-int-status" style="color:${st.color};background:${st.bg}"><i class="ksc-int-status-dot" style="background:${st.color}"></i>${st.label}</span>
+        </div>
+        <div class="ksc-int-title">${esc(r.situacion)}</div>
+        <div class="ksc-int-meta">
+          <span class="ksc-int-chip" style="--dc:${prio}">${esc(this._intPriorityLabel(r.prioridad))}</span>
+          <span class="ksc-int-aula">${esc(aula)}</span>
+          <span class="ksc-int-sep">·</span>
+          <span class="ksc-int-teacher">${esc(maestra)}</span>
+        </div>
+        <div class="ksc-int-sub">${esc(r.modulo || 'aula')}${r.submodulo ? ' → ' + esc(r.submodulo) : ''}</div>
+        <div class="ksc-int-foot">
+          <span class="ksc-int-date"><i data-lucide="clock" class="w-3.5 h-3.5"></i> ${this._intDate(r.created_at)}</span>
+          <div class="ksc-int-actions">
+            <button type="button" class="spv-btn spv-btn--ghost" data-ksc-action="int-open" data-ksc-int-id="${r.id}"><i data-lucide="eye"></i> Ver</button>
+            ${(r.status === 'open' || r.status === 'in_progress')
+              ? `<button type="button" class="spv-btn spv-btn--danger" data-ksc-action="int-close" data-ksc-int-id="${r.id}"><i data-lucide="check-check"></i> Cerrar</button>`
+              : ''}
+          </div>
+        </div>
+      </div>`;
+  },
+  _openInterventionDetail(idStr) {
+    const row = this._intList.find(i => String(i.id) === String(idStr));
+    if (!row) return;
+    const st = this._intStatusMeta(row.status);
+    const prio = this._intPriorityColor(row.prioridad);
+    const aula = this._intNames.rooms[String(row.classroom_id)] || ('Aula #' + row.classroom_id);
+    const maestra = row.teacher_id ? (this._intNames.profs[String(row.teacher_id)] || 'Maestra') : 'Sin asignar';
+    const creador = row.created_by ? (this._intNames.profs[String(row.created_by)] || 'Directivo') : 'Staff';
+    const canClose = (row.status === 'open' || row.status === 'in_progress');
+
+    const overlay = document.createElement('div');
+    overlay.className = 'spv-modal-overlay';
+    overlay.innerHTML = `
+      <div class="spv-modal ksc-int-modal" role="dialog" aria-modal="true" aria-labelledby="kscIntTitle" style="--spv-accent:#0B63C7;--spv-glow:rgba(11,99,199,.16)">
+        <div class="spv-modal-head">
+          <div class="spv-modal-icon"><i data-lucide="siren"></i></div>
+          <div style="min-width:0">
+            <h3 id="kscIntTitle">${esc(row.code || ('INT-' + row.id))} · Intervención Directiva</h3>
+            <p>${esc(aula)} · ${esc(maestra)} · <b>${esc(this._intPriorityLabel(row.prioridad))}</b></p>
+          </div>
+          <button type="button" class="spv-modal-close" data-ksc-int-close aria-label="Cerrar"><i data-lucide="x"></i></button>
+        </div>
+        <div class="spv-modal-body">
+          <div class="ksc-int-detail-status" style="color:${st.color};background:${st.bg}">● ${st.label}</div>
+          <div class="ksc-int-detail-block">
+            <span class="ksc-int-detail-label">Situación detectada</span>
+            <p class="ksc-int-detail-value">${esc(row.situacion)}</p>
+          </div>
+          <div class="ksc-int-detail-grid">
+            <div class="ksc-int-detail-block"><span class="ksc-int-detail-label">Módulo</span><p class="ksc-int-detail-value">${esc(row.modulo || 'aula')}${row.submodulo ? ' — ' + esc(row.submodulo) : ''}</p></div>
+            <div class="ksc-int-detail-block"><span class="ksc-int-detail-label">Aula</span><p class="ksc-int-detail-value">${esc(aula)}</p></div>
+            <div class="ksc-int-detail-block"><span class="ksc-int-detail-label">Maestra responsable</span><p class="ksc-int-detail-value">${esc(maestra)}</p></div>
+            <div class="ksc-int-detail-block"><span class="ksc-int-detail-label">Registrada por</span><p class="ksc-int-detail-value">${esc(creador)} · ${this._intDate(row.created_at)}</p></div>
+          </div>
+          <div class="ksc-int-detail-block">
+            <span class="ksc-int-detail-label">Observación y acción requerida</span>
+            <p class="ksc-int-detail-value">${esc(row.observacion || 'Sin observación.')}</p>
+          </div>
+          ${canClose ? `
+          <label class="spv-field">
+            <span>Motivo de cierre <span class="req">*</span></span>
+            <textarea id="kscIntMotivo" rows="3" maxlength="500" placeholder="Motivo administrativo del cierre (queda en la auditoría)"></textarea>
+          </label>` : ''}
+        </div>
+        <div class="spv-modal-foot">
+          <button type="button" class="spv-btn spv-btn--ghost" data-ksc-int-close>Cancelar</button>
+          ${canClose ? `<button type="button" class="spv-btn spv-btn--danger" data-ksc-int-close-send><i data-lucide="check-check"></i> Cerrar intervención</button>` : `<span class="ksc-int-detail-closed">Intervención cerrada el ${this._intDate(row.closed_at)}</span>`}
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    if (window.lucide) requestAnimationFrame(() => lucide.createIcons({ root: overlay }));
+
+    const teardown = () => { try { if (overlay.parentNode) overlay.parentNode.removeChild(overlay); } catch (_) {} };
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) teardown(); });
+    overlay.querySelectorAll('[data-ksc-int-close]').forEach(b => b.addEventListener('click', teardown));
+    document.addEventListener('keydown', function esc(ev) {
+      if (ev.key === 'Escape' && overlay.isConnected) { teardown(); document.removeEventListener('keydown', esc); }
+    });
+
+    const sendBtn = overlay.querySelector('[data-ksc-int-close-send]');
+    sendBtn?.addEventListener('click', async () => {
+      const motivo = (overlay.querySelector('#kscIntMotivo')?.value || '').trim();
+      if (motivo.length < 3) {
+        Helpers.toast('Indica un motivo de cierre (mínimo 3 caracteres)', 'warning');
+        return;
+      }
+      sendBtn.disabled = true;
+      sendBtn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Cerrando…';
+      const { data, error } = await supabase.rpc('close_intervention', { p_id: Number(row.id), p_motivo: motivo });
+      if (error) {
+        Helpers.toast('Error al cerrar: ' + (error.message || 'desconocido'), 'error');
+        sendBtn.disabled = false;
+        sendBtn.innerHTML = '<i data-lucide="check-check"></i> Cerrar intervención';
+        return;
+      }
+      try { window.SupervisionEngine?.registerAudit?.('intervention.close', { intervention_id: row.id, intervention_code: row.code, motivo }); } catch (_) {}
+      Helpers.toast((data?.message || 'Intervención cerrada') + ' · ' + (row.code || ''), 'success');
+      teardown();
+      await this._loadIntervenciones();
+      this._render();
+    });
+  },
+
+  _locateAula(idStr) {
+    if (!idStr) return null;
+    const idNorm = String(idStr);
+    const pool = (this._data?.aulas || []).concat(this._data?.pool || []);
+    return pool.find(a => String(a.id) === idNorm) || null;
+  },
+
+  _sectionJumpForAlert(alertIcon, alertGo) {
+    const go = (alertGo || '').toLowerCase();
+    const ico = (alertIcon || '').toLowerCase();
+    if (ico === 'message-square' || go === 'muro' || go === 'chat' || go.includes('mensaje')) return 't-chat';
+    if (ico === 'user-check'     || go === 'aula' || go.includes('asisten'))                return 't-attendance';
+    if (ico === 'list-checks'    || go.includes('rutina') || go.includes('jornada'))         return 't-routine';
+    if (ico === 'megaphone'     || go.includes('publica') || go.includes('muro'))            return 't-feed';
+    if (ico === 'alert-triangle'|| go.includes('inciden'))                                  return 't-incidents';
+    if (go.includes('maestro'))                                                             return 't-home';
+    if (go.includes('estudiante'))                                                          return 't-students';
+    return 't-class-detail';
+  },
+
+  /* ════════════════════════ CARGA DE DATOS ════════════════════════ */
+
+  /** Ejecuta una consulta sin tumbar todo el módulo si falla.
+   *  Nivel 1: SDK normal.
+   *  Nivel 2: Si el error es de auth (401/403/42501) → forzar refresh del token y REINTENTAR la misma query.
+   *  Nivel 3: Si aún falla → devolver fallback.
+   */
+  async _q(builder, fallback = []) {
+    try {
+      // Nivel 1: ejecutar builder / thenable
+      const r = await builder;
+      if (!r?.error) return (r?.data ?? fallback);
+
+      // Error detectado. Chequear si es de autorización/autenticación
+      const code   = String(r.error?.code || '');
+      const status = Number(r.error?.status || 0);
+      const msg    = String(r.error?.message || '').toLowerCase();
+      const isAuthError = (
+        status === 401 || status === 403 ||
+        code === '42501' || code === 'PGRST301' ||
+        msg.includes('jwt') ||
+        msg.includes('permission denied') ||
+        msg.includes('unauthorized') ||
+        msg.includes('token')
+      );
+
+      if (isAuthError) {
+        console.warn('[CentroEscolar] Auth error detectado en SDK. Forzando refresh + reintento.',
+          r.error?.message || r.error?.code || status);
+        // Nivel 2: Forzar refresh de token
+        const newToken = await forceRefreshToken();
+        if (newToken && builder && typeof builder.eq === 'function') {
+          try {
+            const r2 = await builder;
+            if (!r2?.error) return (r2?.data ?? fallback);
+            console.warn('[CentroEscolar] Reintento post-refresh también falló:', r2.error?.message);
+          } catch (e2) {
+            console.warn('[CentroEscolar] Reintento excepción:', e2);
+          }
+        }
+      }
+      console.warn('[CentroEscolar] query → fallback. Error:',
+        r.error?.message || r.error?.code || status);
+      return fallback;
+    } catch (e) {
+      console.warn('[CentroEscolar] query excepción → fallback:', e?.message || e);
+      return fallback;
+    }
+  },
+
+  /** Estudiantes: 4 niveles de fallback.
+   *  N1) SDK con birth_date
+   *  N2) SDK sin birth_date (columna faltante en BD vieja)
+   *  N3) Forzar refresh de token + reintento N2
+   *  N4) FALLBACK FINAL: fetch directo a PostgREST sin pasar por SDK
+   */
   async _studentsQuery() {
+    // ── N1: SDK normal con birth_date
     try {
       const r = await supabase.from('students')
         .select('id, name, birth_date, classroom_id, parent_id')
-        .eq('is_active', true).is('deleted_at', null).order('name').limit(2000);
+        .eq('is_active', true).is('deleted_at', null)
+        .order('name').limit(2000);
       if (!r.error) return r.data ?? [];
-      console.warn('[CentroEscolar] students con birth_date falló, reintento:', r.error);
+      console.warn('[CentroEscolar] N1 students con birth_date falló:',
+        r.error?.message || r.error?.code || r.error?.status);
     } catch (e) {
-      console.warn('[CentroEscolar] students error', e);
+      console.warn('[CentroEscolar] N1 students excepción:', e?.message || e);
     }
+
+    // ── N2: SDK sin birth_date (por si la columna no existe en migración vieja)
     try {
       const r2 = await supabase.from('students')
         .select('id, name, classroom_id, parent_id')
-        .eq('is_active', true).is('deleted_at', null).order('name').limit(2000);
-      if (r2.error) console.warn('[CentroEscolar] students (reintento) error:', r2.error);
-      return r2.data ?? [];
+        .eq('is_active', true).is('deleted_at', null)
+        .order('name').limit(2000);
+      if (!r2.error) return r2.data ?? [];
+      console.warn('[CentroEscolar] N2 students (sin birth_date) falló:',
+        r2.error?.message || r2.error?.code || r2.error?.status);
     } catch (e) {
-      console.warn('[CentroEscolar] students (reintento) excepción:', e);
-      return [];
+      console.warn('[CentroEscolar] N2 students (sin birth_date) excepción:', e?.message || e);
     }
+
+    // ── N3: Auth? → forzar refresh + reintento N2
+    try {
+      console.warn('[CentroEscolar] N3 students: forzando refresh de token y reintento...');
+      const t = await forceRefreshToken();
+      if (t) {
+        const r3 = await supabase.from('students')
+          .select('id, name, classroom_id, parent_id')
+          .eq('is_active', true).is('deleted_at', null)
+          .order('name').limit(2000);
+        if (!r3.error) return r3.data ?? [];
+      }
+    } catch (_) { /* seguir */ }
+
+    // ── N4: FALLBACK DEFINITIVO — PostgREST directo sin SDK
+    console.warn('[CentroEscolar] N4 students: POSTGREST DIRECTO (último recurso)');
+    return await fetchPostgREST('students', {
+      select: 'id,name,classroom_id,parent_id',
+      filters: { is_active: true },
+      is:      { deleted_at: null },
+      order:   { column: 'name', ascending: true },
+      limit:   2000,
+    }, []);
   },
 
   async load() {
@@ -216,11 +900,27 @@ export const SchoolCenterModule = {
     const weekAgoDate = this._dateISO(new Date(Date.now() - 6 * 864e5));
 
     try {
-      const [
-        aulasRaw, students, attWeek, logsToday, schedToday, eventsToday,
-        postsWeek, msgUnread, msgWeek, tasks, incidents, staff,
-        meetings, years, periods,
-      ] = await Promise.all([
+      // ✅ Promise.allSettled: una sola promesa que falle NO tumba el resto del dashboard.
+      // (Lección aprendida del panel-maestra: Promise.all → fallo único = UI rota)
+      const defaultFallbacks = [
+        [],    // 0  aulasRaw
+        [],    // 1  students
+        [],    // 2  attWeek
+        [],    // 3  logsToday
+        [],    // 4  schedToday
+        [],    // 5  eventsToday
+        [],    // 6  postsWeek
+        [],    // 7  msgUnread
+        [],    // 8  msgWeek
+        [],    // 9  tasks
+        [],    // 10 incidents
+        [],    // 11 staff
+        [],    // 12 meetings
+        [],    // 13 years
+        [],    // 14 periods
+        [],    // 15 schoolActivities
+      ];
+      const settled = await Promise.allSettled([
         this._q(supabase.from('classrooms')
           .select('id, name, level, capacity, is_live, teacher_id, teacher:teacher_id(name, avatar_url)')
           .is('deleted_at', null).order('name')),
@@ -266,12 +966,38 @@ export const SchoolCenterModule = {
         this._q(supabase.from('periods')
           .select('id, name, start_date, end_date, status, is_active, classroom_id')
           .order('start_date', { ascending: false }).limit(60)),
+        // 15. school_activities: planificación central de directora/encargada/asistente
+        //   (cargamos 4 meses de ventana: 1 hacia atrás + 3 hacia adelante para el calendario visual)
+        this._q(supabase.from('school_activities')
+          .select('id, code, title, description, activity_type, priority, status,'
+                + ' classroom_id, target_audience, scheduled_date, scheduled_time,'
+                + ' duration_minutes, location, created_by, assigned_to, published_at,'
+                + ' starts_at, ends_at, completed_at, created_at')
+          .gte('scheduled_date', _dateAddISO(today, -35))
+          .lte('scheduled_date', _dateAddISO(today, 120))
+          .order('scheduled_date', { ascending: true })
+          .limit(1500)),
       ]);
+
+      // Extraer valores: fulfilled → value, rejected → fallback por posición
+      const results = settled.map((s, i) => {
+        if (s.status === 'fulfilled') {
+          return Array.isArray(s.value) ? s.value : (s.value ?? defaultFallbacks[i]);
+        }
+        console.warn('[CentroEscolar] Query allSettled rejected, usando fallback idx=' + i, s.reason);
+        return defaultFallbacks[i];
+      });
+
+      const [
+        aulasRaw, students, attWeek, logsToday, schedToday, eventsToday,
+        postsWeek, msgUnread, msgWeek, tasks, incidents, staff,
+        meetings, years, periods, schoolActivities,
+      ] = results;
 
       this._data = this._compute({
         aulasRaw, students, attWeek, logsToday, schedToday, eventsToday,
         postsWeek, msgUnread, msgWeek, tasks, incidents, staff,
-        meetings, years, periods, today, weekAgoDate,
+        meetings, years, periods, schoolActivities, today, weekAgoDate,
       });
 
       this._loadedAt = Date.now();
@@ -663,6 +1389,7 @@ export const SchoolCenterModule = {
       staff: d.staff || [], meetings: d.meetings || [], years: d.years || [], periods: d.periods || [],
       msgUnread: d.msgUnread || [], students: d.students || [],
       tasks: d.tasks || [], incidents: d.incidents || [], posts: d.postsWeek || [],
+      schoolActivities: d.schoolActivities || [],
       respAcc, today, isWeekend,
       weekRange: `${this._fmtShortDate(d.weekAgoDate)} – ${this._fmtShortDate(today)}`,
     };
@@ -728,6 +1455,10 @@ export const SchoolCenterModule = {
     else if (this._tab === 'calendario')   view.innerHTML = this._renderCalendario();
     else if (this._tab === 'monitoreo')    view.innerHTML = this._renderMonitoreo();
     else if (this._tab === 'reportes')     view.innerHTML = this._renderReportes();
+    else if (this._tab === 'intervenciones') {
+      view.innerHTML = this._renderIntervenciones();
+      this._ensureIntervencionesLoaded();
+    }
     else                                   view.innerHTML = this._renderResumen();
 
     if (window.lucide) requestAnimationFrame(() => lucide.createIcons());
@@ -1231,15 +1962,34 @@ export const SchoolCenterModule = {
     const today = this._todayISO();
     const filter = this._calFilter || 'todos';
 
-    // Eventos indexados por día
+    // Metadatos globales: colores / labels de school_activities
+    const activityTypeMeta = {
+      academica:         { label: 'Académica',         icon: 'book-open',  color: '#0B63C7' },
+      extracurricular:   { label: 'Extracurricular',   icon: 'sparkles',   color: '#7C3AED' },
+      cierre_periodo:    { label: 'Cierre Periodo',    icon: 'flag',       color: '#DB2777' },
+      evaluacion:        { label: 'Evaluación',        icon: 'clipboard-check', color: '#EA580C' },
+      reunion_padres:    { label: 'Reunión Padres',    icon: 'users',      color: '#F59E0B' },
+      excursion:         { label: 'Excursión',         icon: 'bus',        color: '#0891B2' },
+      admin:             { label: 'Administrativa',    icon: 'file-cog',   color: '#64748B' },
+      otra:              { label: 'Otra',              icon: 'pin',        color: '#475569' },
+    };
+    const priorityColor = p => ({ baja:'#22C55E', media:'#F59E0B', alta:'#EF4444', critica:'#B91C1C' })[p] || '#64748B';
+    const priorityLabel = p => ({ baja:'Baja', media:'Media', alta:'Alta', critica:'Crítica' })[p] || '—';
+    const audienceLabel = a => ({ aula:'Aula', nivel:'Nivel', todo_el_centro:'Todo el centro', estudiante:'Estudiante', staff:'Staff' })[a] || '—';
+    const statusLabel = s => ({ draft:'Borrador', scheduled:'Programada', published:'Publicada', in_progress:'En curso', completed:'Cumplida', archived:'Archivada' })[s] || s;
+    const statusClass = s => ({ draft:'ksc-chip--muted', scheduled:'ksc-chip--info', published:'ksc-chip--ok', in_progress:'ksc-chip--warn', completed:'ksc-chip--ok', archived:'ksc-chip--muted' })[s] || 'ksc-chip--info';
+    const aulaById = new Map(D.aulas.filter(a=>a.id).map(a => [String(a.id), a]));
+    const staffById = new Map((D.staff || []).map(s => [String(s.id), s]));
+
+    // Eventos indexados por día (se extiende push: ahora guarda objeto enriquecido)
     const byDay = new Map();
-    const push = (day, type, title, time) => {
+    const push = (day, type, title, time, extra = null) => {
       if (!day) return;
       if (!byDay.has(day)) byDay.set(day, []);
-      byDay.get(day).push({ type, title, time });
+      byDay.get(day).push({ type, title, time, extra });
     };
 
-    // Recorremos el pool completo (publicaciones + mensajes + incidencias + eventos)
+    // ── 1. Publicaciones + tareas (historico existente)
     (D.posts || this._postsCache || []).forEach(p => {
       if (p.created_at) push(p.created_at.slice(0, 10), 'actividad', `Publicación · ${p.title || p.content || 'actividad'}`, p.created_at);
     });
@@ -1254,26 +2004,44 @@ export const SchoolCenterModule = {
       if (m.start_time) push(m.start_time.slice(0, 10), 'reunion', `Reunión · ${m.title || 'Sin título'}`, m.start_time);
     });
 
-    // Incidencias + tareas vencidas como pendientes
+    // ── 2. INCIDENCIAS (alert)
     D.pool.forEach(a => {
       (a.m.incidents || []).forEach(i => {
         if (i.reported_at) push(i.reported_at.slice(0, 10), 'alerta', `${a.name} · incidencia`, i.reported_at);
       });
     });
 
-    const typeMeta = {
-      todos:       { label: 'Todos',        color: '#0B63C7' },
-      actividad:   { label: 'Actividad',    color: '#0B63C7' },
-      reunion:     { label: 'Reunión',      color: '#F59E0B' },
-      alerta:      { label: 'Alerta',       color: '#EF4444' },
-      asistencia:  { label: 'Asistencia',   color: '#16A34A' },
-    };
-
-    // Marcar días con asistencia registrada
+    // ── 3. ASISTENCIA
     const attDays = new Set();
     D.pool.forEach(a => a.m.weekDates?.forEach(d => attDays.add(d)));
     attDays.forEach(d => push(d, 'asistencia', 'Asistencia registrada', null));
 
+    // ── 4. 🔥 NUEVO: SCHOOL_ACTIVITIES (planificación staff)
+    //    - Las metemos como tipo extra "planificada" (visual destacado con icono propio)
+    //    - Guardamos en extra: objeto completo para renderizarlo luego.
+    (D.schoolActivities || []).forEach(a => {
+      const meta = activityTypeMeta[a.activity_type] || activityTypeMeta.otra;
+      const time = a.scheduled_time ? `${a.scheduled_date}T${a.scheduled_time}` : a.scheduled_date;
+      const label =
+        a.target_audience === 'todo_el_centro'
+          ? `★ [Centro] ${a.title || 'Actividad'}`
+          : (a.classroom_id ? `[${aulaById.get(String(a.classroom_id))?.name || 'Aula'}] ${a.title || 'Actividad'}`
+                            : `[${audienceLabel(a.target_audience)}] ${a.title || 'Actividad'}`);
+      push(a.scheduled_date, 'planificada', label, time, { kind: 'school_activity', id: a.id, meta, obj: a });
+    });
+
+    const typeMeta = {
+      todos:       { label: 'Todos',          color: '#0B63C7' },
+      planificada: { label: 'Planificada',    color: '#6D28D9' },
+      actividad:   { label: 'Actividad',      color: '#0B63C7' },
+      reunion:     { label: 'Reunión',        color: '#F59E0B' },
+      alerta:      { label: 'Alerta',         color: '#EF4444' },
+      asistencia:  { label: 'Asistencia',     color: '#16A34A' },
+    };
+
+    // ============================================================
+    // GRID DE DÍAS + NUEVO BOTÓN "NUEVA ACTIVIDAD" SAAS PREMIUM
+    // ============================================================
     const first = new Date(year, month, 1);
     const startDow = (first.getDay() + 6) % 7; // lunes = 0
     const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -1288,8 +2056,9 @@ export const SchoolCenterModule = {
       const iso = `${y}-${String(mth + 1).padStart(2, '0')}-${String(n).padStart(2, '0')}`;
       const evs = (byDay.get(iso) || []).filter(e => filter === 'todos' || e.type === filter);
       const dots = evs.slice(0, 4).map(e => `<i class="ksc-dot" style="--d:${typeMeta[e.type]?.color || '#0B63C7'}"></i>`).join('');
+      const hasPlan = evs.some(e => e.type === 'planificada');
       cells.push(`
-        <div class="ksc-day${out ? ' is-out' : ''}${iso === today ? ' is-today' : ''}${iso === this._calSelected ? ' is-selected' : ''}"
+        <div class="ksc-day${out ? ' is-out' : ''}${iso === today ? ' is-today' : ''}${iso === this._calSelected ? ' is-selected' : ''}${hasPlan ? ' has-plan' : ''}"
              data-ksc-cal-day="${iso}" title="${esc(evs.map(e => e.title).join('\n'))}">
           <span class="ksc-day-num">${n}</span>
           <div class="ksc-day-dots">${dots}</div>
@@ -1298,18 +2067,104 @@ export const SchoolCenterModule = {
       if (i >= 34 && dayNum > daysInMonth) break;
     }
 
+    // ============================================================
+    // Panel derecho: actividades del día seleccionado + PLANIFICADAS PROXIMAS
+    // ============================================================
     const sel = this._calSelected || today;
     const selEvents = (byDay.get(sel) || []).filter(e => filter === 'todos' || e.type === filter);
     const eventList = selEvents.length
-      ? selEvents.map(e => `
-          <div class="ksc-event-item">
-            <span class="ksc-event-time">${e.time ? esc(this._fmtTime(e.time)) : 'todo el día'}</span>
-            <div class="ksc-list-main">
-              <div class="ksc-list-title">${esc(e.title)}</div>
-              <div class="ksc-list-sub"><span class="ksc-chip" style="background:${(typeMeta[e.type]?.color || '#0B63C7')}1f;color:${typeMeta[e.type]?.color || '#0B63C7'}">${esc(typeMeta[e.type]?.label || e.type)}</span></div>
-            </div>
-          </div>`).join('')
+      ? selEvents.map(e => {
+          if (e.extra?.kind === 'school_activity') {
+            const a = e.extra.obj;
+            const meta = e.extra.meta;
+            const aula = a.classroom_id ? aulaById.get(String(a.classroom_id)) : null;
+            return `
+              <div class="ksc-event-item is-activity" data-ksc-activity="${a.id}">
+                <span class="ksc-event-time">${a.scheduled_time ? esc(a.scheduled_time.slice(0,5)) : 'todo el día'}</span>
+                <div class="ksc-list-main" style="width:100%">
+                  <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">
+                    <div class="ksc-list-title" style="margin:0">${esc(a.title || 'Sin título')}</div>
+                    <span class="ksc-chip" style="background:${meta.color}1A;color:${meta.color}">
+                      <i data-lucide="${meta.icon}"></i> ${esc(meta.label)}
+                    </span>
+                    <span class="ksc-chip ksc-chip--muted">${esc(a.code || '')}</span>
+                    <span class="ksc-chip ${statusClass(a.status)}">${esc(statusLabel(a.status))}</span>
+                  </div>
+                  <div class="ksc-list-sub" style="margin-top:.35rem">
+                    ${aula ? `<span>🏫 ${esc(aula.name)}</span> · ` : ''}
+                    <span>👥 ${esc(audienceLabel(a.target_audience))}</span> ·
+                    <span>⚡ ${esc(priorityLabel(a.priority))}</span>
+                    ${a.duration_minutes ? ` · ⏱ ${a.duration_minutes} min` : ''}
+                    ${a.location ? ` · 📍 ${esc(a.location)}` : ''}
+                    ${a.description ? `<div style="margin-top:.4rem;color:var(--ksc-text-dim)">${esc(String(a.description).slice(0,140))}</div>` : ''}
+                  </div>
+                </div>
+              </div>`;
+          }
+          return `
+            <div class="ksc-event-item">
+              <span class="ksc-event-time">${e.time ? esc(this._fmtTime(e.time)) : 'todo el día'}</span>
+              <div class="ksc-list-main">
+                <div class="ksc-list-title">${esc(e.title)}</div>
+                <div class="ksc-list-sub"><span class="ksc-chip" style="background:${(typeMeta[e.type]?.color || '#0B63C7')}1f;color:${typeMeta[e.type]?.color || '#0B63C7'}">${esc(typeMeta[e.type]?.label || e.type)}</span></div>
+              </div>
+            </div>`;
+        }).join('')
       : `<div class="ksc-empty"><i data-lucide="calendar"></i><div>Sin eventos para el ${esc(this._fmtShortDate(sel))}.</div></div>`;
+
+    // ──────────────────────────────────────────────────────────
+    // KPI RÁPIDO: cuenta actividades planificadas / publicadas próximas
+    // ──────────────────────────────────────────────────────────
+    const upcoming = (D.schoolActivities || [])
+      .filter(a => !['archived','completed','draft'].includes(a.status))
+      .sort((x, y) => (String(x.scheduled_date) + (x.scheduled_time||'')).localeCompare(String(y.scheduled_date) + (y.scheduled_time||'')))
+      .slice(0, 12);
+    const upcomingList = upcoming.length
+      ? upcoming.map(a => {
+          const meta = activityTypeMeta[a.activity_type] || activityTypeMeta.otra;
+          const aula = a.classroom_id ? aulaById.get(String(a.classroom_id)) : null;
+          return `
+            <div class="ksc-event-item is-activity-up" data-ksc-activity="${a.id}">
+              <span class="ksc-event-time" style="min-width:4.6rem;flex:0 0 auto">
+                <span style="display:block;font-weight:700;color:${meta.color}">${esc(String(a.scheduled_date||'').slice(8,10))}/${esc(String(a.scheduled_date||'').slice(5,7))}</span>
+                <span style="display:block;font-size:.7rem;color:var(--ksc-text-dim)">${a.scheduled_time?esc(a.scheduled_time.slice(0,5)):'—'}</span>
+              </span>
+              <div class="ksc-list-main" style="width:100%">
+                <div style="display:flex;align-items:center;gap:.45rem;flex-wrap:wrap">
+                  <div class="ksc-list-title" style="margin:0">${esc(a.title || 'Sin título')}</div>
+                  <span class="ksc-chip ${statusClass(a.status)}">${esc(statusLabel(a.status))}</span>
+                </div>
+                <div class="ksc-list-sub" style="margin-top:.3rem;color:var(--ksc-text-dim)">
+                  ${aula ? `🏫 ${esc(aula.name)}` : `👥 ${esc(audienceLabel(a.target_audience))}`}
+                  <span style="margin:0 .35rem">·</span>
+                  <span style="color:${priorityColor(a.priority)}">⚡ ${esc(priorityLabel(a.priority))}</span>
+                  <span style="margin:0 .35rem">·</span>
+                  ${a.assigned_to ? `👩‍🏫 ${esc(staffById.get(String(a.assigned_to))?.name || 'Responsable')}` : '👩‍🏫 Sin asignar'}
+                </div>
+              </div>
+            </div>`;
+        }).join('')
+      : `<div class="ksc-empty"><i data-lucide="calendar-days"></i>
+          <div>No hay actividades programadas próximamente.</div>
+          <button class="ksc-mini-btn" data-ksc-action="new-activity" data-ksc-date="${today}" type="button" style="margin-top:.6rem">
+            <i data-lucide="plus"></i> Crear la primera
+          </button></div>`;
+
+    const statsKPIs = (() => {
+      const all = D.schoolActivities || [];
+      const published = all.filter(a => a.status === 'published').length;
+      const inProgress = all.filter(a => a.status === 'in_progress').length;
+      const scheduled = all.filter(a => a.status === 'scheduled').length;
+      const completed = all.filter(a => a.status === 'completed').length;
+      const critical = all.filter(a => a.priority === 'critica' && !['archived','completed'].includes(a.status)).length;
+      return `
+        <div class="ksc-kpi-4row">
+          <div class="ksc-kpi-mini"><div class="k"><span class="ksc-dot" style="--d:#0B63C7"></i> Programadas</div><div class="v">${scheduled}</div></div>
+          <div class="ksc-kpi-mini"><div class="k"><span class="ksc-dot" style="--d:#16A34A"></i> Publicadas</div><div class="v">${published}</div></div>
+          <div class="ksc-kpi-mini"><div class="k"><span class="ksc-dot" style="--d:#F59E0B"></i> En curso</div><div class="v">${inProgress}</div></div>
+          <div class="ksc-kpi-mini"><div class="k"><span class="ksc-dot" style="--d:#B91C1C"></i> Críticas</div><div class="v">${critical}</div></div>
+        </div>`;
+    })();
 
     // Planificador: años escolares + periodos
     const years = D.years.map(y => {
@@ -1351,15 +2206,39 @@ export const SchoolCenterModule = {
 
     return `
       <div class="ksc-cal">
-        <div class="ksc-panel">
+        <div class="ksc-panel ksc-calendar-root">
           <div class="ksc-cal-head">
-            <div class="ksc-cal-month">${esc(monthName)}</div>
-            <div class="ksc-cal-nav">
+            <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap">
+              <div style="display:flex;align-items:center;gap:.65rem">
+                <div style="width:46px;height:46px;border-radius:14px;background:linear-gradient(135deg,#6D28D9 0%,#0B63C7 100%);
+                            display:flex;align-items:center;justify-content:center;box-shadow:0 10px 22px rgba(109,40,217,.28)">
+                  <i data-lucide="calendar-plus" style="color:#fff;width:22px;height:22px"></i>
+                </div>
+                <div>
+                  <div class="ksc-cal-month" style="margin:0">${esc(monthName)}</div>
+                  <div class="ksc-panel-sub" style="margin:.1rem 0 0 0;display:block">Planificación central de actividades escolares</div>
+                </div>
+              </div>
+              <!-- 🔥 NUEVO BOTÓN SAAS PREMIUM: NUEVA ACTIVIDAD 🔥 -->
+              <button class="ksc-btn-primary" data-ksc-action="new-activity" data-ksc-date="${sel}" type="button"
+                      style="margin-left:auto;padding:.95rem 1.35rem;border-radius:16px;border:0;
+                             background:linear-gradient(135deg,#6D28D9 0%,#0B63C7 100%);
+                             color:#fff;font-weight:700;letter-spacing:.2px;
+                             box-shadow:0 14px 32px rgba(13,71,161,.35);cursor:pointer;
+                             display:inline-flex;align-items:center;gap:.65rem">
+                <i data-lucide="plus" style="width:18px;height:18px"></i>
+                Nueva Actividad
+              </button>
+            </div>
+            <div class="ksc-cal-nav" style="margin-top:.6rem">
               <button class="ksc-nav-btn" data-ksc-nav="-1" type="button" aria-label="Mes anterior"><i data-lucide="chevron-left"></i></button>
               <button class="ksc-nav-btn" data-ksc-nav="0" type="button" aria-label="Hoy" title="Hoy"><i data-lucide="target"></i></button>
               <button class="ksc-nav-btn" data-ksc-nav="1" type="button" aria-label="Mes siguiente"><i data-lucide="chevron-right"></i></button>
             </div>
           </div>
+
+          ${statsKPIs}
+
           <div class="ksc-cal-filters">
             ${Object.entries(typeMeta).map(([k, v]) => `
               <button class="ksc-filter${filter === k ? ' active' : ''}" data-ksc-cal-filter="${k}" type="button">${esc(v.label)}</button>`).join('')}
@@ -1378,17 +2257,26 @@ export const SchoolCenterModule = {
           <div class="ksc-panel">
             <div class="ksc-panel-head">
               <h3 class="ksc-panel-title"><i data-lucide="calendar"></i> ${esc(this._fmtShortDate(sel))}</h3>
-              <span class="ksc-panel-sub">${selEvents.length} evento${selEvents.length === 1 ? '' : 's'}</span>
+              <button class="ksc-mini-btn" data-ksc-action="new-activity" data-ksc-date="${sel}" type="button">
+                <i data-lucide="plus"></i> Para hoy
+              </button>
             </div>
             <div>${eventList}</div>
           </div>
 
           <div class="ksc-panel">
             <div class="ksc-panel-head">
-              <h3 class="ksc-panel-title"><i data-lucide="layers"></i> Planificador del año escolar</h3>
+              <h3 class="ksc-panel-title"><i data-lucide="layers"></i> Actividades próximas</h3>
+              <span class="ksc-panel-sub">${upcoming.length} activa${upcoming.length === 1 ? '' : 's'}</span>
+            </div>
+            <div class="ksc-panel-body">${upcomingList}</div>
+
+            <div class="ksc-panel-head" style="border-top:1px solid var(--ksc-line);margin-top:1rem">
+              <h3 class="ksc-panel-title"><i data-lucide="flag"></i> Planificador año escolar</h3>
               <span class="ksc-panel-sub">${D.years.length} ciclo${D.years.length === 1 ? '' : 's'}</span>
             </div>
             <div class="ksc-panel-body">${years}</div>
+
             <div class="ksc-panel-head" style="border-top:1px solid var(--ksc-line)">
               <h3 class="ksc-panel-title"><i data-lucide="list-checks"></i> Periodos</h3>
               <span class="ksc-panel-sub">${D.periods.length} definidos</span>
@@ -1701,6 +2589,17 @@ export const SchoolCenterModule = {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   },
 
+  /**
+   * Helper: hoy + N días → "YYYY-MM-DD" (acepta negativos para fechas pasadas).
+   * Se usa en los rangos de fecha de school_activities para no repetir código.
+   */
+  _dateAddISO(baseISO, days) {
+    const [y, m, d] = String(baseISO).split('-').map(Number);
+    const dt = new Date(y, (m || 1) - 1, d || 1);
+    dt.setDate(dt.getDate() + Number(days || 0));
+    return this._dateISO(dt);
+  },
+
   _fmtTime(ts) {
     if (!ts) return '—';
     const d = typeof ts === 'string' && ts.length <= 10 ? new Date(ts + 'T00:00:00') : new Date(ts);
@@ -1941,11 +2840,18 @@ export const SchoolCenterModule = {
         <span class="ksc-qa-label">${esc(label)}</span>
         ${badge != null ? `<span class="ksc-qa-badge ${badgeCls || ''}">${esc(badge)}</span>` : ''}
       </button>`;
+    const spv = `
+      <button type="button" class="ksc-qa-btn ksc-qa-btn--primary ksc-qa-btn--supervision" data-ksc-action="superviseAula" data-ksc-classroom="${esc(a.id)}" style="--accent:#6D28D9">
+        <span class="ksc-qa-icon"><i data-lucide="eye"></i></span>
+        <span class="ksc-qa-label">Supervisar aula</span>
+        <span class="ksc-qa-badge is-new" title="Nuevo">NEW</span>
+      </button>`;
     return `
       <div class="ksc-quick-actions" style="--accent:${accent}">
         ${btn('replyMsgs', 'message-square-reply', 'Responder mensajes', pendMsgs > 0 ? pendMsgs : null, pendMsgs >= 3 ? 'is-danger' : pendMsgs > 0 ? 'is-warn' : '')}
         ${btn('newPost', 'megaphone', 'Publicar en muro', null)}
         ${btn('newEvent', 'calendar-plus', 'Crear / Agendar evento', null)}
+        ${spv}
       </div>`;
   },
 

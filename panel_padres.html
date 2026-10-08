@@ -575,6 +575,12 @@
           <i data-lucide="calendar-check" class="w-5 h-5 shrink-0"></i>
           <span class="flex-1 text-left">Asistencia</span>
         </button>
+
+        <!-- Actividades y Experiencias -->
+        <button type="button" data-target="actividades" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 font-bold text-sm" aria-label="Actividades">
+          <i data-lucide="calendar-heart" class="w-5 h-5 shrink-0"></i>
+          <span class="flex-1 text-left">Actividades</span>
+        </button>
         
         <!-- Finanzas (módulo deshabilitado)
         <button type="button" data-target="payments" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 font-bold text-sm" aria-label="Finanzas">
@@ -1494,6 +1500,11 @@
                 </div>
               </div>
             </div>
+          </section>
+
+          <!-- ACTIVIDADES & EXPERIENCIAS DE APRENDIZAJE -->
+          <section id="actividades" class="section hidden">
+            <div id="actividadesContent" class="flex flex-col gap-5"></div>
           </section>
 
           <!-- PERFIL -->

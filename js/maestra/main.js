@@ -24,6 +24,7 @@ import { UI } from './modules/ui.js';
 import { UIPremium } from '../shared/ui-premium.js';
 import { NewsCenter } from '../shared/news-center.js';
 import { SectionCache } from '../shared/section-cache.js';
+import SupervisionEngine from '../shared/supervision.js';
 import {
   findCanonicalClassroom,
   findSpecialClassroom,
@@ -40,6 +41,76 @@ const { safeToast, safeEscapeHTML, safeUrl, safeJS, Modal } = UI;
 // Exponer Modal globalmente ANTES de cualquier interacción del usuario
 // Los onclick inline en HTML dinámico necesitan window.Modal disponible de inmediato
 window.Modal = Modal;
+
+// 👁️ Motor de supervisión expuesto globalmente (igual que en panel_directora)
+window.SupervisionEngine = SupervisionEngine;
+
+/* ──────────────────────────────────────────────────────────
+ * 👁️ MODO SUPERVISIÓN — auditoría + lockdown (panel-maestra)
+ * La directora/asistente/encargada ve y escribe con auditoría;
+ * las acciones destructivas quedan con confirmación reforzada
+ * y todo queda registrado en supervision_audit_log.
+ * ────────────────────────────────────────────────────────── */
+function _spvIsActive() {
+  try { return window.SupervisionEngine?.isActive?.() === true; } catch (_) { return false; }
+}
+function _spvIsOwner() {
+  try {
+    const ctx = window.SupervisionEngine?.getContext?.();
+    return !!ctx && ctx.userRole === 'maestra';
+  } catch (_) { return false; }
+}
+function _spvAudit(action, payload) {
+  try { return window.SupervisionEngine?.registerAudit?.(action, payload); } catch (_) { return null; }
+}
+function _installSupervisionGuards() {
+  const app = window.App;
+  if (!app || window.__SPV_GUARDS_INSTALLED__) return;
+  window.__SPV_GUARDS_INSTALLED__ = true;
+
+  const auditWrite = (fn, table, action) => async function (...args) {
+    const res = await fn.apply(this, args);
+    if (_spvIsActive() && !_spvIsOwner()) {
+      _spvAudit(action, { table_name: table, record_id: args && args.length ? String(args[0]) : null });
+    }
+    return res;
+  };
+
+  const guardDelete = (fn, table, label) => async function (...args) {
+    const directorSupervising = _spvIsActive() && !_spvIsOwner();
+    if (directorSupervising) {
+      const ok = await Helpers.confirm(
+        '🔒 Estás en Modo Supervisión. Eliminarás ' + label +
+        '; la acción quedará registrada en la auditoría directiva con tu identidad. ¿Continuar?'
+      );
+      if (!ok) return undefined;
+    }
+    const res = await fn.apply(this, args);
+    if (directorSupervising) {
+      _spvAudit('DELETE ' + table, { table_name: table, record_id: args && args.length ? String(args[0]) : null, label });
+      try {
+        window.SupervisionEngine?.openInterventionModal?.({
+          situacion: 'Eliminación de ' + label + ' durante supervisión',
+          module: table === 'tasks' ? 'tareas' : 'rutinas',
+          submodulo: label
+        });
+      } catch (_) {}
+    }
+    return res;
+  };
+
+  // 🔒 Destructivas → lockdown reforzado + auditoría
+  app.deleteTask         = guardDelete(Tasks.deleteTask, 'tasks', 'una tarea');
+  app.deleteInfantEvent  = guardDelete(Routine.deleteInfantEvent, 'daily_logs', 'un evento de rutina');
+
+  // ✍️ Escrituras clave → auditoría automática
+  app.registerAttendance = auditWrite(Attendance.registerAttendance, 'attendance', 'INSERT/UPDATE attendance');
+  app.markAllPresent     = auditWrite(Attendance.markAllPresent, 'attendance', 'INSERT attendance (bulk)');
+  app.addStudentEvent    = auditWrite(Routine.addStudentEvent, 'daily_logs', 'INSERT/UPDATE daily_logs');
+  app.saveStudentNote    = auditWrite(Routine.saveStudentNote, 'daily_logs', 'UPDATE daily_logs');
+  app.publishDailyLogs   = auditWrite(Routine.publishDailyLogs, 'daily_logs', 'PUBLISH daily_logs');
+  app.submitGrade        = auditWrite(Tasks.submitGrade, 'grades', 'INSERT/UPDATE grades');
+}
 
 /**
  * 🧼 Normaliza una fila de aula para PANTALLA: nombre/nivel al canónico
@@ -202,8 +273,81 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.location.href = 'login.html';
   });
 
-  const auth = await ensureRole(['maestra', 'admin']);
+  // 👁️ MODO SUPERVISIÓN: la directora/asistente/encargada solo puede entrar a
+  // este panel con contexto de supervisión activo (?supervision=true o contexto
+  // persistido). Sin contexto, se mantiene el acceso normal (solo maestra/admin).
+  let supervising = false;
+  try {
+    const u = new URL(window.location.href);
+    const q = u.searchParams.get('supervision') === 'true';
+    let stored = null;
+    try {
+      const raw = localStorage.getItem('karpus_supervision_ctx_v1');
+      if (raw) {
+        const c = JSON.parse(raw);
+        if (c && c.active && c.classroomId) stored = c;
+      }
+    } catch (_) {}
+    supervising = q || !!stored;
+  } catch (_) { supervising = false; }
+
+  const requiredRoles = supervising
+    ? ['maestra', 'admin', 'directora', 'asistente', 'encargada']
+    : ['maestra', 'admin'];
+  const auth = await ensureRole(requiredRoles);
   if (!auth) return;
+
+  // Restaurar la sesión de supervisión ANTES de cargar aulas
+  if (supervising && !['maestra', 'admin'].includes((auth.profile?.role || '').toLowerCase())) {
+    let bootOk = false;
+    try {
+      bootOk = await SupervisionEngine.bootFromEnvironment({
+        panelRole: auth.profile?.role, isMaestraPanel: true
+      });
+    } catch (e) {
+      console.warn('[Supervision] boot en panel-maestra falló:', e?.message || e);
+    }
+
+    // ✅ RECUPERACIÓN A PRUEBA DE FALLOS:
+    //    Si bootFromEnvironment retornó false (falló el rehydrate con sessionId
+    //    del storage, error 409, PK duplicate o cualquier cosa), PERO tenemos
+    //    classroomId en la URL y el usuario tiene rol staff válido, FORZAMOS un
+    //    enter() LIMPIO con NUEVA sessionId.
+    //    Esto impide que el usuario se quede atascado sin poder navegar en
+    //    el aula por un error puntual de persistencia de session anterior.
+    if (!bootOk || !SupervisionEngine.isActive()) {
+      try {
+        const url     = new URL(window.location.href);
+        const params  = url.searchParams;
+        const clsId   = params.get('classroomId');
+        if (clsId) {
+          console.warn('[Supervision] boot inicial falló, forzando enter() limpio...');
+          // No pasar sessionId (omitiéndolo se genera UUID NUEVA → sin PK duplicate)
+          const forceOpts = {
+            classroomId:   clsId,
+            teacherId:     params.get('teacherId') || null,
+            classroomName: params.get('classroomName') || params.get('classroom') || null,
+            teacherName:   params.get('teacherName') || null,
+            moduleOrigin:  params.get('originModule') || params.get('moduleOrigin') || 'centro-escolar',
+            jumpToSection: params.get('jumpTo')     || params.get('section')      || 't-home',
+            role:          auth.profile?.role || null,
+            source:        'url_force_retry'
+          };
+          bootOk = !!await SupervisionEngine.enter(forceOpts);
+        }
+      } catch (e2) {
+        console.warn('[Supervision] force enter también falló:', e2?.message || e2);
+      }
+    }
+
+    // Solo si AMBOS caminos fallaron → mostrar error y redirigir.
+    if (!SupervisionEngine.isActive()) {
+      safeToast('El contexto de supervisión no pudo restaurarse. Regresando al Centro Escolar.', 'error');
+      try { setTimeout(() => { window.location.href = 'panel_directora.html#ksc'; }, 800); }
+      catch (_) { window.location.href = 'panel_directora.html#ksc'; }
+      return;
+    }
+  }
   
   AppState.set('user', auth.user);
   AppState.set('profile', auth.profile);
@@ -407,12 +551,20 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   try {
-    const { data: rawRooms, error } = await supabase
+    const spv = SupervisionEngine.isActive() ? SupervisionEngine.getContext() : null;
+    let roomsQuery = supabase
       .from('classrooms')
       .select('id, name, level, capacity, teacher_id, is_live, is_special')
-      .eq('teacher_id', auth.user.id)
-      .is('deleted_at', null)
-      .order('name');
+      .is('deleted_at', null);
+
+    if (spv && spv.classroomId) {
+      // Supervisión: aula observada (contexto directivo), no la propia maestra.
+      roomsQuery = roomsQuery.eq('id', String(spv.classroomId));
+    } else {
+      roomsQuery = roomsQuery.eq('teacher_id', auth.user.id);
+    }
+
+    const { data: rawRooms, error } = await roomsQuery.order('name');
 
     if (error) throw error;
 
@@ -421,12 +573,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     const classrooms = dedupeClassrooms(sanitized);
 
     if (!classrooms?.length) {
+      if (spv && spv.classroomId) {
+        safeToast('El aula supervisada ya no existe o no tienes acceso.', 'error');
+        window.SupervisionEngine?.exit?.({ reason: 'classroom_missing' });
+        return;
+      }
       safeToast('No tienes un aula asignada.', 'warning');
       return;
     }
 
     AppState.set('classrooms', classrooms);
     AppState.set('classroom', classrooms[0]);
+
+    // 👁️ Instalar guardas de auditoría + lockdown (una sola vez)
+    _installSupervisionGuards();
 
     // Switcher de aulas (para maestras con varias aulas)
     _initClassroomSwitcher(classrooms);
@@ -1029,6 +1189,9 @@ function initNavigation() {
     const fullId = targetId.startsWith('t-') ? targetId : `t-${targetId}`;
     const cleanId = targetId.replace('t-', '');
 
+    // 👁️ Sincronizar chip de la barra de supervisión con la sección activa
+    try { SupervisionEngine?.setSubSection?.(fullId); } catch (_) {}
+
     Helpers.vibrate?.('light');
 
     // ✅ LIMPIEZA DE REALTIME: Eliminar canales al cambiar de sección
@@ -1086,6 +1249,16 @@ function initNavigation() {
     if (cleanId === 'daily-routine') initRoutine();
     if (cleanId === 'tasks') initTasks();
     if (cleanId === 'grades') import('./modules/grades.js').then(m => m.MaestraGrades.init());
+    if (cleanId === 'actividades') {
+      import('../shared/school-activities.module.js')
+        .then(m => m.SchoolActivitiesModule.init({
+          mode: 'teacher',
+          containerId: 'actividadesContent',
+          profile: AppState.get('profile'),
+          keepMonth: true
+        }))
+        .catch(() => {});
+    }
     if (cleanId === 'permits') PermitsModule.init();
     if (cleanId === 'chat') initChat();
     if (cleanId === 'profile') {
@@ -1107,11 +1280,21 @@ function initNavigation() {
   window.App._setActiveSection = setActiveSection; // Alias interno para el proxy global
 
   // Restaurar última sección
-  const lastSection = localStorage.getItem('maestra_last_section') || 't-home';
-  const lastClassroom = localStorage.getItem('maestra_last_classroom');
-  const lastTab = localStorage.getItem('maestra_last_tab');
+  // 👁️ En supervisión se ignora el historial previo: se entra al contexto
+  // del aula supervisada (sección del salto o inicio), nunca al detalle de un aula histórico.
+  let lastSection, lastClassroom, lastTab;
+  if (SupervisionEngine.isActive()) {
+    const sub = SupervisionEngine.getContext()?.subSection;
+    lastSection = sub || 't-home';
+    lastClassroom = null;
+    lastTab = null;
+  } else {
+    lastSection = localStorage.getItem('maestra_last_section') || 't-home';
+    lastClassroom = localStorage.getItem('maestra_last_classroom');
+    lastTab = localStorage.getItem('maestra_last_tab');
+  }
 
-  if (lastSection === 't-class-detail' && lastClassroom) {
+  if (!SupervisionEngine.isActive() && lastSection === 't-class-detail' && lastClassroom) {
     showClassroomDetail(lastClassroom, { activeTab: lastTab });
   } else {
     setActiveSection(lastSection, { skipSave: true });

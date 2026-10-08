@@ -50,7 +50,8 @@
   <link rel="stylesheet" href="css/directora-containers.css">
   <link rel="stylesheet" href="css/school-center.css">
   <link rel="stylesheet" href="css/student-record-modal.css">
-  <link rel="stylesheet" href="css/messenger-chat.css">
+  <link rel="stylesheet" href="css/messenger-chat.css">      
+  <link rel="stylesheet" href="css/supervision.css">
   <script src="js/shared/chart.min.js" defer></script>
   <script src="js/shared/jspdf.min.js" defer></script>
   <script src="js/shared/jspdf-autotable.min.js" defer></script>
@@ -1162,6 +1163,12 @@
           <span id="badge-ksc" class="hidden kk-badge ml-auto">0</span>
         </button>
 
+        <!-- ACTIVIDADES (Calendario Pedagógico) -->
+        <button data-section="actividades" class="kk-nav-item" data-tooltip="Actividades">
+          <i data-lucide="calendar-heart" class="text-amber-300"></i>
+          <span class="label">Actividades</span>
+        </button>
+
         <!-- FINANZAS (módulo oculto/deshabilitado) -->
         <!--
         <div class="kk-nav-group">
@@ -1310,6 +1317,13 @@
 
 <!-- CICLO ESCOLAR HUB -->
 <section id="ciclo-escolar" class="section"><div class="p-2 md:p-4"></div></section>
+
+<!-- ACTIVIDADES / CALENDARIO PEDAGÓGICO -->
+<section id="actividades" class="section">
+  <div class="p-2 md:p-4">
+    <div id="actividadesContent" class="space-y-6"></div>
+  </div>
+</section>
 
 <!-- FINANZAS / PAGOS deshabilitado -->
 

@@ -64,8 +64,9 @@ supabase.auth.onAuthStateChange((event, session) => {
 });
 
 // Interceptar errores 401 globalmente y refrescar token
-// IMPORTANTE: usar flag para evitar loop infinito
-let _refreshing = false;
+// IMPORTANTE: usar promise-pending para COLA de espera (peticiones concurrentes)
+let _refreshPromise = null;
+let _redirectingToLogin = false;
 const _originalFetch = window.fetch;
 
 // RPC/tabla endpoints conocidos como opcionales (no desplegados en producción todavía).
@@ -125,19 +126,20 @@ window.fetch = async function(...args) {
     const options = args[1] || {};
     options.headers = options.headers || {};
     
-    // Inyectar apikey solo si falta (útil para Edge Functions o fetch directo)
-    if (!options.headers['apikey']) {
-      options.headers['apikey'] = SUPABASE_ANON_KEY;
-    }
-    // Inyectar Authorization Bearer si no está presente y tenemos sesión (para mayor seguridad)
-    if (!options.headers['Authorization']) {
+    // Siempre inyectar/ sobrescribir apikey (para Edge Functions, fetch directo y evitar valores stale)
+    options.headers['apikey'] = SUPABASE_ANON_KEY;
+
+    // ✅ OBTENER SIEMPRE token FRESCO y SOBRESCRIBIR header Authorization.
+    // El SDK de Supabase a veces cachea headers con JWT vencido — esta línea lo corrige.
+    let bearerToken = SUPABASE_ANON_KEY;
+    try {
       const { data } = await supabase.auth.getSession();
       if (data?.session?.access_token) {
-        options.headers['Authorization'] = `Bearer ${data.session.access_token}`;
-      } else {
-        options.headers['Authorization'] = `Bearer ${SUPABASE_ANON_KEY}`;
+        bearerToken = data.session.access_token;
       }
-    }
+    } catch (_) { /* Sin sesión — usar anon como fallback */ }
+    options.headers['Authorization'] = `Bearer ${bearerToken}`;
+
     args[1] = options;
   }
 
@@ -152,36 +154,56 @@ window.fetch = async function(...args) {
     return res;
   }
 
-  // Interceptar 401 para intentar refrescar sesión
-  if (res.status === 401 && isSupabase && !_refreshing && !url.includes('/auth/v1/')) {
-    _refreshing = true;
-    try {
-      console.warn('[supabase-js] 401 detectado, intentando refrescar sesión...');
-      // Intentar refresh una única vez
-      const { data: refreshed, error } = await supabase.auth.refreshSession();
-      if (!error && refreshed?.session) {
-        console.log('[supabase-js] Sesión refrescada con éxito. Reintentando petición...');
-        
-        // Clonar opciones y actualizar el header Authorization con el nuevo token
-        const retryOptions = args[1] || {};
-        retryOptions.headers = { 
-          ...retryOptions.headers, 
-          'Authorization': `Bearer ${refreshed.session.access_token}` 
-        };
-        args[1] = retryOptions;
+  // Interceptar 401: Sistema de COLA para peticiones concurrentes.
+  // La primera que llega dispara el refresh, TODAS las demás ESPERAN en cola,
+  // luego TODAS reintentan con el nuevo token (incluida la primera).
+  if (res.status === 401 && isSupabase && !url.includes('/auth/v1/')) {
+    console.warn('[supabase-js] 401 detectado en:', url.split('?')[0]);
 
-        return _originalFetch.apply(this, args);
-      } else {
-        console.error('[supabase-js] Falló el refresco de sesión:', error);
-        // Si el refresh falla con 401, redirigir a login para evitar loop
-        window.location.href = 'login.html';
-      }
-    } catch (e) {
-      console.error('[supabase-js] Error al intentar refrescar sesión:', e);
-      window.location.href = 'login.html';
-    } finally {
-      _refreshing = false;
+    // —— Paso 1: Crear o reutilizar promesa de refresh compartida —— //
+    if (!_refreshPromise) {
+      _refreshPromise = (async () => {
+        try {
+          console.warn('[supabase-js] Refrescando sesión (única llamada concurrente)...');
+          const { data: refreshed, error } = await supabase.auth.refreshSession();
+          if (!error && refreshed?.session) {
+            console.log('[supabase-js] ✅ Sesión refrescada. Todas las peticiones en cola reintentan.');
+            return refreshed.session.access_token;
+          }
+          console.error('[supabase-js] ❌ Refresh falló:', error?.message || error);
+          // Login redirect — solo UNA vez, flag para evitar múltiples location.assign
+          if (!_redirectingToLogin) {
+            _redirectingToLogin = true;
+            try { await supabase.auth.signOut(); } catch (_) {}
+            setTimeout(() => { window.location.href = 'login.html'; }, 150);
+          }
+          return null;
+        } catch (e) {
+          console.error('[supabase-js] ❌ Excepción en refresh:', e);
+          if (!_redirectingToLogin) {
+            _redirectingToLogin = true;
+            try { await supabase.auth.signOut(); } catch (_) {}
+            setTimeout(() => { window.location.href = 'login.html'; }, 150);
+          }
+          return null;
+        }
+      })().finally(() => {
+        // Limpiar cache de refresh para el siguiente ciclo 401
+        setTimeout(() => { _refreshPromise = null; }, 2000);
+      });
     }
+
+    // —— Paso 2: TODAS las peticiones esperan la promesa compartida —— //
+    const newToken = await _refreshPromise;
+    if (newToken) {
+      // Clonar args para no mutar el original, inyectar NUEVO token y REINTENTAR
+      const retryOptions = { ...(args[1] || {}), headers: { ...((args[1] || {}).headers || {}) } };
+      retryOptions.headers['Authorization'] = `Bearer ${newToken}`;
+      retryOptions.headers['apikey'] = SUPABASE_ANON_KEY;
+      console.log('[supabase-js] ↻ Reintentando:', url.split('?')[0]);
+      return _originalFetch.apply(this, [args[0], retryOptions]);
+    }
+    // Si newToken es null, falló el refresh. Devolver respuesta original 401.
   }
   return res;
 };
@@ -570,9 +592,36 @@ function _osLoginWithBackoff(OneSignal, userId, maxWaitMs = 60_000) {
 
 async function _initOneSignalAsync(currentUser) {
   try {
+    // ✅ Paso 0: Detectar Tracking Prevention (Edge ITP / Safari WebKit ITP).
+    //    Si el storage 3rd-party está BLOQUEADO, OneSignal falla al intentar
+    //    acceder a localStorage/cookies del dominio cdn.onesignal.com y
+    //    emite advertencias ruidosas en consola — ABORTAMOS TEMPRANO.
     const host = window.location.hostname;
-    const isProd = host === 'montessorisonrisascreativas.com' || host === 'www.montessorisonrisascreativas.com' || host.endsWith('.montessorisonrisascreativas.com');
+    const isProd = host === 'montessorisonrisascreativas.com'
+                || host === 'www.montessorisonrisascreativas.com'
+                || host.endsWith('.montessorisonrisascreativas.com');
     if (!isProd) return;
+
+    // Check rápido de disponibilidad de 3rd-party storage sin side-effects.
+    // Safari ITP/Edge bloquean document.cookie y localStorage si el dominio
+    // no fue visitado directamente; en ese caso nos saltamos OneSignal.
+    try {
+      const PROBE = '__karpus_os_probe__';
+      const canAccessCookie = (() => {
+        try {
+          document.cookie = PROBE + '=1; SameSite=None; Secure';
+          const ok = document.cookie.includes(PROBE);
+          // Limpiar sonda
+          document.cookie = PROBE + '=; SameSite=None; Secure; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+          return ok;
+        } catch (_) { return false; }
+      })();
+      if (!canAccessCookie) {
+        console.warn('[OneSignal] ⚠️ 3rd-party storage bloqueado (Tracking Prevention).'
+          + ' OneSignal no se inicializará en esta sesión. Push notifications desactivadas.');
+        return;
+      }
+    } catch (_) { /* continuar sin abortar */ }
 
     if (window.OneSignalInitialized) return;
     window.OneSignalInitialized = true;
@@ -668,4 +717,126 @@ async function _initOneSignalAsync(currentUser) {
       } catch (_) {}
     });
   } catch (_) {}
+}
+
+/* ════════════════════════════════════════════════════════════════
+   🔥 FALLBACK POSTGREST DIRECTO (último recurso)
+   Cuando el SDK de Supabase SDK falla con 401/403/42501 a pesar
+   del fetch-interceptor, usamos fetch() NATIVO hacia /rest/v1/
+   inyectando apikey + Authorization manualmente.
+   ════════════════════════════════════════════════════════════════ */
+
+/**
+ * Obtener token + apikey siempre frescos (sin pasar por SDK cache).
+ * @returns {{apikey:string, authorization:string, baseUrl:string}}
+ */
+export async function getRestCredentials() {
+  let accessToken = SUPABASE_ANON_KEY;
+  try {
+    const { data } = await supabase.auth.getSession();
+    if (data?.session?.access_token) accessToken = data.session.access_token;
+  } catch (_) { /* Sin sesión, usamos anon */ }
+  return {
+    apikey:         SUPABASE_ANON_KEY,
+    authorization:  `Bearer ${accessToken}`,
+    baseUrl:        `${SUPABASE_URL}/rest/v1`,
+  };
+}
+
+/**
+ * Realiza un SELECT directo por PostgREST (bypassea el SDK completamente).
+ * Equivalente a: supabase.from(table).select(selectStr).match(filters).order(orderCol,...).limit(n)
+ *
+ * @param {string} table    - Nombre de la tabla (ej: 'students')
+ * @param {object} opts     - { select, filters?: {k:v}, order?: {column, ascending?}, limit?, gte?: {k,v}, lte?: {k,v}, not?: {k,op,v}, is?: {k,v}, in?: {k,[]} }
+ * @param {*}      fallback - Valor si falla todo (default: [])
+ * @returns {Promise<any[]>}
+ */
+export async function fetchPostgREST(table, opts = {}, fallback = []) {
+  try {
+    const { apikey, authorization, baseUrl } = await getRestCredentials();
+
+    // Construir query string (PostgREST syntax)
+    const parts = [];
+    if (opts.select)  parts.push(`select=${encodeURIComponent(opts.select)}`);
+
+    const addFilter = (key, op, value) => {
+      const v = value === null ? 'null' : encodeURIComponent(String(value));
+      parts.push(`${encodeURIComponent(key)}=${op}.${v}`);
+    };
+
+    if (opts.filters) {
+      for (const [k, v] of Object.entries(opts.filters)) addFilter(k, 'eq', v);
+    }
+    if (opts.is) {
+      for (const [k, v] of Object.entries(opts.is)) {
+        parts.push(`${encodeURIComponent(k)}=is.${v === null ? 'null' : (v ? 'true' : 'false')}`);
+      }
+    }
+    if (opts.in) {
+      for (const [k, arr] of Object.entries(opts.in)) {
+        const list = (arr || []).map(x => String(x)).map(encodeURIComponent).join(',');
+        parts.push(`${encodeURIComponent(k)}=in.(${list})`);
+      }
+    }
+    if (opts.gte) { for (const [k, v] of Object.entries(opts.gte)) addFilter(k, 'gte', v); }
+    if (opts.lte) { for (const [k, v] of Object.entries(opts.lte)) addFilter(k, 'lte', v); }
+    if (opts.not) {
+      for (const [k, spec] of Object.entries(opts.not)) {
+        if (spec && typeof spec === 'object') {
+          const [op, v] = Object.entries(spec)[0] || [];
+          if (op) addFilter(k, `not.${op}`, v);
+        }
+      }
+    }
+    if (opts.order) {
+      const col = encodeURIComponent(opts.order.column);
+      const asc = opts.order.ascending === false ? 'desc' : 'asc';
+      const nulls = opts.order.nullsFirst ? 'nullsfirst' : 'nullslast';
+      parts.push(`order=${col}.${asc}.${nulls}`);
+    }
+    if (typeof opts.limit === 'number') parts.push(`limit=${opts.limit}`);
+
+    const qs = parts.length ? `?${parts.join('&')}` : '';
+    const url = `${baseUrl}/${encodeURIComponent(table)}${qs}`;
+
+    const resp = await _originalFetch(url, {
+      method: 'GET',
+      headers: {
+        'apikey':          apikey,
+        'Authorization':   authorization,
+        'Accept':          'application/json',
+        'Accept-Profile':  'public',
+        'Content-Type':    'application/json',
+        'Range':           opts.limit ? `0-${opts.limit - 1}` : '0-999999',
+      },
+    });
+
+    if (!resp.ok) {
+      console.warn(`[fetchPostgREST] ${table} respondió ${resp.status}`, url.split('?')[0]);
+      return fallback;
+    }
+    const json = await resp.json();
+    return Array.isArray(json) ? json : fallback;
+  } catch (e) {
+    console.warn(`[fetchPostgREST] Excepción en tabla "${table}":`, e?.message || e);
+    return fallback;
+  }
+}
+
+/**
+ * Último recurso: Forzar refresh de sesión + devolver token nuevo.
+ * @returns {string|null} Nuevo access_token o null si falló.
+ */
+export async function forceRefreshToken() {
+  try {
+    // Limpiar cache interna para forzar petición real
+    const { data, error } = await supabase.auth.refreshSession();
+    if (!error && data?.session?.access_token) {
+      return data.session.access_token;
+    }
+    return null;
+  } catch (_) {
+    return null;
+  }
 }

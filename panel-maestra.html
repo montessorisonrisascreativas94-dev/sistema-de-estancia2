@@ -66,7 +66,8 @@
     <link rel="stylesheet" href="css/wall-social.css">
   <link rel="stylesheet" href="css/karpus-modern.css">
   <link rel="stylesheet" href="css/maestra-design-system.css">
-  <link rel="stylesheet" href="css/messenger-chat.css">
+  <link rel="stylesheet" href="css/messenger-chat.css">       
+  <link rel="stylesheet" href="css/supervision.css">
   <script src="js/shared/lucide.min.js"></script>
   
   <style>
@@ -542,6 +543,11 @@
           <span class="label">Calificaciones</span>
           <span id="badge-t-grades" class="hidden absolute -top-1 -right-1 w-4 h-4 bg-[#EF4444] text-white text-[9px] font-black rounded-full flex items-center justify-center shadow-sm">0</span>
         </button>
+        <button data-section="t-actividades" class="nav-btn-toy w-full relative">
+          <i data-lucide="calendar-heart" class="w-5 h-5"></i>
+          <span class="label">Actividades</span>
+          <span id="badge-t-actividades" class="hidden absolute -top-1 -right-1 w-4 h-4 bg-[#EF4444] text-white text-[9px] font-black rounded-full flex items-center justify-center shadow-sm">0</span>
+        </button>
         <button data-section="t-permits" class="nav-btn-toy w-full relative">
           <i data-lucide="calendar-off" class="w-5 h-5"></i>
           <span class="label">Mis Permisos</span>
@@ -850,6 +856,15 @@
       <!-- SECTION: CALIFICACIONES -->
       <section id="t-grades" class="section">
         <div id="t-grades-inner"></div>
+      </section>
+
+      <!-- SECTION: ACTIVIDADES / CALENDARIO PEDAGÓGICO -->
+      <section id="t-actividades" class="section">
+        <header class="mb-4">
+          <h1 class="text-2xl font-black text-slate-800">Actividades y Experiencias</h1>
+          <p class="text-slate-500 text-sm font-medium">Consulta la guía pedagógica, registra evidencias y marca tus experiencias como realizadas.</p>
+        </header>
+        <div id="actividadesContent" class="space-y-6"></div>
       </section>
 
       <!-- SECTION: CHAT UNIFICADO -->

@@ -28,7 +28,8 @@
   <link rel="stylesheet" href="css/karpus-tailwind.css">
   <link rel="stylesheet" href="css/premium-mobile.css">
     <link rel="stylesheet" href="css/wall-social.css">
-  <link rel="stylesheet" href="css/messenger-chat.css">
+  <link rel="stylesheet" href="css/messenger-chat.css">      
+  <link rel="stylesheet" href="css/supervision.css">
   <script src="js/shared/chart.min.js" defer></script>
   <script src="js/shared/jspdf.min.js" defer></script>
   <script src="js/shared/jspdf-autotable.min.js" defer></script>
@@ -910,6 +911,11 @@
           <span class="label">Muro Escolar</span>
         </button>
 
+        <button data-section="actividades" class="kk-nav-item" data-tooltip="Actividades">
+          <i data-lucide="calendar-heart" class="text-amber-300"></i>
+          <span class="label">Actividades</span>
+        </button>
+
         <button data-section="control-rutinas-cumplimiento" class="kk-nav-item" data-tooltip="Control de Rutinas y Cumplimiento">
           <i data-lucide="clipboard-check" class="shrink-0"></i>
           <span class="label">Control de Rutinas y Cumplimiento</span>
@@ -1162,6 +1168,12 @@
               <p class="section-subtitle">Publica avisos, fotos y novedades para todas las aulas.</p>
             </div>
             <div id="muroContent" class="text-slate-400">Cargando...</div>
+          </div>
+        </section>
+
+        <section class="section" id="actividades">
+          <div class="section-shell">
+            <div id="actividadesContent" class="space-y-6"></div>
           </div>
         </section>
 

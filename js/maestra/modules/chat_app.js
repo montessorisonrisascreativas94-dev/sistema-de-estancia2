@@ -351,10 +351,21 @@ export async function selectChatContact(contactId) {
   const headerMeta = document.getElementById('mChatActiveMeta');
   const displayName = c.childName ? c.childName : c.name;
   if (headerAvatar) {
-    headerAvatar.classList.add('bg-gradient-to-br',
-      (c.role === 'directora') ? 'from-indigo-400 to-indigo-600'
-        : (c.role === 'asistente') ? 'from-teal-400 to-teal-600'
-          : 'from-orange-400 to-orange-600');
+    // ✅ FIX: classList.add NO acepta espacios dentro del mismo token.
+    // Cada clase debe ser un argumento separado. Además limpiamos gradientes
+    // previos para no mezclar colores entre contactos.
+    const gradClasses = ['from-orange-400','to-orange-600',
+                       'from-teal-400',  'to-teal-600',
+                       'from-indigo-400','to-indigo-600'];
+    headerAvatar.classList.remove('bg-gradient-to-br', ...gradClasses);
+    headerAvatar.classList.add('bg-gradient-to-br');
+    if (c.role === 'directora') {
+      headerAvatar.classList.add('from-indigo-400', 'to-indigo-600');
+    } else if (c.role === 'asistente') {
+      headerAvatar.classList.add('from-teal-400', 'to-teal-600');
+    } else {
+      headerAvatar.classList.add('from-orange-400', 'to-orange-600');
+    }
     headerAvatar.innerHTML = c.avatar_url
       ? `<img src="${safeUrl(c.avatar_url)}">`
       : safeEscapeHTML(displayName.charAt(0));

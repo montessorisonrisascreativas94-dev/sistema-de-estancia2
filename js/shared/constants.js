@@ -21,7 +21,10 @@ export const TABLES = Object.freeze({
   CLASSROOMS: 'classrooms',
   NOTIFICATIONS: 'notifications',
   INQUIRIES: 'inquiries',
-  STAFF_PERMITS: 'staff_permits'
+  STAFF_PERMITS: 'staff_permits',
+  SUPERVISION_SESSIONS: 'supervision_sessions',
+  SUPERVISION_AUDIT: 'supervision_audit_log',
+  INTERVENTIONS: 'interventions'
 });
 
 // ============================
@@ -62,7 +65,7 @@ export const PAYMENT_STATUS = Object.freeze({
   CANCELLED: 'cancelled'
 });
 
-// 📩 Incidencias
+// 📩 Incidencias (Centro Escolar / Antiguo)
 export const INQUIRY_STATUS = Object.freeze({
   RECEIVED: 'received',
   REVIEW: 'review',
@@ -70,6 +73,27 @@ export const INQUIRY_STATUS = Object.freeze({
   RESOLVED: 'resolved',
   CLOSED: 'closed'
 });
+
+// 🚨 Intervenciones Directivas (Nuevo — Modo Supervisión)
+export const INTERVENTION_STATUS = Object.freeze({
+  OPEN:       'open',
+  IN_PROGRESS:'in_progress',
+  RESOLVED:   'resolved',
+  CLOSED:     'closed'
+});
+
+export const INTERVENTION_PRIORITY = Object.freeze({
+  LOW:     'baja',
+  MEDIUM:  'media',
+  HIGH:    'alta',
+  CRITICAL:'critica'
+});
+
+export const INTERVENTION_MODULES = Object.freeze([
+  'asistencia', 'rutinas', 'tareas', 'calificaciones',
+  'muro', 'comunicacion', 'estudiantes', 'aula',
+  'incidencias', 'videollamada', 'bitacora', 'inicio'
+]);
 
 // 🔔 Notificaciones
 export const NOTIFICATION_TYPES = Object.freeze({
