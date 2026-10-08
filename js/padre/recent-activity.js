@@ -19,7 +19,7 @@ const TYPE_CONFIG = {
   homework:     { icon: '📚', label: 'tareas',     bg: 'bg-orange-50',  border: 'border-orange-200', text: 'text-orange-700', accent: '#FF7A00', priority: 4, target: 'tasks',        groupLabel: 'tarea' },
   task:         { icon: '📚', label: 'tareas',     bg: 'bg-orange-50',  border: 'border-orange-200', text: 'text-orange-700', accent: '#FF7A00', priority: 4, target: 'tasks',        groupLabel: 'tarea' },
   photo:        { icon: '📸', label: 'fotos',      bg: 'bg-purple-50',  border: 'border-purple-200', text: 'text-purple-700', accent: '#8B5CF6', priority: 1, target: 'class',        groupLabel: 'foto' },
-  routine:      { icon: '🍽',  label: 'rutinas',    bg: 'bg-yellow-50',  border: 'border-yellow-200', text: 'text-yellow-700', accent: '#EAB308', priority: 1, target: 'rutina-diaria', groupLabel: 'rutina' },
+  routine:      { icon: '🍽️', label: 'rutinas',    bg: 'bg-yellow-50',  border: 'border-yellow-200', text: 'text-yellow-700', accent: '#EAB308', priority: 1, target: 'rutina-diaria', groupLabel: 'rutina' },
   payment:      { icon: '💵', label: 'pagos',      bg: 'bg-emerald-50', border: 'border-emerald-200',text: 'text-emerald-700',accent: '#10B981', priority: 5, target: 'payments',     groupLabel: 'pago' },
   event:        { icon: '📅', label: 'eventos',    bg: 'bg-cyan-50',    border: 'border-cyan-200',   text: 'text-cyan-700',   accent: '#06B6D4', priority: 2, target: 'home',         groupLabel: 'evento' },
   info:         { icon: 'ℹ️',  label: 'info',       bg: 'bg-slate-50',   border: 'border-slate-200',  text: 'text-slate-700',  accent: '#64748B', priority: 0, target: 'home',         groupLabel: 'info' },

@@ -299,7 +299,8 @@ export async function countRowsSafe(table, filters = {}, { hideDeleted = true, l
   };
 
   try {
-    return await run(hideDeleted);
+    const r1 = await run(hideDeleted);
+    return r1;
   } catch (e) {
     const code = e?.code || '';
     const msg = String(e?.message || '');
@@ -309,13 +310,25 @@ export async function countRowsSafe(table, filters = {}, { hideDeleted = true, l
     if (isMissingColumn) {
       console.warn(`[countRowsSafe] Columna deleted_at ausente en "${table}", reintentando sin filtro.`);
       if (hideDeleted) {
-        try { return await run(false); } catch (e2) { console.error(`[countRowsSafe] ${table}:`, e2); return 0; }
+        try {
+          const r2 = await run(false);
+          return r2;
+        } catch (e2) {
+          console.error(`[countRowsSafe] ${table}:`, e2);
+          return 0;
+        }
       }
       return 0;
     }
     console.error(`[countRowsSafe] Error contando "${label}":`, code, msg);
     return 0;
   }
+}
+
+export const STUDENTS_NO_DELETED = true;
+
+export async function countRowsSafeStudents(filters = {}, { label = 'students' } = {}) {
+  return countRowsSafe('students', filters, { hideDeleted: false, label });
 }
 
 /**

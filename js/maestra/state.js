@@ -7,6 +7,9 @@ export const AppState = new SafeAppState({
   user: null,
   profile: null,
   classroom: null,
+  // Mis aulas (multi-aula): initDashboard y switchClassroom leen esta clave.
+  classrooms: [],
+  activeConversationId: null,
   currentSection: 'dashboard',
   students: [],
   attendance: [],

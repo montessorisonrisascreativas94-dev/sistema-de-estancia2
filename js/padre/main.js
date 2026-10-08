@@ -846,73 +846,81 @@ function renderDailySummary(log) {
   }
 
   const rawEvents = log.infant_data || [];
-
-  // Fallback from top-level fields if no infant_data
   const items = [];
-  if (rawEvents.length) {
-    const typeMap = {
-      milk:   (e) => ({ icon:'🍼', label:'Biberón',       detail: e.oz ? e.oz + ' oz' : '' }),
-      sleep:  (e) => ({ icon:'😴', label: e.label || 'Durmió',        detail: e.end_time ? ('hasta ' + fmtTime(e.end_time)) : 'En siesta...' }),
-      diaper: (e) => ({ icon: e.subtype==='wet'?'💧':'💩', label: e.subtype==='wet'?'Pañal mojado':'Pañal sucio', detail: '' }),
-      diaper_change: (_) => ({ icon:'🧻', label:'Cambio de pañal', detail: '' }),
-      food:   (e) => ({ icon:'🍽️', label: e.meal||'Comida', detail: e.amount||'' }),
-      temp:   (e) => ({ icon:'🌡️', label:'Temperatura',   detail: e.value ? e.value + '°C' : '' }),
-      med:    (e) => ({ icon:'💊', label:'Medicamento',   detail: e.name||'' }),
-      note:   (e) => ({ icon:'📝', label:'Nota',          detail: e.text||'' }),
-      bath:   (_) => ({ icon:'🛁', label:'Baño',          detail: '' }),
-      handwash: (e) => ({ icon:'🧼', label: e.label || 'Lavado de manos', detail: '' }),
-      toothbrush: (e) => ({ icon:'🪥', label: e.label || 'Cepillado dental', detail: '' }),
-      activity: (e) => ({ icon:'🏫', label: e.label || 'Actividad educativa', detail: '' }),
-      playground: (e) => ({ icon:'🌳', label: e.label || 'Salida al patio', detail: '' }),
-      welcome_song: (e) => ({ icon:'👋', label: e.label || 'Canción de bienvenida', detail: '' }),
-      prayer: (e) => ({ icon:'🙏', label: e.label || 'Oración / reflexión', detail: '' }),
-      behavior: (e) => {
-        const behaviorLabels = {
-          social: { shared:'Compartió con compañeros', alone:'Jugó solo', group:'Participó en grupo', emotional_support:'Necesitó apoyo emocional' },
-          classroom: { attention:'Prestó atención', participation:'Participó activamente', curiosity:'Mostró curiosidad', completed:'Terminó actividades', needed_help:'Necesitó ayuda constante' },
-          emotional: { controlled:'Controló emociones', frustrated:'Se frustró fácilmente', crying:'Lloró por separación', anxious:'Mostró ansiedad', calmed:'Se calmó rápidamente' },
-          montessori: { manipulation:'Manipulación materiales', fine_motor:'Motricidad fina', gross_motor:'Motricidad gruesa', language:'Lenguaje', concentration:'Concentración', autonomy:'Autonomía' }
-        };
-        let detail = '';
-        if (e.category && e.data) {
-          const catLabels = behaviorLabels[e.category];
-          if (catLabels && e.data[e.category]) detail = catLabels[e.data[e.category]] || '';
-        }
-        return { icon:'🤝', label: e.label || 'Comportamiento', detail };
-      },
-      health: (e) => ({ icon: e.subtype==='vomit'?'🤮':'😷', label: e.label || 'Salud', detail: e.description || '' }),
-      incident: (e) => {
-        const icons = { hit:'🤕', fever:'🤒', accident:'🩹', parent_call:'📞', other:'📌' };
-        return { icon: icons[e.subtype] || '📌', label: e.label || 'Incidente', detail: e.description || '' };
-      },
-    };
-    rawEvents.forEach(e => {
-      const fn = typeMap[e.type];
-      const base = fn ? fn(e) : { icon:'📌', label: e.label || e.type, detail: '' };
-      items.push({ ...base, timeStr: fmtTime(e.created_at || e.start_time) });
-    });
-  } else {
-    const moodMap = { feliz:'😊', bien:'😊', normal:'😐', triste:'😢', inquieto:'😫', enojado:'😡', muy_feliz:'😁', cansado:'😴', enfermo:'🤒' };
-    if (log.mood) items.push({ icon: moodMap[log.mood.toLowerCase()]||'😊', label:'Ánimo', detail: log.mood, timeStr: fmtTime(log.created_at) });
 
-    // Parsear food JSON estructurado
-    if (log.food) {
-      let foodObj = {};
-      try { foodObj = JSON.parse(log.food); } catch { foodObj = { breakfast: log.food }; }
-      const fl = { todo:'Comió todo ✅', poco:'Comió poco ⚠️', nada:'No comió ❌', ayuda:'Necesitó ayuda 🆘' };
-      if (foodObj.breakfast) items.push({ icon:'🍞', label:'Desayuno', detail: fl[foodObj.breakfast]||foodObj.breakfast, timeStr:'' });
-      if (foodObj.lunch)     items.push({ icon:'🥗', label:'Almuerzo', detail: fl[foodObj.lunch]||foodObj.lunch,         timeStr:'' });
-      if (foodObj.snack)     items.push({ icon:'🍎', label:'Merienda', detail: fl[foodObj.snack]||foodObj.snack,         timeStr:'' });
-    }
-    if (log.nap === 'si')    items.push({ icon:'💤', label:'Siesta', detail:'Durmió su siesta', timeStr:'' });
-    else if (log.nap === 'no') items.push({ icon:'☀️', label:'Sin siesta', detail:'No durmió siesta', timeStr:'' });
-    else if (log.nap === 'poco') items.push({ icon:'⏰', label:'Siesta', detail:'Durmió poco', timeStr:'' });
-    else if (log.nap === 'excelente') items.push({ icon:'⭐', label:'Siesta', detail:'Durmió excelente', timeStr:'' });
-    if (log.notes) items.push({ icon:'📝', label:'Observación', detail: log.notes, timeStr: fmtTime(log.created_at) });
+  // ── Mapa de tipos de evento de infant_data → { icon, label, detail } ────
+  const typeMap = {
+    milk:          (e) => ({ icon:'🍼', label:'Biberón',                detail: e.oz ? e.oz + ' oz' : '' }),
+    sleep:         (e) => ({ icon:'😴', label: e.label || (e.end_time ? 'Terminó siesta' : 'Inició siesta'), detail: e.end_time ? ('hasta ' + fmtTime(e.end_time)) : 'En siesta...' }),
+    diaper:        (e) => ({ icon: e.subtype==='wet'?'💧':'💩', label: e.subtype==='wet'?'Pañal mojado':'Pañal sucio', detail: '' }),
+    diaper_change: ()  => ({ icon:'🧻', label:'Cambio de pañal',        detail: '' }),
+    food:          (e) => ({ icon:'🍽️', label: e.meal||'Comida',        detail: e.amount||'' }),
+    temp:          (e) => ({ icon:'🌡️', label:'Temperatura',            detail: e.value ? e.value + '°C' : '' }),
+    med:           (e) => ({ icon:'💊', label:'Medicamento',            detail: e.name||'' }),
+    note:          (e) => ({ icon:'📝', label:'Nota',                   detail: e.text||'' }),
+    bath:          ()  => ({ icon:'🚿', label:'Baño',                   detail: '' }),
+    handwash:      (e) => ({ icon:'🧼', label: e.label || 'Lavado de manos',    detail: '' }),
+    toothbrush:    (e) => ({ icon:'🪥', label: e.label || 'Cepillado dental',   detail: '' }),
+    activity:      (e) => ({ icon:'🏫', label: e.label || 'Actividad educativa',detail: '' }),
+    playground:    (e) => ({ icon:'🌳', label: e.label || 'Salida al patio',    detail: '' }),
+    welcome_song:  (e) => ({ icon:'👋', label: e.label || 'Canción de bienvenida', detail: '' }),
+    prayer:        (e) => ({ icon:'🙏', label: e.label || 'Oración / reflexión',   detail: '' }),
+    behavior:      (e) => {
+      const blabels = {
+        social:     { shared:'Compartió con compañeros', alone:'Jugó solo', group:'Participó en grupo' },
+        classroom:  { attention:'Prestó atención', participation:'Participó activamente', curiosity:'Mostró curiosidad' },
+        emotional:  { controlled:'Controló emociones', frustrated:'Se frustró fácilmente', calmed:'Se calmó rápidamente' },
+        montessori: { manipulation:'Materiales Montessori', autonomy:'Mostró autonomía', concentration:'Buena concentración' }
+      };
+      let detail = '';
+      if (e.category && e.data) { const c = blabels[e.category]; if (c && e.data[e.category]) detail = c[e.data[e.category]] || ''; }
+      return { icon:'🤝', label: e.label || 'Comportamiento', detail };
+    },
+    health:   (e) => ({ icon: e.subtype==='vomit'?'🤮':'😷', label: e.label || 'Salud', detail: e.description || '' }),
+    incident: (e) => ({ icon: {hit:'🤕',fever:'🤒',accident:'🩹',parent_call:'📞',other:'📌'}[e.subtype] || '📌', label: e.label || 'Incidente', detail: e.description || '' }),
+  };
+
+  // ── 1) Siempre incluir mood/nap de campos top-level ──────────────────────
+  const moodMap = { feliz:'😊', bien:'😊', normal:'😐', triste:'😢', inquieto:'😫', enojado:'😡', muy_feliz:'😁', cansado:'😴', enfermo:'🤒' };
+  const moodLbl = { feliz:'Contento/a', bien:'Contento/a', normal:'Normal', triste:'Triste', inquieto:'Inquieto/a', enojado:'Molesto/a', muy_feliz:'Muy contento/a', cansado:'Cansado/a', enfermo:'Enfermo/a' };
+  if (log.mood) items.push({ icon: moodMap[log.mood] || '😊', label: 'Ánimo: ' + (moodLbl[log.mood] || log.mood), detail: '', timeStr: fmtTime(log.created_at) });
+
+  // ── 2) Siempre incluir comidas del campo food (JSON estructurado) ─────────
+  if (log.food) {
+    let foodObj = {};
+    try { foodObj = JSON.parse(log.food); } catch { foodObj = { breakfast: log.food }; }
+    const fl = { todo:'Comió todo ✅', poco:'Comió poco ⚠️', nada:'No comió ❌', ayuda:'Necesitó ayuda 🆘' };
+    if (foodObj.breakfast) items.push({ icon:'🍞', label:'Desayuno', detail: fl[foodObj.breakfast] || foodObj.breakfast, timeStr:'' });
+    if (foodObj.lunch)     items.push({ icon:'🥗', label:'Almuerzo', detail: fl[foodObj.lunch] || foodObj.lunch,         timeStr:'' });
+    if (foodObj.snack)     items.push({ icon:'🍎', label:'Merienda', detail: fl[foodObj.snack] || foodObj.snack,         timeStr:'' });
   }
 
+  // ── 3) Siempre incluir siesta del campo nap ───────────────────────────────
+  if (log.nap === 'si')         items.push({ icon:'💤', label:'Siesta', detail:'Durmió su siesta',   timeStr:'' });
+  else if (log.nap === 'no')    items.push({ icon:'☀️', label:'Siesta', detail:'No durmió siesta',   timeStr:'' });
+  else if (log.nap === 'poco')  items.push({ icon:'⏰', label:'Siesta', detail:'Durmió poco',         timeStr:'' });
+  else if (log.nap === 'excelente') items.push({ icon:'⭐', label:'Siesta', detail:'Durmió excelente', timeStr:'' });
+
+  // ── 4) Agregar todos los eventos de infant_data ───────────────────────────
+  rawEvents.forEach(e => {
+    // Evitar duplicar: si es un evento de comida que ya capturamos del campo food, saltar
+    if (e.type === 'food_meal') return;
+    const fn = typeMap[e.type];
+    const base = fn ? fn(e) : { icon:'📌', label: e.label || e.type || 'Evento', detail: '' };
+    items.push({ ...base, timeStr: fmtTime(e.created_at || e.start_time) });
+  });
+
+  // ── 5) Notas ──────────────────────────────────────────────────────────────
+  if (log.notes) items.push({ icon:'📝', label:'Observación', detail: log.notes, timeStr: fmtTime(log.created_at) });
+
   if (!items.length) {
-    timeline.innerHTML = `<div class="text-center py-4 text-slate-400 text-sm font-bold">Sin eventos registrados hoy</div>`;
+    timeline.innerHTML = `<div class="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl">
+      <span class="text-3xl">✨</span>
+      <div>
+        <p class="font-black text-sm text-slate-600">Sin eventos registrados aún hoy</p>
+        <p class="text-xs text-slate-400 font-medium">La maestra actualizará cuando registre actividades</p>
+      </div>
+    </div>`;
     return;
   }
 

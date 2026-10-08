@@ -437,9 +437,28 @@ export const WallModule = {
       let res = await withTimeout(() => buildQuery(true), 10_000).catch(() => null);
       let posts = res?.error ? null : res?.data;
       if (!posts) {
-        res = await withTimeout(() => buildQuery(false), 10_000);
-        if (res.error) throw res.error;
-        posts = res.data || [];
+        try {
+          res = await withTimeout(() => buildQuery(false), 10_000);
+          if (res?.error) {
+            const code = String(res.error.code || '').toLowerCase();
+            const msg  = String(res.error.message || '').toLowerCase();
+            if (res.error.status === 404 || code.includes('404') || msg.includes('not found') || msg.includes('does not exist')) {
+              console.warn('[WallModule] posts no disponible (404), mostrando estado vacío.');
+              posts = [];
+            } else {
+              throw res.error;
+            }
+          } else {
+            posts = res?.data || [];
+          }
+        } catch (err) {
+          if (err?.status === 404 || String(err?.code || '').includes('404') || String(err?.message || '').toLowerCase().includes('not found')) {
+            console.warn('[WallModule] posts no disponible (excepción 404), mostrando estado vacío.');
+            posts = [];
+          } else {
+            throw err;
+          }
+        }
       }
 
       // Limpiar loaders

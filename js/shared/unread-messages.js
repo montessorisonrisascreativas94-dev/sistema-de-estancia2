@@ -39,6 +39,12 @@ import { supabase } from './supabase.js';
 const CHANNEL_PREFIX = 'unread_msgs_';
 const REFRESH_DEBOUNCE_MS = 400;
 const MAX_UNREAD_QUERY = 500;
+// Reintento del canal tras CHANNEL_ERROR / TIMED_OUT / CLOSED.
+const RESUB_MAX_ATTEMPTS = 5;
+const RESUB_MIN_MS = 2000;
+const RESUB_MAX_MS = 30000;
+// Si el canal no levanta, la campana se mantiene viva leyendo la BD.
+const POLL_FALLBACK_MS = 30000;
 
 export const UnreadMessages = {
   _userId: null,
@@ -51,6 +57,9 @@ export const UnreadMessages = {
   _timer: null,       // debounce del refresco
   _inFlight: null,    // promesa del refresco en curso
   _ready: false,
+  _retries: 0,        // intentos de re-suscripción consecutivos fallidos
+  _resubTimer: null,  // temporizador del próximo reintento de canal
+  _pollTimer: null,   // polling de respaldo cuando el canal no conecta
 
   /* ══════════════════════  ARRANQUE / CIERRE  ══════════════════════ */
 
@@ -61,9 +70,13 @@ export const UnreadMessages = {
     this.destroy();
     this._userId = userId;
     this._role = role || this._detectRole();
+    this._retries = 0;
 
     this._installGlobalBridge();
     this._installVisibilityHook();
+    // access_token fresco ANTES del primer join: un token vencido en el
+    // payload de entrada responde "error" y el canal queda en CHANNEL_ERROR.
+    try { await supabase.realtime?.setAuth?.(); } catch (_) { /* sin sesión aún */ }
     this._ensureSubscribed();
 
     await this.refresh();
@@ -71,13 +84,12 @@ export const UnreadMessages = {
   },
 
   destroy() {
-    if (this._channel) {
-      try { supabase.removeChannel(this._channel); } catch (_) { /* ya cerrado */ }
-      this._channel = null;
-      this._channelName = null;
-    }
+    this._teardownChannel();
     clearTimeout(this._timer);
     this._timer = null;
+    clearTimeout(this._resubTimer);
+    this._resubTimer = null;
+    this._stopPolling();
     this._inFlight = null;
     if (this._onVisibility) {
       document.removeEventListener('visibilitychange', this._onVisibility);
@@ -85,9 +97,19 @@ export const UnreadMessages = {
     }
     this._userId = null;
     this._ready = false;
+    this._retries = 0;
     this._counts = {};
     this._total = 0;
     this._notifUnread = 0;
+  },
+
+  /** Cierra el canal actual sin disparar re-suscripciones (destroy o retry). */
+  _teardownChannel() {
+    const ch = this._channel;
+    this._channel = null;
+    this._channelName = null;
+    if (!ch) return;
+    try { supabase.removeChannel(ch); } catch (_) { /* ya cerrado */ }
   },
 
   _detectRole() {
@@ -129,17 +151,80 @@ export const UnreadMessages = {
       table: 'messages'
     }, (payload) => this._onMessageUpdate(payload));
 
-    channel.subscribe((status) => {
-      if (status === 'SUBSCRIBED') {
-        // Al (re)conectar, la BD pudo haber cambiado mientras no escuchábamos.
-        this._scheduleRefresh(0);
-      } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-        // Dejar que el cliente de Supabase reintente por su cuenta.
-        console.warn('[UnreadMessages] canal en error:', status);
-      }
-    });
-
+    // Registrar el canal ANTES de suscribirse: si subscribe() dispara el
+    // callback de forma síncrona, el guard de abajo lo reconoce como "nuestro".
     this._channel = channel;
+
+    try {
+      channel.subscribe((status, err) => {
+        // El canal ya fue destruido o reemplazado: su callback no nos incumbe
+        // (si no, removeChannel() dispararía un reintento infinito en destroy()).
+        if (this._channel !== channel) return;
+
+        if (status === 'SUBSCRIBED') {
+          this._retries = 0;
+          this._stopPolling();
+          // Al (re)conectar, la BD pudo haber cambiado mientras no escuchábamos.
+          this._scheduleRefresh(0);
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          this._handleChannelFailure(status, err, channel);
+        }
+      });
+    } catch (err) {
+      this._handleChannelFailure('CHANNEL_ERROR', err, channel);
+    }
+  },
+
+  /**
+   * El canal falló (JWT vencido en el join, corte de red, servidor ocupado...).
+   * Antes esto era un console.warn y ya: si el canal no levantaba, la campana
+   * se quedaba muda hasta recargar. Ahora:
+   *   1. se suelta el canal en error (si no, _ensureSubscribed() no vuelve a entrar),
+   *   2. se reintenta con backoff exponencial y token de auth refrescado,
+   *   3. si no levanta, se cae a polling de la BD para que el badge siga real.
+   */
+  _handleChannelFailure(status, err, channel) {
+    const detail = err?.message || '';
+    this._retries += 1;
+
+    if (this._retries === 1) {
+      console.warn('[UnreadMessages] canal en error:', status, detail ? '— ' + detail : '');
+      if (/mismatch/i.test(detail)) {
+        console.warn('[UnreadMessages] El servidor no aceptó los bindings de postgres_changes. '
+          + 'Revisa que `messages` esté en la publicación supabase_realtime '
+          + '(bloque 14 de sql/13_fix_storage_video.sql).');
+      }
+    } else {
+      console.warn(`[UnreadMessages] ${status} (intento ${this._retries}/${RESUB_MAX_ATTEMPTS})`);
+    }
+
+    if (this._channel === channel) this._teardownChannel();
+
+    if (this._retries >= RESUB_MAX_ATTEMPTS) { this._startPolling(); return; }
+    if (this._resubTimer) return;
+
+    const delay = Math.min(RESUB_MIN_MS * 2 ** (this._retries - 1), RESUB_MAX_MS);
+    this._resubTimer = setTimeout(async () => {
+      this._resubTimer = null;
+      if (!this._userId) return;
+      // Token fresco antes de volver a unirnos: la causa más común de
+      // CHANNEL_ERROR en el join es un access_token vencido o malformado.
+      try { await supabase.realtime?.setAuth?.(); } catch (_) { /* ya refrescado */ }
+      this._ensureSubscribed();
+    }, delay);
+  },
+
+  _startPolling() {
+    if (this._pollTimer || !this._userId) return;
+    console.warn(`[UnreadMessages] Canal realtime inaccesible tras ${RESUB_MAX_ATTEMPTS} intentos: `
+      + `el badge se mantendrá leyendo la BD cada ${POLL_FALLBACK_MS / 1000}s.`);
+    this._pollTimer = setInterval(() => { this.refresh(); }, POLL_FALLBACK_MS);
+  },
+
+  _stopPolling() {
+    if (!this._pollTimer) return;
+    clearInterval(this._pollTimer);
+    this._pollTimer = null;
   },
 
   _onMessageInsert(payload) {
@@ -164,7 +249,9 @@ export const UnreadMessages = {
     this._onVisibility = () => {
       if (document.hidden) return;
       // Volver a la pestaña: el canal puede haberse caído y la BD cambió
-      // mientras no escuchábamos. Reconciliar siempre.
+      // mientras no escuchábamos. Reconciliar siempre. Nueva oportunidad
+      // para el canal aunque antes se hubiera caído al modo polling.
+      this._retries = 0;
       this._ensureSubscribed();
       this.refresh();
     };

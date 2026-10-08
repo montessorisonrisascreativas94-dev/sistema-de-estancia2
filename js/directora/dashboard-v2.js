@@ -1,6 +1,6 @@
-/**
- * Dashboard v2 — Centro de Control Estratégico
- * Indicadores en tiempo real, gráficos, alertas, cumpleaños, eventos
+﻿/**
+ * Dashboard v2 â€” Centro de Control EstratÃ©gico
+ * Indicadores en tiempo real, grÃ¡ficos, alertas, cumpleaÃ±os, eventos
  */
 import { supabase } from '../shared/supabase.js';
 import { countRowsSafe } from '../shared/db-utils.js';
@@ -43,19 +43,19 @@ export async function renderDashboardV2(data) {
   const attendance = safe(attendanceRes).data||[];
   const unread    = safe(messagesRes).count||0;
   
-  // Filtrar cumpleaños del día (ahora usando solo la tabla students y campos que existan)
+  // Filtrar cumpleaÃ±os del dÃ­a (ahora usando solo la tabla students y campos que existan)
   const currentMonth = String(now.getMonth()+1).padStart(2,'0');
   const currentDay = String(now.getDate()).padStart(2,'0');
-  const birthdays = []; // Por ahora, si no hay campo birth_date en students, dejamos vacío
+  const birthdays = []; // Por ahora, si no hay campo birth_date en students, dejamos vacÃ­o
 
   const cycles     = safe(cycleRes).data||[];
 
   const present    = attendance.filter(a=>['present','late'].includes(a.status?.toLowerCase())).length;
   const absent     = attendance.filter(a=>a.status?.toLowerCase()==='absent').length;
-  const currentCycle = cycles.find(c=>c.is_current)?.name || cycles[0]?.name || '—';
+  const currentCycle = cycles.find(c=>c.is_current)?.name || cycles[0]?.name || 'â€”';
 
   let academic = { totalClassrooms: 0, evaluations: 0, activities: 0, scores: 0, overall: null, rows: [] };
-  try { academic = await _loadAcademicStats(); } catch (err) { console.error('[Dashboard] Académico', err); }
+  try { academic = await _loadAcademicStats(); } catch (err) { console.error('[Dashboard] AcadÃ©mico', err); }
 
   container.innerHTML = `
   <style>
@@ -77,18 +77,18 @@ export async function renderDashboardV2(data) {
   <div class="flex items-center justify-between flex-wrap gap-3">
     <div>
       <h2 class="text-2xl font-black text-slate-800">Centro de Control</h2>
-      <p class="text-sm text-slate-400 font-bold">Ciclo activo: <span class="text-emerald-600">${currentCycle}</span> · ${now.toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'})}</p>
+      <p class="text-sm text-slate-400 font-bold">Ciclo activo: <span class="text-emerald-600">${currentCycle}</span> Â· ${now.toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'})}</p>
     </div>
     <div class="flex gap-2 flex-wrap">
       <button onclick="App.navigation?.goTo?.('ciclo-escolar')" class="px-4 py-2 text-white text-xs font-black uppercase rounded-xl shadow-md transition-all hover:opacity-90 active:scale-95" style="background:#0850A0">Ciclo Escolar</button>
     </div>
   </div>
 
-  <!-- ALERTAS / CUMPLEAÑOS -->
+  <!-- ALERTAS / CUMPLEAÃ‘OS -->
   ${birthdays.length ? `
   <div class="flex flex-wrap gap-2">
-    <span class="text-xs font-black text-amber-600 uppercase tracking-wider self-center">🎂 Hoy:</span>
-    ${birthdays.map(b=>`<span class="bday-chip">🎂 ${b.name.split(' ')[0]}</span>`).join('')}
+    <span class="text-xs font-black text-amber-600 uppercase tracking-wider self-center">ðŸŽ‚ Hoy:</span>
+    ${birthdays.map(b=>`<span class="bday-chip">ðŸŽ‚ ${b.name.split(' ')[0]}</span>`).join('')}
   </div>` : ''}
 
   <!-- KPIs FILA 1: Estudiantes y Personal -->
@@ -131,9 +131,9 @@ export async function renderDashboardV2(data) {
     </div>
   </div>
 
-  <!-- KPIs FILA 2: Académico y Comunicación -->
+  <!-- KPIs FILA 2: AcadÃ©mico y ComunicaciÃ³n -->
   <div>
-    <div class="dash-section-title"><i data-lucide="graduation-cap" class="w-3.5 h-3.5"></i> Académico · Evaluaciones y Promedios</div>
+    <div class="dash-section-title"><i data-lucide="graduation-cap" class="w-3.5 h-3.5"></i> AcadÃ©mico Â· Evaluaciones y Promedios</div>
     <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
       <div class="kpi2" style="border-left:3px solid #8B5CF6">
         <div class="kpi-icon" style="background:#F3E8FF"><i data-lucide="layers" class="w-4 h-4" style="color:#7C3AED"></i></div>
@@ -152,7 +152,7 @@ export async function renderDashboardV2(data) {
       </div>
       <div class="kpi2" style="border-left:3px solid #28B54D">
         <div class="kpi-icon" style="background:#E8FFF0"><i data-lucide="trending-up" class="w-4 h-4" style="color:#1A8035"></i></div>
-        <div class="kpi-val" style="color:#1A8035">${academic.overall != null ? academic.overall.toFixed(1) : '—'}</div>
+        <div class="kpi-val" style="color:#1A8035">${academic.overall != null ? academic.overall.toFixed(1) : 'â€”'}</div>
         <div class="kpi-lbl">Promedio General</div>
       </div>
       <div class="kpi2" style="border-left:3px solid #F59E0B">
@@ -171,7 +171,7 @@ export async function renderDashboardV2(data) {
     <div class="mt-4 bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
       <div class="flex items-center justify-between px-4 py-3 border-b border-slate-100">
         <h3 class="font-black text-slate-700 text-sm">Promedio por Aula</h3>
-        <span class="text-[10px] text-slate-400 font-bold">Se calcula con las actividades evaluadas de la estructura 5×5</span>
+        <span class="text-[10px] text-slate-400 font-bold">Se calcula con las actividades evaluadas de la estructura 5Ã—5</span>
       </div>
       <div class="overflow-x-auto">
         <table class="w-full text-sm">
@@ -193,7 +193,7 @@ export async function renderDashboardV2(data) {
                 </td>
                 <td class="px-3 py-2.5 text-center text-xs font-bold text-slate-500">${r.students}</td>
                 <td class="px-3 py-2.5 text-center text-xs font-bold text-slate-500">${r.graded}</td>
-                <td class="px-3 py-2.5 text-center font-black text-sm ${gradeColor(r.avg)}">${r.avg != null ? r.avg.toFixed(1) : '—'}</td>
+                <td class="px-3 py-2.5 text-center font-black text-sm ${gradeColor(r.avg)}">${r.avg != null ? r.avg.toFixed(1) : 'â€”'}</td>
                 <td class="px-3 py-2.5 text-center"><span class="px-2 py-0.5 rounded-lg text-[9px] font-black ${gradeToLevel(r.avg).cls}">${gradeToLevel(r.avg).label}</span></td>
               </tr>`).join('')}
           </tbody>
@@ -201,11 +201,11 @@ export async function renderDashboardV2(data) {
       </div>
     </div>` : `
     <div class="mt-4 p-8 text-center rounded-2xl border-2 border-dashed border-purple-200 bg-purple-50/30">
-      <p class="text-sm font-bold text-slate-500">Aún no hay calificaciones de evaluación. Genera la estructura y califica desde el Centro de Calificaciones.</p>
+      <p class="text-sm font-bold text-slate-500">AÃºn no hay calificaciones de evaluaciÃ³n. Genera la estructura y califica desde el Centro de Calificaciones.</p>
     </div>`}
   </div>
 
-  <!-- GRÁFICOS -->
+  <!-- GRÃFICOS -->
   <div class="grid grid-cols-1 gap-5">
     <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
       <div class="flex items-center justify-between mb-4">
@@ -255,7 +255,7 @@ async function _loadAcademicStats() {
   const safe = r => r.status === 'fulfilled' ? r.value : { data: [] };
   const [classRes, studRes, evalRes, modRes, actRes, scoreRes] = await Promise.allSettled([
     supabase.from('classrooms').select('id,name,level').is('deleted_at', null).order('name').limit(200),
-    supabase.from('students').select('id,name,classroom_id,is_active').is('deleted_at', null).limit(2000),
+    supabase.from('students').select('id,name,classroom_id,is_active').limit(2000),
     supabase.from('eval_evaluations').select('id,name').is('deleted_at', null).limit(100),
     supabase.from('eval_modules').select('id,area_id,period_id,name,eval_type,config').is('deleted_at', null).limit(2000),
     supabase.from('eval_activities').select('id,module_id,name').is('deleted_at', null).limit(5000),
@@ -268,6 +268,17 @@ async function _loadAcademicStats() {
   const modules = safe(modRes).data || [];
   const activities = safe(actRes).data || [];
   const scores = safe(scoreRes).data || [];
+
+  // #region debug-point A:academic-stats-results
+  (async()=>{try{await fetch("http://127.0.0.1:7777/event",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId:"students-zero-no-error",runId:"pre-fix",hypothesisId:"A",location:"dashboard-v2.js:265",msg:"[DEBUG] _loadAcademicStats per-query results",data:{
+    classrooms:{status:classRes.status,dataLength:classrooms.length,reason:classRes.status==='rejected'?String(classRes.reason?.message||classRes.reason):null},
+    students:  {status:studRes.status,dataLength:students.length,  reason:studRes.status==='rejected'?String(studRes.reason?.message||studRes.reason):null},
+    evaluations:{status:evalRes.status,dataLength:evaluations.length,reason:evalRes.status==='rejected'?String(evalRes.reason?.message||evalRes.reason):null},
+    modules:   {status:modRes.status,dataLength:modules.length,   reason:modRes.status==='rejected'?String(modRes.reason?.message||modRes.reason):null},
+    activities:{status:actRes.status,dataLength:activities.length,reason:actRes.status==='rejected'?String(actRes.reason?.message||actRes.reason):null},
+    scores:    {status:scoreRes.status,dataLength:scores.length, reason:scoreRes.status==='rejected'?String(scoreRes.reason?.message||scoreRes.reason):null}
+  },ts:Date.now()})}).catch(()=>{})}catch(_){}})();
+  // #endregion
 
   const actsByModule = new Map();
   activities.forEach(a => {

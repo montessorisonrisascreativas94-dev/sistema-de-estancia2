@@ -1,4 +1,4 @@
-import { supabase, sendEmail } from '../shared/supabase.js';
+﻿import { supabase, sendEmail } from '../shared/supabase.js';
 import { QueryCache } from '../shared/query-cache.js';
 import { safeHandle } from '../shared/db-utils.js';
 import {
@@ -23,7 +23,7 @@ const TABLES = {
   REPORT_CARDS: 'report_cards'
 };
 
-// Local timeout helper — accepts a promise OR a function returning a promise
+// Local timeout helper â€” accepts a promise OR a function returning a promise
 const withTimeout = (promiseOrFn, ms = 30000) => { // Increased timeout from 10s to 30s
   const p = typeof promiseOrFn === 'function' ? promiseOrFn() : promiseOrFn;
   const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), ms));
@@ -35,8 +35,8 @@ const logError = (context, err) => {
   return { data: null, error: err.message || err };
 };
 
-// Refresca el token si está próximo a expirar o ya expiró. Evita 401 en
-// consultas que corren mucho después de que ensureRole validara la sesión.
+// Refresca el token si estÃ¡ prÃ³ximo a expirar o ya expirÃ³. Evita 401 en
+// consultas que corren mucho despuÃ©s de que ensureRole validara la sesiÃ³n.
 async function _freshSession() {
   try {
     const { data: { session } } = await supabase.auth.getSession();
@@ -50,8 +50,8 @@ async function _freshSession() {
   } catch (_) { return false; }
 }
 
-// Ejecuta la consulta con sesión fresca; si el servidor responde 401
-// (token vencido/revocado a mitad de sesión), refresca y reintenta una vez.
+// Ejecuta la consulta con sesiÃ³n fresca; si el servidor responde 401
+// (token vencido/revocado a mitad de sesiÃ³n), refresca y reintenta una vez.
 async function _withSessionRetry(queryFn) {
   await _freshSession();
   let res = await queryFn();
@@ -90,12 +90,12 @@ export const DirectorApi = {
   },
 
   getDescriptor(score) {
-    if (score >= 95) return '🌟 Excelente';
-    if (score >= 85) return '👍 Muy Bueno';
-    if (score >= 75) return '✅ Bueno';
-    if (score >= 60) return '⚠️ Aceptable';
-    if (score >= 50) return '🔶 Requiere Mejoras';
-    return '❌ Bajo Desempeño';
+    if (score >= 95) return 'ðŸŒŸ Excelente';
+    if (score >= 85) return 'ðŸ‘ Muy Bueno';
+    if (score >= 75) return 'âœ… Bueno';
+    if (score >= 60) return 'âš ï¸ Aceptable';
+    if (score >= 50) return 'ðŸ”¶ Requiere Mejoras';
+    return 'âŒ Bajo DesempeÃ±o';
   },
 
   // --- TASKS & GRADES ---
@@ -152,7 +152,7 @@ export const DirectorApi = {
       try {
         const { data, error } = await supabase.rpc('get_dashboard_kpis');
         if (!error && data) rpcData = data;
-      } catch (_) { /* RPC no existe — usar fallback */ }
+      } catch (_) { /* RPC no existe â€” usar fallback */ }
 
       if (rpcData) {
         return {
@@ -164,13 +164,13 @@ export const DirectorApi = {
         };
       }
 
-      // Optimización: conteos rápidos con count exacto (data ligera para que el
+      // OptimizaciÃ³n: conteos rÃ¡pidos con count exacto (data ligera para que el
       // count siempre llegue poblado desde la BD).
       const d = new Date();
       const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
       
       const results = await Promise.allSettled([
-        supabase.from('students').select('id', { count: 'exact' }).eq('is_active', true).is('deleted_at', null).limit(100),
+        supabase.from('students').select('id', { count: 'exact' }).eq('is_active', true).limit(100),
         supabase.from('profiles').select('id', { count: 'exact' }).in('role', ['maestra', 'asistente', 'encargada']).is('deleted_at', null).limit(100),
         supabase.from('classrooms').select('id, name, level').is('deleted_at', null).limit(200),
         supabase.from('attendance').select('id', { count: 'exact' }).eq('date', today).in('status', ['present', 'late']).limit(100),
@@ -323,7 +323,7 @@ export const DirectorApi = {
     return await supabase.from('inquiries').update(updates).eq('id', id);
   },
 
-  // --- CONFIGURACIÃ“N ---
+  // --- CONFIGURACIÃƒâ€œN ---
   async getSchoolSettings() {
     return QueryCache.get('school_settings', async () => {
       try {
@@ -339,7 +339,7 @@ export const DirectorApi = {
   },
 
   // --- CLASSROOMS ---
-  // Normaliza name/level al canónico (mata "parvalo 2 (variante — canon …)").
+  // Normaliza name/level al canÃ³nico (mata "parvalo 2 (variante â€” canon â€¦)").
   _displayRoom(r) {
     if (!r) return r;
     const n = sanitizeClassroomDisplayName(r.name || '');
@@ -399,14 +399,13 @@ export const DirectorApi = {
       const { data: activeStudents } = await supabase
         .from(TABLES.STUDENTS)
         .select('parent_id')
-        .eq('is_active', true)
-        .is('deleted_at', null);
+        .eq('is_active', true);
 
       const activeParentIds = [...new Set((activeStudents || []).map(s => s.parent_id).filter(Boolean))];
 
       // Filtrar perfiles finales:
-      // - Padres: solo si están en activeParentIds
-      // - Personal (directora, maestra, asistente): todos válidos
+      // - Padres: solo si estÃ¡n en activeParentIds
+      // - Personal (directora, maestra, asistente): todos vÃ¡lidos
       const finalUsers = validProfiles.filter(u => {
         if (u.role === 'padre') {
           return activeParentIds.includes(u.id);
@@ -431,8 +430,7 @@ export const DirectorApi = {
         .from(TABLES.STUDENTS)
         .select('parent_id, name, classroom_id')
         .in('parent_id', ids)
-        .eq('is_active', true)
-        .is('deleted_at', null);
+        .eq('is_active', true);
       if (error) throw error;
 
       // Enriquecer con nombre de aula en query separada si hay classroom_ids
@@ -467,7 +465,7 @@ export const DirectorApi = {
 
   // --- ESTUDIANTES ---
   async getStudents(filters = {}, range = null) {
-    const build = (useDeleted = true) => {
+    const build = (useDeleted = false) => {
       let q = supabase
         .from(TABLES.STUDENTS)
         .select('id, name, avatar_url, matricula, age, age_type, classroom_id, is_active', { count: 'exact' })
@@ -483,26 +481,71 @@ export const DirectorApi = {
       if (range) {
         q = q.range(range.from, range.to);
       } else {
+        q = q.limit(100);
+      }
+
+      return q;
+    };      if (range) {
+        q = q.range(range.from, range.to);
+      } else {
         q = q.limit(100); // Default safety limit
       }
 
       return q;
     };
 
-    let { data, error, count } = await _withSessionRetry(() => build());
-    // Si el esquema no tiene deleted_at, reintentar sin ese filtro
-    if (error && /deleted_at/.test(String(error.message || '')) && /does not exist|not exist|no existe|column/i.test(String(error.message || ''))) {
-      console.warn('[getStudents] Columna deleted_at ausente — reintentando sin filtro.');
-      ({ data, error, count } = await _withSessionRetry(() => build(false)));
+    const DEFAULT_USE_DELETED = false;
+    const OPPOSITE_USE_DELETED = !DEFAULT_USE_DELETED;
+    let { data, error, count } = await _withSessionRetry(() => build(DEFAULT_USE_DELETED));
+
+    // #region debug-point C:getStudents-first-build
+    // #endregion
+
+    // Fallback: si la BD tiene deleted_at y usamos el default (sin) o viceversa,
+    // reintentamos con la opciÃ³n contraria. Detectamos por cÃ³digo de columna faltante.
+    const errCode   = String(error?.code || error?.status || '');
+    const errMsg    = String(error?.message || '').toLowerCase();
+    const isMissingColError = errCode === 'PGRST205' || errCode === '42703' ||
+      (/deleted_at/.test(errMsg) && /column|not exist|does not exist|no existe/i.test(errMsg));
+
+    // #region debug-point C:getStudents-fallback-check
+    // #endregion
+
+    if (error && isMissingColError) {
+      console.warn('[getStudents] Reintentando con useDeleted=' + String(OPPOSITE_USE_DELETED));
+      ({ data, error, count } = await _withSessionRetry(() => build(OPPOSITE_USE_DELETED)));
+      // #region debug-point C:getStudents-retry-build
+      // #endregion
     }
     
     if (error) return { data, error, count };
+
+    // ── Fallback: si el range dio 0 resultados pero no hay error,
+    // puede ser que RLS esté devolviendo vacío. Intentar sin range (primeras 200 filas).
+    if ((!data || data.length === 0) && count === 0 && range) {
+      console.warn('[getStudents] Range returned 0, retrying without range...');
+      const { data: d2, error: e2, count: c2 } = await _withSessionRetry(() => {
+        let q2 = supabase
+          .from(TABLES.STUDENTS)
+          .select('id, name, avatar_url, matricula, age, age_type, classroom_id, is_active', { count: 'exact' })
+          .order('name')
+          .limit(200);
+        if (filters.search) q2 = q2.ilike('name', `%${filters.search}%`);
+        if (filters.classroom_id) q2 = q2.eq('classroom_id', filters.classroom_id);
+        if (filters.status === 'active') q2 = q2.eq('is_active', true);
+        if (filters.status === 'inactive') q2 = q2.eq('is_active', false);
+        return q2;
+      });
+      if (!e2 && d2 && d2.length > 0) {
+        data = d2; count = c2 || d2.length;
+      }
+    }
     
     // Enrich with classroom names
     const classroomIds = [...new Set((data || []).map(s => s.classroom_id).filter(Boolean))];
     let classroomMap = {};
     if (classroomIds.length > 0) {
-      // ✅ 1) Buscar aulas ACTIVAS primero
+      // âœ… 1) Buscar aulas ACTIVAS primero
       const { data: activeRooms } = await supabase
         .from('classrooms')
         .select('id, name, level')
@@ -510,11 +553,11 @@ export const DirectorApi = {
         .is('deleted_at', null);
       (activeRooms || []).forEach(r => { classroomMap[r.id] = r; });
 
-      // ✅ 2) Para classroom_id que no están activos,
-      //       buscar aula ACTIVA canónica equivalente (sanitizar nombre / canónica)
+      // âœ… 2) Para classroom_id que no estÃ¡n activos,
+      //       buscar aula ACTIVA canÃ³nica equivalente (sanitizar nombre / canÃ³nica)
       const unresolved = classroomIds.filter(id => !classroomMap[id]);
       if (unresolved.length) {
-        // Todas las aulas activas para lookup canónico
+        // Todas las aulas activas para lookup canÃ³nico
         const { data: allActiveRooms } = await supabase
           .from('classrooms')
           .select('id, name, level')
@@ -527,7 +570,7 @@ export const DirectorApi = {
         (deletedRooms || []).forEach(dr => {
           const sanitizedName = sanitizeClassroomDisplayName(dr.name);
           const sanitizedLevel = sanitizeClassroomDisplayName(dr.level);
-          // Buscar por canónica
+          // Buscar por canÃ³nica
           const canon = findCanonicalClassroom(sanitizedLevel || sanitizedName);
           let target = null;
           if (canon) {
@@ -591,7 +634,7 @@ export const DirectorApi = {
       return v.count ?? v.data.length;
     };
     const [students, teachers, classrooms, inquiries] = await Promise.all([
-      supabase.from(TABLES.STUDENTS).select('id', { count: 'exact' }).eq('is_active', true).is('deleted_at', null).limit(500),
+      supabase.from(TABLES.STUDENTS).select('id', { count: 'exact' }).eq('is_active', true).limit(500),
       supabase.from(TABLES.PROFILES).select('id', { count: 'exact' }).in('role', ['maestra', 'asistente', 'encargada']).is('deleted_at', null).limit(500),
       supabase.from(TABLES.CLASSROOMS).select('id', { count: 'exact' }).is('deleted_at', null).limit(500),
       supabase.from('inquiries').select('id', { count: 'exact' }).eq('status', 'pending').limit(500)
@@ -612,9 +655,9 @@ export const DirectorApi = {
   },
   async updateStudent(id, data) {
     const numId = parseInt(id, 10);
-    if (isNaN(numId)) return { data: null, error: 'ID de estudiante inválido' };
+    if (isNaN(numId)) return { data: null, error: 'ID de estudiante invÃ¡lido' };
 
-    // Whitelist explícito de columnas válidas en la tabla students
+    // Whitelist explÃ­cito de columnas vÃ¡lidas en la tabla students
     const ALLOWED_COLUMNS = new Set([
       'name','matricula','classroom_id','age','age_type','schedule','start_date',
       'is_active','blood_type','allergies','authorized_pickup','authorized_pickup_phone',
@@ -663,8 +706,8 @@ export const DirectorApi = {
         );
         if (error) throw error;
         const normalized = (data || []).map(t => {
-          // Excluir aulas soft-deleted (la variante "parvalo 2 (variante …)")
-          // y normalizar nombre/nivel al canónico.
+          // Excluir aulas soft-deleted (la variante "parvalo 2 (variante â€¦)")
+          // y normalizar nombre/nivel al canÃ³nico.
           const rooms = (Array.isArray(t.classrooms) ? t.classrooms : [])
             .filter((c) => c && !c.deleted_at)
             .map((c) => this._displayRoom(c));
@@ -685,7 +728,7 @@ export const DirectorApi = {
     const idsRaw = Array.isArray(classroom_ids)
       ? classroom_ids
       : (classroom_id !== undefined && classroom_id !== null ? [classroom_id] : undefined);
-    // ✅ Filtrar IDs: solo números (cast seguro) y no vacíos (evita 400 Bad Request)
+    // âœ… Filtrar IDs: solo nÃºmeros (cast seguro) y no vacÃ­os (evita 400 Bad Request)
     const ids = Array.isArray(idsRaw)
       ? idsRaw
           .filter((x) => x !== null && x !== undefined && x !== '')
@@ -779,7 +822,7 @@ export const DirectorApi = {
           ['Estudiante', studentName],
           ['Concepto',   month],
           ['Monto',      amount],
-          ['MÃ©todo',     method],
+          ['MÃƒÂ©todo',     method],
           ['Fecha',      dateStr]
         ].map(([label, value], i) => {
           const border = i < 4 ? 'border-bottom:1px solid #d1fae5;' : '';
@@ -796,8 +839,8 @@ export const DirectorApi = {
           '<body style="margin:0;padding:0;background:#f8fafc;font-family:Arial,sans-serif;">' +
           '<div style="max-width:560px;margin:32px auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">' +
             '<div style="background:linear-gradient(135deg,#16a34a,#15803d);padding:32px 40px;text-align:center;">' +
-              '<h1 style="margin:0;color:#fff;font-size:22px;font-weight:800;">âœ… Pago Confirmado</h1>' +
-              '<p style="margin:8px 0 0;color:rgba(255,255,255,0.85);font-size:14px;">Colegio Montessori Sonrisas Creativas — Recibo de Pago</p>' +
+              '<h1 style="margin:0;color:#fff;font-size:22px;font-weight:800;">Ã¢Å“â€¦ Pago Confirmado</h1>' +
+              '<p style="margin:8px 0 0;color:rgba(255,255,255,0.85);font-size:14px;">Colegio Montessori Sonrisas Creativas â€” Recibo de Pago</p>' +
             '</div>' +
             '<div style="padding:32px 40px;">' +
               '<p style="margin:0 0 8px;color:#374151;font-size:15px;">Hola,</p>' +
@@ -805,17 +848,17 @@ export const DirectorApi = {
               '<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:20px 24px;margin-bottom:24px;">' +
                 '<table style="width:100%;border-collapse:collapse;font-size:14px;">' + rows + '</table>' +
               '</div>' +
-              '<p style="margin:0 0 24px;color:#6b7280;font-size:13px;text-align:center;">Gracias por tu puntualidad y compromiso con la educaciÃ³n de tu hijo/a.</p>' +
+              '<p style="margin:0 0 24px;color:#6b7280;font-size:13px;text-align:center;">Gracias por tu puntualidad y compromiso con la educaciÃƒÂ³n de tu hijo/a.</p>' +
               '<div style="text-align:center;">' +
-                '<a href="https://montessorisonrisascreativas.com/panel_padres.html" style="display:inline-block;background:#16a34a;color:#fff;padding:12px 28px;border-radius:8px;font-weight:700;font-size:14px;text-decoration:none;">Ver mi Panel â†’</a>' +
+                '<a href="https://montessorisonrisascreativas.com/panel_padres.html" style="display:inline-block;background:#16a34a;color:#fff;padding:12px 28px;border-radius:8px;font-weight:700;font-size:14px;text-decoration:none;">Ver mi Panel Ã¢â€ â€™</a>' +
               '</div>' +
             '</div>' +
             '<div style="background:#f9fafb;border-top:1px solid #f0f0f0;padding:16px 40px;text-align:center;">' +
-              '<p style="margin:0;font-size:11px;color:#9ca3af;">Colegio Montessori Sonrisas Creativas · Correo automático, por favor no respondas.</p>' +
+              '<p style="margin:0;font-size:11px;color:#9ca3af;">Colegio Montessori Sonrisas Creativas Â· Correo automÃ¡tico, por favor no respondas.</p>' +
             '</div>' +
           '</div></body></html>';
 
-        const result = await sendEmail(emails, 'Recibo de Pago — ' + month + ' · ' + studentName, html);
+        const result = await sendEmail(emails, 'Recibo de Pago â€” ' + month + ' Â· ' + studentName, html);
         return !!result;
       } catch (e) {
         console.error('Error sending payment receipt:', e);

@@ -243,42 +243,7 @@ body.panel-maestra-body .alert-banner-tasks .w-12 {
   color: var(--m-green) !important;
 }
 
-/* ── INTERNAL TABS ──────────────────────────────────────────────────
-   Pildoras grandes, coloridas y con iconos
-─────────────────────────────────────────────────────────────────── */
-body.panel-maestra-body .class-tab-btn {
-  border-radius: 20px !important;
-  font-weight: 700 !important;
-  font-size: 0.9375rem !important;
-  text-transform: capitalize;
-  letter-spacing: 0.025em;
-  padding: 14px 20px !important;
-  border: none !important;
-  background: transparent !important;
-  color: var(--m-text-mid) !important;
-  transition: all .2s ease;
-  cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-}
-body.panel-maestra-body .class-tab-btn:hover {
-  background: #F3F4F6 !important;
-  color: #374151 !important;
-  transform: translateY(-2px);
-}
-body.panel-maestra-body .class-tab-btn.active {
-  background: var(--m-green) !important;
-  color: white !important;
-  border: none !important;
-  box-shadow: 0 6px 20px rgba(40,181,77,.3) !important;
-  transform: translateY(-2px);
-}
-body.panel-maestra-body .class-tab-btn svg {
-  width: 24px;
-  height: 24px;
-}
+
 
 /* ── ENCABEZADOS DE SECCIÓN ─────────────────────────────────────
    Icono naranja · Texto negro/oscuro · Nunca título completamente verde
@@ -415,30 +380,6 @@ body.panel-maestra-body button.border-2.border-\[#28B54D\] {
   border: none !important;
 }
 
-/* ── TABS DE AULA ─────────────────────────────────────────────── */
-body.panel-maestra-body .class-tab-btn {
-  border-radius: 12px !important;
-  font-weight: 700 !important;
-  font-size: 0.72rem !important;
-  text-transform: uppercase;
-  letter-spacing: .06em;
-  padding: 10px 16px !important;
-  border: none !important;
-  background: transparent !important;
-  color: var(--m-text-mid) !important;
-  transition: background .15s, color .15s;
-  cursor: pointer;
-}
-body.panel-maestra-body .class-tab-btn:hover {
-  background: var(--m-green-lt) !important;
-  color: var(--m-green) !important;
-}
-body.panel-maestra-body .class-tab-btn.active {
-  background: var(--m-green) !important;
-  color: #fff !important;
-  border: none !important;
-  box-shadow: 0 4px 12px rgba(40,181,77,.2) !important;
-}
 
 /* ── TABLAS ──────────────────────────────────────────────────────
    Cabecera verde muy claro, hover suave, separadores finos
@@ -833,22 +774,6 @@ body.panel-maestra-body .section.active {
   border-color: var(--m-green-h);
 }
 
-/* ── TARJETAS DE AULA (classesGrid) — borde naranja, texto verde ─── */
-body.panel-maestra-body #classesGrid > div {
-  border: 2px solid var(--m-orange) !important;
-}
-body.panel-maestra-body #classesGrid > div:hover {
-  border-color: var(--m-green) !important;
-  box-shadow: 0 16px 32px rgba(40,181,77,.12) !important;
-}
-/* Nombre del aula y nivel: texto blanco sobre banda verde */
-body.panel-maestra-body #classesGrid .classroom-name,
-body.panel-maestra-body #classesGrid h3,
-body.panel-maestra-body #classesGrid h4,
-body.panel-maestra-body #classesGrid .classroom-level {
-  color: #FFFFFF !important;
-  text-shadow: 0 1px 3px rgba(0,0,0,0.25);
-}
 
 /* ── TABS DE AULA — pildoras limpias, sin borde grueso ───────────── */
 body.panel-maestra-body .class-tab-btn {
@@ -877,11 +802,6 @@ body.panel-maestra-body .class-tab-btn.active {
   border: none !important;
   box-shadow: 0 4px 12px rgba(40,181,77,.2) !important;
 }
-body.panel-maestra-body .class-tab-btn:not(.active):hover {
-  background: var(--m-green-lt) !important;
-  color: var(--m-green) !important;
-  border: none !important;
-}
 
 /* ── MODALES MAESTRA — header blanco, ícono en círculo naranja ────── */
 body.panel-maestra-body [id$="-inner"] > div > div:first-child,
@@ -907,25 +827,67 @@ body.panel-maestra-body .modal-header-pink .modal-close {
 body.panel-maestra-body .modal-header-pink .modal-close:hover {
   background: var(--m-border) !important;
 }
-/* Botón guardar/primario en modales: naranja */
+/* Botón guardar/primario en modales: verde principal Sonrisas Creativas */
 body.panel-maestra-body .modal-footer-pink .btn-maestra,
+body.panel-maestra-body .modal-footer-pink button.btn-maestra,
 body.panel-maestra-body [id$="-inner"] button[id^="btnSave"],
 body.panel-maestra-body [id$="-inner"] button#btnSaveTask,
 body.panel-maestra-body [id$="-inner"] button#btnSaveModalRoutine,
 body.panel-maestra-body [id$="-inner"] button#btnBulkSave,
-body.panel-maestra-body [id$="-inner"] button#btnSaveInfant {
-  background: var(--m-orange) !important;
-  box-shadow: 0 4px 14px rgba(255,138,0,.25) !important;
+body.panel-maestra-body [id$="-inner"] button#btnSaveInfant,
+body.panel-maestra-body button.btn-maestra,
+body.panel-maestra-body button.btn-primary,
+body.panel-maestra-body button.btn-save,
+body.panel-maestra-body button[data-action="save"],
+body.panel-maestra-body button[id*="Save"],
+body.panel-maestra-body button[id*="Guardar"],
+body.panel-maestra-body [data-modal] button.btn-primary,
+body.panel-maestra-body .modal-card .btn-primary,
+body.panel-maestra-body .modal-body .btn-primary {
+  background: var(--m-green) !important;
+  box-shadow: 0 4px 14px rgba(40,181,77,.22) !important;
   border: none !important;
   color: #fff !important;
+  padding: 12px 22px !important;
+  border-radius: 14px !important;
+  font-weight: 900 !important;
+  font-size: 0.85rem !important;
+  letter-spacing: .02em !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  cursor: pointer !important;
+  transition: transform .18s, background .18s, box-shadow .18s !important;
 }
 body.panel-maestra-body .modal-footer-pink .btn-maestra:hover,
 body.panel-maestra-body [id$="-inner"] button[id^="btnSave"]:hover,
 body.panel-maestra-body [id$="-inner"] button#btnSaveTask:hover,
 body.panel-maestra-body [id$="-inner"] button#btnSaveModalRoutine:hover,
 body.panel-maestra-body [id$="-inner"] button#btnBulkSave:hover,
-body.panel-maestra-body [id$="-inner"] button#btnSaveInfant:hover {
-  background: var(--m-orange-h) !important;
+body.panel-maestra-body [id$="-inner"] button#btnSaveInfant:hover,
+body.panel-maestra-body button.btn-maestra:hover,
+body.panel-maestra-body button.btn-primary:hover,
+body.panel-maestra-body button.btn-save:hover,
+body.panel-maestra-body button[data-action="save"]:hover,
+body.panel-maestra-body button[id*="Save"]:hover,
+body.panel-maestra-body button[id*="Guardar"]:hover,
+body.panel-maestra-body .modal-card .btn-primary:hover,
+body.panel-maestra-body .modal-body .btn-primary:hover {
+  background: var(--m-green-h) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 8px 20px rgba(40,181,77,.28) !important;
+}
+body.panel-maestra-body .modal-footer-pink .btn-maestra:disabled,
+body.panel-maestra-body button.btn-maestra:disabled,
+body.panel-maestra-body button.btn-primary:disabled,
+body.panel-maestra-body button[id*="Save"]:disabled,
+body.panel-maestra-body button[id*="Guardar"]:disabled {
+  background: #CBD5E1 !important;
+  box-shadow: none !important;
+  transform: none !important;
+  cursor: not-allowed !important;
+  color: #475569 !important;
 }
 
 /* ── BOTÓN NUEVA TAREA — verde sólido ────────────────────────────── */
@@ -1251,6 +1213,21 @@ body.panel-maestra-body .stat-block {
   to   { opacity: 1; transform: translateY(0); }
 }
 .table-panel, .table-scroll-wrap + * { animation: tbl-fadein 0.22s ease-out both; }
+
+/* ═══════════════════════════════════════════════════
+   AULA ACTIVA en #classesGrid — initDashboard() pinta
+   TODAS las aulas; esta regla resalta la seleccionada
+   (va al final: las reglas generales de arriba usan
+   !important y borrarían el borde en línea).
+═══════════════════════════════════════════════════ */
+body.panel-maestra-body #classesGrid > div.is-active-classroom {
+  border: 2px solid var(--m-green) !important;
+  border-left: 6px solid var(--m-green) !important;
+  box-shadow: 0 12px 32px rgba(40, 181, 77, .18) !important;
+}
+body.panel-maestra-body #classesGrid > div.is-active-classroom:hover {
+  box-shadow: 0 16px 36px rgba(40, 181, 77, .24) !important;
+}
 
 /* ── Responsive touch-friendly para móviles ───────────────────── */
 @media (max-width: 640px) {

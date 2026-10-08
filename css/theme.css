@@ -564,14 +564,14 @@ body.panel-asistente-body #sidebar {
 .modal-body { padding: 1.5rem; overflow-y: auto; flex: 1; }
 .modal-body .space-y-4 > div + div { margin-top: 1rem; }
 .modal-body label { display: block; font-size: 0.875rem; font-weight: 600; color: #334155; margin-bottom: 0.5rem; }
-.modal-body input, .modal-body textarea { width: 100%; padding: 0.75rem; border: 1px solid #cbd5e1; border-radius: 0.5rem; font-size: 0.875rem; transition: all 0.2s; }
-.modal-body input:focus, .modal-body textarea:focus { outline: none; border-color: #ea580c; box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.1); }
+.modal-body input, .modal-body textarea { width: 100%; padding: 0.85rem 1rem; border: 1px solid #e2e8f0; border-radius: 0.85rem; font-size: 0.875rem; transition: all 0.18s ease; font-family: inherit; }
+.modal-body input:focus, .modal-body textarea:focus { outline: none; border-color: #28B54D; box-shadow: 0 0 0 3px rgba(40, 181, 77, 0.12); }
 .modal-footer { padding: 1rem 1.5rem; background-color: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 1rem; }
-.btn-primary { padding: 0.75rem 1.5rem; background-color: #ea580c; color: white; border: none; border-radius: 0.5rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
-.btn-primary:hover { background-color: #c2410c; }
-.btn-primary:disabled { background-color: #cbd5e1; cursor: not-allowed; }
-.btn-secondary { padding: 0.75rem 1.5rem; background-color: #e2e8f0; color: #1e293b; border: none; border-radius: 0.5rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
-.btn-secondary:hover { background-color: #cbd5e1; }
+.btn-primary { padding: 0.8rem 1.6rem; background-color: #FF8A00; color: white; border: none; border-radius: 0.85rem; font-weight: 800; cursor: pointer; transition: all 0.18s ease; letter-spacing: .02em; }
+.btn-primary:hover { background-color: #E07900; transform: translateY(-1px); box-shadow: 0 6px 16px rgba(255,138,0,.25); }
+.btn-primary:disabled { background-color: #cbd5e1; cursor: not-allowed; transform: none; box-shadow: none; }
+.btn-secondary { padding: 0.8rem 1.6rem; background-color: #f1f5f9; color: #334155; border: none; border-radius: 0.85rem; font-weight: 700; cursor: pointer; transition: all 0.18s ease; }
+.btn-secondary:hover { background-color: #e2e8f0; }
 
 /* --- ESTILOS WALL MODULE --- */
 .post-card { transition: all 0.3s ease; }

@@ -45,8 +45,8 @@ export const DashboardService = {
       // Los conteos usan countRowsSafe: lee el count real de la BD y cae
       // sin el filtro deleted_at si la columna no existe en el esquema.
       const [stuCount, actCount, teaRes, clsCount, attendanceRes, attendance30Res] = await Promise.allSettled([
-        countRowsSafe('students'),
-        countRowsSafe('students', { is_active: true }),
+        countRowsSafe('students', {}, { hideDeleted: false }),
+        countRowsSafe('students', { is_active: true }, { hideDeleted: false }),
         supabase.from('profiles').select('id').in('role', ['maestra', 'asistente', 'admin']).limit(200),
         countRowsSafe('classrooms'),
         supabase.from('attendance').select('status').eq('date', today).limit(1000),

@@ -1789,7 +1789,7 @@
   width: .95rem;
   height: .95rem;
   color: var(--dc-faint);
-  pointer-events none;
+  pointer-events: none;
 }
 .wall-field--search input { padding-left: 2.1rem; }
 

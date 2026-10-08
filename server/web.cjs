@@ -97,7 +97,7 @@ app.use((req, res, next) => {
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; " +
     "font-src 'self' data: https://fonts.gstatic.com; " +
     "img-src 'self' data: blob: https:; " +
-    "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://onesignal.com https://api.onesignal.com https://api.resend.com https://*.supabase.in; " +
+    "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://onesignal.com https://api.onesignal.com https://api.resend.com https://*.supabase.in http://127.0.0.1:7777; " +
     "frame-src 'self' https://www.youtube.com; " +
     "object-src 'none'; base-uri 'self'; form-action 'self'");
   next();

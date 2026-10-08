@@ -199,6 +199,37 @@
       line-height: 1.1;
     }
 
+    /* ── Rejilla de métricas auto-ajustable (evita que las tarjetas se
+          salgan del contenedor en pantallas estrechas) ── */
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 168px), 1fr));
+      gap: 0.75rem;
+    }
+
+    /* ── Protección anti-desbordamiento de textos y tarjetas ── */
+    .section-shell,
+    .section-header,
+    .section-title,
+    .section-subtitle,
+    .metric-card,
+    .quick-action-card,
+    .admin-card { min-width: 0; }
+
+    .section-shell .grid > *,
+    .section-shell .metric-grid > * { min-width: 0; }
+
+    .metric-label,
+    .metric-value,
+    .metric-foot { overflow-wrap: anywhere; }
+
+    .metric-label { line-height: 1.25; }
+
+    .kk-nav-item,
+    .nav-btn { min-width: 0; }
+    .kk-nav-item span,
+    .nav-btn span { min-width: 0; overflow-wrap: anywhere; }
+
     .quick-action-card {
       padding: 1.3rem;
       transition: transform 0.25s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.2s ease, border-color 0.2s ease;
@@ -961,7 +992,7 @@
               <p class="section-subtitle">Resumen general del desempeño docente y cumplimiento.</p>
             </div>
 
-            <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
+            <div class="metric-grid mb-6">
               <div class="metric-card metric-card--primary">
                 <div class="metric-icon"><i data-lucide="users" class="w-5 h-5"></i></div>
                 <div class="metric-label">Total Maestras</div>
@@ -989,7 +1020,7 @@
               </div>
             </div>
 
-            <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
+            <div class="metric-grid mb-6">
               <div class="metric-card metric-card--primary">
                 <div class="metric-icon"><i data-lucide="sparkles" class="w-5 h-5"></i></div>
                 <div class="metric-label">Índice de Eficiencia</div>
@@ -1023,7 +1054,7 @@
                 <i data-lucide="bar-chart-3" class="w-5 h-5 text-purple-600"></i>
                 Métricas de Desempeño por Maestra y Aulas
               </h3>
-              <div class="grid grid-cols-2 md:grid-cols-5 gap-3" id="metricasDesempeno">
+              <div class="metric-grid" id="metricasDesempeno">
                 <div class="admin-card role-purple p-4 text-center">
                   <div class="w-10 h-10 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center mx-auto mb-2"><i data-lucide="clock" class="w-5 h-5"></i></div>
                   <div class="text-xl font-black text-slate-800" id="metricPuntualidad">-</div>

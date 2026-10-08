@@ -842,7 +842,7 @@ export const SchoolCenterModule = {
     try {
       const r = await supabase.from('students')
         .select('id, name, birth_date, classroom_id, parent_id')
-        .eq('is_active', true).is('deleted_at', null)
+        .eq('is_active', true)
         .order('name').limit(2000);
       if (!r.error) return r.data ?? [];
       console.warn('[CentroEscolar] N1 students con birth_date falló:',
@@ -855,7 +855,7 @@ export const SchoolCenterModule = {
     try {
       const r2 = await supabase.from('students')
         .select('id, name, classroom_id, parent_id')
-        .eq('is_active', true).is('deleted_at', null)
+        .eq('is_active', true)
         .order('name').limit(2000);
       if (!r2.error) return r2.data ?? [];
       console.warn('[CentroEscolar] N2 students (sin birth_date) falló:',
@@ -871,7 +871,7 @@ export const SchoolCenterModule = {
       if (t) {
         const r3 = await supabase.from('students')
           .select('id, name, classroom_id, parent_id')
-          .eq('is_active', true).is('deleted_at', null)
+          .eq('is_active', true)
           .order('name').limit(2000);
         if (!r3.error) return r3.data ?? [];
       }
@@ -882,7 +882,6 @@ export const SchoolCenterModule = {
     return await fetchPostgREST('students', {
       select: 'id,name,classroom_id,parent_id',
       filters: { is_active: true },
-      is:      { deleted_at: null },
       order:   { column: 'name', ascending: true },
       limit:   2000,
     }, []);
@@ -973,8 +972,8 @@ export const SchoolCenterModule = {
                 + ' classroom_id, target_audience, scheduled_date, scheduled_time,'
                 + ' duration_minutes, location, created_by, assigned_to, published_at,'
                 + ' starts_at, ends_at, completed_at, created_at')
-          .gte('scheduled_date', _dateAddISO(today, -35))
-          .lte('scheduled_date', _dateAddISO(today, 120))
+          .gte('scheduled_date', this._dateAddISO(today, -35))
+          .lte('scheduled_date', this._dateAddISO(today, 120))
           .order('scheduled_date', { ascending: true })
           .limit(1500)),
       ]);

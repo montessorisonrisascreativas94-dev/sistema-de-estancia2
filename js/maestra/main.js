@@ -721,7 +721,6 @@ window.App.switchClassroom = async (classroomId) => {
   const current = AppState.get('classroom');
   if (current && String(current.id) === String(target.id)) return;
 
-  // Limpiar Wall + canal realtime del aula anterior
   WallModule.destroy?.();
   if (current) RealtimeManager.unsubscribe(`maestra_room_${current.id}`);
 
@@ -729,18 +728,25 @@ window.App.switchClassroom = async (classroomId) => {
   AppState.set('students', []);
   localStorage.setItem('maestra_last_classroom', String(target.id));
 
-  // Re-suscribir realtime del nuevo aula y reconectar el muro
+  try {
+    SectionCache.clear?.();
+  } catch (_) {}
+
   initRealtimeUpdates(target.id);
   WallModule.init('muroPostsContainer', { accentColor: 'blue', classroomId: target.id }, AppState);
 
-  // Actualizar pills
   document.querySelectorAll('.croom-pill').forEach(b => {
     b.classList.toggle('croom-active', String(b.dataset.croom) === String(target.id));
   });
 
-  // Recargar la sección activa con el nuevo aula
   const activeSection = document.querySelector('.section.active')?.id || 't-home';
-  window.App._setActiveSection?.(activeSection, { skipSave: true, force: true });
+  const lastTab = localStorage.getItem('maestra_last_tab');
+
+  if (activeSection === 't-class-detail') {
+    await showClassroomDetail(target.id, { activeTab: lastTab, force: true });
+  } else {
+    window.App._setActiveSection?.(activeSection, { skipSave: true, force: true });
+  }
 
   loadPendingTasksBadge(target.id);
   safeToast(`Cambiaste al aula ${safeEscapeHTML(target.name)}`, 'success');
@@ -887,7 +893,10 @@ function _applyContactBadge(senderId) {
 
 
 /**
- * 📊 Dashboard
+ * 📊 Dashboard — pinta TODAS las aulas de la maestra y KPIs agregados.
+ * Antes solo se leía AppState.get('classroom') (la activa): con 2 aulas salía
+ * 1 tarjeta, y "Mis Clases: 2" convivía con 0 alumnos porque los KPIs solo
+ * sumaban la aula activa.
  */
 async function initDashboard() {
   const classroom = AppState.get('classroom');
@@ -898,106 +907,67 @@ async function initDashboard() {
     const startOfDay = `${today}T00:00:00Z`;
     const endOfDay   = `${today}T23:59:59Z`;
 
-    // 1. Carga paralela de datos críticos — allSettled: el fallo de 1 query no mata el grid
-    const raw = await Promise.allSettled([
-      MaestraApi.getStudentsByClassroom(classroom.id),
-      MaestraApi.getAttendance(classroom.id, today),
-      supabase
-        .from('incidents')
-        .select('id', { count: 'exact', head: true })
-        .eq('classroom_id', classroom.id)
-        .gte('created_at', startOfDay)
-        .lte('created_at', endOfDay),
-      supabase
-        .from('classrooms')
-        .select('id', { count: 'exact', head: true })
-        .eq('teacher_id', AppState.get('user').id)
-        .is('deleted_at', null)
-    ]);
-    const extract = (r, fb) => r.status === 'fulfilled' ? (r.value ?? fb) : fb;
-    const students     = extract(raw[0], []);
-    const attendance   = extract(raw[1], []);
-    const incidentRes  = extract(raw[2], { count: 0 });
-    const classesRes   = extract(raw[3], { count: 0 });
+    // 1. Lista completa de aulas (ya sanitizada y deduplicada en el boot).
+    const allRooms = (AppState.get('classrooms') || []).filter(r => r?.id);
+    const rooms = allRooms.length ? allRooms : [classroom];
 
-    raw.forEach((r, i) => {
-      if (r.status === 'rejected') {
-        const names = ['getStudentsByClassroom','getAttendance','count_incidents','count_classes'];
-        console.warn(`[maestra:dashboard] ${names[i]} falló:`, r.reason);
-        _reportError('dashboard_query', r.reason, { query: names[i] });
-      }
-    });
+    // 2. Datos POR AULA en paralelo. allSettled por query: si un aula o una
+    //    query falla, el resto del grid sigue pintándose (y se reporta).
+    const perRoom = await Promise.all(rooms.map(async (room) => {
+      const settled = await Promise.allSettled([
+        MaestraApi.getStudentsByClassroom(room.id),
+        MaestraApi.getAttendance(room.id, today),
+        supabase
+          .from('incidents')
+          .select('id', { count: 'exact', head: true })
+          .eq('classroom_id', room.id)
+          .gte('created_at', startOfDay)
+          .lte('created_at', endOfDay),
+      ]);
 
-    AppState.set('students', students || []);
+      settled.forEach((r, i) => {
+        if (r.status !== 'rejected') return;
+        const names = ['getStudentsByClassroom', 'getAttendance', 'count_incidents'];
+        console.warn(`[maestra:dashboard] ${names[i]} falló (aula ${room.id}):`, r.reason);
+        _reportError('dashboard_query', r.reason, { query: names[i], classroom_id: room.id });
+      });
 
-    // Actualizar Estadísticas (Bloques)
-    UI.updateDashboardStats({
-      students: students?.length || 0,
-      present: (attendance || []).filter(a => ['present', 'late'].includes(a.status)).length,
-      incidents: incidentRes.count || 0,
-      classes: classesRes.count || 0
-    });
+      const pick = (i, fb) => (settled[i].status === 'fulfilled' ? (settled[i].value ?? fb) : fb);
+      const s0 = pick(0, []);
+      const s1 = pick(1, []);
+      const students   = Array.isArray(s0) ? s0 : [];
+      const attendance = Array.isArray(s1) ? s1 : [];
+      const present    = attendance.filter(a => ['present', 'late'].includes(a.status)).length;
+
+      return { room, students, attendance, present, incidents: pick(2, { count: 0 })?.count || 0 };
+    }));
+
+    const dash = perRoom.filter(Boolean);
+    if (!dash.length) return;
+
+    // 3. KPIs globales: suma de TODAS las aulas.
+    const totals = {
+      students:  dash.reduce((n, d) => n + d.students.length, 0),
+      present:   dash.reduce((n, d) => n + d.present, 0),
+      incidents: dash.reduce((n, d) => n + d.incidents, 0),
+      classes:   rooms.length
+    };
+
+    // La pestaña "Estudiantes" y los demás módulos siguen sobre el aula ACTIVA.
+    const active = dash.find(d => String(d.room.id) === String(classroom.id)) || dash[0];
+    AppState.set('students', active.students);
+
+    UI.updateDashboardStats(totals);
 
     _updateNextActivityWidget();
-    _updatePunchAlertWidget(students, attendance);
-    _updateTasksToGradeWidget(classroom.id);
+    _updatePunchAlertWidget(totals);
+    _updateTasksToGradeWidget(rooms.map(r => r.id));
 
-    // Grid de Aulas (Home) — Paleta Sonrisas Creativas
-    const grid = document.getElementById('classesGrid');
-    if (grid) {
-      const attendanceToday = (attendance || []).filter(a => {
-        const now = new Date();
-        const today = now.getFullYear() + '-' +
-          String(now.getMonth() + 1).padStart(2, '0') + '-' +
-          String(now.getDate()).padStart(2, '0');
-        return a.date === today && a.status === 'present';
-      }).length;
-      const totalSt = (students || []).length;
-
-      grid.innerHTML = `
-        <div onclick="App.showClassroomDetail('${classroom.id}')"
-             class="cursor-pointer group relative overflow-hidden"
-             style="background:#fff; border-radius:2rem; border:2px solid #E6F7EB; box-shadow:0 8px 24px rgba(40,181,77,.1); transition:all .25s ease;">
-          <!-- Banda superior verde -->
-          <div style="background:linear-gradient(135deg,#28B54D,#239943); padding:24px 24px 20px; position:relative; overflow:hidden;">
-            <div style="position:absolute;top:-20px;right:-20px;width:100px;height:100px;background:rgba(255,255,255,.12);border-radius:50%;pointer-events:none;"></div>
-            <div style="position:absolute;bottom:-30px;left:-10px;width:80px;height:80px;background:rgba(255,255,255,.08);border-radius:50%;pointer-events:none;"></div>
-            <div style="display:flex;align-items:center;gap:16px;position:relative;z-index:1;">
-              <div style="width:60px;height:60px;background:rgba(255,255,255,.2);border-radius:18px;display:flex;align-items:center;justify-content:center;transition:transform .3s;flex-shrink:0;" class="group-hover:scale-110">
-                <i data-lucide="door-open" style="width:30px;height:30px;color:white;"></i>
-              </div>
-              <div>
-                <h3 style="font-weight:900;color:white;font-size:1.25rem;line-height:1.2;" class="classroom-name">${safeEscapeHTML(classroom.name)}</h3>
-                <p style="color:rgba(255,255,255,.8);font-size:.8rem;font-weight:600;margin-top:2px;">${safeEscapeHTML(classroom.level || 'Educación Inicial')}</p>
-              </div>
-            </div>
-          </div>
-
-          <!-- Cuerpo blanco -->
-          <div style="padding:20px 24px;">
-            <!-- KPIs compactos -->
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
-              <div style="background:#E6F7EB;border-radius:12px;padding:10px 14px;text-align:center;">
-                <p style="font-size:1.5rem;font-weight:900;color:#28B54D;line-height:1;">${totalSt}</p>
-                <p style="font-size:.65rem;font-weight:800;color:#239943;text-transform:uppercase;letter-spacing:.06em;margin-top:2px;">Alumnos</p>
-              </div>
-              <div style="background:#FFF3E0;border-radius:12px;padding:10px 14px;text-align:center;">
-                <p style="font-size:1.5rem;font-weight:900;color:#FF8A00;line-height:1;">${attendanceToday}</p>
-                <p style="font-size:.65rem;font-weight:800;color:#E07900;text-transform:uppercase;letter-spacing:.06em;margin-top:2px;">Presentes hoy</p>
-              </div>
-            </div>
-
-            <!-- Botón CTA -->
-            <button style="width:100%;padding:14px;background:linear-gradient(135deg,#FF8A00,#E07900);color:white;border:none;border-radius:14px;font-weight:900;font-size:.9rem;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;box-shadow:0 4px 14px rgba(255,138,0,.3);transition:transform .2s;" class="group-hover:scale-[1.02]">
-              🚪 Entrar al Aula
-              <i data-lucide="arrow-right" style="width:18px;height:18px;"></i>
-            </button>
-          </div>
-        </div>
-      `;
-    }
+    // Grid de Aulas (Home) — 1 tarjeta por aula, paleta Sonrisas Creativas
+    _renderClassroomCards(dash, classroom.id);
 
     // Grid de Estudiantes (Tab) — Paleta Sonrisas Creativas
+    const students = active.students;
     const classGrid = document.getElementById('classroomStudentsGrid');
     if (classGrid) {
       if (!students || students.length === 0) {
@@ -1036,6 +1006,75 @@ async function initDashboard() {
   } catch (err) {
     safeToast('Error cargando dashboard', 'error');
   }
+}
+
+/**
+ * 🏫 Grid "Mis Clases": 1 tarjeta por aula con sus KPIs propios.
+ * @param {Array} dash    filas {room, students, present, incidents} por aula
+ * @param {*} activeId    id del aula activa (se resalta)
+ */
+function _renderClassroomCards(dash, activeId) {
+  const grid = document.getElementById('classesGrid');
+  if (!grid) return;
+
+  if (!dash.length) {
+    grid.innerHTML = `
+      <div class="col-span-full py-12 text-center bg-white rounded-[2rem] border-2 border-dashed border-slate-200">
+        <p class="font-bold text-slate-400">No tienes aulas asignadas.</p>
+      </div>
+    `;
+    return;
+  }
+
+  grid.innerHTML = dash.map(({ room, students, present }) => {
+    const color   = room.color || classroomColorFor(room.name, room.level);
+    const isActive = String(room.id) === String(activeId);
+    const totalSt = (students || []).length;
+    const safeId  = String(room.id).replace(/'/g, "\\'");
+
+    return `
+      <div onclick="App.showClassroomDetail('${safeId}')"
+           class="cursor-pointer group relative overflow-hidden${isActive ? ' is-active-classroom' : ''}"
+           style="background:#fff; border-radius:2rem; border:2px solid ${isActive ? '#28B54D' : '#E6F7EB'}; box-shadow:0 8px 24px rgba(40,181,77,${isActive ? '.18' : '.1'}); transition:all .25s ease;">
+        <!-- Banda superior: color canónico del aula -->
+        <div style="background-color:${color}; background-image:linear-gradient(135deg,rgba(255,255,255,.18),rgba(0,0,0,.2)); padding:24px 24px 20px; position:relative; overflow:hidden;">
+          <div style="position:absolute;top:-20px;right:-20px;width:100px;height:100px;background:rgba(255,255,255,.12);border-radius:50%;pointer-events:none;"></div>
+          <div style="position:absolute;bottom:-30px;left:-10px;width:80px;height:80px;background:rgba(255,255,255,.08);border-radius:50%;pointer-events:none;"></div>
+          ${isActive ? `
+            <span style="position:absolute;top:16px;right:16px;background:rgba(255,255,255,.22);border:1px solid rgba(255,255,255,.55);color:#fff;font-size:.6rem;font-weight:900;letter-spacing:.08em;text-transform:uppercase;padding:5px 10px;border-radius:999px;">Aula activa</span>
+          ` : ''}
+          <div style="display:flex;align-items:center;gap:16px;position:relative;z-index:1;">
+            <div style="width:60px;height:60px;background:rgba(255,255,255,.2);border-radius:18px;display:flex;align-items:center;justify-content:center;transition:transform .3s;flex-shrink:0;" class="group-hover:scale-110">
+              <i data-lucide="door-open" style="width:30px;height:30px;color:white;"></i>
+            </div>
+            <div style="min-width:0;">
+              <h3 style="font-weight:900;color:white;font-size:1.25rem;line-height:1.2;" class="classroom-name">${safeEscapeHTML(room.name)}</h3>
+              <p style="color:rgba(255,255,255,.85);font-size:.8rem;font-weight:600;margin-top:2px;">${safeEscapeHTML(room.level || 'Educación Inicial')}</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Cuerpo blanco -->
+        <div style="padding:20px 24px;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
+            <div style="background:#E6F7EB;border-radius:12px;padding:10px 14px;text-align:center;">
+              <p style="font-size:1.5rem;font-weight:900;color:#28B54D;line-height:1;">${totalSt}</p>
+              <p style="font-size:.65rem;font-weight:800;color:#239943;text-transform:uppercase;letter-spacing:.06em;margin-top:2px;">Alumnos</p>
+            </div>
+            <div style="background:#FFF3E0;border-radius:12px;padding:10px 14px;text-align:center;">
+              <p style="font-size:1.5rem;font-weight:900;color:#FF8A00;line-height:1;">${present}</p>
+              <p style="font-size:.65rem;font-weight:800;color:#E07900;text-transform:uppercase;letter-spacing:.06em;margin-top:2px;">Presentes hoy</p>
+            </div>
+          </div>
+
+          <button type="button" style="width:100%;padding:14px;background:linear-gradient(135deg,#FF8A00,#E07900);color:white;border:none;border-radius:14px;font-weight:900;font-size:.9rem;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;box-shadow:0 4px 14px rgba(255,138,0,.3);transition:transform .2s;" class="group-hover:scale-[1.02]">
+            🚪 Entrar al Aula
+            <i data-lucide="arrow-right" style="width:18px;height:18px;"></i>
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
 }
 
 /**
@@ -1084,18 +1123,19 @@ function _updateNextActivityWidget() {
   }
 }
 
-function _updatePunchAlertWidget(students, attendance) {
+function _updatePunchAlertWidget(totals = {}) {
   const widget = document.getElementById('punchAlertWidget');
   const textEl = document.getElementById('punchAlertText');
   if (!widget || !textEl) return;
 
-  const total = students.length;
-  const present = (attendance || []).filter(a => ['present', 'late'].includes(a.status)).length;
-  const missing = total - present;
+  const total   = totals.students || 0;
+  const missing = total - (totals.present || 0);
 
   if (missing > 0 && total > 0) {
+    const uno = missing === 1;
+    const scope = (totals.classes || 1) > 1 ? ' (en todas sus aulas)' : '';
     widget.classList.remove('hidden');
-    textEl.textContent = `${missing} niños aún no han marcado entrada hoy.`;
+    textEl.textContent = `${missing} niño${uno ? '' : 's'} aún no ${uno ? 'ha' : 'han'} marcado entrada hoy${scope}.`;
   } else {
     widget.classList.add('hidden');
   }
@@ -1104,15 +1144,24 @@ function _updatePunchAlertWidget(students, attendance) {
 /**
  * Widget de Tareas Pendientes por Calificar
  * Solo aparece si hay entregas de hace más de 24 horas sin calificar.
+ * Acepta un classroomId o un array (todas las aulas de la maestra).
  */
-async function _updateTasksToGradeWidget(classroomId) {
+async function _updateTasksToGradeWidget(classroomIds) {
   const widget = document.getElementById('tasksToGradeWidget');
   const textEl = document.getElementById('tasksToGradeText');
   if (!widget || !textEl) return;
 
   try {
-    // 1. Obtener tareas del aula
-    const { data: tasks } = await supabase.from('tasks').select('id').eq('classroom_id', classroomId);
+    const ids = (Array.isArray(classroomIds) ? classroomIds : [classroomIds])
+      .filter(id => id !== undefined && id !== null && id !== '');
+    if (!ids.length) return widget.classList.add('hidden');
+
+    // 1. Obtener tareas de TODAS las aulas
+    let taskQuery = supabase.from('tasks').select('id');
+    taskQuery = ids.length === 1
+      ? taskQuery.eq('classroom_id', ids[0])
+      : taskQuery.in('classroom_id', ids);
+    const { data: tasks } = await taskQuery;
     if (!tasks?.length) return widget.classList.add('hidden');
 
     const taskIds = tasks.map(t => t.id);
@@ -1308,8 +1357,15 @@ function initNavigation() {
     try {
       let classroom = AppState.get('classroom');
       let students = AppState.get('students');
+      const force = !!options.force;
 
-      if (!classroom || String(classroom.id) !== String(classroomId) || !students) {
+      const needReload = force
+        || !classroom
+        || String(classroom.id) !== String(classroomId)
+        || !students
+        || students.length === 0;
+
+      if (needReload) {
         const raw = await Promise.allSettled([
           supabase.from('classrooms')
             .select('id, name, level, capacity, teacher_id, is_live')

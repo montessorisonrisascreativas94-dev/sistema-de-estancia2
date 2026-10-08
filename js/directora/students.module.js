@@ -1,4 +1,4 @@
-import { DirectorApi } from './api.js';
+﻿import { DirectorApi } from './api.js';
 import { Helpers } from '../shared/helpers.js';
 import { UI } from './ui.module.js';
 import { AppState } from './state.js';
@@ -28,9 +28,9 @@ function avg(arr) {
 }
 
 function fmtTime(ts) {
-  if (!ts) return '—';
+  if (!ts) return 'â€”';
   const d = new Date(ts);
-  if (isNaN(d.getTime())) return '—';
+  if (isNaN(d.getTime())) return 'â€”';
   return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
@@ -43,7 +43,7 @@ export const StudentsModule = {
   _realtimeSubscribed: false,
 
   async init() {
-    // ✅ Suscribirse a cambios en tiempo real
+    // âœ… Suscribirse a cambios en tiempo real
     if (!this._realtimeSubscribed) {
       this._subscribeRealtime();
     }
@@ -57,6 +57,8 @@ export const StudentsModule = {
 
       // 1. Obtener datos de estudiantes paginados desde el servidor
       const { data: students, error, count } = await DirectorApi.getStudents({}, range);
+      // #region debug-point B:students-module-getStudents
+      // #endregion
       if (error) throw error;
 
       AppState.set('students', students || []);
@@ -70,9 +72,12 @@ export const StudentsModule = {
       }
       if (!dashboardData?.stats) dashboardData = { stats: {} }; // fallback seguro
 
+      // #region debug-point B:students-module-dashboardData
+      // #endregion
+
       const kpis = dashboardData.stats;
 
-      // 3. Promedio general (rendimiento académico global)
+      // 3. Promedio general (rendimiento acadÃ©mico global)
       const avgGrade = await this._loadAvgGrade();
 
       // 4. Actualizar tarjetas KPI
@@ -92,7 +97,7 @@ export const StudentsModule = {
       this._applyView();
       this.render(students);
 
-      // Renderizar paginación
+      // Renderizar paginaciÃ³n
       this._renderDirPagination(this._dirPage, Math.ceil((count || 0) / pageSize), count || 0, students);
       const searchInput = document.getElementById('searchStudent');
       if (searchInput && !searchInput._bound) {
@@ -107,7 +112,7 @@ export const StudentsModule = {
         // Poblar opciones de aulas
         const { data: rooms } = await DirectorApi.getClassrooms();
         if (rooms) {
-          // Limpiar antes de poblar (excepto la opción "Todas")
+          // Limpiar antes de poblar (excepto la opciÃ³n "Todas")
           filterClassroom.innerHTML = '<option value="all">Todas las aulas</option>';
           rooms.forEach(r => {
             const o = document.createElement('option');
@@ -127,7 +132,7 @@ export const StudentsModule = {
       const filterLevel = document.getElementById('filterLevel');
       if (filterLevel && !filterLevel._bound) {
         filterLevel._bound = true;
-        // Poblar niveles únicos de los estudiantes
+        // Poblar niveles Ãºnicos de los estudiantes
         const levels = [...new Set(students.map(s => s.level).filter(Boolean))];
         if (levels.length) {
           filterLevel.innerHTML = '<option value="all">Todos los niveles</option>';
@@ -191,7 +196,7 @@ export const StudentsModule = {
         .on('postgres_changes',
           { event: '*', schema: 'public', table: 'attendance' },
           async () => {
-            // Solo refrescamos los horarios, sin recargar toda la sección
+            // Solo refrescamos los horarios, sin recargar toda la secciÃ³n
             const cached = AppState.get('students') || [];
             if (!cached.length) return;
             await this._loadAttendance(cached);
@@ -226,8 +231,8 @@ export const StudentsModule = {
   },
 
   /**
-   * Carga los horarios de entrada/salida de hoy (y del último día con registro)
-   * para los estudiantes de la página actual.
+   * Carga los horarios de entrada/salida de hoy (y del Ãºltimo dÃ­a con registro)
+   * para los estudiantes de la pÃ¡gina actual.
    */
   async _loadAttendance(students) {
     const ids = (students || []).map(s => s.id).filter(Boolean);
@@ -276,7 +281,7 @@ export const StudentsModule = {
         supabase.from('eval_modules').select('id,area_id,period_id,name,eval_type,config').is('deleted_at', null).limit(2000),
         supabase.from('eval_activities').select('id,module_id,name').is('deleted_at', null).limit(5000),
         supabase.from('eval_scores').select('module_id,activity_id,student_id,value,stars,level,yesno,checklist,rubric').limit(20000),
-        supabase.from('students').select('id,is_active').is('deleted_at', null).limit(2000)
+        supabase.from('students').select('id,is_active').limit(2000)
       ]);
 
       const modules = safe(modRes).data || [];
@@ -323,7 +328,7 @@ export const StudentsModule = {
     this._roomsById = this._roomsById || new Map();
     const canonOf = (s) => findCanonicalClassroom(s?.classrooms?.level || s?.classrooms?.name || s?.level_requested || s?.level || '');
 
-/** Nivel legible del aula del estudiante: "1° Primero", "Inglés Afterschool"… */
+/** Nivel legible del aula del estudiante: "1Â° Primero", "InglÃ©s Afterschool"â€¦ */
 const roomLevelOf = (s) => {
   const canon = canonOf(s);
   if (canon?.displayLevel) return canon.displayLevel;
@@ -331,7 +336,7 @@ const roomLevelOf = (s) => {
   return special?.displayName || '';
 };
 
-/** Color del aula: canónico, especial o azul por defecto. */
+/** Color del aula: canÃ³nico, especial o azul por defecto. */
 const roomColorOf = (s) => {
   const canon = canonOf(s);
   if (canon?.color) return canon.color;
@@ -374,7 +379,7 @@ const roomColorOf = (s) => {
               <div class="dc-student-av" style="--room:${color};width:2.6rem;height:2.6rem;font-size:.9rem">${avatar}</div>
               <div class="dc-student-id">
                 <span class="dc-student-name">${Helpers.escapeHTML(s.name)}</span>
-                <span class="dc-student-mat">${Helpers.escapeHTML(s.matricula || 'Sin matrícula')}</span>
+                <span class="dc-student-mat">${Helpers.escapeHTML(s.matricula || 'Sin matrÃ­cula')}</span>
               </div>
             </div>
           </td>
@@ -414,7 +419,7 @@ const roomColorOf = (s) => {
       }).join('');
     }
 
-    // Render tarjetas (contenedores con borde y color de línea del aula)
+    // Render tarjetas (contenedores con borde y color de lÃ­nea del aula)
     if (gridContainer) {
       gridContainer.innerHTML = pageStudents.map(s => {
         const color = roomColorOf(s);
@@ -433,7 +438,7 @@ const roomColorOf = (s) => {
             <div class="dc-student-av">${avatar}</div>
             <div class="dc-student-id">
               <h3 class="dc-student-name">${Helpers.escapeHTML(s.name)}</h3>
-              <span class="dc-student-mat">${Helpers.escapeHTML(s.matricula || 'Sin matrícula')}</span>
+              <span class="dc-student-mat">${Helpers.escapeHTML(s.matricula || 'Sin matrÃ­cula')}</span>
               <div class="dc-student-badges">
                 <span class="dc-badge ${s.classrooms ? 'dc-badge--room' : 'dc-badge--none'}">
                   <i data-lucide="door-open"></i><span>${Helpers.escapeHTML(roomName)}</span>
@@ -449,11 +454,11 @@ const roomColorOf = (s) => {
           <div class="dc-student-stats">
             <div class="dc-student-stat">
               <span class="dc-student-stat-k">Nivel</span>
-              <span class="dc-student-stat-v" style="color:var(--room)">${Helpers.escapeHTML(roomLevelOf(s) || '—')}</span>
+              <span class="dc-student-stat-v" style="color:var(--room)">${Helpers.escapeHTML(roomLevelOf(s) || 'â€”')}</span>
             </div>
             <div class="dc-student-stat">
               <span class="dc-student-stat-k">Edad</span>
-              <span class="dc-student-stat-v">${s.age != null ? Helpers.escapeHTML(String(s.age)) + ' ' + Helpers.escapeHTML(s.age_type || 'años') : '—'}</span>
+              <span class="dc-student-stat-v">${s.age != null ? Helpers.escapeHTML(String(s.age)) + ' ' + Helpers.escapeHTML(s.age_type || 'aÃ±os') : 'â€”'}</span>
             </div>
             <div class="dc-student-stat">
               <span class="dc-student-stat-k">Hora de entrada</span>
@@ -501,11 +506,11 @@ const roomColorOf = (s) => {
     const end = Math.min(page * 10, total);
     container.className = 'flex items-center justify-between px-4 py-3 border-t border-slate-100 bg-white rounded-b-3xl';
     container.innerHTML = `
-      <span class="text-xs font-bold text-slate-400">${start}–${end} de ${total} estudiantes</span>
+      <span class="text-xs font-bold text-slate-400">${start}â€“${end} de ${total} estudiantes</span>
       <div class="flex gap-2">
-        <button id="dirBtnPrev" class="px-3 py-1.5 text-xs font-black rounded-xl border border-slate-200 text-slate-500 hover:bg-[#E8F2FF] hover:border-blue-300 hover:text-[#0B63C7] transition-all disabled:opacity-40 disabled:cursor-not-allowed" ${page <= 1 ? 'disabled' : ''}>← Ant</button>
+        <button id="dirBtnPrev" class="px-3 py-1.5 text-xs font-black rounded-xl border border-slate-200 text-slate-500 hover:bg-[#E8F2FF] hover:border-blue-300 hover:text-[#0B63C7] transition-all disabled:opacity-40 disabled:cursor-not-allowed" ${page <= 1 ? 'disabled' : ''}>â† Ant</button>
         <span class="px-3 py-1.5 text-xs font-black text-[#0B63C7] bg-[#E8F2FF] rounded-xl">${page} / ${totalPages}</span>
-        <button id="dirBtnNext" class="px-3 py-1.5 text-xs font-black rounded-xl border border-slate-200 text-slate-500 hover:bg-[#E8F2FF] hover:border-blue-300 hover:text-[#0B63C7] transition-all disabled:opacity-40 disabled:cursor-not-allowed" ${page >= totalPages ? 'disabled' : ''}>Sig →</button>
+        <button id="dirBtnNext" class="px-3 py-1.5 text-xs font-black rounded-xl border border-slate-200 text-slate-500 hover:bg-[#E8F2FF] hover:border-blue-300 hover:text-[#0B63C7] transition-all disabled:opacity-40 disabled:cursor-not-allowed" ${page >= totalPages ? 'disabled' : ''}>Sig â†’</button>
       </div>`;
     document.getElementById('dirBtnPrev')?.addEventListener('click', () => { this._dirPage--; this.init(); });
     document.getElementById('dirBtnNext')?.addEventListener('click', () => { this._dirPage++; this.init(); });
@@ -548,7 +553,7 @@ const roomColorOf = (s) => {
     const emailUser = document.getElementById('stEmailUser')?.value?.trim();
     const password = document.getElementById('stPassword')?.value?.trim();
 
-    if (!payload.name || payload.name.trim().length < 3) return Helpers.toast('Nombre inválido (min 3 caracteres)', 'warning');
+    if (!payload.name || payload.name.trim().length < 3) return Helpers.toast('Nombre invÃ¡lido (min 3 caracteres)', 'warning');
     
     UI.setLoading(true);
     try {
@@ -566,10 +571,10 @@ const roomColorOf = (s) => {
         const inheritedParentId = payload._inheritedParentId;
         delete payload._inheritedParentId;
 
-        // Si se seleccionó un hermano, heredar su parent_id directamente
+        // Si se seleccionÃ³ un hermano, heredar su parent_id directamente
         if (inheritedParentId) {
           payload.parent_id = inheritedParentId;
-          // Validación de padre menos estricta cuando hay hermano
+          // ValidaciÃ³n de padre menos estricta cuando hay hermano
         } else if (emailUser && password) {
           const tempClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
             auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
@@ -587,7 +592,7 @@ const roomColorOf = (s) => {
           let parentId = null;
 
           if (authError) {
-            // User already exists – look up their profile by email
+            // User already exists â€“ look up their profile by email
             if (authError.message?.toLowerCase().includes('already registered') ||
                 authError.status === 422) {
               const { data: existing } = await supabase
@@ -597,9 +602,9 @@ const roomColorOf = (s) => {
                 .maybeSingle();
               if (existing?.id) {
                 parentId = existing.id;
-                Helpers.toast('Usuario ya existe – vinculando al estudiante', 'info');
+                Helpers.toast('Usuario ya existe â€“ vinculando al estudiante', 'info');
               } else {
-                throw new Error('El correo ya está registrado pero no tiene perfil. Contacta al administrador.');
+                throw new Error('El correo ya estÃ¡ registrado pero no tiene perfil. Contacta al administrador.');
               }
             } else {
               throw authError;
@@ -621,9 +626,9 @@ const roomColorOf = (s) => {
           }
         }
 
-        // Validar que el padre quedó asignado
+        // Validar que el padre quedÃ³ asignado
         if (!payload.parent_id && !inheritedParentId) {
-          // Si no se eligió hermano ni usuario, aún puede crear sin parent_id (padre se asignará luego)
+          // Si no se eligiÃ³ hermano ni usuario, aÃºn puede crear sin parent_id (padre se asignarÃ¡ luego)
         }
         
         res = await DirectorApi.createStudent(payload);
@@ -676,7 +681,7 @@ const roomColorOf = (s) => {
   async delete(id) {
     const student = (AppState.get('students') || []).find(s => String(s.id) === String(id));
     const name = student?.name || 'este estudiante';
-    const ok = window.confirm(`¿Eliminar a "${name}"?\n\nEsta acción no se puede deshacer. Se perderán todos los datos del estudiante.`);
+    const ok = window.confirm(`Â¿Eliminar a "${name}"?\n\nEsta acciÃ³n no se puede deshacer. Se perderÃ¡n todos los datos del estudiante.`);
     if (!ok) return;
     UI.setLoading(true);
     try {
@@ -698,7 +703,7 @@ const roomColorOf = (s) => {
     const n = (id, def = null) => { const val = parseFloat(document.getElementById(id)?.value); return isNaN(val) ? def : val; };
     const i = (id, def = 5) => { const val = parseInt(document.getElementById(id)?.value); return isNaN(val) ? def : val; };
 
-    // Si se seleccionó un hermano, heredar el parent_id de ese estudiante
+    // Si se seleccionÃ³ un hermano, heredar el parent_id de ese estudiante
     const siblingId = v('stSiblingId');
     let inheritedParentId = null;
     if (siblingId) {
@@ -712,7 +717,7 @@ const roomColorOf = (s) => {
       matricula:             v('stMatricula') || null,
       classroom_id:          v('stClassroom') ? parseInt(v('stClassroom')) : null,
       age:                   i('stAge', null),
-      age_type:              v('stAgeType') || 'años',
+      age_type:              v('stAgeType') || 'aÃ±os',
       schedule:              v('stHorario'),
       start_date:            v('stJoinedDate') || new Date().toISOString().split('T')[0],
       is_active:             document.getElementById('active')?.checked ?? true,

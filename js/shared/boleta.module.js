@@ -96,7 +96,7 @@ export const BoletaUI = {
     const [evalRes, classRes, studRes, schoolRes] = await Promise.all([
       supabase.from('eval_evaluations').select('*').eq('id', S.evaluationId).maybeSingle(),
       supabase.from('classrooms').select('*').eq('id', S.classroomId).maybeSingle(),
-      supabase.from('students').select('id, name, matricula').eq('classroom_id', S.classroomId).eq('is_active', true).is('deleted_at', null).order('name'),
+      supabase.from('students').select('id, name, matricula').eq('classroom_id', S.classroomId).eq('is_active', true).order('name'),
       supabase.from('school_settings').select('school_name, logo_url').eq('id', 1).maybeSingle()
     ]);
     S.evaluation = evalRes.data || { name: 'Evaluación' };

@@ -75,11 +75,16 @@ export class SafeAppState {
 
   /**
    * 📤 SET optimizado
+   *
+   * Antes había un guard: `if (!(key in this._initialState)) return;` que
+   * DESCARTABA en silencio cualquier clave no declarada en el factory. Eso
+   * rompió módulos reales (maestra: 'classrooms' → 1 tarjeta y clic muerto en
+   * las píldoras; directora: 'paymentsData' → cobros vacíos). Las claves que
+   * no estaban en el factory simplemente no se guardan, y ahora se aceptan
+   * en memoria para que get() las encuentre.
    */
   set(key, value) {
-    if (!(key in this._initialState)) {
-      return;
-    }
+    if (key === undefined || key === null || key === '') return;
 
     const prev = this._state[key];
 

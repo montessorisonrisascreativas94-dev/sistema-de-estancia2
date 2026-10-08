@@ -75,6 +75,8 @@ const _OPTIONAL_ENDPOINTS = [
   '/rpc/get_tasks_for_period',
   '/rpc/get_direct_message',
   '/rpc/get_student_history',
+  '/rpc/get_unread_counts',
+  '/rest/v1/posts',
   '/functions/v1/generate-invoice',
   '/functions/v1/process-event',
   '/functions/v1/send-push',

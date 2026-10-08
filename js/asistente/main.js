@@ -87,6 +87,9 @@ window.App = {
   schoolCenter: {
     init: () => SchoolCenterModule.init(),
   },
+  ui: {
+    closeModal: () => closeGlobalModal(),
+  },
 };
 
 /**
@@ -464,6 +467,29 @@ function initNavigation() {
           case 'aulas':
             await RoomsModule.init();
             break;
+          case 'asistencia':
+            import('../directora/attendance.module.js').then(m => {
+              window.App.attendance = m.AttendanceModule;
+              return m.AttendanceModule.init();
+            }).catch(() => Helpers.toast('No se pudo cargar Asistencia', 'error'));
+            break;
+          case 'calificaciones':
+            import('../directora/grades.module.js').then(m => {
+              window.App.grades = m.GradesModule;
+              return m.GradesModule.init();
+            }).catch(() => Helpers.toast('No se pudo cargar Calificaciones', 'error'));
+            break;
+          case 'ciclo-escolar-config':
+            import('../directora/school-year.module.js')
+              .then(m => m.SchoolYearModule.init())
+              .catch(() => Helpers.toast('No se pudo cargar Ciclo Escolar', 'error'));
+            break;
+          case 'reportes':
+            import('../directora/reports.module.js').then(m => {
+              window.App.reports = m.ReportsModule;
+              return m.ReportsModule.init();
+            }).catch(() => Helpers.toast('No se pudo cargar Incidencias', 'error'));
+            break;
           case 'muro':
             WallModule.init('muroPostsContainer', { 
               accentColor: 'teal', 
@@ -517,6 +543,16 @@ function initNavigation() {
         case 'estudiantes': StudentsModule.loadStudents?.(); break;
         case 'aulas':      RoomsModule.loadRooms?.(); break;
         case 'pagos':      PaymentsModule.loadPayments?.(); break;
+        case 'asistencia': window.App.attendance?.load?.(); break;
+        case 'calificaciones': {
+          const g = window.App.grades;
+          if (g) { try { g._loadBase?.().then(() => g._render?.()); } catch (_) {} }
+          break;
+        }
+        case 'ciclo-escolar-config':
+          import('../directora/school-year.module.js').then(m => m.SchoolYearModule.init()).catch(() => {});
+          break;
+        case 'reportes': try { window.App.reports?.loadReports?.(); } catch (_) {} break;
       }
     }
   };

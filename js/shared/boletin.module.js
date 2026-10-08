@@ -140,7 +140,6 @@ export const BoletinUI = {
         .select('id, name, matricula, p1_email, p2_email')
         .eq('classroom_id', S.classroomId)
         .eq('is_active', true)
-        .is('deleted_at', null)
         .order('name');
       S.students = students || [];
     }

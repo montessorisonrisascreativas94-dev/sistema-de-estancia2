@@ -186,7 +186,7 @@ export const CajaCobroV2 = {
     });
     const [{ data: pays }, { data: students }, { data: pending }] = await Promise.all([
       supabase.from('payments').select('amount').eq('status','paid').gte('paid_date',todayStr+'T00:00:00').lte('paid_date',todayStr+'T23:59:59').limit(500),
-      supabase.from('students').select('id,name,matricula,classroom_id,classrooms:classroom_id(name),p1_name,p1_phone').eq('is_active',true).is('deleted_at',null).order('name').limit(500),
+      supabase.from('students').select('id,name,matricula,classroom_id,classrooms:classroom_id(name),p1_name,p1_phone').eq('is_active',true).order('name').limit(500),
       supabase.from('payments').select('student_id,amount,status,due_date').in('status',['pending','overdue','review']).limit(2000),
     ]);
     const set = (id,v) => { const e=document.getElementById(id); if(e) e.textContent=v; };

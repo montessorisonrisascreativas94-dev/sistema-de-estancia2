@@ -157,7 +157,6 @@ export const AssistantChatApp = {
           .from('students')
           .select('parent_id, name, classrooms(name)')
           .in('parent_id', parentIds)
-          .is('deleted_at', null)
           .eq('is_active', true);
         (students || []).forEach(s => {
           if (!studentMap[s.parent_id]) {

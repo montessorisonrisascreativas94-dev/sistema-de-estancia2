@@ -1552,3 +1552,52 @@ body.panel-encargada-body .ksc-tab--sm.active::before { background: #8B5CF6; }
   box-shadow: 0 8px 16px -10px rgba(29,78,216,.65);
 }
 .ksc-alert-cta-secondary i { width: .8rem; height: .8rem; }
+
+/* ═══════════════════════════════════════════════════════════
+   CICLO ACADÉMICO — fallback de tabs y secciones
+   .acad-tab se construye en academic-cycle.module.js con clases
+   Tailwind sueltas: si el CSS utilitario no carga (o el shell se
+   pinta tarde), estos selectores mantienen el tab legible.
+═══════════════════════════════════════════════════════════ */
+.acad-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  padding: .4rem .85rem;
+  border-radius: .75rem;
+  border: 2px solid transparent;
+  background: transparent;
+  color: #64748B;
+  font-size: .7rem;
+  font-weight: 900;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease, border-color .15s ease;
+}
+.acad-tab:hover {
+  background: #F8FAFC;
+  color: #334155;
+}
+.acad-tab.active {
+  border-color: #3B82F6;
+  background: #EFF6FF;
+  color: #1D4ED8;
+}
+
+/* Padding mínimo garantizado en los hubs del ciclo (el HTML trae p-2,
+   que en móvil queda demasiado pegado al borde). */
+#ciclo-escolar > div,
+#ciclo-academico > div,
+#ciclo-escolar-config > div {
+  padding: 1rem;
+  min-height: 180px;
+}
+
+/* Tipografía consistente en ambos hubs */
+#ciclo-escolar h1, #ciclo-escolar h2,
+#ciclo-academico h1, #ciclo-academico h2 {
+  color: #0F172A;
+  font-weight: 900;
+  line-height: 1.25;
+}

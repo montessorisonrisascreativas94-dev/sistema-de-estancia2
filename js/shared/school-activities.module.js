@@ -1068,21 +1068,66 @@ export const SchoolActivitiesModule = {
   nextMonth() { document.querySelector('[data-sa-action="next-month"]')?.click(); }
 };
 
-// Estilos usados por los modales/formularios (se inyectan una sola vez)
+// Estilos usados por la sección (contenedor, tarjetas, formularios).
+// Se inyectan UNA sola vez. Paleta Sonrisas Creativas:
+//   verde #28B54D / #239943 · naranja #FF8A00 / #E07900 · rojo #EF4444
+//   gris #64748B / bordes #E2E8F0 · texto #0F172A / #1E293B
 const SA_CSS = `
-.sa-label{display:block;font-size:10px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:#94A3B8;margin-bottom:6px}
-.sa-input{width:100%;border:1px solid #E2E8F0;border-radius:12px;padding:10px 12px;font-size:14px;font-weight:600;color:#1E293B;outline:none;background:#fff;transition:border-color .15s}
-.sa-input:focus{border-color:#14B8A6}
+/* ── Contenedor de la sección ───────────────────────────── */
+#actividadesContent{color-scheme:light;max-width:1400px;margin:0 auto;font-family:'Nunito',sans-serif}
+
+/* ── Etiquetas de formulario ────────────────────────────── */
+.sa-label{display:block;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#64748B;margin-bottom:6px}
+
+/* ── Campos ─────────────────────────────────────────────── */
+.sa-input{width:100%;border:1px solid #E2E8F0;border-radius:14px;padding:12px 14px;font-size:14px;font-weight:600;color:#1E293B;outline:none;background:#fff;transition:all .18s ease;font-family:inherit}
+.sa-input:focus{border-color:#28B54D;box-shadow:0 0 0 4px rgba(40,181,77,.14)}
+.sa-input::placeholder{color:#94A3B8;font-weight:600}
 textarea.sa-input{resize:vertical;line-height:1.5}
-.sa-btn-primary,.sa-btn-ghost,.sa-btn-danger,.sa-btn-publish{display:inline-flex;align-items:center;gap:6px;border-radius:12px;padding:10px 16px;font-size:12px;font-weight:900;cursor:pointer;transition:all .15s;border:1px solid transparent}
-.sa-btn-primary{background:#0D9488;color:#fff;box-shadow:0 6px 16px rgba(13,148,136,.25)}
-.sa-btn-primary:hover{background:#0F766E}
-.sa-btn-publish{background:#8B5CF6;color:#fff;box-shadow:0 6px 16px rgba(139,92,246,.25)}
-.sa-btn-publish:hover{background:#7C3AED}
-.sa-btn-ghost{background:#F1F5F9;color:#475569}
-.sa-btn-ghost:hover{background:#E2E8F0}
-.sa-btn-danger{background:#FEF2F2;color:#DC2626;border-color:#FECACA}
-.sa-btn-danger:hover{background:#FEE2E2}
+select.sa-input{cursor:pointer}
+
+/* ── Botones (acción principal = verde) ─────────────────── */
+.sa-btn-primary,.sa-btn-ghost,.sa-btn-danger,.sa-btn-publish{display:inline-flex;align-items:center;gap:6px;border-radius:14px;padding:12px 22px;font-size:12px;font-weight:900;letter-spacing:.02em;cursor:pointer;transition:all .18s ease;border:1px solid transparent;line-height:1}
+.sa-btn-primary:active,.sa-btn-ghost:active,.sa-btn-danger:active,.sa-btn-publish:active{transform:translateY(1px)}
+.sa-btn-primary{background:#28B54D;color:#fff;box-shadow:0 6px 16px rgba(40,181,77,.28)}
+.sa-btn-primary:hover{background:#239943}
+.sa-btn-publish{background:#FF8A00;color:#fff;box-shadow:0 6px 16px rgba(255,138,0,.28)}
+.sa-btn-publish:hover{background:#E07900}
+.sa-btn-ghost{background:#F1F5F9;color:#475569;border-color:#E2E8F0}
+.sa-btn-ghost:hover{background:#E2E8F0;color:#0F172A}
+.sa-btn-danger{background:#EF4444;color:#fff;border-color:#DC2626;box-shadow:0 6px 16px rgba(239,68,68,.22)}
+.sa-btn-danger:hover{background:#DC2626}
+
+/* ── Variantes utilitarias que faltan en montessori-tailwind ── */
+@media (min-width:768px){
+  [class~="md:p-4"]{padding:1rem}
+  [class~="md:p-5"]{padding:1.25rem}
+  [class~="md:p-7"]{padding:1.75rem}
+  [class~="md:gap-2"]{gap:.5rem}
+  [class~="md:text-xs"]{font-size:.75rem;line-height:1rem}
+  [class~="md:text-base"]{font-size:1rem;line-height:1.5rem}
+  [class~="md:text-xl"]{font-size:1.25rem;line-height:1.75rem}
+}
+[class~="active:scale-[.995]"]:active{transform:scale(.995)}
+[class~="hover:shadow-md"]:hover{box-shadow:0 10px 24px rgba(15,23,42,.08)}
+
+/* ── Input de archivo ───────────────────────────────────── */
+#actividadesContent input[type=file]::file-selector-button{margin-right:12px;padding:8px 16px;border:0;border-radius:12px;background:#E6F7EB;color:#239943;font-weight:800;font-size:12px;cursor:pointer;transition:background .15s}
+#actividadesContent input[type=file]::file-selector-button:hover{background:#D1F2DC}
+
+/* ── Paleta del colegio sobre los acentos teal del módulo ─ */
+#actividadesContent .text-teal-500{color:#28B54D}
+#actividadesContent .text-teal-600,#actividadesContent .text-teal-700{color:#239943}
+#actividadesContent .bg-teal-50{background-color:#E6F7EB}
+#actividadesContent .bg-teal-600,#actividadesContent .bg-teal-700{background-color:#28B54D}
+#actividadesContent [class~="hover:bg-teal-700"]:hover{background-color:#239943}
+#actividadesContent [class~="hover:text-teal-700"]:hover{color:#239943}
+#actividadesContent [class~="hover:bg-teal-50"]:hover{background-color:#E6F7EB}
+#actividadesContent .border-teal-100{border-color:#C8EFD5}
+#actividadesContent .border-teal-400,#actividadesContent .border-teal-500{border-color:#28B54D}
+#actividadesContent [class~="hover:border-teal-300"]:hover{border-color:#7BD696}
+#actividadesContent [class~="focus:border-teal-400"]:focus{border-color:#28B54D}
+
 .line-clamp-2{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 `;
 if (typeof document !== 'undefined' && !document.getElementById('saActivitiesCss')) {

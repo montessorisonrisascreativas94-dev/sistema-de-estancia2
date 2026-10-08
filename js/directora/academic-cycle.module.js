@@ -105,20 +105,64 @@ export const AcademicCycleModule = {
       </div>
       <div id="academicTabContent"></div>
     </div>`;
+
+    this._syncHeaderSelector();
+  },
+
+  /**
+   * El header del panel (#headerCycleSelector) se llena desde main.js y este
+   * módulo renderiza su propio #yearSelector: si no se espejan, el header y el
+   * contenido quedan desincronizados. Aquí se garantiza que ambos tengan el
+   * mismo año seleccionado (y la misma lista de opciones).
+   */
+  _syncHeaderSelector() {
+    const hdr = $el('headerCycleSelector');
+    if (!hdr || !this._years.length) return;
+    const yr = this._currentYear;
+
+    const hasValue = yr && Array.from(hdr.options || []).some(o => o.value === String(yr.id));
+    if (!hasValue || hdr.options.length !== this._years.length) {
+      hdr.innerHTML = this._years
+        .map(y => `<option value="${y.id}"${yr && y.id === yr.id ? ' selected' : ''}>${y.name}${y.is_current ? ' ✓' : ''}</option>`)
+        .join('');
+    }
+    if (yr && hdr.value !== String(yr.id)) hdr.value = String(yr.id);
   },
 
   showTab(tab) {
     this._currentTab = tab;
-    document.querySelectorAll('.acad-tab').forEach(b=>{
-      const on = b.dataset.tab===tab;
-      b.className=`acad-tab px-3 py-1.5 rounded-xl text-xs font-black uppercase border-2 ${on?'border-blue-500 bg-blue-50 text-blue-700':'border-transparent text-slate-500 hover:bg-slate-50'}`;
-    });
+    const paintTabs = () => {
+      const tabs = document.querySelectorAll('.acad-tab');
+      tabs.forEach(b => {
+        const on = b.dataset.tab === tab;
+        b.className = `acad-tab px-3 py-1.5 rounded-xl text-xs font-black uppercase border-2 ${on ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-transparent text-slate-500 hover:bg-slate-50'}`;
+        b.classList.toggle('active', on);
+      });
+      return tabs.length;
+    };
+    // El shell puede acabar de insertarse: si aún no hay tabs, repintar en el
+    // siguiente frame para no dejar el estado visual desincronizado.
+    if (!paintTabs()) requestAnimationFrame(paintTabs);
     const c=$el('academicTabContent'); if(!c)return;
     c.innerHTML='<div class="animate-pulse h-32 bg-slate-100 rounded-2xl"></div>';
     ({preregistrations:()=>this.loadPreregistrations(), enrollments:()=>this.loadEnrollments(), plans:()=>this.loadPlans(), charges:()=>this.loadCharges(), reenrollments:()=>this.loadReenrollments()})[tab]?.();
   },
 
-  async switchYear(id){ this._currentYear=this._years.find(y=>String(y.id)===String(id)); this.showTab('preregistrations'); },
+  async switchYear(id){
+    let y = this._years.find(x => String(x.id) === String(id));
+    // Vino del header y este módulo aún no lo conoce: recargar la lista.
+    if (!y) { await this._loadYears(); y = this._years.find(x => String(x.id) === String(id)); }
+    if (y) this._currentYear = y;
+
+    // Espejar el año en AMBOS selects (header y módulo).
+    this._syncHeaderSelector();
+    const ys = $el('yearSelector');
+    if (ys && this._currentYear && ys.value !== String(this._currentYear.id)) {
+      ys.value = String(this._currentYear.id);
+    }
+
+    this.showTab('preregistrations');
+  },
 
   // ── PRE-INSCRIPCIONES ────────────────────────────────────────────────────
   async loadPreregistrations() {

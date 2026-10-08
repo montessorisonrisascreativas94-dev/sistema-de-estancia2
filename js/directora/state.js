@@ -44,6 +44,9 @@ function createInitialState() {
       selected: null
     },
 
+    // ?? Pagos (lista cacheada por payments_clean.js — se lee con get())
+    paymentsData: null,
+
     // ?? PAGOS
     payments: {
       all: [],

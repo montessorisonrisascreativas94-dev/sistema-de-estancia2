@@ -137,7 +137,6 @@ export const BadgeSystem = {
             .from('students')
             .select('classroom_id')
             .eq('parent_id', user.id)
-            .is('deleted_at', null)
             .eq('is_active', true);
           const classroomIds = students?.map(s => s.classroom_id).filter(Boolean) || [];
           if (classroomIds.length) {
@@ -401,7 +400,6 @@ export const BadgeSystem = {
             .from('students')
             .select('classroom_id')
             .eq('parent_id', user.id)
-            .is('deleted_at', null)
             .eq('is_active', true);
           const classroomIds = students?.map(s => s.classroom_id).filter(Boolean) || [];
           if (classroomIds.length) {

@@ -22,6 +22,11 @@
   <link rel="stylesheet" href="css/layout.css" />
   <link rel="stylesheet" href="css/montessori-modern.css" />
   <link rel="stylesheet" href="css/montessori-tailwind.css">
+  <!-- Utilidades Tailwind v4 del build actual del proyecto (cascada por @layer:
+       sólo rellena clases que montessori-tailwind no define, sin pisar el resto) -->
+  <link rel="stylesheet" href="css/karpus-tailwind.css">
+  <!-- Estilos propios del módulo académico (asistencia, calificaciones, reportes) -->
+  <link rel="stylesheet" href="css/asistente-gradebook.css">
   <link rel="stylesheet" href="css/premium-mobile.css">
     <link rel="stylesheet" href="css/wall-social.css">
   <link rel="stylesheet" href="css/student-record-modal.css">
@@ -245,6 +250,18 @@
               <i data-lucide="school" class="w-3.5 h-3.5 text-blue-200 shrink-0"></i>
               <span>Aulas</span>
             </button>
+            <button data-section="asistencia" class="kk-nav-sub-item">
+              <i data-lucide="calendar-check-2" class="w-3.5 h-3.5 text-pink-200 shrink-0"></i>
+              <span>Asistencia</span>
+            </button>
+            <button data-section="calificaciones" class="kk-nav-sub-item">
+              <i data-lucide="star" class="w-3.5 h-3.5 text-amber-200 shrink-0"></i>
+              <span>Calificaciones</span>
+            </button>
+            <button data-section="ciclo-escolar-config" class="kk-nav-sub-item">
+              <i data-lucide="calendar-range" class="w-3.5 h-3.5 text-blue-200 shrink-0"></i>
+              <span>Ciclo Escolar</span>
+            </button>
             <button data-section="accesos" class="kk-nav-sub-item">
               <i data-lucide="scan-line" class="w-3.5 h-3.5 text-lime-200 shrink-0"></i>
               <span>Accesos QR</span>
@@ -279,6 +296,10 @@
               <i data-lucide="video" class="w-3.5 h-3.5 text-rose-200 shrink-0"></i>
               <span>Videollamadas</span>
               <span id="badge-videocall" class="hidden kk-badge ml-auto">0</span>
+            </button>
+            <button data-section="reportes" class="kk-nav-sub-item">
+              <i data-lucide="alert-triangle" class="w-3.5 h-3.5 text-pink-200 shrink-0"></i>
+              <span>Incidencias</span>
             </button>
           </div>
         </div>
@@ -1171,6 +1192,248 @@
         </div>
         <div id="inscripcionesContainer">
           <div class="text-center py-8 text-slate-400">Cargando preinscripciones...</div>
+        </div>
+      </section>
+
+      <!-- ============================================================
+           ASISTENCIA (módulo compartido con Dirección)
+           ============================================================ -->
+      <section id="asistencia" class="section hidden">
+
+        <!-- Header -->
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+          <div>
+            <h1 class="text-2xl font-black text-slate-800 tracking-tight flex items-center gap-2">
+              <span class="w-9 h-9 bg-blue-100 text-[#0B63C7] rounded-xl flex items-center justify-center"><i data-lucide="calendar-check" class="w-5 h-5"></i></span>
+              Control de Asistencia
+            </h1>
+            <p class="text-slate-400 text-sm font-medium mt-0.5">Seguimiento diario y por periodo de todos los estudiantes</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <div id="attSpinner" class="hidden w-5 h-5 border-2 border-blue-200 border-t-transparent rounded-full animate-spin"></div>
+          </div>
+        </div>
+
+        <!-- Mode Tabs -->
+        <div class="flex gap-1 bg-slate-100 p-1 rounded-xl w-fit mb-6">
+          <button data-att-mode="day" class="active-att-tab px-5 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all">
+            <i data-lucide="calendar" class="w-3.5 h-3.5 inline mr-1"></i>Por Dia
+          </button>
+          <button data-att-mode="range" class="px-5 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all text-slate-500 hover:text-slate-700">
+            <i data-lucide="calendar-range" class="w-3.5 h-3.5 inline mr-1"></i>Por Periodo
+          </button>
+        </div>
+
+        <!-- Day picker -->
+        <div id="attPanelDay" class="mb-5">
+          <div class="flex items-center gap-3 flex-wrap">
+            <label class="text-xs font-black text-slate-400 uppercase tracking-wider">Fecha</label>
+            <input type="date" id="attDateSingle" class="px-4 py-2 border-2 border-slate-100 rounded-xl text-sm font-bold bg-white focus:border-blue-200 focus:ring-4 focus:ring-[#0B63C7] outline-none transition-all">
+          </div>
+        </div>
+
+        <!-- Range picker -->
+        <div id="attPanelRange" class="hidden mb-5">
+          <div class="flex items-center gap-3 flex-wrap">
+            <label class="text-xs font-black text-slate-400 uppercase tracking-wider">Desde</label>
+            <input type="date" id="attDateFrom" class="px-4 py-2 border-2 border-slate-100 rounded-xl text-sm font-bold bg-white focus:border-blue-200 focus:ring-4 focus:ring-[#0B63C7] outline-none transition-all">
+            <label class="text-xs font-black text-slate-400 uppercase tracking-wider">Hasta</label>
+            <input type="date" id="attDateTo"   class="px-4 py-2 border-2 border-slate-100 rounded-xl text-sm font-bold bg-white focus:border-blue-200 focus:ring-4 focus:ring-[#0B63C7] outline-none transition-all">
+          </div>
+        </div>
+
+        <!-- KPI Cards -->
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
+          <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
+            <p class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">Total</p>
+            <p class="text-2xl font-black text-slate-800" id="attKpiTotal"></p>
+          </div>
+          <div class="bg-emerald-50 rounded-2xl p-4 border border-emerald-100 shadow-sm">
+            <p class="text-[10px] font-black text-emerald-500 uppercase tracking-wider mb-1">Presentes</p>
+            <p class="text-2xl font-black text-emerald-700" id="attKpiPresent"></p>
+          </div>
+          <div class="bg-rose-50 rounded-2xl p-4 border border-rose-100 shadow-sm">
+            <p class="text-[10px] font-black text-rose-500 uppercase tracking-wider mb-1">Ausentes</p>
+            <p class="text-2xl font-black text-rose-700" id="attKpiAbsent"></p>
+          </div>
+          <div class="bg-amber-50 rounded-2xl p-4 border border-amber-100 shadow-sm">
+            <p class="text-[10px] font-black text-amber-500 uppercase tracking-wider mb-1">Tardanzas</p>
+            <p class="text-2xl font-black text-amber-700" id="attKpiLate"></p>
+          </div>
+          <div class="bg-[#E8F2FF] rounded-2xl p-4 border border-blue-200 shadow-sm col-span-2 md:col-span-1">
+            <p class="text-[10px] font-black text-[#0B63C7] uppercase tracking-wider mb-1">Tasa Asistencia</p>
+            <p class="text-2xl font-black text-[#0850A0]" id="attKpiRate"></p>
+            <div class="mt-2 h-1.5 bg-blue-100 rounded-full overflow-hidden">
+              <div id="attRateBar" class="h-full bg-[#0B63C7] rounded-full transition-all duration-500" style="width:0%"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Charts + Table layout -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-5">
+          <!-- Donut -->
+          <div class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
+            <h3 class="text-xs font-black text-slate-500 uppercase tracking-wider mb-4">Distribucin</h3>
+            <div class="h-52"><canvas id="attDonutChart"></canvas></div>
+          </div>
+          <!-- Bar por aula (solo rango) -->
+          <div id="attBarWrap" class="hidden bg-white rounded-2xl p-5 border border-slate-100 shadow-sm lg:col-span-2">
+            <h3 class="text-xs font-black text-slate-500 uppercase tracking-wider mb-4">Asistencia por Aula</h3>
+            <div class="h-52"><canvas id="attBarChart"></canvas></div>
+          </div>
+        </div>
+
+        <!-- Filters row -->
+        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+          <div class="flex flex-wrap gap-3 p-4 border-b border-slate-100">
+            <div class="flex-1 min-w-[180px] relative">
+              <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+              <input id="attSearch" type="text" placeholder="Buscar estudiante..." class="w-full pl-9 pr-4 py-2 border-2 border-slate-100 rounded-xl text-sm font-medium bg-slate-50 focus:border-blue-200 focus:ring-4 focus:ring-[#0B63C7] outline-none transition-all">
+            </div>
+            <select id="attFilterRoom" class="px-4 py-2 border-2 border-slate-100 rounded-xl text-sm font-bold bg-slate-50 focus:border-blue-200 outline-none transition-all">
+              <option value="">Todas las aulas</option>
+            </select>
+            <select id="attFilterStatus" class="px-4 py-2 border-2 border-slate-100 rounded-xl text-sm font-bold bg-slate-50 focus:border-blue-200 outline-none transition-all">
+              <option value="present">Presente</option>
+              <option value="absent">Ausente</option>
+              <option value="late">Tardanza</option>
+            </select>
+          </div>
+
+          <!-- Table -->
+          <div class="table-scroll-wrap">
+            <table class="w-full" style="min-width:560px;">
+              <thead id="attTableHead">
+                <tr class="bg-slate-50 border-b border-slate-100">
+                  <th class="px-5 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider">Estudiante</th>
+                  <th class="px-5 py-3 text-center text-[10px] font-black text-slate-400 uppercase tracking-wider">Estado</th>
+                  <th class="px-5 py-3 text-center text-[10px] font-black text-slate-400 uppercase tracking-wider">Fecha</th>
+                  <th class="px-5 py-3 text-center text-[10px] font-black text-slate-400 uppercase tracking-wider">Entrada</th>
+                  <th class="px-5 py-3 text-center text-[10px] font-black text-slate-400 uppercase tracking-wider">Salida</th>
+                </tr>
+              </thead>
+              <tbody id="attTableBody">
+                <tr><td colspan="5" class="text-center py-10 text-slate-400 text-sm">Cargando...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ============================================================
+           CALIFICACIONES (Centro de Evaluación Académica)
+           ============================================================ -->
+      <section id="calificaciones" class="section hidden">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+          <div>
+            <h1 class="text-2xl font-black text-[#1A2340] tracking-tight flex items-center gap-3">
+              <span class="p-2 bg-indigo-100 text-indigo-600 rounded-2xl"><i data-lucide="graduation-cap" class="w-5 h-5"></i></span>
+              Centro de Evaluación Académica
+            </h1>
+            <p class="text-slate-500 font-medium mt-1">Boletín Inteligente · Plan de Estudio Único por Aula · Cuadrícula Áreas × Actividades</p>
+          </div>
+          <div class="flex gap-2 flex-wrap">
+            <button id="btnClassroomConfig" class="px-5 py-2.5 text-white rounded-xl font-black text-xs uppercase tracking-wider shadow-lg transition-all flex items-center gap-2 active:scale-95 hover:opacity-90" style="background:linear-gradient(135deg,#FF7A00,#F43F5E);box-shadow:0 4px 14px rgba(244,63,94,0.25);">
+              <i data-lucide="settings-2" class="w-4 h-4"></i> Configurar Áreas por Aula
+            </button>
+            <select id="gradesFilterPeriod" class="px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 bg-white shadow-sm outline-none focus:ring-2 focus:ring-indigo-400">
+              <option value="">Todos los períodos</option>
+            </select>
+            <button id="btnNewPeriod" class="px-5 py-2.5 text-white rounded-xl font-black text-xs uppercase tracking-wider shadow-lg transition-all flex items-center gap-2 active:scale-95 hover:opacity-90" style="background:#6366F1;box-shadow:0 4px 14px rgba(99,102,241,0.3);">
+              <i data-lucide="calendar-plus" class="w-4 h-4"></i> Nuevo Periodo
+            </button>
+          </div>
+        </div>
+
+        <div class="admin-card role-blue p-6">
+          <div id="gradesListView">
+            <div class="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
+              <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2 w-full md:w-auto">
+                <span class="w-2 h-6 bg-indigo-500 rounded-full"></span>
+                Evaluación por Estudiante
+              </h3>
+              <div class="flex flex-wrap gap-3 w-full md:w-auto">
+                <div class="relative flex-1 md:w-56">
+                  <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"></i>
+                  <input id="searchGradeStudent" placeholder="Buscar estudiante..." class="admin-input role-blue pl-10 pr-4 py-2 rounded-xl text-sm w-full">
+                </div>
+                <select id="gradesFilterClassroom" class="admin-input role-blue px-3 py-2 rounded-xl text-sm bg-slate-50 font-bold text-slate-700 outline-none">
+                  <option value="all">Todas las aulas</option>
+                </select>
+              </div>
+            </div>
+            <div class="table-scroll-wrap rounded-2xl border border-slate-200">
+              <table class="w-full text-sm text-left border-separate border-spacing-0" style="min-width:600px;">
+                <thead class="bg-[#EEF2FF] text-indigo-700 font-black uppercase text-[10px] tracking-wider sticky top-0 z-10">
+                  <tr>
+                    <th class="px-6 py-4 border-b border-indigo-100">Estudiante</th>
+                    <th class="px-4 py-4 border-b border-indigo-100">Aula</th>
+                    <th class="px-4 py-4 text-center border-b border-indigo-100">Promedio</th>
+                    <th class="px-4 py-4 text-center border-b border-indigo-100">Nivel</th>
+                    <th class="px-4 py-4 text-center border-b border-indigo-100">Acción</th>
+                  </tr>
+                </thead>
+                <tbody id="gradesTableBody" class="divide-y divide-slate-100 bg-white">
+                  <tr><td colspan="5" class="text-center py-10 text-slate-400">Cargando evaluaciones...</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="text-[10px] text-slate-400 mt-4 italic">Clic en un estudiante o en su botón Calificaciones para abrir la cuadrícula Áreas × Actividades.</p>
+          </div>
+          <div id="boletinViewer" class="hidden"></div>
+        </div>
+      </section>
+
+      <!-- ============================================================
+           CICLO ESCOLAR (configuración de año/períodos)
+           ============================================================ -->
+      <section id="ciclo-escolar-config" class="section hidden">
+        <div class="p-2 md:p-4"></div>
+      </section>
+
+      <!-- ============================================================
+           INCIDENCIAS / REPORTES
+           ============================================================ -->
+      <section id="reportes" class="section hidden">
+        <div class="flex items-center justify-between mb-6">
+          <div>
+            <h2 class="text-2xl font-bold text-[#1A2340] flex items-center gap-2">
+              <i data-lucide="alert-triangle" class="w-6 h-6 text-pink-600"></i>
+              Sistema Formal de Incidencias
+            </h2>
+            <p class="text-slate-500 text-sm">Gestione quejas con estados, prioridad, adjuntos y respuesta oficial</p>
+          </div>
+          <div class="flex gap-3">
+            <select id="statusFilter" class="px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+              <option value="">Todos los estados</option>
+              <option value="pending">Pendientes</option>
+              <option value="in_review">En Revisin</option>
+              <option value="resolved">Resueltos</option>
+              <option value="closed">Cerrados</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden">
+          <div class="table-scroll-wrap">
+            <table class="w-full text-left">
+              <thead>
+                <tr class="bg-[#E8F2FF] border-b border-blue-100 text-[#0850A0]">
+                  <th class="px-6 py-4 text-[10px] font-black uppercase tracking-widest">Tipo</th>
+                  <th class="px-6 py-4 text-[10px] font-black uppercase tracking-widest">Reportado por</th>
+                  <th class="px-6 py-4 text-[10px] font-black uppercase tracking-widest">Objetivo</th>
+                  <th class="px-6 py-4 text-[10px] font-black uppercase tracking-widest">Severidad</th>
+                  <th class="px-6 py-4 text-[10px] font-black uppercase tracking-widest">Estado</th>
+                  <th class="px-6 py-4 text-[10px] font-black uppercase tracking-widest">Fecha</th>
+                  <th class="px-6 py-4 text-[10px] font-black uppercase tracking-widest">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="reportsList" class="divide-y divide-slate-50">
+                <!-- Inyectado por JS -->
+              </tbody>
+            </table>
+          </div>
         </div>
       </section>
 
