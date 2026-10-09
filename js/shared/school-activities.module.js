@@ -264,7 +264,7 @@ function _bannerHTML() {
          style="background-image:url('${_escAttr(cfg.banner_url)}');background-size:cover;background-position:center"></div>`
     : '';
   return `
-    <div class="rounded-3xl p-5 md:p-6 text-white relative overflow-hidden shadow-lg"
+    <div class="sa-anim rounded-3xl p-5 md:p-6 text-white relative overflow-hidden shadow-lg"
          style="background:linear-gradient(135deg, ${color}, ${color}CC 55%, #0F172A)">
       ${banner}
       <div class="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2"></div>
@@ -296,7 +296,7 @@ function _filtersHTML() {
       `<option value="${c.id}" ${f.classroom === String(c.id) ? 'selected' : ''}>${esc(c.name)}</option>`)).join('');
 
   return `
-    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-3 flex flex-wrap gap-2 items-center">
+    <div class="sa-anim bg-white rounded-2xl border border-slate-100 shadow-sm p-3 flex flex-wrap gap-2 items-center">
       <div class="relative flex-1 min-w-[180px]">
         <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
         <input id="saSearch" type="search" value="${_escAttr(f.q)}" placeholder="🔎 Buscar actividad..."
@@ -327,7 +327,7 @@ function _navHTML() {
        </button>`
     : '';
   return `
-    <div class="flex flex-wrap items-center justify-between gap-3">
+    <div class="sa-anim flex flex-wrap items-center justify-between gap-3">
       <div class="flex items-center gap-2">
         <button data-sa-action="prev-month" aria-label="Mes anterior"
           class="w-10 h-10 rounded-xl bg-white border border-slate-200 shadow-sm flex items-center justify-center text-slate-600 hover:bg-teal-50 hover:text-teal-700 transition-all active:scale-95">
@@ -350,9 +350,9 @@ function _chipHTML(a) {
   const c = catOf(a.category);
   return `
     <button data-sa-action="open" data-id="${a.id}"
-      class="w-full text-left px-2 py-1 rounded-lg text-[11px] font-bold leading-tight truncate transition-transform hover:scale-[1.02]"
+      class="sa-chip w-full text-left px-2 py-1 rounded-lg text-[11px] font-bold leading-tight"
       style="background:${esc(a.color_hex || c.color)}1F;color:${esc(a.color_hex || c.color)};border-left:3px solid ${esc(a.color_hex || c.color)}">
-      <span class="mr-0.5">${c.emoji}</span>${esc(a.title)}
+      <span class="sa-emoji">${c.emoji}</span><span class="min-w-0 truncate">${esc(a.title)}</span>
     </button>`;
 }
 
@@ -364,15 +364,15 @@ function _gridHTML(list) {
   const isThisMonth = today.getFullYear() === state.year && today.getMonth() + 1 === state.month;
 
   let cells = '';
-  for (let i = 0; i < offset; i++) cells += `<div class="rounded-2xl bg-slate-50 border border-slate-100" style="min-height:92px"></div>`;
+  for (let i = 0; i < offset; i++) cells += `<div class="sa-cell sa-cell-empty"></div>`;
   for (let d = 1; d <= days; d++) {
     const dayActs = list.filter(a => Number((a.activity_date || '').slice(8, 10)) === d);
     const isToday = isThisMonth && today.getDate() === d;
     cells += `
-      <div class="rounded-2xl bg-white border p-2 flex flex-col gap-1 overflow-hidden shadow-sm ${isToday ? 'border-teal-500 shadow-md' : 'border-slate-100'}" style="min-height:92px;${isToday ? 'box-shadow:0 0 0 3px rgba(20,184,166,0.18)' : ''}">
+      <div class="sa-cell${isToday ? ' sa-cell-today' : ''}">
         <div class="flex items-center justify-between px-0.5">
-          <span class="text-[11px] font-black ${isToday ? 'text-teal-700' : 'text-slate-400'}">${d}</span>
-          ${dayActs.length ? `<span class="text-[9px] font-black text-slate-300">${dayActs.length}</span>` : ''}
+          <span class="text-[11px] font-black ${isToday ? 'text-teal-700' : 'text-slate-500'}">${d}</span>
+          ${dayActs.length ? `<span class="sa-day-count">${dayActs.length}</span>` : ''}
         </div>
         <div class="flex flex-col gap-1 overflow-y-auto kk-scroll">${dayActs.slice(0, 3).map(_chipHTML).join('')}</div>
         ${dayActs.length > 3 ? `<button data-sa-action="day" data-day="${d}" class="text-[10px] font-black text-teal-600 hover:underline text-left px-0.5">+${dayActs.length - 3} más</button>` : ''}
@@ -380,9 +380,9 @@ function _gridHTML(list) {
   }
 
   return `
-    <div class="bg-white rounded-3xl border border-slate-100 shadow-sm p-3 md:p-4 overflow-x-auto">
+    <div class="sa-cal sa-anim rounded-3xl overflow-x-auto">
       <div class="grid grid-cols-7 gap-1.5 md:gap-2" style="min-width:560px">
-        ${WEEKDAYS.map(w => `<div class="text-center text-[10px] md:text-xs font-black text-slate-400 uppercase tracking-wider py-1">${w}</div>`).join('')}
+        ${WEEKDAYS.map(w => `<div class="sa-wd text-center uppercase py-1.5 tracking-wider font-black">${w}</div>`).join('')}
         ${cells}
       </div>
       ${!list.length ? `<p class="text-center text-sm font-bold text-slate-400 py-6">Sin actividades para este mes</p>` : ''}
@@ -391,13 +391,13 @@ function _gridHTML(list) {
 
 function _listHTML(list) {
   if (!list.length) {
-    return `<div class="bg-white rounded-3xl border border-slate-100 shadow-sm p-10 text-center">
+    return `<div class="sa-anim bg-white rounded-3xl border border-slate-100 shadow-sm p-10 text-center">
       <div class="text-4xl mb-3">🗓️</div>
       <p class="text-sm font-bold text-slate-400">No hay actividades que coincidan con los filtros.</p>
     </div>`;
   }
   return `
-    <div class="space-y-3">
+    <div class="sa-anim space-y-3">
       ${list.map(a => {
         const c = catOf(a.category);
         const s = stOf(a.status);
@@ -436,7 +436,7 @@ function _statsHTML() {
       <div><div class="text-xl font-black text-slate-800 leading-none">${v}</div>
       <div class="text-[10px] font-black text-slate-400 uppercase tracking-wider mt-1">${l}</div></div>
     </div>`;
-  return `<div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+  return `<div class="sa-anim grid grid-cols-2 lg:grid-cols-4 gap-3">
     ${item(total, 'Actividades', 'calendar-check')}${item(done, 'Realizadas', 'check-circle-2')}
     ${item(pub, 'Publicadas', 'users')}${item(state.evidenceCount, 'Fotografías', 'camera')}
   </div>`;
@@ -445,30 +445,35 @@ function _statsHTML() {
 function _upcomingHTML() {
   if (state.mode !== 'parent' || !state.upcoming.length) return '';
   return `
-    <div class="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+    <div class="sa-anim bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
       <div class="p-4 md:p-5 border-b border-slate-100 flex items-center gap-3">
         <div class="w-10 h-10 rounded-2xl bg-amber-50 flex items-center justify-center"><span class="text-lg">📌</span></div>
         <div><h3 class="font-black text-slate-800 text-sm">Próximas Actividades</h3>
-        <p class="text-[10px] font-black text-slate-400 uppercase tracking-wider">Lo que viviremos pronto en el aula</p></div>
+        <p class="text-[10px] font-black text-slate-400 uppercase tracking-wider">Doble clic sobre una actividad para leerla completa</p></div>
       </div>
-      <div class="divide-y divide-slate-50">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3 p-4">
         ${state.upcoming.map(a => {
           const c = catOf(a.category);
           const d = new Date(`${a.activity_date}T12:00:00`);
+          const dateLabel = `${d.getDate()} ${MONTH_NAMES[d.getMonth()].slice(0, 3).toUpperCase()}`;
           const shots = state.upcomingEvidence?.get(a.id) || 0;
           return `
-          <button data-sa-action="open" data-id="${a.id}" class="w-full text-left p-4 flex gap-3 hover:bg-slate-50 transition-colors">
-            <div class="shrink-0 w-12 rounded-xl flex flex-col items-center justify-center text-white py-2" style="background:${esc(a.color_hex || c.color)}">
-              <span class="text-base font-black leading-none">${d.getDate()}</span>
-              <span class="text-[8px] font-black opacity-80">${MONTH_NAMES[d.getMonth()].slice(0, 3).toUpperCase()}</span>
-            </div>
+          <button data-sa-dblopen="${a.id}" title="Doble clic para leer completo"
+            class="sa-upc w-full text-left bg-white rounded-2xl border border-slate-100 shadow-sm p-4 flex gap-3 cursor-pointer">
+            <div class="shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center text-2xl" style="background:${esc(a.color_hex || c.color)}1A">${c.emoji}</div>
             <div class="min-w-0 flex-1">
-              <p class="font-black text-slate-800 text-sm truncate">${c.emoji} ${esc(a.title)}</p>
-              <p class="text-xs text-slate-500 font-semibold mt-0.5 line-clamp-2">${esc(a.description)}</p>
+              <div class="flex items-start justify-between gap-2">
+                <h4 class="font-black text-slate-800 text-sm leading-snug truncate">${esc(a.title)}</h4>
+                ${shots ? `<span class="shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-teal-50 text-teal-700 text-[10px] font-black no-underline">📸 ${shots}</span>` : ''}
+              </div>
+              <p class="text-xs text-slate-500 font-semibold mt-1 line-clamp-2">${esc(a.description)}</p>
+              <div class="flex flex-wrap items-center gap-1.5 mt-2 text-[10px] font-black uppercase tracking-wider">
+                <span class="px-2 py-0.5 rounded-md" style="background:${esc(a.color_hex || c.color)}1A;color:${esc(a.color_hex || c.color)}">${c.emoji} ${esc(c.label)}</span>
+                <span class="text-slate-400">🗓 ${dateLabel}</span>
+                ${a.start_time ? `<span class="text-slate-400">🕐 ${esc(a.start_time.slice(0, 5))}</span>` : ''}
+              </div>
             </div>
-            ${shots ? `<div class="flex flex-col items-end gap-1 shrink-0 justify-center">
-                <span class="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-teal-50 text-teal-700 text-[10px] font-black">📸 ${shots} <span class="hidden sm:inline">foto(s)</span></span>
-              </div>` : ''}
+            <span class="sa-upc-hint shrink-0 self-center hidden sm:flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-50 text-slate-300 text-[9px] font-black">📖 <span>Doble clic</span></span>
           </button>`;
         }).join('')}
       </div>
@@ -1004,6 +1009,11 @@ function _bind() {
     const ev = e.target.closest('[data-sa-action="open"]');
     if (ev) setTimeout(_bindEvidenceInput, 300);
   });
+  // Doble clic → leer actividad completa en modal (feed de padres)
+  document.addEventListener('dblclick', (e) => {
+    const el = e.target.closest('[data-sa-dblopen]');
+    if (el && el.dataset.saDblopen) openDetail(el.dataset.saDblopen);
+  });
   document.addEventListener('input', _handleInput);
   document.addEventListener('change', (e) => {
     if (e.target.id === 'saEvidenceFiles') {
@@ -1129,6 +1139,47 @@ select.sa-input{cursor:pointer}
 #actividadesContent [class~="focus:border-teal-400"]:focus{border-color:#28B54D}
 
 .line-clamp-2{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+
+/* ══ Calendario: panel gris destacado + días con borde de contraste ══ */
+.sa-cal{background:linear-gradient(180deg,#E9EEF4 0%,#DEE6EF 100%);border:1px solid #C6D1DF;box-shadow:0 12px 32px rgba(15,23,42,.12);padding:12px}
+@media(min-width:768px){.sa-cal{padding:16px}}
+.sa-wd{font-size:10px;color:#475569;background:rgba(100,116,139,.20);border-radius:.55rem;padding:7px 4px;letter-spacing:.14em}
+@media(min-width:768px){.sa-wd{font-size:12px;padding:8px 4px}}
+.sa-cell{background:#fff;border:1px solid #C7D0DB;border-radius:.9rem;padding:6px;min-height:96px;display:flex;flex-direction:column;gap:4px;overflow:hidden;box-shadow:0 1px 3px rgba(15,23,42,.06);transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease}
+.sa-cell:hover{transform:translateY(-2px);border-color:#8FA0B5;box-shadow:0 10px 22px rgba(15,23,42,.14)}
+.sa-cell-empty{background:rgba(226,232,240,.50);border:1px dashed #C7D0DB;box-shadow:none}
+.sa-cell-empty:hover{transform:none;border-color:#C7D0DB;box-shadow:none}
+.sa-cell-today{border-color:#28B54D;outline:2px solid rgba(40,181,77,.28);outline-offset:0}
+.sa-day-count{height:18px;min-width:18px;padding:0 5px;border-radius:999px;background:#475569;color:#fff;font-size:9px;font-weight:900;display:inline-flex;align-items:center;justify-content:center}
+
+/* ══ Eventos: emoji grande con animación ══ */
+.sa-chip{display:flex;align-items:center;gap:6px;transition:transform .18s ease,filter .18s ease}
+.sa-chip:hover{transform:translateY(-1px) translateX(1px);filter:brightness(1.05)}
+.sa-chip:active{transform:scale(.98)}
+.sa-emoji{font-size:18px;line-height:1.1;flex:0 0 auto;display:inline-block;animation:saPop .45s cubic-bezier(.2,.85,.3,1.5) both}
+.sa-chip:hover .sa-emoji{animation:saWiggle .5s ease}
+@keyframes saPop{0%{transform:scale(.2) rotate(-14deg);opacity:0}70%{transform:scale(1.16) rotate(3deg);opacity:1}100%{transform:scale(1) rotate(0);opacity:1}}
+@keyframes saWiggle{0%,100%{transform:rotate(0) scale(1)}25%{transform:rotate(-14deg) scale(1.14)}75%{transform:rotate(10deg) scale(1.1)}}
+
+/* ══ Entrada animada de la sección (stagger) ══ */
+.sa-anim{animation:saFadeUp .5s ease both}
+#actividadesContent .space-y-5>.sa-anim:nth-child(1){animation-delay:.04s}
+#actividadesContent .space-y-5>.sa-anim:nth-child(2){animation-delay:.10s}
+#actividadesContent .space-y-5>.sa-anim:nth-child(3){animation-delay:.16s}
+#actividadesContent .space-y-5>.sa-anim:nth-child(4){animation-delay:.22s}
+#actividadesContent .space-y-5>.sa-anim:nth-child(5){animation-delay:.28s}
+#actividadesContent .space-y-5>.sa-anim:nth-child(6){animation-delay:.34s}
+@keyframes saFadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+
+/* ══ Feed padres: contenedores pequeños, doble clic = modal ══ */
+.sa-upc{transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease}
+.sa-upc:hover{transform:translateY(-2px);border-color:#C7D0DB;box-shadow:0 10px 24px rgba(15,23,42,.10)}
+.sa-upc:hover .sa-upc-hint{background:#E6F7EB;color:#239943}
+.sa-upc-hint{transition:background .18s ease,color .18s ease}
+
+/* ══ Filas de la vista lista: elevación al hover ══ */
+#actividadesContent [data-sa-action="open"]{transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease}
+#actividadesContent [data-sa-action="open"]:hover{transform:translateY(-1px)}
 `;
 if (typeof document !== 'undefined' && !document.getElementById('saActivitiesCss')) {
   const style = document.createElement('style');

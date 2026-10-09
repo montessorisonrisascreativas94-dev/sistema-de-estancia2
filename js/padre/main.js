@@ -15,7 +15,7 @@ import { ReportsModule }   from './reports.js';
 import { DailyReportModule } from './daily-report.js';
 import { initLiveClassListener } from './attendance_live.js';
 import { NotifyPermission } from '../shared/notify-permission.js';
-import { BadgeSystem } from '../shared/badges.js';
+import { NotificationCenter, BadgeSystem } from '../shared/notification-center.js';
 import { OnboardingGuide } from '../shared/onboarding.js';
 import { Prefetch } from '../shared/prefetch.js';
 import { VideoCallUI } from '../shared/videocall-ui.js';
@@ -23,7 +23,6 @@ import { ParentRatingModule } from './parent_rating.js';
 import { WizardPayment } from './payment-wizard.js';
 import { RecentActivityModule } from './recent-activity.js';
 import { ClassroomSchedule } from './classroom-schedule.js';
-import { NewsCenter } from '../shared/news-center.js';
 import { SectionCache } from '../shared/section-cache.js';
 
 // #rating-modal se oculta con style="display:none" inline, pero se abria con
@@ -497,7 +496,6 @@ window.App = {
     win.document.close();
   }
 };
-window.BadgeSystem = BadgeSystem;
 
 window.PadreErrors = [];
 window._padreReportError = (source, err) => {
@@ -625,10 +623,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Carga paralela — no bloquea UI
     refreshDashboard().then(() => {
-      // Iniciar badges DESPUÉS de que las tarjetas del dashboard existan
-      BadgeSystem.init(auth.user.id);
-      // ?? Campanita de novedades (centro de notificaciones)
-      NewsCenter.init(auth.user.id);
+      // 🎯 Notification Center unificado (campana, badges, mensajes, realtime)
+      NotificationCenter.init(auth.user.id, 'padre');
       // Navegar a la sección solicitada en la URL (si no es home)
       if (_needsNavTo && document.getElementById(_needsNavTo)) {
         navigateTo(_needsNavTo, { force: true });
@@ -650,12 +646,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('btnLogout')?.addEventListener('click', logoutHandler);
     document.getElementById('btnLogoutDesktop')?.addEventListener('click', logoutHandler);
 
-    // 🔴 Mensajes no leídos: fuente única para la campana y el badge de
-    // Comunicación. Reemplaza a loadUnreadBadge() + initMessageBadgeRealtime(),
-    // que pintaban sobre 'badge-muro' — un id que no existe en este panel.
-    import('../shared/unread-messages.js')
-      .then(({ UnreadMessages }) => UnreadMessages.init(auth.user.id, 'padre'))
-      .catch(err => console.warn('[padre] unread-messages no cargó:', err));
+    // 🔴 Mensajes sin leer ya se cargan dentro de NotificationCenter (no doble init)
 
     // 🔴 Sistema de badges — se inicia en el .then() de refreshDashboard arriba
 
@@ -1037,8 +1028,9 @@ function _showOnlySection(targetId) {
   // canal de badges moría en cada navegación sin resuscripción.
   if (window.RealtimeManager) {
     const _rtUid = AppState.get('user')?.id;
-    const _rtKeep = _rtUid ? ['badges_' + _rtUid, 'news-center_' + _rtUid, 'notif_' + _rtUid] : [];
-    if (currentStudent?.classroom_id) _rtKeep.push('live_status_' + currentStudent.classroom_id);
+    const _rtKeep = _rtUid ? ['badges_' + _rtUid, 'news-center_' + _rtUid, 'notif_' + _rtUid, 'notif-center_' + _rtUid] : [];
+    const student = AppState.get('currentStudent');
+    if (student?.classroom_id) _rtKeep.push('live_status_' + student.classroom_id);
     RealtimeManager.unsubscribeAll(_rtKeep);
   }
   if (FeedModule._channel) {
@@ -1564,8 +1556,8 @@ async function switchStudent(studentId) {
     if (selected.classroom_id) initLiveClassListener(selected.classroom_id);
     ClassroomSchedule.init();
 
-    // 4b. Refrescar los badges del panel con el hijo seleccionado
-    BadgeSystem.init(auth.user?.id);
+    // 4b. Refrescar Notification Center con el hijo seleccionado (idempotente)
+    NotificationCenter.init(auth.user?.id, 'padre');
 
     // 5. Recargar Dashboard y UI
     updateHeaderProfile(AppState.get('profile'), selected, all);

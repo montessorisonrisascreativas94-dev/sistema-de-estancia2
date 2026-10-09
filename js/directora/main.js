@@ -15,8 +15,7 @@ import { PaymentsModule } from './payments.module.js';
 import { NewPaymentsModule } from './payments-new.module.js';
 import { InvoicingModule } from './invoicing.module.js';
 import { AccountingModule } from './accounting.module.js';
-import { BadgeSystem } from '../shared/badges.js';
-import { NewsCenter } from '../shared/news-center.js';
+import { NotificationCenter } from '../shared/notification-center.js';
 import { SCHOOL_SETTINGS_ID } from '../shared/constants.js';
 import { openGlobalModal, closeGlobalModal } from '../shared/modal.js';
 
@@ -232,7 +231,7 @@ export function goToSection(sectionId) {
 
   // ✅ LIMPIEZA DE REALTIME: Eliminar canales al cambiar de sección
   const _uid = AppState.get('user')?.id;
-  const _keepChannels = _uid ? ['badges_' + _uid, 'news-center_' + _uid, 'notif_' + _uid] : [];
+  const _keepChannels = _uid ? ['badges_' + _uid, 'news-center_' + _uid, 'notif_' + _uid, 'notif-center_' + _uid] : [];
   RealtimeManager.unsubscribeAll(_keepChannels);
 
   // Desuscribir muro al salir (ahorro de recursos Realtime)
@@ -603,21 +602,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupSearch('wallSearch', 'wall');
     setupSearch('chatSearchInput', 'chat');
 
-    // 5c. 🔴 Mensajes no leídos: fuente única para la campana y el badge de
-    // Comunicación. Reemplaza a loadUnreadMessageBadge(), que pintaba sobre
-    // 'unreadMessagesBadge' y 'badge-card-comunicacion' — ninguno existe en el
-    // HTML de este panel, así que su updateBadgeUI() era un no-op silencioso.
-    import('../shared/unread-messages.js')
-      .then(({ UnreadMessages }) => UnreadMessages.init(auth.user.id, 'directora'))
-      .catch(err => console.warn('[directora] unread-messages no cargó:', err));
+    // 5c. 🎯 Notification Center unificado: campana, badges sidebar/tarjetas,
+    // mensajes sin leer, centro de novedades y realtime — TODO en un solo init.
+    NotificationCenter.init(auth.user.id, 'directora');
 
     // Badge de posts nuevos en muro
     loadNewPostsBadge();
-
-        BadgeSystem.init(auth.user.id);
-
-    // Centro de Novedades (campana dorada con todos los eventos del panel)
-    NewsCenter.init(auth.user.id);
 
     // Feature flags de configuración del Panel Directora.
     // `student_preregistrations` SÍ existe (verificado en la BD), así que el

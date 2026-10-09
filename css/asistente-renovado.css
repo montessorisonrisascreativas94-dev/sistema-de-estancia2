@@ -1,0 +1,463 @@
+/* ═══════════════════════════════════════════════════════════════
+   PANEL ASISTENTE — Rediseño aplicando `md/diseñopaneles.md`
+   §3.4 / Matriz: Paleta = TEAL OPERATIVO #0D9488
+   · Fondo (70%): blanca/neutra + mint suave #F0FDF4
+   · Primario (20%): Teal #0D9488 (sidebar #0D9488 → #077A70)
+   · Acento (10%): Naranja #FF7A00 para CTAs/badges urgentes
+   Radios: contenedores 20–28px, inputs/botones 12–14px.
+   Se carga de ÚLTIMO en panel_asistente.html.
+   ═══════════════════════════════════════════════════════════════ */
+
+body.panel-asistente-body {
+  background: #F0FDF4 !important;
+  --kk-teal-100: #CCFBF1;
+  --kk-teal-200: #99F6E4;
+  --kk-teal-400: #2DD4BF;
+  --kk-teal-500: #0D9488;
+  --kk-teal-600: #0F766E;
+  --kk-teal-700: #115E59;
+  --kk-teal-800: #134E4A;
+  --kk-mint-50: #F0FDF4;
+}
+
+/* ─────────────────────────────────────────────
+   1. SIDEBAR — Teal #0D9488 → #077A70 (spec §3.4)
+   ───────────────────────────────────────────── */
+.panel-asistente-body aside#sidebar.kk-sidebar,
+.panel-asistente-body aside#sidebar {
+  background: linear-gradient(180deg, #0D9488 0%, #0A8A80 50%, #077A70 100%) !important;
+  border-right: 1px solid rgba(255,255,255,0.15) !important;
+}
+
+/* Logo */
+.panel-asistente-body .kk-sidebar-logo { position: relative; z-index: 10; }
+.panel-asistente-body .kk-sidebar-logo img {
+  box-shadow: 0 4px 14px rgba(0,0,0,0.22);
+  border: 2px solid rgba(255,255,255,0.85);
+}
+.panel-asistente-body .kit { color: #ffffff !important; letter-spacing: -0.01em; }
+.panel-asistente-body .brand { color: #ffffff !important; letter-spacing: -0.01em; }
+.panel-asistente-body .kk-sidebar-logo-text .sub {
+  color: rgba(255,255,255,0.72) !important;
+  letter-spacing: 0.14em;
+  font-weight: 800;
+}
+
+/* Perfil */
+.panel-asistente-body .kk-sidebar-profile {
+  background: rgba(255,255,255,0.10) !important;
+  border: 1px solid rgba(255,255,255,0.16);
+  border-radius: 16px;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+.panel-asistente-body .kk-sidebar-profile-role { color: #CCFBF1 !important; letter-spacing: 0.1em; }
+.panel-asistente-body .kk-sidebar-profile-name { color: #ffffff !important; }
+
+/* Navegación — cápsulas interactivas con borde blanco (spec mejoras.md §3.2) */
+.panel-asistente-body .kk-nav-item,
+.panel-asistente-body aside#sidebar .nav-btn {
+  background: rgba(255,255,255,0.10) !important;
+  border: 1px solid rgba(255,255,255,0.25) !important;
+  border-radius: 14px !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  margin-bottom: 6px !important;
+  padding: 10px 14px !important;
+  transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+.panel-asistente-body .kk-nav-item i,
+.panel-asistente-body aside#sidebar .nav-btn i { color: rgba(255,255,255,0.85) !important; }
+.panel-asistente-body .kk-nav-item:hover,
+.panel-asistente-body aside#sidebar .nav-btn:hover {
+  background: rgba(255,255,255,0.22) !important;
+  border-color: rgba(255,255,255,0.65) !important;
+  color: #ffffff !important;
+  transform: translateX(4px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+}
+.panel-asistente-body .kk-nav-item:hover i,
+.panel-asistente-body aside#sidebar .nav-btn:hover i { color: #ffffff !important; }
+
+/* Item ACTIVO → blanco puro con texto esmeralda #0D9488 */
+.panel-asistente-body .kk-nav-item.active,
+.panel-asistente-body aside#sidebar .nav-btn.active {
+  color: #0D9488 !important;
+  background: #ffffff !important;
+  border: 1px solid #ffffff !important;
+  font-weight: 900 !important;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18) !important;
+}
+.panel-asistente-body .kk-nav-item.active i,
+.panel-asistente-body aside#sidebar .nav-btn.active i { color: #0D9488 !important; }
+
+/* Micro-encabezados de grupo + sub-items */
+.panel-asistente-body .kk-nav-group-title {
+  color: rgba(255,255,255,0.55) !important;
+  font-size: 10px !important;
+  letter-spacing: 0.14em !important;
+  text-transform: uppercase !important;
+  font-weight: 900 !important;
+  border-top: 1px solid rgba(255,255,255,0.12);
+  padding-top: 14px !important;
+  margin-top: 6px !important;
+}
+.panel-asistente-body .kk-nav-sub-item {
+  color: rgba(255,255,255,0.82) !important;
+  border-radius: 10px;
+}
+.panel-asistente-body .kk-nav-sub-item i { color: rgba(255,255,255,0.7) !important; }
+.panel-asistente-body .kk-nav-sub-item:hover {
+  background: rgba(255,255,255,0.12) !important;
+  color: #ffffff !important;
+  border-left-color: #CCFBF1;
+}
+.panel-asistente-body .kk-nav-sub-item.active {
+  background: rgba(255,255,255,0.18) !important;
+  color: #ffffff !important;
+  border-left-color: #CCFBF1;
+  font-weight: 800;
+}
+.panel-asistente-body .kk-nav-group-toggle.open .kk-nav-chevron { color: #CCFBF1 !important; }
+
+/* Logout */
+.panel-asistente-body .kk-logout-btn {
+  background: rgba(255,255,255,0.10) !important;
+  border: 1px solid rgba(255,255,255,0.16);
+  color: #ffffff !important;
+  border-radius: 12px !important;
+  font-weight: 800;
+}
+.panel-asistente-body .kk-logout-btn:hover { background: #dc2626 !important; border-color: #dc2626 !important; }
+
+/* Ocultar mascotas decorativas */
+.panel-asistente-body .kk-sidebar-deco,
+.panel-asistente-body .sidebar-mascot,
+.panel-asistente-body #mascotContainer,
+.panel-asistente-body #helperMascot { display: none !important; }
+.panel-asistente-body aside#sidebar .kk-sidebar-deco { display: none !important; }
+.panel-asistente-body aside#sidebar .kk-sidebar-foot p {
+  font-size: 9px !important;
+  color: rgba(255,255,255,0.45) !important;
+  letter-spacing: 0.18em;
+}
+
+/* Tooltip + scrollbar del sidebar */
+.panel-asistente-body [data-tooltip]::after { background: #115E59 !important; }
+.panel-asistente-body .kk-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.28) !important; }
+.panel-asistente-body .kk-scroll::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.45) !important; }
+
+/* ─────────────────────────────────────────────
+   2. HEADER — sticky, blanco translúcido
+   ───────────────────────────────────────────── */
+.panel-asistente-body .header {
+  background: rgba(255,255,255,0.78) !important;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-bottom: 1px solid #E2E8F0;
+}
+.panel-asistente-body .header h2 { color: #134E4A !important; font-weight: 900 !important; }
+.panel-asistente-body .header span:not(.kk-badge) { color: #0F766E !important; }
+.panel-asistente-body #menuBtn:hover { background: #F0FDF4 !important; color: #134E4A !important; }
+
+/* ─────────────────────────────────────────────
+   3. ENCABEZADOS DE SECCIÓN — jerarquía (spec §2.3)
+   Título oscuro + barra de acento teal
+   ───────────────────────────────────────────── */
+.panel-asistente-body .section h1,
+.panel-asistente-body .section h2 {
+  color: #0F172A !important;
+  letter-spacing: -0.02em;
+}
+.panel-asistente-body .section h1::before,
+.panel-asistente-body .section h2::before {
+  content: "";
+  display: inline-flex;
+  width: 7px;
+  height: 24px;
+  align-self: center;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #14B8A6 0%, #0F766E 100%);
+  margin-right: 10px;
+  box-shadow: 0 2px 6px rgba(13,148,136,0.35);
+  vertical-align: -4px;
+}
+
+/* ─────────────────────────────────────────────
+   4. CONTENEDORES Y TARJETAS — blanco, borde #E2E8F0,
+      radios 20–28px (spec §2.1 / §2.2)
+   ───────────────────────────────────────────── */
+.panel-asistente-body .section .bg-white,
+.panel-asistente-body .section .rounded-2xl,
+.panel-asistente-body .section .rounded-\[2rem\],
+.panel-asistente-body .section .rounded-\[2\.5rem\],
+.panel-asistente-body .section .rounded-3xl {
+  border-color: #E2E8F0 !important;
+}
+.panel-asistente-body .section .rounded-2xl,
+.panel-asistente-body .section .rounded-\[2rem\],
+.panel-asistente-body .section .rounded-\[2\.5rem\],
+.panel-asistente-body .section .rounded-3xl {
+  border-radius: 24px !important;
+}
+.panel-asistente-body #dashboard .group,
+.panel-asistente-body #estudiantes .group,
+.panel-asistente-body #aulas .group,
+.panel-asistente-body #maestros .group {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.panel-asistente-body #dashboard .group:hover,
+.panel-asistente-body #estudiantes .group:hover,
+.panel-asistente-body #aulas .group:hover,
+.panel-asistente-body #maestros .group:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 32px -18px rgba(13,148,136,0.45);
+  border-color: #2DD4BF !important;
+}
+
+/* ─────────────────────────────────────────────
+   5. INPUTS — foco teal (spec §2.2 radios 12–14px)
+   ───────────────────────────────────────────── */
+.panel-asistente-body .section input[type="text"]:focus,
+.panel-asistente-body .section input[type="search"]:focus,
+.panel-asistente-body .section input[type="date"]:focus,
+.panel-asistente-body .section input[type="number"]:focus,
+.panel-asistente-body .section select:focus,
+.panel-asistente-body .section textarea:focus {
+  border-color: #0D9488 !important;
+  box-shadow: 0 0 0 4px rgba(13,148,136,0.14) !important;
+  outline: none !important;
+}
+
+/* ─────────────────────────────────────────────
+   6. TABLAS — cabeceras Teal (spec §3.3 directora-style)
+   ───────────────────────────────────────────── */
+.panel-asistente-body .section thead,
+.panel-asistente-body .table-panel thead,
+.panel-asistente-body .data-table thead {
+  background: linear-gradient(115deg, #0D9488 0%, #0F766E 58%, #115E59 100%) !important;
+}
+.panel-asistente-body .section thead th,
+.panel-asistente-body .table-panel thead th,
+.panel-asistente-body .data-table thead th {
+  color: #ffffff !important;
+  font-weight: 900 !important;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border: none !important;
+  border-bottom: 1px solid rgba(255,255,255,0.18) !important;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.18);
+}
+.panel-asistente-body .section thead tr,
+.panel-asistente-body .table-panel thead tr,
+.panel-asistente-body .data-table thead tr { background: transparent !important; }
+.panel-asistente-body .table-panel,
+.panel-asistente-body .table-scroll-wrap,
+.panel-asistente-body .data-table {
+  border-radius: 18px !important;
+  overflow: hidden !important;
+  box-shadow: 0 14px 34px -22px rgba(13,148,136,0.45);
+}
+.panel-asistente-body .data-table { border-color: #E2E8F0 !important; }
+.panel-asistente-body .data-table tbody tr:nth-child(even) td { background: #F5FCF9; }
+.panel-asistente-body .data-table tbody tr:hover td,
+.panel-asistente-body .data-table tbody tr:hover { background: #E9F9F4 !important; }
+.panel-asistente-body .data-table td { color: #2F3F3B; }
+
+/* ─────────────────────────────────────────────
+   7. UTILIDADES TEAL → TEAL OPERATIVO (refuerzo)
+   ───────────────────────────────────────────── */
+.panel-asistente-body .bg-teal-50    { background-color: #F0FDF4 !important; }
+.panel-asistente-body .bg-teal-100   { background-color: #CCFBF1 !important; }
+.panel-asistente-body .bg-teal-200   { background-color: #99F6E4 !important; }
+.panel-asistente-body .bg-teal-400   { background-color: #2DD4BF !important; }
+.panel-asistente-body .bg-teal-500   { background-color: #0D9488 !important; }
+.panel-asistente-body .bg-teal-600   { background-color: #0F766E !important; }
+.panel-asistente-body .bg-teal-700   { background-color: #115E59 !important; }
+.panel-asistente-body .text-teal-500 { color: #0D9488 !important; }
+.panel-asistente-body .text-teal-600 { color: #0F766E !important; }
+.panel-asistente-body .text-teal-700 { color: #115E59 !important; }
+.panel-asistente-body .text-teal-800 { color: #134E4A !important; }
+.panel-asistente-body .text-teal-900 { color: #0F766E !important; }
+.panel-asistente-body .border-teal-100 { border-color: #CCFBF1 !important; }
+.panel-asistente-body .border-teal-200 { border-color: #99F6E4 !important; }
+.panel-asistente-body .border-teal-400 { border-color: #2DD4BF !important; }
+.panel-asistente-body .border-teal-500 { border-color: #0D9488 !important; }
+.panel-asistente-body .hover\:bg-teal-50:hover   { background-color: #F0FDF4 !important; }
+.panel-asistente-body .hover\:bg-teal-100:hover  { background-color: #CCFBF1 !important; }
+.panel-asistente-body .hover\:bg-teal-600:hover  { background-color: #0F766E !important; }
+.panel-asistente-body .hover\:bg-teal-700:hover  { background-color: #115E59 !important; }
+.panel-asistente-body .hover\:text-teal-600:hover { color: #0F766E !important; }
+.panel-asistente-body .hover\:text-teal-700:hover { color: #115E59 !important; }
+.panel-asistente-body .hover\:border-teal-400:hover { border-color: #2DD4BF !important; }
+.panel-asistente-body .from-teal-400 { --tw-gradient-from: #2DD4BF !important; }
+.panel-asistente-body .from-teal-500 { --tw-gradient-from: #0D9488 !important; }
+.panel-asistente-body .from-teal-600 { --tw-gradient-from: #0F766E !important; }
+.panel-asistente-body .via-teal-600  { --tw-gradient-stops: var(--tw-gradient-from), #0F766E var(--tw-gradient-via-position, 50%), var(--tw-gradient-to) !important; }
+.panel-asistente-body .to-teal-600   { --tw-gradient-to: #0F766E !important; }
+.panel-asistente-body .to-teal-700   { --tw-gradient-to: #115E59 !important; }
+.panel-asistente-body .to-teal-800   { --tw-gradient-to: #134E4A !important; }
+.panel-asistente-body .focus\:ring-teal-500:focus { --tw-ring-color: #0D9488 !important; }
+.panel-asistente-body .focus\:border-teal-500:focus { border-color: #0D9488 !important; }
+.panel-asistente-body .shadow-teal-100 { --tw-shadow-color: #99F6E4 !important; }
+.panel-asistente-body .shadow-teal-200 { --tw-shadow-color: #99F6E4 !important; }
+
+/* ─────────────────────────────────────────────
+   8. UTILIDADES AZUL MARCA → TEAL
+   ───────────────────────────────────────────── */
+.panel-asistente-body .text-\[\#0B63C7\]   { color: #0F766E !important; }
+.panel-asistente-body .text-\[\#0850A0\]   { color: #115E59 !important; }
+.panel-asistente-body .bg-\[\#0B63C7\]     { background-color: #0D9488 !important; }
+.panel-asistente-body .bg-\[\#E8F2FF\]     { background-color: #CCFBF1 !important; }
+.panel-asistente-body .bg-\[\#EBF5FF\]     { background-color: #F0FDF4 !important; }
+.panel-asistente-body .border-\[\#0B63C7\] { border-color: #0D9488 !important; }
+.panel-asistente-body .hover\:bg-\[\#0850A0\]:hover { background-color: #0F766E !important; }
+.panel-asistente-body .focus\:ring-\[\#0B63C7\]:focus { --tw-ring-color: #0D9488 !important; }
+.panel-asistente-body .from-\[\#0B63C7\] { --tw-gradient-from: #0D9488 !important; }
+.panel-asistente-body .via-\[\#0B63C7\]  { --tw-gradient-stops: var(--tw-gradient-from), #0D9488 50%, var(--tw-gradient-to) !important; }
+.panel-asistente-body .to-\[\#0B63C7\]   { --tw-gradient-to: #0D9488 !important; }
+.panel-asistente-body .to-\[\#0850A0\]   { --tw-gradient-to: #115E59 !important; }
+
+/* ─────────────────────────────────────────────
+   9. BLUE / INDIGO → TEAL  ·  GREEN-BRILLANTE → TEAL
+   ───────────────────────────────────────────── */
+.panel-asistente-body .bg-blue-50   { background-color: #F0FDF4 !important; }
+.panel-asistente-body .bg-blue-100  { background-color: #CCFBF1 !important; }
+.panel-asistente-body .bg-blue-600  { background-color: #0F766E !important; }
+.panel-asistente-body .text-blue-600{ color: #0F766E !important; }
+.panel-asistente-body .text-blue-700{ color: #115E59 !important; }
+.panel-asistente-body .text-blue-100{ color: #CCFBF1 !important; }
+.panel-asistente-body .hover\:bg-blue-600:hover { background-color: #115E59 !important; }
+.panel-asistente-body .from-blue-600 { --tw-gradient-from: #0F766E !important; }
+.panel-asistente-body .from-blue-500 { --tw-gradient-from: #0D9488 !important; }
+.panel-asistente-body .to-blue-700   { --tw-gradient-to: #115E59 !important; }
+
+.panel-asistente-body .bg-indigo-50   { background-color: #F0FDF4 !important; }
+.panel-asistente-body .bg-indigo-100  { background-color: #CCFBF1 !important; }
+.panel-asistente-body .text-indigo-600{ color: #0F766E !important; }
+.panel-asistente-body .text-indigo-700{ color: #115E59 !important; }
+.panel-asistente-body .border-indigo-100 { border-color: #CCFBF1 !important; }
+.panel-asistente-body .from-indigo-600 { --tw-gradient-from: #0F766E !important; }
+.panel-asistente-body .to-indigo-700   { --tw-gradient-to: #115E59 !important; }
+
+/* KPI / tarjetas (clases verdes introducidas) → Teal */
+.panel-asistente-body .from-green-500   { --tw-gradient-from: #0D9488 !important; }
+.panel-asistente-body .to-green-600     { --tw-gradient-to: #115E59 !important; }
+.panel-asistente-body .from-emerald-500 { --tw-gradient-from: #14B8A6 !important; }
+.panel-asistente-body .to-green-700     { --tw-gradient-to: #0F766E !important; }
+.panel-asistente-body .from-lime-500    { --tw-gradient-from: #2DD4BF !important; }
+.panel-asistente-body .from-\[\#1BA350\] { --tw-gradient-from: #0D9488 !important; }
+.panel-asistente-body .to-\[\#14532D\]  { --tw-gradient-to: #134E4A !important; }
+.panel-asistente-body .text-green-100   { color: #CCFBF1 !important; }
+.panel-asistente-body .text-emerald-100 { color: #CCFBF1 !important; }
+.panel-asistente-body .text-lime-100    { color: #CCFBF1 !important; }
+.panel-asistente-body .text-green-600   { color: #0F766E !important; }
+.panel-asistente-body .text-green-800   { color: #134E4A !important; }
+.panel-asistente-body .bg-green-500     { background-color: #0D9488 !important; }
+.panel-asistente-body .bg-green-50      { background-color: #F0FDF4 !important; }
+.panel-asistente-body .from-green-50    { --tw-gradient-from: #ECFBFA !important; }
+.panel-asistente-body .border-emerald-100 { border-color: #CCFBF1 !important; }
+.panel-asistente-body .border-emerald-200 { border-color: #99F6E4 !important; }
+
+/* ─────────────────────────────────────────────
+   10. COMPONENTES
+   ───────────────────────────────────────────── */
+.panel-asistente-body .btn-edit { color: #115E59; background: #CCFBF1; }
+.panel-asistente-body .btn-edit:hover { background: #99F6E4; }
+.panel-asistente-body .btn-primary,
+.panel-asistente-body button.bg-\[\#0B63C7\] { background-color: #0F766E !important; }
+.panel-asistente-body button.bg-\[\#0B63C7\]:hover { background-color: #115E59 !important; }
+
+.panel-asistente-body .admin-input:focus,
+.panel-asistente-body .admin-panel-blue .admin-input:focus {
+  border-color: #2DD4BF !important;
+  box-shadow: 0 0 0 4px rgba(13,148,136,0.13) !important;
+}
+
+.panel-asistente-body .active-att-tab,
+.panel-asistente-body [data-att-mode].active-att-tab {
+  background: #ffffff !important;
+  color: #0F766E !important;
+  box-shadow: 0 2px 8px rgba(13,148,136,0.20) !important;
+}
+
+.panel-asistente-body .modal-header {
+  background: linear-gradient(135deg, #0D9488 0%, #0F766E 100%) !important;
+}
+
+.panel-asistente-body ::-webkit-scrollbar-thumb { background: rgba(13, 148, 136, 0.38) !important; }
+.panel-asistente-body ::-webkit-scrollbar-thumb:hover { background: rgba(13, 148, 136, 0.60) !important; }
+
+/* Accesos rápidos del dashboard */
+.panel-asistente-body .qa-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+  gap: 10px;
+}
+.panel-asistente-body .qa-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 8px;
+  border-radius: 18px;
+  border: 1px solid #E2E8F0;
+  background: #ffffff;
+  color: #134E4A;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-align: center;
+  transition: all 0.18s ease;
+  cursor: pointer;
+}
+.panel-asistente-body .qa-tile .qa-ico {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ECFBFA;
+  color: #0F766E;
+  transition: all 0.18s ease;
+}
+.panel-asistente-body .qa-tile:hover {
+  border-color: #2DD4BF;
+  background: #F5FCF9;
+  color: #115E59;
+  box-shadow: 0 10px 24px -14px rgba(13,148,136,0.5);
+  transform: translateY(-2px);
+}
+.panel-asistente-body .qa-tile:hover .qa-ico { background: #CCFBF1; }
+
+/* ─────────────────────────────────────────────
+   11. MÓVIL (spec §3.4) — botón menú flotante fijo,
+       touch targets 44–48px
+   ───────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .panel-asistente-body #menuBtn {
+    position: fixed !important;
+    top: 12px;
+    left: 12px;
+    z-index: 210;
+    background: #0D9488 !important;
+    color: #ffffff !important;
+    border: none !important;
+    box-shadow: 0 8px 20px rgba(13,148,136,0.35) !important;
+    min-height: 44px;
+    min-width: 44px;
+  }
+  .panel-asistente-body #menuBtn i { color: #ffffff !important; }
+  .panel-asistente-body .header { padding-left: 64px !important; }
+  .panel-asistente-body .qa-grid { grid-template-columns: repeat(3, 1fr); }
+  .panel-asistente-body .table-scroll-wrap,
+  .panel-asistente-body .data-table { border-radius: 14px !important; }
+  .panel-asistente-body .data-table thead th { font-size: 9px !important; }
+}
+
+@media (min-width: 1440px) {
+  .panel-asistente-body .qa-grid { grid-template-columns: repeat(6, 1fr); }
+}

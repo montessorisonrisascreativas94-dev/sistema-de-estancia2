@@ -11,14 +11,13 @@ import { StudentsModule } from './modules/students.js';
 import { initCajaCobro, CajaCobroV2 } from '../shared/caja-cobro-v2.js';
 import { RoomsModule } from './modules/rooms.js';
 import { DashboardModule } from './modules/dashboard.js';
-import { BadgeSystem } from '../shared/badges.js';
+import { NotificationCenter } from '../shared/notification-center.js';
 import { ImageLoader } from '../shared/image-loader.js';
 import { RealtimeManager } from '../shared/realtime-manager.js';
 import { UIPremium } from '../shared/ui-premium.js';
 import { AssistantAccountingModule } from './accounting.module.js';
 import { InscripcionesModule } from '../directora/inscripciones.module.js';
 import { CatalogoModule } from '../shared/catalogo-conceptos.module.js';
-import { NewsCenter } from '../shared/news-center.js';
 import { openGlobalModal, closeGlobalModal } from '../shared/modal.js';
 import { InvoiceModule } from '../shared/invoice.js';
 import { AssistantChatApp } from './chat_app.js';
@@ -104,18 +103,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   AppState.set('user', auth.user);
   AppState.set('profile', auth.profile);
 
-  // ?? Sistema de badges por sección
-  BadgeSystem.init(auth.user.id);
-
-  // ?? Campanita de novedades (centro de notificaciones)
-  NewsCenter.init(auth.user.id);
-
-  // 🔴 Mensajes no leídos: fuente única para la campana y el badge del chat.
-  // Este panel no tenía NINGÚN cargador de no leídos: 'badge-chat' solo lo
-  // escribía el +1 a ciegas del handler compartido de postgres_changes.
-  import('../shared/unread-messages.js')
-    .then(({ UnreadMessages }) => UnreadMessages.init(auth.user.id, 'asistente'))
-    .catch(err => console.warn('[asistente] unread-messages no cargó:', err));
+  // 🎯 Notification Center unificado (campana, badges, mensajes, realtime)
+  NotificationCenter.init(auth.user.id, 'asistente');
 
   // Badge inscripciones pendientes
   const loadPreBadge = async () => {
@@ -366,7 +355,7 @@ function initNavigation() {
     // destruía el canal de badges en cada navegación sin resuscripción.
     const _uid = AppState.get('user')?.id;
     RealtimeManager.unsubscribeAll(
-      _uid ? ['badges_' + _uid, 'news-center_' + _uid, 'notif_' + _uid] : []
+      _uid ? ['badges_' + _uid, 'news-center_' + _uid, 'notif_' + _uid, 'notif-center_' + _uid] : []
     );
 
     // Desuscribir muro al salir (ahorro de recursos Realtime)

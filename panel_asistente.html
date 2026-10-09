@@ -12,7 +12,7 @@
   <script>if(self===top){document.documentElement.style.display='block';}else{top.location=self.location;}</script>
   <title>Colegio Montessori Sonrisas Creativas — Panel Asistente</title>
   <link rel="icon" href="./logo/favicon.ico" type="image/x-icon">
-  <meta name="theme-color" content="#0B63C7">
+  <meta name="theme-color" content="#0D9488">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="manifest" href="manifest.json">
@@ -33,6 +33,8 @@
   <link rel="stylesheet" href="css/messenger-chat.css">
   <link rel="stylesheet" href="css/school-center.css">       
   <link rel="stylesheet" href="css/supervision.css">
+  <!-- Rediseño renovado del panel (verde) — va al final para sobrescribir el resto -->
+  <link rel="stylesheet" href="css/asistente-renovado.css">
   <script src="js/shared/chart.min.js"></script>
   <style>
     /* =========================================
@@ -104,18 +106,18 @@
       font-weight: 800;
     }
     
-    /* Override sidebar orange elements to green */
+    /* Override sidebar orange elements to teal */
     .kk-sidebar-profile-avatar::after {
-      background: #28B54D !important;
+      background: #0D9488 !important;
     }
     .kk-badge {
-      background: #28B54D !important;
-      box-shadow: 0 2px 6px rgba(40,181,77,0.5) !important;
-      animation: kk-pulse-ring-green 2s infinite;
+      background: #0D9488 !important;
+      box-shadow: 0 2px 6px rgba(13,148,136,0.5) !important;
+      animation: kk-pulse-ring-teal 2s infinite;
     }
-    @keyframes kk-pulse-ring-green {
-      0%   { box-shadow: 0 0 0 0 rgba(40,181,77,0.4); }
-      70%  { box-shadow: 0 0 0 10px rgba(40,181,77,0); }
+    @keyframes kk-pulse-ring-teal {
+      0%   { box-shadow: 0 0 0 0 rgba(13,148,136,0.4); }
+      70%  { box-shadow: 0 0 0 10px rgba(13,148,136,0); }
       100% { box-shadow: 0 0 0 0 rgba(40,181,77,0); }
     }
 
@@ -185,7 +187,7 @@
     <div id="sidebarOverlay" class="fixed inset-0 bg-black/50 z-40 backdrop-blur-sm" style="display:none;"></div>
 
     <!-- SIDEBAR -->
-    <aside id="sidebar" class="kk-sidebar shadow-2xl flex flex-col flex-shrink-0" style="background:linear-gradient(180deg,#0d9488 0%,#0a8a80 50%,#077a70 100%);border-right:none;">
+    <aside id="sidebar" class="kk-sidebar shadow-2xl flex flex-col flex-shrink-0" style="background:linear-gradient(180deg,#0D9488 0%,#0A8A80 50%,#077A70 100%);border-right:none;">
       <button id="toggleSidebar" class="absolute -right-3 top-8 bg-white rounded-full p-1.5 shadow-lg border border-slate-100 text-slate-500 hover:text-teal-600 hidden md:flex items-center justify-center z-10 transition-all hover:scale-110">
         <i data-lucide="chevron-left" id="toggleSidebarIcon" class="w-3.5 h-3.5"></i>
       </button>
@@ -340,27 +342,9 @@
         </button>
       </div>
 
-      <!-- MASCOTAS DECORATIVAS -->
-      <div class="kk-sidebar-deco flex items-end justify-center gap-2">
-        <!-- Triángulo Verde -->
-        <svg width="60" height="70" viewBox="0 0 180 200" class="animate-bounce" style="animation-duration: 2.5s;">
-          <polygon points="90,20 165,180 15,180" fill="#28B54D" stroke="#1A8035" stroke-width="4"/>
-          <circle cx="68" cy="105" r="12" fill="white"/>
-          <circle cx="112" cy="105" r="12" fill="white"/>
-          <circle cx="68" cy="105" r="6" fill="#333"/>
-          <circle cx="112" cy="105" r="6" fill="#333"/>
-          <path d="M 58 140 Q 90 160 122 140" stroke="#333" stroke-width="5" fill="none" stroke-linecap="round"/>
-        </svg>
-        <!-- Hexágono Verde -->
-        <svg width="60" height="60" viewBox="0 0 180 180" class="animate-bounce" style="animation-duration: 3s; animation-delay: 0.3s;">
-          <polygon points="90,10 155,45 155,115 90,150 25,115 25,45" fill="#28B54D" stroke="#1A8035" stroke-width="4"/>
-          <ellipse cx="90" cy="28" rx="42" ry="16" fill="#0B63C7"/>
-          <circle cx="68" cy="80" r="12" fill="white"/>
-          <circle cx="112" cy="80" r="12" fill="white"/>
-          <circle cx="68" cy="80" r="6" fill="#333"/>
-          <circle cx="112" cy="80" r="6" fill="#333"/>
-          <path d="M 58 105 Q 90 125 122 105" stroke="#333" stroke-width="5" fill="none" stroke-linecap="round"/>
-        </svg>
+      <!-- Pie del sidebar: nota institucional sutil (mascotas animadas eliminadas) -->
+      <div class="kk-sidebar-foot px-4 py-2">
+        <p class="text-[9px] text-white/40 font-bold uppercase tracking-[0.2em] text-center label">Colegio Montessori · Asistente</p>
       </div>
     </aside>
 
@@ -394,71 +378,102 @@
         <!-- Alertas urgentes -->
         <div id="urgentAlertsWidget" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 hidden"></div>
 
-        <!-- KPI Cards -->
+        <!-- KPI Cards: blanco premium + acento Teal Esmeralda -->
         <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <div class="bg-gradient-to-br from-blue-500 to-blue-600 p-5 rounded-2xl shadow-md text-white relative overflow-hidden group cursor-pointer" data-section="estudiantes">
+          <div class="relative overflow-hidden bg-white rounded-3xl border border-slate-200 shadow-sm p-5 group cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:border-teal-200" data-section="estudiantes">
+            <div class="absolute left-0 inset-y-4 w-1.5 rounded-r-full bg-gradient-to-b from-teal-400 to-teal-600"></div>
+            <div class="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-teal-50 group-hover:bg-teal-100 transition-colors duration-300"></div>
             <div class="relative z-10">
-              <div class="flex items-center gap-2 mb-2">
-                <div class="p-1.5 bg-white/20 rounded-lg"><i data-lucide="users" class="w-4 h-4"></i></div>
-                <span class="text-[10px] font-black text-blue-100 uppercase tracking-wider">Estudiantes</span>
+              <div class="flex items-center gap-2 mb-2.5">
+                <div class="p-2 rounded-xl bg-teal-100 text-teal-700 shadow-sm"><i data-lucide="users" class="w-5 h-5"></i></div>
+                <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Estudiantes</span>
+                <i data-lucide="arrow-up-right" class="ml-auto w-4 h-4 text-teal-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></i>
               </div>
-              <p class="text-3xl font-black" id="statStudents">-</p>
-              <p class="text-xs text-blue-100 mt-0.5">Total registrados</p>
+              <p class="text-3xl font-black text-slate-900 leading-none" id="statStudents">-</p>
+              <p class="text-xs font-bold text-slate-400 mt-1">Total registrados</p>
             </div>
-            <i data-lucide="users" class="absolute -bottom-4 -right-4 w-20 h-20 text-white/10 rotate-12 group-hover:scale-110 transition-transform duration-500"></i>
           </div>
 
-          <div class="bg-gradient-to-br from-emerald-500 to-teal-600 p-5 rounded-2xl shadow-md text-white relative overflow-hidden group">
+          <div class="relative overflow-hidden bg-white rounded-3xl border border-slate-200 shadow-sm p-5 group cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:border-teal-200" data-section="asistencia">
+            <div class="absolute left-0 inset-y-4 w-1.5 rounded-r-full bg-gradient-to-b from-teal-500 to-teal-700"></div>
+            <div class="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-teal-50 group-hover:bg-teal-100 transition-colors duration-300"></div>
             <div class="relative z-10">
-              <div class="flex items-center gap-2 mb-2">
-                <div class="p-1.5 bg-white/20 rounded-lg"><i data-lucide="check-circle" class="w-4 h-4"></i></div>
-                <span class="text-[10px] font-black text-emerald-100 uppercase tracking-wider">Asistencia</span>
+              <div class="flex items-center gap-2 mb-2.5">
+                <div class="p-2 rounded-xl bg-teal-50 text-teal-600 shadow-sm"><i data-lucide="check-circle" class="w-5 h-5"></i></div>
+                <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Asistencia</span>
+                <i data-lucide="arrow-up-right" class="ml-auto w-4 h-4 text-teal-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></i>
               </div>
-              <p class="text-3xl font-black" id="statAttendance">-</p>
-              <p class="text-xs text-emerald-100 mt-0.5">Presentes hoy</p>
+              <p class="text-3xl font-black text-slate-900 leading-none" id="statAttendance">-</p>
+              <p class="text-xs font-bold text-slate-400 mt-1">Presentes hoy</p>
             </div>
-            <i data-lucide="calendar-check" class="absolute -bottom-4 -right-4 w-20 h-20 text-white/10 rotate-12 group-hover:scale-110 transition-transform duration-500"></i>
           </div>
 
-          <div class="bg-gradient-to-br from-purple-500 to-indigo-600 p-5 rounded-2xl shadow-md text-white relative overflow-hidden group cursor-pointer" data-section="aulas">
+          <div class="relative overflow-hidden bg-white rounded-3xl border border-slate-200 shadow-sm p-5 group cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:border-teal-200" data-section="aulas">
+            <div class="absolute left-0 inset-y-4 w-1.5 rounded-r-full bg-gradient-to-b from-teal-400 to-teal-700"></div>
+            <div class="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-teal-50 group-hover:bg-teal-100 transition-colors duration-300"></div>
             <div class="relative z-10">
-              <div class="flex items-center gap-2 mb-2">
-                <div class="p-1.5 bg-white/20 rounded-lg"><i data-lucide="school" class="w-4 h-4"></i></div>
-                <span class="text-[10px] font-black text-purple-100 uppercase tracking-wider">Aulas</span>
+              <div class="flex items-center gap-2 mb-2.5">
+                <div class="p-2 rounded-xl bg-teal-100 text-teal-600 shadow-sm"><i data-lucide="school" class="w-5 h-5"></i></div>
+                <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Aulas</span>
+                <i data-lucide="arrow-up-right" class="ml-auto w-4 h-4 text-teal-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></i>
               </div>
-              <p class="text-3xl font-black" id="statClassrooms">-</p>
-              <p class="text-xs text-purple-100 mt-0.5">Aulas activas</p>
+              <p class="text-3xl font-black text-slate-900 leading-none" id="statClassrooms">-</p>
+              <p class="text-xs font-bold text-slate-400 mt-1">Aulas activas</p>
             </div>
-            <i data-lucide="school" class="absolute -bottom-4 -right-4 w-20 h-20 text-white/10 rotate-12 group-hover:scale-110 transition-transform duration-500"></i>
           </div>
 
-          <div class="bg-gradient-to-br from-[#0B63C7] to-[#0850A0] p-5 rounded-2xl shadow-md text-white relative overflow-hidden group cursor-pointer" data-section="maestros">
+          <div class="relative overflow-hidden bg-white rounded-3xl border border-slate-200 shadow-sm p-5 group cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:border-teal-200" data-section="maestros">
+            <div class="absolute left-0 inset-y-4 w-1.5 rounded-r-full bg-gradient-to-b from-teal-500 to-teal-800"></div>
+            <div class="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-teal-50 group-hover:bg-teal-100 transition-colors duration-300"></div>
             <div class="relative z-10">
-              <div class="flex items-center gap-2 mb-2">
-                <div class="p-1.5 bg-white/20 rounded-lg"><i data-lucide="user-cog" class="w-4 h-4"></i></div>
-                <span class="text-[10px] font-black text-blue-100 uppercase tracking-wider">Maestras</span>
+              <div class="flex items-center gap-2 mb-2.5">
+                <div class="p-2 rounded-xl bg-teal-100 text-teal-700 shadow-sm"><i data-lucide="user-cog" class="w-5 h-5"></i></div>
+                <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Maestras</span>
+                <i data-lucide="arrow-up-right" class="ml-auto w-4 h-4 text-teal-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></i>
               </div>
-              <p class="text-3xl font-black" id="statTeachers">-</p>
-              <p class="text-xs text-blue-100 mt-0.5">Docentes</p>
+              <p class="text-3xl font-black text-slate-900 leading-none" id="statTeachers">-</p>
+              <p class="text-xs font-bold text-slate-400 mt-1">Docentes</p>
             </div>
-            <i data-lucide="user-cog" class="absolute -bottom-4 -right-4 w-20 h-20 text-white/10 rotate-12 group-hover:scale-110 transition-transform duration-500"></i>
           </div>
         </div>
 
-        <!-- Actividad escolar + Comunicación -->
+        <!-- Accesos rápidos + Comunicación -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
-          <div class="lg:col-span-2 bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-            <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100">
-              <h3 class="text-sm font-black text-slate-700 flex items-center gap-2">
-                <span class="w-2 h-5 bg-teal-500 rounded-full"></span> Actividad Escolar Reciente
+          <div class="lg:col-span-2 bg-white rounded-2xl border border-emerald-100 shadow-sm overflow-hidden">
+            <div class="flex items-center justify-between px-5 py-4 border-b border-emerald-100 bg-gradient-to-r from-green-50 to-white">
+              <h3 class="text-sm font-black text-green-800 flex items-center gap-2">
+                <span class="w-2 h-5 bg-green-500 rounded-full"></span> Accesos Rápidos
               </h3>
-              <button onclick="window.App.navigateTo('muro')" class="text-xs font-black text-teal-600 hover:text-teal-800 uppercase tracking-wider transition-colors">Ver muro →</button>
+              <span class="text-xs font-black text-green-600 uppercase tracking-wider">Panel de trabajo</span>
             </div>
-            <div id="dashRecentPayments" class="divide-y divide-slate-50">
-              <div class="px-5 py-8 text-center text-slate-400 text-sm">Cargando...</div>
+            <div class="p-5 qa-grid">
+              <button onclick="window.App.navigateTo('estudiantes')" class="qa-tile">
+                <span class="qa-ico"><i data-lucide="users"></i></span>
+                <span>Estudiantes</span>
+              </button>
+              <button onclick="window.App.navigateTo('asistencia')" class="qa-tile">
+                <span class="qa-ico"><i data-lucide="calendar-check"></i></span>
+                <span>Asistencia</span>
+              </button>
+              <button onclick="window.App.navigateTo('muro')" class="qa-tile">
+                <span class="qa-ico"><i data-lucide="layout"></i></span>
+                <span>Muro Escolar</span>
+              </button>
+              <button onclick="window.App.navigateTo('actividades')" class="qa-tile">
+                <span class="qa-ico"><i data-lucide="calendar-heart"></i></span>
+                <span>Actividades</span>
+              </button>
+              <button onclick="window.App.navigateTo('centro-escolar')" class="qa-tile">
+                <span class="qa-ico"><i data-lucide="layout-grid"></i></span>
+                <span>Centro Escolar</span>
+              </button>
+              <button onclick="window.App.navigateTo('accesos')" class="qa-tile">
+                <span class="qa-ico"><i data-lucide="scan-line"></i></span>
+                <span>Accesos QR</span>
+              </button>
             </div>
           </div>
-          <div class="bg-gradient-to-br from-[#0B63C7] to-[#7C3AED] rounded-2xl border border-slate-100 shadow-sm p-5 text-white overflow-hidden relative">
+          <div class="bg-gradient-to-br from-emerald-500 to-green-700 rounded-2xl border border-slate-100 shadow-sm p-5 text-white overflow-hidden relative">
             <div class="relative z-10">
               <div class="flex items-center gap-2 mb-3">
                 <div class="p-1.5 bg-white/20 rounded-lg"><i data-lucide="message-circle" class="w-4 h-4"></i></div>

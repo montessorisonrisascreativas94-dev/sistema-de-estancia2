@@ -1,6 +1,6 @@
 import { supabase, ensureRole } from '../shared/supabase.js';
 import { logError, auditLog } from '../shared/db-utils.js';
-import { NewsCenter } from '../shared/news-center.js';
+import { NotificationCenter } from '../shared/notification-center.js';
 import { SchoolCenterModule } from '../directora/school-center.module.js';
 
 const _kscLoaded = { done: false };
@@ -244,14 +244,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     await refreshAll();
     startRealtime();
 
-    // 🛎️ Campanita de novedades (centro de notificaciones) — esquina superior
+    // 🎯 Notification Center unificado (campana, badges, mensajes, realtime)
+    // Antes: solo NewsCenter + UnreadMessages, SIN BadgeSystem.init — AHORA todo incluido.
     if (currentUser?.id) {
-      try { NewsCenter.init(currentUser.id); } catch (_) {}
-      // 🔴 Mensajes no leídos: este panel no tenía BadgeSystem.init, así que
-      // ningún indicador de mensajes sin leer se mantenía al día.
-      import('../shared/unread-messages.js')
-        .then(({ UnreadMessages }) => UnreadMessages.init(currentUser.id, 'control'))
-        .catch(err => console.warn('[control] unread-messages no cargó:', err));
+      try { NotificationCenter.init(currentUser.id, 'control'); } catch (_) {}
     }
 
   } catch (err) {

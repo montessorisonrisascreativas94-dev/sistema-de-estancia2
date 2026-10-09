@@ -3,7 +3,7 @@ import { Security } from '../shared/security.js';
 import { AppState } from './state.js';
 import { Helpers, escapeHtml } from '../shared/helpers.js';
 import { UIPremium } from '../shared/ui-premium.js';
-import { BadgeSystem } from '../shared/badges.js';
+import { NotificationCenter } from '../shared/notification-center.js';
 import { RealtimeManager } from '../shared/realtime-manager.js';
 import { QueryCache } from '../shared/query-cache.js';
 import { SectionCache } from '../shared/section-cache.js';
@@ -19,7 +19,6 @@ import {
   withDaySeparators,
 } from '../shared/chat.js';
 import { ScrollModule } from '../shared/scroll.module.js';
-import { NewsCenter } from '../shared/news-center.js';
 import { WALL_REACTIONS } from '../shared/wall.js';
 import { ImageLoader } from '../shared/image-loader.js';
 const MURO_REACTION_ORDER = ['like', 'love', 'bravo', 'adore', 'party'];
@@ -59,7 +58,7 @@ export function goToSection(sectionId) {
   // navegación sin resuscripción.
   const _rtUid = AppState.get('user')?.id;
   RealtimeManager.unsubscribeAll(
-    _rtUid ? ['badges_' + _rtUid, 'news-center_' + _rtUid, 'notif_' + _rtUid] : []
+    _rtUid ? ['badges_' + _rtUid, 'news-center_' + _rtUid, 'notif_' + _rtUid, 'notif-center_' + _rtUid] : []
   );
 
   // Dismiss any open modal overlay
@@ -2145,16 +2144,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // ── Sidebar accordion dropdowns handled by sidebar-manager import below ──
 
-    BadgeSystem.init(auth.user.id);
-
-    // ?? Campanita de novedades (centro de notificaciones)
-    NewsCenter.init(auth.user.id);
-
-    // 🔴 Mensajes no leídos: fuente única para la campana y el badge del chat.
-    // Este panel no tenía ningún cargador de no leídos.
-    import('../shared/unread-messages.js')
-      .then(({ UnreadMessages }) => UnreadMessages.init(auth.user.id, 'encargada'))
-      .catch(err => console.warn('[encargada] unread-messages no cargó:', err));
+    // 🎯 Notification Center unificado (campana, badges, mensajes, realtime)
+    NotificationCenter.init(auth.user.id, 'encargada');
 
     document.getElementById('btnLogout')?.addEventListener('click', async () => {
       RealtimeManager.unsubscribeAll();

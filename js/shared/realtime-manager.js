@@ -23,7 +23,7 @@ const _resubs   = new Map(); // name → setupFn, para poder revivir tras un tea
  * como se suscriben en el init eran siempre los primeros en caer — la campana se
  * quedaba muda en cuanto el usuario abría la novena sección.
  */
-const CRITICAL = ['badges_', 'news-center_', 'unread_msgs_'];
+const CRITICAL = ['badges_', 'news-center_', 'unread_msgs_', 'notif-center_'];
 
 const isCritical = (name) => CRITICAL.some(prefix => name.startsWith(prefix));
 

@@ -1,8 +1,6 @@
 import { supabase } from '../../shared/supabase.js';
 import { AppState } from '../state.js';
-import { Helpers } from '../../shared/helpers.js';
 import { QueryCache } from '../../shared/query-cache.js';
-import { ImageLoader } from '../../shared/image-loader.js';
 import { dedupeClassrooms } from '../../shared/constants.js';
 
 export const DashboardModule = {
@@ -30,7 +28,6 @@ export const DashboardModule = {
 
     await Promise.all([
       this.loadStats(),
-      this.loadRecentActivity(),
       this.loadUnreadMessages(),
       this.loadPreregBadge(),
     ]);
@@ -117,85 +114,6 @@ export const DashboardModule = {
     `).join('');
 
     if (window.lucide) lucide.createIcons();
-  },
-
-  timeAgo(iso) {
-    const diff = Date.now() - new Date(iso).getTime();
-    const m = Math.floor(diff / 60000);
-    if (m < 1) return 'ahora';
-    if (m < 60) return m + 'm';
-    const h = Math.floor(m / 60);
-    if (h < 24) return h + 'h';
-    return Math.floor(h / 24) + 'd';
-  },
-
-  async loadRecentActivity() {
-    const container = document.getElementById('dashRecentPayments');
-    if (!container) return;
-
-    const post = (p) => {
-      const isVideo = p.media_type === 'video' || /\.(mp4|mov|webm|ogg|avi)$/i.test(p.media_url || p.image_url || '');
-      const src = p.media_url || p.image_url || null;
-      const media = src
-        ? (isVideo
-            // 🎬 ImageLoader.video() aplica el fotograma #t (CHAT.MD §1.2) y el
-            // wrapper group/media habilita el autoplay por hover/viewport.
-            ? `<div class="relative group/media mt-2 rounded-xl overflow-hidden bg-slate-900 aspect-video">${ImageLoader.video(src, '', { cls: 'w-full h-full object-cover', controls: false })}</div>`
-            : ImageLoader.img(src, { alt: '', cls: 'mt-2 rounded-xl w-full h-40 object-cover bg-slate-100' }))
-        : '';
-      const name = p.teacher_name || p.title || 'Publicación';
-      const ini = name.charAt(0).toUpperCase();
-      return `
-        <div class="px-5 py-3 hover:bg-slate-50/70 transition-colors">
-          <div class="flex items-start gap-3">
-            <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-[#0d9488] to-[#0B63C7] text-white flex items-center justify-center font-black text-sm shrink-0 shadow-sm">${ini}</div>
-            <div class="min-w-0 flex-1">
-              <p class="font-black text-slate-800 text-sm truncate">${Helpers.escapeHTML(name)}</p>
-              <p class="text-[10px] text-slate-400 font-bold uppercase truncate">${this.timeAgo(p.created_at)}</p>
-              ${p.content ? `<p class="text-xs text-slate-600 font-medium leading-snug mt-1 line-clamp-2">${Helpers.escapeHTML(p.content)}</p>` : ''}
-            </div>
-          </div>
-          ${media}
-        </div>`;
-    };
-
-    try {
-      const [postsRes, commentsRes] = await Promise.allSettled([
-        supabase.from('posts').select('*').order('created_at', { ascending: false }).limit(6),
-        supabase.from('comments').select('id,post_id,content,created_at,user_name').order('created_at', { ascending: false }).limit(8),
-      ]);
-
-      const posts = (postsRes.status === 'fulfilled' ? postsRes.value.data : []) || [];
-      const comments = (commentsRes.status === 'fulfilled' ? commentsRes.value.data : []) || [];
-
-      if (!posts.length && !comments.length) {
-        container.innerHTML = '<div class="px-5 py-8 text-center text-slate-400 text-sm">Aún no hay actividad escolar reciente.</div>';
-        return;
-      }
-
-      const items = [];
-      posts.slice(0, 4).forEach(p => items.push(post(p)));
-      comments.slice(0, 4).forEach(c => {
-        items.push(`
-          <div class="px-5 py-3 hover:bg-slate-50/70 transition-colors">
-            <div class="flex items-start gap-3">
-              <div class="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-black text-sm shrink-0">💬</div>
-              <div class="min-w-0 flex-1">
-                <p class="font-black text-slate-800 text-sm truncate">${Helpers.escapeHTML(c.user_name || 'Comentario')}</p>
-                <p class="text-[10px] text-slate-400 font-bold uppercase truncate">${this.timeAgo(c.created_at)}</p>
-                <p class="text-xs text-slate-600 font-medium leading-snug mt-1 line-clamp-2">${Helpers.escapeHTML(c.content)}</p>
-              </div>
-            </div>
-          </div>`);
-      });
-
-      container.innerHTML = items.join('');
-      // 🖼️ Activar lazy loading + autoplay de los medios recién insertados.
-      ImageLoader.observe(container);
-      ImageLoader.setupHoverAutoplay(container);
-    } catch (_) {
-      container.innerHTML = Helpers.errorState('Error al cargar');
-    }
   },
 
   async loadUnreadMessages() {

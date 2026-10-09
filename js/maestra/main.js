@@ -10,7 +10,7 @@ import { SchoolYearGuard } from '../shared/school-year-guard.js';
 import { SmartLoader } from '../shared/smart-loader.js';
 
 import { VideoCallModule } from '../shared/videocall.js';
-import { BadgeSystem } from '../shared/badges.js';
+import { NotificationCenter } from '../shared/notification-center.js';
 import { ImageLoader } from '../shared/image-loader.js';
 
 import * as Attendance from './modules/attendance.js';
@@ -22,7 +22,6 @@ import { PermitsModule } from './modules/permits.js';
 import { UI } from './modules/ui.js';
 
 import { UIPremium } from '../shared/ui-premium.js';
-import { NewsCenter } from '../shared/news-center.js';
 import { SectionCache } from '../shared/section-cache.js';
 import SupervisionEngine from '../shared/supervision.js';
 import {
@@ -611,18 +610,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Cargar Badges en background
     loadPendingTasksBadge(classrooms[0].id);
 
-    // 🔴 Sistema de badges por sección
-    BadgeSystem.init(auth.user.id);
-
-    // ?? Campanita de novedades (centro de notificaciones)
-    NewsCenter.init(auth.user.id);
-
-    // 🔴 Mensajes no leídos: fuente única para la campana y el badge del chat.
-    // Reemplaza a loadMaestraUnreadBadge() + _incrementBadge('t-chat'), que solo
-    // hacían un +1 sobre el DOM y morían con el canal de badges.
-    import('../shared/unread-messages.js')
-      .then(({ UnreadMessages }) => UnreadMessages.init(auth.user.id, 'maestra'))
-      .catch(err => console.warn('[maestra] unread-messages no cargó:', err));
+    // 🎯 Notification Center unificado (campana, badges, mensajes, realtime)
+    NotificationCenter.init(auth.user.id, 'maestra');
 
     // ── Sidebar Manager (mobile + desktop) ───────────────────────────────────
     import('../shared/sidebar-manager.js')
