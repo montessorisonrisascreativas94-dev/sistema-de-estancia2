@@ -485,13 +485,6 @@ export const DirectorApi = {
       }
 
       return q;
-    };      if (range) {
-        q = q.range(range.from, range.to);
-      } else {
-        q = q.limit(100); // Default safety limit
-      }
-
-      return q;
     };
 
     const DEFAULT_USE_DELETED = false;

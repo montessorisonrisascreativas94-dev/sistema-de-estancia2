@@ -348,11 +348,12 @@ function _navHTML() {
 
 function _chipHTML(a) {
   const c = catOf(a.category);
+  const color = a.color_hex || c.color;
   return `
-    <button data-sa-action="open" data-id="${a.id}"
+    <button data-sa-action="open" data-id="${a.id}" title="${_escAttr(a.title)}"
       class="sa-chip w-full text-left px-2 py-1 rounded-lg text-[11px] font-bold leading-tight"
-      style="background:${esc(a.color_hex || c.color)}1F;color:${esc(a.color_hex || c.color)};border-left:3px solid ${esc(a.color_hex || c.color)}">
-      <span class="sa-emoji">${c.emoji}</span><span class="min-w-0 truncate">${esc(a.title)}</span>
+      style="background:${esc(color)}1F;color:${esc(color)};border-left:3px solid ${esc(color)}">
+      <span class="sa-emoji">${c.emoji}</span><span class="sa-chip-title min-w-0 truncate">${esc(a.title)}</span>
     </button>`;
 }
 
@@ -363,29 +364,42 @@ function _gridHTML(list) {
   const today = new Date();
   const isThisMonth = today.getFullYear() === state.year && today.getMonth() + 1 === state.month;
 
+  // Color del día = color elegido por la asistente/directora/encargada
+  // (color_hex de la actividad; si no, el color de su categoría).
+  const dayColorOf = (arr) => arr.length ? (arr[0].color_hex || catOf(arr[0].category).color) : null;
+
   let cells = '';
   for (let i = 0; i < offset; i++) cells += `<div class="sa-cell sa-cell-empty"></div>`;
   for (let d = 1; d <= days; d++) {
     const dayActs = list.filter(a => Number((a.activity_date || '').slice(8, 10)) === d);
     const isToday = isThisMonth && today.getDate() === d;
+    const dayColor = dayColorOf(dayActs);
+    const delay = (Math.min(d, 31) * 0.012).toFixed(3);
+    const styleParts = [`animation-delay:${delay}s`];
+    if (dayColor) styleParts.push(
+      `background:${esc(dayColor)}14`,
+      `border-color:${esc(dayColor)}55`,
+      `box-shadow:inset 0 0 0 1.5px ${esc(dayColor)}22, 0 1px 3px rgba(15,23,42,.06)`
+    );
     cells += `
-      <div class="sa-cell${isToday ? ' sa-cell-today' : ''}">
-        <div class="flex items-center justify-between px-0.5">
-          <span class="text-[11px] font-black ${isToday ? 'text-teal-700' : 'text-slate-500'}">${d}</span>
+      <div class="sa-cell${isToday ? ' sa-cell-today' : ''}${dayColor ? ' sa-cell-has' : ''}" style="${styleParts.join(';')}">
+        <div class="sa-cell-top">
+          <span class="sa-day-num font-black ${isToday ? 'text-teal-700' : 'text-slate-500'}" ${dayColor ? `style="color:${esc(dayColor)}"` : ''}>${d}</span>
+          ${dayColor ? `<span class="sa-day-dot" style="background:${esc(dayColor)}"></span>` : ''}
           ${dayActs.length ? `<span class="sa-day-count">${dayActs.length}</span>` : ''}
         </div>
-        <div class="flex flex-col gap-1 overflow-y-auto kk-scroll">${dayActs.slice(0, 3).map(_chipHTML).join('')}</div>
-        ${dayActs.length > 3 ? `<button data-sa-action="day" data-day="${d}" class="text-[10px] font-black text-teal-600 hover:underline text-left px-0.5">+${dayActs.length - 3} más</button>` : ''}
+        <div class="sa-cell-body">${dayActs.slice(0, 3).map(_chipHTML).join('')}</div>
+        ${dayActs.length > 3 ? `<button data-sa-action="day" data-day="${d}" class="sa-more">+${dayActs.length - 3} más</button>` : ''}
       </div>`;
   }
 
   return `
-    <div class="sa-cal sa-anim rounded-3xl overflow-x-auto">
-      <div class="grid grid-cols-7 gap-1.5 md:gap-2" style="min-width:560px">
-        ${WEEKDAYS.map(w => `<div class="sa-wd text-center uppercase py-1.5 tracking-wider font-black">${w}</div>`).join('')}
+    <div class="sa-cal sa-anim rounded-3xl">
+      <div class="sa-grid grid grid-cols-7 gap-1.5 md:gap-2">
+        ${WEEKDAYS.map(w => `<div class="sa-wd text-center uppercase tracking-wider font-black">${w}</div>`).join('')}
         ${cells}
       </div>
-      ${!list.length ? `<p class="text-center text-sm font-bold text-slate-400 py-6">Sin actividades para este mes</p>` : ''}
+      ${!list.length ? `<p class="sa-empty-month">Sin actividades para este mes</p>` : ''}
     </div>`;
 }
 
@@ -460,7 +474,7 @@ function _upcomingHTML() {
           return `
           <button data-sa-dblopen="${a.id}" title="Doble clic para leer completo"
             class="sa-upc w-full text-left bg-white rounded-2xl border border-slate-100 shadow-sm p-4 flex gap-3 cursor-pointer">
-            <div class="shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center text-2xl" style="background:${esc(a.color_hex || c.color)}1A">${c.emoji}</div>
+            <div class="sa-upc-emoji shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center text-2xl" style="background:${esc(a.color_hex || c.color)}1A;box-shadow:0 0 0 2px ${esc(a.color_hex || c.color)}22">${c.emoji}</div>
             <div class="min-w-0 flex-1">
               <div class="flex items-start justify-between gap-2">
                 <h4 class="font-black text-slate-800 text-sm leading-snug truncate">${esc(a.title)}</h4>
@@ -1140,26 +1154,77 @@ select.sa-input{cursor:pointer}
 
 .line-clamp-2{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 
-/* ══ Calendario: panel gris destacado + días con borde de contraste ══ */
-.sa-cal{background:linear-gradient(180deg,#E9EEF4 0%,#DEE6EF 100%);border:1px solid #C6D1DF;box-shadow:0 12px 32px rgba(15,23,42,.12);padding:12px}
+/* ══ Calendario: panel gris destacado + días con borde de contraste ══
+   Se adapta SIEMPRE a 7 columnas (móvil incluido). En móvil entra en modo
+   compacto: no hay scroll horizontal y el mes se ve completo. */
+.sa-cal{background:linear-gradient(180deg,#E9EEF4 0%,#DEE6EF 100%);border:1px solid #C6D1DF;box-shadow:0 12px 32px rgba(15,23,42,.12);padding:12px;overflow:hidden}
 @media(min-width:768px){.sa-cal{padding:16px}}
+.sa-grid{width:100%;min-width:0}
 .sa-wd{font-size:10px;color:#475569;background:rgba(100,116,139,.20);border-radius:.55rem;padding:7px 4px;letter-spacing:.14em}
 @media(min-width:768px){.sa-wd{font-size:12px;padding:8px 4px}}
-.sa-cell{background:#fff;border:1px solid #C7D0DB;border-radius:.9rem;padding:6px;min-height:96px;display:flex;flex-direction:column;gap:4px;overflow:hidden;box-shadow:0 1px 3px rgba(15,23,42,.06);transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease}
+.sa-cell{background:#fff;border:1px solid #C7D0DB;border-radius:.9rem;padding:6px;min-height:96px;display:flex;flex-direction:column;gap:4px;overflow:hidden;box-shadow:0 1px 3px rgba(15,23,42,.06);transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease;animation:saCellIn .42s cubic-bezier(.2,.85,.3,1.1) both}
 .sa-cell:hover{transform:translateY(-2px);border-color:#8FA0B5;box-shadow:0 10px 22px rgba(15,23,42,.14)}
-.sa-cell-empty{background:rgba(226,232,240,.50);border:1px dashed #C7D0DB;box-shadow:none}
+.sa-cell-empty{background:rgba(226,232,240,.50);border:1px dashed #C7D0DB;box-shadow:none;animation:none}
 .sa-cell-empty:hover{transform:none;border-color:#C7D0DB;box-shadow:none}
 .sa-cell-today{border-color:#28B54D;outline:2px solid rgba(40,181,77,.28);outline-offset:0}
-.sa-day-count{height:18px;min-width:18px;padding:0 5px;border-radius:999px;background:#475569;color:#fff;font-size:9px;font-weight:900;display:inline-flex;align-items:center;justify-content:center}
+.sa-cell-has{border-left-width:3px}
+.sa-cell-top{display:flex;align-items:center;gap:4px;padding:0 2px}
+.sa-cell-top .sa-day-num{margin-right:auto}
+.sa-day-num{font-size:11px;line-height:1;font-weight:900}
+.sa-day-dot{width:8px;height:8px;border-radius:50%;flex:0 0 auto;box-shadow:0 0 0 2px rgba(255,255,255,.85);animation:saDotPulse 2.2s ease-in-out infinite}
+.sa-cell-body{display:flex;flex-direction:column;gap:4px;overflow-y:auto;overflow-x:hidden}
+.sa-day-count{height:18px;min-width:18px;padding:0 5px;border-radius:999px;background:#475569;color:#fff;font-size:9px;font-weight:900;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto}
+.sa-more{font-size:10px;font-weight:900;color:#239943;text-align:left;padding:0 2px;background:none;border:none;cursor:pointer}
+.sa-more:hover{text-decoration:underline}
+.sa-empty-month{text-align:center;font-size:13px;font-weight:800;color:#94A3B8;padding:18px 0 6px;margin:0}
+@keyframes saCellIn{from{opacity:0;transform:translateY(8px) scale(.97)}to{opacity:1;transform:none}}
+@keyframes saDotPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.28)}}
+
+/* ── Móvil: calendario compacto, completo y sin desvío ───── */
+@media (max-width:640px){
+  .sa-cal{padding:8px;border-radius:1.1rem}
+  .sa-grid{gap:4px !important}
+  .sa-wd{font-size:8px;padding:5px 1px;letter-spacing:.02em;border-radius:.4rem}
+  .sa-cell{min-height:56px;padding:3px;border-radius:.6rem;gap:2px}
+  .sa-cell-has{border-left-width:2px}
+  .sa-day-num{font-size:10px}
+  .sa-day-dot{width:6px;height:6px}
+  .sa-day-count{height:14px;min-width:14px;font-size:7px;padding:0 3px}
+  .sa-cell-body{gap:2px}
+  .sa-chip{padding:0;justify-content:center;gap:0;border-left:none !important;background:transparent !important;border-radius:.4rem}
+  .sa-chip .sa-chip-title{display:none}
+  .sa-chip .sa-emoji{font-size:16px}
+  .sa-more{font-size:8px;padding:0 1px}
+  .sa-empty-month{font-size:11px;padding:12px 0 4px}
+}
+
+/* ── Móvil pequeño (≤400px): aún más compacto, sin desvío ── */
+@media (max-width:400px){
+  .sa-cal{padding:6px;border-radius:1rem}
+  .sa-grid{gap:3px !important}
+  .sa-wd{font-size:7px;padding:4px 0;letter-spacing:0;border-radius:.35rem}
+  .sa-cell{min-height:46px;padding:2px;border-radius:.5rem;gap:1px}
+  .sa-day-num{font-size:9px}
+  .sa-day-dot{width:5px;height:5px}
+  .sa-day-count{height:12px;min-width:12px;font-size:6px;padding:0 2px}
+  .sa-chip .sa-emoji{font-size:13px}
+  .sa-more{font-size:7px;padding:0}
+  .sa-empty-month{font-size:10px;padding:10px 0 2px}
+}
 
 /* ══ Eventos: emoji grande con animación ══ */
-.sa-chip{display:flex;align-items:center;gap:6px;transition:transform .18s ease,filter .18s ease}
-.sa-chip:hover{transform:translateY(-1px) translateX(1px);filter:brightness(1.05)}
+.sa-chip{position:relative;display:flex;align-items:center;gap:6px;overflow:hidden;transition:transform .18s ease,filter .18s ease,box-shadow .18s ease}
+.sa-chip:hover{transform:translateY(-1px) translateX(1px);filter:brightness(1.06);box-shadow:0 4px 12px rgba(15,23,42,.12)}
 .sa-chip:active{transform:scale(.98)}
-.sa-emoji{font-size:18px;line-height:1.1;flex:0 0 auto;display:inline-block;animation:saPop .45s cubic-bezier(.2,.85,.3,1.5) both}
+.sa-chip::after{content:'';position:absolute;top:0;left:-120%;width:60%;height:100%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.65),transparent);transform:skewX(-18deg);pointer-events:none}
+.sa-chip:hover::after{animation:saSheen .7s ease}
+.sa-emoji{font-size:18px;line-height:1.1;flex:0 0 auto;display:inline-block;animation:saPop .5s cubic-bezier(.2,.85,.3,1.5) both}
+.sa-cell-has .sa-emoji{animation:saPop .5s cubic-bezier(.2,.85,.3,1.5) both,saFloat 3.2s ease-in-out 1s infinite}
 .sa-chip:hover .sa-emoji{animation:saWiggle .5s ease}
 @keyframes saPop{0%{transform:scale(.2) rotate(-14deg);opacity:0}70%{transform:scale(1.16) rotate(3deg);opacity:1}100%{transform:scale(1) rotate(0);opacity:1}}
 @keyframes saWiggle{0%,100%{transform:rotate(0) scale(1)}25%{transform:rotate(-14deg) scale(1.14)}75%{transform:rotate(10deg) scale(1.1)}}
+@keyframes saFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}
+@keyframes saSheen{0%{left:-120%}100%{left:130%}}
 
 /* ══ Entrada animada de la sección (stagger) ══ */
 .sa-anim{animation:saFadeUp .5s ease both}
@@ -1176,6 +1241,8 @@ select.sa-input{cursor:pointer}
 .sa-upc:hover{transform:translateY(-2px);border-color:#C7D0DB;box-shadow:0 10px 24px rgba(15,23,42,.10)}
 .sa-upc:hover .sa-upc-hint{background:#E6F7EB;color:#239943}
 .sa-upc-hint{transition:background .18s ease,color .18s ease}
+.sa-upc-emoji{transition:transform .22s cubic-bezier(.34,1.56,.64,1)}
+.sa-upc:hover .sa-upc-emoji{transform:scale(1.12) rotate(-6deg)}
 
 /* ══ Filas de la vista lista: elevación al hover ══ */
 #actividadesContent [data-sa-action="open"]{transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease}

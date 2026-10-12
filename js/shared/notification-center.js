@@ -243,7 +243,7 @@ function _syncAllBadges() {
   // 1) Notificaciones por sección (desde _state.items)
   const secCounts = {};
   for (const it of _state.items) {
-    if (it.isRead) continue;
+    if (it.isRead || it._isMessage) continue;
     const sec = _typeToSection(it.type);
     if (sec) secCounts[sec] = (secCounts[sec] || 0) + 1;
   }
@@ -295,6 +295,12 @@ async function _fetchNotifCount() {
   }
 }
 
+// Columnas reales de la tabla notifications. NO incluir `target_section`:
+// esa columna no existe en el esquema, y pedirla hacía fallar TODO el SELECT
+// (error 400 PostgREST) devolviendo la lista vacía — por eso la campana
+// mostraba "1" pero el Centro decía "Aún no hay eventos".
+const NOTIF_COLS = 'id,type,title,message,is_read,created_at,link';
+
 // SELECT lista de notificaciones (limit 200)
 async function _fetchNotifications() {
   const uid = _state.userId;
@@ -302,7 +308,7 @@ async function _fetchNotifications() {
   try {
     const { data, error } = await supabase
       .from('notifications')
-      .select('id,type,title,message,is_read,created_at,link,target_section')
+      .select(NOTIF_COLS)
       .eq('user_id', uid)
       .order('created_at', { ascending: false })
       .limit(MAX_NOTIF_LIST);
@@ -311,7 +317,7 @@ async function _fetchNotifications() {
   // 2) PostgREST
   try {
     const rows = await fetchPostgREST('notifications', {
-      select: 'id,type,title,message,is_read,created_at,link,target_section',
+      select: NOTIF_COLS,
       filters: { user_id: uid },
       order: { column: 'created_at', ascending: false },
       limit: MAX_NOTIF_LIST
@@ -319,9 +325,62 @@ async function _fetchNotifications() {
     if (Array.isArray(rows) && rows.length) return rows;
   } catch (_) { /* cae a memoria */ }
   // 3) Último valor en memoria no se toca
-  return _state.items.map(i => ({
-    id: i.id, type: i.type, title: i.title, message: i.message,
-    is_read: i.isRead, created_at: i.createdAt, link: i.link
+  return _state.items
+    .filter(i => !i._isMessage)
+    .map(i => ({
+      id: i.id, type: i.type, title: i.title, message: i.message,
+      is_read: i.isRead, created_at: i.createdAt, link: i.link
+    }));
+}
+
+// Mensajes de chat sin leer (fuente disjunta de notifications). El badge de la
+// campana los suma, así que la lista del Centro TAMBIÉN debe mostrarlos para
+// que nunca diga "0 / sin eventos" cuando el contador marcaba n>0.
+async function _fetchUnreadMessages() {
+  const uid = _state.userId;
+  let rows = null;
+  try {
+    const { data, error } = await supabase
+      .from('messages')
+      .select('id,conversation_id,sender_id,content,created_at')
+      .eq('receiver_id', uid)
+      .eq('is_read', false)
+      .order('created_at', { ascending: false })
+      .limit(50);
+    if (!error && Array.isArray(data)) rows = data;
+  } catch (_) {}
+  if (!rows) {
+    try {
+      rows = await fetchPostgREST('messages', {
+        select: 'id,conversation_id,sender_id,content,created_at',
+        filters: { receiver_id: uid, is_read: 'false' },
+        order: { column: 'created_at', ascending: false },
+        limit: 50
+      }, []);
+    } catch (_) { rows = []; }
+  }
+  rows = Array.isArray(rows) ? rows : [];
+  if (!rows.length) return [];
+  // Resolver nombre de remitente (best-effort)
+  const senderIds = [...new Set(rows.map(m => m.sender_id).filter(Boolean))];
+  const names = new Map();
+  if (senderIds.length) {
+    try {
+      const { data: profs } = await supabase
+        .from('profiles').select('id,name').in('id', senderIds);
+      (profs || []).forEach(p => names.set(p.id, p.name));
+    } catch (_) {}
+  }
+  return rows.map(m => ({
+    id: 'message-' + m.id,
+    type: 'message',
+    title: names.get(m.sender_id) || 'Nuevo mensaje',
+    message: m.content || '',
+    isRead: false,
+    createdAt: m.created_at,
+    link: null,
+    _isMessage: true,
+    _conversationId: m.conversation_id
   }));
 }
 
@@ -1148,12 +1207,13 @@ export const NotificationCenter = {
     if (els.list) els.list.innerHTML = _ncSkeleton();
     if (els.grouped) els.grouped.innerHTML = '';
     try {
-      const [rowsNotif, cntUnread, cntMsg] = await Promise.all([
+      const [rowsNotif, cntUnread, cntMsg, msgItems] = await Promise.all([
         _fetchNotifications(),
         _fetchNotifCount(),
-        _fetchMsgCounts()
+        _fetchMsgCounts(),
+        _fetchUnreadMessages()
       ]);
-      _state.items = (rowsNotif || []).map(n => ({
+      const notifItems = (rowsNotif || []).map(n => ({
         id: n.id,
         type: n.type || 'info',
         title: n.title || _cfg(n.type || 'info').label,
@@ -1162,8 +1222,10 @@ export const NotificationCenter = {
         createdAt: n.created_at,
         link: n.link || null
       }));
+      // Unir notificaciones + mensajes sin leer → la lista refleja el badge.
+      _state.items = notifItems.concat(msgItems || []);
       _state.notifUnread = typeof cntUnread === 'number' ? cntUnread :
-        _state.items.filter(i => !i.isRead).length;
+        notifItems.filter(i => !i.isRead).length;
       _state.msgCounts = cntMsg || {};
       _state.msgUnread = Object.values(_state.msgCounts).reduce((a,b) => a+b, 0);
       _sortItems();
@@ -1192,20 +1254,23 @@ export const NotificationCenter = {
     if (els.backdrop) els.backdrop.classList.add('show');
 
     const unreadArr = _state.items.filter(i => !i.isRead);
+    // Los mensajes de chat NO se marcan leídos aquí: se limpian al abrir la
+    // conversación. Solo las notificaciones del panel se marcan al abrir.
+    const unreadNotifs = unreadArr.filter(i => !i._isMessage);
     if (unreadArr.length || _state.msgUnread > 0 || _state.notifUnread > 0) {
       // 1) UI optimista INMEDIATA
-      for (const item of unreadArr) item.isRead = true;
+      for (const item of unreadNotifs) item.isRead = true;
       const prevNotifUnread = _state.notifUnread;
       _state.notifUnread = 0;
       // badges
       _syncAllBadges();
       _refreshNewsCenterListUI();
-      if (els.badge) { els.badge.textContent = '0'; els.badge.classList.add('hidden'); }
+      _renderBell();
       // BadgeSystem legacy mark (comunicacion / chat sections)
       try { window.BadgeSystem?.mark?.('comunicacion'); } catch(_) {}
       try { window.BadgeSystem?.mark?.('chat'); } catch(_) {}
       // 2) UPDATE BD INMEDIATO — AWAIT (no .then colgado)
-      if (_state.userId && (unreadArr.length || prevNotifUnread > 0)) {
+      if (_state.userId && (unreadNotifs.length || prevNotifUnread > 0)) {
         try {
           await supabase.from('notifications')
             .update({ is_read: true })
@@ -1246,8 +1311,8 @@ export const NotificationCenter = {
   async markAllRead() {
     const unreadArr = _state.items.filter(i => !i.isRead);
     if (!unreadArr.length && _state.notifUnread === 0) return;
-    // 1) UI
-    for (const item of unreadArr) item.isRead = true;
+    // 1) UI — solo notificaciones (los mensajes se leen en el chat)
+    for (const item of unreadArr) { if (!item._isMessage) item.isRead = true; }
     _state.notifUnread = 0;
     _syncAllBadges();
     _refreshNewsCenterListUI();
@@ -1329,6 +1394,23 @@ export const NotificationCenter = {
   async _onItemClick(id) {
     const item = _state.items.find(i => String(i.id) === String(id));
     if (!item) return;
+
+    // Mensaje de chat: abrir la conversación y marcarla leída.
+    if (item._isMessage) {
+      const section = _typeToSection('message') || 'notifications';
+      const resolved = _navigate(section, item.link);
+      if (resolved) _state.opened = false;
+      try {
+        const { ChatModule } = await import('./chat.js');
+        await ChatModule.markAsRead?.(item._conversationId);
+      } catch (_) {}
+      item.isRead = true;
+      _state.msgUnread = Math.max(0, _state.msgUnread - 1);
+      _syncAllBadges();
+      _refreshNewsCenterListUI();
+      return;
+    }
+
     const section = _extractSection(item.link, TYPE_CONFIG[item.type]?.target || item.target_section);
     const resolved = _navigate(section, item.link);
     if (resolved) _state.opened = false;

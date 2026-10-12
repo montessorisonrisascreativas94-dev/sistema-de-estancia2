@@ -5,7 +5,7 @@
  * para evitar conflictos de handlers con este worker.
  */
 
-const CACHE_NAME = 'karpus-pwa-v13';
+const CACHE_NAME = 'karpus-pwa-v14';
 
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
@@ -91,7 +91,10 @@ self.addEventListener('fetch', e => {
   // falla con 400 aunque el archivo en disco ya sea correcto. Para código y
   // HTML siempre se pregunta a la red primero; la caché es solo el fallback
   // sin conexión.
+  // El CSS también es código: si queda servido desde caché, los ajustes de
+  // responsive (calendario/móvil) no llegan al usuario hasta vaciar la caché.
   const isCode = url.pathname.endsWith('.js') ||
+                 url.pathname.endsWith('.css') ||
                  url.pathname.endsWith('.html') ||
                  url.pathname === '/' ||
                  url.pathname === '';
@@ -109,9 +112,8 @@ self.addEventListener('fetch', e => {
     return;
   }
 
-  // ✅ ASSETS INMUTABLES (css, imágenes, fuentes): cache-first
-  const isCoreAsset = url.pathname.endsWith('.css') ||
-                     url.pathname.endsWith('.png') ||
+  // ✅ ASSETS INMUTABLES (imágenes, fuentes): cache-first
+  const isCoreAsset = url.pathname.endsWith('.png') ||
                      url.pathname.endsWith('.jpg') ||
                      url.pathname.endsWith('.svg');
 

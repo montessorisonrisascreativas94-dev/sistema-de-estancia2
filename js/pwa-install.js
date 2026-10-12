@@ -60,12 +60,12 @@
 
     banner.innerHTML =
       '<div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center text-2xl flex-shrink-0">\uD83C\uDF93</div>' +
-      '<div class="flex-1 min-w-0">' +
-        '<p class="font-black text-slate-800 text-sm leading-tight">Instala la App</p>' +
-        '<p class="text-[10px] font-bold text-slate-400 mt-0.5">Acceso r\u00E1pido desde tu pantalla de inicio</p>' +
+      '<div class="flex-1 min-w-0 overflow-hidden">' +
+        '<p class="font-black text-slate-800 text-sm leading-tight truncate">Instala la App</p>' +
+        '<p class="text-[10px] font-bold text-slate-400 mt-0.5 truncate">Acceso r\u00E1pido desde tu pantalla de inicio</p>' +
       '</div>' +
-      '<div class="flex flex-col gap-1.5 flex-shrink-0">' +
-        '<button id="pwa-install-btn" class="px-3 py-1.5 bg-green-500 text-white rounded-xl text-[10px] font-black uppercase hover:bg-green-600 transition-colors">Instalar</button>' +
+      '<div class="flex-shrink-0">' +
+        '<button id="pwa-install-btn" class="px-3 py-1.5 bg-green-500 text-white rounded-xl text-[10px] font-black uppercase hover:bg-green-600 transition-colors whitespace-nowrap">Instalar</button>' +
       '</div>' +
       '<button id="pwa-dismiss-btn" style="position:absolute;top:8px;right:8px;width:24px;height:24px;border-radius:50%;background:#f1f5f9;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#64748b;font-size:14px;font-weight:900;line-height:1" aria-label="Cerrar">\u00D7</button>';
 

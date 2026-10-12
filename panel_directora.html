@@ -117,12 +117,18 @@
     .main {
       background: linear-gradient(180deg, #f8fbff 0%, #f3f7fb 100%);
       padding: 1.5rem 1rem 2.5rem;
+      max-width: 100%;
+      min-width: 0;
+      overflow-x: hidden;
     }
 
     .section {
       display: none;
       overflow: visible;
+      overflow-x: hidden;
       padding: 0.25rem 0.25rem 2rem;
+      max-width: 100%;
+      min-width: 0;
     }
 
     .section.active {
@@ -138,6 +144,9 @@
       box-shadow: var(--shadow);
       padding: 1.4rem;
       backdrop-filter: blur(8px);
+      max-width: 100%;
+      min-width: 0;
+      overflow-x: hidden;
     }
 
     .section-header {
@@ -1344,7 +1353,7 @@
 <!-- ACTIVIDADES / CALENDARIO PEDAGÓGICO -->
 <section id="actividades" class="section">
   <div class="p-2 md:p-4">
-    <div id="actividadesContent" class="space-y-6"></div>
+    <div id="actividadesContent" class="space-y-5 w-full min-w-0 max-w-full"></div>
   </div>
 </section>
 
