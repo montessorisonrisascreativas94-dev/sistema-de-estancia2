@@ -1620,3 +1620,286 @@ body.panel-encargada-body .ksc-tab--sm.active::before { background: #8B5CF6; }
   font-weight: 900;
   line-height: 1.25;
 }
+
+/* ============================================================
+   SPV — Activity Modal Premium (Directora / Encargada)
+   Clases: spv-modal, spv-field, spv-btn, spv-chip, spv-kpi-sp
+   Estas clases son usadas por school-center.module.js al renderizar
+   el modal "Nueva Actividad Escolar".
+   ============================================================ */
+
+/* ── Modal shell ── */
+.spv-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 9000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  overflow-y: auto;
+}
+
+.spv-modal {
+  background: #fff;
+  border-radius: 24px;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.28);
+  width: 100%;
+  max-height: calc(100dvh - 2rem);
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(11, 99, 199, 0.2) transparent;
+  position: relative;
+}
+.spv-modal--xl { max-width: 980px; }
+
+/* Close button */
+.spv-close {
+  position: absolute;
+  top: 1.2rem;
+  right: 1.4rem;
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.18s;
+  z-index: 10;
+}
+.spv-close:hover { background: rgba(255, 255, 255, 0.28); }
+
+/* ── KPI strip in header ── */
+.spv-kpi-sp {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: .2rem;
+  padding: .55rem .7rem;
+  border-radius: 14px;
+  text-align: center;
+}
+.spv-kpi-sp span {
+  font-size: .68rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.82);
+  white-space: nowrap;
+}
+.spv-kpi-sp b {
+  font-size: 1.35rem;
+  font-weight: 900;
+  color: #fff;
+  line-height: 1;
+}
+
+/* ── Form fields ── */
+.spv-field {
+  display: flex;
+  flex-direction: column;
+  gap: .45rem;
+}
+
+.spv-field > span {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  font-size: .72rem;
+  font-weight: 800;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: #475569;
+}
+
+.spv-field > span svg,
+.spv-field > span i[data-lucide] {
+  width: .85rem;
+  height: .85rem;
+  color: #94a3b8;
+  flex-shrink: 0;
+}
+
+.spv-field > span em {
+  font-style: normal;
+  color: #ef4444;
+}
+
+.spv-field > span small {
+  font-size: .65rem;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.spv-field input[type="text"],
+.spv-field input[type="date"],
+.spv-field input[type="time"],
+.spv-field input[type="number"],
+.spv-field select,
+.spv-field textarea {
+  width: 100%;
+  padding: .65rem .9rem;
+  border: 1.5px solid #e2e8f0;
+  border-radius: .85rem;
+  font-size: .88rem;
+  font-weight: 600;
+  color: #0f172a;
+  background: #f8fafc;
+  outline: none;
+  transition: border-color .2s, box-shadow .2s, background .2s;
+  font-family: inherit;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.spv-field input:focus,
+.spv-field select:focus,
+.spv-field textarea:focus {
+  border-color: #0B63C7;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(11, 99, 199, .12);
+}
+
+.spv-field textarea {
+  resize: vertical;
+  min-height: 72px;
+  line-height: 1.55;
+}
+
+.spv-field select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' stroke='%2394a3b8' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right .75rem center;
+  padding-right: 2rem;
+}
+
+/* ── Priority chips ── */
+.spv-chiprow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .4rem;
+}
+
+.spv-chip-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  padding: .4rem .7rem;
+  border-radius: 8px;
+  border: 1.5px solid #e2e8f0;
+  background: #f8fafc;
+  font-size: .72rem;
+  font-weight: 800;
+  color: #475569;
+  cursor: pointer;
+  transition: all .18s;
+  letter-spacing: .03em;
+  white-space: nowrap;
+}
+.spv-chip-btn:hover {
+  border-color: #0B63C7;
+  color: #0B63C7;
+  background: #e8f2ff;
+}
+.spv-chip-btn.active {
+  border-color: var(--bc, #0B63C7);
+  background: color-mix(in srgb, var(--bc, #0B63C7) 12%, #fff);
+  color: var(--bc, #0B63C7);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, .08);
+}
+
+.spv-chip-dot {
+  width: .55rem;
+  height: .55rem;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ── Buttons ── */
+.spv-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .5rem;
+  padding: .7rem 1.4rem;
+  border-radius: .9rem;
+  border: 1.5px solid transparent;
+  font-size: .8rem;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform .16s, box-shadow .18s, background .18s, color .18s;
+  font-family: inherit;
+}
+.spv-btn:active { transform: scale(.97); }
+.spv-btn:disabled { opacity: .55; cursor: not-allowed; transform: none !important; }
+
+.spv-btn svg,
+.spv-btn i[data-lucide] { width: .95rem; height: .95rem; flex-shrink: 0; }
+
+.spv-btn--primary {
+  background: linear-gradient(135deg, #0B63C7, #0850A0);
+  color: #fff;
+  box-shadow: 0 8px 20px -10px rgba(11, 99, 199, .8);
+}
+.spv-btn--primary:hover {
+  box-shadow: 0 12px 26px -8px rgba(11, 99, 199, .7);
+  filter: brightness(1.06);
+}
+
+.spv-btn--ghost {
+  background: transparent;
+  color: #64748b;
+  border-color: #e2e8f0;
+}
+.spv-btn--ghost:hover {
+  background: #f1f5f9;
+  color: #334155;
+}
+
+.spv-btn--danger {
+  background: #fff1f2;
+  color: #e11d48;
+  border-color: #fecdd3;
+}
+.spv-btn--danger:hover { background: #ffe4e8; }
+
+/* ── Footnote ── */
+.spv-footnote {
+  display: flex;
+  align-items: flex-start;
+  gap: .5rem;
+  font-size: .78rem;
+  font-weight: 600;
+  color: #94a3b8;
+  line-height: 1.55;
+  max-width: 460px;
+}
+.spv-footnote svg,
+.spv-footnote i[data-lucide] { width: .9rem; height: .9rem; flex-shrink: 0; margin-top: .15rem; }
+
+/* ── Responsive ── */
+@media (max-width: 700px) {
+  .spv-modal { border-radius: 18px; }
+  .spv-modal > div[style*="padding:1.8rem 2.4rem"] { padding: 1.2rem 1.1rem !important; }
+  .spv-modal > div[style*="padding:2.2rem"] { padding: 1.4rem 1.2rem 1.2rem !important; }
+  .spv-modal > div > div[style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
+  .spv-modal > div > div[style*="grid-template-columns:2fr"] { grid-template-columns: 1fr !important; }
+  .spv-modal > div > div[style*="grid-template-columns:1.2fr"] { grid-template-columns: 1fr !important; }
+  .spv-modal > div > div[style*="grid-template-columns:1fr .8fr"] { grid-template-columns: 1fr 1fr !important; }
+  .spv-kpi-sp { display: none; }
+  .spv-footnote { display: none; }
+}

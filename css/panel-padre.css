@@ -1360,3 +1360,64 @@ body.panel-padre-body .cloud-card:hover {
     font-size: 8px !important;
   }
 }
+
+/* ── CALENDARIO RESPONSIVE — Mejoras adicionales panel padre ─
+   Complementa calendar-responsive.css con estilos específicos
+   del panel padre: colores de marca y animaciones de asistencia.
+   ────────────────────────────────────────────────────────────── */
+
+/* Asegurar que el wrapper del calendario no desborde en móvil */
+.cloud-card {
+  overflow-x: hidden;
+}
+
+/* Headers de días de la semana siempre alineados */
+.grid.grid-cols-7.gap-2.mb-4 > div,
+.grid.grid-cols-7.gap-3.mb-3 > div {
+  padding: .35rem 0;
+  text-align: center;
+  font-size: clamp(.55rem, 2vw, .72rem);
+  font-weight: 900;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+/* Celda de hoy sin registro: anillo verde */
+#calendarGrid > div.ring-2 {
+  box-shadow: 0 0 0 2px #34d399, 0 0 0 4px rgba(52, 211, 153, .2) !important;
+}
+
+/* Dot indicador dentro de celda presente */
+#calendarGrid > div .w-1.h-1,
+#calendarGrid > div .w-1\.5.h-1\.5 {
+  width: 5px !important;
+  height: 5px !important;
+  border-radius: 50%;
+  background: rgba(255,255,255,.85);
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+/* Asegura que el contenedor padre no colapse la cuadrícula */
+#calendarGrid {
+  min-width: 0;
+}
+
+/* Fuerza que el grid en mobile NO genere scroll horizontal */
+@media (max-width: 640px) {
+  /* Wrapper del calendario  */
+  .cloud-card > .grid.grid-cols-7 {
+    gap: 3px !important;
+  }
+
+  #calendarGrid > div {
+    /* En pantallas muy pequeñas, el número de día puede necesitar menos padding */
+    padding: 1px !important;
+  }
+
+  /* Oculta el punto indicador en pantallas muy pequeñas para ganar espacio */
+  #calendarGrid > div .w-1.h-1 {
+    display: none;
+  }
+}

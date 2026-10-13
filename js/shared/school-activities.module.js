@@ -1183,31 +1183,56 @@ select.sa-input{cursor:pointer}
 /* ── Móvil: calendario compacto, completo y sin desvío ───── */
 @media (max-width:640px){
   .sa-cal{padding:8px;border-radius:1.1rem}
-  .sa-grid{gap:4px !important}
+  /* FORCE 7 equal columns regardless of Tailwind class loading */
+  .sa-grid{
+    display:grid !important;
+    grid-template-columns:repeat(7,minmax(0,1fr)) !important;
+    gap:3px !important;
+    width:100%;
+    min-width:0;
+  }
   .sa-wd{font-size:8px;padding:5px 1px;letter-spacing:.02em;border-radius:.4rem}
-  .sa-cell{min-height:56px;padding:3px;border-radius:.6rem;gap:2px}
+  /* Square cells via aspect-ratio — NO min-height */
+  .sa-cell{
+    aspect-ratio:1/1 !important;
+    min-height:unset !important;
+    padding:2px;
+    border-radius:.6rem;
+    gap:1px;
+    overflow:hidden;
+    box-sizing:border-box;
+  }
+  .sa-cell-empty{aspect-ratio:1/1 !important;min-height:unset !important}
   .sa-cell-has{border-left-width:2px}
-  .sa-day-num{font-size:10px}
-  .sa-day-dot{width:6px;height:6px}
-  .sa-day-count{height:14px;min-width:14px;font-size:7px;padding:0 3px}
-  .sa-cell-body{gap:2px}
+  .sa-day-num{font-size:9px}
+  .sa-day-dot{width:5px;height:5px}
+  .sa-day-count{height:13px;min-width:13px;font-size:6px;padding:0 2px}
+  .sa-cell-body{gap:1px}
+  /* Hide text labels on chips — show only emoji */
   .sa-chip{padding:0;justify-content:center;gap:0;border-left:none !important;background:transparent !important;border-radius:.4rem}
   .sa-chip .sa-chip-title{display:none}
-  .sa-chip .sa-emoji{font-size:16px}
+  .sa-chip .sa-emoji{font-size:clamp(10px, 3.5vw, 15px)}
   .sa-more{font-size:8px;padding:0 1px}
   .sa-empty-month{font-size:11px;padding:12px 0 4px}
 }
 
 /* ── Móvil pequeño (≤400px): aún más compacto, sin desvío ── */
 @media (max-width:400px){
-  .sa-cal{padding:6px;border-radius:1rem}
-  .sa-grid{gap:3px !important}
+  .sa-cal{padding:5px;border-radius:1rem}
+  .sa-grid{gap:2px !important}
   .sa-wd{font-size:7px;padding:4px 0;letter-spacing:0;border-radius:.35rem}
-  .sa-cell{min-height:46px;padding:2px;border-radius:.5rem;gap:1px}
-  .sa-day-num{font-size:9px}
-  .sa-day-dot{width:5px;height:5px}
-  .sa-day-count{height:12px;min-width:12px;font-size:6px;padding:0 2px}
-  .sa-chip .sa-emoji{font-size:13px}
+  .sa-cell{
+    aspect-ratio:1/1 !important;
+    min-height:unset !important;
+    padding:1px;
+    border-radius:.45rem;
+    gap:0;
+  }
+  .sa-cell-empty{aspect-ratio:1/1 !important;min-height:unset !important}
+  .sa-day-num{font-size:8px}
+  .sa-day-dot{width:4px;height:4px}
+  .sa-day-count{height:11px;min-width:11px;font-size:6px;padding:0 2px}
+  .sa-chip .sa-emoji{font-size:clamp(8px, 3vw, 12px)}
   .sa-more{font-size:7px;padding:0}
   .sa-empty-month{font-size:10px;padding:10px 0 2px}
 }

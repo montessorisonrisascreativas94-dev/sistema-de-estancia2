@@ -1,0 +1,322 @@
+/* ============================================================
+   CALENDAR RESPONSIVE — Universal para todos los paneles
+   Aplica a:
+     • #calendarGrid      (panel_padres — attendance.js)
+     • .ksc-cal-grid      (panel_directora — school-center.module.js)
+     • .ksc-cal           (layout contenedor directora)
+   
+   Principio: grid-cols-7 + aspect-square = días siempre cuadrados
+   sin importar el tamaño de pantalla.
+   ============================================================ */
+
+/* ── 1. PANEL PADRE — #calendarGrid ───────────────────────── */
+
+/* Contenedor principal: siempre 7 columnas, cells cuadradas */
+#calendarGrid {
+  display: grid !important;
+  grid-template-columns: repeat(7, minmax(0, 1fr)) !important;
+  gap: 6px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Cada celda de día: cuadrada garantizada */
+#calendarGrid > div {
+  aspect-ratio: 1 / 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.1;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  transition: transform .15s, box-shadow .15s;
+  min-width: 0;
+  overflow: hidden;
+  box-sizing: border-box;
+  padding: 2px;
+}
+
+/* Status colors — más saturados para mejor visibilidad en móvil */
+#calendarGrid > div.bg-green-500,
+#calendarGrid > div[class*="bg-green-5"] {
+  background: #22c55e !important;
+  color: #fff !important;
+  box-shadow: 0 3px 10px rgba(34,197,94,.35);
+  transform: scale(1.05);
+  z-index: 2;
+}
+
+#calendarGrid > div.bg-rose-500,
+#calendarGrid > div[class*="bg-rose-5"] {
+  background: #ef4444 !important;
+  color: #fff !important;
+  box-shadow: 0 3px 8px rgba(239,68,68,.3);
+}
+
+#calendarGrid > div.bg-amber-500,
+#calendarGrid > div[class*="bg-amber-5"] {
+  background: #f59e0b !important;
+  color: #fff !important;
+  box-shadow: 0 3px 8px rgba(245,158,11,.3);
+}
+
+/* Day header row (Dom Lun Mar ...) */
+#calendarGrid + * .grid-cols-7 > div,
+.att-cal-header > div {
+  font-size: 10px !important;
+  font-weight: 900 !important;
+}
+
+/* ── 2. PANEL DIRECTORA — .ksc-cal layout ─────────────────── */
+
+/* Desktop: calendar + detail side-by-side */
+.ksc-cal {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+  gap: 1rem;
+}
+
+/* .ksc-cal-grid: 7 columns, cells have min-height that adjusts */
+.ksc-cal-grid {
+  display: grid !important;
+  grid-template-columns: repeat(7, minmax(0, 1fr)) !important;
+  gap: 4px;
+  padding: .9rem 1.1rem 1.1rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.ksc-day {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  min-height: unset !important; /* Remove fixed 66px — use aspect-ratio instead */
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: #F8FAFC;
+  padding: .2rem .3rem;
+  cursor: pointer;
+  transition: .16s;
+  display: flex;
+  flex-direction: column;
+  gap: .15rem;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+/* Event dots in ksc-day: limit to 2 dots on mobile to avoid overflow */
+.ksc-day-num {
+  font-size: clamp(.6rem, 1.5vw, .78rem);
+  font-weight: 900;
+  line-height: 1;
+}
+
+.ksc-day-evs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  overflow: hidden;
+  max-height: 1.4rem; /* show max 1 row of dots on small screens */
+}
+
+.ksc-ev-dot {
+  width: clamp(4px, 1.2vw, 7px);
+  height: clamp(4px, 1.2vw, 7px);
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ── 3. BREAKPOINTS MÓVIL ─────────────────────────────────── */
+
+/* Tablets (≤768px): stack calendar and detail vertically */
+@media (max-width: 768px) {
+  .ksc-cal {
+    grid-template-columns: 1fr !important;
+  }
+
+  .ksc-cal-grid {
+    gap: 3px !important;
+    padding: .6rem .7rem .8rem !important;
+  }
+
+  .ksc-day {
+    border-radius: 8px;
+    padding: .15rem !important;
+  }
+
+  #calendarGrid {
+    gap: 5px !important;
+  }
+
+  #calendarGrid > div {
+    font-size: 11px !important;
+    border-radius: 12px !important;
+  }
+}
+
+/* Smartphones (≤480px): tighter gaps, smaller font */
+@media (max-width: 480px) {
+  #calendarGrid {
+    gap: 4px !important;
+  }
+
+  #calendarGrid > div {
+    font-size: 11px !important;
+    border-radius: 10px !important;
+  }
+
+  .ksc-cal-grid {
+    gap: 2px !important;
+    padding: .5rem .55rem .65rem !important;
+  }
+
+  .ksc-day {
+    border-radius: 7px !important;
+    padding: .1rem !important;
+  }
+
+  .ksc-day-num {
+    font-size: .55rem !important;
+  }
+
+  .ksc-day-evs {
+    display: none !important; /* Hide event dots on very small screens */
+  }
+
+  /* Calendar day-of-week headers */
+  .ksc-cal-dow {
+    font-size: .52rem !important;
+    letter-spacing: .03em !important;
+  }
+}
+
+/* Ultra-compact phones (≤360px — iPhone SE, small Androids) */
+@media (max-width: 360px) {
+  #calendarGrid {
+    gap: 3px !important;
+  }
+
+  #calendarGrid > div {
+    font-size: 10px !important;
+    border-radius: 8px !important;
+  }
+
+  .ksc-cal-grid {
+    gap: 2px !important;
+    padding: .4rem !important;
+  }
+
+  .ksc-day {
+    border-radius: 5px !important;
+  }
+}
+
+/* ── 4. LANDSCAPE MÓVIL: ampliar área visual del calendario ── */
+@media (max-width: 768px) and (orientation: landscape) {
+  #calendarGrid {
+    gap: 4px !important;
+  }
+  .ksc-cal {
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) !important;
+  }
+}
+
+/* ── 5. PANEL DE ACTIVIDADES (padre) — mismo patrón ─────────
+   El panel padre tiene una sección de actividades que puede
+   tener su propio calendario. Aplicar el mismo patrón. */
+
+[id$="activitiesCalendar"],
+[id$="activityCalendar"],
+[id$="calGrid"] {
+  display: grid !important;
+  grid-template-columns: repeat(7, minmax(0, 1fr)) !important;
+  gap: 4px;
+  width: 100%;
+}
+
+[id$="activitiesCalendar"] > div,
+[id$="activityCalendar"] > div,
+[id$="calGrid"] > div {
+  aspect-ratio: 1 / 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 800;
+  min-width: 0;
+  overflow: hidden;
+  user-select: none;
+}
+
+/* ── 6. CLOUD-CARD que contiene el calendario de panel padre ─
+   En mobile, el lg:col-span-2 wrapper debe ser full-width     */
+@media (max-width: 1024px) {
+  .lg\:col-span-2:has(#calendarGrid) {
+    grid-column: span 1 / span 1 !important;
+    width: 100%;
+  }
+}
+
+/* Prevent horizontal scroll overflow from calendar on narrow screens */
+.cloud-card:has(#calendarGrid),
+.cloud-card:has(.ksc-cal-grid) {
+  overflow-x: hidden;
+}
+
+/* ── 7. SCHOOL-ACTIVITIES MODULE — .sa-grid / .sa-cell ──────
+   Refuerza las reglas del módulo embebido para garantizar
+   aspect-ratio en todas las pantallas.                        */
+
+@media (max-width: 640px) {
+  .sa-grid {
+    display: grid !important;
+    grid-template-columns: repeat(7, minmax(0, 1fr)) !important;
+    gap: 3px !important;
+    width: 100%;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .sa-cell,
+  .sa-cell-empty {
+    aspect-ratio: 1 / 1 !important;
+    min-height: unset !important;
+    overflow: hidden;
+    box-sizing: border-box;
+  }
+}
+
+@media (max-width: 400px) {
+  .sa-grid { gap: 2px !important; }
+  .sa-cell, .sa-cell-empty {
+    aspect-ratio: 1 / 1 !important;
+    min-height: unset !important;
+  }
+}
+
+/* ── 8. ACTIVIDADES PANEL PADRE — #actividadesContent calendar ─
+   If padre has an activities section that uses sa-* classes    */
+@media (max-width: 640px) {
+  #actividadesContent .sa-grid {
+    grid-template-columns: repeat(7, minmax(0, 1fr)) !important;
+    gap: 3px !important;
+  }
+  #actividadesContent .sa-cell {
+    aspect-ratio: 1 / 1 !important;
+    min-height: unset !important;
+  }
+}
+
+/* ── 9. PREVENT horizontal overflow on any calendar wrapper ──── */
+[class*="sa-cal"],
+[class*="ksc-calendar"],
+.school-activities-calendar,
+.calendar-wrapper {
+  overflow-x: hidden !important;
+  max-width: 100% !important;
+}

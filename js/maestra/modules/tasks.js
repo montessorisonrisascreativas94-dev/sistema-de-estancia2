@@ -11,6 +11,9 @@ const { safeToast, safeEscapeHTML, Modal } = UI;
 // vincular tareas: al calificar, la nota se duplica en eval_scores.
 let _evalLink = null;
 
+// Forzar recarga de áreas (llamar después de ejecutar migración RLS)
+export function resetEvalLinkCache() { _evalLink = null; }
+
 async function _loadEvalLink() {
   if (_evalLink) return _evalLink;
   try {
@@ -55,6 +58,11 @@ async function _initTaskEvalLink(taskToEdit = null) {
   const link = await _loadEvalLink();
   areaSel.innerHTML = '<option value="">— Sin área —</option>' +
     link.areas.map(a => `<option value="${a.id}">${Helpers.escapeHTML(a.name)}</option>`).join('');
+
+  // If no areas, show helpful placeholder
+  if (!link.areas.length) {
+    areaSel.innerHTML = '<option value="">— Sin áreas (ejecuta la migración RLS) —</option>';
+  }
 
   const fillActs = () => {
     const areaId = Number(areaSel.value) || null;
@@ -369,10 +377,12 @@ export async function openNewTaskModal(taskToEdit = null) {
       };
       
       if (isEditing) {
-        await MaestraApi.updateTask(taskToEdit.id, payload);
+        const updated = await MaestraApi.updateTask(taskToEdit.id, payload);
+        if (!updated) throw new Error('No se pudo actualizar la tarea. Verifica los permisos.');
         safeToast('Tarea actualizada correctamente');
       } else {
-        await MaestraApi.createTask(payload);
+        const created = await MaestraApi.createTask(payload);
+        if (!created) throw new Error('No se pudo crear la tarea. Verifica los permisos (RLS).');
         const students = AppState.get('students') || [];
         const classroomName = AppState.get('classroom').name;
 

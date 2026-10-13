@@ -1165,10 +1165,6 @@ export function openEventConfig(eventId) {
           <input type="time" id="cfgStartTime" value="${ev.startTime}" class="w-full mt-1 p-3 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-700 outline-none focus:border-blue-400">
         </div>
         <div>
-          <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Duración (minutos)</label>
-          <input type="number" id="cfgDuration" value="${ev.duration}" min="5" max="480" class="w-full mt-1 p-3 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-700 outline-none focus:border-blue-400">
-        </div>
-        <div>
           <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Emoji</label>
           <input type="text" id="cfgEmoji" value="${ev.emoji}" maxlength="4" class="w-full mt-1 p-3 border-2 border-slate-100 rounded-xl text-2xl text-center outline-none focus:border-blue-400">
         </div>
@@ -1215,15 +1211,12 @@ export function saveEventConfig(eventId) {
   const evIndex = (_scheduleConfig || []).findIndex(e => e.id === eventId);
   if (evIndex === -1) return;
   const oldStart = _scheduleConfig[evIndex].startTime;
-  const oldDuration = _scheduleConfig[evIndex].duration;
   const newStart = document.getElementById('cfgStartTime')?.value || oldStart;
-  const newDuration = parseInt(document.getElementById('cfgDuration')?.value) || oldDuration;
   const doRecalc = document.getElementById('cfgRecalc')?.checked || false;
 
   _scheduleConfig[evIndex] = {
     ..._scheduleConfig[evIndex],
     startTime: newStart,
-    duration: newDuration,
     emoji: document.getElementById('cfgEmoji')?.value || _scheduleConfig[evIndex].emoji,
     color: document.getElementById('cfgColor')?.value || _scheduleConfig[evIndex].color,
     active: document.getElementById('cfgActive')?.checked ?? true,
@@ -1231,13 +1224,11 @@ export function saveEventConfig(eventId) {
   };
 
   if (doRecalc) {
-    const oldEndMin = _timeToMinutes(oldStart) + oldDuration;
-    const newEndMin = _timeToMinutes(newStart) + newDuration;
-    const shiftMin = newEndMin - oldEndMin;
+    const shiftMin = _timeToMinutes(newStart) - _timeToMinutes(oldStart);
     if (shiftMin !== 0) {
       for (let i = evIndex + 1; i < _scheduleConfig.length; i++) {
         const curStartMin = _timeToMinutes(_scheduleConfig[i].startTime);
-        _scheduleConfig[i].startTime = _minutesToTime(curStartMin + shiftMin);
+        _scheduleConfig[i].startTime = _minutesToTime(Math.max(0, Math.min(1439, curStartMin + shiftMin)));
       }
     }
   }
@@ -1314,7 +1305,7 @@ export function openScheduleConfig() {
           <span class="text-xl">${ev.emoji}</span>
           <div class="flex-1 min-w-0">
             <div class="text-sm font-black text-slate-800 truncate">${safeEscapeHTML(ev.label)}</div>
-            <div class="text-[10px] font-bold text-slate-400">${_fmtTimeShort(ev.startTime)} · ${ev.duration}min${isOmittedToday ? ' · <span class="text-amber-500">Omitido hoy</span>' : ''}</div>
+            <div class="text-[10px] font-bold text-slate-400">${_fmtTimeShort(ev.startTime)}${isOmittedToday ? ' · <span class="text-amber-500">Omitido hoy</span>' : ''}</div>
           </div>
           <div class="flex items-center gap-2">
             <span class="w-3 h-3 rounded-full" style="background:${ev.color}"></span>
@@ -1363,7 +1354,7 @@ export function openScheduleConfig() {
       </div>
       <div class="flex gap-1.5 flex-wrap mb-2">
         <label class="bd-start"><span>Inicio</span><input type="time" value="${_buildStartTime}" onchange="App.buildModeSetStart(this.value)"></label>
-        <button onclick="App.buildModeStack()" class="bd-act" title="Encadena las horas según la duración de cada evento">⏱️ Auto-ordenar</button>
+        <button onclick="App.buildModeStack()" class="bd-act" title="Encadena las horas de los eventos en orden">⏱️ Auto-ordenar</button>
         <button onclick="App.buildModeClear()" class="bd-act bd-act-red">🧹 Vaciar</button>
         <button onclick="App.buildModeApply()" class="bd-act bd-act-green">✔ Aplicar cronología</button>
       </div>
@@ -1378,7 +1369,6 @@ export function openScheduleConfig() {
                 <span class="bd-emoji">${emoji}</span>
                 <div class="flex-1 min-w-0"><div class="bd-name">${safeEscapeHTML(label)}</div></div>
                 <input type="time" value="${r.time}" class="bd-in" onchange="App.buildModeSetTime(${i},this.value)" title="Hora de inicio">
-                <div class="bd-dur-wrap"><input type="number" value="${r.dur}" min="5" step="5" class="bd-in bd-dur" onchange="App.buildModeSetDur(${i},this.value)" title="Duración (min)"><span class="bd-dur-t">min</span></div>
                 <button onclick="App.buildModeMove(${i},-1)" class="bd-btn" title="Subir">▲</button>
                 <button onclick="App.buildModeMove(${i},1)" class="bd-btn" title="Bajar">▼</button>
                 <button onclick="App.buildModeRemove(${i})" class="bd-btn bd-del" title="Quitar">✕</button>
@@ -1428,6 +1418,13 @@ export function openScheduleConfig() {
       .bd-btn:active{transform:scale(.9)}
       .bd-del{color:#ef4444;border-color:#fecaca;background:#fef2f2}
       .bd-empty{padding:14px;text-align:center;font-size:.62rem;font-weight:800;color:#94a3b8;border:2px dashed #e2e8f0;border-radius:14px;background:#fff}
+      .shift-ctl{margin-top:14px;padding:10px 12px;border-radius:14px;background:#fff;border:2px solid #f1f5f9;display:flex;flex-direction:column;gap:8px}
+      .shift-lbl{font-size:.6rem;font-weight:900;color:#475569;text-transform:uppercase;letter-spacing:.05em}
+      .shift-actions{display:flex;align-items:center;gap:6px}
+      .shift-btn{font-size:.55rem;font-weight:900;color:#0B63C7;background:#eff6ff;border:2px solid #dbeafe;padding:7px 10px;border-radius:11px;text-transform:uppercase;letter-spacing:.03em;white-space:nowrap}
+      .shift-btn:active{transform:scale(.95)}
+      .shift-in{width:56px;padding:6px;border:2px solid #e2e8f0;border-radius:10px;font-size:.7rem;font-weight:900;color:#334155;text-align:center;outline:none}
+      .shift-unit{font-size:.55rem;font-weight:800;color:#94a3b8}
     </style>
     <div class="bg-white overflow-hidden" style="border-radius:32px;max-height:88vh;display:flex;flex-direction:column">
       <div class="p-5 flex-shrink-0" style="background:linear-gradient(135deg,#0B63C7,#28B54D)">
@@ -1456,6 +1453,15 @@ export function openScheduleConfig() {
               ${catalogHtml}
             </div>
             <div class="mt-4">${scheduleHtml}</div>
+            <div class="shift-ctl">
+              <span class="shift-lbl">⏱️ Correr todo el horario</span>
+              <div class="shift-actions">
+                <button onclick="App.shiftAllScheduleTimes(-1)" class="shift-btn">⏪ Adelantar</button>
+                <input type="number" id="scShiftMin" value="5" min="1" max="180" inputmode="numeric" class="shift-in">
+                <span class="shift-unit">min</span>
+                <button onclick="App.shiftAllScheduleTimes(1)" class="shift-btn">Atrasar ⏩</button>
+              </div>
+            </div>
           `}
         </div>
       </div>
@@ -1474,6 +1480,24 @@ export function resetScheduleConfig() {
   _saveScheduleConfig();
   UI.Modal.close('scheduleConfigModal');
   safeToast('Horario restaurado', 'success');
+  initRoutine();
+}
+
+// Desplaza la hora de TODAS las rutinas del horario a la vez (individual o en general).
+// sign = 1 → atrasa (más tarde) · sign = -1 → adelanta (más temprano)
+export function shiftAllScheduleTimes(sign) {
+  const mins = Math.abs(parseInt(document.getElementById('scShiftMin')?.value, 10)) || 5;
+  const delta = (sign < 0 ? -1 : 1) * mins;
+  const cfg = _getScheduleConfig();
+  if (!cfg || cfg.length === 0) return;
+  cfg.forEach(ev => {
+    if (!ev.startTime) return;
+    const t = _timeToMinutes(ev.startTime);
+    ev.startTime = _minutesToTime(Math.max(0, Math.min(1439, t + delta)));
+  });
+  _saveScheduleConfig();
+  openScheduleConfig();
+  safeToast(`Horario ${delta > 0 ? 'atrasado' : 'adelantado'} ${mins} min en ${cfg.length} evento(s)`, 'success');
   initRoutine();
 }
 

@@ -1,6 +1,6 @@
 /**
  * Daily Report Module — Panel Padre
- * Muestra el reporte de rutina diaria del hijo con timeline de eventos y horas, plus weekly summary!
+ * Muestra el reporte de rutina diaria del hijo (estadísticas, comidas, observaciones) plus weekly summary!
  */
 import { supabase } from '../shared/supabase.js';
 import { Helpers } from '../shared/helpers.js';
@@ -487,8 +487,6 @@ export const DailyReportModule = {
     const todaySleepHours = todaySleepMs > 0 ? Math.floor(todaySleepMs / (1000 * 60 * 60)) : 0;
     const todaySleepMinutes = todaySleepMs > 0 ? Math.floor((todaySleepMs % (1000 * 60 * 60)) / (1000 * 60)) : 0;
 
-    const events = log.infant_data || [];
-
     // Populate quick status chips
     requestAnimationFrame(() => {
       const qsMood = document.getElementById('qsMood');
@@ -506,8 +504,6 @@ export const DailyReportModule = {
       if (qsNapLabel) qsNapLabel.textContent = napLbl;
       if (rutinaDateLabel) rutinaDateLabel.textContent = todayLabel;
     });
-
-    const timeline = events.map(e => this._renderEvent(e)).join('');
 
     return `
       <div class="space-y-4">
@@ -564,94 +560,101 @@ export const DailyReportModule = {
             <span class="text-[9px] font-bold text-[#94A3B8] uppercase tracking-widest">Actualizado ${updTime}</span>
           </div>` : ''}
         </div>
-
-        ${events.length > 0 ? `
-        <!-- Timeline de eventos -->
-        <div class="rounded-2xl border border-[#E2E8F0] bg-white overflow-hidden shadow-sm">
-          <div class="p-4 border-b border-[#F1F5F9]">
-            <div class="text-[10px] font-black text-[#64748B] uppercase tracking-widest flex items-center gap-2">
-              <span class="w-5 h-5 rounded-lg bg-[#28B54D]/10 flex items-center justify-center">🕐</span>
-              Timeline de eventos (${events.length})
-            </div>
-          </div>
-          <div class="p-4">${timeline}</div>
-        </div>` : ''}
-
-        <!-- Visual Timeline -->
-        ${this._renderVisualTimeline(log)}
       </div>`;
   },
 
-  _renderVisualTimeline(log) {
-    const events = log.infant_data || [];
-    if (events.length === 0) return '';
+  // ── Resumen visual del día (timeline vertical) — se muestra en el Inicio ──
+  renderVisualSummaryVertical(log) {
+    const container = document.getElementById('dailyVisualSummary');
+    if (!container) return;
 
-    // Build a visual horizontal timeline like the teacher's
-    const sortedEvents = [...events].sort((a, b) => {
-      const ta = a.created_at ? new Date(a.created_at).getTime() : (a.start_time ? new Date(a.start_time).getTime() : 0);
-      const tb = b.created_at ? new Date(b.created_at).getTime() : (b.start_time ? new Date(b.start_time).getTime() : 0);
-      return ta - tb;
+    const fmtT = (iso) => iso ? new Date(iso).toLocaleTimeString('es-DO', { hour: '2-digit', minute: '2-digit', hour12: true }) : '';
+
+    const emptyState = (title, sub) => `
+      <div class="flex items-center gap-3 p-4 rounded-2xl bg-slate-50 border border-slate-100">
+        <span class="text-2xl">✨</span>
+        <div>
+          <p class="font-black text-sm text-[#334155]">${title}</p>
+          <p class="text-xs font-bold text-[#94A3B8]">${sub}</p>
+        </div>
+      </div>`;
+
+    if (!log) {
+      container.innerHTML = emptyState('Resumen visual del día', 'La maestra aún no ha publicado el reporte de hoy');
+      return;
+    }
+
+    const items = [];
+    const push = (icon, label, detail, iso) => items.push({ icon, label, detail, time: iso || '' });
+
+    if (log.mood) {
+      const label = LABELS.mood[log.mood] || log.mood;
+      push(ICONS.mood[log.mood] || '😊', `Ánimo: ${label}`, '', log.created_at);
+    }
+
+    if (log.food) {
+      let fo = {};
+      try { fo = JSON.parse(log.food); } catch { fo = { breakfast: log.food }; }
+      [['breakfast', '🍞', 'Desayuno'], ['lunch', '🥗', 'Almuerzo'], ['snack', '🍎', 'Merienda']].forEach(([key, icon, name]) => {
+        if (!fo[key]) return;
+        const value = fo[key];
+        const txt = (LABELS.food[value] || value) + (ICONS.food[value] ? ` ${ICONS.food[value]}` : '');
+        push(icon, name, txt, log.created_at);
+      });
+    }
+
+    if (log.nap && LABELS.nap[log.nap]) push(ICONS.nap[log.nap] || '💤', 'Siesta', LABELS.nap[log.nap], log.created_at);
+
+    (log.infant_data || []).forEach(e => {
+      if (e.type === 'food_meal') return;
+      const label = e.label || LABELS.event[e.type] || e.type;
+      push(this._getEventIcon(e), label, '', e.created_at || e.start_time);
     });
 
-    // Add food events to timeline
-    const foodEvents = [];
-    if (log.food) {
-      try {
-        const foodObj = JSON.parse(log.food);
-        if (foodObj.breakfast) foodEvents.push({ type: 'food_meal', meal: 'breakfast', value: foodObj.breakfast, time: log.created_at });
-        if (foodObj.lunch) foodEvents.push({ type: 'food_meal', meal: 'lunch', value: foodObj.lunch, time: log.created_at });
-        if (foodObj.snack) foodEvents.push({ type: 'food_meal', meal: 'snack', value: foodObj.snack, time: log.created_at });
-      } catch {}
+    if (log.notes) push('📝', 'Observación', String(log.notes), log.created_at);
+
+    if (!items.length) {
+      container.innerHTML = emptyState('Sin actividades registradas hoy', 'La maestra actualizará cuando registre la jornada');
+      return;
     }
 
-    // Add mood event
-    if (log.mood) {
-      foodEvents.push({ type: 'mood', value: log.mood, time: log.created_at });
-    }
-
-    // Combine all into visual timeline
-    const allEvents = [
-      ...foodEvents.map(e => ({
-        icon: e.type === 'mood' ? (ICONS.mood[e.value] || '😊') : e.meal === 'breakfast' ? '🍞' : e.meal === 'lunch' ? '🥗' : '🍎',
-        label: e.type === 'mood' ? `Llegó ${LABELS.mood[e.value] || ''}` : `${LABELS.meal[e.meal]}: ${LABELS.food[e.value] || e.value}`,
-        time: e.time
-      })),
-      ...sortedEvents.map(e => ({
-        icon: this._getEventIcon(e),
-        label: e.label || LABELS.event[e.type] || e.type,
-        time: e.created_at || e.start_time
-      }))
-    ].sort((a, b) => {
+    items.sort((a, b) => {
       const ta = a.time ? new Date(a.time).getTime() : 0;
       const tb = b.time ? new Date(b.time).getTime() : 0;
       return ta - tb;
     });
 
-    if (allEvents.length === 0) return '';
+    const count = items.length;
 
-    return `
-      <div class="rounded-2xl border border-[#E2E8F0] bg-white overflow-hidden shadow-sm">
-        <div class="p-4 border-b border-[#F1F5F9]">
-          <div class="text-[10px] font-black text-[#64748B] uppercase tracking-widest flex items-center gap-2">
-            <span class="w-5 h-5 rounded-lg bg-[#8B5CF6]/10 flex items-center justify-center">📊</span>
-            Resumen visual del día
-          </div>
+    container.innerHTML = `
+      <div class="flex items-center gap-3 mb-5">
+        <div class="w-10 h-10 rounded-xl bg-[#8B5CF6] text-white flex items-center justify-center shadow-lg shadow-[#8B5CF6]/20">
+          <i data-lucide="activity" class="w-5 h-5"></i>
         </div>
-        <div class="p-4" style="overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch">
-          <div style="display:flex;align-items:flex-start;gap:0;min-width:max-content;position:relative;padding:0 8px">
-            <div style="position:absolute;top:18px;left:20px;right:20px;height:3px;background:linear-gradient(90deg,#E2E8F0,#CBD5E1,#E2E8F0);border-radius:2px;z-index:0"></div>
-            ${allEvents.map((ev, i) => `
-              ${i > 0 ? '<div style="width:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;padding-top:14px"><div style="width:100%;height:2px;border-radius:2px;background:linear-gradient(90deg,#28B54D30,#28B54D60,#28B54D30)"></div></div>' : ''}
-              <div style="display:flex;flex-direction:column;align-items:center;min-width:60px;max-width:68px;position:relative;z-index:1;padding:0 2px">
-                <div style="width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.1rem;border:2.5px solid #28B54D;background:white;flex-shrink:0;box-shadow:0 2px 8px rgba(40,181,77,0.15)">${ev.icon}</div>
-                <span style="font-size:.55rem;font-weight:900;text-transform:uppercase;color:#1A2340;text-align:center;line-height:1.2;margin-top:5px;max-width:64px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${Helpers.escapeHTML(ev.label)}</span>
-                <span style="font-size:.5rem;font-weight:700;color:#94A3B8;margin-top:1px">${fmtTime(ev.time)}</span>
-              </div>
-            `).join('')}
-          </div>
+        <div>
+          <h3 class="font-black text-xl text-[#1A2340]">Resumen visual del día</h3>
+          <p class="text-[10px] font-black text-[#64748B] uppercase tracking-[0.15em]">Hoy · ${new Date().toLocaleDateString('es-DO', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
         </div>
       </div>
-    `;
+      <div>
+        ${items.map((it, i) => `
+          <div class="relative flex gap-3 pb-4 last:pb-0">
+            ${i < count - 1 ? '<div class="absolute left-[19px] top-11 bottom-0 w-0.5 rounded-full bg-gradient-to-b from-[#8B5CF6]/40 to-[#E2E8F0]"></div>' : ''}
+            <div class="relative z-10 shrink-0">
+              <div class="w-10 h-10 rounded-2xl bg-white border-2 border-[#8B5CF6]/30 flex items-center justify-center text-lg shadow-sm">${it.icon}</div>
+            </div>
+            <div class="flex-1 min-w-0 rounded-2xl bg-slate-50 border border-slate-100 p-3 flex items-center justify-between gap-2">
+              <div class="min-w-0">
+                <p class="font-black text-sm text-[#1A2340] leading-tight truncate">${Helpers.escapeHTML(it.label)}</p>
+                ${it.detail ? `<p class="text-xs text-slate-500 font-medium truncate">${Helpers.escapeHTML(it.detail)}</p>` : ''}
+              </div>
+              ${it.time ? `<span class="text-[10px] font-black text-[#8B5CF6] bg-[#F3E8FF] px-2 py-1 rounded-lg shrink-0">${fmtT(it.time)}</span>` : ''}
+            </div>
+          </div>
+        `).join('')}
+      </div>`;
+
+    if (window.lucide) lucide.createIcons();
   },
 
   _getEventIcon(e) {
@@ -666,72 +669,6 @@ export const DailyReportModule = {
       incident: '🤕'
     };
     return iconMap[e.type] || '📌';
-  },
-
-  _renderEvent(e) {
-    const time = e.created_at ? fmtTime(e.created_at) : (e.start_time ? fmtTime(e.start_time) : '');
-    const eventLabel = e.label || LABELS.event[e.type] || e.type;
-    let icon = '📌', label = eventLabel, detail = '';
-
-    switch (e.type) {
-      case 'milk':
-        icon = '🍼'; label = 'Biberón'; detail = e.oz ? `${e.oz} oz` : ''; break;
-      case 'sleep':
-        icon = '😴'; label = e.label || 'Durmió';
-        if (e.end_time) {
-          const dur = e.duration || '';
-          detail = dur ? `Siesta de ${dur}` : `Despertó: ${fmtTime(e.end_time)}`;
-        } else { detail = 'En siesta...'; }
-        break;
-      case 'diaper':
-        icon = e.subtype === 'wet' ? '💧' : '💩';
-        label = e.subtype === 'wet' ? 'Pañal mojado' : 'Pañal sucio'; break;
-      case 'diaper_change': icon = '🧻'; label = 'Cambio de pañal'; break;
-      case 'bath': icon = '🚽'; label = 'Fue al baño'; break;
-      case 'temp':
-        icon = '🌡️'; label = 'Temperatura';
-        detail = e.value ? `${e.value}°` : '';
-        if (e.value >= 38) detail += ' ⚠ Fiebre';
-        break;
-      case 'med':
-        icon = '💊'; label = 'Medicamento';
-        detail = [e.name, e.dose].filter(Boolean).join(' — '); break;
-      case 'note': icon = '📝'; label = 'Nota'; detail = e.text || ''; break;
-      case 'handwash': icon = '🧼'; label = 'Lavado de manos'; break;
-      case 'toothbrush': icon = '🪥'; label = 'Cepillado dental'; break;
-      case 'activity': icon = '🏫'; label = 'Actividad educativa'; break;
-      case 'playground': icon = '🌳'; label = 'Salida al patio'; break;
-      case 'welcome_song': icon = '👋'; label = 'Canción de bienvenida'; break;
-      case 'prayer': icon = '🙏'; label = 'Oración / reflexión'; break;
-      case 'behavior':
-        icon = '🤝'; label = e.label || 'Comportamiento';
-        if (e.category && e.data) {
-          const behaviorLabels = {
-            social: { shared: 'Compartió con compañeros', alone: 'Jugó solo', group: 'Participó en grupo', emotional_support: 'Necesitó apoyo emocional' },
-            classroom: { attention: 'Prestó atención', participation: 'Participó activamente', curiosity: 'Mostró curiosidad', completed: 'Terminó actividades', needed_help: 'Necesitó ayuda constante' },
-            emotional: { controlled: 'Controló emociones', frustrated: 'Se frustró fácilmente', crying: 'Lloró por separación', anxious: 'Mostró ansiedad', calmed: 'Se calmó rápidamente' },
-            montessori: { manipulation: 'Manipulación de materiales', fine_motor: 'Motricidad fina', gross_motor: 'Motricidad gruesa', language: 'Lenguaje', concentration: 'Concentración', autonomy: 'Autonomía' }
-          };
-          const catLabels = behaviorLabels[e.category];
-          if (catLabels && e.data[e.category]) detail = catLabels[e.data[e.category]] || e.data[e.category];
-        }
-        break;
-      default: label = eventLabel; break;
-    }
-
-    const autoTag = e.auto ? '<span class="text-[8px] font-black px-1.5 py-0.5 rounded-full bg-[#0B63C7]/10 text-[#0B63C7] ml-1">AUTO</span>' : '';
-
-    return `
-    <div class="flex items-start gap-3 py-3 border-b border-[#F8FAFC] last:border-none">
-      <div class="w-10 h-10 rounded-xl bg-[#F8FAFC] flex items-center justify-center text-lg flex-shrink-0">${icon}</div>
-      <div class="flex-1 min-w-0">
-        <div class="flex items-center justify-between gap-2">
-          <span class="text-xs font-black text-[#1A2340]">${Helpers.escapeHTML(label)}${autoTag}</span>
-          <span class="text-[10px] font-bold text-[#94A3B8] shrink-0">${time}</span>
-        </div>
-        ${detail ? `<p class="text-[11px] text-[#64748B] mt-0.5 font-medium">${Helpers.escapeHTML(detail)}</p>` : ''}
-      </div>
-    </div>`;
   },
 };
 

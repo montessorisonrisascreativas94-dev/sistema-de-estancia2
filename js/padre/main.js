@@ -22,7 +22,6 @@ import { VideoCallUI } from '../shared/videocall-ui.js';
 import { ParentRatingModule } from './parent_rating.js';
 import { WizardPayment } from './payment-wizard.js';
 import { RecentActivityModule } from './recent-activity.js';
-import { ClassroomSchedule } from './classroom-schedule.js';
 import { SectionCache } from '../shared/section-cache.js';
 
 // #rating-modal se oculta con style="display:none" inline, pero se abria con
@@ -620,6 +619,27 @@ document.addEventListener('DOMContentLoaded', async () => {
         <div class="w-16 h-4 bg-slate-200 rounded-xl"></div>
       </div>`;
   }
+  const visSummary = document.getElementById('dailyVisualSummary');
+  if (visSummary) {
+    visSummary.innerHTML = `
+      <div class="space-y-3 animate-pulse">
+        <div class="flex items-center gap-3 mb-5">
+          <div class="w-10 h-10 bg-slate-200 rounded-xl shrink-0"></div>
+          <div class="space-y-2 flex-1">
+            <div class="h-4 bg-slate-200 rounded-xl w-1/2"></div>
+            <div class="h-3 bg-slate-200 rounded-xl w-1/3"></div>
+          </div>
+        </div>
+        <div class="flex items-center gap-3 p-3 bg-slate-50 rounded-2xl">
+          <div class="w-10 h-10 bg-slate-200 rounded-xl shrink-0"></div>
+          <div class="flex-1 h-4 bg-slate-200 rounded-xl"></div>
+        </div>
+        <div class="flex items-center gap-3 p-3 bg-slate-50 rounded-2xl">
+          <div class="w-10 h-10 bg-slate-200 rounded-xl shrink-0"></div>
+          <div class="flex-1 h-4 bg-slate-200 rounded-xl"></div>
+        </div>
+      </div>`;
+  }
 
     // Carga paralela — no bloquea UI
     refreshDashboard().then(() => {
@@ -634,9 +654,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (currentStudent?.classroom_id) {
       initLiveClassListener(currentStudent.classroom_id);
     }
-
-    // Cronología del aula (plan de la maestra) en tiempo real
-    ClassroomSchedule.init();
 
     // Logout — ambos botones (móvil y desktop)
     const logoutHandler = async () => {
@@ -767,6 +784,7 @@ async function refreshDashboard() {
   AppState.set('todayAttendance', todayAtt?.status || null);
 
   renderDailySummary(logs);
+  DailyReportModule.renderVisualSummaryVertical(logs);
   renderLatestPosts(latestPosts);
 
   // ── Initialize Recent Activity Feed ──
@@ -1554,7 +1572,6 @@ async function switchStudent(studentId) {
     // 4. Reiniciar Realtime para el nuevo hijo
     _initDailyLogRealtime(selected.id);
     if (selected.classroom_id) initLiveClassListener(selected.classroom_id);
-    ClassroomSchedule.init();
 
     // 4b. Refrescar Notification Center con el hijo seleccionado (idempotente)
     NotificationCenter.init(auth.user?.id, 'padre');
@@ -1657,6 +1674,7 @@ function _initDailyLogRealtime(studentId) {
       try {
         const log = await Api.getDailyLog(studentId, today);
         renderDailySummary(log);
+        DailyReportModule.renderVisualSummaryVertical(log);
       } catch (err) {
         // Realtime daily log callback failed
       }
