@@ -195,11 +195,23 @@ export const MaestraApi = {
       const newEvent = cleanPayload.infant_event;
       delete cleanPayload.infant_event;
 
+      // Si el evento trae event_time (HH:MM), construir created_at con esa hora
+      // para que el padre vea la hora real en que ocurrió el evento, no la hora
+      // en que la maestra lo registró.
+      let eventCreatedAt = new Date().toISOString();
+      if (newEvent.event_time && /^\d{2}:\d{2}$/.test(newEvent.event_time)) {
+        const [hh, mm] = newEvent.event_time.split(':').map(Number);
+        const d = new Date();
+        d.setHours(hh, mm, 0, 0);
+        eventCreatedAt = d.toISOString();
+      }
+      const { event_time: _et, ...eventData } = newEvent; // no guardar event_time en el objeto
+
       const currentInfantData = existing?.infant_data || [];
       const updatedInfantData = [...currentInfantData, {
-        ...newEvent,
+        ...eventData,
         id: crypto.randomUUID?.() || Math.random().toString(36).substr(2, 9),
-        created_at: new Date().toISOString()
+        created_at: eventCreatedAt
       }];
 
       cleanPayload.infant_data = updatedInfantData;

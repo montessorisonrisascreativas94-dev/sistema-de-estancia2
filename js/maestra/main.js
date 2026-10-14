@@ -106,6 +106,7 @@ function _installSupervisionGuards() {
   app.registerAttendance = auditWrite(Attendance.registerAttendance, 'attendance', 'INSERT/UPDATE attendance');
   app.markAllPresent     = auditWrite(Attendance.markAllPresent, 'attendance', 'INSERT attendance (bulk)');
   app.addStudentEvent    = auditWrite(Routine.addStudentEvent, 'daily_logs', 'INSERT/UPDATE daily_logs');
+  app._saveQuickEvent    = auditWrite(Routine._saveQuickEvent, 'daily_logs', 'INSERT/UPDATE daily_logs');
   app.saveStudentNote    = auditWrite(Routine.saveStudentNote, 'daily_logs', 'UPDATE daily_logs');
   app.publishDailyLogs   = auditWrite(Routine.publishDailyLogs, 'daily_logs', 'PUBLISH daily_logs');
   app.submitGrade        = auditWrite(Tasks.submitGrade, 'grades', 'INSERT/UPDATE grades');
@@ -179,6 +180,7 @@ window.App = {
     _confirmMilk:             Routine._confirmMilk,
     _confirmMed:              Routine._confirmMed,
     _confirmExtraEvent:       Routine._confirmExtraEvent,
+    _saveQuickEvent:          Routine._saveQuickEvent,
     publishDailyLogs:         Routine.publishDailyLogs,
     toggleOmitToday:          Routine.toggleOmitToday,
     insertEventAt:            Routine.insertEventAt,
