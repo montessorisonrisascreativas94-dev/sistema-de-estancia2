@@ -394,7 +394,7 @@ function _attachStyles() {
   if (style) return;
   const s = document.createElement('style');
   s.id = '_inscStyles';
-  s.textContent = `
+  s.textContent = `@layer components {\n` + `
 /* ═══════════ INSCRIPCIONES — filtros ═══════════ */
 .insc-filters {
   display: flex;
@@ -690,6 +690,7 @@ function _attachStyles() {
   .insc-student__name { max-width: 130px; }
   .insc-chip { max-width: 130px; }
 }
+} /* end @layer components */
 `;
   document.head.appendChild(s);
 }

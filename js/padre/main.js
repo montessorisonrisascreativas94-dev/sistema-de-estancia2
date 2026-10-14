@@ -23,6 +23,7 @@ import { ParentRatingModule } from './parent_rating.js';
 import { WizardPayment } from './payment-wizard.js';
 import { RecentActivityModule } from './recent-activity.js';
 import { SectionCache } from '../shared/section-cache.js';
+import { ParentAnnouncements } from './announcements.js';
 
 // #rating-modal se oculta con style="display:none" inline, pero se abria con
 // classList.remove('hidden') — el style inline gana y el modal nunca aparecia.
@@ -818,6 +819,9 @@ async function refreshDashboard() {
 
   // 🚨 Banner de deuda vencida
   _updateDebtBanner(finance);
+
+  // 📣 Banner de anuncios (push, entradas/salidas, tareas, actividades)
+  ParentAnnouncements.init(student);
 
   // checkActiveMeetings en background — no bloquea las tarjetas
   checkActiveMeetings().catch(() => {});

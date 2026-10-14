@@ -2373,6 +2373,9 @@ export function openStudentRoutine(studentId) {
   const students = AppState.get('students') || [];
   const student = students.find(s => String(s.id) === String(studentId));
   if (!student) { safeToast('No se encontró el estudiante', 'error'); return; }
+  // 🚫 Si el estudiante ya fue retirado hoy, se bloquea el registro de rutina.
+  const _exitedIds = AppState.get('exitedStudentIds');
+  const isExited = !!(_exitedIds && typeof _exitedIds.has === 'function' && _exitedIds.has(String(studentId)));
   const log = _logsMap[studentId];
   let currentFood = {};
   if (log?.food) { try { currentFood = JSON.parse(log.food); } catch {} }
@@ -2462,6 +2465,15 @@ export function openStudentRoutine(studentId) {
       </div>
 
       <div class="p-5 space-y-5 max-h-[70vh] overflow-y-auto" id="sr-scroll">
+
+        ${isExited ? `
+        <div class="rounded-2xl p-4 flex items-start gap-3" style="background:#FEE2E2;border:2px solid #FCA5A5">
+          <span class="text-2xl">🚫</span>
+          <div>
+            <p class="text-sm font-black text-red-700">Este estudiante ya fue retirado hoy</h3>
+            <p class="text-xs font-bold text-red-500 mt-0.5">No se puede registrar ni modificar rutina después de la salida. Los datos mostrados son solo de lectura.</p>
+          </div>
+        </div>` : ''}
 
         <!-- ═══ EVENTOS REGISTRADOS (TOP BADGES) ═══ -->
         ${registeredBadges.length > 0 ? section('✅ Eventos Registrados', `

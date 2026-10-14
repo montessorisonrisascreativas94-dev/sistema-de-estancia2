@@ -28,10 +28,21 @@ function avg(arr) {
 }
 
 function fmtTime(ts) {
-  if (!ts) return 'â€”';
+  if (!ts) return '—';
   const d = new Date(ts);
-  if (isNaN(d.getTime())) return 'â€”';
+  if (isNaN(d.getTime())) return '—';
   return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+/**
+ * Parsea el horario del estudiante ("8:00-15:00") → { in:'08:00', out:'15:00', has }.
+ * Se usa para mostrar el horario planificado de entrada/salida en la tabla.
+ */
+function schedTimes(schedule) {
+  const m = String(schedule || '').match(/(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})/);
+  if (!m) return { in: null, out: null, has: false };
+  const pad = h => String(Number(h)).padStart(2, '0');
+  return { in: `${pad(m[1])}:${m[2]}`, out: `${pad(m[3])}:${m[4]}`, has: true };
 }
 
 function dateStr(d) {
@@ -345,12 +356,15 @@ const roomColorOf = (s) => {
 };
     const times = (s) => {
       const att = this._attendanceFor(s.id);
+      const sched = schedTimes(s.schedule);
       return {
         status: att?.status || null,
-        in: fmtTime(att?.check_in),
-        out: fmtTime(att?.check_out),
-        hasIn: !!att?.check_in,
-        hasOut: !!att?.check_out
+        // Prioridad: horario planificado del estudiante; si no tiene, la marca real
+        in:  sched.has ? sched.in  : fmtTime(att?.check_in),
+        out: sched.has ? sched.out : fmtTime(att?.check_out),
+        hasIn:  sched.has || !!att?.check_in,
+        hasOut: sched.has || !!att?.check_out,
+        scheduled: sched.has
       };
     };
 

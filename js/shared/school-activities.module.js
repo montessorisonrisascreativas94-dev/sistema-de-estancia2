@@ -16,6 +16,7 @@ import { supabase } from './supabase.js';
 import { Helpers } from './helpers.js';
 import { SchoolYearGuard } from './school-year-guard.js';
 import { openGlobalModal, closeGlobalModal } from './modal.js';
+import { RealtimeManager } from './realtime-manager.js';
 
 const ADMIN_ROLES = ['directora', 'encargada', 'asistente', 'admin'];
 
@@ -76,6 +77,55 @@ const stOf = (s) => STATUS[s] || STATUS.draft;
 const lastDay = (y, m) => new Date(y, m, 0).getDate();
 
 function _escAttr(s) { return esc(s).replace(/"/g, '&quot;'); }
+
+const SA_PREVIEW_IDS = ['saTitle', 'saDesc', 'saDate', 'saStart', 'saEnd', 'saColor', 'saCategoryField', 'saClassroomField'];
+let _prevPreview = {};
+
+function _formatLongDate(isoStr) {
+  if (!isoStr) return 'Sin fecha asignada';
+  const d = new Date(`${isoStr}T12:00:00`);
+  if (isNaN(d)) return 'Sin fecha asignada';
+  const days = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+  return `${days[d.getDay()]}, ${d.getDate()} de ${MONTH_NAMES[d.getMonth()]} de ${d.getFullYear()}`;
+}
+
+function _refreshActivityPreview(opts = {}) {
+  const box = document.getElementById('saPreview');
+  if (!box) return;
+  const val = (id) => document.getElementById(id)?.value?.trim() || '';
+  const cat = catOf(val('saCategoryField') || 'general');
+  const room = document.getElementById('saClassroomField')?.selectedOptions?.[0]?.textContent?.trim() || '';
+  const start = val('saStart');
+  const end = val('saEnd');
+
+  box.style.setProperty('--sa-accent', val('saColor') || '#64748B');
+
+  const set = (id, value, key) => {
+    const el = document.getElementById(id);
+    if (!el || el.textContent === value) return;
+    el.textContent = value;
+    if (opts.animate && _prevPreview[key] !== undefined && _prevPreview[key] !== value) {
+      el.classList.remove('sa-preview-updated');
+      void el.offsetWidth;
+      el.classList.add('sa-preview-updated');
+    }
+    _prevPreview[key] = value;
+  };
+
+  set('saPrevEmoji', cat.emoji, 'emoji');
+  set('saPrevCat', cat.label, 'cat');
+  set('saPrevTitle', val('saTitle') || 'Título de la actividad', 'title');
+  set('saPrevDesc', val('saDesc') || 'Aquí aparecerá la descripción que verán las familias...', 'desc');
+  set('saPrevDate', '📅 ' + _formatLongDate(val('saDate')), 'date');
+  set('saPrevTime', '🕐 ' + (start ? start + (end ? ' — ' + end : '') : 'Sin hora'), 'time');
+  set('saPrevRoom', '🏫 ' + (room || 'Todo el colegio'), 'room');
+
+  if (opts.pop) {
+    box.classList.remove('sa-preview-pop');
+    void box.offsetWidth;
+    box.classList.add('sa-preview-pop');
+  }
+}
 
 function _icons() {
   requestAnimationFrame(() => { if (window.lucide) lucide.createIcons(); });
@@ -296,25 +346,19 @@ function _filtersHTML() {
       `<option value="${c.id}" ${f.classroom === String(c.id) ? 'selected' : ''}>${esc(c.name)}</option>`)).join('');
 
   return `
-    <div class="sa-anim bg-white rounded-2xl border border-slate-100 shadow-sm p-3 flex flex-wrap gap-2 items-center">
-      <div class="relative flex-1 min-w-[180px]">
-        <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
-        <input id="saSearch" type="search" value="${_escAttr(f.q)}" placeholder="🔎 Buscar actividad..."
-          class="w-full pl-9 pr-3 py-2.5 rounded-xl border border-slate-200 text-sm font-semibold outline-none focus:border-teal-400"
-          data-sa-action="filter-q">
+    <div class="sa-toolbar sa-anim">
+      <div class="sa-search">
+        <i data-lucide="search"></i>
+        <input id="saSearch" type="search" value="${_escAttr(f.q)}" placeholder="🔎 Buscar actividad..." data-sa-action="filter-q">
       </div>
-      <select id="saCategory" data-sa-action="filter-category" class="px-3 py-2.5 rounded-xl border border-slate-200 text-sm font-bold outline-none focus:border-teal-400 bg-white">${catOpts}</select>
-      <select id="saTeacher" data-sa-action="filter-teacher" class="px-3 py-2.5 rounded-xl border border-slate-200 text-sm font-bold outline-none focus:border-teal-400 bg-white hidden md:block">${teacherOpts}</select>
-      <select id="saClassroom" data-sa-action="filter-classroom" class="px-3 py-2.5 rounded-xl border border-slate-200 text-sm font-bold outline-none focus:border-teal-400 bg-white hidden md:block">${roomOpts}</select>
-      <div class="flex items-center gap-1 bg-slate-100 rounded-xl p-1">
+      <select id="saCategory" class="sa-select" data-sa-action="filter-category">${catOpts}</select>
+      <select id="saTeacher" class="sa-select" data-sa-action="filter-teacher">${teacherOpts}</select>
+      <select id="saClassroom" class="sa-select" data-sa-action="filter-classroom">${roomOpts}</select>
+      <div class="sa-viewtoggle">
         <button data-sa-action="view" data-view="grid" title="Calendario"
-          class="px-3 py-2 rounded-lg text-sm font-black transition-all ${state.view === 'grid' ? 'bg-white shadow text-teal-700' : 'text-slate-500'}">
-          <i data-lucide="calendar-days" class="w-4 h-4"></i>
-        </button>
+          class="${state.view === 'grid' ? 'is-active' : ''}"><i data-lucide="calendar-days"></i></button>
         <button data-sa-action="view" data-view="list" title="Lista"
-          class="px-3 py-2 rounded-lg text-sm font-black transition-all ${state.view === 'list' ? 'bg-white shadow text-teal-700' : 'text-slate-500'}">
-          <i data-lucide="list" class="w-4 h-4"></i>
-        </button>
+          class="${state.view === 'list' ? 'is-active' : ''}"><i data-lucide="list"></i></button>
       </div>
     </div>`;
 }
@@ -734,6 +778,27 @@ function openForm(id = null) {
         <div><label class="sa-label">Desarrollo / Guía de aula</label><textarea id="saDesarrollo" rows="3" class="sa-input">${esc(content.desarrollo || '')}</textarea></div>
       </div>
 
+      <div class="sa-preview-wrap">
+        <p class="text-[11px] font-black uppercase tracking-widest text-slate-400 mb-2">✨ Vista previa — así se verá esta actividad</p>
+        <div id="saPreview" class="sa-preview" style="--sa-accent:${_escAttr(color)}">
+          <span class="sa-preview-glow"></span>
+          <div class="sa-preview-card">
+            <span class="sa-preview-stripe"></span>
+            <div class="sa-preview-head">
+              <span class="sa-preview-emoji" id="saPrevEmoji">${catOf(a?.category || 'general').emoji}</span>
+              <span class="sa-preview-cat" id="saPrevCat">${esc(catOf(a?.category || 'general').label)}</span>
+            </div>
+            <h4 class="sa-preview-title" id="saPrevTitle">${esc(a?.title || 'Título de la actividad')}</h4>
+            <p class="sa-preview-desc" id="saPrevDesc">${esc(a?.description || 'Aquí aparecerá la descripción que verán las familias...')}</p>
+            <div class="sa-preview-meta">
+              <span id="saPrevDate">📅 ${esc(_formatLongDate(a?.activity_date))}</span>
+              <span id="saPrevTime">🕐 ${a?.start_time ? esc(a.start_time.slice(0, 5)) + (a?.end_time ? ' — ' + esc(a.end_time.slice(0, 5)) : '') : 'Sin hora'}</span>
+              <span id="saPrevRoom">🏫 Todo el colegio</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="flex flex-wrap gap-2 pt-2 border-t border-slate-100">
         <button type="button" data-sa-action="save-draft" data-id="${a?.id || ''}" class="sa-btn-ghost">💾 Guardar borrador</button>
         <button type="button" data-sa-action="save-plan" data-id="${a?.id || ''}" class="sa-btn-primary">📅 Guardar y planificar</button>
@@ -741,6 +806,8 @@ function openForm(id = null) {
       </div>
     </form>
   `, true);
+  _prevPreview = {};
+  requestAnimationFrame(() => _refreshActivityPreview({ pop: true }));
 }
 
 function _readForm() {
@@ -979,6 +1046,7 @@ async function _handleAction(e) {
       if (colorInput) colorInput.value = el.dataset.color;
       document.querySelectorAll('[data-sa-action="pick-color"]').forEach(b => b.classList.remove('border-slate-800', 'scale-110'));
       el.classList.add('border-slate-800', 'scale-110');
+      _refreshActivityPreview({ animate: true, pop: true });
       break;
     }
     case 'filter-category': break;
@@ -987,6 +1055,7 @@ async function _handleAction(e) {
 }
 
 function _handleInput(e) {
+  if (SA_PREVIEW_IDS.includes(e.target.id)) _refreshActivityPreview({ animate: true });
   const el = e.target.closest('[data-sa-action]');
   if (!el) return;
   if (el.dataset.saAction === 'filter-q') {
@@ -1002,6 +1071,7 @@ function _handleInput(e) {
 }
 
 function _handleChange(e) {
+  if (SA_PREVIEW_IDS.includes(e.target.id)) _refreshActivityPreview({ animate: true });
   const el = e.target.closest('[data-sa-action]');
   if (!el) return;
   const map = { 'filter-category': 'category', 'filter-teacher': 'teacher', 'filter-classroom': 'classroom' };
@@ -1040,6 +1110,37 @@ function _bind() {
 
 function _bindEvidenceInput() { /* la subida se dispara vía change de #saEvidenceFiles */ }
 
+// ── Realtime: refrescar el calendario cuando cambia la tabla ─────
+// Creada por el admin, una actividad debe aparecer en los demás paneles
+// sin recargar. El canal se registra en RealtimeManager para que la
+// navegación de secciones lo limpie y no deje WebSockets huérfanos.
+const RT_CHANNEL = 'school_activities_rt';
+let _rtTimer = null;
+
+function _isModalOpen() {
+  if (document.getElementById('saModalOverlay')) return true;
+  const g = document.getElementById('globalModalContainer');
+  if (g && !g.classList.contains('hidden') && g.style.display !== 'none') return true;
+  return false;
+}
+
+function _scheduleRealtimeRefresh() {
+  // No pisar el formulario/detalle abierto mientras el usuario escribe.
+  if (_isModalOpen()) return;
+  if (!_container()) return;
+  clearTimeout(_rtTimer);
+  _rtTimer = setTimeout(() => { _loadMonth(); }, 400);
+}
+
+function _subscribeRealtime() {
+  RealtimeManager.subscribe(RT_CHANNEL, (channel) =>
+    channel.on('postgres_changes',
+      { event: '*', schema: 'public', table: 'school_activities' },
+      _scheduleRealtimeRefresh
+    )
+  );
+}
+
 // ── API pública ─────────────────────────────────────────────────
 export const SchoolActivitiesModule = {
   CATEGORIES,
@@ -1073,6 +1174,7 @@ export const SchoolActivitiesModule = {
     _bind();
     await _loadReference();
     await _loadMonth();
+    _subscribeRealtime();
   },
 
   async refresh() {
@@ -1096,9 +1198,29 @@ export const SchoolActivitiesModule = {
 // Se inyectan UNA sola vez. Paleta Sonrisas Creativas:
 //   verde #28B54D / #239943 · naranja #FF8A00 / #E07900 · rojo #EF4444
 //   gris #64748B / bordes #E2E8F0 · texto #0F172A / #1E293B
-const SA_CSS = `
+const SA_CSS = `@layer components {
 /* ── Contenedor de la sección ───────────────────────────── */
 #actividadesContent{color-scheme:light;max-width:1400px;margin:0 auto;font-family:'Nunito',sans-serif}
+
+/* ── Barra de filtros (autocontenida: no depende de variantes Tailwind) ── */
+.sa-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;background:#fff;border:1px solid #EEF2F7;border-radius:1.25rem;padding:12px;box-shadow:0 4px 16px rgba(15,23,42,.05)}
+.sa-search{position:relative;flex:1 1 240px;min-width:190px}
+.sa-search>svg,.sa-search>i{position:absolute;left:13px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:#94A3B8;pointer-events:none}
+.sa-search input{width:100%;height:44px;padding:0 14px 0 40px;border:1px solid #E2E8F0;border-radius:12px;font-size:14px;font-weight:600;color:#1E293B;background:#fff;outline:none;transition:border-color .18s ease,box-shadow .18s ease;font-family:inherit}
+.sa-search input::placeholder{color:#94A3B8;font-weight:600}
+.sa-search input:focus{border-color:#28B54D;box-shadow:0 0 0 4px rgba(40,181,77,.14)}
+.sa-select{appearance:none;-webkit-appearance:none;height:44px;min-width:158px;max-width:100%;padding:0 36px 0 14px;border:1px solid #E2E8F0;border-radius:12px;font-size:14px;font-weight:700;color:#334155;background-color:#fff;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748B' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;background-size:14px;outline:none;cursor:pointer;transition:border-color .18s ease,box-shadow .18s ease;font-family:inherit}
+.sa-select:focus{border-color:#28B54D;box-shadow:0 0 0 4px rgba(40,181,77,.14)}
+.sa-viewtoggle{display:flex;align-items:center;gap:4px;background:#F1F5F9;border-radius:12px;padding:4px;margin-left:auto}
+.sa-viewtoggle button{display:inline-flex;align-items:center;justify-content:center;width:40px;height:36px;border:none;border-radius:9px;background:transparent;color:#64748B;cursor:pointer;transition:background .18s ease,color .18s ease,box-shadow .18s ease}
+.sa-viewtoggle button:hover{color:#239943}
+.sa-viewtoggle button.is-active{background:#fff;color:#239943;box-shadow:0 1px 3px rgba(15,23,42,.14)}
+.sa-viewtoggle button svg{width:17px;height:17px}
+@media (max-width:640px){
+  .sa-search{flex-basis:100%}
+  .sa-select{flex:1 1 140px;min-width:0}
+  .sa-viewtoggle{margin-left:0}
+}
 
 /* ── Etiquetas de formulario ────────────────────────────── */
 .sa-label{display:block;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#64748B;margin-bottom:6px}
@@ -1272,6 +1394,31 @@ select.sa-input{cursor:pointer}
 /* ══ Filas de la vista lista: elevación al hover ══ */
 #actividadesContent [data-sa-action="open"]{transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease}
 #actividadesContent [data-sa-action="open"]:hover{transform:translateY(-1px)}
+
+/* ══ Vista previa animada de la actividad (formulario) ══ */
+.sa-preview{position:relative;--sa-accent:#64748B}
+.sa-preview-glow{position:absolute;inset:-28%;background:radial-gradient(circle at 15% 0%,color-mix(in srgb,var(--sa-accent) 42%,transparent),transparent 62%);opacity:.45;pointer-events:none;transition:background .6s ease;animation:saPreviewGlow 4s ease-in-out infinite}
+@keyframes saPreviewGlow{0%,100%{opacity:.32;transform:scale(1)}50%{opacity:.68;transform:scale(1.09)}}
+.sa-preview-card{position:relative;border-radius:1.25rem;background:#fff;border:1px solid #E2E8F0;border-left:8px solid var(--sa-accent);padding:18px 18px 16px;overflow:hidden;box-shadow:0 10px 30px rgba(15,23,42,.10);transition:border-color .5s ease,box-shadow .5s ease;animation:saPreviewIn .55s cubic-bezier(.2,.85,.3,1.15) both}
+@keyframes saPreviewIn{from{opacity:0;transform:translateY(16px) scale(.96)}to{opacity:1;transform:none}}
+.sa-preview-pop .sa-preview-card{animation:saPreviewPop .55s cubic-bezier(.2,.85,.3,1.3) both}
+@keyframes saPreviewPop{0%{transform:scale(.97)}55%{transform:scale(1.015)}100%{transform:scale(1)}}
+.sa-preview-stripe{position:absolute;top:0;left:0;width:100%;height:4px;background:var(--sa-accent);transition:background .5s ease}
+.sa-preview-stripe::after{content:'';position:absolute;top:0;left:-40%;width:35%;height:100%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.92),transparent);transform:skewX(-18deg);animation:saSheen 2.6s ease-in-out infinite}
+.sa-preview-head{display:flex;align-items:center;gap:8px;position:relative;z-index:1}
+.sa-preview-emoji{font-size:26px;line-height:1;display:inline-block;filter:drop-shadow(0 3px 6px rgba(15,23,42,.18));animation:saPreviewFloat 2.8s ease-in-out infinite}
+@keyframes saPreviewFloat{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-5px) rotate(-6deg)}}
+.sa-preview-cat{font-size:10px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;color:#fff;background:var(--sa-accent);padding:4px 10px;border-radius:999px;transition:background .5s ease;box-shadow:0 3px 10px rgba(15,23,42,.16)}
+.sa-preview-title{margin:10px 0 4px;font-size:19px;font-weight:900;color:#0F172A;line-height:1.2;position:relative;z-index:1}
+.sa-preview-desc{margin:0 0 12px;font-size:13px;font-weight:600;color:#475569;line-height:1.55;position:relative;z-index:1;white-space:pre-wrap;word-break:break-word}
+.sa-preview-meta{display:flex;flex-wrap:wrap;gap:8px;position:relative;z-index:1}
+.sa-preview-meta span{font-size:11px;font-weight:800;color:#334155;background:#F1F5F9;border:1px solid #E2E8F0;border-radius:999px;padding:5px 11px;animation:saPreviewMeta .45s ease both}
+.sa-preview-meta span:nth-child(2){animation-delay:.07s}
+.sa-preview-meta span:nth-child(3){animation-delay:.14s}
+@keyframes saPreviewMeta{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.sa-preview-updated{animation:saPreviewText .4s ease}
+@keyframes saPreviewText{0%{opacity:.3;transform:translateX(-5px)}100%{opacity:1;transform:none}}
+} /* end @layer components */
 `;
 if (typeof document !== 'undefined' && !document.getElementById('saActivitiesCss')) {
   const style = document.createElement('style');

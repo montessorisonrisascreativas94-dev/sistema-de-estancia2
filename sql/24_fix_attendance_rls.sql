@@ -418,3 +418,120 @@ SELECT
 ;
 
 SELECT '✅ Todas las políticas RLS aplicadas correctamente.' AS resultado;
+
+-- ============================================================
+-- 25 FIX VISIBILIDAD DE ACTIVIDADES ESCOLARES
+-- ============================================================
+-- Problema:
+--   Una actividad creada desde la sección "Actividades" (módulo compartido
+--   js/shared/school-activities.module.js) con los valores por defecto
+--   ("Todo el colegio" + "Sin asignar") tiene:
+--        classroom_id = NULL  y  assigned_teacher_id = NULL
+--   La política RLS del script 23 excluía esas actividades para las maestras
+--   (sólo veían actividades de su aula o asignadas a ella) y, si el trigger
+--   espejo no estaba aplicado, también para los padres (target_audience='aula'
+--   con classroom_id NULL no coincide con el aula de su hijo).
+--
+--   --> La directora (admin) la veía, pero no el resto de paneles.
+--
+-- Este script es 100% RE-EJECUTABLE.
+-- ============================================================
+
+SET client_min_messages = WARNING;
+
+-- ============================================================
+-- 1. BACKFILL: coherencia aula ↔ audiencia
+--    Actividades sin aula = "todo el colegio".
+-- ============================================================
+UPDATE public.school_activities
+   SET target_audience = 'todo_el_centro'
+ WHERE classroom_id IS NULL
+   AND COALESCE(target_audience, 'aula') <> 'todo_el_centro';
+
+UPDATE public.school_activities
+   SET target_audience = 'aula'
+ WHERE classroom_id IS NOT NULL
+   AND COALESCE(target_audience, 'aula') = 'todo_el_centro';
+
+-- ============================================================
+-- 2. BACKFILL: columnas espejo (por si el trigger no estaba aplicado)
+--    Esquema 21 (activity_date/start_time/assigned_teacher_id)
+--    ↔ Esquema 23 (scheduled_date/scheduled_time/assigned_to)
+-- ============================================================
+UPDATE public.school_activities
+   SET activity_date = COALESCE(activity_date, scheduled_date),
+       scheduled_date = COALESCE(scheduled_date, activity_date)
+ WHERE activity_date IS DISTINCT FROM scheduled_date
+   AND (activity_date IS NULL OR scheduled_date IS NULL);
+
+UPDATE public.school_activities
+   SET start_time = COALESCE(start_time, scheduled_time),
+       scheduled_time = COALESCE(scheduled_time, start_time)
+ WHERE start_time IS DISTINCT FROM scheduled_time
+   AND (start_time IS NULL OR scheduled_time IS NULL);
+
+UPDATE public.school_activities
+   SET assigned_teacher_id = COALESCE(assigned_teacher_id, assigned_to),
+       assigned_to = COALESCE(assigned_to, assigned_teacher_id)
+ WHERE assigned_teacher_id IS DISTINCT FROM assigned_to
+   AND (assigned_teacher_id IS NULL OR assigned_to IS NULL);
+
+-- ============================================================
+-- 3. RLS — las maestras también ven las actividades de TODO EL COLEGIO
+--    (reemplaza la política del script 23, que sólo permitía su aula/asignadas)
+-- ============================================================
+DROP POLICY IF EXISTS school_activities_select_maestra ON public.school_activities;
+CREATE POLICY school_activities_select_maestra
+    ON public.school_activities FOR SELECT
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.profiles p
+            WHERE p.id = auth.uid() AND p.role = 'maestra'
+            AND (
+                 assigned_to = auth.uid()
+              OR assigned_teacher_id = auth.uid()
+              OR target_audience = 'todo_el_centro'
+              OR classroom_id IN (SELECT c.id FROM public.classrooms c WHERE c.teacher_id = auth.uid())
+            )
+        )
+        AND status IN ('scheduled','published','in_progress','completed')
+    );
+
+-- ============================================================
+-- 4. RLS — los padres ven las publicadas de "todo el colegio"
+--    (idempotente; equivalente a la política del script 23)
+-- ============================================================
+DROP POLICY IF EXISTS school_activities_select_padre ON public.school_activities;
+CREATE POLICY school_activities_select_padre
+    ON public.school_activities FOR SELECT
+    USING (
+        EXISTS (
+            SELECT 1
+            FROM public.profiles p
+            JOIN public.students s ON s.parent_id = p.id
+            WHERE p.id = auth.uid()
+              AND p.role = 'padre'
+              AND (
+                   s.classroom_id = school_activities.classroom_id
+                OR school_activities.target_audience IN ('todo_el_centro')
+              )
+        )
+        AND status IN ('published','in_progress','completed')
+    );
+
+-- ============================================================
+-- 5. Realtime (opcional pero recomendado): publicar cambios de la tabla
+--    para que los paneles se actualicen en vivo.
+-- ============================================================
+DO $$ BEGIN
+  ALTER PUBLICATION supabase_realtime ADD TABLE public.school_activities;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+-- ============================================================
+-- VERIFICACIÓN (ejecutar manualmente para comprobar)
+-- ============================================================
+-- SELECT id, title, classroom_id, assigned_teacher_id, assigned_to,
+--        target_audience, status, activity_date, scheduled_date
+--   FROM public.school_activities
+--  ORDER BY id DESC
+--  LIMIT 20;

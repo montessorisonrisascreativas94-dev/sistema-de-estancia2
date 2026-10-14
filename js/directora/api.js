@@ -468,7 +468,7 @@ export const DirectorApi = {
     const build = (useDeleted = false) => {
       let q = supabase
         .from(TABLES.STUDENTS)
-        .select('id, name, avatar_url, matricula, age, age_type, classroom_id, is_active', { count: 'exact' })
+        .select('id, name, avatar_url, matricula, age, age_type, classroom_id, is_active, schedule', { count: 'exact' })
         .order('name');
 
       if (useDeleted) q = q.is('deleted_at', null);
@@ -520,7 +520,7 @@ export const DirectorApi = {
       const { data: d2, error: e2, count: c2 } = await _withSessionRetry(() => {
         let q2 = supabase
           .from(TABLES.STUDENTS)
-          .select('id, name, avatar_url, matricula, age, age_type, classroom_id, is_active', { count: 'exact' })
+          .select('id, name, avatar_url, matricula, age, age_type, classroom_id, is_active, schedule', { count: 'exact' })
           .order('name')
           .limit(200);
         if (filters.search) q2 = q2.ilike('name', `%${filters.search}%`);

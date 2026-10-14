@@ -24,6 +24,7 @@ import { UI } from './modules/ui.js';
 import { UIPremium } from '../shared/ui-premium.js';
 import { SectionCache } from '../shared/section-cache.js';
 import SupervisionEngine from '../shared/supervision.js';
+import { TeacherExitBanner } from './exit-banner.js';
 import {
   findCanonicalClassroom,
   findSpecialClassroom,
@@ -585,6 +586,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     AppState.set('classrooms', classrooms);
     AppState.set('classroom', classrooms[0]);
+
+    // 🚪 Banner de salidas próximas (sticky en todas las secciones)
+    TeacherExitBanner.init().catch(() => {});
 
     // 👁️ Instalar guardas de auditoría + lockdown (una sola vez)
     _installSupervisionGuards();
