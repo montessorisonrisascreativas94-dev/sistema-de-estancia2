@@ -270,14 +270,20 @@ async function _loadAcademicStats() {
   const scores = safe(scoreRes).data || [];
 
   // #region debug-point A:academic-stats-results
-  (async()=>{try{await fetch("http://127.0.0.1:7777/event",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId:"students-zero-no-error",runId:"pre-fix",hypothesisId:"A",location:"dashboard-v2.js:265",msg:"[DEBUG] _loadAcademicStats per-query results",data:{
-    classrooms:{status:classRes.status,dataLength:classrooms.length,reason:classRes.status==='rejected'?String(classRes.reason?.message||classRes.reason):null},
-    students:  {status:studRes.status,dataLength:students.length,  reason:studRes.status==='rejected'?String(studRes.reason?.message||studRes.reason):null},
-    evaluations:{status:evalRes.status,dataLength:evaluations.length,reason:evalRes.status==='rejected'?String(evalRes.reason?.message||evalRes.reason):null},
-    modules:   {status:modRes.status,dataLength:modules.length,   reason:modRes.status==='rejected'?String(modRes.reason?.message||modRes.reason):null},
-    activities:{status:actRes.status,dataLength:activities.length,reason:actRes.status==='rejected'?String(actRes.reason?.message||actRes.reason):null},
-    scores:    {status:scoreRes.status,dataLength:scores.length, reason:scoreRes.status==='rejected'?String(scoreRes.reason?.message||scoreRes.reason):null}
-  },ts:Date.now()})}).catch(()=>{})}catch(_){}})();
+  try {
+    console.debug({
+      tag: 'academic-stats-results',
+      results: {
+        classrooms: { status: classRes.status, dataLength: classrooms.length, reason: classRes.status === 'rejected' ? String(classRes.reason?.message || classRes.reason) : null },
+        students:   { status: studRes.status,   dataLength: students.length,   reason: studRes.status === 'rejected'   ? String(studRes.reason?.message   || studRes.reason)   : null },
+        evaluations:{ status: evalRes.status,  dataLength: evaluations.length,reason: evalRes.status === 'rejected'  ? String(evalRes.reason?.message  || evalRes.reason)  : null },
+        modules:    { status: modRes.status,   dataLength: modules.length,   reason: modRes.status === 'rejected'   ? String(modRes.reason?.message   || modRes.reason)   : null },
+        activities: { status: actRes.status,   dataLength: activities.length,reason: actRes.status === 'rejected'  ? String(actRes.reason?.message  || actRes.reason)  : null },
+        scores:     { status: scoreRes.status,  dataLength: scores.length,    reason: scoreRes.status === 'rejected'  ? String(scoreRes.reason?.message  || scoreRes.reason)  : null }
+      },
+      ts: Date.now()
+    });
+  } catch (_) {}
   // #endregion
 
   const actsByModule = new Map();

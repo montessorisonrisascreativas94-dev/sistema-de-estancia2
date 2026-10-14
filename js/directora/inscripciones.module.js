@@ -191,56 +191,67 @@ export async function loadInscripciones() {
     const ageOutOfRange = data.filter(r => r.age_match === false);
 
     container.innerHTML = `
-      <!-- KPIs compactos y elegantes -->
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-3.5 mb-7">
-        <div class="relative overflow-hidden bg-white border border-amber-200/80 rounded-2xl px-4 py-3.5 shadow-[0_2px_10px_rgba(15,23,42,0.05)] hover:-translate-y-0.5 hover:shadow-[0_6px_18px_rgba(234,179,8,0.15)] transition-all cursor-pointer" onclick="InscripcionesModule.filterStatus('pending')">
-          <div class="flex items-center justify-between gap-2">
-            <div class="min-w-0">
-              <p class="text-[11px] font-bold text-amber-700 uppercase tracking-widest leading-none">Pendientes</p>
-              <p class="mt-2 text-[32px] leading-none font-black text-amber-600 tracking-tight">${pending.length}</p>
+      <!-- KPIs — inline styles for Tailwind v4 cascade independence -->
+      <div class="insc-kpi-grid">
+        <div class="insc-kpi-card" style="border-color:#FCD34D;cursor:pointer" onclick="InscripcionesModule.filterStatus('pending')">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+            <div style="min-width:0">
+              <p style="font-size:11px;font-weight:700;color:#B45309;text-transform:uppercase;letter-spacing:.1em;line-height:1;margin:0">Pendientes</p>
+              <p style="margin:8px 0 0;font-size:32px;line-height:1;font-weight:900;color:#D97706;letter-spacing:-.02em">${pending.length}</p>
             </div>
-            <div class="shrink-0 w-10 h-10 rounded-xl bg-gradient-to-br from-amber-100 to-yellow-200 flex items-center justify-center border border-amber-200/70">
-              <i data-lucide="clock" class="w-4.5 h-4.5 text-amber-700"></i>
+            <div style="flex-shrink:0;width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#FEF3C7,#FDE68A);display:flex;align-items:center;justify-content:center;border:1px solid #FCD34D">
+              <i data-lucide="clock" style="width:18px;height:18px;color:#B45309"></i>
             </div>
           </div>
-          <div class="mt-3 h-1.5 w-full rounded-full bg-amber-100 overflow-hidden"><div class="h-full bg-gradient-to-r from-amber-400 to-yellow-500 w-2/3 rounded-r-full"></div></div>
+          <div style="margin-top:12px;height:6px;width:100%;border-radius:999px;background:#FEF3C7;overflow:hidden">
+            <div style="height:100%;background:linear-gradient(90deg,#F59E0B,#EAB308);width:66%;border-radius:999px"></div>
+          </div>
         </div>
-        <div class="relative overflow-hidden bg-white border border-emerald-200/80 rounded-2xl px-4 py-3.5 shadow-[0_2px_10px_rgba(15,23,42,0.05)] hover:-translate-y-0.5 hover:shadow-[0_6px_18px_rgba(34,197,94,0.16)] transition-all cursor-pointer" onclick="InscripcionesModule.filterStatus('admitted')">
-          <div class="flex items-center justify-between gap-2">
-            <div class="min-w-0">
-              <p class="text-[11px] font-bold text-emerald-700 uppercase tracking-widest leading-none">Admitidos</p>
-              <p class="mt-2 text-[32px] leading-none font-black text-emerald-600 tracking-tight">${admitted.length}</p>
+
+        <div class="insc-kpi-card" style="border-color:#6EE7B7;cursor:pointer" onclick="InscripcionesModule.filterStatus('admitted')">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+            <div style="min-width:0">
+              <p style="font-size:11px;font-weight:700;color:#065F46;text-transform:uppercase;letter-spacing:.1em;line-height:1;margin:0">Admitidos</p>
+              <p style="margin:8px 0 0;font-size:32px;line-height:1;font-weight:900;color:#059669;letter-spacing:-.02em">${admitted.length}</p>
             </div>
-            <div class="shrink-0 w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-100 to-green-200 flex items-center justify-center border border-emerald-200/70">
-              <i data-lucide="check-circle-2" class="w-4.5 h-4.5 text-emerald-700"></i>
+            <div style="flex-shrink:0;width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#D1FAE5,#A7F3D0);display:flex;align-items:center;justify-content:center;border:1px solid #6EE7B7">
+              <i data-lucide="check-circle-2" style="width:18px;height:18px;color:#065F46"></i>
             </div>
           </div>
-          <div class="mt-3 h-1.5 w-full rounded-full bg-emerald-100 overflow-hidden"><div class="h-full bg-gradient-to-r from-emerald-400 to-green-600 w-4/5 rounded-r-full"></div></div>
+          <div style="margin-top:12px;height:6px;width:100%;border-radius:999px;background:#D1FAE5;overflow:hidden">
+            <div style="height:100%;background:linear-gradient(90deg,#10B981,#059669);width:80%;border-radius:999px"></div>
+          </div>
         </div>
-        <div class="relative overflow-hidden bg-white border border-rose-200/80 rounded-2xl px-4 py-3.5 shadow-[0_2px_10px_rgba(15,23,42,0.05)] hover:-translate-y-0.5 hover:shadow-[0_6px_18px_rgba(244,63,94,0.16)] transition-all cursor-pointer" onclick="InscripcionesModule.filterStatus('rejected')">
-          <div class="flex items-center justify-between gap-2">
-            <div class="min-w-0">
-              <p class="text-[11px] font-bold text-rose-700 uppercase tracking-widest leading-none">Rechazados</p>
-              <p class="mt-2 text-[32px] leading-none font-black text-rose-600 tracking-tight">${rejected.length}</p>
+
+        <div class="insc-kpi-card" style="border-color:#FECDD3;cursor:pointer" onclick="InscripcionesModule.filterStatus('rejected')">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+            <div style="min-width:0">
+              <p style="font-size:11px;font-weight:700;color:#9F1239;text-transform:uppercase;letter-spacing:.1em;line-height:1;margin:0">Rechazados</p>
+              <p style="margin:8px 0 0;font-size:32px;line-height:1;font-weight:900;color:#E11D48;letter-spacing:-.02em">${rejected.length}</p>
             </div>
-            <div class="shrink-0 w-10 h-10 rounded-xl bg-gradient-to-br from-rose-100 to-pink-200 flex items-center justify-center border border-rose-200/70">
-              <i data-lucide="x-circle" class="w-4.5 h-4.5 text-rose-700"></i>
+            <div style="flex-shrink:0;width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#FFE4E6,#FECDD3);display:flex;align-items:center;justify-content:center;border:1px solid #FECDD3">
+              <i data-lucide="x-circle" style="width:18px;height:18px;color:#9F1239"></i>
             </div>
           </div>
-          <div class="mt-3 h-1.5 w-full rounded-full bg-rose-100 overflow-hidden"><div class="h-full bg-gradient-to-r from-rose-400 to-pink-600 w-1/4 rounded-r-full"></div></div>
+          <div style="margin-top:12px;height:6px;width:100%;border-radius:999px;background:#FFE4E6;overflow:hidden">
+            <div style="height:100%;background:linear-gradient(90deg,#F43F5E,#BE123C);width:25%;border-radius:999px"></div>
+          </div>
         </div>
-        <div class="relative overflow-hidden bg-white border border-violet-200/80 rounded-2xl px-4 py-3.5 shadow-[0_2px_10px_rgba(15,23,42,0.05)] hover:-translate-y-0.5 hover:shadow-[0_6px_18px_rgba(139,92,246,0.18)] transition-all cursor-pointer" onclick="InscripcionesModule.filterStatus('auth-pending')">
-          <div class="flex items-center justify-between gap-2">
-            <div class="min-w-0">
-              <p class="text-[11px] font-bold text-violet-700 uppercase tracking-widest leading-none">Pend. Autoriz.</p>
-              <p class="mt-2 text-[32px] leading-none font-black text-violet-600 tracking-tight">${authPending.length}</p>
+
+        <div class="insc-kpi-card" style="border-color:#DDD6FE;cursor:pointer" onclick="InscripcionesModule.filterStatus('auth-pending')">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+            <div style="min-width:0">
+              <p style="font-size:11px;font-weight:700;color:#5B21B6;text-transform:uppercase;letter-spacing:.1em;line-height:1;margin:0">Pend. Autoriz.</p>
+              <p style="margin:8px 0 0;font-size:32px;line-height:1;font-weight:900;color:#7C3AED;letter-spacing:-.02em">${authPending.length}</p>
             </div>
-            <div class="shrink-0 w-10 h-10 rounded-xl bg-gradient-to-br from-violet-100 to-indigo-200 flex items-center justify-center border border-violet-200/70 relative">
-              <i data-lucide="shield-alert" class="w-4.5 h-4.5 text-violet-700"></i>
-              <span class="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-[#8B5CF6] animate-pulse ring-2 ring-white"></span>
+            <div style="position:relative;flex-shrink:0;width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#EDE9FE,#DDD6FE);display:flex;align-items:center;justify-content:center;border:1px solid #DDD6FE">
+              <i data-lucide="shield-alert" style="width:18px;height:18px;color:#5B21B6"></i>
+              ${authPending.length > 0 ? `<span style="position:absolute;top:-2px;right:-2px;width:10px;height:10px;border-radius:50%;background:#8B5CF6;border:2px solid white;animation:pulse 1.5s ease-in-out infinite"></span>` : ''}
             </div>
           </div>
-          <div class="mt-3 h-1.5 w-full rounded-full bg-violet-100 overflow-hidden"><div class="h-full bg-gradient-to-r from-violet-500 to-indigo-600 w-1/3 rounded-r-full"></div></div>
+          <div style="margin-top:12px;height:6px;width:100%;border-radius:999px;background:#EDE9FE;overflow:hidden">
+            <div style="height:100%;background:linear-gradient(90deg,#8B5CF6,#6D28D9);width:33%;border-radius:999px"></div>
+          </div>
         </div>
       </div>
 
@@ -395,6 +406,31 @@ function _attachStyles() {
   const s = document.createElement('style');
   s.id = '_inscStyles';
   s.textContent = `@layer components {\n` + `
+/* ═══════════ INSCRIPCIONES — KPI cards ═══════════ */
+.insc-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 28px;
+}
+@media (min-width: 768px) {
+  .insc-kpi-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+.insc-kpi-card {
+  position: relative;
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid #E2E8F0;
+  border-radius: 16px;
+  padding: 14px 16px;
+  box-shadow: 0 2px 10px rgba(15,23,42,.05);
+  transition: transform .18s ease, box-shadow .18s ease;
+}
+.insc-kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px -8px rgba(15,23,42,.18);
+}
+
 /* ═══════════ INSCRIPCIONES — filtros ═══════════ */
 .insc-filters {
   display: flex;
