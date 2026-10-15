@@ -2,6 +2,8 @@
  * 🧰 Helpers PRO - Nivel Empresa
  */
 
+const SITE_BASE_URL = 'https://montessorisonrisascreativas.com';
+
 export const Helpers = {
 
   /**
@@ -139,7 +141,7 @@ export const Helpers = {
     const isActive    = opts.is_active    !== undefined ? opts.is_active : true;
     const year      = opts.year      || new Date().getFullYear();
     const school    = 'Colegio Montessori Sonrisas Creativas';
-    const logoUrl   = opts.logoUrl   || (window.location.origin + '/img/monte.jpg');
+    const logoUrl   = opts.logoUrl   || (SITE_BASE_URL + '/img/monte.jpg');
     const photoUrl  = opts.photo_url || opts.avatar_url || '';
     const phone     = '+1 (809) 532-4903';
     const email     = 'montessorisonrisascreativas@gmail.com';
@@ -504,7 +506,7 @@ body{font-family:'Nunito',sans-serif;background:#e8ecf1;-webkit-print-color-adju
 
     const year = new Date().getFullYear();
     const school = 'Colegio Montessori Sonrisas Creativas';
-    const logoUrl = window.location.origin + '/img/monte.jpg';
+    const logoUrl = SITE_BASE_URL + '/img/monte.jpg';
     const phone   = '+1 (809) 532-4903';
     const email   = 'montessorisonrisascreativas@gmail.com';
     const web     = 'montessorisonrisascreativas.com';

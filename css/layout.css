@@ -5,10 +5,19 @@
    ============================================================ */
 
 /* ── 1. RESET ────────────────────────────────────────────────── */
-*, *::before, *::after {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+/* IMPORTANTE: el reset va dentro de @layer base.
+   Tailwind v4 coloca sus utilidades (p-*, px-*, m-*) en @layer utilities y
+   los componentes (dc-*, insc-*) en @layer components. El CSS SIN capa
+   (unlayered) SIEMPRE gana sobre cualquier @layer, así que un reset sin capa
+   anulaba el padding/margen de TODAS las utilidades y componentes del panel
+   (letras pegadas al borde, espacios rotos). En @layer base queda por debajo
+   de components y utilities, como corresponde a un reset. */
+@layer base {
+  *, *::before, *::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
 }
 
 html, body {

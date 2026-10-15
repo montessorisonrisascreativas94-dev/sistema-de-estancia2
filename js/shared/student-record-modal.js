@@ -38,6 +38,13 @@ const LEVELS = [...CANONICAL_LEVELS.map((l) => l.canon), ...SPECIAL_LEVELS];
 const SCHEDULES = ['8:00-12:00','8:00-15:00','8:00-17:00'];
 const PAYMENT_PLANS = [{v:'monthly',l:'Mensual'},{v:'two_installments',l:'Dos Cuotas'},{v:'semestral',l:'Semestral'},{v:'anual',l:'Anual'}];
 
+// URL pública del sistema. NUNCA usar location.origin: cuando la directora
+// admite desde una copia local (localhost / 127.0.0.1) el correo de admisión
+// salía con esa dirección y la familia no podía ingresar. El correo SIEMPRE
+// debe apuntar al dominio real del colegio.
+const SITE_BASE_URL = 'https://montessorisonrisascreativas.com';
+const LOGIN_URL = `${SITE_BASE_URL}/login.html`;
+
 let _state = { mode: 'new', studentId: null, preData: null, activeTab: 'info', data: {}, classes: [], draft: {}, lastEmailError: null };
 
   export const StudentRecordModal = {
@@ -1168,13 +1175,21 @@ let _state = { mode: 'new', studentId: null, preData: null, activeTab: 'info', d
       `Nivel: ${level || '—'}\n` +
       `Horario: ${schedule}\n` +
       `${monthlyFee ? 'Mensualidad: $' + monthlyFee + '\n' : ''}` +
-      `\nCREDENCIALES DE ACCESO AL PORTAL DE PADRES\n` +
-      `URL del portal: ${location.origin}/panel_padres.html\n` +
-      `Usuario (institucional): ${email}\n` +
-      `Contraseña temporal: ${password}\n\n` +
-      `El usuario de acceso pertenece al colegio. Los avisos de cuotas, ausencias y\n` +
-      `documentos se envían a: ${notificationEmail || email}\n\n` +
-      `IMPORTANTE: Por favor cambie su contraseña temporal al ingresar por primera vez.\n\n` +
+      `\n=====================================================================\n` +
+      `  CÓMO ENTRAR AL PORTAL — SIGA ESTOS 3 PASOS (es muy fácil)\n` +
+      `=====================================================================\n` +
+      `PASO 1) Copie su USUARIO y su CONTRASEÑA. Los tiene aquí abajo.\n` +
+      `PASO 2) Abra esta dirección en su navegador (computadora o teléfono):\n` +
+      `        ${LOGIN_URL}\n` +
+      `PASO 3) Escriba (o pegue) el USUARIO y la CONTRASEÑA y presione "Iniciar sesión".\n\n` +
+      `  ▶ USUARIO (cópielo exactamente igual):  ${email}\n` +
+      `  ▶ CONTRASEÑA TEMPORAL:                  ${password}\n\n` +
+      `  Enlace directo para entrar:  ${LOGIN_URL}\n` +
+      `  (Si el enlace no abre, escriba esa dirección en la barra del navegador.)\n\n` +
+      `IMPORTANTE: al iniciar sesión por primera vez, cambie su contraseña temporal.\n` +
+      `No comparta estos datos con nadie.\n` +
+      `El usuario es institucional y pertenece al colegio. Los avisos de cuotas, ausencias\n` +
+      `y documentos se envían a: ${notificationEmail || email}\n\n` +
       `Si tiene alguna duda, contáctenos:\n` +
       `Instagram: @montessorisonrisascreativas\n` +
       `Teléfono: +1 (809) 532-4903\n\n` +
@@ -1184,9 +1199,9 @@ let _state = { mode: 'new', studentId: null, preData: null, activeTab: 'info', d
   },
 
   _buildWelcomeEmailTemplate({ p1Name, studentName, matricula, classroom, level, schedule, email, password, monthlyFee, isTest, notificationEmail, planType }) {
-    const host = location.origin || 'https://montessorisonrisascreativas.com';
+    const host = SITE_BASE_URL;
     const logoUrl = `${host}/img/monte.jpg`;
-    const portalUrl = `${host}/panel_padres.html`;
+    const portalUrl = LOGIN_URL;
     const year = new Date().getFullYear();
     const feeCell = monthlyFee
       ? `<tr><td style="padding:6px 0;border-bottom:1px dashed #e5e7eb"><span style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#475569;font-weight:700">Mensualidad</span></td><td style="padding:6px 0;border-bottom:1px dashed #e5e7eb;text-align:right"><span style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#0B63C7;font-weight:900">$${monthlyFee.toFixed(2)} USD</span></td></tr>`
@@ -1235,26 +1250,30 @@ let _state = { mode: 'new', studentId: null, preData: null, activeTab: 'info', d
   </td></tr>
   <tr><td style="padding:18px 28px 4px">
     <div style="border-radius:14px;background:linear-gradient(135deg,#0B63C7 0%,#2563eb 55%,#10B981 100%);padding:18px 18px;color:#ffffff;border:1px solid #bfdbfe">
-      <div style="font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#dbeafe;font-weight:900;letter-spacing:0.6px;text-transform:uppercase;margin-bottom:12px">🔐 Credenciales de Acceso al Portal</div>
-      <table width="100%" cellpadding="0" cellspacing="0">
-        <tr><td style="padding:6px 0;width:35%"><span style="font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#e0f2fe;font-weight:700">Usuario</span></td><td style="padding:6px 0"><span style="font-family:'Courier New',monospace;font-size:13px;color:#ffffff;font-weight:900">${Helpers.escapeHTML(email)}</span></td></tr>
-        <tr><td style="padding:6px 0"><span style="font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#e0f2fe;font-weight:700">Contraseña</span></td><td style="padding:6px 0"><span style="display:inline-block;background:rgba(255,255,255,0.15);border:1px dashed rgba(255,255,255,0.4);padding:4px 10px;border-radius:8px;font-family:'Courier New',monospace;font-size:13px;color:#fef3c7;font-weight:900;letter-spacing:0.5px">${Helpers.escapeHTML(password)}</span></td></tr>
+      <div style="font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#dbeafe;font-weight:900;letter-spacing:0.6px;text-transform:uppercase;margin-bottom:12px;text-align:center">🔐 Sus datos para entrar al portal</div>
+      <table width="100%" cellpadding="0" cellspacing="0" style="background:rgba(255,255,255,0.14);border:1px solid rgba(255,255,255,0.28);border-radius:12px">
+        <tr><td style="padding:12px 14px;width:38%"><span style="font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#e0f2fe;font-weight:700">USUARIO</span></td><td style="padding:12px 14px"><span style="font-family:'Courier New',monospace;font-size:15px;color:#ffffff;font-weight:900;word-break:break-all">${Helpers.escapeHTML(email)}</span></td></tr>
+        <tr><td style="padding:12px 14px;border-top:1px solid rgba(255,255,255,0.2)"><span style="font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#e0f2fe;font-weight:700">CONTRASEÑA</span></td><td style="padding:12px 14px;border-top:1px solid rgba(255,255,255,0.2)"><span style="display:inline-block;background:rgba(255,255,255,0.18);border:1px dashed rgba(255,255,255,0.5);padding:6px 12px;border-radius:8px;font-family:'Courier New',monospace;font-size:15px;color:#fef3c7;font-weight:900;letter-spacing:0.5px">${Helpers.escapeHTML(password)}</span></td></tr>
       </table>
-      <div style="margin-top:12px;padding:10px 12px;border-radius:10px;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2)">
-        <div style="font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#dbeafe;line-height:1.6">
-          Este usuario es institucional y pertenece al colegio. Los avisos de cuotas,
-          ausencias y documentos se envían a
-          <strong style="color:#ffffff">${Helpers.escapeHTML(notificationEmail || email)}</strong>.
+
+      <div style="margin-top:16px;padding:14px 16px;border-radius:12px;background:#ffffff;color:#0f172a">
+        <div style="font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#0B63C7;font-weight:900;letter-spacing:0.4px;text-transform:uppercase;margin-bottom:10px">Siga estos 3 pasos</div>
+        <div style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#334155;line-height:1.8">
+          <div><strong style="color:#0B63C7">Paso 1.</strong> Copie su <strong>USUARIO</strong> y su <strong>CONTRASEÑA</strong> (los de arriba).</div>
+          <div><strong style="color:#0B63C7">Paso 2.</strong> Abra la página de ingreso: <a href="${portalUrl}" style="color:#0B63C7;font-weight:900;word-break:break-all">${portalUrl}</a></div>
+          <div><strong style="color:#0B63C7">Paso 3.</strong> Escriba (o pegue) el usuario y la contraseña y presione <strong>"Iniciar sesión"</strong>.</div>
         </div>
       </div>
-      <div style="margin-top:14px;text-align:center">
-        <a href="${portalUrl}" style="display:inline-block;background:linear-gradient(135deg,#ffffff 0%,#ecfeff 100%);color:#0B63C7;text-decoration:none;padding:12px 28px;border-radius:999px;font-family:Arial,Helvetica,sans-serif;font-size:13px;font-weight:900;letter-spacing:0.5px;text-transform:uppercase;box-shadow:0 6px 18px rgba(0,0,0,0.2)">
-          Ingresar al Portal de Padres →
+
+      <div style="margin-top:16px;text-align:center">
+        <a href="${portalUrl}" style="display:inline-block;background:linear-gradient(135deg,#ffffff 0%,#ecfeff 100%);color:#0B63C7;text-decoration:none;padding:14px 34px;border-radius:999px;font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:900;letter-spacing:0.5px;text-transform:uppercase;box-shadow:0 6px 18px rgba(0,0,0,0.2)">
+          👉 Entrar ahora al portal
         </a>
       </div>
-      <div style="margin-top:10px;text-align:center;font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#dbeafe;line-height:1.4">
-        URL directa: <a href="${portalUrl}" style="color:#ffffff;text-decoration:underline">${portalUrl}</a><br>
-        <strong style="color:#fef3c7">Por favor cambie su contraseña temporal al ingresar por primera vez.</strong>
+      <div style="margin-top:10px;text-align:center;font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#dbeafe;line-height:1.5">
+        Dirección de ingreso: <a href="${portalUrl}" style="color:#ffffff;text-decoration:underline;word-break:break-all">${portalUrl}</a><br>
+        <strong style="color:#fef3c7">Al entrar por primera vez, cambie su contraseña temporal.</strong><br>
+        Los avisos de cuotas, ausencias y documentos se envían a <strong style="color:#ffffff">${Helpers.escapeHTML(notificationEmail || email)}</strong>.
       </div>
     </div>
   </td></tr>

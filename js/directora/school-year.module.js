@@ -118,7 +118,7 @@ export const SchoolYearModule = {
     const isHistory = this.state.viewingHistory;
 
     section.innerHTML = `
-      <div class="space-y-6">
+      <div class="section-shell">
         ${this._renderHeader()}
 
         ${year ? this._renderExecutiveSummary(year, kpi, d) : this._renderNoYear()}

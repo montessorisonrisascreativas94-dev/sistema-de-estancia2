@@ -3,6 +3,8 @@ import { AssistantApi } from './api.js';
 import { Helpers } from '../shared/helpers.js';
 import { dedupeClassrooms } from '../shared/constants.js';
 
+const SITE_BASE_URL = 'https://montessorisonrisascreativas.com';
+
 /**
  * M�dulo de Gesti�n de Maestros para Asistente
  */
@@ -430,7 +432,7 @@ export const TeachersModule = {
                 <p><b>Usuario (Email):</b> ${email}</p>
                 <p style="color:#6b7280;font-size:13px;">Por seguridad, usa el enlace de abajo para establecer tu contraseña.</p>
               </div>
-              <p>Accede desde aquí: <a href="${window.location.origin}/login.html" style="color: #0369a1; font-weight: bold;">Iniciar Sesión</a></p>
+              <p>Accede desde aquí: <a href="${SITE_BASE_URL}/login.html" style="color: #0369a1; font-weight: bold;">Iniciar Sesión</a></p>
               <hr style="border: none; border-top: 1px solid #e0f2fe; margin: 20px 0;">
               <p style="font-size: 12px; color: #666;">Colegio Montessori Sonrisas Creativas - Administración</p>
             </div>
