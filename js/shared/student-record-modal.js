@@ -437,7 +437,7 @@ let _state = { mode: 'new', studentId: null, preData: null, activeTab: 'info', d
     document.getElementById('srmBody').innerHTML = this._renderTabContent(tabId);
     this._restoreDraft();
     if (tabId === 'info') this._syncAgeField();
-    if (tabId === 'access') this._refreshCredPreviewValues();
+    if (tabId === 'access') { this._refreshCredPreviewValues(); this._autoGenQR(); }
     if (window.lucide) lucide.createIcons();
   },
 
@@ -965,7 +965,7 @@ let _state = { mode: 'new', studentId: null, preData: null, activeTab: 'info', d
       <div class="srm-section-divider"><i data-lucide="qr-code" class="w-4 h-4"></i> Código QR de Asistencia</div>
       <div class="srm-qr-section">
         <div id="srm-qr-container" class="srm-qr-box">
-          <p class="text-xs text-slate-400 font-bold text-center">Genera o ingresa una matrícula para ver el QR</p>
+          <p class="text-xs text-slate-400 font-bold text-center">Tu código QR se genera automáticamente con la matrícula</p>
         </div>
         <p id="srm-qr-label" class="text-lg font-black text-slate-700 mt-2">—</p>
         <div class="flex gap-2 mt-3">
@@ -1025,6 +1025,7 @@ let _state = { mode: 'new', studentId: null, preData: null, activeTab: 'info', d
     body.innerHTML = this._renderTabContent('access');
     this._restoreDraft();
     if (window.lucide) lucide.createIcons();
+    this._autoGenQR();
   },
 
   /** Actualiza el preview sin re-renderizar (preserva inputs visibles). */
@@ -1691,6 +1692,7 @@ let _state = { mode: 'new', studentId: null, preData: null, activeTab: 'info', d
       || document.getElementById('srm-emailnotif')?.value?.trim()
       || _state.data?.notification_email
       || payload.p1_email
+      || payload.p2_email
       || '';
     // ✅ REGLA NUEVA: contraseña temporal SIEMPRE es sonrisa123 (minúscula).
     // Si el draft trae algo distinto se fuerza a la predeterminada.
@@ -2092,18 +2094,20 @@ let _state = { mode: 'new', studentId: null, preData: null, activeTab: 'info', d
     return this._qrLibPromise;
   },
 
-  async genQR() {
+  async genQR(silent = false) {
     // `srm-matricula` vive en la pestaña Info General. Si el usuario
     // está en la pestaña Accesos, getElementById devuelve null y el QR
     // nunca se generaba.
     const matricula = this._currentMatricula();
     if (!matricula) {
-      return Helpers.toast('Genera o ingresa una matrícula en la pestaña Info General', 'warning');
+      if (!silent) Helpers.toast('Genera o ingresa una matrícula en la pestaña Info General', 'warning');
+      return;
     }
 
     const container = document.getElementById('srm-qr-container');
     if (!container) {
-      return Helpers.toast('Abre la pestaña Accesos para ver el QR', 'warning');
+      if (!silent) Helpers.toast('Abre la pestaña Accesos para ver el QR', 'warning');
+      return;
     }
     const label = document.getElementById('srm-qr-label');
     if (label) label.textContent = matricula;
@@ -2112,6 +2116,9 @@ let _state = { mode: 'new', studentId: null, preData: null, activeTab: 'info', d
 
     try {
       const QRCode = await this._ensureQrLib();
+      // El usuario pudo cambiar de pestaña mientras cargaba la librería:
+      // si el contenedor ya no está montado, se aborta sin tocar el DOM.
+      if (!container.isConnected) return;
       container.innerHTML = '';
       new QRCode(container, {
         text: matricula,
@@ -2123,8 +2130,21 @@ let _state = { mode: 'new', studentId: null, preData: null, activeTab: 'info', d
       });
     } catch (e) {
       console.error('[srm] QR:', e);
-      container.innerHTML = '<p class="text-xs text-rose-500 font-bold text-center">No se pudo generar el QR. Reintenta.</p>';
+      if (container.isConnected) {
+        container.innerHTML = '<p class="text-xs text-rose-500 font-bold text-center">No se pudo generar el QR. Reintenta.</p>';
+      }
     }
+  },
+
+  /**
+   * Auto-rellena el QR en cuanto la pestaña Accesos está montada.
+   * La matrícula ya viene generada por `_prefillAdmission()` (modo
+   * admisión) o por el input, así que no hace falta pulsar "Generar QR".
+   * Silencioso: si aún no hay matrícula, no molesta con un aviso.
+   */
+  _autoGenQR() {
+    if (!document.getElementById('srm-qr-container')) return;
+    this.genQR(true);
   },
 
   printCarnet() {
@@ -2180,6 +2200,7 @@ let _state = { mode: 'new', studentId: null, preData: null, activeTab: 'info', d
       || document.getElementById('srm-emailnotif')?.value?.trim()
       || _state.data?.notification_email
       || data.p1_email
+      || data.p2_email
       || '';
     const password = _state.draft['srm-password']
       || document.getElementById('srm-password')?.value?.trim()
@@ -2353,7 +2374,7 @@ let _state = { mode: 'new', studentId: null, preData: null, activeTab: 'info', d
     const matInput = document.getElementById('srm-matricula');
     if (matInput) {
       let qrTimeout;
-      matInput.addEventListener('input', () => { clearTimeout(qrTimeout); qrTimeout = setTimeout(() => this.genQR(), 600); });
+      matInput.addEventListener('input', () => { clearTimeout(qrTimeout); qrTimeout = setTimeout(() => this.genQR(true), 600); });
     }
 
     if (_state.activeTab === 'history') this._loadTimeline();
