@@ -12,8 +12,17 @@ function handleError(error, fallback = null) {
 
 function _isColumnError(error) {
   if (!error) return false;
-  const msg = (error.message || error.code || String(error)).toLowerCase();
-  return msg.includes('column') && (msg.includes('does not exist') || msg.includes('no existe') || msg.includes('pgrst301'));
+  const code = String(error.code || '').toLowerCase();
+  // PGRST204: PostgREST no encuentra la columna en el schema cache
+  // ("Could not find the 'x' column of 'y' in the schema cache").
+  if (code === 'pgrst204' || code === 'pgrst301') return true;
+  const msg = String(error.message || '').toLowerCase();
+  return msg.includes('column') && (
+    msg.includes('does not exist') ||
+    msg.includes('no existe') ||
+    msg.includes('could not find') ||
+    msg.includes('schema cache')
+  );
 }
 
 const _cache = new Map();
@@ -102,8 +111,7 @@ export const MaestraApi = {
       .eq('date', record.date)
       .maybeSingle();
 
-    const fb = handleError(findError, null);
-    if (fb !== null) return null;
+    if (findError) { handleError(findError, null); return null; }
 
     const query = existing
       ? supabase
@@ -116,8 +124,7 @@ export const MaestraApi = {
 
     const { data, error } = await query.select().maybeSingle();
 
-    const fb2 = handleError(error, null);
-    if (fb2 !== null) return null;
+    if (error) { handleError(error, null); return null; }
     invalidateCache('getAttendance');
     return data;
   },
@@ -188,8 +195,7 @@ export const MaestraApi = {
       .eq('date', cleanPayload.date)
       .maybeSingle();
 
-    const fb = handleError(findError, null);
-    if (fb !== null) return null;
+    if (findError) { handleError(findError, null); return null; }
 
     if (cleanPayload.infant_event) {
       const newEvent = cleanPayload.infant_event;
@@ -228,8 +234,7 @@ export const MaestraApi = {
 
     const { data, error } = await query.select().maybeSingle();
 
-    const fb2 = handleError(error, null);
-    if (fb2 !== null) return null;
+    if (error) { handleError(error, null); return null; }
     invalidateCache('getDailyRoutine');
     return data;
   },
@@ -241,8 +246,7 @@ export const MaestraApi = {
       .update({ status: 'published' })
       .in('id', logIds);
 
-    const fb = handleError(error, null);
-    if (fb !== null) return null;
+    if (error) { handleError(error, null); return null; }
     invalidateCache('getDailyRoutine');
     return data;
   },
@@ -260,8 +264,7 @@ export const MaestraApi = {
       .select()
       .maybeSingle();
 
-    const fb = handleError(error, null);
-    if (fb !== null) return null;
+    if (error) { handleError(error, null); return null; }
     return data;
   },
 
@@ -273,8 +276,7 @@ export const MaestraApi = {
       .select()
       .maybeSingle();
 
-    const fb = handleError(error, null);
-    if (fb !== null) return null;
+    if (error) { handleError(error, null); return null; }
     return data;
   },
 
@@ -284,8 +286,8 @@ export const MaestraApi = {
       .delete()
       .eq('id', taskId);
 
-    const fb = handleError(error, null);
-    return { success: fb === null };
+    if (error) { handleError(error, null); return { success: false }; }
+    return { success: true };
   },
 
   async gradeTask(taskId, studentId, gradeLetter, stars, feedback, numericScore = null) {
@@ -326,8 +328,7 @@ export const MaestraApi = {
         .maybeSingle();
     }
 
-    const fb = handleError(result.error, null);
-    if (fb !== null) return null;
+    if (result.error) { handleError(result.error, null); return null; }
     return result.data;
   },
 
@@ -344,8 +345,7 @@ export const MaestraApi = {
       .select()
       .maybeSingle();
 
-    const fb = handleError(error, null);
-    if (fb !== null) return null;
+    if (error) { handleError(error, null); return null; }
     return data;
   }
 };

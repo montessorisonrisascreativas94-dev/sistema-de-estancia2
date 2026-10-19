@@ -182,6 +182,11 @@ window.App = {
     _confirmMed:              Routine._confirmMed,
     _confirmExtraEvent:       Routine._confirmExtraEvent,
     _saveQuickEvent:          Routine._saveQuickEvent,
+    _editEventTime:           Routine._editEventTime,
+    _confirmEditEventTime:    Routine._confirmEditEventTime,
+    _addScheduleEventToStudent: Routine._addScheduleEventToStudent,
+    _addClassRoutineToStudent:  Routine._addClassRoutineToStudent,
+    _filterStudentEvents:       Routine._filterStudentEvents,
     publishDailyLogs:         Routine.publishDailyLogs,
     toggleOmitToday:          Routine.toggleOmitToday,
     insertEventAt:            Routine.insertEventAt,
@@ -1273,6 +1278,11 @@ function initNavigation() {
       localStorage.setItem('maestra_last_section', fullId);
     }
 
+    // 🔴 Marcar badge como leído al entrar a la sección (siempre, incluso si
+    // el contenido está cacheado y no se vuelve a cargar).
+    BadgeSystem.mark(fullId);
+    previousSection = fullId;
+
     // Lógica de refresco inteligente (TTL). Antes vivía en un objeto local
     // `_lastLoad`; ahora lo lleva SectionCache, el mismo que usan el resto de
     // paneles, para que se pueda invalidar desde los handlers de realtime.
@@ -1308,11 +1318,6 @@ function initNavigation() {
     if (cleanId === 'profile') {
       import('../shared/notify-permission.js').then(m => m.NotifyPermission.requestIfNeeded());
     }
-
-    // 🔴 Marcar badge como leído al entrar a la sección
-    BadgeSystem.mark(fullId);
-    
-    previousSection = fullId;
   };
 
   navButtons.forEach(btn => {

@@ -1488,15 +1488,22 @@
         });
 
         // ── SCHOOL YEARS ──
+        // `window.__schoolYears` guarda {id,name} para que al enviar se pueda
+        // adjuntar también `school_year_id`: sin ese id el año escolar activo
+        // no "recibe" la preinscripción (el contador del panel y el módulo de
+        // Ciclo Escolar quedaban con datos distintos).
+        window.__schoolYears = [];
         (async function(){
-            if(!sb)return;
+            const sel=document.querySelector('[name="school_year_requested"]');
+            if(!sb||!sel)return;
             try{
                 const{data}=await sb.from('school_years').select('id,name').eq('status','active').order('start_date',{ascending:false});
-                const sel=document.querySelector('[name="school_year_requested"]');
                 if(data&&data.length){
+                    window.__schoolYears = data;
                     data.forEach(y=>{
                         const o=document.createElement('option');
                         o.value=y.name; o.textContent=y.name;
+                        o.dataset.yearId = y.id;
                         sel.appendChild(o);
                     });
                 }
@@ -1982,6 +1989,14 @@
                 gender:v('gender'),
                 nationality:v('nationality'),
                 school_year_requested:v('school_year_requested'),
+                // id real del año escolar: sin él, el año activo no "recibe"
+                // la solicitud (badge del panel y Ciclo Escolar no cuadraban).
+                // Si no se resuelve el id, la clave no se envía y queda NULL.
+                school_year_id:(function(){
+                    const name=v('school_year_requested');
+                    const y=(window.__schoolYears||[]).find(x=>x&&x.name===name);
+                    return y&&y.id ? Number(y.id) : undefined;
+                })(),
                 level_requested:v('level_requested'),
                 schedule:v('schedule'),
                 estimated_entry_date:v('estimated_entry_date'),

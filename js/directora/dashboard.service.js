@@ -7,6 +7,7 @@
 
 import { supabase } from '../shared/supabase.js';
 import { countRowsSafe } from '../shared/db-utils.js';
+import { SchoolYearGuard } from '../shared/school-year-guard.js';
 import { DirectorApi } from './api.js';
 import { AppState } from './state.js';
 
@@ -64,7 +65,28 @@ export const DashboardService = {
       const attData       = (attRes?.data) || [];
 
       const presentCount = attData.filter(a => ['present','presente','late','tarde'].includes((a.status||'').toLowerCase())).length;
-      const totalPending = 0;
+
+      // Pagos pendientes del año escolar activo. Antes estaba en 0 fijo, así
+      // que el dashboard siempre informaba "0 pendientes / RD$0" aunque la
+      // caja tuviera cuotas por cobrar.
+      let pendingPaymentsCount = 0;
+      let pendingPaymentsAmount = 0;
+      try {
+        const yearId = (await SchoolYearGuard.getCurrentYear())?.id;
+        if (yearId) {
+          const { data: pendData, count: pendCount, error: pendErr } = await supabase
+            .from('payments')
+            .select('amount', { count: 'exact' })
+            .eq('school_year_id', yearId)
+            .eq('status', 'pending')
+            .limit(5000);
+          if (!pendErr) {
+            pendingPaymentsCount = pendCount ?? (pendData || []).length;
+            pendingPaymentsAmount = (pendData || []).reduce((s, r) => s + (Number(r.amount) || 0), 0);
+          }
+        }
+      } catch (_) {}
+      const totalPending = pendingPaymentsCount;
 
       // Asistencia promedio: tasa diaria promedio de los últimos 30 días
       const byDay = {};
@@ -92,7 +114,7 @@ export const DashboardService = {
           present:          presentCount || rpcKpis.attendance_today || 0,
           attendance:       avgAttendance || rpcKpis.attendance_pct || 0,
           pendingInquiries: rpcKpis.inquiries || 0,
-          pending_amount:   totalPending,
+          pending_amount:   pendingPaymentsAmount,
           pending_payments: totalPending,
         },
         recentInquiries: []

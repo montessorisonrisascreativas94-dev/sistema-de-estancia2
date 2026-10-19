@@ -7,6 +7,7 @@
  */
 import { supabase } from '../../shared/supabase.js';
 import { Helpers } from '../../shared/helpers.js';
+import { SectionCache } from '../../shared/section-cache.js';
 import { MaestraApi } from '../api.js';
 import { Modal } from './ui.js';
 import {
@@ -94,52 +95,70 @@ export async function initGradesCenter() {
   const container = document.getElementById('t-grades-inner');
   if (!container) return;
 
-  const uid = await _currentUserId();
+  try {
+    const uid = await _currentUserId();
+    if (!uid) {
+      container.innerHTML = _emptyState('No se pudo identificar tu usuario. Cierra sesión y vuelve a entrar.', '🔐');
+      return;
+    }
 
-  const { data: rawRooms } = await supabase
-    .from('classrooms').select('id, name, level')
-    .eq('teacher_id', uid)
-    .is('deleted_at', null);
+    const { data: rawRooms, error: roomsErr } = await supabase
+      .from('classrooms').select('id, name, level')
+      .eq('teacher_id', uid)
+      .is('deleted_at', null);
+    if (roomsErr) throw roomsErr;
 
-  // ✅ Sanitizar + deduplicar
-  const sanitized = (rawRooms || []).map((r) => {
-    const n = sanitizeClassroomDisplayName(r.name);
-    const l = sanitizeClassroomDisplayName(r.level);
-    const canon = findCanonicalClassroom(l || n);
-    const special = canon ? null : (findSpecialClassroom(n) || findSpecialClassroom(l));
-    return {
-      ...r,
-      name:  canon?.displayLevel || special?.displayName || formatClassroomFullName(n, l),
-      level: canon?.level || special?.key || l,
-    };
-  });
-  const classrooms = dedupeClassrooms(sanitized);
+    // ✅ Sanitizar + deduplicar
+    const sanitized = (rawRooms || []).map((r) => {
+      const n = sanitizeClassroomDisplayName(r.name);
+      const l = sanitizeClassroomDisplayName(r.level);
+      const canon = findCanonicalClassroom(l || n);
+      const special = canon ? null : (findSpecialClassroom(n) || findSpecialClassroom(l));
+      return {
+        ...r,
+        name:  canon?.displayLevel || special?.displayName || formatClassroomFullName(n, l),
+        level: canon?.level || special?.key || l,
+      };
+    });
+    const classrooms = dedupeClassrooms(sanitized);
 
-  if (!classrooms?.length) {
-    container.innerHTML = _emptyState('No tienes aulas asignadas', '🏫');
-    return;
+    if (!classrooms?.length) {
+      container.innerHTML = _emptyState('No tienes aulas asignadas', '🏫');
+      return;
+    }
+
+    _currentClassroomId = classrooms[0].id;
+    _currentClassroom = classrooms[0] || null;
+    _classrooms = classrooms || [];
+    _tab = 'boletines';
+    _boletinOpen = false;
+    container.innerHTML = _buildLayout(classrooms);
+    _bindEvents();
+
+    await _loadEvalBase();
+    await _loadBoletines();
+  } catch (e) {
+    console.warn('[Calificaciones] Error al iniciar el centro de calificaciones:', e);
+    // Invalidar para que el próximo intento recargue en vez de servir el fallo cacheado.
+    try { SectionCache.invalidate('grades'); } catch (_) {}
+    container.innerHTML = _emptyState('No se pudo cargar el centro de calificaciones. Intenta de nuevo.', '⚠️');
   }
-
-  _currentClassroomId = classrooms[0].id;
-  _currentClassroom = classrooms[0] || null;
-  _classrooms = classrooms || [];
-  _tab = 'boletines';
-  _boletinOpen = false;
-  container.innerHTML = _buildLayout(classrooms);
-  _bindEvents();
-
-  await _loadEvalBase();
-  await _loadBoletines();
 }
 
 async function _loadEvalBase() {
-  const { data: evals } = await supabase
+  const { data: evals, error } = await supabase
     .from('eval_evaluations').select('*').is('deleted_at', null)
     .order('created_at', { ascending: false });
+  if (error) {
+    console.warn('[Calificaciones] No se pudo leer eval_evaluations:', error.message || error);
+    _evals = [];
+    return;
+  }
   _evals = evals || [];
   if (!_evals.length) return;
   _actEvalId = _evals[0].id;
-  try { await supabase.rpc('boletin_ensure_structure', { p_evaluation_id: _actEvalId }); } catch (_) {}
+  const { error: rpcErr } = await supabase.rpc('boletin_ensure_structure', { p_evaluation_id: _actEvalId });
+  if (rpcErr) console.warn('[Calificaciones] boletin_ensure_structure:', rpcErr.message || rpcErr);
   await _loadEvalChildren();
 }
 
@@ -254,11 +273,13 @@ async function _loadGradebook() {
   await _loadStudents();
 
   // Load tasks for this classroom (recent, within period dates or all if no period)
-  let taskQuery = supabase
+  const _baseTaskQuery = () => supabase
     .from('tasks').select('id, title, due_date, created_at, grading_system, eval_module_id, eval_activity_id')
     .eq('classroom_id', _currentClassroomId)
     .order('created_at', { ascending: false })
     .limit(20);
+
+  let taskQuery = _baseTaskQuery();
 
   if (_periodInfo?.period?.start_date && _periodInfo?.period?.end_date) {
     taskQuery = taskQuery
@@ -266,7 +287,14 @@ async function _loadGradebook() {
       .lte('created_at', _periodInfo.period.end_date + 'T23:59:59');
   }
 
-  const { data: tasks } = await taskQuery;
+  let { data: tasks, error: tasksErr } = await taskQuery;
+
+  // Si el filtro por fechas del período deja la lista vacía, mostrar las
+  // tareas recientes del aula igualmente (evita "no hay tareas" engañoso).
+  if (!tasksErr && !(tasks || []).length && _periodInfo?.period?.start_date) {
+    ({ data: tasks, error: tasksErr } = await _baseTaskQuery());
+  }
+  if (tasksErr) console.warn('[Calificaciones] No se pudieron leer las tareas:', tasksErr.message || tasksErr);
   _tasks = tasks || [];
 
   // Load all graded evidences for these students + tasks
@@ -275,11 +303,12 @@ async function _loadGradebook() {
     const studentIds = _students.map(s => s.id);
     const taskIds = _tasks.map(t => t.id);
 
-    const { data: evidences } = await supabase
+    const { data: evidences, error: evidencesErr } = await supabase
       .from('task_evidences')
       .select('student_id, task_id, numeric_score, grade_letter, stars, status')
       .in('student_id', studentIds)
       .in('task_id', taskIds);
+    if (evidencesErr) console.warn('[Calificaciones] No se pudieron leer las entregas:', evidencesErr.message || evidencesErr);
 
     (evidences || []).forEach(e => {
       _evidenceMap[`${e.student_id}_${e.task_id}`] = e;
@@ -605,16 +634,18 @@ async function _loadActivities() {
   content.innerHTML = '<div class="p-8 text-center"><div class="inline-block w-8 h-8 border-4 border-purple-400 border-t-transparent rounded-full animate-spin"></div><p class="mt-3 text-sm text-slate-400 font-medium">Cargando actividades...</p></div>';
 
   if (!_students.length) {
-    const { data: students } = await supabase
+    const { data: students, error: studentsErr } = await supabase
       .from('students').select('id, name, matricula')
       .eq('classroom_id', _currentClassroomId)
       .eq('is_active', true).order('name');
+    if (studentsErr) console.warn('[Calificaciones] No se pudieron leer los alumnos:', studentsErr.message || studentsErr);
     _students = students || [];
   }
 
-  const { data: evals } = await supabase
+  const { data: evals, error: evalsErr } = await supabase
     .from('eval_evaluations').select('*').is('deleted_at', null)
     .order('created_at', { ascending: false });
+  if (evalsErr) console.warn('[Calificaciones] No se pudo leer eval_evaluations:', evalsErr.message || evalsErr);
   _evals = evals || [];
 
   if (!_evals.length) {
@@ -629,31 +660,40 @@ async function _loadActivities() {
 
 async function _loadEvalChildren() {
   const evalId = _actEvalId;
+  if (!evalId) {
+    _evalAreas = []; _evalPeriods = []; _evalModules = []; _evalActivities = []; _evalScoresMap = {};
+    return;
+  }
   const [areas, periods] = await Promise.all([
     supabase.from('eval_areas').select('*').eq('evaluation_id', evalId).is('deleted_at', null).order('sort_order').order('created_at'),
     supabase.from('eval_periods').select('*').eq('evaluation_id', evalId).is('deleted_at', null).order('sort_order').order('created_at')
   ]);
+  if (areas.error) console.warn('[Calificaciones] No se pudieron leer las áreas:', areas.error.message || areas.error);
+  if (periods.error) console.warn('[Calificaciones] No se pudieron leer los períodos:', periods.error.message || periods.error);
   _evalAreas = areas.data || [];
   _evalPeriods = periods.data || [];
 
   const periodIds = _evalPeriods.map(p => p.id);
-  const { data: modules } = periodIds.length
+  const { data: modules, error: modulesErr } = periodIds.length
     ? await supabase.from('eval_modules').select('*, area:eval_areas(name), period:eval_periods(name)')
         .in('period_id', periodIds).is('deleted_at', null).order('sort_order').order('created_at')
-    : { data: [] };
+    : { data: [], error: null };
+  if (modulesErr) console.warn('[Calificaciones] No se pudieron leer los módulos:', modulesErr.message || modulesErr);
   _evalModules = modules || [];
 
   const moduleIds = _evalModules.map(m => m.id);
-  const { data: activities } = moduleIds.length
+  const { data: activities, error: activitiesErr } = moduleIds.length
     ? await supabase.from('eval_activities').select('*')
         .in('module_id', moduleIds).is('deleted_at', null).order('sort_order').order('created_at')
-    : { data: [] };
+    : { data: [], error: null };
+  if (activitiesErr) console.warn('[Calificaciones] No se pudieron leer las actividades:', activitiesErr.message || activitiesErr);
   _evalActivities = activities || [];
 
   const actIds = _evalActivities.map(a => a.id);
-  const { data: scores } = actIds.length
+  const { data: scores, error: scoresErr } = actIds.length
     ? await supabase.from('eval_scores').select('*').in('activity_id', actIds)
-    : { data: [] };
+    : { data: [], error: null };
+  if (scoresErr) console.warn('[Calificaciones] No se pudieron leer las notas:', scoresErr.message || scoresErr);
   _evalScoresMap = buildScoresMap(scores || [], _evalActivities);
 
   if (_actPeriodId && !_evalPeriods.find(p => p.id === _actPeriodId)) _actPeriodId = null;

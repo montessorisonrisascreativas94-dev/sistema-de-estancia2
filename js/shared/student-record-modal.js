@@ -1903,6 +1903,7 @@ let _state = { mode: 'new', studentId: null, preData: null, activeTab: 'info', d
             months.push({
               student_id: studentId,
               payment_plan_id: planId,
+              school_year_id: schoolYearId,
               amount: fee,
               concept: 'Mensualidad',
               month_paid: monthsEs[m.getMonth()] + ' ' + m.getFullYear(),

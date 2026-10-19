@@ -60,6 +60,24 @@ const EVENT_META = {
 
 const evMeta = (type) => EVENT_META[type] || { label: String(type || 'Evento'), icon: 'zap', color: '#0B63C7' };
 
+/** Estados de ánimo usados por la maestra en daily_logs.mood */
+const MOOD_META = {
+  feliz:       { emoji: '😊', label: 'Feliz' },
+  tranquilo:   { emoji: '🙂', label: 'Tranquilo' },
+  normal:      { emoji: '😐', label: 'Normal' },
+  triste:      { emoji: '😢', label: 'Triste' },
+  llanto:      { emoji: '😭', label: 'Llanto' },
+  enfermo:     { emoji: '🤒', label: 'Enfermo' },
+  somnoliento: { emoji: '😴', label: 'Somnoliento' },
+  irritable:   { emoji: '😡', label: 'Irritable' },
+  enojado:     { emoji: '😡', label: 'Enojado' },
+  muy_feliz:   { emoji: '😄', label: 'Muy feliz' },
+  cansado:     { emoji: '😴', label: 'Cansado' },
+};
+
+/** Estado de cada comida en daily_logs.food (JSON) */
+const FOOD_STATE_LABEL = { todo: 'todo', poco: 'poco', nada: 'no comió', ayuda: 'con ayuda' };
+
 export const SchoolCenterModule = {
   _tab: 'resumen',
   _aulaId: undefined,
@@ -906,18 +924,17 @@ export const SchoolCenterModule = {
         [],    // 1  students
         [],    // 2  attWeek
         [],    // 3  logsToday
-        [],    // 4  schedToday
-        [],    // 5  eventsToday
-        [],    // 6  postsWeek
-        [],    // 7  msgUnread
-        [],    // 8  msgWeek
-        [],    // 9  tasks
-        [],    // 10 incidents
-        [],    // 11 staff
-        [],    // 12 meetings
-        [],    // 13 years
-        [],    // 14 periods
-        [],    // 15 schoolActivities
+        [],    // 4  eventsToday
+        [],    // 5  postsWeek
+        [],    // 6  msgUnread
+        [],    // 7  msgWeek
+        [],    // 8  tasks
+        [],    // 9  incidents
+        [],    // 10 staff
+        [],    // 11 meetings
+        [],    // 12 years
+        [],    // 13 periods
+        [],    // 14 schoolActivities
       ];
       const settled = await Promise.allSettled([
         this._q(supabase.from('classrooms')
@@ -927,20 +944,23 @@ export const SchoolCenterModule = {
         this._q(supabase.from('attendance')
           .select('id, student_id, classroom_id, status, date, created_at')
           .gte('date', weekAgoDate).lte('date', today).limit(6000)),
+        // Rutinas individuales del día (bitácora real de cada estudiante)
         this._q(supabase.from('daily_logs')
-          .select('id, student_id, classroom_id, date, status, created_at')
+          .select('id, student_id, classroom_id, date, status, mood, food, nap, activities, notes, infant_data, created_at')
           .eq('date', today).limit(4000)),
-        this._q(supabase.from('classroom_daily_schedule')
-          .select('classroom_id, events, schedule_date').eq('schedule_date', today).limit(200)),
+        // Rutina del aula: eventos reales registrados hoy
         this._q(supabase.from('classroom_events')
           .select('id, classroom_id, event_type, event_time, event_date, teacher_id')
           .eq('event_date', today).order('event_time').limit(3000)),
         this._q(supabase.from('posts')
           .select('id, classroom_id, teacher_id, title, content, teacher_name, created_at')
           .gte('created_at', weekAgoISO).order('created_at', { ascending: false }).limit(500)),
+        // Mensajes sin responder: los más recientes primero para que no se
+        // pierdan cuando hay muchos no leídos acumulados.
         this._q(supabase.from('messages')
           .select('id, sender_id, receiver_id, content, created_at, sender:sender_id(name, role)')
-          .eq('is_read', false).order('created_at').limit(600)),
+          .eq('is_read', false).is('deleted_at', null)
+          .order('created_at', { ascending: false }).limit(1000)),
         this._q(supabase.from('messages')
           .select('id, receiver_id, sender_id, created_at, read_at')
           .gte('created_at', weekAgoISO).order('created_at', { ascending: false }).limit(800)),
@@ -965,7 +985,7 @@ export const SchoolCenterModule = {
         this._q(supabase.from('periods')
           .select('id, name, start_date, end_date, status, is_active, classroom_id')
           .order('start_date', { ascending: false }).limit(60)),
-        // 15. school_activities: planificación central de directora/encargada/asistente
+        // 14. school_activities: planificación central de directora/encargada/asistente
         //   (cargamos 4 meses de ventana: 1 hacia atrás + 3 hacia adelante para el calendario visual)
         this._q(supabase.from('school_activities')
           .select('id, code, title, description, activity_type, priority, status,'
@@ -988,13 +1008,13 @@ export const SchoolCenterModule = {
       });
 
       const [
-        aulasRaw, students, attWeek, logsToday, schedToday, eventsToday,
+        aulasRaw, students, attWeek, logsToday, eventsToday,
         postsWeek, msgUnread, msgWeek, tasks, incidents, staff,
         meetings, years, periods, schoolActivities,
       ] = results;
 
       this._data = this._compute({
-        aulasRaw, students, attWeek, logsToday, schedToday, eventsToday,
+        aulasRaw, students, attWeek, logsToday, eventsToday,
         postsWeek, msgUnread, msgWeek, tasks, incidents, staff,
         meetings, years, periods, schoolActivities, today, weekAgoDate,
       });
@@ -1102,8 +1122,8 @@ export const SchoolCenterModule = {
       students: [], nStudents: 0,
       attRecords: 0, present: 0, absent: 0, late: 0, noRecord: 0,
       weekDates: new Set(), weekRecords: 0, attWeekPct: 0,
-      logs: 0, routinePct: 0,
-      eventsToday: [], planToday: [],
+      logs: 0, routinePct: 0, logsToday: [],
+      eventsToday: [],
       postsToday: 0, postsWeek: 0, lastPost: null,
       msgsPending: [], msgsIn: 0, msgsRead: 0, respMs: null,
       tasksWeek: 0, tasksPending: 0,
@@ -1146,22 +1166,16 @@ export const SchoolCenterModule = {
       }
     });
 
-    // ── 4. Bitácora / rutina del día
+    // ── 4. Rutinas individuales (bitácora real de cada estudiante)
     (d.logsToday || []).forEach(r => {
       const a = resolve(r.classroom_id);
       a.m.logs++;
+      a.m.logsToday.push(r);
       const ts = r.created_at ? new Date(r.created_at).getTime() : 0;
       if (ts) a.m.lastActivity = maxTs(a.m.lastActivity, ts);
     });
 
-    // ── 5. Plan del día (classroom_daily_schedule)
-    (d.schedToday || []).forEach(r => {
-      const a = resolve(r.classroom_id);
-      const list = Array.isArray(r.events) ? r.events : [];
-      a.m.planToday = list.filter(e => e && e.active !== false && this._planAppliesToday(e));
-    });
-
-    // ── 6. Eventos de rutina registrados hoy
+    // ── 5. Rutina del aula: eventos reales registrados hoy
     (d.eventsToday || []).forEach(ev => {
       const a = resolve(ev.classroom_id);
       a.m.eventsToday.push(ev);
@@ -1169,7 +1183,7 @@ export const SchoolCenterModule = {
       if (ts) a.m.lastActivity = maxTs(a.m.lastActivity, ts);
     });
 
-    // ── 7. Publicaciones
+    // ── 6. Publicaciones
     (d.postsWeek || []).forEach(p => {
       const a = resolve(p.classroom_id);
       a.m.postsWeek++;
@@ -1179,9 +1193,14 @@ export const SchoolCenterModule = {
       if (!a.m.lastPost || ts > a.m.lastPost) a.m.lastPost = ts;
     });
 
-    // ── 8. Mensajes: pendientes (sin leer) por aula + tiempo de respuesta
-    const parentToStudent = new Map();
-    (d.students || []).forEach(s => { if (s.parent_id) parentToStudent.set(s.parent_id, s); });
+    // ── 7. Mensajes: pendientes (sin responder) por aula + tiempo de respuesta
+    // Un padre puede tener hijos en más de un aula: se guardan TODAS sus aulas.
+    const parentClassrooms = new Map();
+    (d.students || []).forEach(s => {
+      if (!s.parent_id || s.classroom_id == null) return;
+      if (!parentClassrooms.has(s.parent_id)) parentClassrooms.set(s.parent_id, new Set());
+      parentClassrooms.get(s.parent_id).add(String(s.classroom_id));
+    });
 
     const respAcc = new Map(); // teacherId -> [ms...]
     (d.msgWeek || []).forEach(m => {
@@ -1192,17 +1211,13 @@ export const SchoolCenterModule = {
       respAcc.get(m.receiver_id).push(ms);
     });
 
-    const seenPending = new Set();
     (d.msgUnread || []).forEach(m => {
       aulas.forEach(a => {
-        if (!a.id || seenPending.has(m.id)) return;
+        if (!a.id) return;
         const teacherHit = a.teacher_id && m.receiver_id === a.teacher_id;
-        const parentStudent = parentToStudent.get(m.sender_id);
-        const parentHit = parentStudent && parentStudent.classroom_id === a.id;
-        if (teacherHit || parentHit) {
-          seenPending.add(m.id);
-          a.m.msgsPending.push(m);
-        }
+        const senderClassrooms = parentClassrooms.get(m.sender_id);
+        const parentHit = senderClassrooms && senderClassrooms.has(String(a.id));
+        if (teacherHit || parentHit) a.m.msgsPending.push(m);
       });
     });
 
@@ -1215,7 +1230,7 @@ export const SchoolCenterModule = {
       }
     });
 
-    // ── 9. Actividades (tareas)
+    // ── 8. Actividades (tareas)
     const weekMs = Date.now() - 7 * 864e5;
     (d.tasks || []).forEach(t => {
       const a = resolve(t.classroom_id);
@@ -1227,7 +1242,7 @@ export const SchoolCenterModule = {
       }
     });
 
-    // ── 10. Incidencias abiertas
+    // ── 9. Incidencias abiertas
     (d.incidents || []).forEach(i => {
       const a = resolve(i.classroom_id);
       a.m.incidents.push(i);
@@ -1235,7 +1250,7 @@ export const SchoolCenterModule = {
       if (ts) a.m.lastActivity = maxTs(a.m.lastActivity, ts);
     });
 
-    // ── 11. Métricas derivadas por aula
+    // ── 10. Métricas derivadas por aula
     const isWeekend = [0, 6].includes(new Date().getDay());
     aulas.forEach(a => {
       const m = a.m;
@@ -1263,7 +1278,7 @@ export const SchoolCenterModule = {
       a.status = status;
     });
 
-    // ── 12. Alertas
+    // ── 11. Alertas
     const alerts = [];
     aulas.forEach(a => {
       if (!a.id || a.__placeholder || a.__special) return;
@@ -1293,7 +1308,7 @@ export const SchoolCenterModule = {
     const order = { danger: 0, warn: 1, info: 2 };
     alerts.sort((x, y) => order[x.sev] - order[y.sev]);
 
-    // ── 13. Feed de actividad de hoy
+    // ── 12. Feed de actividad de hoy
     const feed = [];
     (d.eventsToday || []).forEach(ev => {
       const meta = evMeta(ev.event_type);
@@ -1333,7 +1348,7 @@ export const SchoolCenterModule = {
     });
     feed.sort((a, b) => b.ts - a.ts);
 
-    // ── 14. KPIs globales + salud
+    // ── 13. KPIs globales + salud
     const real = aulas.filter(a => a.id);
     const kpis = {
       aulas: real.length,
@@ -1341,7 +1356,13 @@ export const SchoolCenterModule = {
       maestras: new Set(real.map(a => a.teacher_id).filter(Boolean)).size,
       rutinas: avg(real.filter(a => a.m.nStudents > 0).map(a => a.m.routinePct)),
       publicaciones: aulas.reduce((n, a) => n + a.m.postsWeek, 0),
-      mensajes: aulas.reduce((n, a) => n + a.m.msgsPending.length, 0),
+      mensajes: (() => {
+        // Un mensaje puede concernir a varias aulas (padres con hermanos): se
+        // cuenta una sola vez en el KPI global.
+        const ids = new Set();
+        aulas.forEach(a => a.m.msgsPending.forEach(m => { if (m?.id != null) ids.add(m.id); }));
+        return ids.size;
+      })(),
       actividades: aulas.reduce((n, a) => n + a.m.tasksPending, 0),
       publicadasHoy: real.filter(a => a.m.postsToday > 0).length,
     };
@@ -1741,7 +1762,7 @@ export const SchoolCenterModule = {
     const stats = [
       { icon: 'users',        label: 'Estudiantes',        value: m.nStudents,                       foot: `${a.capacity || 20} de cupo` },
       { icon: 'user-check',   label: 'Asistencia hoy',     value: m.attRecords ? `${m.present}/${m.nStudents}` : '—', foot: m.noRecord ? `${m.noRecord} sin registro` : 'completa' },
-      { icon: 'list-checks',  label: 'Rutina',             value: m.routinePct + '%',                foot: m.routinePct >= 100 ? 'completada' : 'en curso' },
+      { icon: 'list-checks',  label: 'Rutina',             value: m.routinePct + '%',                foot: m.routinePct >= 100 ? 'completa' : `${Math.max(0, (m.present || m.nStudents) - m.logs)} sin bitácora` },
       { icon: 'megaphone',    label: 'Publicaciones',      value: m.postsWeek,                       foot: `${m.postsToday} hoy` },
       { icon: 'message-square', label: 'Mensajes',         value: m.msgsPending.length,              foot: 'pendientes' },
       { icon: 'clipboard-list', label: 'Actividades',      value: m.tasksWeek,                       foot: `${m.tasksPending} por vencer` },
@@ -1749,23 +1770,52 @@ export const SchoolCenterModule = {
       { icon: 'clock',        label: 'Última actividad',   value: m.lastActivity ? this._fmtTime(m.lastActivity) : '—', foot: m.lastActivity ? this._relDay(m.lastActivity) : 'sin movimientos' },
     ];
 
-    // Plan del día
-    const plan = m.planToday.length
-      ? m.planToday.map(ev => {
-          const st = this._planStatus(ev);
+    // Rutinas individuales: bitácora real de cada estudiante (daily_logs)
+    const logByStudent = new Map();
+    (m.logsToday || []).forEach(l => { if (l && l.student_id != null) logByStudent.set(String(l.student_id), l); });
+
+    const foodSummary = (food) => {
+      if (!food) return '';
+      let obj = null;
+      try { obj = JSON.parse(food); } catch { return String(food); }
+      if (!obj || typeof obj !== 'object') return String(food);
+      return [['breakfast', 'Desayuno'], ['lunch', 'Almuerzo'], ['snack', 'Merienda']]
+        .filter(([k]) => obj[k])
+        .map(([k, label]) => `${label}: ${FOOD_STATE_LABEL[obj[k]] || obj[k]}`)
+        .join(' · ');
+    };
+
+    const napSummary = (nap) => {
+      if (nap === 'si' || nap === 'excelente') return '😴 Siesta';
+      if (nap === 'poco') return '😴 Siesta corta';
+      if (nap === 'no') return 'Sin siesta';
+      return '';
+    };
+
+    const indiv = m.students.length
+      ? m.students.map(s => {
+          const log = logByStudent.get(String(s.id));
+          const mood = log && log.mood ? (MOOD_META[log.mood] || { emoji: '🙂', label: log.mood }) : null;
+          const parts = [
+            mood ? `${mood.emoji} ${mood.label}` : '',
+            foodSummary(log?.food),
+            napSummary(log?.nap),
+          ].filter(Boolean);
+          const events = Array.isArray(log?.infant_data) ? log.infant_data.length : 0;
+          if (events) parts.push(`${events} evento${events > 1 ? 's' : ''} de rutina`);
           return `
-            <div class="ksc-list-item">
-              <div class="ksc-list-av" style="background:${esc(ev.color || '#E8F2FF')};color:#fff">${esc((ev.label || '?').charAt(0))}</div>
+            <div class="ksc-list-item clickable" data-ksc-student="${s.id}">
+              <div class="ksc-list-av">${esc((s.name || '?').charAt(0).toUpperCase())}</div>
               <div class="ksc-list-main">
-                <div class="ksc-list-title">${esc(ev.label || ev.id || 'Evento')}</div>
-                <div class="ksc-list-sub">${esc(ev.startTime || ev.time || '—')}${ev.duration ? ` · ${Number(ev.duration)} min` : ''}</div>
+                <div class="ksc-list-title">${esc(s.name)}</div>
+                <div class="ksc-list-sub">${log ? esc(parts.join(' · ') || 'Bitácora registrada') : 'Sin rutina individual registrada hoy'}</div>
               </div>
-              <span class="ksc-chip ${st.cls}">${st.txt}</span>
+              <span class="ksc-chip ${log ? (log.status === 'draft' ? 'ksc-chip--warn' : 'ksc-chip--ok') : 'ksc-chip--muted'}">${log ? (log.status === 'draft' ? 'borrador' : 'registrada') : 'pendiente'}</span>
             </div>`;
         }).join('')
-      : `<div class="ksc-empty"><i data-lucide="calendar"></i><div>Sin plan de rutina cargado para hoy.</div></div>`;
+      : `<div class="ksc-empty"><i data-lucide="users"></i><div>Sin estudiantes asignados a esta aula.</div></div>`;
 
-    // Eventos registrados hoy
+    // Eventos de la rutina del aula registrados hoy
     const reg = m.eventsToday.length
       ? m.eventsToday.slice(-14).reverse().map(ev => {
           const meta = evMeta(ev.event_type);
@@ -1779,7 +1829,7 @@ export const SchoolCenterModule = {
               <span class="ksc-chip ksc-chip--ok">registrado</span>
             </div>`;
         }).join('')
-      : `<div class="ksc-empty"><i data-lucide="clock"></i><div>Aún no se registran eventos de rutina hoy.</div></div>`;
+      : `<div class="ksc-empty"><i data-lucide="clock"></i><div>Sin eventos de rutina del aula registrados hoy.</div></div>`;
 
     // Estudiantes
     const studs = m.students.length
@@ -1886,14 +1936,15 @@ export const SchoolCenterModule = {
 
         <div class="ksc-panel">
           <div class="ksc-panel-head">
-            <h3 class="ksc-panel-title"><i data-lucide="calendar"></i> Rutina de hoy</h3>
-            <span class="ksc-panel-sub">${m.eventsToday.length} eventos registrados</span>
-          </div>
-          <div class="ksc-list">${plan}</div>
-          <div class="ksc-panel-head" style="border-top:1px solid var(--ksc-line)">
-            <h3 class="ksc-panel-title"><i data-lucide="check-circle-2"></i> Registrado hoy</h3>
+            <h3 class="ksc-panel-title"><i data-lucide="calendar"></i> Rutina del aula</h3>
+            <span class="ksc-panel-sub">${m.eventsToday.length} evento${m.eventsToday.length === 1 ? '' : 's'} hoy</span>
           </div>
           <div class="ksc-list">${reg}</div>
+          <div class="ksc-panel-head" style="border-top:1px solid var(--ksc-line)">
+            <h3 class="ksc-panel-title"><i data-lucide="users"></i> Rutinas individuales</h3>
+            <span class="ksc-panel-sub">${m.logs} de ${m.nStudents} registradas hoy</span>
+          </div>
+          <div class="ksc-list" style="max-height:300px;overflow-y:auto">${indiv}</div>
         </div>
       </div>
 
@@ -2555,25 +2606,6 @@ export const SchoolCenterModule = {
 
   _attendanceOf(studentId) {
     return this._attIndex?.get?.(studentId) || null;
-  },
-
-  _planAppliesToday(ev) {
-    const dow = new Date().getDay();
-    if (Array.isArray(ev.days) && ev.days.length && !ev.days.includes(dow)) return false;
-    if (ev.active === false) return false;
-    return true;
-  },
-
-  _planStatus(ev) {
-    const t = ev.startTime || ev.time;
-    if (!t) return { txt: 'planificado', cls: 'ksc-chip--info' };
-    const [h, mi] = String(t).split(':').map(Number);
-    const now = new Date();
-    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h || 0, mi || 0);
-    const end = new Date(start.getTime() + (Number(ev.duration) || 30) * 60000);
-    if (now > end) return { txt: 'completado', cls: 'ksc-chip--ok' };
-    if (now >= start) return { txt: 'en curso', cls: 'ksc-chip--warn' };
-    return { txt: 'pendiente', cls: 'ksc-chip--info' };
   },
 
   _postsOf(classroomId) {

@@ -623,11 +623,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     const loadPreBadge = async () => {
       if (!APP_CONFIG.ENABLE_STUDENT_PREREG_TABLE) return;
       try {
-        const { count = 0, error } = await supabase
-          .from('student_preregistrations')
-          .select('id', { count: 'exact', head: true })
-          .eq('status', 'pending');
-        if (error) { console.warn('[directora] badge preinscripciones:', error.message); return; }
+        // Solo las preinscripciones del año escolar activo: si no, el badge
+        // marcaba (ej.) 2 solicitudes de otros años mientras el módulo de
+        // Ciclo Escolar no recibía ningún dato para el año en curso.
+        const count = await SchoolYearGuard.countPendingPreregistrations();
         const applyBadge = (id, c) => {
           const b = document.getElementById(id);
           if (!b) return;
@@ -639,7 +638,6 @@ document.addEventListener('DOMContentLoaded', async () => {
           }
         };
         applyBadge('badge-ciclo', count);
-        applyBadge('badge-inscripciones', count);
         applyBadge('badge-ciclo-group', count);
       } catch (err) { console.warn('[directora] badge preinscripciones:', err?.message || err); }
     };

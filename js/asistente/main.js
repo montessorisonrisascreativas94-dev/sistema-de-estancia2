@@ -23,6 +23,7 @@ import { InvoiceModule } from '../shared/invoice.js';
 import { AssistantChatApp } from './chat_app.js';
 import { dedupeClassrooms } from '../shared/constants.js';
 import { SchoolCenterModule } from '../directora/school-center.module.js';
+import { SchoolYearGuard } from '../shared/school-year-guard.js';
 
 // Exponer globalmente para onclick en HTML
 window.InscripcionesModule = InscripcionesModule;
@@ -106,10 +107,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   // 🎯 Notification Center unificado (campana, badges, mensajes, realtime)
   NotificationCenter.init(auth.user.id, 'asistente');
 
-  // Badge inscripciones pendientes
+  // Badge inscripciones pendientes (solo las del año escolar activo)
   const loadPreBadge = async () => {
     try {
-      const { count } = await supabase.from('student_preregistrations').select('id', { count: 'exact', head: true }).eq('status', 'pending');
+      const count = await SchoolYearGuard.countPendingPreregistrations();
       const b = document.getElementById('badge-inscripciones');
       if (b) {
         if (count > 0) { b.textContent = count > 99 ? '99+' : String(count); b.classList.remove('hidden'); }

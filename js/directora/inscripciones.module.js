@@ -10,6 +10,7 @@
 import { supabase } from '../shared/supabase.js';
 import { Helpers } from '../shared/helpers.js';
 import { SCHOOL_SETTINGS_ID } from '../shared/constants.js';
+import { SchoolYearGuard } from '../shared/school-year-guard.js';
 
 let _AppState = null;
 async function _getAppState() {
@@ -141,9 +142,7 @@ export async function loadInscripciones() {
     </div>`;
 
   try {
-    const { data, error } = await supabase
-      .from('student_preregistrations')
-      .select(`
+    const SELECT_FIELDS = `
         id,
         student_name,
         student_last_name,
@@ -167,8 +166,23 @@ export async function loadInscripciones() {
         director_authorization_approved,
         reviewed_at,
         reviewed_by
-      `)
-      .order('created_at', { ascending: false });
+    `;
+
+    // Mismo filtro que el badge del sidebar: solo el año escolar activo.
+    // Si la BD aún no tuviera `school_year_id`, se reintenta sin el filtro
+    // para que la sección nunca quede vacía por un problema de esquema.
+    const yearFilter = await SchoolYearGuard.preregistrationFilter();
+    let result = await (yearFilter
+      ? supabase.from('student_preregistrations').select(SELECT_FIELDS).or(yearFilter)
+      : supabase.from('student_preregistrations').select(SELECT_FIELDS)
+    ).order('created_at', { ascending: false });
+
+    if (result.error && yearFilter && /school_year_id/i.test(String(result.error.message || ''))) {
+      result = await supabase.from('student_preregistrations').select(SELECT_FIELDS)
+        .order('created_at', { ascending: false });
+    }
+
+    const { data, error } = result;
 
     if (error) throw error;
 
@@ -1307,7 +1321,7 @@ export async function _legacyAdmitStudent(preregId) {
 
     const studentPayload = {
       name:                  v('stName') || reg.student_name,
-      last_name:             v('stLastname') || reg.student_last_name,
+      student_last_name:     v('stLastname') || reg.student_last_name,
       matricula,
       classroom_id:          classroomId ? parseInt(classroomId) : null,
       schedule:              v('stHorario') || reg.schedule,
@@ -1403,27 +1417,83 @@ export async function _legacyAdmitStudent(preregId) {
 
     const studentId = student.id;
 
+    // El año escolar activo es dueño de la matrícula y de las cuotas.
+    // Antes esta ruta insertaba en `payment_plans` columnas que no existen
+    // (student_id/monthly_fee/due_day) y en `payments` una columna inexistente
+    // (`payment_plan`), así que no se creaba NADA y el año escolar quedaba sin
+    // matrícula ni pendientes.
+    const currentYearRow = await SchoolYearGuard.getCurrentYear();
+    const schoolYearId = currentYearRow?.id || null;
+    const levelName = v('stLevel') || reg.level_requested || 'General';
+    const scheduleTxt = v('stHorario') || reg.schedule || 'Matutino';
+
     let plan = null;
-    try {
-      const { data } = await supabase
-        .from('payment_plans')
-        .insert({ student_id: studentId, monthly_fee: monthlyFee, due_day: dueDay, status: 'active', start_date: `${startMonth}-01` })
-        .select('id')
-        .single();
-      plan = data;
-    } catch (e) {
-      console.warn('[Inscripciones] payment plan insert:', e.message);
-      plan = null;
+    if (schoolYearId) {
+      try {
+        const { data: existingPlan } = await supabase
+          .from('payment_plans')
+          .select('id')
+          .eq('school_year_id', schoolYearId)
+          .eq('level', levelName)
+          .eq('schedule', scheduleTxt)
+          .is('deleted_at', null)
+          .maybeSingle();
+        plan = existingPlan;
+        if (!plan?.id) {
+          const { data: created, error: plErr } = await supabase
+            .from('payment_plans')
+            .insert({
+              school_year_id: schoolYearId,
+              level: levelName,
+              schedule: scheduleTxt,
+              name: `${levelName} · ${scheduleTxt}`,
+              registration_fee: 0,
+              description: 'Plan generado automáticamente en la admisión',
+            })
+            .select('id')
+            .single();
+          if (!plErr) plan = created;
+          else console.warn('[Inscripciones] payment plan insert:', plErr.message);
+        }
+      } catch (e) {
+        console.warn('[Inscripciones] payment plan:', e.message);
+        plan = null;
+      }
     }
 
-    if (plan?.id) {
+    if (plan?.id && schoolYearId) {
+      // Matrícula en el año escolar (trazabilidad preinscrito → admitido).
+      try {
+        await supabase.from('student_enrollments').upsert({
+          student_id: studentId,
+          school_year_id: schoolYearId,
+          classroom_id: classroomId ? parseInt(classroomId) : null,
+          payment_plan_id: plan.id,
+          status: 'admitido',
+          admission_date: new Date().toISOString(),
+        }, { onConflict: 'student_id,school_year_id', ignoreDuplicates: false });
+      } catch (e) {
+        console.warn('[Inscripciones] enrollment insert:', e.message);
+      }
+
       const payments = [];
       const [yr, mo] = startMonth.split('-').map(Number);
       for (let i = 0; i < MONTHS_IN_YEAR; i++) {
         const d  = new Date(yr, mo - 1 + i, dueDay);
         const mm = String(d.getMonth() + 1).padStart(2, '0');
         const yy = d.getFullYear();
-        payments.push({ student_id: studentId, payment_plan: plan.id, amount: monthlyFee, month_paid: `${mm}/${yy}`, due_date: d.toISOString().split('T')[0], status: 'pending' });
+        payments.push({
+          student_id: studentId,
+          payment_plan_id: plan.id,
+          school_year_id: schoolYearId,
+          amount: monthlyFee,
+          concept: 'Mensualidad',
+          month_paid: `${mm}/${yy}`,
+          due_date: d.toISOString().split('T')[0],
+          installment_number: i + 1,
+          total_installments: MONTHS_IN_YEAR,
+          status: 'pending',
+        });
       }
       try {
         await supabase.from('payments').insert(payments);
@@ -1456,15 +1526,14 @@ export async function _legacyAdmitStudent(preregId) {
       if (typeof window.refreshPreBadge === 'function') {
         window.refreshPreBadge();
       } else {
-        const ids = ['badge-ciclo-group', 'badge-inscripciones', 'badge-ciclo'];
+        // Respaldo: mismo conteo del año escolar activo que usa el sidebar.
+        const ids = ['badge-ciclo-group', 'badge-ciclo'];
+        const count = await SchoolYearGuard.countPendingPreregistrations();
         ids.forEach((bid) => {
           const b = document.getElementById(bid);
           if (!b) return;
-          supabase.from('student_preregistrations').select('id', { count: 'exact', head: true }).eq('status', 'pending')
-            .then(({ count = 0 }) => {
-              if (count > 0) { b.textContent = count > 99 ? '99+' : String(count); b.classList.remove('hidden'); }
-              else { b.classList.add('hidden'); }
-            }).catch(() => {});
+          if (count > 0) { b.textContent = count > 99 ? '99+' : String(count); b.classList.remove('hidden'); }
+          else { b.classList.add('hidden'); }
         });
       }
     } catch (_) {}

@@ -209,6 +209,8 @@ async function _loadReference() {
     jobs.push(Promise.resolve({ data: [] }));
   }
   const [teachersRes, roomsRes] = await Promise.all(jobs);
+  if (teachersRes?.error) console.warn('[Actividades] No se pudieron leer los docentes:', teachersRes.error.message || teachersRes.error);
+  if (roomsRes?.error) console.warn('[Actividades] No se pudieron leer las aulas:', roomsRes.error.message || roomsRes.error);
   state.teachers = teachersRes.data || [];
   state.classrooms = roomsRes.data || [];
   if (state.mode === 'teacher') {
@@ -218,28 +220,52 @@ async function _loadReference() {
   }
 }
 
+function _isColumnErr(error) {
+  if (!error) return false;
+  if (String(error.code || '').toLowerCase() === 'pgrst204') return true;
+  const msg = String(error.message || '').toLowerCase();
+  return msg.includes('column') && (
+    msg.includes('does not exist') || msg.includes('could not find') || msg.includes('schema cache')
+  );
+}
+
+// Esquemas antiguos (migración 21) usan scheduled_date en lugar de activity_date.
+async function _fetchActivities(from, to) {
+  const run = (field, timeField) => {
+    let q = supabase.from('school_activities')
+      .select('*')
+      .gte(field, from).lte(field, to)
+      .order(field, { ascending: true });
+    if (timeField) q = q.order(timeField, { ascending: true, nullsFirst: false });
+    if (state.mode === 'parent') q = q.eq('status', 'published');
+    return q;
+  };
+  let res = await run('activity_date', 'start_time');
+  if (_isColumnErr(res.error)) {
+    res = await run('scheduled_date', 'scheduled_time');
+    if (!res.error) {
+      res = { ...res, data: (res.data || []).map(a => ({ ...a, activity_date: a.activity_date || a.scheduled_date })) };
+    }
+  }
+  if (res.error) console.warn('[Actividades] No se pudieron leer las actividades:', res.error.message || res.error);
+  return res;
+}
+
 async function _loadMonth() {
   state.loading = true;
   _renderSkeleton();
   const from = iso(state.year, state.month, 1);
   const to = iso(state.year, state.month, lastDay(state.year, state.month));
 
-  let query = supabase.from('school_activities')
-    .select('*')
-    .gte('activity_date', from)
-    .lte('activity_date', to)
-    .order('activity_date', { ascending: true })
-    .order('start_time', { ascending: true, nullsFirst: false });
-  if (state.mode === 'parent') query = query.eq('status', 'published');
-
   const [actRes, cfgRes] = await Promise.all([
-    query,
+    _fetchActivities(from, to),
     supabase.from('school_month_configs')
       .select('*')
       .eq('year_number', state.year)
       .eq('month_number', state.month)
       .maybeSingle()
   ]);
+  if (cfgRes.error) console.warn('[Actividades] No se pudo leer la configuración del mes:', cfgRes.error.message || cfgRes.error);
 
   state.activities = actRes.data || [];
   state.monthConfig = cfgRes.data || null;

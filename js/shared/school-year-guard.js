@@ -69,6 +69,52 @@ export const SchoolYearGuard = {
     return '';
   },
 
+  /**
+   * Filtro PostgREST de `student_preregistrations` para un año escolar.
+   *
+   * Sin este filtro, el badge del sidebar, la sección de Inscripciones y el
+   * módulo de Ciclo Escolar contaban registros de TODOS los años y el año
+   * escolar activo no "recibía" sus preinscripciones.
+   *
+   * Reglas del filtro:
+   *  - Filas nuevas: `school_year_id` = año activo.
+   *  - Filas antiguas (insertadas antes de guardar el id): `school_year_id`
+   *    NULL y `school_year_requested` = nombre del año.
+   *  - Si no hay año configurado devuelve `null` = sin filtro (sin cambios).
+   *
+   * @param {object|null} year Año escolar a filtrar. Por defecto el activo.
+   * @returns {Promise<string|null>} Cadena para `.or(...)` o null.
+   */
+  async preregistrationFilter(year = null) {
+    const y = year && year.id ? year : await this.getCurrentYear();
+    if (!y || !y.id) return null;
+    const id = Number(y.id);
+    if (!Number.isFinite(id)) return null;
+    const name = String(y.name || '').replace(/["',]/g, '');
+    return `school_year_id.eq.${id},and(school_year_id.is.null,school_year_requested.eq."${name}")`;
+  },
+
+  async countPendingPreregistrations(year = null) {
+    const yearFilter = await this.preregistrationFilter(year);
+    const base = () => supabase
+      .from('student_preregistrations')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'pending');
+
+    if (!yearFilter) {
+      const { count = 0, error } = await base();
+      if (error) throw error;
+      return count;
+    }
+
+    let res = await base().or(yearFilter);
+    // Si la BD todavía no tiene la columna `school_year_id`, se cae al conteo
+    // sin filtro: el badge nunca debe desaparecer por un problema de esquema.
+    if (res.error && /school_year_id/i.test(String(res.error.message || ''))) res = await base();
+    if (res.error) throw res.error;
+    return res.count || 0;
+  },
+
   invalidateCache() {
     _cachedYear = null;
     _cachedPeriod = null;

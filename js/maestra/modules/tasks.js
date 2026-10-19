@@ -16,35 +16,47 @@ export function resetEvalLinkCache() { _evalLink = null; }
 
 async function _loadEvalLink() {
   if (_evalLink) return _evalLink;
+  const EMPTY = { areas: [], periods: [], modules: [], activities: [] };
   try {
-    const { data: evals } = await supabase
+    const { data: evals, error: evalErr } = await supabase
       .from('eval_evaluations').select('id')
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
       .limit(1);
+    if (evalErr) {
+      // No cachear el fallo: el próximo intento vuelve a consultar.
+      console.warn('[Tareas] No se pudo leer eval_evaluations:', evalErr.message || evalErr);
+      return EMPTY;
+    }
     const evalId = evals?.[0]?.id;
-    if (!evalId) { _evalLink = { areas: [], periods: [], modules: [], activities: [] }; return _evalLink; }
+    if (!evalId) { _evalLink = EMPTY; return _evalLink; }
 
-    try { await supabase.rpc('boletin_ensure_structure', { p_evaluation_id: evalId }); } catch (_) {}
+    const { error: rpcErr } = await supabase.rpc('boletin_ensure_structure', { p_evaluation_id: evalId });
+    if (rpcErr) console.warn('[Tareas] boletin_ensure_structure:', rpcErr.message || rpcErr);
 
     const [aRes, pRes] = await Promise.all([
       supabase.from('eval_areas').select('id, name').eq('evaluation_id', evalId).is('deleted_at', null).order('sort_order').order('created_at'),
       supabase.from('eval_periods').select('id, name').eq('evaluation_id', evalId).is('deleted_at', null).order('sort_order').order('created_at')
     ]);
+    if (aRes.error) console.warn('[Tareas] No se pudieron leer las áreas:', aRes.error.message || aRes.error);
+    if (pRes.error) console.warn('[Tareas] No se pudieron leer los períodos:', pRes.error.message || pRes.error);
     const areas = aRes.data || [];
     const periods = pRes.data || [];
     const periodIds = periods.map(p => p.id);
-    const { data: mods } = periodIds.length
+    const { data: mods, error: modsErr } = periodIds.length
       ? await supabase.from('eval_modules').select('id, name, area_id, period_id').in('period_id', periodIds).is('deleted_at', null).order('sort_order').order('created_at')
-      : { data: [] };
+      : { data: [], error: null };
+    if (modsErr) console.warn('[Tareas] No se pudieron leer los módulos:', modsErr.message || modsErr);
     const modules = mods || [];
     const moduleIds = modules.map(m => m.id);
-    const { data: acts } = moduleIds.length
+    const { data: acts, error: actsErr } = moduleIds.length
       ? await supabase.from('eval_activities').select('id, name, module_id').in('module_id', moduleIds).is('deleted_at', null).order('sort_order').order('created_at')
-      : { data: [] };
+      : { data: [], error: null };
+    if (actsErr) console.warn('[Tareas] No se pudieron leer las actividades:', actsErr.message || actsErr);
     _evalLink = { areas, periods, modules, activities: acts || [] };
-  } catch (_) {
-    _evalLink = { areas: [], periods: [], modules: [], activities: [] };
+  } catch (e) {
+    console.warn('[Tareas] Error inesperado cargando estructura del boletín:', e);
+    return EMPTY;
   }
   return _evalLink;
 }
@@ -61,7 +73,10 @@ async function _initTaskEvalLink(taskToEdit = null) {
 
   // If no areas, show helpful placeholder
   if (!link.areas.length) {
-    areaSel.innerHTML = '<option value="">— Sin áreas (ejecuta la migración RLS) —</option>';
+    areaSel.innerHTML = '<option value="">— Sin áreas configuradas (crea la evaluación en el boletín) —</option>';
+    // No conservar el vacío cacheado: la próxima apertura vuelve a consultar
+    // (así aparecen las áreas apenas se ejecute la migración RLS).
+    resetEvalLinkCache();
   }
 
   const fillActs = () => {
@@ -97,6 +112,11 @@ export async function initTasks() {
   const container = document.getElementById('tab-tasks');
   if (!container) return;
 
+  if (!classroom?.id) {
+    container.innerHTML = '<div class="text-center p-8 text-slate-500">Selecciona un aula para ver sus tareas.</div>';
+    return;
+  }
+
   container.innerHTML = `
     <div class="flex justify-between items-center mb-8">
       <h3 class="text-2xl font-black text-slate-800 flex items-center gap-3">Mochila de Tareas</h3>
@@ -117,7 +137,8 @@ export async function initTasks() {
   try {
     const tasks = await MaestraApi.getTasksByClassroom(classroom.id);
     if (!tasks.length) {
-      listContainer.innerHTML = '<div class="text-center p-8 text-slate-500">Aún no has asignado tareas.</div>';
+      console.info('[Tareas] 0 filas para classroom_id=', classroom.id, '|', classroom.name);
+      listContainer.innerHTML = `<div class="text-center p-8 text-slate-500">Aún no has asignado tareas.<br><span class="text-xs text-slate-400">Aula consultada: ${safeEscapeHTML(classroom.name || '')} (id ${safeEscapeHTML(String(classroom.id))})</span></div>`;
       return;
     }
 

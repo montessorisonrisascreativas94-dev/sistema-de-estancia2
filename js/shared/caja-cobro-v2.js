@@ -11,6 +11,7 @@
 import { supabase } from './supabase.js';
 import { Helpers } from './helpers.js';
 import { InvoiceModule } from './invoice.js';
+import { SchoolYearGuard } from './school-year-guard.js';
 import {
   fmt, fmtN, today, MONTHS_SHORT, MONTHS_FULL,
   DEFAULT_CATALOG, calcMora, calcDiscount, calcTotal,
@@ -1142,6 +1143,12 @@ export const CajaCobroV2 = {
 
       const currentYear = new Date().getFullYear();
 
+      // Año escolar activo: cada pago debe quedar vinculado a él o el
+      // módulo de Ciclo Escolar / RPC get_school_year_dashboard no recibe
+      // ingresos ni pendientes (siempre devolvía 0).
+      let schoolYearId = null;
+      try { schoolYearId = (await SchoolYearGuard.getCurrentYear())?.id || null; } catch (_) {}
+
       const payBank = _method === 'transferencia' ? (document.getElementById('tfBanco')?.value || '') :
                       _method === 'cheque' ? (document.getElementById('chqBanco')?.value || '') : '';
       const payRef = _method === 'transferencia' ? (document.getElementById('tfRef')?.value || '') :
@@ -1159,7 +1166,7 @@ export const CajaCobroV2 = {
         const monthPaid = item.type === 'colegiatura'
           ? currentYear + '-' + String(item._monthIdx + 1).padStart(2, '0')
           : null;
-        await supabase.from('payments').update({
+        const reviewUpdate = {
           status: 'paid',
           paid_date: now,
           method: _method,
@@ -1168,7 +1175,9 @@ export const CajaCobroV2 = {
           month_paid: monthPaid,
           notes: notes || null,
           exclude_dgii: excludeDGII
-        }).eq('id', item._reviewId);
+        };
+        if (schoolYearId) reviewUpdate.school_year_id = schoolYearId;
+        await supabase.from('payments').update(reviewUpdate).eq('id', item._reviewId);
         allPaymentIds.push(item._reviewId);
       }
 
@@ -1190,6 +1199,7 @@ export const CajaCobroV2 = {
           notes: notes || null,
           exclude_dgii: excludeDGII
         }));
+        if (schoolYearId) inserts.forEach(p => { p.school_year_id = schoolYearId; });
 
         const { error } = await supabase.from('payments').insert(inserts);
         if (error) throw error;

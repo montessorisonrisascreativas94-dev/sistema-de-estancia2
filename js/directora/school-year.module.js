@@ -7,6 +7,7 @@
 import { supabase } from '../shared/supabase.js';
 import { Helpers } from '../shared/helpers.js';
 import { SmartLoader } from '../shared/smart-loader.js';
+import { SchoolYearGuard } from '../shared/school-year-guard.js';
 
 const $el = (id) => document.getElementById(id);
 
@@ -26,8 +27,9 @@ export const SchoolYearModule = {
   async init() {
     await this.loadSchoolYears();
     await this.loadDashboard();
-    // If dashboard KPIs are all zeros (fallback), load real counts
-    if (this.state.dashboard && this.state.kpi && this.state.kpi.enrollments === 0) {
+    // Si el RPC devolvió los KPIs en 0 (o el fallback armó la estructura vacía),
+    // se recalculan con conteos directos para que el año escolar sí reciba datos.
+    if (this.state.dashboard?.kpi && Number(this.state.dashboard.kpi.enrollments || 0) === 0) {
       await this._loadFallbackKPIs();
     }
     this.render();
@@ -35,14 +37,16 @@ export const SchoolYearModule = {
   },
 
   async _loadFallbackKPIs() {
-    const yearId = this.state.currentYear?.id;
+    const yearId = this.state.viewingYearId || this.state.currentYear?.id;
     if (!yearId) return;
     try {
-      const [enr, cls, tea, per] = await Promise.all([
+      const [enr, cls, tea, per, pend, paid] = await Promise.all([
         supabase.from('student_enrollments').select('id', { count: 'exact', head: true }).eq('school_year_id', yearId).in('status', ['activo','inscrito','admitido','reinscrito']),
         supabase.from('classrooms').select('id', { count: 'exact', head: true }).is('deleted_at', null),
         supabase.from('classrooms').select('teacher_id').not('teacher_id', 'is', null).is('deleted_at', null),
-        supabase.from('periods').select('status').eq('school_year_id', yearId)
+        supabase.from('periods').select('status').eq('school_year_id', yearId),
+        supabase.from('payments').select('amount', { count: 'exact' }).eq('school_year_id', yearId).eq('status', 'pending'),
+        supabase.from('payments').select('amount').eq('school_year_id', yearId).eq('status', 'paid')
       ]);
       const kpi = this.state.dashboard.kpi;
       kpi.enrollments = enr.count || 0;
@@ -51,8 +55,9 @@ export const SchoolYearModule = {
       const periods = per.data || [];
       kpi.active_periods = periods.filter(p => p.status === 'open').length;
       kpi.closed_periods = periods.filter(p => p.status === 'closed').length;
-      kpi.pending_payments = 0;
-      kpi.total_income = 0;
+      kpi.pending_payments = pend.count || 0;
+      kpi.pending_income = (pend.data || []).reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
+      kpi.total_income = (paid.data || []).reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
     } catch (_) {}
   },
 
@@ -838,10 +843,11 @@ export const SchoolYearModule = {
     const el = $el('syc-pending-count');
     if (!el) return;
     try {
-      const { count } = await supabase.from('student_preregistrations')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'pending');
-      el.textContent = count || 0;
+      // Mismo criterio que el badge del sidebar: pendientes del año escolar
+      // mostrado (histórico) o, en su defecto, del año activo.
+      const yearId = this.state.viewingYearId || this.state.currentYear?.id;
+      const year = this.state.schoolYears.find(y => y.id === yearId) || this.state.currentYear;
+      el.textContent = await SchoolYearGuard.countPendingPreregistrations(year);
     } catch (_) { el.textContent = '—'; }
   },
 

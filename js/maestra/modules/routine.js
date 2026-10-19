@@ -520,6 +520,11 @@ function _today() { return AppState.today(); }
 function _fmtTime(d) {
   return new Date(d).toLocaleTimeString('es-DO', { hour: '2-digit', minute: '2-digit', hour12: true });
 }
+
+function _nowHHMM(date) {
+  const d = date || new Date();
+  return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+}
 function _fmtTimeShort(timeStr) {
   if (!timeStr) return '';
   const [h, m] = timeStr.split(':').map(Number);
@@ -530,16 +535,12 @@ function _fmtTimeShort(timeStr) {
 function _isWithin12h(d) {
   return d ? (Date.now() - new Date(d).getTime()) < 43200000 : false;
 }
-/** Devuelve la hora actual como HH:MM (para valor default del time picker) */
-function _nowHHMM() {
-  return new Date().toTimeString().slice(0, 5);
-}
 
 /**
  * Muestra un mini-modal para que la maestra elija la hora del evento.
  * Retorna una Promise<string|null>: HH:MM si confirma, null si cancela.
  */
-function _promptEventTime(emoji, label) {
+function _promptEventTime(emoji, label, defaultTime) {
   return new Promise((resolve) => {
     const modalId = 'eventTimePromptModal';
     const content = `
@@ -555,7 +556,7 @@ function _promptEventTime(emoji, label) {
         </div>
         <div class="p-4 space-y-3">
           <p class="text-xs text-slate-500 font-medium">Si lo marcas tarde, ajusta la hora para que los padres lo vean en el momento correcto.</p>
-          <input type="time" id="eventTimePromptInput" value="${_nowHHMM()}"
+          <input type="time" id="eventTimePromptInput" value="${defaultTime || _nowHHMM()}"
             class="w-full p-3 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-700 outline-none focus:border-slate-400">
           <div class="flex gap-2">
             <button id="eventTimePromptCancel" class="flex-1 py-3 rounded-xl font-black text-xs uppercase bg-slate-100 text-slate-500">Cancelar</button>
@@ -565,6 +566,9 @@ function _promptEventTime(emoji, label) {
       </div>
     `;
     UI.Modal.open(modalId, content);
+    // Si la maestra cierra tocando fuera, resolver como cancelado (evita promesa colgada)
+    const overlay = document.getElementById(modalId);
+    overlay?.addEventListener('click', (e) => { if (e.target === overlay) resolve(null); });
     setTimeout(() => {
       document.getElementById('eventTimePromptOk')?.addEventListener('click', () => {
         const val = document.getElementById('eventTimePromptInput')?.value || _nowHHMM();
@@ -2475,17 +2479,137 @@ export function openStudentRoutine(studentId) {
           </div>
         </div>` : ''}
 
-        <!-- ═══ EVENTOS REGISTRADOS (TOP BADGES) ═══ -->
-        ${registeredBadges.length > 0 ? section('✅ Eventos Registrados', `
-          <div class="flex flex-wrap gap-1.5">
-            ${registeredBadges.map(b => `
-              <span class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[10px] font-black" 
-                style="background:${b.color}18;border:2px solid ${b.color};color:${b.color}">
-                ${b.emoji} ${safeEscapeHTML(b.label)}
-              </span>
-            `).join('')}
-          </div>
-        `) : section('📋 Eventos', '<p class="text-xs text-slate-400 py-2">Aún no hay eventos registrados para hoy</p>')}
+        <!-- ═══ LÍNEA DE TIEMPO DE EVENTOS REGISTRADOS ═══ -->
+        ${(() => {
+          // Build chronological event list from all sources
+          const allEvents = [];
+
+          // Mood
+          if (log?.mood) {
+            const mood = MOOD_OPTIONS.find(m => m.val === log.mood);
+            allEvents.push({ emoji: mood?.emoji || '😊', label: 'Ánimo: ' + (mood?.label || log.mood), time: log.created_at, color: '#3B82F6', id: null, type: 'mood', editable: false });
+          }
+          // Food
+          if (currentFood.breakfast) allEvents.push({ emoji: '🍞', label: 'Desayuno: ' + (foodOptions.find(f => f.val === currentFood.breakfast)?.label || currentFood.breakfast), time: null, color: '#FF8A00', id: null, type: 'food_breakfast', editable: false });
+          if (currentFood.lunch)     allEvents.push({ emoji: '🥗', label: 'Almuerzo: ' + (foodOptions.find(f => f.val === currentFood.lunch)?.label || currentFood.lunch),   time: null, color: '#28B54D', id: null, type: 'food_lunch',     editable: false });
+          if (currentFood.snack)     allEvents.push({ emoji: '🍎', label: 'Merienda: ' + (foodOptions.find(f => f.val === currentFood.snack)?.label || currentFood.snack),     time: null, color: '#F59E0B', id: null, type: 'food_snack',     editable: false });
+          if (log?.nap)              allEvents.push({ emoji: '😴', label: 'Siesta: ' + ({si:'Durmió',no:'No durmió',poco:'Poco',excelente:'Excelente'}[log.nap]||log.nap), time: null, color: '#8B5CF6', id: null, type: 'nap', editable: false });
+
+          // infant_data events — each with its own created_at
+          const EMAP = { milk:'🍼', activity:'🎨', sensorial:'🔬', playground:'🌳', handwash:'🧼', toothbrush:'🪥', bath:'🚽', temp:'🌡️', med:'💊', note:'📝', behavior:'🤝', health:'😷', incident:'🤕', diaper:'🧻', sleep:'😴' };
+          const poop = ev => ev.subtype === 'soiled' ? '💩' : (ev.subtype === 'wet' ? '💧' : EMAP[ev.type] || '📌');
+          events.forEach(ev => {
+            allEvents.push({
+              emoji: poop(ev),
+              label: ev.label || ev.type,
+              time:  ev.created_at || ev.start_time || null,
+              color: '#475569',
+              id:    ev.id,
+              type:  ev.type,
+              editable: true
+            });
+          });
+
+          if (log?.notes) allEvents.push({ emoji: '📝', label: 'Nota: ' + log.notes.substring(0,40) + (log.notes.length>40?'…':''), time: log.created_at, color: '#64748B', id: null, type: 'note', editable: false });
+
+          // Sort by time
+          allEvents.sort((a, b) => {
+            if (!a.time && !b.time) return 0;
+            if (!a.time) return 1;
+            if (!b.time) return -1;
+            return new Date(a.time).getTime() - new Date(b.time).getTime();
+          });
+
+          if (!allEvents.length) return `
+            <div class="rounded-2xl p-4 text-center" style="background:#F8FAFC;border:2px dashed #E2E8F0">
+              <p class="text-xs font-bold text-slate-400">Sin eventos registrados hoy</p>
+            </div>`;
+
+          return `
+            <div>
+              <h4 class="text-xs font-black text-slate-800 mb-3 flex items-center gap-2">
+                📋 Línea del Tiempo
+                <span class="ml-auto text-[9px] font-black text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">${allEvents.length} evento${allEvents.length!==1?'s':''}</span>
+              </h4>
+              <div class="space-y-1.5">
+                ${allEvents.map(ev => `
+                  <div class="flex items-center gap-2.5 p-2.5 rounded-xl" style="background:${ev.color}0D;border:1.5px solid ${ev.color}33">
+                    <span class="text-lg flex-shrink-0">${ev.emoji}</span>
+                    <div class="flex-1 min-w-0">
+                      <p class="text-[11px] font-black truncate" style="color:${ev.color}">${safeEscapeHTML(ev.label)}</p>
+                      ${ev.time ? `<p class="text-[9px] font-bold text-slate-400">${_fmtTime(ev.time)}</p>` : '<p class="text-[9px] text-slate-300">Sin hora registrada</p>'}
+                    </div>
+                    ${ev.editable && ev.id ? `
+                      <button onclick="App._editEventTime('${studentId}','${ev.id}')"
+                        class="flex-shrink-0 p-1.5 rounded-lg text-[9px] font-black"
+                        style="background:${ev.color}15;color:${ev.color};border:1px solid ${ev.color}33"
+                        title="Editar hora">
+                        ✏️
+                      </button>
+                      <button onclick="App.deleteInfantEvent('${studentId}','${ev.id}')"
+                        class="flex-shrink-0 p-1.5 rounded-lg text-[9px] font-black"
+                        style="background:#FFF1F2;color:#E11D48;border:1px solid #FECDD3"
+                        title="Eliminar evento">
+                        🗑️
+                      </button>` : ''}
+                  </div>
+                `).join('')}
+              </div>
+            </div>`;
+        })()}
+
+        <div class="border-b border-slate-100"></div>
+
+        <!-- ═══ ELEGIR EVENTO DEL AULA PARA ESTE ESTUDIANTE ═══ -->
+        ${(() => {
+          const schedule = _getSchedule();
+          const routines = _getWholeClassRoutines();
+          const norm = (s) => String(s || '').trim().toLowerCase();
+          const hasLabel = (lbl) => events.some(e => norm(e.label) === norm(lbl));
+
+          const chip = (onclick, emoji, label, time, isReg) => `
+            <button data-evname="${safeEscapeHTML(norm(label))}" onclick="${onclick}"
+              class="sr-evchip p-2 rounded-xl border-2 ${isReg ? 'border-green-400 bg-green-50' : 'border-slate-100 bg-white'} flex flex-col items-center gap-0.5 active:scale-95 transition-all">
+              <span class="text-lg">${emoji || '📌'}</span>
+              <span class="text-[7px] font-black ${isReg ? 'text-green-700' : 'text-slate-500'} text-center leading-tight">${safeEscapeHTML((label || '').substring(0, 16))}</span>
+              ${time ? `<span class="text-[6px] font-bold text-slate-400">${_fmtTimeShort(time)}</span>` : ''}
+              ${isReg ? '<span class="text-[6px] font-black text-green-500">✓</span>' : ''}
+            </button>`;
+
+          const schedChips = schedule.map(ev => chip(
+            `App._addScheduleEventToStudent('${studentId}','${safeEscapeHTML(ev.id || ev.label)}')`,
+            ev.emoji, ev.label, ev.startTime, hasLabel(ev.label)
+          )).join('');
+
+          const routineBlocks = [...new Set(routines.map(r => r.cat))].map(cat => `
+            <div class="mt-2">
+              <p class="text-[9px] font-black text-slate-400 uppercase tracking-wide mb-1.5">${safeEscapeHTML(cat)}</p>
+              <div class="grid grid-cols-4 gap-1.5">
+                ${routines.filter(r => r.cat === cat).map(r => chip(
+                  `App._addClassRoutineToStudent('${studentId}','${r.id}')`,
+                  r.emoji, r.label, null, hasLabel(r.label)
+                )).join('')}
+              </div>
+            </div>`).join('');
+
+          return `
+            <div>
+              <h4 class="text-xs font-black text-slate-800 mb-2 flex items-center gap-2">
+                🗓️ Eventos del Aula
+                <span class="ml-auto text-[9px] font-bold text-slate-400">Toca para registrar con su hora</span>
+              </h4>
+              <input id="srEvSearch" placeholder="Buscar evento del aula..." oninput="App._filterStudentEvents(this.value)"
+                class="w-full mb-3 p-2.5 border-2 border-slate-100 rounded-xl text-xs focus:border-green-400 outline-none">
+              <div>
+                <p class="text-[9px] font-black text-slate-400 uppercase tracking-wide mb-1.5">⏰ Horario del Aula</p>
+                <div class="grid grid-cols-4 gap-1.5">${schedChips || '<p class="col-span-4 text-[10px] text-slate-300 italic">Sin bloques configurados</p>'}</div>
+              </div>
+              <div class="mt-3">
+                <p class="text-[9px] font-black text-slate-400 uppercase tracking-wide mb-1.5">🎯 Rutinas del Aula</p>
+                <div class="max-h-64 overflow-y-auto pr-1">${routineBlocks || '<p class="text-[10px] text-slate-300 italic">Sin rutinas para este nivel</p>'}</div>
+              </div>
+            </div>`;
+        })()}
 
         <div class="border-b border-slate-100"></div>
 
@@ -2756,6 +2880,152 @@ export async function deleteInfantEvent(studentId, eventId) {
 
 function _isModalOpen() {
   return !!document.getElementById('studentRoutineModal')?.querySelector('#sr-scroll');
+}
+
+/** Edit the timestamp of an already-recorded infant_data event */
+export async function _editEventTime(studentId, eventId) {
+  const log = _logsMap[studentId];
+  if (!log?.infant_data) return;
+  const ev = log.infant_data.find(e => e.id === eventId);
+  if (!ev) return;
+
+  const currentTime = ev.created_at ? _nowHHMM(new Date(ev.created_at)) : _nowHHMM();
+  const modalId = 'editEventTimeModal';
+  const content = `
+    <div class="bg-white overflow-hidden" style="border-radius:24px;max-width:340px;margin:0 auto">
+      <div class="p-5" style="background:linear-gradient(135deg,#475569,#334155)">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <span class="text-2xl">${ev.emoji || '📌'}</span>
+            <div>
+              <h3 class="text-base font-black text-white">Modificar Hora</h3>
+              <p class="text-xs font-bold text-white/80">${safeEscapeHTML(ev.label || ev.type)}</p>
+            </div>
+          </div>
+          <button onclick="UI.Modal.close('${modalId}')" class="p-2 rounded-xl bg-white/20 text-white">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="p-5 space-y-4">
+        <p class="text-xs text-slate-500 font-medium">Ajusta la hora para que el padre vea el evento en el momento correcto.</p>
+        <div>
+          <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Nueva hora del evento</label>
+          <input type="time" id="editEventTimeInput" value="${currentTime}"
+            class="w-full p-3 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-700 outline-none focus:border-slate-400">
+        </div>
+        <button onclick="App._confirmEditEventTime('${studentId}','${eventId}')"
+          class="w-full py-3 rounded-xl font-black text-xs uppercase text-white" style="background:#475569">
+          Guardar Hora
+        </button>
+      </div>
+    </div>`;
+  UI.Modal.open(modalId, content);
+}
+
+export async function _confirmEditEventTime(studentId, eventId) {
+  const newTime = document.getElementById('editEventTimeInput')?.value;
+  if (!newTime) return;
+  const log = _logsMap[studentId];
+  if (!log?.infant_data) return;
+
+  // Build new ISO timestamp from today's date + chosen HH:MM
+  const [hh, mm] = newTime.split(':');
+  const dt = new Date();
+  dt.setHours(Number(hh), Number(mm), 0, 0);
+  const newISO = dt.toISOString();
+
+  const updated = log.infant_data.map(e => {
+    if (e.id !== eventId) return e;
+    return { ...e, created_at: newISO, start_time: newISO };
+  });
+
+  try {
+    await supabase.from('daily_logs').update({ infant_data: updated }).eq('id', log.id);
+    invalidateCache('getDailyRoutine');
+    safeToast('Hora actualizada ✅', 'success');
+    UI.Modal.close('editEventTimeModal');
+    await initRoutine();
+    openStudentRoutine(studentId);
+  } catch {
+    safeToast('Error al actualizar hora', 'error');
+  }
+}
+
+/** Agrega un bloque del HORARIO del aula a un estudiante, con hora elegible */
+export async function _addScheduleEventToStudent(studentId, scheduleId) {
+  const classroom = AppState.get('classroom');
+  if (!classroom?.id) return;
+  const ev = _getSchedule().find(e => String(e.id) === String(scheduleId))
+          || _getLevelDefaultSchedule().find(e => String(e.id) === String(scheduleId));
+  const label = ev?.label || 'Evento';
+  const emoji = ev?.emoji || '📌';
+
+  // Cada evento permite ajustar su hora (por si se marca tarde).
+  const event_time = await _promptEventTime(emoji, label, ev?.startTime || _nowHHMM());
+  if (event_time === null) return; // cancelado
+
+  try {
+    await MaestraApi.upsertDailyLog({
+      student_id:   studentId,
+      classroom_id: classroom.id,
+      date:         _today(),
+      infant_event: {
+        type: 'activity',
+        subtype: scheduleId,
+        label,
+        emoji,
+        event_time,
+        origin: 'individual'
+      }
+    });
+    safeToast(`${emoji} ${label} registrado`, 'success');
+    await initRoutine();
+    if (_isModalOpen()) openStudentRoutine(studentId);
+  } catch {
+    safeToast('Error al registrar evento', 'error');
+  }
+}
+
+/** Agrega una Rutina del Aula (catálogo amplio) a un estudiante, con hora elegible */
+export async function _addClassRoutineToStudent(studentId, routineId) {
+  const classroom = AppState.get('classroom');
+  if (!classroom?.id) return;
+  const routine = _getWholeClassRoutines().find(r => String(r.id) === String(routineId));
+  if (!routine) return;
+
+  const event_time = await _promptEventTime(routine.emoji, routine.label, _nowHHMM());
+  if (event_time === null) return; // cancelado
+
+  try {
+    await MaestraApi.upsertDailyLog({
+      student_id:   studentId,
+      classroom_id: classroom.id,
+      date:         _today(),
+      infant_event: {
+        type: 'activity',
+        label: routine.label,
+        emoji: routine.emoji,
+        category: routine.cat,
+        event_time,
+        origin: 'individual'
+      }
+    });
+    safeToast(`${routine.emoji} ${routine.label} registrado`, 'success');
+    await initRoutine();
+    if (_isModalOpen()) openStudentRoutine(studentId);
+  } catch {
+    safeToast('Error al registrar rutina', 'error');
+  }
+}
+
+/** Filtra en vivo los chips de "Eventos del Aula" dentro del modal individual */
+export function _filterStudentEvents(query) {
+  const q = String(query || '').trim().toLowerCase();
+  document.querySelectorAll('#studentRoutineModal .sr-evchip').forEach(btn => {
+    const name = btn.getAttribute('data-evname') || '';
+    btn.style.display = (!q || name.includes(q)) ? '' : 'none';
+  });
 }
 
 export async function setStudentMood(studentId, mood) {
