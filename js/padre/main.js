@@ -755,7 +755,7 @@ async function refreshDashboard() {
     Api.getStudentFinancialStatus(student.id),
     Api.getStudentGrades(student.id),
     Api.getDailyLog(student.id, today),
-    supabase.from('attendance').select('status').eq('student_id', student.id).eq('date', today).maybeSingle(),
+    supabase.from('attendance').select('status, created_at').eq('student_id', student.id).eq('date', today).order('created_at', { ascending: false }).limit(1),
     // Cargar últimos 3 posts para la sección de inicio
     supabase
       .from('posts')
@@ -768,7 +768,16 @@ async function refreshDashboard() {
   const finance  = financeRes.status  === 'fulfilled' ? financeRes.value  : null;
   const academic = academicRes.status === 'fulfilled' ? academicRes.value : null;
   let   logs     = logsRes.status     === 'fulfilled' ? logsRes.value     : null;
-  const todayAtt = todayAttRes.status === 'fulfilled' ? todayAttRes.value?.data : null;
+  const todayAtt = todayAttRes.status === 'fulfilled' ? (todayAttRes.value?.data?.[0] || null) : null;
+
+  if (!todayAtt) {
+    supabase.from('attendance').select('date, status').eq('student_id', student.id)
+      .order('date', { ascending: false }).limit(3)
+      .then(({ data, error }) => console.warn('[padre] Sin asistencia para hoy:', {
+        studentId: student.id, date: today,
+        ultimasVisibles: data || [], error: error?.message || null
+      }));
+  }
   const latestPosts = postsRes.status === 'fulfilled' ? (postsRes.value?.data || []) : [];
 
   // Registrar errores si fallaron promesas críticas
@@ -809,8 +818,8 @@ async function refreshDashboard() {
   const lastGradedEv = evidences.filter(e => e.grade_letter).pop();
   const lastGrade = lastReport?.numeric_score ?? lastReport?.score ?? lastGradedEv?.grade_letter ?? '—';
   set('lastGradeValue', lastGrade);
-  // Messages badge  
-  const unreadCount = AppState.get('unreadMessages') || 0;
+  // Messages badge
+  const unreadCount = window.UnreadMessages?.getTotal?.() ?? (AppState.get('unreadMessages') || 0);
   set('messagesStatus', unreadCount > 0 ? `${unreadCount} nuevo${unreadCount !== 1 ? 's' : ''}` : 'Sin nuevos');
   
   // Load weekly summary for the dashboard

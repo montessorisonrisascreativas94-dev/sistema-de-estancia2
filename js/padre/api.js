@@ -96,7 +96,6 @@ export const Api = {
           supabase.from(TABLES.TASK_EVIDENCES)
             .select('id, status, grade_letter, stars, comment, created_at, task:task_id(title, due_date)')
             .eq('student_id', studentId)
-            .not('grade_letter', 'is', null)
             .order('created_at', { ascending: false })
             .limit(50),
           'getTaskGrades'
@@ -115,15 +114,40 @@ export const Api = {
    * 📝 Rutina diaria (Daily Logs)
    */
   async getDailyLog(studentId, date) {
-    return await handle(
+    // Prioriza el reporte publicado, pero si la fila quedó con otro status
+    // (borrador / legado) igual se muestra: es mejor ver la rutina que un
+    // "Sin reporte" aunque la maestra sí la registró.
+    // Se usa limit(1) en vez de maybeSingle para no romper si hay filas duplicadas.
+    const rows = await handle(
       supabase.from(TABLES.DAILY_LOGS)
         .select('mood, food, nap, eating, sleeping, activities, notes, infant_data, date, status, created_at')
         .eq('student_id', studentId)
         .eq('date', date)
-        .eq('status', 'published') // Solo ver publicados
-        .maybeSingle(),
+        .order('status', { ascending: false, nullsFirst: false })
+        .order('created_at', { ascending: false })
+        .limit(1),
       'getDailyLog'
     );
+    if (rows && rows[0]) return rows[0];
+
+    // Diagnóstico: sin fila para hoy. Consultamos las últimas fechas del
+    // estudiante para distinguir "no hay datos" de "RLS/estudiante distinto".
+    try {
+      const { data: recent } = await supabase.from(TABLES.DAILY_LOGS)
+        .select('date, status')
+        .eq('student_id', studentId)
+        .order('date', { ascending: false })
+        .limit(3);
+      console.warn('[padre.getDailyLog] Sin rutina para hoy:', {
+        studentId, date,
+        ultimasFechasVisibles: recent || [],
+        nota: (recent && recent.length)
+          ? 'La RLS SÍ permite leer daily_logs: revisa la fecha/estado de la fila de hoy.'
+          : 'La RLS NO devuelve ninguna fila de daily_logs para este estudiante.'
+      });
+    } catch (_) {}
+
+    return null;
   },
 
   /**

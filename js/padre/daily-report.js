@@ -162,12 +162,12 @@ export const DailyReportModule = {
       const [weeklyRes, monthlyRes, todayRes] = await Promise.all([
         supabase.from('daily_logs').select('id, date, mood, food, nap, notes, infant_data, created_at').eq('student_id', this._studentId).gte('date', weekStartStr).lte('date', todayStr).order('date', { ascending: true }),
         supabase.from('daily_logs').select('id, date, mood, food, nap, notes, infant_data').eq('student_id', this._studentId).gte('date', monthStartStr).lte('date', todayStr),
-        supabase.from('daily_logs').select('id, date, mood, food, nap, notes, infant_data, created_at').eq('student_id', this._studentId).eq('date', todayStr).maybeSingle(),
+        supabase.from('daily_logs').select('id, date, mood, food, nap, notes, infant_data, created_at').eq('student_id', this._studentId).eq('date', todayStr).order('status', { ascending: false, nullsFirst: false }).order('created_at', { ascending: false }).limit(1),
       ]);
 
       const weeklyLogs = weeklyRes.data || [];
       const monthlyLogs = monthlyRes.data || [];
-      const todayLog = todayRes.data;
+      const todayLog = (todayRes.data && todayRes.data[0]) || null;
 
       // Calculate stats
       const processLogs = (logs) => {
@@ -348,13 +348,17 @@ export const DailyReportModule = {
     </div>`;
 
     try {
-      const { data: log } = await supabase
+      const { data: logRows, error } = await supabase
         .from('daily_logs')
         .select('id, student_id, date, mood, food, nap, notes, infant_data, created_at, status')
         .eq('student_id', this._studentId)
         .eq('date', dateStr)
-        .eq('status', 'published')
-        .maybeSingle();
+        .order('status', { ascending: false, nullsFirst: false })
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (error) throw error;
+      const log = (logRows && logRows[0]) || null;
 
       const dateLabel = fmtDate(dateStr + 'T12:00:00');
 
@@ -398,15 +402,17 @@ export const DailyReportModule = {
 
       const today = localToday();
 
-      const { data: log, error } = await supabase
+      const { data: logRows, error } = await supabase
         .from('daily_logs')
         .select('id, student_id, date, mood, food, nap, notes, infant_data, created_at, status')
         .eq('student_id', sid)
         .eq('date', today)
-        .eq('status', 'published')
-        .maybeSingle();
+        .order('status', { ascending: false, nullsFirst: false })
+        .order('created_at', { ascending: false })
+        .limit(1);
 
       if (error) throw error;
+      const log = (logRows && logRows[0]) || null;
 
       const todayLabel = new Date().toLocaleDateString('es-DO', { weekday: 'long', day: 'numeric', month: 'long' });
 

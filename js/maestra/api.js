@@ -202,12 +202,21 @@ export const MaestraApi = {
     const cleanPayload = { ...payload };
     if (!cleanPayload.status) cleanPayload.status = 'published';
 
-    const { data: existing, error: findError } = await supabase
-      .from('daily_logs')
-      .select('id, infant_data')
-      .eq('student_id', cleanPayload.student_id)
-      .eq('date', cleanPayload.date)
-      .maybeSingle();
+    // limit(1) en vez de maybeSingle(): si por carreras existieran filas
+    // duplicadas para (student_id, date), maybeSingle devuelve error y el
+    // guardado de la maestra fallaría en silencio.
+    const findRow = async () => {
+      const { data, error } = await supabase
+        .from('daily_logs')
+        .select('id, infant_data')
+        .eq('student_id', cleanPayload.student_id)
+        .eq('date', cleanPayload.date)
+        .order('created_at', { ascending: false })
+        .limit(1);
+      return { row: (data && data[0]) || null, error };
+    };
+
+    let { row: existing, error: findError } = await findRow();
 
     if (findError) { handleError(findError, null); return null; }
 

@@ -775,7 +775,8 @@ function _getEventProgress(event, students, logsMap) {
     handwash: { field: '_group', type: 'handwash' }, toothbrush: { field: '_group', type: 'toothbrush' },
     activity: { field: '_group', type: 'activity' }, playground: { field: '_group', type: 'playground' },
     sleep_start: { field: '_sleep', type: 'sleep' }, sleep_end: { field: '_sleep_end', type: 'sleep' },
-    bathroom: { field: '_group', type: 'bath' }, poop_gr: { field: '_group', type: 'diaper' }, milk_gr: { field: '_group', type: 'milk' }
+    bathroom: { field: '_group', type: 'bath' }, poop_gr: { field: '_group', type: 'diaper' }, milk_gr: { field: '_group', type: 'milk' },
+    diaper_change: { field: '_group', type: 'diaper_change' }
   };
   const mapping = GROUP_MAP[gid];
   if (!mapping) return { done: 0, total: students.length, pct: 0 };
@@ -2013,6 +2014,7 @@ export async function routineQuickGroup(eventId) {
     sleep_start: { field: '_sleep', value: 'start', label: 'Iniciar siesta' },
     sleep_end: { field: '_sleep', value: 'end', label: 'Terminar siesta' },
     bathroom: { field: '_group', value: 'bath', label: 'Baño' },
+    diaper_change: { field: '_group', value: 'diaper_change', label: 'Cambio de pañal' },
     poop_gr: { field: '_group', value: 'diaper', subtype: 'soiled', label: 'Popó' },
     milk_gr: { field: '_group', value: 'milk', label: 'Biberón' }
   };
@@ -2068,6 +2070,7 @@ function _legacyKeyForEvent(ev) {
     playground: 'infant:playground',
     bath: 'infant:bath',
     diaper: ev.subtype === 'soiled' ? 'infant:diaper:soiled' : 'infant:diaper:wet',
+    diaper_change: 'infant:diaper_change',
     milk: 'infant:milk'
   };
   return map[ev.value];
@@ -2585,7 +2588,7 @@ export function openStudentRoutine(studentId) {
             if (log?.nap)              allEvents.push({ emoji: '😴', label: 'Siesta: ' + ({si:'Durmió',no:'No durmió',poco:'Poco',excelente:'Excelente'}[log.nap]||log.nap), time: null, color: '#8B5CF6', id: null, type: 'nap', editable: false });
 
             // infant_data events — each with its own created_at
-            const EMAP = { milk:'🍼', activity:'🎨', sensorial:'🔬', playground:'🌳', handwash:'🧼', toothbrush:'🪥', bath:'🚽', temp:'🌡️', med:'💊', note:'📝', behavior:'🤝', health:'😷', incident:'🤕', diaper:'🧻', sleep:'😴' };
+            const EMAP = { milk:'🍼', activity:'🎨', sensorial:'🔬', playground:'🌳', handwash:'🧼', toothbrush:'🪥', bath:'🚽', temp:'🌡️', med:'💊', note:'📝', behavior:'🤝', health:'😷', incident:'🤕', diaper:'🧻', diaper_change:'🧻', sleep:'😴' };
             const poop = ev => ev.subtype === 'soiled' ? '💩' : (ev.subtype === 'wet' ? '💧' : EMAP[ev.type] || '📌');
             events.forEach(ev => {
               allEvents.push({
