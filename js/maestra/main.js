@@ -25,6 +25,7 @@ import { UIPremium } from '../shared/ui-premium.js';
 import { SectionCache } from '../shared/section-cache.js';
 import SupervisionEngine from '../shared/supervision.js';
 import { TeacherExitBanner } from './exit-banner.js';
+import { PostOptions } from '../shared/post-options.js';
 import {
   findCanonicalClassroom,
   findSpecialClassroom,
@@ -1609,11 +1610,18 @@ async function openNewPostModal() {
           </label>
         </div>
 
+        <div id="maestraPostOptions"></div>
+
         <button id="btnSubmitPost" onclick="App.submitNewPost()" class="w-full py-3.5 bg-[#FF7A00] text-white rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-[#FF7A00] shadow-lg shadow-orange-100 transition-all">PUBLICAR</button>
       </div>
     </div>
   `;
   Modal.open('newPostModal', html);
+  PostOptions.mount({
+    anchor: 'maestraPostOptions',
+    classroomId: AppState.get('classroom')?.id || null,
+    position: 'after'
+  }).catch(() => {});
 }
 
 async function submitNewPost() {
@@ -1663,7 +1671,7 @@ async function submitNewPost() {
     const { data: { user } } = await supabase.auth.getUser();
     const classroom = AppState.get('classroom');
 
-    const { error } = await supabase.from('posts').insert({
+    const result = await PostOptions.insertPost({
       content,
       media_url: mediaUrl,
       media_type: mediaType,
@@ -1671,7 +1679,7 @@ async function submitNewPost() {
       classroom_id: classroom.id
     });
 
-    if (error) throw error;
+    if (result.error) throw result.error;
 
     // Notificar a padres del aula via Edge Function
     emitEvent('post.created', {

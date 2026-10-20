@@ -389,6 +389,9 @@ CREATE TABLE IF NOT EXISTS public.posts (
   teacher_avatar text,
   likes_count    integer DEFAULT 0,
   comments_count integer DEFAULT 0,
+  student_id      bigint REFERENCES public.students(id) ON DELETE CASCADE,
+  allow_download  boolean NOT NULL DEFAULT true,
+  protect_capture boolean NOT NULL DEFAULT false,
   updated_at     timestamp with time zone DEFAULT now(),
   created_at     timestamp with time zone DEFAULT now() NOT NULL
 );

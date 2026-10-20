@@ -11,6 +11,7 @@
 import { supabase } from '../shared/supabase.js';
 import { AppState } from './appState.js';
 import { Helpers, escapeHtml } from '../shared/helpers.js';
+import { PostOptions } from '../shared/post-options.js';
 
 const TYPE_CONFIG = {
   announcement: { icon: '📢', label: 'anuncios',  bg: 'bg-blue-50',    border: 'border-blue-200',   text: 'text-blue-700',   accent: '#0B63C7', priority: 2, target: 'class',        groupLabel: 'anuncio' },
@@ -84,11 +85,12 @@ export const RecentActivityModule = {
           .or(`student_id.is.null,student_id.eq.${student.id}`)
           .order('created_at', { ascending: false })
           .limit(30),
-        supabase.from('posts')
-          .select('id, content, media_url, media_type, created_at, classroom_id, teacher:teacher_id(name)')
-          .or(`classroom_id.is.null,classroom_id.eq.${student.classroom_id ?? 0}`)
-          .order('created_at', { ascending: false })
-          .limit(10)
+        PostOptions.fetchStudentPosts({
+          studentId: student.id,
+          classroomId: student.classroom_id ?? null,
+          select: 'id, content, media_url, media_type, created_at, classroom_id, teacher:teacher_id(name)',
+          limit: 10
+        }).then((rows) => ({ data: rows }))
       ]);
 
       this._items = [];
@@ -129,7 +131,7 @@ export const RecentActivityModule = {
       if (posts.status === 'fulfilled' && posts.value.data) {
         const readIds = _getReadIds();
         const authorPosts = new Map();
-        for (const p of posts.value.data) {
+        for (const p of PostOptions.filterForStudent(posts.value.data, student.id)) {
           const teacher = Array.isArray(p.teacher) ? p.teacher[0] : (p.teacher || {});
           const authorName = teacher.name || 'Desconocido';
           if (!authorPosts.has(authorName)) {

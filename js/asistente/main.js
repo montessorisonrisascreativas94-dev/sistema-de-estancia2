@@ -24,6 +24,7 @@ import { AssistantChatApp } from './chat_app.js';
 import { dedupeClassrooms } from '../shared/constants.js';
 import { SchoolCenterModule } from '../directora/school-center.module.js';
 import { SchoolYearGuard } from '../shared/school-year-guard.js';
+import { PostOptions } from '../shared/post-options.js';
 
 // Exponer globalmente para onclick en HTML
 window.InscripcionesModule = InscripcionesModule;
@@ -228,6 +229,8 @@ async function openNewPostModal() {
             <p class="text-xs text-slate-500">Sube una imagen o video para acompañar tu publicación. Máximo 10MB.</p>
           </div>
         </div>
+
+        <div id="asistentePostOptions"></div>
       </div>
 
       <div class="p-6 border-t bg-slate-50 rounded-b-3xl flex justify-end gap-3">
@@ -254,6 +257,9 @@ async function openNewPostModal() {
   } catch (_) { /* silencioso */ }
 
   if (window.lucide) lucide.createIcons();
+
+  // Opciones avanzadas (visibilidad / descarga / capturas)
+  PostOptions.mount({ anchor: 'asistentePostOptions', classroomSelectId: 'postClassroom', position: 'after' }).catch(() => {});
 }
 
 async function submitNewPost() {
@@ -304,9 +310,9 @@ async function submitNewPost() {
       classroom_id: classroomSelect?.value || null
     };
 
-    const { error } = await supabase.from('posts').insert(insertPayload);
+    const result = await PostOptions.insertPost(insertPayload);
 
-    if (error) throw error;
+    if (result.error) throw result.error;
 
     // Notificar a padres si el post es de un aula específica
     if (insertPayload.classroom_id) {

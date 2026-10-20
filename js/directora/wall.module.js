@@ -6,6 +6,7 @@ import { supabase, emitEvent } from '../shared/supabase.js';
 import { Helpers } from '../shared/helpers.js';
 import { WallModule as SharedWallModule } from '../shared/wall.js';
 import { dedupeClassrooms } from '../shared/constants.js';
+import { PostOptions } from '../shared/post-options.js';
 
 export const WallModule = {
   ...SharedWallModule,
@@ -66,6 +67,8 @@ export const WallModule = {
             <p class="text-xs text-slate-500">Sube una imagen o video para acompaar tu publicacin. Mximo 10MB.</p>
           </div>
         </div>
+
+        <div id="wallPostOptions"></div>
       </div>
 
       <div class="p-6 border-t bg-slate-50 rounded-b-3xl flex justify-end gap-3">
@@ -87,6 +90,9 @@ export const WallModule = {
 
     // Listener para preview
     document.getElementById('postMediaFile')?.addEventListener('change', (e) => this.handleMediaPreview(e));
+
+    // Opciones avanzadas (visibilidad / descarga / capturas)
+    PostOptions.mount({ anchor: 'wallPostOptions', classroomSelectId: 'postClassroom', position: 'after' }).catch(() => {});
   },
 
   async loadClassroomsForPost() {
@@ -161,7 +167,7 @@ export const WallModule = {
         mediaUrl = urlData.publicUrl;
       }
 
-      const { error } = await supabase.from('posts').insert({
+      const result = await PostOptions.insertPost({
         content,
         classroom_id: classroomId || null,
         media_url: mediaUrl,
@@ -169,8 +175,7 @@ export const WallModule = {
         teacher_id: user.id
       });
 
-      if (error) throw error;
-
+      if (result.error) throw result.error;
       // Notify parents of classroom via Edge Function
       if (classroomId) {
         emitEvent('post.created', {

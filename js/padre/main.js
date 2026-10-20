@@ -24,6 +24,8 @@ import { WizardPayment } from './payment-wizard.js';
 import { RecentActivityModule } from './recent-activity.js';
 import { SectionCache } from '../shared/section-cache.js';
 import { ParentAnnouncements } from './announcements.js';
+import { MediaProtect } from '../shared/media-protect.js';
+import { PostOptions } from '../shared/post-options.js';
 
 // #rating-modal se oculta con style="display:none" inline, pero se abria con
 // classList.remove('hidden') — el style inline gana y el modal nunca aparecia.
@@ -517,6 +519,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   try {
     AppState.set('loading', true);
 
+    MediaProtect.install();
+
     const auth = await ensureRole('padre');
     if (!auth) return;
     
@@ -757,12 +761,12 @@ async function refreshDashboard() {
     Api.getDailyLog(student.id, today),
     supabase.from('attendance').select('status, created_at').eq('student_id', student.id).eq('date', today).order('created_at', { ascending: false }).limit(1),
     // Cargar últimos 3 posts para la sección de inicio
-    supabase
-      .from('posts')
-      .select('*, teacher:profiles(id, name, avatar_url)')
-      .or(`classroom_id.is.null,classroom_id.eq.${student.classroom_id || 0}`)
-      .order('created_at', { ascending: false })
-      .limit(3)
+    PostOptions.fetchStudentPosts({
+      studentId: student.id,
+      classroomId: student.classroom_id || null,
+      select: '*, teacher:profiles(id, name, avatar_url)',
+      limit: 3
+    })
   ]);
 
   const finance  = financeRes.status  === 'fulfilled' ? financeRes.value  : null;
@@ -770,14 +774,6 @@ async function refreshDashboard() {
   let   logs     = logsRes.status     === 'fulfilled' ? logsRes.value     : null;
   const todayAtt = todayAttRes.status === 'fulfilled' ? (todayAttRes.value?.data?.[0] || null) : null;
 
-  if (!todayAtt) {
-    supabase.from('attendance').select('date, status').eq('student_id', student.id)
-      .order('date', { ascending: false }).limit(3)
-      .then(({ data, error }) => console.warn('[padre] Sin asistencia para hoy:', {
-        studentId: student.id, date: today,
-        ultimasVisibles: data || [], error: error?.message || null
-      }));
-  }
   const latestPosts = postsRes.status === 'fulfilled' ? (postsRes.value?.data || []) : [];
 
   // Registrar errores si fallaron promesas críticas
@@ -792,10 +788,9 @@ async function refreshDashboard() {
   if (finance?.config) AppState.set('financeConfig', finance.config);
   if (finance?.history) AppState.set('financeHistory', finance.history);
   AppState.set('todayAttendance', todayAtt?.status || null);
-
   renderDailySummary(logs);
   DailyReportModule.renderVisualSummaryVertical(logs);
-  renderLatestPosts(latestPosts);
+  renderLatestPosts(PostOptions.filterForStudent(latestPosts, student.id));
 
   // ── Initialize Recent Activity Feed ──
   RecentActivityModule.destroy();

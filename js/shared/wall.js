@@ -405,6 +405,7 @@ export const WallModule = {
           q = q.select(`
             id, content, media_url, media_type, teacher_id, created_at,
             is_pinned, is_important, post_type,
+            student_id, allow_download, protect_capture,
             classroom:classrooms(name),
             teacher:profiles(name, avatar_url),
             likes(user_id, reaction_type),
@@ -415,6 +416,7 @@ export const WallModule = {
         } else {
           q = q.select(`
             id, content, media_url, media_type, teacher_id, created_at,
+            student_id, allow_download, protect_capture,
             classroom:classrooms(name),
             teacher:profiles(name, avatar_url),
             likes(user_id),
@@ -723,10 +725,12 @@ export const WallModule = {
 
     // Lógica de Renderizado Multimedia con aspect-ratio fijo y lazy loading
     let mediaHtml = '';
+    const protectAttr = p.protect_capture ? ' data-protect-media="1"' : '';
+    const showDownload = p.allow_download !== false;
     if (p.display_media_url) {
       if (p.is_video) {
         mediaHtml = `
-          <div class="relative aspect-video rounded-2xl overflow-hidden border border-slate-100 mb-3 bg-black group/media shadow-inner" id="media-wrap-${p.id}">
+          <div class="relative aspect-video rounded-2xl overflow-hidden border border-slate-100 mb-3 bg-black group/media shadow-inner" id="media-wrap-${p.id}"${protectAttr}>
             ${ImageLoader.video(p.display_media_url, '', {
               cls: 'w-full h-full object-contain',
               fotograma: true
@@ -738,16 +742,17 @@ export const WallModule = {
             </button>
             <span class="absolute bottom-2 right-2 px-1.5 py-0.5 rounded-lg bg-black/70 text-white text-[10px] font-black tracking-wide tabular-nums backdrop-blur-sm transition-opacity duration-300 pointer-events-none"
                   id="video-dur-${p.id}" style="opacity:0">0:00</span>
+            ${showDownload ? `
             <a href="${p.display_media_url}" download target="_blank" rel="noopener noreferrer"
                class="absolute top-2 right-2 p-2 bg-black/60 hover:bg-black/80 text-white rounded-xl opacity-0 group-hover/media:opacity-100 transition-opacity flex items-center gap-1.5 text-[10px] font-black uppercase backdrop-blur-sm"
                title="Descargar video" onclick="event.stopPropagation()">
               <i data-lucide="download" class="w-3.5 h-3.5"></i> Descargar
-            </a>
+            </a>` : ''}
             <div class="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent pointer-events-none"></div>
           </div>`;
       } else {
         mediaHtml = `
-          <div class="aspect-video rounded-2xl overflow-hidden border border-slate-100 mb-3 cursor-zoom-in bg-slate-50 relative group/media shadow-inner"
+          <div class="aspect-video rounded-2xl overflow-hidden border border-slate-100 mb-3 cursor-zoom-in bg-slate-50 relative group/media shadow-inner"${protectAttr}
                onclick="window.openLightbox('${p.display_media_url}','image')">
             ${ImageLoader.img(p.display_media_url, {
               alt: 'Post media',
@@ -755,11 +760,12 @@ export const WallModule = {
               fallback: 'img/monte.jpg',
               priority: isFirstPost ? 'high' : 'low'
             })}
+            ${showDownload ? `
             <a href="${p.display_media_url}" download target="_blank" rel="noopener noreferrer"
                class="absolute top-2 right-2 p-2 bg-black/60 hover:bg-black/80 text-white rounded-xl opacity-0 group-hover/media:opacity-100 transition-opacity flex items-center gap-1.5 text-[10px] font-black uppercase backdrop-blur-sm"
                title="Descargar imagen" onclick="event.stopPropagation()">
               <i data-lucide="download" class="w-3.5 h-3.5"></i> Descargar
-            </a>
+            </a>` : ''}
           </div>`;
       }
     }

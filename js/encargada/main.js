@@ -20,6 +20,7 @@ import {
 } from '../shared/chat.js';
 import { ScrollModule } from '../shared/scroll.module.js';
 import { WALL_REACTIONS } from '../shared/wall.js';
+import { PostOptions } from '../shared/post-options.js';
 import { ImageLoader } from '../shared/image-loader.js';
 const MURO_REACTION_ORDER = ['like', 'love', 'bravo', 'adore', 'party'];
 const MURO_COMMENTS_SHOWN = 3;
@@ -1322,6 +1323,7 @@ async function loadMuroEscolar() {
             <button onclick="document.getElementById('muroFile').value='';document.getElementById('muroFilePreview').classList.add('hidden')" class="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full text-xs flex items-center justify-center shadow">&times;</button>
           </div>
         </div>
+        <div id="encargadaPostOptions" class="mt-3"></div>
       </div>
       <div id="muroPostsList" class="space-y-4">
         ${posts.length === 0 ? '<div class="text-center py-12 text-slate-400"><i data-lucide="megaphone" class="w-12 h-12 mx-auto mb-3 text-slate-300"></i><p class="font-bold">No hay publicaciones aún</p><p class="text-xs mt-1">Crea la primera publicación del muro escolar</p></div>' : ''}
@@ -1395,6 +1397,8 @@ async function loadMuroEscolar() {
       if (preview && img) { img.src = URL.createObjectURL(file); preview.classList.remove('hidden'); }
     });
 
+    PostOptions.mount({ anchor: 'encargadaPostOptions', classroomSelectId: 'muroClassroom', position: 'after' }).catch(() => {});
+
     document.getElementById('btnMuroPublish')?.addEventListener('click', async () => {
       const text = document.getElementById('muroText')?.value?.trim();
       if (!text) { Helpers.toast('Escribe algo para publicar', 'error'); return; }
@@ -1413,14 +1417,14 @@ async function loadMuroEscolar() {
           }
         }
         const clsId = document.getElementById('muroClassroom')?.value || null;
-        const { error } = await supabase.from('posts').insert({
+        const result = await PostOptions.insertPost({
           teacher_id: AppState.get('user')?.id,
           classroom_id: clsId ? parseInt(clsId) : null,
           content: text,
           media_url: mediaUrl,
           media_type: file ? 'image' : null,
         });
-        if (error) throw error;
+        if (result.error) throw result.error;
         Helpers.toast('Publicación enviada', 'success');
         document.getElementById('muroText').value = '';
         document.getElementById('muroFile').value = '';

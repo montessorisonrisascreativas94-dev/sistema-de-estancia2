@@ -1719,6 +1719,8 @@ CREATE POLICY "posts_parent_read" ON public.posts
   FOR SELECT TO authenticated
   USING (
     COALESCE(public.get_my_role(),'') = 'padre'
+    AND (student_id IS NULL
+      OR student_id IN (SELECT id FROM public.students WHERE parent_id = auth.uid()))
     AND (classroom_id IS NULL
       OR classroom_id IN (SELECT classroom_id FROM public.students WHERE parent_id = auth.uid() AND classroom_id IS NOT NULL))
   );

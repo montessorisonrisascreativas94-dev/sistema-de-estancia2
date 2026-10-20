@@ -19,6 +19,7 @@ import { Helpers } from '../shared/helpers.js';
 import { StudentRecordModal } from '../shared/student-record-modal.js';
 import { openGlobalModal, closeGlobalModal as _scCloseModal } from '../shared/modal.js';
 import SupervisionEngine from '../shared/supervision.js';
+import { PostOptions } from '../shared/post-options.js';
 import {
   CANONICAL_CLASSROOMS,
   SPECIAL_CLASSROOMS_META,
@@ -3151,6 +3152,7 @@ export const SchoolCenterModule = {
               </label>
               <div id="ksc-post-preview" class="ksc-post-preview"></div>
             </div>
+            <div id="kscPostOptions"></div>
           </div>
         </div>
         <div class="ksc-modal-footer">
@@ -3213,6 +3215,8 @@ export const SchoolCenterModule = {
       }
     });
     submit?.addEventListener('click', () => this.submitPostFromCenter(classroomId, aula));
+
+    PostOptions.mount({ anchor: 'kscPostOptions', classroomId: classroomId || null, position: 'after' }).catch(() => {});
   },
 
   async submitPostFromCenter(classroomId, aula) {
@@ -3250,16 +3254,27 @@ export const SchoolCenterModule = {
       } catch (eU) { console.warn('[CentroEscolar] media upload error', eU); }
     }
     const target = isGlobal ? null : classroomId;
+    const extras = PostOptions.collect();
     const payload = {
       classroom_id: target, teacher_id: me.id, teacher_name: me.profile?.name || 'Dirección',
       title: title || null, content, media_urls: mediaUrls.length ? mediaUrls : null,
       created_at: new Date().toISOString(),
+      ...extras,
     };
     let row = null;
     try {
       const r = await supabase.from('posts').insert(payload).select().maybeSingle();
-      if (r?.error && ['401','403','42501','PGRST'].some(x => String(r.error?.code || r.error?.message || '').includes(x))) throw r.error;
-      row = r?.data || null;
+      if (r?.error && PostOptions.isMissingColumn(r.error)) {
+        PostOptions._warnDegraded();
+        const fallback = { ...payload };
+        ['student_id', 'allow_download', 'protect_capture'].forEach(k => delete fallback[k]);
+        const r2 = await supabase.from('posts').insert(fallback).select().maybeSingle();
+        row = r2?.data || null;
+      } else if (r?.error && ['401','403','42501','PGRST'].some(x => String(r.error?.code || r.error?.message || '').includes(x))) {
+        throw r.error;
+      } else {
+        row = r?.data || null;
+      }
     } catch (eSdk) {
       try {
         const cfg = supabase;

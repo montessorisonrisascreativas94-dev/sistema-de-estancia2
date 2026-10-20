@@ -4,6 +4,7 @@ import { Helpers, escapeHtml } from '../shared/helpers.js';
 import { ImageLoader } from '../shared/image-loader.js';
 import { Security } from '../shared/security.js';
 import { WALL_REACTIONS } from '../shared/wall.js';
+import { PostOptions } from '../shared/post-options.js';
 
 const REACTION_ORDER = ['like', 'love', 'bravo', 'adore', 'party'];
 const TOP_COMMENTS = 3; // primer grupo de comentarios visibles (carga progresiva)
@@ -241,22 +242,23 @@ export const FeedModule = {
     try {
       const student = AppState.get('currentStudent');
       // Query directa — sin RPC ni Edge Function que pueden fallar
-      // Con soporte de fijadas/avisos; si la migración no está aplicada, reintenta sin esas columnas.
-      let { data: posts, error } = await supabase
-        .from('posts')
-        .select(`
-          id, content, media_url, media_type, created_at, classroom_id,
-          is_pinned, is_important,
-          teacher:teacher_id ( id, name, avatar_url )
-        `)
-        .or(`classroom_id.is.null,classroom_id.eq.${student?.classroom_id ?? 0}`)
-        .order('is_pinned', { ascending: false })
-        .order('created_at', { ascending: false })
-        .limit(50);
-
-      if (error) {
-        posts = null;
+      // Incluye publicaciones generales del aula + privadas de este estudiante.
+      let posts;
+      try {
+        posts = await PostOptions.fetchStudentPosts({
+          studentId: student?.id,
+          classroomId: student?.classroom_id ?? null,
+          select: `id, content, media_url, media_type, created_at, classroom_id,
+            is_pinned, is_important,
+            teacher:teacher_id ( id, name, avatar_url )`,
+          limit: 50
+        });
+        // Ordenar fijadas primero (el helper ordena por fecha)
+        posts.sort((a, b) => Number(b.is_pinned || 0) - Number(a.is_pinned || 0));
+      } catch (err) {
+        posts = [];
       }
+
       if (!posts) {
         const res = await supabase
           .from('posts')
@@ -271,6 +273,8 @@ export const FeedModule = {
         posts = res.data || [];
         posts = posts.map(p => ({ ...p, is_pinned: false, is_important: false }));
       }
+
+      posts = PostOptions.filterForStudent(posts, student?.id);
 
       // Enrich with likes (con reacción) y comentarios (con parent_id)
       const postIds = (posts || []).map(p => p.id);
@@ -397,32 +401,34 @@ export const FeedModule = {
     const repliesOf = (id) => comments.filter(c => String(c.parent_id) === String(id));
 
     let mediaHTML = '';
+    const allowDownload = PostOptions.isDownloadAllowed(p);
+    const protectCapture = PostOptions.isCaptureProtected(p);
+    const protectAttr = protectCapture ? ' data-protect-media="1"' : '';
+    const downloadBtn = (type) => allowDownload ? `
+            <button data-action="download-media" data-url="${escapeHtml(p.media_url)}" data-type="${type}"
+               class="absolute top-2 right-2 p-2 bg-black/60 hover:bg-black/80 text-white rounded-xl opacity-0 group-hover/media:opacity-100 transition-opacity flex items-center gap-1.5 text-[10px] font-black uppercase backdrop-blur-sm">
+              <i data-lucide="download" class="w-3.5 h-3.5"></i> Descargar
+            </button>` : '';
     if (p.media_url) {
       const isVideo = p.media_url.match(/\.(mp4|webm|ogg|mov)$/i);
       const optimizedUrl = p.media_url;
       if (isVideo) {
         mediaHTML = `
-          <div class="relative group/media rounded-2xl overflow-hidden mb-4 bg-black" id="media-wrap-${p.id}">
+          <div class="relative group/media rounded-2xl overflow-hidden mb-4 bg-black" id="media-wrap-${p.id}"${protectAttr}>
             ${ImageLoader.video(p.media_url, '', { cls: 'w-full max-h-80 object-contain', controls: false })}
             <button data-action="video-toggle" data-post-id="${p.id}" aria-label="Reproducir video"
                class="absolute inset-0 m-auto w-16 h-16 rounded-full bg-white/25 backdrop-blur-md border border-white/40 text-white flex items-center justify-center transition-all hover:scale-110 hover:bg-white/40 shadow-xl">
               <i data-lucide="play" class="w-7 h-7 fill-current ml-1"></i>
             </button>
             <span class="absolute bottom-2 right-2 px-1.5 py-0.5 rounded-lg bg-black/70 text-white text-[10px] font-black tracking-wide tabular-nums backdrop-blur-sm transition-opacity duration-300 pointer-events-none" id="video-dur-${p.id}" style="opacity:0">0:00</span>
-            <button data-action="download-media" data-url="${escapeHtml(optimizedUrl)}" data-type="video"
-               class="absolute top-2 right-2 p-2 bg-black/60 hover:bg-black/80 text-white rounded-xl opacity-0 group-hover/media:opacity-100 transition-opacity flex items-center gap-1.5 text-[10px] font-black uppercase backdrop-blur-sm">
-              <i data-lucide="download" class="w-3.5 h-3.5"></i> Descargar
-            </button>
+            ${downloadBtn('video')}
           </div>`;
       } else {
         mediaHTML = `
-          <div class="relative group/media cursor-zoom-in rounded-2xl overflow-hidden mb-4 bg-black"
+          <div class="relative group/media cursor-zoom-in rounded-2xl overflow-hidden mb-4 bg-black"${protectAttr}
                data-lightbox-url="${escapeHtml(optimizedUrl)}" data-lightbox-type="image">
             ${ImageLoader.img(optimizedUrl, { cls: 'w-full max-h-[500px] object-cover', fallback: 'img/mundo.jpg' })}
-            <button data-action="download-media" data-url="${escapeHtml(optimizedUrl)}" data-type="image"
-               class="absolute top-2 right-2 p-2 bg-black/60 hover:bg-black/80 text-white rounded-xl opacity-0 group-hover/media:opacity-100 transition-opacity flex items-center gap-1.5 text-[10px] font-black uppercase backdrop-blur-sm">
-              <i data-lucide="download" class="w-3.5 h-3.5"></i> Descargar
-            </button>
+            ${downloadBtn('image')}
           </div>`;
       }
     }
