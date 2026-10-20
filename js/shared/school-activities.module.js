@@ -280,18 +280,33 @@ async function _loadMonth() {
     state.evidenceCount = count || 0;
   }
 
-  // Feed "Próximas actividades" para padres
+  // Feed "Próximas actividades" — TODOS los roles (padres: solo publicadas),
+  // siempre desde hoy en adelante y ordenado por fecha + hora.
   state.upcoming = [];
   state.upcomingEvidence = null;
-  if (state.mode === 'parent') {
+  {
     const today = new Date().toISOString().slice(0, 10);
-    const { data } = await supabase.from('school_activities')
-      .select('*')
-      .eq('status', 'published')
-      .gte('activity_date', today)
-      .order('activity_date', { ascending: true })
-      .limit(10);
-    state.upcoming = data || [];
+    const upQuery = (field, timeField) => {
+      let q = supabase.from('school_activities')
+        .select('*')
+        .gte(field, today)
+        .order(field, { ascending: true });
+      if (timeField) q = q.order(timeField, { ascending: true, nullsFirst: false });
+      if (state.mode === 'parent') q = q.eq('status', 'published');
+      return q.limit(12);
+    };
+    let upRes = await upQuery('activity_date', 'start_time');
+    if (_isColumnErr(upRes.error)) {
+      upRes = await upQuery('scheduled_date', 'scheduled_time');
+      if (!upRes.error) {
+        upRes = { ...upRes, data: (upRes.data || []).map(a => ({ ...a, activity_date: a.activity_date || a.scheduled_date })) };
+      }
+    }
+    // Orden garantizado en cliente (fecha + hora) aunque el esquema sea legacy.
+    state.upcoming = (upRes.data || []).sort((a, b) =>
+      (String(a.activity_date || '') + (a.start_time || ''))
+        .localeCompare(String(b.activity_date || '') + (b.start_time || ''))
+    );
     if (state.upcoming.length) {
       const ids = state.upcoming.map(a => a.id);
       const { data: ev } = await supabase.from('school_activity_evidences')
@@ -527,19 +542,26 @@ function _statsHTML() {
 }
 
 function _upcomingHTML() {
-  if (state.mode !== 'parent' || !state.upcoming.length) return '';
+  if (!state.upcoming.length) return '';
+  const list = [...state.upcoming].sort((a, b) =>
+    (String(a.activity_date || a.scheduled_date || '') + (a.start_time || a.scheduled_time || ''))
+      .localeCompare(String(b.activity_date || b.scheduled_date || '') + (b.start_time || b.scheduled_time || ''))
+  );
   return `
     <div class="sa-anim bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
       <div class="p-4 md:p-5 border-b border-slate-100 flex items-center gap-3">
         <div class="w-10 h-10 rounded-2xl bg-amber-50 flex items-center justify-center"><span class="text-lg">📌</span></div>
         <div><h3 class="font-black text-slate-800 text-sm">Próximas Actividades</h3>
-        <p class="text-[10px] font-black text-slate-400 uppercase tracking-wider">Doble clic sobre una actividad para leerla completa</p></div>
+        <p class="text-[10px] font-black text-slate-400 uppercase tracking-wider">En orden de fecha · doble clic para leer completo</p></div>
       </div>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-3 p-4">
-        ${state.upcoming.map(a => {
+        ${list.map(a => {
           const c = catOf(a.category);
-          const d = new Date(`${a.activity_date}T12:00:00`);
-          const dateLabel = `${d.getDate()} ${MONTH_NAMES[d.getMonth()].slice(0, 3).toUpperCase()}`;
+          const raw = a.activity_date || a.scheduled_date || '';
+          const d = new Date(`${raw}T12:00:00`);
+          const dateLabel = !raw || isNaN(d)
+            ? 'Sin fecha'
+            : `${d.getDate()} ${MONTH_NAMES[d.getMonth()].slice(0, 3).toUpperCase()}`;
           const shots = state.upcomingEvidence?.get(a.id) || 0;
           return `
           <button data-sa-dblopen="${a.id}" title="Doble clic para leer completo"

@@ -799,16 +799,6 @@ export const ChatModule = {
       </div>
 
       <div class="m-info-card">
-        <div class="m-info-card__title">Acciones rápidas</div>
-        <div class="m-info-actions">
-          <button class="m-info-action"><i data-lucide="phone" class="w-4 h-4"></i><span>Llamar</span></button>
-          <button class="m-info-action"><i data-lucide="video" class="w-4 h-4"></i><span>Videollamada</span></button>
-          <button class="m-info-action"><i data-lucide="search" class="w-4 h-4"></i><span>Buscar</span></button>
-          <button class="m-info-action"><i data-lucide="bell-off" class="w-4 h-4"></i><span>Silenciar</span></button>
-        </div>
-      </div>
-
-      <div class="m-info-card">
         <div class="m-info-card__title">Archivos compartidos</div>
         <div class="m-info-empty">
           <i data-lucide="folder-open" class="w-6 h-6"></i>

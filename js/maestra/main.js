@@ -901,24 +901,43 @@ function _applyContactBadge(senderId) {
  * sumaban la aula activa.
  */
 async function initDashboard() {
-  const classroom = AppState.get('classroom');
-  if (!classroom) return;
-
   try {
     const today = AppState.today();
     const startOfDay = `${today}T00:00:00Z`;
     const endOfDay   = `${today}T23:59:59Z`;
 
-    // 1. Lista completa de aulas (ya sanitizada y deduplicada en el boot).
-    const allRooms = (AppState.get('classrooms') || []).filter(r => r?.id);
-    const rooms = allRooms.length ? allRooms : [classroom];
+    // 1. Aulas: AppState → aula activa → query al servidor. El KPI nunca
+    //    debe quedarse en "-" / 0 solo porque el aula activa no estaba lista.
+    let allRooms = (AppState.get('classrooms') || []).filter(r => r?.id);
+    const classroom = AppState.get('classroom');
+    if (!allRooms.length && classroom?.id) allRooms = [classroom];
+    if (!allRooms.length) {
+      const uid = AppState.get('user')?.id || null;
+      if (uid) {
+        const { data: teacherRooms } = await supabase
+          .from('classrooms')
+          .select('id, name, level')
+          .eq('teacher_id', uid)
+          .is('deleted_at', null);
+        allRooms = (teacherRooms || []).filter(r => r?.id);
+      }
+    }
+    if (!allRooms.length) return;
+    const rooms = allRooms;
 
-    // 2. Datos POR AULA en paralelo. allSettled por query: si un aula o una
-    //    query falla, el resto del grid sigue pintándose (y se reporta).
+    // 2. Datos POR AULA. Primero alumnos (necesitamos sus ids para el
+    //    fallback de asistencia), luego asistencia + incidentes en paralelo.
     const perRoom = await Promise.all(rooms.map(async (room) => {
+      const s0 = await MaestraApi.getStudentsByClassroom(room.id).catch((err) => {
+        console.warn(`[maestra:dashboard] getStudentsByClassroom falló (aula ${room.id}):`, err);
+        _reportError('dashboard_query', err, { query: 'getStudentsByClassroom', classroom_id: room.id });
+        return [];
+      });
+      const students = Array.isArray(s0) ? s0 : [];
+      const studentIds = students.map(s => s.id).filter(Boolean);
+
       const settled = await Promise.allSettled([
-        MaestraApi.getStudentsByClassroom(room.id),
-        MaestraApi.getAttendance(room.id, today),
+        MaestraApi.getAttendance(room.id, today, studentIds),
         supabase
           .from('incidents')
           .select('id', { count: 'exact', head: true })
@@ -929,19 +948,17 @@ async function initDashboard() {
 
       settled.forEach((r, i) => {
         if (r.status !== 'rejected') return;
-        const names = ['getStudentsByClassroom', 'getAttendance', 'count_incidents'];
+        const names = ['getAttendance', 'count_incidents'];
         console.warn(`[maestra:dashboard] ${names[i]} falló (aula ${room.id}):`, r.reason);
         _reportError('dashboard_query', r.reason, { query: names[i], classroom_id: room.id });
       });
 
       const pick = (i, fb) => (settled[i].status === 'fulfilled' ? (settled[i].value ?? fb) : fb);
-      const s0 = pick(0, []);
-      const s1 = pick(1, []);
-      const students   = Array.isArray(s0) ? s0 : [];
+      const s1 = pick(0, []);
       const attendance = Array.isArray(s1) ? s1 : [];
       const present    = attendance.filter(a => ['present', 'late'].includes(a.status)).length;
 
-      return { room, students, attendance, present, incidents: pick(2, { count: 0 })?.count || 0 };
+      return { room, students, attendance, present, incidents: pick(1, { count: 0 })?.count || 0 };
     }));
 
     const dash = perRoom.filter(Boolean);
@@ -956,7 +973,7 @@ async function initDashboard() {
     };
 
     // La pestaña "Estudiantes" y los demás módulos siguen sobre el aula ACTIVA.
-    const active = dash.find(d => String(d.room.id) === String(classroom.id)) || dash[0];
+    const active = dash.find(d => classroom && String(d.room.id) === String(classroom.id)) || dash[0];
     AppState.set('students', active.students);
 
     UI.updateDashboardStats(totals);
@@ -966,7 +983,7 @@ async function initDashboard() {
     _updateTasksToGradeWidget(rooms.map(r => r.id));
 
     // Grid de Aulas (Home) — 1 tarjeta por aula, paleta Sonrisas Creativas
-    _renderClassroomCards(dash, classroom.id);
+    _renderClassroomCards(dash, classroom?.id || active.room.id);
 
     // Grid de Estudiantes (Tab) — Paleta Sonrisas Creativas
     const students = active.students;

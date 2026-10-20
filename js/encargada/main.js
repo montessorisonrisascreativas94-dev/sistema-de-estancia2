@@ -544,8 +544,6 @@ async function loadChat() {
               <div class="m-chat-header__meta" id="mChatActiveMeta">Elige a quién escribirle</div>
             </div>
             <div class="m-chat-header__actions">
-              <button class="m-chat-header__btn" title="Llamar"><i data-lucide="phone" class="w-4 h-4"></i></button>
-              <button class="m-chat-header__btn" title="Videollamada"><i data-lucide="video" class="w-4 h-4"></i></button>
               <button class="m-chat-header__btn" title="Más opciones"><i data-lucide="more-vertical" class="w-4 h-4"></i></button>
             </div>
           </div>
@@ -559,13 +557,8 @@ async function loadChat() {
           </div>
 
           <div class="m-chat-input">
-            <div class="m-chat-input__tools">
-              <button class="m-chat-input__tool" title="Adjuntar imagen" type="button"><i data-lucide="image" class="w-4 h-4"></i></button>
-              <button class="m-chat-input__tool" title="Adjuntar archivo" type="button"><i data-lucide="paperclip" class="w-4 h-4"></i></button>
-            </div>
             <div class="m-chat-input__wrap">
               <textarea id="mChatInput" rows="1" placeholder="Escribe un mensaje…"></textarea>
-              <button class="m-chat-input__emoji" type="button" title="Emoji">😊</button>
             </div>
             <button id="mChatSendBtn" class="m-chat-input__send" type="button">
               <i data-lucide="send" class="w-4 h-4"></i>

@@ -1203,6 +1203,16 @@ export const NotificationCenter = {
   /* 🔄 REFRESH (fuente única — COUNT y SELECT alineados) */
   async refresh() {
     if (!_state.userId) return null;
+    // ✅ Evita la cascada de 401 cuando el access token expiró o la sesión
+    // aún no se restaura: sin sesión válida no se consulta nada.
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return null;
+      const expiresAt = session.expires_at ? session.expires_at * 1000 : 0;
+      if (expiresAt && expiresAt < Date.now() + 30000) {
+        await supabase.auth.refreshSession();
+      }
+    } catch (_) { return null; }
     const els = _ncEls();
     if (els.list) els.list.innerHTML = _ncSkeleton();
     if (els.grouped) els.grouped.innerHTML = '';

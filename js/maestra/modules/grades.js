@@ -537,6 +537,24 @@ function _overallFor(studentId) {
 function _renderBoletines() {
   const content = document.getElementById('tGradeContent');
   if (!content) return;
+
+  // ✅ Sin evaluación configurada: en vez de una tabla vacía en 0, guiamos
+  // a la maestra para crear el boletín del período en un clic.
+  if (!_evals.length || !_actEvalId) {
+    content.innerHTML = `
+      <div class="p-10 text-center">
+        <div class="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl" style="background:#FFF7ED">🗓️</div>
+        <h3 class="text-lg font-black text-slate-800 mb-1">Aún no existe un boletín para este ciclo</h3>
+        <p class="text-sm text-slate-500 font-medium max-w-md mx-auto">Crea el boletín del período y el sistema generará automáticamente las áreas, períodos y actividades con las que calificarás a tus estudiantes.</p>
+        <button id="tGradeCreateEval" class="mt-5 px-6 py-3 rounded-2xl text-white text-sm font-black transition-all active:scale-95" style="background:${GREEN};box-shadow:0 6px 18px rgba(40,181,77,.3)">
+          Crear boletín del período
+        </button>
+      </div>`;
+    document.getElementById('tGradeCreateEval')?.addEventListener('click', createEvaluation);
+    if (window.lucide) lucide.createIcons();
+    return;
+  }
+
   if (!_students.length) {
     content.innerHTML = _emptyState('No hay alumnos en esta aula', '👨‍🎓');
     return;
@@ -600,6 +618,35 @@ function _renderBoletines() {
     </div>`;
 
   if (window.lucide) lucide.createIcons();
+}
+
+// Crea el boletín del ciclo + su estructura (áreas/períodos/actividades).
+export async function createEvaluation() {
+  try {
+    const uid = await _currentUserId();
+    const year = new Date().getFullYear();
+    const { data: created, error } = await supabase
+      .from('eval_evaluations')
+      .insert({
+        name: `Boletín ${year}`,
+        structure_label: 'Período Escolar',
+        status: 'active',
+        created_by: uid
+      })
+      .select()
+      .single();
+    if (error) throw error;
+
+    const { error: rpcErr } = await supabase.rpc('boletin_ensure_structure', { p_evaluation_id: created.id });
+    if (rpcErr) console.warn('[Calificaciones] boletin_ensure_structure:', rpcErr.message || rpcErr);
+
+    Helpers.toast('Boletín creado. Ya puedes calificar a tus estudiantes.', 'success');
+    await _loadEvalBase();
+    await _loadBoletines();
+  } catch (e) {
+    console.warn('[Calificaciones] No se pudo crear el boletín:', e);
+    Helpers.toast('No se pudo crear el boletín. Verifica tus permisos.', 'error');
+  }
 }
 
 async function openBoletin(studentId) {
@@ -1162,5 +1209,6 @@ export const MaestraGrades = {
   init: initGradesCenter,
   saveAll,
   openBoletin,
+  createEvaluation,
 };
 window.MaestraGrades = MaestraGrades;

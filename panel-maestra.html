@@ -176,6 +176,19 @@
     .stat-block * { color: white !important; }
     .stat-block:hover { transform: translateY(-4px); }
     .stat-block svg { opacity: 0.85; transform: rotate(-10deg); position: absolute; right: -10px; bottom: -10px; width: 80px; height: 80px; }
+    /* Barra de progreso del indicador de asistencia */
+    .stat-bar {
+      margin-top: 10px; height: 8px; border-radius: 999px;
+      background: rgba(255,255,255,.25); overflow: hidden; max-width: 70%;
+    }
+    .stat-bar__fill {
+      height: 100%; border-radius: 999px; background: #fff;
+      transition: width .6s ease; box-shadow: 0 0 8px rgba(255,255,255,.6);
+    }
+    .stat-sub {
+      display: block; margin-top: 6px; font-size: 10px; font-weight: 800;
+      text-transform: uppercase; letter-spacing: .05em; opacity: .9;
+    }
 
     /* ═══════════════════════════════════════════════
        TABS DE AULA — scroll horizontal sin romper body
@@ -691,11 +704,14 @@
           <div class="stat-block sb-orange">
             <h3 id="statIncidents">-</h3>
             <p>Incidentes Hoy</p>
+            <span class="stat-sub" id="statIncidentsSub">Cargando…</span>
             <i data-lucide="alert-circle"></i>
           </div>
           <div class="stat-block sb-purple">
             <h3 id="statPresent">-</h3>
             <p>Asistencia Hoy</p>
+            <div class="stat-bar"><div class="stat-bar__fill" id="statPresentBar" style="width:0%"></div></div>
+            <span class="stat-sub" id="statPresentPct">Registrando…</span>
             <i data-lucide="calendar-check"></i>
           </div>
         </div>
@@ -907,8 +923,6 @@
                 <div class="m-chat-header__meta" id="mChatActiveMeta">Elige a quién escribirle</div>
               </div>
               <div class="m-chat-header__actions">
-                <button class="m-chat-header__btn" title="Llamar"><i data-lucide="phone" class="w-4 h-4"></i></button>
-                <button class="m-chat-header__btn" title="Videollamada"><i data-lucide="video" class="w-4 h-4"></i></button>
                 <button class="m-chat-header__btn" title="Más opciones"><i data-lucide="more-vertical" class="w-4 h-4"></i></button>
               </div>
             </div>
@@ -922,13 +936,8 @@
             </div>
 
             <div class="m-chat-input">
-              <div class="m-chat-input__tools">
-                <button class="m-chat-input__tool" title="Adjuntar imagen" type="button"><i data-lucide="image" class="w-4 h-4"></i></button>
-                <button class="m-chat-input__tool" title="Adjuntar archivo" type="button"><i data-lucide="paperclip" class="w-4 h-4"></i></button>
-              </div>
               <div class="m-chat-input__wrap">
                 <textarea id="mChatInput" rows="1" placeholder="Escribe un mensaje…"></textarea>
-                <button class="m-chat-input__emoji" type="button" title="Emoji"><i data-lucide="smile" class="w-5 h-5"></i></button>
               </div>
               <button id="mChatSendBtn" class="m-chat-input__send" type="button">
                 <i data-lucide="send" class="w-4 h-4"></i>

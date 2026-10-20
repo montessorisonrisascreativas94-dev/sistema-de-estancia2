@@ -272,33 +272,6 @@ export const ChatModule = {
           </div>
         </div>
       </div>
-
-      <div class="m-info-card">
-        <div class="m-info-card__title">Acciones rápidas</div>
-        <div style="display:flex;flex-direction:column;gap:.35rem;">
-          <div class="m-info-listitem" role="button">
-            <div class="m-info-listitem__icon"><i data-lucide="phone" class="w-4 h-4"></i></div>
-            <div class="m-info-listitem__body">
-              <div class="m-info-listitem__label">Llamar</div>
-              <div class="m-info-listitem__sub">Aviso: necesita permiso</div>
-            </div>
-          </div>
-          <div class="m-info-listitem" role="button">
-            <div class="m-info-listitem__icon"><i data-lucide="search" class="w-4 h-4"></i></div>
-            <div class="m-info-listitem__body">
-              <div class="m-info-listitem__label">Buscar en conversación</div>
-              <div class="m-info-listitem__sub">Palabras clave</div>
-            </div>
-          </div>
-          <div class="m-info-listitem" role="button">
-            <div class="m-info-listitem__icon"><i data-lucide="flag" class="w-4 h-4"></i></div>
-            <div class="m-info-listitem__body">
-              <div class="m-info-listitem__label">Reportar mensaje</div>
-              <div class="m-info-listitem__sub">Solo si es necesario</div>
-            </div>
-          </div>
-        </div>
-      </div>
     `;
     if (window.lucide) lucide.createIcons();
   },

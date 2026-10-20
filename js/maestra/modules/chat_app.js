@@ -426,13 +426,7 @@ function renderInfoPanel(c) {
         </div>
       </div>
     </div>
-    <div class="m-info-card">
-      <div class="m-info-card__title">Acciones rápidas</div>
-      <div style="display:flex;flex-direction:column;gap:.35rem;">
-        <div class="m-info-listitem"><div class="m-info-listitem__icon"><i data-lucide="phone" class="w-4 h-4"></i></div><div class="m-info-listitem__body"><div class="m-info-listitem__label">Llamar</div><div class="m-info-listitem__sub">Necesita permiso</div></div></div>
-        <div class="m-info-listitem"><div class="m-info-listitem__icon"><i data-lucide="search" class="w-4 h-4"></i></div><div class="m-info-listitem__body"><div class="m-info-listitem__label">Buscar en chat</div><div class="m-info-listitem__sub">Palabras clave</div></div></div>
-      </div>
-    </div>`;
+    `;
   if (window.lucide) lucide.createIcons();
 }
 

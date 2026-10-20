@@ -192,8 +192,26 @@ export const updateDashboardStats = (stats = {}) => {
     if (el) el.textContent = val;
   };
   if (stats.students !== undefined) set('statStudents', stats.students);
-  if (stats.present !== undefined) set('statPresent', stats.present);
-  if (stats.incidents !== undefined) set('statIncidents', stats.incidents);
+  if (stats.present !== undefined) {
+    // ✅ Indicador de asistencia: nunca un "0" a secas. Muestra fracción,
+    // porcentaje y barra de progreso para que sea legible de un vistazo.
+    if (stats.students > 0) {
+      const pct = Math.round((stats.present / stats.students) * 100);
+      set('statPresent', `${stats.present}/${stats.students}`);
+      set('statPresentPct', pct >= 70 ? `${pct}% presente · ¡Muy bien!` : `${pct}% presente`);
+      const bar = document.getElementById('statPresentBar');
+      if (bar) bar.style.width = `${Math.max(pct, 2)}%`;
+    } else {
+      set('statPresent', String(stats.present));
+      set('statPresentPct', stats.present > 0 ? 'Registrados' : 'Sin registro hoy');
+      const bar = document.getElementById('statPresentBar');
+      if (bar) bar.style.width = '0%';
+    }
+  }
+  if (stats.incidents !== undefined) {
+    set('statIncidents', stats.incidents);
+    set('statIncidentsSub', stats.incidents > 0 ? 'Revisa el detalle' : 'Día tranquilo');
+  }
   if (stats.classes !== undefined) set('statClasses', stats.classes);
 };
 

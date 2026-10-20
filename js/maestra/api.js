@@ -75,7 +75,7 @@ export const MaestraApi = {
     return result;
   },
 
-  async getAttendance(classroomId, date) {
+  async getAttendance(classroomId, date, studentIds = null) {
     const cached = _getCache('getAttendance', classroomId, date);
     if (cached) return cached;
 
@@ -98,7 +98,21 @@ export const MaestraApi = {
     }
 
     const fb = handleError(res.error, []);
-    const result = fb !== null ? fb : (res.data || []);
+    let result = fb !== null ? fb : (res.data || []);
+
+    // ✅ Fallback: registros con classroom_id NULL (escritos antes de la columna)
+    // no matchean el filtro del aula y dejaban el indicador en 0 para siempre.
+    if (!result.length && Array.isArray(studentIds) && studentIds.length) {
+      const { data: byStudents, error: byErr } = await supabase
+        .from(TABLES.ATTENDANCE)
+        .select(FULL_COLS)
+        .in('student_id', studentIds)
+        .eq('date', date);
+      if (!byErr && Array.isArray(byStudents) && byStudents.length) {
+        result = byStudents;
+      }
+    }
+
     _setCache('getAttendance', result, 30000, classroomId, date);
     return result;
   },
