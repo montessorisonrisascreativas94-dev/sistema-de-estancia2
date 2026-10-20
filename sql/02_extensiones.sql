@@ -1,3 +1,4 @@
+-- NOTA: este archivo contiene ademas bloques CONSOLIDADOS de los antiguos sql/11-30 (buscar "BLOQUE CONSOLIDADO" al final).
 -- ============================================================
 -- 02_extensiones.sql — Colegio Montessori Sonrisas Creativas
 -- Contenido: sección 10 (CONFIGURACION DE STORAGE)
@@ -72,8 +73,7 @@ CREATE POLICY "invoices_auth_insert" ON storage.objects FOR INSERT WITH CHECK (b
 DROP POLICY IF EXISTS "invoices_auth_update" ON storage.objects;
 CREATE POLICY "invoices_auth_update" ON storage.objects FOR UPDATE USING (bucket_id = 'invoices' AND auth.role() = 'authenticated');
 
--- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
--- CONSOLIDADO DESDE migrations\ (historial) â€” aÃ±adido automÃ¡ticamente
+
 -- Fecha: 2026-09-12 21:41
 
 
@@ -81,3 +81,32 @@ INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_typ
 VALUES ('invoices', 'invoices', true, 10485760,
   ARRAY['application/pdf','image/png','image/jpeg'])
 ON CONFLICT (id) DO NOTHING;
+
+
+-- #################################################################
+-- BLOQUE CONSOLIDADO DESDE los antiguos sql/11-30
+-- (integrado el 2026-10-19; idempotente y re-ejecutable)
+-- #################################################################
+-- Realtime: `messages` no estaba en la publicación supabase_realtime,
+-- así que el badge de no leídos solo se actualizaba al recargar.
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_publication_tables
+    WHERE pubname = 'supabase_realtime'
+      AND schemaname = 'public'
+      AND tablename  = 'messages'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.messages;
+  END IF;
+END
+$$;
+
+-- Necesario para que el UPDATE que marca is_read=true llegue con la
+-- fila anterior y el cliente pueda restar el contador sin releer.
+ALTER TABLE public.messages REPLICA IDENTITY FULL;
+
+DO $$ BEGIN
+  ALTER PUBLICATION supabase_realtime ADD TABLE public.school_activities;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;

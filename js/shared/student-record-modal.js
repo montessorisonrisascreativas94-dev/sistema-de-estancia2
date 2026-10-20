@@ -159,7 +159,7 @@ let _state = { mode: 'new', studentId: null, preData: null, activeTab: 'info', d
       </div>
       <h3>${Helpers.escapeHTML(title || '¡Listo!')}</h3>
       ${subtitle ? `<p>${Helpers.escapeHTML(subtitle)}</p>` : ''}
-      ${emailSent && email ? `<span class="srm-success-mail"><i data-lucide="mail-check" style="width:13px;height:13px"></i> Correo enviado a ${Helpers.escapeHTML(email)}</span>` : ''}`;
+      ${emailSent && email ? (() => { const multi = String(email).includes(','); return `<span class="srm-success-mail"><i data-lucide="mail-check" style="width:13px;height:13px"></i> Correo${multi ? 's' : ''} enviado${multi ? 's' : ''} a ${Helpers.escapeHTML(email)}</span>`; })() : ''}`;
     modal.appendChild(ov);
     if (window.lucide) { try { lucide.createIcons({ root: ov }); } catch (_) {} }
     await new Promise((r) => setTimeout(r, reduced ? 450 : 1400));
@@ -1052,7 +1052,9 @@ let _state = { mode: 'new', studentId: null, preData: null, activeTab: 'info', d
   async _sendTestWelcomeEmail() {
     this._captureDraft();
     const data = this._collectFormData();
-    const email = _state.draft['srm-emailnotif'] || data.p1_email;
+    const primaryEmail = _state.draft['srm-emailnotif'] || data.p1_email;
+    const emailList = this._parentEmailList(primaryEmail, data.p1_email, data.p2_email);
+    const email = this._emailRecipientsTxt(emailList) || primaryEmail;
     if (!email) return Helpers.toast('Ingresa un correo de notificaciones para la prueba', 'warning');
     const loginEmail = _state.draft['srm-emailuser']
       || buildStudentParentLoginEmail({
@@ -1083,10 +1085,10 @@ let _state = { mode: 'new', studentId: null, preData: null, activeTab: 'info', d
         email: loginEmail, password, monthlyFee: fee, isTest: false
       });
       const subject = `Bienvenido(a) ${studentName} — Matrícula ${matricula}`;
-      const ok = await this._sendEmailViaEdge({ to: email, subject, html, text });
+      const ok = await this._sendEmailViaEdge({ to: emailList.length ? emailList : email, subject, html, text });
       if (ok) {
-        Helpers.toast('Correo enviado a ' + email, 'success');
-        this._setCredStatus('success', '¡Correo de prueba enviado!', 'Entregado a ' + email);
+        Helpers.toast(emailList.length > 1 ? 'Correo de prueba enviado a los 2 tutores: ' + email : 'Correo enviado a ' + email, 'success');
+        this._setCredStatus('success', '¡Correo de prueba enviado!', (emailList.length > 1 ? 'Entregado a los 2 tutores: ' : 'Entregado a ') + email);
       } else {
         Helpers.toast(this._emailErrorHint(' Revisa RESEND_API_KEY / FROM_EMAIL en la Edge Function.'), 'warning');
         this._setCredStatus('error', 'No se pudo enviar el correo', this._emailErrorHint(' Revisa RESEND_API_KEY / FROM_EMAIL.'));
@@ -1162,6 +1164,30 @@ let _state = { mode: 'new', studentId: null, preData: null, activeTab: 'info', d
     _emailErrorHint(suffix = '') {
       const why = _state.lastEmailError || 'Error desconocido.';
       return `${why}${suffix}`;
+    },
+
+    /**
+     * Une los correos de los DOS tutores (principal + secundario) en una
+     * lista única, válida y sin duplicados. Acepta strings con comas
+     * ("a@x.com, b@y.com") y arrays anidados.
+     */
+    _parentEmailList(...candidates) {
+      const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      const seen = new Set();
+      const out = [];
+      const push = (raw) => {
+        String(raw || '').split(/[,;\s]+/).forEach((e) => {
+          const v = e.trim().toLowerCase();
+          if (v && re.test(v) && !seen.has(v)) { seen.add(v); out.push(v); }
+        });
+      };
+      candidates.flat(Infinity).forEach(push);
+      return out;
+    },
+
+    /** "a@x.com, b@y.com" (o "a@x.com" si solo hay uno). */
+    _emailRecipientsTxt(list) {
+      return (Array.isArray(list) ? list : [list]).filter(Boolean).join(', ');
     },
 
   _buildWelcomeEmailText({ p1Name, studentName, matricula, classroom, level, schedule, email, password, monthlyFee, isTest, notificationEmail }) {
@@ -1694,6 +1720,10 @@ let _state = { mode: 'new', studentId: null, preData: null, activeTab: 'info', d
       || payload.p1_email
       || payload.p2_email
       || '';
+    // ✅ El correo de credenciales se envía a LOS DOS tutores: el
+    // notificaciones del tutor principal + el correo del tutor secundario.
+    const parentEmails = this._parentEmailList(notificationEmail, payload.p1_email, payload.p2_email);
+    const recipientsTxt = this._emailRecipientsTxt(parentEmails) || notificationEmail;
     // ✅ REGLA NUEVA: contraseña temporal SIEMPRE es sonrisa123 (minúscula).
     // Si el draft trae algo distinto se fuerza a la predeterminada.
     const parentPassword = STUDENT_DEFAULT_PASSWORD;
@@ -1929,16 +1959,16 @@ let _state = { mode: 'new', studentId: null, preData: null, activeTab: 'info', d
         const html = this._buildWelcomeEmailTemplate({
           p1Name, studentName, matricula, classroom: classroomName, level: levelName,
           schedule: scheduleTxt, email: parentEmail, password: parentPassword,
-          monthlyFee: fee, isTest: false, notificationEmail, planType
+          monthlyFee: fee, isTest: false, notificationEmail: recipientsTxt, planType
         });
         const text = this._buildWelcomeEmailText({
           p1Name, studentName, matricula, classroom: classroomName, level: levelName,
           schedule: scheduleTxt, email: parentEmail, password: parentPassword,
-          monthlyFee: fee, isTest: false
+          monthlyFee: fee, isTest: false, notificationEmail: recipientsTxt
         });
-        // Se envía al correo de NOTIFICACIONES de la familia, no al de
-        // login: el institucional es solo para autenticarse.
-        emailSent = await this._sendEmailViaEdge({ to: notificationEmail, subject, html, text });
+        // Se envía a LOS DOS correos de los tutores (principal y
+        // secundario), nunca al institucional de login.
+        emailSent = await this._sendEmailViaEdge({ to: parentEmails.length ? parentEmails : notificationEmail, subject, html, text });
         if (emailSent && preId) {
           await supabase.from('student_preregistrations')
             .update({ credentials_sent_at: new Date().toISOString() })
@@ -1950,7 +1980,7 @@ let _state = { mode: 'new', studentId: null, preData: null, activeTab: 'info', d
           const retryHTML = `
             <div id="${retryBtnId}" style="margin-top:8px" class="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-[12px] text-amber-800 font-bold">
               <span>Credenciales creadas pero el correo no llegó. ${Helpers.escapeHTML(this._emailErrorHint(' Revisa RESEND_API_KEY / FROM_EMAIL en la Edge Function.'))}</span>
-              <button onclick="StudentRecordModal._sendWelcomeEmailRetry({to:'${Helpers.escapeHTML(notificationEmail)}',studentName:'${Helpers.escapeHTML(studentName)}',matricula:'${Helpers.escapeHTML(matricula)}',classroom:'${Helpers.escapeHTML(classroomName)}',level:'${Helpers.escapeHTML(levelName || '')}',schedule:'${Helpers.escapeHTML(scheduleTxt)}',email:'${Helpers.escapeHTML(parentEmail)}',password:'${Helpers.escapeHTML(parentPassword)}',fee:${fee}})"
+              <button onclick="StudentRecordModal._sendWelcomeEmailRetry({to:'${Helpers.escapeHTML(recipientsTxt)}',studentName:'${Helpers.escapeHTML(studentName)}',matricula:'${Helpers.escapeHTML(matricula)}',classroom:'${Helpers.escapeHTML(classroomName)}',level:'${Helpers.escapeHTML(levelName || '')}',schedule:'${Helpers.escapeHTML(scheduleTxt)}',email:'${Helpers.escapeHTML(parentEmail)}',password:'${Helpers.escapeHTML(parentPassword)}',fee:${fee}})"
                 class="ml-auto inline-flex items-center gap-1.5 rounded-lg bg-amber-600 text-white px-3 py-1.5 text-xs font-black shadow hover:bg-amber-700 active:scale-95">
                 <i data-lucide="send" class="w-3 h-3"></i> Reenviar
               </button>
@@ -1968,7 +1998,9 @@ let _state = { mode: 'new', studentId: null, preData: null, activeTab: 'info', d
 
       Helpers.toast(
         '¡Admisión exitosa! ' + (emailSent
-          ? 'Credenciales enviadas a ' + notificationEmail
+          ? (parentEmails.length > 1
+              ? 'Credenciales enviadas a los 2 tutores: ' + recipientsTxt
+              : 'Credenciales enviadas a ' + recipientsTxt)
           : 'Estudiante admitido; el correo no salió — usa Reenviar'),
         'success',
         { duration: 6000 }
@@ -1983,7 +2015,7 @@ let _state = { mode: 'new', studentId: null, preData: null, activeTab: 'info', d
           ? `${studentName} · Matrícula ${matricula}`
           : `${studentName} quedó admitido. El correo está pendiente de reenvío.`,
         emailSent,
-        email: notificationEmail,
+        email: recipientsTxt,
       });
 
       this.close();
@@ -2027,6 +2059,10 @@ let _state = { mode: 'new', studentId: null, preData: null, activeTab: 'info', d
   async _sendWelcomeEmailRetry({ to, studentName, matricula, classroom, level, schedule, email, password, fee }) {
     Helpers.toast('Reenviando correo de bienvenida...', 'info');
     try {
+      // `to` puede traer los DOS correos de los tutores separados por coma.
+      const toList = this._parentEmailList(to);
+      const toTarget = toList.length ? toList : to;
+      const toTxt = this._emailRecipientsTxt(toList) || String(to || '');
       const p1Name = _state.draft['srm-p1name'] || _state.data?.p1_name || 'Familia';
       const subject = `¡Admisión aprobada! ${studentName} — Matrícula ${matricula} · Credenciales de acceso`;
       const html = this._buildWelcomeEmailTemplate({
@@ -2037,10 +2073,10 @@ let _state = { mode: 'new', studentId: null, preData: null, activeTab: 'info', d
         p1Name, studentName, matricula, classroom, level, schedule,
         email: email || to, password, monthlyFee: fee || 0, isTest: false
       });
-      const ok = await this._sendEmailViaEdge({ to, subject, html, text });
+      const ok = await this._sendEmailViaEdge({ to: toTarget, subject, html, text });
       if (ok) {
-        Helpers.toast('¡Correo reenviado a ' + to + '!', 'success');
-        this._setCredStatus('success', '¡Credenciales enviadas!', 'Correo reenviado a ' + to);
+        Helpers.toast('¡Correo reenviado a ' + toTxt + '!', 'success');
+        this._setCredStatus('success', '¡Credenciales enviadas!', 'Correo reenviado a ' + toTxt);
         const el = document.querySelector('[onclick*="_sendWelcomeEmailRetry"]')?.closest('[id^="retry-email-"]');
         if (el) el.remove();
       } else {
@@ -2203,6 +2239,10 @@ let _state = { mode: 'new', studentId: null, preData: null, activeTab: 'info', d
       || data.p1_email
       || data.p2_email
       || '';
+    // ✅ Credenciales para LOS DOS tutores: notificaciones del principal
+    // y el correo personal del tutor secundario.
+    const parentEmails = this._parentEmailList(notificationEmail, data.p1_email, data.p2_email);
+    const recipientsTxt = this._emailRecipientsTxt(parentEmails) || notificationEmail;
     const password = _state.draft['srm-password']
       || document.getElementById('srm-password')?.value?.trim()
       || _state.data?.password
@@ -2214,7 +2254,7 @@ let _state = { mode: 'new', studentId: null, preData: null, activeTab: 'info', d
     const sendBtns = Array.from(document.querySelectorAll('#srm-overlay [onclick*="sendCredentials"]'));
     sendBtns.forEach((b) => this._setButtonLoading(b, true));
     this._setModalBusy(true);
-    this._setCredStatus('pending', 'Enviando credenciales…', 'Preparando el correo para ' + notificationEmail);
+    this._setCredStatus('pending', 'Enviando credenciales…', (parentEmails.length > 1 ? 'Preparando el correo para los 2 tutores: ' : 'Preparando el correo para ') + recipientsTxt);
     try {
 
     const p1Name = data.p1_name || 'Familia';
@@ -2331,22 +2371,25 @@ let _state = { mode: 'new', studentId: null, preData: null, activeTab: 'info', d
       }
     }
 
-    Helpers.toast('Paso 3/3 — Enviando credenciales a ' + notificationEmail + '...', 'info');
+    Helpers.toast('Paso 3/3 — Enviando credenciales a ' + recipientsTxt + '...', 'info');
     const subject = `Credenciales Portal de Padres · ${studentName} (${matricula})`;
     const html = this._buildWelcomeEmailTemplate({
       p1Name, studentName, matricula, classroom, level, schedule,
       email: loginEmail, password, monthlyFee: fee, isTest: false,
-      notificationEmail, planType,
+      notificationEmail: recipientsTxt, planType,
     });
     const text = this._buildWelcomeEmailText({
       p1Name, studentName, matricula, classroom, level, schedule,
-      email: loginEmail, password, monthlyFee: fee, isTest: false
+      email: loginEmail, password, monthlyFee: fee, isTest: false,
+      notificationEmail: recipientsTxt,
     });
-    const ok = await this._sendEmailViaEdge({ to: notificationEmail, subject, html, text });
+    const ok = await this._sendEmailViaEdge({ to: parentEmails.length ? parentEmails : notificationEmail, subject, html, text });
     if (ok) {
       const sentAt = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      Helpers.toast('Credenciales enviadas a ' + notificationEmail, 'success');
-      this._setCredStatus('success', '¡Credenciales enviadas!', `Correo entregado a ${notificationEmail} · ${sentAt}`);
+      Helpers.toast(parentEmails.length > 1
+        ? 'Credenciales enviadas a los 2 tutores: ' + recipientsTxt
+        : 'Credenciales enviadas a ' + recipientsTxt, 'success');
+      this._setCredStatus('success', '¡Credenciales enviadas!', (parentEmails.length > 1 ? `Correos entregados a los 2 tutores: ${recipientsTxt}` : `Correo entregado a ${recipientsTxt}`) + ` · ${sentAt}`);
       const preview = document.getElementById('srm-credpreview');
       if (preview) { preview.classList.remove('srm-flash'); void preview.offsetWidth; preview.classList.add('srm-flash'); }
       const preId = _state.preData?._preId || _state.preData?.id;

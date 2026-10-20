@@ -1,3 +1,4 @@
+-- NOTA: este archivo contiene ademas bloques CONSOLIDADOS de los antiguos sql/11-30 (buscar "BLOQUE CONSOLIDADO" al final).
 -- ============================================================
 -- 03_seguridad.sql — Colegio Montessori Sonrisas Creativas
 -- Contenido: sección 6 (HABILITAR ROW LEVEL SECURITY (RLS))
@@ -74,10 +75,6 @@ ALTER TABLE public.caja_sessions           ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.accounting_journal      ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.payroll_records         ENABLE ROW LEVEL SECURITY;
 
--- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
--- CONSOLIDADO DESDE migrations\ (historial) â€” aÃ±adido automÃ¡ticamente
--- Fecha: 2026-09-12 21:41
--- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 ALTER TABLE public.student_preregistrations ENABLE ROW LEVEL SECURITY;
 
@@ -334,3 +331,24 @@ BEGIN
     GRANT EXECUTE ON FUNCTION public.convert_preregistration TO authenticated;
   END IF;
 END $do$;
+
+
+-- #################################################################
+-- BLOQUE CONSOLIDADO DESDE los antiguos sql/11-30
+-- (integrado el 2026-10-19; idempotente y re-ejecutable)
+-- #################################################################
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.school_activities TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.school_activities TO anon;
+GRANT USAGE, SELECT ON SEQUENCE public.school_activities_id_seq TO authenticated;
+GRANT USAGE, SELECT ON SEQUENCE public.school_activities_id_seq TO anon;
+
+GRANT SELECT ON TABLE public.school_month_configs TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.school_month_configs TO authenticated;
+GRANT SELECT ON TABLE public.school_activity_evidences TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.school_activity_evidences TO authenticated;
+GRANT USAGE, SELECT ON SEQUENCE public.school_activity_evidences_id_seq TO authenticated;
+GRANT USAGE, SELECT ON SEQUENCE public.school_month_configs_id_seq TO authenticated;
+
+RESET client_min_messages;
+
+GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;

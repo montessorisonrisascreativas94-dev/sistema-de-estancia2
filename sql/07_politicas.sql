@@ -1,3 +1,4 @@
+-- NOTA: este archivo contiene ademas bloques CONSOLIDADOS de los antiguos sql/11-30 (buscar "BLOQUE CONSOLIDADO" al final).
 -- ============================================================
 -- 07_politicas.sql — Colegio Montessori Sonrisas Creativas
 -- Contenido: sección 9 (POLITICAS RLS)
@@ -1331,3 +1332,974 @@ DO $$ BEGIN
     TO authenticated USING (auth.role() = 'authenticated');
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
+
+
+-- #################################################################
+-- BLOQUE CONSOLIDADO DESDE los antiguos sql/11-30
+-- (integrado el 2026-10-19; idempotente y re-ejecutable)
+-- #################################################################
+-- ================================================================
+-- SECCIÓN 3 — STORAGE + REALTIME                    [original 13]
+-- ================================================================
+-- Corrige la subida de videos al muro (HTTP 400): el código sube los
+-- videos al bucket `posts`, cuyo allowed_mime_types solo aceptaba
+-- imágenes y PDF.
+
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES (
+  'posts',
+  'posts',
+  true,
+  26214400,
+  ARRAY[
+    'image/jpeg','image/jpg','image/png','image/webp','image/gif',
+    'video/mp4','video/webm','video/quicktime','video/ogg',
+    'video/x-matroska','video/3gpp','video/x-msvideo'
+  ]
+)
+ON CONFLICT (id) DO UPDATE
+  SET public              = true,
+      file_size_limit     = 26214400,
+      allowed_mime_types  = EXCLUDED.allowed_mime_types;
+
+-- `karpus-uploads` se mantiene como solo-imágenes/PDF a propósito:
+-- es el bucket de avatares y documentos.
+
+-- UPDATE (upsert) y DELETE faltantes en `posts`
+DROP POLICY IF EXISTS "posts_auth_update" ON storage.objects;
+CREATE POLICY "posts_auth_update" ON storage.objects FOR UPDATE
+  USING (bucket_id = 'posts' AND auth.role() = 'authenticated')
+  WITH CHECK (bucket_id = 'posts' AND auth.role() = 'authenticated');
+
+DROP POLICY IF EXISTS "posts_auth_delete" ON storage.objects;
+CREATE POLICY "posts_auth_delete" ON storage.objects FOR DELETE
+  USING (bucket_id = 'posts' AND auth.role() = 'authenticated');
+
+-- ================================================================
+-- SECCIÓN 4 — RLS BASE
+-- ================================================================
+
+-- ----------------------------------------------------------------
+-- 4a. Tablas creadas en 01_base sin RLS        [original 12]
+--     Sin RLS, PostgREST las expone a cualquier rol con grant.
+--     Habilitar RLS sin política es deny-all, así que cada ENABLE va
+--     acompañado de sus políticas en la misma transacción.
+-- ----------------------------------------------------------------
+BEGIN;
+
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables
+             WHERE table_schema = 'public' AND table_name = 'academic_areas') THEN
+
+    DROP POLICY IF EXISTS "academic_areas_select" ON public.academic_areas;
+    CREATE POLICY "academic_areas_select" ON public.academic_areas FOR SELECT
+      USING (COALESCE(get_my_role(), '') IN ('directora','asistente','admin','encargada','maestra'));
+
+    DROP POLICY IF EXISTS "academic_areas_write" ON public.academic_areas;
+    CREATE POLICY "academic_areas_write" ON public.academic_areas FOR ALL
+      USING (COALESCE(get_my_role(), '') IN ('directora','admin'))
+      WITH CHECK (COALESCE(get_my_role(), '') IN ('directora','admin'));
+
+    ALTER TABLE public.academic_areas ENABLE ROW LEVEL SECURITY;
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables
+             WHERE table_schema = 'public' AND table_name = 'competencies') THEN
+
+    DROP POLICY IF EXISTS "competencies_select" ON public.competencies;
+    CREATE POLICY "competencies_select" ON public.competencies FOR SELECT
+      USING (COALESCE(get_my_role(), '') IN ('directora','asistente','admin','encargada','maestra'));
+
+    DROP POLICY IF EXISTS "competencies_write" ON public.competencies;
+    CREATE POLICY "competencies_write" ON public.competencies FOR ALL
+      USING (COALESCE(get_my_role(), '') IN ('directora','admin'))
+      WITH CHECK (COALESCE(get_my_role(), '') IN ('directora','admin'));
+
+    ALTER TABLE public.competencies ENABLE ROW LEVEL SECURITY;
+  END IF;
+END $$;
+
+-- competency_scores: calificaciones por competencia. Mismo tratamiento
+-- que grades: el personal escribe (con período abierto o directora/
+-- admin), el padre solo lee las notas de su propio hijo.
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables
+             WHERE table_schema = 'public' AND table_name = 'competency_scores') THEN
+
+    DROP POLICY IF EXISTS "competency_scores_staff" ON public.competency_scores;
+    CREATE POLICY "competency_scores_staff" ON public.competency_scores FOR ALL
+      USING (COALESCE(get_my_role(), '') IN ('directora','asistente','maestra','admin','encargada'))
+      WITH CHECK (
+        COALESCE(get_my_role(), '') IN ('directora','asistente','maestra','admin','encargada') AND (
+          period_id IS NULL
+          OR is_period_open(period_id)
+          OR COALESCE(get_my_role(), '') IN ('directora','admin')
+        )
+      );
+
+    DROP POLICY IF EXISTS "competency_scores_parent" ON public.competency_scores;
+    CREATE POLICY "competency_scores_parent" ON public.competency_scores FOR SELECT
+      USING (is_parent_of_student(student_id));
+
+    ALTER TABLE public.competency_scores ENABLE ROW LEVEL SECURITY;
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables
+             WHERE table_schema = 'public' AND table_name = 'student_promotions') THEN
+
+    DROP POLICY IF EXISTS "student_promotions_staff_all" ON public.student_promotions;
+    CREATE POLICY "student_promotions_staff_all" ON public.student_promotions FOR ALL
+      USING (COALESCE(get_my_role(), '') IN ('directora','asistente','admin'))
+      WITH CHECK (COALESCE(get_my_role(), '') IN ('directora','asistente','admin'));
+
+    ALTER TABLE public.student_promotions ENABLE ROW LEVEL SECURITY;
+  END IF;
+END $$;
+
+-- school_year_archive: snapshot JSONb de alumnos, pagos y notas.
+-- La tabla más sensible del grupo: solo directora/admin.
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables
+             WHERE table_schema = 'public' AND table_name = 'school_year_archive') THEN
+
+    DROP POLICY IF EXISTS "school_year_archive_staff_all" ON public.school_year_archive;
+    CREATE POLICY "school_year_archive_staff_all" ON public.school_year_archive FOR ALL
+      USING (COALESCE(get_my_role(), '') IN ('directora','admin'))
+      WITH CHECK (COALESCE(get_my_role(), '') IN ('directora','admin'));
+
+    ALTER TABLE public.school_year_archive ENABLE ROW LEVEL SECURITY;
+  END IF;
+END $$;
+
+COMMIT;
+
+-- ----------------------------------------------------------------
+-- 4b. comments / likes: COALESCE(..., false) para no dar 403 por NULL
+--     [original 13, refactor de policies]
+-- ----------------------------------------------------------------
+-- parent_id para respuestas a comentarios (si no existe ya)
+ALTER TABLE public.comments
+  ADD COLUMN IF NOT EXISTS parent_id bigint
+  REFERENCES public.comments(id) ON DELETE CASCADE;
+CREATE INDEX IF NOT EXISTS idx_comments_parent_id ON public.comments(parent_id);
+CREATE INDEX IF NOT EXISTS idx_comments_post_id_parent_id
+  ON public.comments(post_id, parent_id) INCLUDE (id, created_at);
+
+DROP POLICY IF EXISTS "comments_select" ON public.comments;
+CREATE POLICY "comments_select" ON public.comments FOR SELECT USING (
+  EXISTS (
+    SELECT 1 FROM public.posts p
+    WHERE p.id = comments.post_id
+      AND auth.uid() IS NOT NULL
+      AND (
+        COALESCE(get_my_role(), '') IN ('directora','asistente','admin','maestra','encargada') OR
+        COALESCE(p.classroom_id IS NULL, true) OR
+        COALESCE(is_teacher_of_classroom(p.classroom_id), false) OR
+        COALESCE(is_parent_of_classroom(p.classroom_id), false)
+      )
+  )
+);
+
+DROP POLICY IF EXISTS "comments_insert" ON public.comments;
+CREATE POLICY "comments_insert" ON public.comments FOR INSERT WITH CHECK (
+  auth.uid() = user_id
+  AND EXISTS (
+    SELECT 1 FROM public.posts p
+    WHERE p.id = comments.post_id
+      AND (
+        COALESCE(get_my_role(), '') IN ('directora','asistente','maestra','admin','encargada') OR
+        COALESCE(p.classroom_id IS NULL, true) OR
+        COALESCE(is_parent_of_classroom(p.classroom_id), false)
+      )
+  )
+);
+
+DROP POLICY IF EXISTS "likes_select" ON public.likes;
+CREATE POLICY "likes_select" ON public.likes FOR SELECT USING (
+  EXISTS (
+    SELECT 1 FROM public.posts p
+    WHERE p.id = likes.post_id
+      AND auth.uid() IS NOT NULL
+      AND (
+        COALESCE(get_my_role(), '') IN ('directora','asistente','admin','maestra','encargada') OR
+        COALESCE(p.classroom_id IS NULL, true) OR
+        COALESCE(is_teacher_of_classroom(p.classroom_id), false) OR
+        COALESCE(is_parent_of_classroom(p.classroom_id), false)
+      )
+  )
+);
+
+DROP POLICY IF EXISTS "likes_all" ON public.likes;
+CREATE POLICY "likes_all" ON public.likes FOR ALL USING (auth.uid() = user_id);
+
+-- (NOTA: el 25 creaba comments_auth/likes_auth USING(true); se omiten
+--  deliberadamente por ser más abiertas que estas.)
+
+-- ----------------------------------------------------------------
+-- 4c. login_attempts: INSERT público para registrar intentos de login
+--     [original 16]
+--     La política login_attempts_staff solo daba acceso a directora/
+--     admin; los inserts desde js/login.js (anon/padre) recibían 401.
+-- ----------------------------------------------------------------
+BEGIN;
+
+ALTER TABLE IF EXISTS public.login_attempts ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS login_attempts_self_insert ON public.login_attempts;
+CREATE POLICY login_attempts_self_insert ON public.login_attempts
+    FOR INSERT
+    TO anon, authenticated
+    WITH CHECK (true);
+
+DROP POLICY IF EXISTS login_attempts_staff_read ON public.login_attempts;
+CREATE POLICY login_attempts_staff_read ON public.login_attempts
+    FOR SELECT
+    TO authenticated
+    USING (COALESCE(get_my_role(), '') IN ('directora','admin','asistente'));
+
+COMMIT;
+
+-- ----------------------------------------------------------------
+-- 4d. ATTENDANCE                              [original 24]
+--     Política de escritura que acepta al personal POR ROL o al
+--     docente del aula (is_teacher_of_classroom): no depende de una
+--     sola vía, así el INSERT de la maestra no se bloquea aunque
+--     get_my_role() devuelva ''.
+-- ----------------------------------------------------------------
+ALTER TABLE public.attendance ENABLE ROW LEVEL SECURITY;
+
+DO $$
+DECLARE
+  pol record;
+BEGIN
+  FOR pol IN
+    SELECT policyname FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'attendance'
+  LOOP
+    EXECUTE format('DROP POLICY IF EXISTS %I ON public.attendance', pol.policyname);
+  END LOOP;
+END $$;
+
+CREATE POLICY "attendance_staff_all" ON public.attendance
+  FOR ALL
+  TO authenticated
+  USING (
+    COALESCE(public.get_my_role(), '') IN (
+      'directora', 'asistente', 'maestra', 'encargada', 'admin'
+    )
+    OR public.is_teacher_of_classroom(classroom_id)
+  )
+  WITH CHECK (
+    COALESCE(public.get_my_role(), '') IN (
+      'directora', 'asistente', 'maestra', 'encargada', 'admin'
+    )
+    OR public.is_teacher_of_classroom(classroom_id)
+  );
+
+CREATE POLICY "attendance_parent_select" ON public.attendance
+  FOR SELECT
+  TO authenticated
+  USING (
+    COALESCE(public.get_my_role(), '') = 'padre'
+    AND student_id IN (
+      SELECT id FROM public.students WHERE parent_id = auth.uid()
+    )
+  );
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.attendance TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.attendance TO service_role;
+DO $$
+BEGIN
+  EXECUTE format('GRANT USAGE, SELECT ON SEQUENCE %s TO authenticated',
+    pg_get_serial_sequence('public.attendance','id'));
+EXCEPTION WHEN OTHERS THEN NULL; END $$;
+
+-- ----------------------------------------------------------------
+-- 4e. RLS general del sistema                  [original 25]
+--     profiles / students / messages / posts / daily_logs /
+--     classroom_daily_schedule / tasks / task_evidences / eval_* /
+--     notifications / classroom_routine_settings / preregistrations.
+--     (attendance, comments y likes NO se repiten aquí: sus políticas
+--      definitivas son las de 4b y 4d.)
+-- ----------------------------------------------------------------
+
+-- 1. PROFILES
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "profiles_authenticated_read" ON public.profiles;
+DROP POLICY IF EXISTS "profiles_self"               ON public.profiles;
+DROP POLICY IF EXISTS "profiles_staff_manage"       ON public.profiles;
+DROP POLICY IF EXISTS "profiles_all"                ON public.profiles;
+DROP POLICY IF EXISTS "profiles_public_read"        ON public.profiles;
+DROP POLICY IF EXISTS "profiles_staff_upsert"       ON public.profiles;
+CREATE POLICY "profiles_authenticated_read" ON public.profiles
+  FOR SELECT TO authenticated USING (auth.role() = 'authenticated');
+CREATE POLICY "profiles_self" ON public.profiles
+  FOR ALL TO authenticated USING (auth.uid() = id) WITH CHECK (auth.uid() = id);
+CREATE POLICY "profiles_staff_manage" ON public.profiles
+  FOR ALL TO authenticated
+  USING      (COALESCE(public.get_my_role(),'') IN ('directora','asistente','admin'))
+  WITH CHECK (COALESCE(public.get_my_role(),'') IN ('directora','asistente','admin'));
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.profiles TO authenticated, service_role;
+
+-- 2. STUDENTS
+ALTER TABLE public.students ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "students_staff_all"     ON public.students;
+DROP POLICY IF EXISTS "students_padre_select"  ON public.students;
+DROP POLICY IF EXISTS "students_select"        ON public.students;
+DROP POLICY IF EXISTS "students_insert"        ON public.students;
+DROP POLICY IF EXISTS "students_update"        ON public.students;
+DROP POLICY IF EXISTS "students_delete"        ON public.students;
+DROP POLICY IF EXISTS "students_all"           ON public.students;
+DROP POLICY IF EXISTS "students_read_all"      ON public.students;
+DROP POLICY IF EXISTS "students_directora_all" ON public.students;
+CREATE POLICY "students_staff_all" ON public.students
+  FOR ALL TO authenticated
+  USING      (COALESCE(public.get_my_role(),'') IN ('directora','asistente','maestra','encargada','admin'))
+  WITH CHECK (COALESCE(public.get_my_role(),'') IN ('directora','asistente','maestra','encargada','admin'));
+CREATE POLICY "students_padre_select" ON public.students
+  FOR SELECT TO authenticated
+  USING (COALESCE(public.get_my_role(),'') = 'padre' AND parent_id = auth.uid());
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.students TO authenticated, service_role;
+DO $$ BEGIN EXECUTE format('GRANT USAGE, SELECT ON SEQUENCE %s TO authenticated', pg_get_serial_sequence('public.students','id')); EXCEPTION WHEN OTHERS THEN NULL; END $$;
+
+-- 3. MESSAGES
+ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "messages_authenticated_all" ON public.messages;
+DROP POLICY IF EXISTS "messages_staff_all"         ON public.messages;
+DROP POLICY IF EXISTS "messages_select"            ON public.messages;
+DROP POLICY IF EXISTS "messages_insert"            ON public.messages;
+DROP POLICY IF EXISTS "messages_update"            ON public.messages;
+DROP POLICY IF EXISTS "messages_delete"            ON public.messages;
+DROP POLICY IF EXISTS "messages_all"               ON public.messages;
+DROP POLICY IF EXISTS "messages_read"              ON public.messages;
+DROP POLICY IF EXISTS "messages_write"             ON public.messages;
+DROP POLICY IF EXISTS "messages_own"               ON public.messages;
+CREATE POLICY "messages_read" ON public.messages
+  FOR SELECT TO authenticated
+  USING (sender_id = auth.uid() OR receiver_id = auth.uid()
+    OR COALESCE(public.get_my_role(),'') IN ('directora','asistente','admin','encargada'));
+CREATE POLICY "messages_insert" ON public.messages
+  FOR INSERT TO authenticated WITH CHECK (sender_id = auth.uid());
+CREATE POLICY "messages_update" ON public.messages
+  FOR UPDATE TO authenticated
+  USING (sender_id = auth.uid() OR receiver_id = auth.uid())
+  WITH CHECK (sender_id = auth.uid() OR receiver_id = auth.uid());
+CREATE POLICY "messages_delete" ON public.messages
+  FOR DELETE TO authenticated
+  USING (sender_id = auth.uid() OR COALESCE(public.get_my_role(),'') IN ('directora','admin'));
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.messages TO authenticated, service_role;
+DO $$ BEGIN EXECUTE format('GRANT USAGE, SELECT ON SEQUENCE %s TO authenticated', pg_get_serial_sequence('public.messages','id')); EXCEPTION WHEN OTHERS THEN NULL; END $$;
+
+-- 4. POSTS
+ALTER TABLE public.posts ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "posts_staff_all"     ON public.posts;
+DROP POLICY IF EXISTS "posts_parent_read"   ON public.posts;
+DROP POLICY IF EXISTS "posts_own"           ON public.posts;
+DROP POLICY IF EXISTS "posts_select"        ON public.posts;
+DROP POLICY IF EXISTS "posts_insert"        ON public.posts;
+DROP POLICY IF EXISTS "posts_update"        ON public.posts;
+DROP POLICY IF EXISTS "posts_delete"        ON public.posts;
+DROP POLICY IF EXISTS "posts_all"           ON public.posts;
+DROP POLICY IF EXISTS "posts_read"          ON public.posts;
+DROP POLICY IF EXISTS "posts_authenticated" ON public.posts;
+CREATE POLICY "posts_staff_all" ON public.posts
+  FOR ALL TO authenticated
+  USING      (COALESCE(public.get_my_role(),'') IN ('directora','asistente','maestra','encargada','admin'))
+  WITH CHECK (COALESCE(public.get_my_role(),'') IN ('directora','asistente','maestra','encargada','admin'));
+CREATE POLICY "posts_parent_read" ON public.posts
+  FOR SELECT TO authenticated
+  USING (
+    COALESCE(public.get_my_role(),'') = 'padre'
+    AND (classroom_id IS NULL
+      OR classroom_id IN (SELECT classroom_id FROM public.students WHERE parent_id = auth.uid() AND classroom_id IS NOT NULL))
+  );
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.posts TO authenticated, service_role;
+DO $$ BEGIN EXECUTE format('GRANT USAGE, SELECT ON SEQUENCE %s TO authenticated', pg_get_serial_sequence('public.posts','id')); EXCEPTION WHEN OTHERS THEN NULL; END $$;
+
+-- 5. DAILY_LOGS
+ALTER TABLE public.daily_logs ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "daily_logs_staff_all"   ON public.daily_logs;
+DROP POLICY IF EXISTS "daily_logs_parent_read" ON public.daily_logs;
+DROP POLICY IF EXISTS "daily_logs_select"      ON public.daily_logs;
+DROP POLICY IF EXISTS "daily_logs_insert"      ON public.daily_logs;
+DROP POLICY IF EXISTS "daily_logs_update"      ON public.daily_logs;
+DROP POLICY IF EXISTS "daily_logs_all"         ON public.daily_logs;
+CREATE POLICY "daily_logs_staff_all" ON public.daily_logs
+  FOR ALL TO authenticated
+  USING      (COALESCE(public.get_my_role(),'') IN ('directora','asistente','maestra','encargada','admin'))
+  WITH CHECK (COALESCE(public.get_my_role(),'') IN ('directora','asistente','maestra','encargada','admin'));
+CREATE POLICY "daily_logs_parent_read" ON public.daily_logs
+  FOR SELECT TO authenticated
+  USING (COALESCE(public.get_my_role(),'') = 'padre'
+    AND student_id IN (SELECT id FROM public.students WHERE parent_id = auth.uid()));
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.daily_logs TO authenticated, service_role;
+DO $$ BEGIN EXECUTE format('GRANT USAGE, SELECT ON SEQUENCE %s TO authenticated', pg_get_serial_sequence('public.daily_logs','id')); EXCEPTION WHEN OTHERS THEN NULL; END $$;
+
+-- 6. CLASSROOM_DAILY_SCHEDULE (rutina del aula)
+ALTER TABLE public.classroom_daily_schedule ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "cds_staff_all"   ON public.classroom_daily_schedule;
+DROP POLICY IF EXISTS "cds_parent_read" ON public.classroom_daily_schedule;
+DROP POLICY IF EXISTS "cds_select"      ON public.classroom_daily_schedule;
+DROP POLICY IF EXISTS "cds_insert"      ON public.classroom_daily_schedule;
+DROP POLICY IF EXISTS "cds_update"      ON public.classroom_daily_schedule;
+DROP POLICY IF EXISTS "cds_all"         ON public.classroom_daily_schedule;
+DROP POLICY IF EXISTS "cds_read"        ON public.classroom_daily_schedule;
+CREATE POLICY "cds_staff_all" ON public.classroom_daily_schedule
+  FOR ALL TO authenticated
+  USING      (COALESCE(public.get_my_role(),'') IN ('directora','asistente','maestra','encargada','admin'))
+  WITH CHECK (COALESCE(public.get_my_role(),'') IN ('directora','asistente','maestra','encargada','admin'));
+CREATE POLICY "cds_parent_read" ON public.classroom_daily_schedule
+  FOR SELECT TO authenticated
+  USING (COALESCE(public.get_my_role(),'') = 'padre'
+    AND classroom_id IN (SELECT classroom_id FROM public.students WHERE parent_id = auth.uid() AND classroom_id IS NOT NULL));
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.classroom_daily_schedule TO authenticated, service_role;
+DO $$ BEGIN EXECUTE format('GRANT USAGE, SELECT ON SEQUENCE %s TO authenticated', pg_get_serial_sequence('public.classroom_daily_schedule','id')); EXCEPTION WHEN OTHERS THEN NULL; END $$;
+
+-- 7. TASKS
+ALTER TABLE public.tasks ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "tasks_staff_all"   ON public.tasks;
+DROP POLICY IF EXISTS "tasks_parent_read" ON public.tasks;
+DROP POLICY IF EXISTS "tasks_select"      ON public.tasks;
+DROP POLICY IF EXISTS "tasks_insert"      ON public.tasks;
+DROP POLICY IF EXISTS "tasks_update"      ON public.tasks;
+DROP POLICY IF EXISTS "tasks_delete"      ON public.tasks;
+DROP POLICY IF EXISTS "tasks_all"         ON public.tasks;
+DROP POLICY IF EXISTS "tasks_read"        ON public.tasks;
+CREATE POLICY "tasks_staff_all" ON public.tasks
+  FOR ALL TO authenticated
+  USING      (COALESCE(public.get_my_role(),'') IN ('directora','asistente','maestra','encargada','admin'))
+  WITH CHECK (COALESCE(public.get_my_role(),'') IN ('directora','asistente','maestra','encargada','admin'));
+CREATE POLICY "tasks_parent_read" ON public.tasks
+  FOR SELECT TO authenticated
+  USING (COALESCE(public.get_my_role(),'') = 'padre'
+    AND classroom_id IN (SELECT classroom_id FROM public.students WHERE parent_id = auth.uid() AND classroom_id IS NOT NULL));
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.tasks TO authenticated, service_role;
+DO $$ BEGIN EXECUTE format('GRANT USAGE, SELECT ON SEQUENCE %s TO authenticated', pg_get_serial_sequence('public.tasks','id')); EXCEPTION WHEN OTHERS THEN NULL; END $$;
+
+-- 8. TASK_EVIDENCES
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='task_evidences') THEN
+    EXECUTE 'ALTER TABLE public.task_evidences ENABLE ROW LEVEL SECURITY';
+    EXECUTE 'DROP POLICY IF EXISTS "te_staff_all"  ON public.task_evidences';
+    EXECUTE 'DROP POLICY IF EXISTS "te_parent_own" ON public.task_evidences';
+    EXECUTE $p$ CREATE POLICY "te_staff_all" ON public.task_evidences FOR ALL TO authenticated
+      USING      (COALESCE(public.get_my_role(),'') IN ('directora','asistente','maestra','encargada','admin'))
+      WITH CHECK (COALESCE(public.get_my_role(),'') IN ('directora','asistente','maestra','encargada','admin')) $p$;
+    EXECUTE $p$ CREATE POLICY "te_parent_own" ON public.task_evidences FOR ALL TO authenticated
+      USING (student_id IN (SELECT id FROM public.students WHERE parent_id = auth.uid()))
+      WITH CHECK (student_id IN (SELECT id FROM public.students WHERE parent_id = auth.uid())) $p$;
+    EXECUTE 'GRANT SELECT,INSERT,UPDATE,DELETE ON TABLE public.task_evidences TO authenticated,service_role';
+  END IF;
+EXCEPTION WHEN OTHERS THEN NULL; END $$;
+
+-- 9. EVAL TABLES (lectura básica; la capa final de visibilidad va en
+--    la sección 7, a partir de 27_fix_maestra_visibility)
+DO $$
+DECLARE t text;
+BEGIN
+  FOREACH t IN ARRAY ARRAY['eval_evaluations','eval_areas','eval_periods','eval_modules','eval_activities'] LOOP
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name=t) THEN
+      EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY', t);
+      EXECUTE format('DROP POLICY IF EXISTS "eval_%s_staff_all" ON public.%I', t, t);
+      EXECUTE format($p$
+        CREATE POLICY "eval_%s_staff_all" ON public.%I
+          FOR ALL TO authenticated
+          USING (true)
+          WITH CHECK (COALESCE(public.get_my_role(),'''') IN (''directora'',''asistente'',''maestra'',''encargada'',''admin''))
+      $p$, t, t);
+      EXECUTE format('GRANT SELECT,INSERT,UPDATE,DELETE ON TABLE public.%I TO authenticated,service_role', t);
+    END IF;
+  END LOOP;
+EXCEPTION WHEN OTHERS THEN RAISE NOTICE 'eval RLS: %', SQLERRM; END $$;
+
+-- 10. NOTIFICATIONS
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='notifications') THEN
+    EXECUTE 'ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY';
+    EXECUTE 'DROP POLICY IF EXISTS "notifications_own" ON public.notifications';
+    EXECUTE $p$ CREATE POLICY "notifications_own" ON public.notifications FOR ALL TO authenticated
+      USING (user_id = auth.uid() OR COALESCE(public.get_my_role(),'') IN ('directora','admin','asistente'))
+      WITH CHECK (true) $p$;
+    EXECUTE 'GRANT SELECT,INSERT,UPDATE,DELETE ON TABLE public.notifications TO authenticated,service_role';
+  END IF;
+EXCEPTION WHEN OTHERS THEN NULL; END $$;
+
+-- 11. CLASSROOM_ROUTINE_SETTINGS
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='classroom_routine_settings') THEN
+    EXECUTE 'ALTER TABLE public.classroom_routine_settings ENABLE ROW LEVEL SECURITY';
+    EXECUTE 'DROP POLICY IF EXISTS "crs_staff_all"   ON public.classroom_routine_settings';
+    EXECUTE 'DROP POLICY IF EXISTS "crs_parent_read" ON public.classroom_routine_settings';
+    EXECUTE $p$ CREATE POLICY "crs_staff_all" ON public.classroom_routine_settings FOR ALL TO authenticated
+      USING      (COALESCE(public.get_my_role(),'') IN ('directora','asistente','maestra','encargada','admin'))
+      WITH CHECK (COALESCE(public.get_my_role(),'') IN ('directora','asistente','maestra','encargada','admin')) $p$;
+    EXECUTE $p$ CREATE POLICY "crs_parent_read" ON public.classroom_routine_settings FOR SELECT TO authenticated
+      USING (COALESCE(public.get_my_role(),'') = 'padre') $p$;
+    EXECUTE 'GRANT SELECT,INSERT,UPDATE,DELETE ON TABLE public.classroom_routine_settings TO authenticated,service_role';
+  END IF;
+EXCEPTION WHEN OTHERS THEN NULL; END $$;
+
+-- 12. STUDENT_PREREGISTRATIONS
+--     NOTA: la política prereg_anon_insert_only que sigue se elimina en
+--     la sección 8 al instalar la RPC submit_preregistration (19), que
+--     es la vía pública definitiva (el INSERT directo de anon devolvía
+--     42501 al SELECT de retorno "Prefer: return=representation").
+ALTER TABLE public.student_preregistrations ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "prereg_anon_insert_only"          ON public.student_preregistrations;
+DROP POLICY IF EXISTS "prereg_authenticated_insert_only" ON public.student_preregistrations;
+DROP POLICY IF EXISTS "prereg_staff_select"              ON public.student_preregistrations;
+DROP POLICY IF EXISTS "prereg_staff_update"              ON public.student_preregistrations;
+DROP POLICY IF EXISTS "prereg_staff_delete"              ON public.student_preregistrations;
+DROP POLICY IF EXISTS "prereg_public_insert"             ON public.student_preregistrations;
+DROP POLICY IF EXISTS "prereg_staff_all"                 ON public.student_preregistrations;
+DROP POLICY IF EXISTS "preregistrations_insert_public"   ON public.student_preregistrations;
+DROP POLICY IF EXISTS "preregistrations_select_staff"    ON public.student_preregistrations;
+DROP POLICY IF EXISTS "preregistrations_update_staff"    ON public.student_preregistrations;
+DROP POLICY IF EXISTS "Permitir insercion publica"       ON public.student_preregistrations;
+DROP POLICY IF EXISTS "Permitir lectura staff"           ON public.student_preregistrations;
+
+CREATE POLICY "prereg_anon_insert_only" ON public.student_preregistrations
+  FOR INSERT TO anon WITH CHECK (true);
+
+CREATE POLICY "prereg_authenticated_insert_only" ON public.student_preregistrations
+  FOR INSERT TO authenticated WITH CHECK (true);
+
+CREATE POLICY "prereg_staff_select" ON public.student_preregistrations
+  FOR SELECT TO authenticated
+  USING (
+    COALESCE(public.get_my_role(), '') IN ('directora','asistente','admin','encargada')
+  );
+
+CREATE POLICY "prereg_staff_update" ON public.student_preregistrations
+  FOR UPDATE TO authenticated
+  USING      (COALESCE(public.get_my_role(), '') IN ('directora','asistente','admin','encargada'))
+  WITH CHECK (COALESCE(public.get_my_role(), '') IN ('directora','asistente','admin','encargada'));
+
+CREATE POLICY "prereg_staff_delete" ON public.student_preregistrations
+  FOR DELETE TO authenticated
+  USING (COALESCE(public.get_my_role(), '') IN ('directora','asistente','admin','encargada'));
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.student_preregistrations TO authenticated, service_role;
+GRANT SELECT, INSERT ON TABLE public.student_preregistrations TO anon;
+DO $$ BEGIN
+  EXECUTE format('GRANT USAGE, SELECT ON SEQUENCE %s TO authenticated, anon',
+    pg_get_serial_sequence('public.student_preregistrations','id'));
+EXCEPTION WHEN OTHERS THEN NULL; END $$;
+
+-- ----------------------------------------------------------------
+-- 5h. RLS (una política por comando; se limpian las del 21)
+-- ----------------------------------------------------------------
+ALTER TABLE public.school_activities ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.school_month_configs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.school_activity_evidences ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "activities_parent_select"  ON public.school_activities;
+DROP POLICY IF EXISTS "activities_staff_select"   ON public.school_activities;
+DROP POLICY IF EXISTS "activities_admin_all"      ON public.school_activities;
+DROP POLICY IF EXISTS "activities_teacher_update" ON public.school_activities;
+
+DROP POLICY IF EXISTS school_activities_select_staff   ON public.school_activities;
+DROP POLICY IF EXISTS school_activities_select_maestra ON public.school_activities;
+DROP POLICY IF EXISTS school_activities_select_padre   ON public.school_activities;
+DROP POLICY IF EXISTS school_activities_insert_staff   ON public.school_activities;
+DROP POLICY IF EXISTS school_activities_update_staff   ON public.school_activities;
+DROP POLICY IF EXISTS school_activities_update_maestra ON public.school_activities;
+DROP POLICY IF EXISTS school_activities_delete_staff   ON public.school_activities;
+
+CREATE POLICY school_activities_select_staff
+    ON public.school_activities FOR SELECT
+    USING (
+        EXISTS (SELECT 1 FROM public.profiles p WHERE p.id = auth.uid()
+                 AND p.role IN ('directora','asistente','encargada','admin'))
+    );
+
+CREATE POLICY school_activities_select_maestra
+    ON public.school_activities FOR SELECT
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.profiles p
+            WHERE p.id = auth.uid() AND p.role = 'maestra'
+            AND (
+                 assigned_to = auth.uid()
+              OR classroom_id IN (SELECT c.id FROM public.classrooms c WHERE c.teacher_id = auth.uid())
+            )
+        )
+        AND status IN ('scheduled','published','in_progress','completed')
+    );
+
+CREATE POLICY school_activities_select_padre
+    ON public.school_activities FOR SELECT
+    USING (
+        EXISTS (
+            SELECT 1
+            FROM public.profiles p
+            JOIN public.students s ON s.parent_id = p.id
+            WHERE p.id = auth.uid()
+              AND p.role = 'padre'
+              AND (
+                   s.classroom_id = school_activities.classroom_id
+                OR school_activities.target_audience IN ('todo_el_centro')
+              )
+        )
+        AND status IN ('published','in_progress','completed')
+    );
+
+CREATE POLICY school_activities_insert_staff
+    ON public.school_activities FOR INSERT
+    WITH CHECK (
+        EXISTS (SELECT 1 FROM public.profiles p WHERE p.id = auth.uid()
+                 AND p.role IN ('directora','asistente','encargada','admin'))
+        AND created_by = auth.uid()
+    );
+
+CREATE POLICY school_activities_update_staff
+    ON public.school_activities FOR UPDATE
+    USING (
+        EXISTS (SELECT 1 FROM public.profiles p WHERE p.id = auth.uid()
+                 AND p.role IN ('directora','asistente','encargada','admin'))
+    )
+    WITH CHECK (
+        EXISTS (SELECT 1 FROM public.profiles p WHERE p.id = auth.uid()
+                 AND p.role IN ('directora','asistente','encargada','admin'))
+    );
+
+CREATE POLICY school_activities_update_maestra
+    ON public.school_activities FOR UPDATE
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.profiles p
+            WHERE p.id = auth.uid() AND p.role = 'maestra'
+            AND (
+                 assigned_to = auth.uid()
+              OR classroom_id IN (SELECT c.id FROM public.classrooms c WHERE c.teacher_id = auth.uid())
+            )
+        )
+        AND status IN ('scheduled','published','in_progress')
+    )
+    WITH CHECK (
+        EXISTS (SELECT 1 FROM public.profiles p WHERE p.id = auth.uid() AND p.role = 'maestra')
+        AND status IN ('scheduled','published','in_progress','completed')
+    );
+
+CREATE POLICY school_activities_delete_staff
+    ON public.school_activities FOR DELETE
+    USING (
+        EXISTS (SELECT 1 FROM public.profiles p WHERE p.id = auth.uid()
+                 AND p.role IN ('directora','asistente','encargada','admin'))
+    );
+
+DROP POLICY IF EXISTS "month_configs_select"    ON public.school_month_configs;
+DROP POLICY IF EXISTS "month_configs_admin_all" ON public.school_month_configs;
+
+CREATE POLICY "month_configs_select"
+  ON public.school_month_configs FOR SELECT TO authenticated USING (true);
+
+CREATE POLICY "month_configs_admin_all"
+  ON public.school_month_configs FOR ALL TO authenticated
+  USING (COALESCE(get_my_role(), '') IN ('directora','asistente','encargada','admin'))
+  WITH CHECK (COALESCE(get_my_role(), '') IN ('directora','asistente','encargada','admin'));
+
+DROP POLICY IF EXISTS "evidences_select" ON public.school_activity_evidences;
+DROP POLICY IF EXISTS "evidences_insert" ON public.school_activity_evidences;
+DROP POLICY IF EXISTS "evidences_delete" ON public.school_activity_evidences;
+
+CREATE POLICY "evidences_select"
+  ON public.school_activity_evidences FOR SELECT TO authenticated
+  USING (
+    uploaded_by = auth.uid()
+    OR COALESCE(get_my_role(), '') IN ('directora','asistente','encargada','maestra','admin')
+    OR EXISTS (
+      SELECT 1 FROM public.school_activities a
+      WHERE a.id = activity_id AND a.status = 'published'
+    )
+  );
+
+CREATE POLICY "evidences_insert"
+  ON public.school_activity_evidences FOR INSERT TO authenticated
+  WITH CHECK (
+    COALESCE(get_my_role(), '') IN ('directora','asistente','encargada','admin')
+    OR EXISTS (
+      SELECT 1 FROM public.school_activities a
+      WHERE a.id = activity_id AND (a.assigned_to = auth.uid() OR a.assigned_teacher_id = auth.uid())
+    )
+  );
+
+CREATE POLICY "evidences_delete"
+  ON public.school_activity_evidences FOR DELETE TO authenticated
+  USING (
+    uploaded_by = auth.uid()
+    OR COALESCE(get_my_role(), '') IN ('directora','asistente','encargada','admin')
+  );
+
+-- ----------------------------------------------------------------
+-- RLS — políticas granulares (evitar FOR ALL para INSERT)
+-- ----------------------------------------------------------------
+ALTER TABLE public.supervision_sessions  ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.supervision_audit_log ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.interventions         ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS supervision_sessions_select_self_staff ON public.supervision_sessions;
+CREATE POLICY supervision_sessions_select_self_staff
+    ON public.supervision_sessions FOR SELECT USING (
+      usuario_id = auth.uid()
+      OR EXISTS (SELECT 1 FROM public.profiles p WHERE p.id = auth.uid() AND p.role IN ('directora','asistente','encargada'))
+    );
+
+DROP POLICY IF EXISTS supervision_sessions_insert_staff ON public.supervision_sessions;
+CREATE POLICY supervision_sessions_insert_staff
+    ON public.supervision_sessions FOR INSERT WITH CHECK (
+      auth.uid() IS NOT NULL
+      AND usuario_id = auth.uid()
+      AND role IN (SELECT p.role FROM public.profiles p WHERE p.id = auth.uid())
+    );
+
+DROP POLICY IF EXISTS supervision_sessions_update_self ON public.supervision_sessions;
+CREATE POLICY supervision_sessions_update_self
+    ON public.supervision_sessions FOR UPDATE USING (usuario_id = auth.uid())
+    WITH CHECK (usuario_id = auth.uid());
+
+DROP POLICY IF EXISTS supervision_audit_select_staff ON public.supervision_audit_log;
+CREATE POLICY supervision_audit_select_staff
+    ON public.supervision_audit_log FOR SELECT USING (
+      usuario_id = auth.uid()
+      OR EXISTS (SELECT 1 FROM public.profiles p WHERE p.id = auth.uid() AND p.role IN ('directora','asistente','encargada'))
+    );
+
+DROP POLICY IF EXISTS supervision_audit_insert_self ON public.supervision_audit_log;
+CREATE POLICY supervision_audit_insert_self
+    ON public.supervision_audit_log FOR INSERT WITH CHECK (
+      auth.uid() IS NOT NULL
+      AND usuario_id = auth.uid()
+    );
+-- audit log append-only. NO hay políticas de UPDATE/DELETE (quedan bloqueadas)
+
+DROP POLICY IF EXISTS interventions_select_staff ON public.interventions;
+CREATE POLICY interventions_select_staff
+    ON public.interventions FOR SELECT USING (
+      created_by = auth.uid()
+      OR assigned_to = auth.uid()
+      OR teacher_id = auth.uid()
+      OR EXISTS (SELECT 1 FROM public.profiles p WHERE p.id = auth.uid() AND p.role IN ('directora','asistente','encargada'))
+    );
+
+DROP POLICY IF EXISTS interventions_insert_staff ON public.interventions;
+CREATE POLICY interventions_insert_staff
+    ON public.interventions FOR INSERT WITH CHECK (
+      auth.uid() IS NOT NULL
+      AND created_by = auth.uid()
+      AND EXISTS (SELECT 1 FROM public.profiles p WHERE p.id = auth.uid() AND p.role IN ('directora','asistente','encargada','maestra'))
+    );
+
+DROP POLICY IF EXISTS interventions_update_assigned ON public.interventions;
+CREATE POLICY interventions_update_assigned
+    ON public.interventions FOR UPDATE USING (
+      created_by = auth.uid()
+      OR assigned_to = auth.uid()
+      OR EXISTS (SELECT 1 FROM public.profiles p WHERE p.id = auth.uid() AND p.role = 'directora')
+    )
+    WITH CHECK (
+      created_by = auth.uid()
+      OR assigned_to = auth.uid()
+      OR EXISTS (SELECT 1 FROM public.profiles p WHERE p.id = auth.uid() AND p.role = 'directora')
+    );
+
+-- ================================================================
+-- SECCIÓN 7 — RLS FINAL / VISIBILIDAD MAESTRA      [original 27]
+-- ================================================================
+-- En el Panel Maestra no se veían las áreas/actividades del boletín
+-- ni las tareas del aula: RLS en eval_*/tasks sin políticas con el rol
+-- "maestra" (deny-all silencioso). Aquí la capa definitiva, que además
+-- sobrescribe las select_maestra/select_padre del 23 para que las
+-- maestras también vean las actividades de TODO EL COLEGIO y las
+-- actividades sin aula (classroom_id NULL).
+
+-- 1. Tablas de ESTRUCTURA del boletín: lectura abierta a cualquier
+--    usuario autenticado (el padre necesita ver nombres de áreas y
+--    actividades), escritura sólo para personal.
+DO $$
+DECLARE t text;
+BEGIN
+  FOREACH t IN ARRAY ARRAY[
+    'eval_evaluations','eval_areas','eval_competencies','eval_periods',
+    'eval_modules','eval_activities','eval_formulas'
+  ] LOOP
+    IF EXISTS (SELECT 1 FROM information_schema.tables
+               WHERE table_schema='public' AND table_name=t) THEN
+      EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY', t);
+      EXECUTE format('DROP POLICY IF EXISTS "eval_%s_staff_all" ON public.%I', t, t);
+      EXECUTE format('DROP POLICY IF EXISTS "staff_all_%s"    ON public.%I', t, t);
+      EXECUTE format('DROP POLICY IF EXISTS "eval_%s_read"     ON public.%I', t, t);
+      EXECUTE format('DROP POLICY IF EXISTS "eval_%s_staff_write" ON public.%I', t, t);
+      EXECUTE format($p$
+        CREATE POLICY "eval_%s_read" ON public.%I
+          FOR SELECT TO authenticated USING (true)
+      $p$, t, t);
+      EXECUTE format($p$
+        CREATE POLICY "eval_%s_staff_write" ON public.%I
+          FOR INSERT, UPDATE, DELETE TO authenticated
+          USING (COALESCE(public.get_my_role(),'''') IN
+            (''directora'',''asistente'',''maestra'',''encargada'',''admin''))
+          WITH CHECK (COALESCE(public.get_my_role(),'''') IN
+            (''directora'',''asistente'',''maestra'',''encargada'',''admin''))
+      $p$, t, t);
+      EXECUTE format('GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.%I TO authenticated, service_role', t);
+    END IF;
+  END LOOP;
+EXCEPTION WHEN OTHERS THEN RAISE NOTICE 'eval estructura: %', SQLERRM; END $$;
+
+-- 2. Tablas de NOTAS del boletín: lectura/escritura del personal
+--    (las políticas "parent_read_*" definidas arriba en 10_fixes se
+--     conservan).
+DO $$
+DECLARE t text;
+BEGIN
+  FOREACH t IN ARRAY ARRAY[
+    'eval_scores','eval_evidences','eval_area_notes',
+    'eval_score_history','eval_boleta_notes'
+  ] LOOP
+    IF EXISTS (SELECT 1 FROM information_schema.tables
+               WHERE table_schema='public' AND table_name=t) THEN
+      EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY', t);
+      EXECUTE format('DROP POLICY IF EXISTS "staff_all_%s" ON public.%I', t, t);
+      EXECUTE format($p$
+        CREATE POLICY "staff_all_%s" ON public.%I
+          FOR ALL TO authenticated
+          USING (COALESCE(public.get_my_role(),'''') IN
+            (''directora'',''asistente'',''maestra'',''encargada'',''admin''))
+          WITH CHECK (COALESCE(public.get_my_role(),'''') IN
+            (''directora'',''asistente'',''maestra'',''encargada'',''admin''))
+      $p$, t, t);
+      EXECUTE format('GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.%I TO authenticated, service_role', t);
+    END IF;
+  END LOOP;
+EXCEPTION WHEN OTHERS THEN RAISE NOTICE 'eval notas: %', SQLERRM; END $$;
+
+-- 3. boletin_ensure_structure: la maestra debe poder ejecutarla para
+--    que existan áreas/períodos/módulos por defecto.
+DO $$ BEGIN
+  EXECUTE 'GRANT EXECUTE ON FUNCTION public.boletin_ensure_structure(bigint) TO authenticated';
+EXCEPTION WHEN OTHERS THEN NULL; END $$;
+
+-- 4. ACTIVIDADES ESCOLARES: la maestra ve las suyas, las de su aula,
+--    las sin aula (classroom_id NULL) y las de todo el centro.
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='school_activities') THEN
+    EXECUTE 'ALTER TABLE public.school_activities ENABLE ROW LEVEL SECURITY';
+    EXECUTE 'DROP POLICY IF EXISTS school_activities_select_maestra ON public.school_activities';
+    EXECUTE $p$ CREATE POLICY school_activities_select_maestra
+      ON public.school_activities FOR SELECT TO authenticated
+      USING (
+        COALESCE(public.get_my_role(),'''') IN (''directora'',''asistente'',''admin'',''encargada'')
+        OR EXISTS (
+          SELECT 1 FROM public.profiles p
+          WHERE p.id = auth.uid() AND p.role = ''maestra''
+            AND (
+                 school_activities.assigned_to = auth.uid()
+              OR school_activities.assigned_teacher_id = auth.uid()
+              OR school_activities.target_audience = ''todo_el_centro''
+              OR school_activities.classroom_id IS NULL
+              OR school_activities.classroom_id IN (
+                   SELECT c.id FROM public.classrooms c WHERE c.teacher_id = auth.uid())
+            )
+        )
+      ) $p$;
+    EXECUTE 'DROP POLICY IF EXISTS school_activities_select_padre ON public.school_activities';
+    EXECUTE $p$ CREATE POLICY school_activities_select_padre
+      ON public.school_activities FOR SELECT TO authenticated
+      USING (
+        EXISTS (
+          SELECT 1 FROM public.profiles p
+          JOIN public.students s ON s.parent_id = p.id
+          WHERE p.id = auth.uid()
+            AND p.role = ''padre''
+            AND (
+                 s.classroom_id = school_activities.classroom_id
+              OR school_activities.target_audience IN (''todo_el_centro'')
+            )
+        )
+        AND school_activities.status IN (''published'',''in_progress'',''completed'')
+      ) $p$;
+  END IF;
+EXCEPTION WHEN OTHERS THEN RAISE NOTICE 'school_activities: %', SQLERRM; END $$;
+
+-- ----------------------------------------------------------------
+-- 8b. submit_preregistration(p_data)            [original 19]
+--     El formulario público fallaba con HTTP 401 / 42501: el INSERT se
+--     permitía y la fila SE GUARDABA, pero el "Prefer:
+--     return=representation" lanzaba un SELECT que RLS bloqueaba para
+--     anon (no había política SELECT pública). El navegador veía error
+--     y el padre reenviaba → duplicados.
+--     La solución: el INSERT pasa por una función SECURITY DEFINER que
+--     devuelve ÚNICAMENTE el id generado. Además descarta `status` y
+--     `director_authorization_approved`: el público no puede saltarse
+--     la revisión de Dirección ni fijar el estado.
+-- ----------------------------------------------------------------
+REVOKE INSERT ON public.student_preregistrations FROM anon;
+DROP POLICY IF EXISTS "prereg_anon_insert_only" ON public.student_preregistrations;
+DROP POLICY IF EXISTS "prereg_authenticated_insert_only" ON public.student_preregistrations;
+CREATE POLICY "prereg_authenticated_insert_only"
+  ON public.student_preregistrations
+  FOR INSERT
+  TO authenticated
+  WITH CHECK (true);
+
+-- ----------------------------------------------------------------
+-- 8c. LIMPIEZA TOTAL DE POLÍTICAS HEREDADAS DE PREINSCRIPCIÓN
+--     (arreglo del ERROR 401 / 42501 definitivo; subsume al archivo
+--      FIX_FINAL_PREINSCRIPCION_RLS.sql, ya eliminado)
+--     07_politicas.sql creó ~8 policies antiguas sobre
+--     student_preregistrations (prereg_insert, prereg_update,
+--     "Permitir insercion anonima…", etc.). PostgreSQL evalúa TODAS
+--     las policies que aplican a un comando en modo AND: una sola
+--     policy vieja con WITH CHECK get_my_role() = 'directora' bastaba
+--     para romper los INSERT/UPDATE del panel (42501). Además faltaba
+--     GRANT USAGE ON SCHEMA public (el #1 olvidado del 401).
+--     Solución idempotente: borrar TODAS las policies heredadas y
+--     recrear exactamente el conjunto final.
+-- ----------------------------------------------------------------
+DO $$
+DECLARE pol RECORD;
+BEGIN
+  FOR pol IN
+    SELECT policyname
+      FROM pg_policies
+     WHERE schemaname = 'public' AND tablename = 'student_preregistrations'
+  LOOP
+    EXECUTE format('DROP POLICY IF EXISTS %I ON public.student_preregistrations', pol.policyname);
+  END LOOP;
+END $$;
+
+CREATE POLICY "prereg_authenticated_insert_only" ON public.student_preregistrations
+  FOR INSERT TO authenticated WITH CHECK (true);
+
+CREATE POLICY "prereg_staff_select" ON public.student_preregistrations
+  FOR SELECT TO authenticated
+  USING (COALESCE(public.get_my_role(), '') IN ('directora','asistente','admin','encargada'));
+
+CREATE POLICY "prereg_staff_update" ON public.student_preregistrations
+  FOR UPDATE TO authenticated
+  USING      (COALESCE(public.get_my_role(), '') IN ('directora','asistente','admin','encargada'))
+  WITH CHECK (COALESCE(public.get_my_role(), '') IN ('directora','asistente','admin','encargada'));
+
+CREATE POLICY "prereg_staff_delete" ON public.student_preregistrations
+  FOR DELETE TO authenticated
+  USING (COALESCE(public.get_my_role(), '') IN ('directora','asistente','admin','encargada'));
+
+
+REVOKE INSERT ON public.student_preregistrations FROM anon;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.student_preregistrations TO authenticated, service_role;
+DO $$
+BEGIN
+  EXECUTE format('GRANT USAGE, SELECT ON SEQUENCE %s TO authenticated',
+    pg_get_serial_sequence('public.student_preregistrations','id'));
+EXCEPTION WHEN OTHERS THEN NULL; END $$;

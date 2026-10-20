@@ -1,3 +1,4 @@
+-- NOTA: este archivo contiene ademas bloques CONSOLIDADOS de los antiguos sql/11-30 (buscar "BLOQUE CONSOLIDADO" al final).
 -- ============================================================
 -- 08_indices.sql — Colegio Montessori Sonrisas Creativas
 -- Contenido: sección 5 (INDICES DE RENDIMIENTO)
@@ -480,3 +481,73 @@ CREATE INDEX IF NOT EXISTS idx_payment_concepts_category ON public.payment_conce
 
 CREATE UNIQUE INDEX IF NOT EXISTS parent_ratings_parent_month_idx
   ON public.parent_ratings(parent_id, month);
+
+
+-- #################################################################
+-- BLOQUE CONSOLIDADO DESDE los antiguos sql/11-30
+-- (integrado el 2026-10-19; idempotente y re-ejecutable)
+-- #################################################################
+-- ----------------------------------------------------------------
+-- 2j. Índices de apoyo                         [original 14 §14]
+-- ----------------------------------------------------------------
+CREATE INDEX IF NOT EXISTS idx_students_pre_registration_id
+  ON public.students(pre_registration_id) WHERE pre_registration_id IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_students_matricula_lower
+  ON public.students(lower(matricula)) WHERE matricula IS NOT NULL;
+
+-- Una preinscripción no puede generar dos expedientes. Si ya hay
+-- duplicados no se crea el índice único: se avisa en vez de abortar.
+DO $$
+DECLARE dups bigint;
+BEGIN
+  SELECT count(*) INTO dups
+  FROM (SELECT pre_registration_id
+        FROM public.students
+        WHERE pre_registration_id IS NOT NULL
+        GROUP BY pre_registration_id
+        HAVING count(*) > 1) t;
+
+  IF dups > 0 THEN
+    RAISE NOTICE 'ATENCIÓN: % preinscripciones ya tienen más de un estudiante. No se creó el índice único; revísalas a mano.', dups;
+  ELSE
+    CREATE UNIQUE INDEX IF NOT EXISTS uq_students_pre_registration_id
+      ON public.students(pre_registration_id)
+      WHERE pre_registration_id IS NOT NULL;
+  END IF;
+END $$;
+
+-- El índice de 08_indices es WHERE is_read = false, pero
+-- get_unread_counts() y el cliente consideran no leído también
+-- is_read IS NULL (INSERTs antiguos con NULL explícito).
+CREATE INDEX IF NOT EXISTS idx_messages_unread_cover
+  ON public.messages(conversation_id, sender_id, created_at DESC)
+  WHERE is_read IS DISTINCT FROM true;
+
+-- ----------------------------------------------------------------
+-- 5f. Índices
+-- ----------------------------------------------------------------
+CREATE INDEX IF NOT EXISTS idx_activities_class_date
+    ON public.school_activities(classroom_id, scheduled_date DESC)
+    WHERE classroom_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_activities_status_date
+    ON public.school_activities(status, scheduled_date DESC);
+CREATE INDEX IF NOT EXISTS idx_activities_created
+    ON public.school_activities(created_by, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_activities_assigned
+    ON public.school_activities(assigned_to)
+    WHERE assigned_to IS NOT NULL AND status IN ('scheduled','published','in_progress');
+CREATE INDEX IF NOT EXISTS idx_activities_range
+    ON public.school_activities(scheduled_date, status)
+    WHERE status IN ('published','scheduled','in_progress','completed');
+-- Compatibilidad con el módulo compartido
+CREATE INDEX IF NOT EXISTS idx_school_activities_date
+    ON public.school_activities(activity_date);
+CREATE INDEX IF NOT EXISTS idx_school_activities_status_date
+    ON public.school_activities(status, activity_date);
+CREATE INDEX IF NOT EXISTS idx_school_activities_year
+    ON public.school_activities(school_year_id);
+CREATE INDEX IF NOT EXISTS idx_school_activities_classroom
+    ON public.school_activities(classroom_id);
+CREATE INDEX IF NOT EXISTS idx_school_activities_teacher
+    ON public.school_activities(assigned_teacher_id);

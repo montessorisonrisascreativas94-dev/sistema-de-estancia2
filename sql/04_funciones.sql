@@ -1,3 +1,4 @@
+-- NOTA: este archivo contiene ademas bloques CONSOLIDADOS de los antiguos sql/11-30 (buscar "BLOQUE CONSOLIDADO" al final).
 -- ============================================================
 -- 04_funciones.sql — Colegio Montessori Sonrisas Creativas
 -- Contenido: sección 7 (FUNCIONES)
@@ -2692,3 +2693,300 @@ BEGIN
 ON CONFLICT DO NOTHING;
 END;
 $$;
+
+
+-- #################################################################
+-- BLOQUE CONSOLIDADO DESDE los antiguos sql/11-30
+-- (integrado el 2026-10-19; idempotente y re-ejecutable)
+-- #################################################################
+-- (originales 24/27) get_my_role() SECURITY DEFINER con COALESCE, evita
+-- RLS circular y que '' rompa los filtros por rol.
+CREATE OR REPLACE FUNCTION public.get_my_role()
+RETURNS text
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT COALESCE(role, '') FROM public.profiles WHERE id = auth.uid() LIMIT 1;
+$$;
+GRANT EXECUTE ON FUNCTION public.get_my_role() TO authenticated, anon;
+
+-- (original 24) Respaldo: el docente dueño del aula escribe aunque
+-- get_my_role() devuelva '' (evita 403 en panel maestra).
+CREATE OR REPLACE FUNCTION public.is_teacher_of_classroom(p_classroom_id bigint)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.classrooms
+    WHERE id = p_classroom_id AND teacher_id = auth.uid()
+  );
+$$;
+GRANT EXECUTE ON FUNCTION public.is_teacher_of_classroom(bigint) TO authenticated;
+
+-- ----------------------------------------------------------------
+-- 5j. RPC publish_school_activity + realtime + grants
+-- ----------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.publish_school_activity(p_activity_id bigint)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE id = auth.uid() AND role IN ('directora','asistente','encargada','admin')
+  ) THEN
+    RAISE EXCEPTION 'No tiene permisos para publicar actividades.';
+  END IF;
+
+  UPDATE public.school_activities
+  SET status = 'published',
+      published_at = COALESCE(published_at, now()),
+      updated_at = now()
+  WHERE id = p_activity_id;
+
+  RETURN TRUE;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.publish_school_activity(bigint) TO authenticated;
+
+-- RPC close_intervention
+CREATE OR REPLACE FUNCTION public.close_intervention(p_id BIGINT, p_motivo TEXT DEFAULT NULL)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $rpc_ci$
+DECLARE
+  v_uid     UUID := auth.uid();
+  v_role    TEXT;
+  v_owner   UUID;
+  v_assig   UUID;
+  v_status  TEXT;
+  v_result  JSONB;
+BEGIN
+  IF v_uid IS NULL THEN
+    RAISE EXCEPTION 'No autenticado';
+  END IF;
+
+  SELECT p.role INTO v_role FROM public.profiles p WHERE p.id = v_uid;
+  IF v_role NOT IN ('directora','asistente','encargada','maestra') THEN
+    RAISE EXCEPTION 'Rol no autorizado';
+  END IF;
+
+  SELECT created_by, assigned_to, status
+    INTO STRICT v_owner, v_assig, v_status
+    FROM public.interventions i WHERE i.id = p_id;
+
+  IF v_role <> 'directora' AND v_uid <> v_owner AND v_uid <> v_assig THEN
+    RAISE EXCEPTION 'No autorizado a cerrar esta intervención';
+  END IF;
+
+  IF v_status = 'closed' THEN
+    RETURN jsonb_build_object('ok', true, 'skipped', true, 'message', 'Ya estaba cerrada');
+  END IF;
+
+  UPDATE public.interventions i
+     SET status      = 'closed',
+         closed_by   = v_uid,
+         closed_at   = now(),
+         resolved_by = COALESCE(NULLIF(resolved_by, v_uid), v_uid),
+         resolved_at = COALESCE(resolved_at, now()),
+         metadata_jsonb = jsonb_set(
+           COALESCE(i.metadata_jsonb, '{}'),
+           '{close_motivo}',
+           to_jsonb(COALESCE(p_motivo, 'Cierre administrativo'))
+         )
+   WHERE i.id = p_id
+  RETURNING jsonb_build_object(
+    'ok', true,
+    'id', p_id,
+    'code', i.code,
+    'status', i.status,
+    'closed_at', i.closed_at,
+    'closed_by', i.closed_by
+  ) INTO v_result;
+
+  RETURN v_result;
+END;
+$rpc_ci$;
+
+GRANT EXECUTE ON FUNCTION public.close_intervention(BIGINT, TEXT) TO authenticated, anon;
+
+RESET client_min_messages;
+
+-- ================================================================
+-- SECCIÓN 8 — RPCs                              [originales 18 y 19]
+-- ================================================================
+
+-- ----------------------------------------------------------------
+-- 8a. run_ddl_migration(ddl)                   [original 18]
+--     La Edge Function `run-migration` llama a esta RPC, que nunca
+--     había sido creada ("RPC no disponible" en silencio). Permite a
+--     Dirección reparar la base desde Panel → Configuración →
+--     Mantenimiento sin abrir el SQL Editor.
+--     Seguridad: sólo directora/admin; valida cada sentencia por
+--     separado y sólo deja pasar CREATE/ALTER/DROP/COMMENT/GRANT/
+--     REVOKE (deny by default: INSERT/UPDATE/DELETE/SELECT/TRUNCATE/
+--     COPY/DO/CALL/EXECUTE/SET quedan bloqueados); sin EXECUTE para
+--     anon ni public; search_path con pg_temp al final.
+-- ----------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.run_ddl_migration(ddl text)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $run_ddl_body$
+DECLARE
+  v_role  text;
+  v_clean text;
+  v_rest  text;
+  v_stmt  text;
+  v_kw    text;
+  v_pos   integer;
+BEGIN
+  -- 1. Solo directora o admin
+  v_role := COALESCE(public.get_my_role(), '');
+  IF v_role NOT IN ('directora', 'admin') THEN
+    RAISE EXCEPTION 'run_ddl_migration: solo la directora o un admin pueden ejecutar migraciones (rol actual: %)',
+      COALESCE(v_role, 'anonimo');
+  END IF;
+
+  IF ddl IS NULL OR btrim(ddl) = '' THEN
+    RAISE EXCEPTION 'run_ddl_migration: la sentencia va vacia';
+  END IF;
+
+  -- 2. Normalizar antes de validar. EL ORDEN IMPORTA:
+  --    2a. Bloques dollar-quoted (cuerpos de función con etiqueta).
+  --        Su contenido NO debe participar en la validación de verbos DDL.
+  --    2b. Comentarios de línea (--) y literales de cadena ('...').
+  --    2c. Colapsar espacios.
+  v_clean := regexp_replace(ddl,      '\$[A-Za-z_][A-Za-z0-9_]*\$(.|\n)*?\$[A-Za-z_][A-Za-z0-9_]*\$', '', 'g');
+  v_clean := regexp_replace(v_clean,  '\$\$(.|\n)*?\$\$',                                                                            '', 'g');
+  v_clean := regexp_replace(v_clean,  '--[^\n]*',                                                                                      '', 'g');
+  v_clean := regexp_replace(v_clean,  '''[^'']*''',                                                                                    '', 'g');
+  v_clean := btrim(regexp_replace(v_clean, '\s+', ' ', 'g'));
+
+  -- 3. Validar CADA sentencia por separado.
+  v_rest := v_clean;
+  WHILE v_rest <> '' LOOP
+    v_pos := strpos(v_rest, ';');
+    IF v_pos = 0 THEN
+      v_stmt := btrim(v_rest);
+      v_rest := '';
+    ELSE
+      v_stmt := btrim(left(v_rest, v_pos - 1));
+      v_rest := btrim(substring(v_rest FROM v_pos + 1));
+    END IF;
+    CONTINUE WHEN v_stmt = '';
+
+    v_kw := substring(v_stmt FROM '^[[:space:]]*([A-Za-z_]+)');
+    IF upper(v_kw) NOT IN ('CREATE', 'ALTER', 'DROP', 'COMMENT', 'GRANT', 'REVOKE') THEN
+      RAISE EXCEPTION
+        'run_ddl_migration: solo se permiten sentencias DDL (CREATE/ALTER/DROP/COMMENT/GRANT/REVOKE). Rechazada: %',
+        left(v_stmt, 120);
+    END IF;
+  END LOOP;
+
+  -- 4. Ejecutar
+  EXECUTE ddl;
+END;
+$run_ddl_body$;
+
+COMMENT ON FUNCTION public.run_ddl_migration(text) IS
+  'Ejecuta una sentencia DDL. Solo directora/admin. No permite tocar datos. Usada por la Edge Function run-migration.';
+
+REVOKE ALL ON FUNCTION public.run_ddl_migration(text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.run_ddl_migration(text) FROM anon;
+REVOKE ALL ON FUNCTION public.run_ddl_migration(text) FROM authenticated;
+GRANT EXECUTE ON FUNCTION public.run_ddl_migration(text) TO authenticated;
+
+CREATE OR REPLACE FUNCTION public.submit_preregistration(p_data jsonb)
+RETURNS bigint
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_row   jsonb;
+  v_cols  text;
+  v_vals  text;
+  v_id    bigint;
+  v_faltan text;
+BEGIN
+  IF p_data IS NULL OR p_data = '{}'::jsonb THEN
+    RAISE EXCEPTION 'No se recibieron datos de la preinscripción.';
+  END IF;
+
+  -- Campos que el público NUNCA puede fijar
+  v_row := p_data
+    - 'id'
+    - 'status'
+    - 'director_authorization_approved'
+    - 'created_at'
+    - 'updated_at';
+
+  -- Descartar claves que no son columnas reales
+  SELECT coalesce(jsonb_object_agg(e.k, e.v), '{}'::jsonb)
+    INTO v_row
+    FROM jsonb_each(v_row) AS e(k, v)
+   WHERE EXISTS (
+           SELECT 1
+             FROM information_schema.columns c
+            WHERE c.table_schema   = 'public'
+              AND c.table_name     = 'student_preregistrations'
+              AND c.column_name    = e.k
+         );
+
+  -- Columnas obligatorias (consultadas al esquema real)
+  SELECT string_agg(c.column_name, ', ')
+    INTO v_faltan
+    FROM information_schema.columns c
+   WHERE c.table_schema   = 'public'
+     AND c.table_name     = 'student_preregistrations'
+     AND c.is_nullable    = 'NO'
+     AND c.column_default IS NULL
+     AND c.column_name   <> 'id'
+     AND btrim(coalesce(v_row ->> c.column_name, '')) = '';
+
+  IF v_faltan IS NOT NULL THEN
+    RAISE EXCEPTION
+      'Faltan datos obligatorios de la preinscripción: %. Revisa el formulario e inténtalo de nuevo.',
+      v_faltan;
+  END IF;
+
+  -- Toda solicitud entra como PENDIENTE, siempre.
+  v_row := v_row || jsonb_build_object('status', 'pending');
+
+  -- INSERT dinámico sólo con las columnas presentes
+  v_cols := (SELECT string_agg(quote_ident(k), ', ')
+               FROM jsonb_object_keys(v_row) AS k);
+  v_vals := (SELECT string_agg(quote_nullable(v_row ->> k), ', ')
+               FROM jsonb_object_keys(v_row) AS k);
+
+  EXECUTE format(
+    'INSERT INTO public.student_preregistrations (%s) VALUES (%s) RETURNING id',
+    v_cols, v_vals
+  ) INTO v_id;
+
+  RETURN v_id;
+END;
+$$;
+
+COMMENT ON FUNCTION public.submit_preregistration(jsonb) IS
+  'Alta publica de preinscripcion. Devuelve solo el id generado para que el '
+  'navegador no necesite SELECT sobre la tabla (RLS lo bloquearia). Descarta '
+  'status y director_authorization_approved.';
+
+REVOKE ALL ON FUNCTION public.submit_preregistration(jsonb) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.submit_preregistration(jsonb) TO anon;
+GRANT EXECUTE ON FUNCTION public.submit_preregistration(jsonb) TO authenticated;
+
+RESET client_min_messages;

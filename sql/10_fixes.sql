@@ -1356,3 +1356,119 @@ END $$;
 SELECT policyname, cmd FROM pg_policies
 WHERE schemaname='public' AND tablename='students'
 ORDER BY policyname;
+
+
+
+-- #################################################################
+--  CONSOLIDADO 11-30 — DISTRIBUIDO EN LOS ARCHIVOS 01-09
+-- #################################################################
+-- Los archivos 11..30 (y los fixes sueltos) ya NO existen sueltos:
+-- su contenido fue integrado DIRECTAMENTE en cada archivo base,
+-- en bloques marcados con "BLOQUE CONSOLIDADO DESDE los antiguos 11-30":
+--   01_base.sql        helpers add_column_if_missing, columnas de
+--                      students/prereg/profiles/payments/eval_areas,
+--                      actividades escolares (tipos/tabla/reconciliacion),
+--                      tablas de supervision e intervenciones, FKs a classrooms
+--   02_extensiones.sql realtime (messages, school_activities)
+--   03_seguridad.sql   GRANT USAGE ON SCHEMA public + grants de tablas
+--   04_funciones.sql   get_my_role, is_teacher_of_classroom,
+--                      publish_school_activity, close_intervention,
+--                      run_ddl_migration, submit_preregistration
+--   05_trigger.sql     triggers de actividades escolares y de supervision
+--   07_politicas.sql   RLS: storage, comments/likes, attendance, profiles,
+--                      students, messages, posts, daily_logs, eval_*, tasks,
+--                      actividades escolares, supervision, preinscripcion
+--   08_indices.sql     indices de apoyo (students, messages, school_activities)
+--   09_seed.sql        limpieza canonica de aulas (20>15) + backfills (26, 30)
+--   10_fixes.sql       (este archivo) motor de alertas + fixes historicos +
+--                      SECCION 12 de verificacion global
+-- Orden de ejecucion: 01 -> 02 -> 03 -> 04 -> 05 -> 06 -> 07 -> 08 -> 09 -> 10.
+-- Todo es idempotente y re-ejecutable.
+-- #################################################################
+
+-- ================================================================
+-- SECCIÓN 12 — VERIFICACIÓN GLOBAL (sólo SELECTs, seguras)
+-- ================================================================
+
+-- 1) Objetos clave creados por este consolidado
+SELECT routine_name AS funcion, routine_type
+  FROM information_schema.routines
+ WHERE routine_schema = 'public'
+   AND routine_name IN (
+     'get_my_role','is_teacher_of_classroom','add_column_if_missing',
+     'run_ddl_migration','submit_preregistration','close_intervention',
+     'fn_supervision_auto_audit','fn_interventions_updated_at','fn_interventions_code_gen',
+     'fn_school_activities_updated_at','fn_school_activities_code','fn_school_activities_lifecycle',
+     'fn_school_activities_mirror','publish_school_activity',
+     '_repoint_classroom','_aula_strip_suffix','_aula_norm','_aula_catalog','_aula_canon'
+   )
+ ORDER BY routine_name;
+
+-- 2) Tablas nuevas creadas
+SELECT table_name
+  FROM information_schema.tables
+ WHERE table_schema = 'public'
+   AND table_name IN (
+     'supervision_sessions','supervision_audit_log','interventions',
+     'school_activities','school_month_configs','school_activity_evidences',
+     'classroom_daily_schedule','classroom_routine_settings','daily_logs',
+     'login_attempts','student_preregistrations'
+   )
+ ORDER BY table_name;
+
+-- 3) Columnas nuevas clave (cada una debe devolver 1 fila)
+SELECT table_name, column_name
+  FROM information_schema.columns
+ WHERE table_schema = 'public'
+   AND (
+     (table_name = 'students' AND column_name IN
+       ('pre_registration_id','prolonged_fee','school_year_requested','health_notes','allergies'))
+     OR (table_name = 'payments' AND column_name IN ('payment_plan_id','description'))
+     OR (table_name = 'profiles' AND column_name IN ('notification_email','is_temporary_password'))
+     OR (table_name = 'student_preregistrations' AND column_name IN ('reviewer_note','ack_sent_at','admitted_at'))
+     OR (table_name = 'eval_areas' AND column_name = 'classroom_id')
+   )
+ ORDER BY table_name, column_name;
+
+-- 4) Políticas RLS críticas activas (cada una debe devolver 1 fila)
+SELECT schemaname, tablename, policyname
+  FROM pg_policies
+ WHERE schemaname = 'public'
+   AND policyname IN (
+     'attendance_staff_all','comments_auth','likes_auth','likes_select',
+     'prereg_authenticated_insert_only','staff_all_eval_scores',
+     'eval_evaluations_read','eval_areas_read','eval_activities_read',
+     'school_activities_select_maestra','school_activities_select_padre',
+     'supervision_sessions_select_self_staff','interventions_select_staff',
+     'posts_auth_update','posts_auth_delete'
+   )
+ ORDER BY tablename, policyname;
+
+-- 5) TRIGGERS activos (supervisión + actividades escolares)
+SELECT event_object_table AS tabla, trigger_name
+  FROM information_schema.triggers
+ WHERE trigger_schema = 'public'
+   AND trigger_name LIKE 'trg_supervision_%'
+      OR trigger_name LIKE 'trg_school_activities_%'
+      OR trigger_name LIKE 'trg_interventions_%'
+ ORDER BY trigger_name;
+
+-- 6) Aulas: debe quedar limpio (ver sección 10 para el detalle)
+SELECT COUNT(*) AS aulas_activas, COUNT(*) FILTER (WHERE teacher_id IS NULL) AS sin_maestra
+  FROM public.classrooms
+ WHERE deleted_at IS NULL;
+
+-- 7) Índice único parcial de aulas (debe existir)
+SELECT indexname
+  FROM pg_indexes
+ WHERE schemaname = 'public'
+   AND tablename = 'classrooms'
+   AND indexname = 'ux_classrooms_name_active';
+
+
+-- ================================================================
+-- FIN — 10_fixes.sql (motor de alertas + verificacion global)
+-- Los bloques de los antiguos 11-30 viven ahora en 01-09
+-- (buscar "BLOQUE CONSOLIDADO DESDE los antiguos 11-30").
+-- Ejecutar en Supabase -> SQL Editor en orden 01..10. Idempotente.
+-- ================================================================

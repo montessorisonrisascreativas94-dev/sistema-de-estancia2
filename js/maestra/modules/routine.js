@@ -2372,6 +2372,64 @@ export async function _confirmTemp(studentId) {
   } catch { safeToast('Error al guardar', 'error'); btn.disabled = false; btn.textContent = 'Guardar Temperatura'; }
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// SECCIONES COLAPSABLES DEL MODAL INDIVIDUAL
+// Cada "campo de evento" (emocional, alimentación, siesta…) puede ocultarse
+// o mostrarse para ganar espacio, sobre todo en móvil. El estado queda
+// guardado por maestra en localStorage: al reabrir (hoy o mañana) cada
+// sección aparece como ella lo dejó.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const SR_SEC_KEY = 'msc_sr_sections_v1';
+const SR_SEC_IDS = ['timeline', 'aula', 'mood', 'food', 'nap', 'milk', 'activities', 'hygiene', 'health', 'extra', 'behavior', 'note'];
+
+function _srReadSecState() {
+  try {
+    const v = JSON.parse(localStorage.getItem(SR_SEC_KEY) || 'null');
+    return (v && typeof v === 'object') ? v : {};
+  } catch { return {}; }
+}
+function _srIsOpen(id, defOpen) {
+  const st = _srReadSecState();
+  return typeof st[id] === 'boolean' ? st[id] : !!defOpen;
+}
+function _srWriteSecState(st) { try { localStorage.setItem(SR_SEC_KEY, JSON.stringify(st)); } catch {} }
+
+/** Abre/cierra UNA sección del modal individual y persiste el estado */
+export function _srToggleSec(id) {
+  const head = document.querySelector(`#studentRoutineModal [data-sr-head="${id}"]`);
+  const body = document.querySelector(`#studentRoutineModal [data-sr-body="${id}"]`);
+  if (!body) return;
+  const opening = body.style.display === 'none';
+  body.style.display = opening ? '' : 'none';
+  if (head) { head.classList.toggle('sr-collapsed', !opening); head.setAttribute('aria-expanded', String(opening)); }
+  const st = _srReadSecState(); st[id] = opening; _srWriteSecState(st);
+  _srSyncExpandBtn();
+}
+
+/** Abre o cierra TODAS las secciones del modal individual */
+export function _srToggleAll(open) {
+  const st = _srReadSecState();
+  SR_SEC_IDS.forEach(id => { st[id] = !!open; });
+  _srWriteSecState(st);
+  document.querySelectorAll('#studentRoutineModal [data-sr-body]').forEach(b => { b.style.display = open ? '' : 'none'; });
+  document.querySelectorAll('#studentRoutineModal [data-sr-head]').forEach(h => {
+    h.classList.toggle('sr-collapsed', !open);
+    h.setAttribute('aria-expanded', String(!!open));
+  });
+  _srSyncExpandBtn();
+}
+
+/** Sincroniza el estado (habilitado/atenuado) de los botones Expandir/Contraer todo */
+function _srSyncExpandBtn() {
+  const bodies = [...document.querySelectorAll('#studentRoutineModal [data-sr-body]')];
+  if (!bodies.length) return;
+  const allOpen = bodies.every(b => b.style.display !== 'none');
+  const allClosed = bodies.every(b => b.style.display === 'none');
+  document.getElementById('srExpandAllBtn')?.classList.toggle('sr-tool-off', allOpen);
+  document.getElementById('srCollapseAllBtn')?.classList.toggle('sr-tool-off', allClosed);
+}
+
 export function openStudentRoutine(studentId) {
   try { studentId = decodeURIComponent(studentId); } catch {}
   const students = AppState.get('students') || [];
@@ -2418,13 +2476,34 @@ export function openStudentRoutine(studentId) {
   if (hasEvent('behavior')) registeredBadges.push({ emoji: '🤝', label: 'Conducta', color: '#F59E0B' });
   if (log?.notes) registeredBadges.push({ emoji: '📝', label: 'Nota', color: '#64748B' });
 
-  // ── Helper: section header ──
-  const section = (title, content) => `
-    <div class="pt-1">
-      <h4 class="text-xs font-black text-slate-800 mb-3 flex items-center gap-2">${title}</h4>
-      ${content}
-    </div>
-  `;
+  // ── Contadores de estado para los badges de cada sección ──
+  const _nBy = (fn) => events.filter(fn).length;
+  const nMilk     = _nBy(e => e.type === 'milk');
+  const nAct      = _nBy(e => ['activity', 'sensorial', 'playground', 'handwash', 'toothbrush'].includes(e.type));
+  const nHyg      = _nBy(e => e.type === 'diaper' || e.type === 'bath' || e.type === 'diaper_change');
+  const nHealth   = _nBy(e => e.type === 'temp' || e.type === 'med' || e.type === 'health');
+  const nIncident = _nBy(e => e.type === 'incident');
+  const nBehavior = _nBy(e => e.type === 'behavior');
+  const foodCount = ['breakfast', 'lunch', 'snack'].filter(k => currentFood[k]).length;
+
+  // ── Helper: sección colapsable con badge de estado ──
+  // badge: { text, ok } — ok pinta el badge en verde (registrado/completo)
+  // defOpen: estado por defecto la PRIMERA vez (después manda localStorage)
+  const section = (id, title, content, badge, defOpen = false) => {
+    const open = _srIsOpen(id, defOpen);
+    const badgeHTML = badge ? `<span class="sr-sec-badge${badge.ok ? ' sr-ok' : ''}">${badge.text}</span>` : '';
+    return `
+      <div class="sr-sec">
+        <button type="button" class="sr-sec-head${open ? '' : ' sr-collapsed'}" data-sr-head="${id}"
+          onclick="App._srToggleSec('${id}')" aria-expanded="${open}">
+          <svg class="sr-sec-chev" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+          <span class="sr-sec-title">${title}</span>
+          ${badgeHTML}
+        </button>
+        <div class="sr-sec-body" data-sr-body="${id}" style="${open ? '' : 'display:none'}">${content}</div>
+      </div>
+    `;
+  };
 
   // ── Helper: button with registered detection ──
   const chipBtn = (onclick, emoji, label, isRegistered, regColor = '#28B54D') => `
@@ -2468,69 +2547,74 @@ export function openStudentRoutine(studentId) {
         </div>
       </div>
 
-      <div class="p-5 space-y-5 max-h-[70vh] overflow-y-auto" id="sr-scroll">
+      <div class="p-4 sm:p-5 space-y-4 overflow-y-auto" id="sr-scroll" style="max-height:min(80vh,760px)">
+
+        <!-- TOOLBAR: expandir/contraer todas las secciones -->
+        <div class="sr-toolbar">
+          <button type="button" id="srExpandAllBtn" onclick="App._srToggleAll(true)" class="sr-tool-btn">⬆ Expandir todo</button>
+          <button type="button" id="srCollapseAllBtn" onclick="App._srToggleAll(false)" class="sr-tool-btn">⬇ Contraer todo</button>
+          <span class="sr-tool-hint">Toca cada sección para abrir o cerrar</span>
+        </div>
 
         ${isExited ? `
         <div class="rounded-2xl p-4 flex items-start gap-3" style="background:#FEE2E2;border:2px solid #FCA5A5">
           <span class="text-2xl">🚫</span>
           <div>
-            <p class="text-sm font-black text-red-700">Este estudiante ya fue retirado hoy</h3>
+            <p class="text-sm font-black text-red-700">Este estudiante ya fue retirado hoy</p>
             <p class="text-xs font-bold text-red-500 mt-0.5">No se puede registrar ni modificar rutina después de la salida. Los datos mostrados son solo de lectura.</p>
           </div>
         </div>` : ''}
 
         <!-- ═══ LÍNEA DE TIEMPO DE EVENTOS REGISTRADOS ═══ -->
         ${(() => {
-          // Build chronological event list from all sources
-          const allEvents = [];
+          const nTimeline = (log?.mood ? 1 : 0) + (currentFood.breakfast ? 1 : 0) + (currentFood.lunch ? 1 : 0)
+            + (currentFood.snack ? 1 : 0) + (log?.nap ? 1 : 0) + events.length + (log?.notes ? 1 : 0);
+          const body = (() => {
+            // Build chronological event list from all sources
+            const allEvents = [];
 
-          // Mood
-          if (log?.mood) {
-            const mood = MOOD_OPTIONS.find(m => m.val === log.mood);
-            allEvents.push({ emoji: mood?.emoji || '😊', label: 'Ánimo: ' + (mood?.label || log.mood), time: log.created_at, color: '#3B82F6', id: null, type: 'mood', editable: false });
-          }
-          // Food
-          if (currentFood.breakfast) allEvents.push({ emoji: '🍞', label: 'Desayuno: ' + (foodOptions.find(f => f.val === currentFood.breakfast)?.label || currentFood.breakfast), time: null, color: '#FF8A00', id: null, type: 'food_breakfast', editable: false });
-          if (currentFood.lunch)     allEvents.push({ emoji: '🥗', label: 'Almuerzo: ' + (foodOptions.find(f => f.val === currentFood.lunch)?.label || currentFood.lunch),   time: null, color: '#28B54D', id: null, type: 'food_lunch',     editable: false });
-          if (currentFood.snack)     allEvents.push({ emoji: '🍎', label: 'Merienda: ' + (foodOptions.find(f => f.val === currentFood.snack)?.label || currentFood.snack),     time: null, color: '#F59E0B', id: null, type: 'food_snack',     editable: false });
-          if (log?.nap)              allEvents.push({ emoji: '😴', label: 'Siesta: ' + ({si:'Durmió',no:'No durmió',poco:'Poco',excelente:'Excelente'}[log.nap]||log.nap), time: null, color: '#8B5CF6', id: null, type: 'nap', editable: false });
+            // Mood
+            if (log?.mood) {
+              const mood = MOOD_OPTIONS.find(m => m.val === log.mood);
+              allEvents.push({ emoji: mood?.emoji || '😊', label: 'Ánimo: ' + (mood?.label || log.mood), time: log.created_at, color: '#3B82F6', id: null, type: 'mood', editable: false });
+            }
+            // Food
+            if (currentFood.breakfast) allEvents.push({ emoji: '🍞', label: 'Desayuno: ' + (foodOptions.find(f => f.val === currentFood.breakfast)?.label || currentFood.breakfast), time: null, color: '#FF8A00', id: null, type: 'food_breakfast', editable: false });
+            if (currentFood.lunch)     allEvents.push({ emoji: '🥗', label: 'Almuerzo: ' + (foodOptions.find(f => f.val === currentFood.lunch)?.label || currentFood.lunch),   time: null, color: '#28B54D', id: null, type: 'food_lunch',     editable: false });
+            if (currentFood.snack)     allEvents.push({ emoji: '🍎', label: 'Merienda: ' + (foodOptions.find(f => f.val === currentFood.snack)?.label || currentFood.snack),     time: null, color: '#F59E0B', id: null, type: 'food_snack',     editable: false });
+            if (log?.nap)              allEvents.push({ emoji: '😴', label: 'Siesta: ' + ({si:'Durmió',no:'No durmió',poco:'Poco',excelente:'Excelente'}[log.nap]||log.nap), time: null, color: '#8B5CF6', id: null, type: 'nap', editable: false });
 
-          // infant_data events — each with its own created_at
-          const EMAP = { milk:'🍼', activity:'🎨', sensorial:'🔬', playground:'🌳', handwash:'🧼', toothbrush:'🪥', bath:'🚽', temp:'🌡️', med:'💊', note:'📝', behavior:'🤝', health:'😷', incident:'🤕', diaper:'🧻', sleep:'😴' };
-          const poop = ev => ev.subtype === 'soiled' ? '💩' : (ev.subtype === 'wet' ? '💧' : EMAP[ev.type] || '📌');
-          events.forEach(ev => {
-            allEvents.push({
-              emoji: poop(ev),
-              label: ev.label || ev.type,
-              time:  ev.created_at || ev.start_time || null,
-              color: '#475569',
-              id:    ev.id,
-              type:  ev.type,
-              editable: true
+            // infant_data events — each with its own created_at
+            const EMAP = { milk:'🍼', activity:'🎨', sensorial:'🔬', playground:'🌳', handwash:'🧼', toothbrush:'🪥', bath:'🚽', temp:'🌡️', med:'💊', note:'📝', behavior:'🤝', health:'😷', incident:'🤕', diaper:'🧻', sleep:'😴' };
+            const poop = ev => ev.subtype === 'soiled' ? '💩' : (ev.subtype === 'wet' ? '💧' : EMAP[ev.type] || '📌');
+            events.forEach(ev => {
+              allEvents.push({
+                emoji: poop(ev),
+                label: ev.label || ev.type,
+                time:  ev.created_at || ev.start_time || null,
+                color: '#475569',
+                id:    ev.id,
+                type:  ev.type,
+                editable: true
+              });
             });
-          });
 
-          if (log?.notes) allEvents.push({ emoji: '📝', label: 'Nota: ' + log.notes.substring(0,40) + (log.notes.length>40?'…':''), time: log.created_at, color: '#64748B', id: null, type: 'note', editable: false });
+            if (log?.notes) allEvents.push({ emoji: '📝', label: 'Nota: ' + log.notes.substring(0,40) + (log.notes.length>40?'…':''), time: log.created_at, color: '#64748B', id: null, type: 'note', editable: false });
 
-          // Sort by time
-          allEvents.sort((a, b) => {
-            if (!a.time && !b.time) return 0;
-            if (!a.time) return 1;
-            if (!b.time) return -1;
-            return new Date(a.time).getTime() - new Date(b.time).getTime();
-          });
+            // Sort by time
+            allEvents.sort((a, b) => {
+              if (!a.time && !b.time) return 0;
+              if (!a.time) return 1;
+              if (!b.time) return -1;
+              return new Date(a.time).getTime() - new Date(b.time).getTime();
+            });
 
-          if (!allEvents.length) return `
-            <div class="rounded-2xl p-4 text-center" style="background:#F8FAFC;border:2px dashed #E2E8F0">
-              <p class="text-xs font-bold text-slate-400">Sin eventos registrados hoy</p>
-            </div>`;
+            if (!allEvents.length) return `
+              <div class="rounded-2xl p-4 text-center" style="background:#F8FAFC;border:2px dashed #E2E8F0">
+                <p class="text-xs font-bold text-slate-400">Sin eventos registrados hoy</p>
+              </div>`;
 
-          return `
-            <div>
-              <h4 class="text-xs font-black text-slate-800 mb-3 flex items-center gap-2">
-                📋 Línea del Tiempo
-                <span class="ml-auto text-[9px] font-black text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">${allEvents.length} evento${allEvents.length!==1?'s':''}</span>
-              </h4>
+            return `
               <div class="space-y-1.5">
                 ${allEvents.map(ev => `
                   <div class="flex items-center gap-2.5 p-2.5 rounded-xl" style="background:${ev.color}0D;border:1.5px solid ${ev.color}33">
@@ -2554,11 +2638,11 @@ export function openStudentRoutine(studentId) {
                       </button>` : ''}
                   </div>
                 `).join('')}
-              </div>
-            </div>`;
+              </div>`;
+          })();
+          return section('timeline', '📋 Línea del Tiempo', body,
+            { text: `${nTimeline} reg.`, ok: nTimeline > 0 }, nTimeline > 0);
         })()}
-
-        <div class="border-b border-slate-100"></div>
 
         <!-- ═══ ELEGIR EVENTO DEL AULA PARA ESTE ESTUDIANTE ═══ -->
         ${(() => {
@@ -2592,29 +2676,23 @@ export function openStudentRoutine(studentId) {
               </div>
             </div>`).join('');
 
-          return `
+          const body = `
+            <input id="srEvSearch" placeholder="Buscar evento del aula..." oninput="App._filterStudentEvents(this.value)"
+              class="w-full mb-3 p-2.5 border-2 border-slate-100 rounded-xl text-xs focus:border-green-400 outline-none">
             <div>
-              <h4 class="text-xs font-black text-slate-800 mb-2 flex items-center gap-2">
-                🗓️ Eventos del Aula
-                <span class="ml-auto text-[9px] font-bold text-slate-400">Toca para registrar con su hora</span>
-              </h4>
-              <input id="srEvSearch" placeholder="Buscar evento del aula..." oninput="App._filterStudentEvents(this.value)"
-                class="w-full mb-3 p-2.5 border-2 border-slate-100 rounded-xl text-xs focus:border-green-400 outline-none">
-              <div>
-                <p class="text-[9px] font-black text-slate-400 uppercase tracking-wide mb-1.5">⏰ Horario del Aula</p>
-                <div class="grid grid-cols-4 gap-1.5">${schedChips || '<p class="col-span-4 text-[10px] text-slate-300 italic">Sin bloques configurados</p>'}</div>
-              </div>
-              <div class="mt-3">
-                <p class="text-[9px] font-black text-slate-400 uppercase tracking-wide mb-1.5">🎯 Rutinas del Aula</p>
-                <div class="max-h-64 overflow-y-auto pr-1">${routineBlocks || '<p class="text-[10px] text-slate-300 italic">Sin rutinas para este nivel</p>'}</div>
-              </div>
+              <p class="text-[9px] font-black text-slate-400 uppercase tracking-wide mb-1.5">⏰ Horario del Aula</p>
+              <div class="grid grid-cols-4 gap-1.5">${schedChips || '<p class="col-span-4 text-[10px] text-slate-300 italic">Sin bloques configurados</p>'}</div>
+            </div>
+            <div class="mt-3">
+              <p class="text-[9px] font-black text-slate-400 uppercase tracking-wide mb-1.5">🎯 Rutinas del Aula</p>
+              <div class="max-h-64 overflow-y-auto pr-1">${routineBlocks || '<p class="text-[10px] text-slate-300 italic">Sin rutinas para este nivel</p>'}</div>
             </div>`;
+          return section('aula', '🗓️ Eventos del Aula', body,
+            { text: `${schedule.length} bloques`, ok: false }, true);
         })()}
 
-        <div class="border-b border-slate-100"></div>
-
         <!-- ═══ ESTADO EMOCIONAL ═══ -->
-        ${section('😊 Estado Emocional', `
+        ${section('mood', '😊 Estado Emocional', `
           <div class="grid grid-cols-4 gap-1.5">
             ${MOOD_OPTIONS.map(m => `
               <button onclick="App.setStudentMood('${studentId}','${m.val}')"
@@ -2626,12 +2704,10 @@ export function openStudentRoutine(studentId) {
               </button>
             `).join('')}
           </div>
-        `)}
-
-        <div class="border-b border-slate-100"></div>
+        `, log?.mood ? { text: MOOD_OPTIONS.find(m => m.val === log.mood)?.emoji + ' ✓', ok: true } : { text: 'Pendiente', ok: false }, true)}
 
         <!-- ═══ ALIMENTACIÓN ═══ -->
-        ${section('🍽️ Alimentación', `
+        ${section('food', '🍽️ Alimentación', `
           <div class="space-y-2">
             ${['breakfast', 'lunch', 'snack'].map(mealKey => {
               const currentVal = currentFood[mealKey] || '';
@@ -2654,12 +2730,10 @@ export function openStudentRoutine(studentId) {
               `;
             }).join('')}
           </div>
-        `)}
-
-        <div class="border-b border-slate-100"></div>
+        `, { text: `${foodCount}/3 comidas`, ok: foodCount === 3 }, true)}
 
         <!-- ═══ CICLO DE SUEÑO ═══ -->
-        ${section('😴 Ciclo de Sueño', `
+        ${section('nap', '😴 Ciclo de Sueño', `
           <div class="grid grid-cols-4 gap-1.5">
             ${[
               { val: 'si', label: 'Dormido', icon: '💤' }, { val: 'no', label: 'No durmió', icon: '☀️' },
@@ -2679,12 +2753,10 @@ export function openStudentRoutine(studentId) {
             class="mt-2 w-full p-2.5 rounded-xl text-white font-black text-[10px] uppercase flex items-center justify-center gap-2" style="background:#7c3aed">
             <span>😴</span> Despertar
           </button>` : ''}
-        `)}
-
-        <div class="border-b border-slate-100"></div>
+        `, log?.nap ? { text: '✓', ok: true } : { text: 'Pendiente', ok: false })}
 
         <!-- ═══ BIBERÓN ═══ -->
-        ${section('🍼 Biberón', `
+        ${section('milk', '🍼 Biberón', `
           <button onclick="App._openMilkModal('${studentId}')"
             class="w-full p-3 rounded-xl border-2 ${hasEvent('milk') ? 'border-green-300 bg-green-50' : 'border-slate-100 bg-white'} flex items-center gap-3 text-left hover:border-blue-200 transition-all">
             <span class="text-xl">🍼</span>
@@ -2695,7 +2767,7 @@ export function openStudentRoutine(studentId) {
             ${hasEvent('milk') ? '<span class="text-[10px] font-black text-green-600 mr-1">✓</span>' : ''}
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
           </button>
-          ${events.filter(e => e.type === 'milk').length > 0 ? `
+          ${nMilk > 0 ? `
           <div class="mt-2 space-y-1">
             ${events.filter(e => e.type === 'milk').map(evt => `
               <div class="flex items-center gap-2 p-2 rounded-lg bg-blue-50 text-[10px]">
@@ -2706,15 +2778,13 @@ export function openStudentRoutine(studentId) {
               </div>
             `).join('')}
           </div>` : ''}
-        `)}
-
-        <div class="border-b border-slate-100"></div>
+        `, nMilk > 0 ? { text: `${nMilk} reg.`, ok: true } : { text: 'Pendiente', ok: false })}
 
         <!-- ═══ ACTIVIDADES — nivel-aware ═══ -->
         ${(() => {
           const lc = _getLevelCategory();
           const noHandwash = lc === 'primary';
-          return section('🎨 Actividades', `
+          return section('activities', '🎨 Actividades', `
             <div class="grid grid-cols-3 gap-1.5">
               ${chipBtn("App.addStudentEvent('" + studentId + "','activity')", '🎨', 'Actividad', hasEvent('activity'))}
               ${chipBtn("App.addStudentEvent('" + studentId + "','sensorial')", '🔬', 'Sensorial', hasEvent('sensorial'))}
@@ -2722,10 +2792,8 @@ export function openStudentRoutine(studentId) {
               ${!noHandwash ? chipBtn("App.addStudentEvent('" + studentId + "','handwash')", '🧼', 'Lavado manos', hasEvent('handwash')) : ''}
               ${!noHandwash ? chipBtn("App.addStudentEvent('" + studentId + "','toothbrush')", '🪥', 'Cepillado', hasEvent('toothbrush')) : ''}
             </div>
-          `);
+          `, nAct > 0 ? { text: `${nAct} reg.`, ok: true } : { text: 'Pendiente', ok: false });
         })()}
-
-        <div class="border-b border-slate-100"></div>
 
         <!-- ═══ HIGIENE — filtrado por nivel ═══ -->
         ${(() => {
@@ -2740,13 +2808,12 @@ export function openStudentRoutine(studentId) {
           const noteSpan = chips.length % 3 === 2 ? 'col-span-2' : '';
           chips.push(`<button onclick="App.addStudentEvent('${studentId}','note')" class="p-2 rounded-xl border-2 ${log?.notes ? 'border-green-400 bg-green-50' : 'border-slate-100 bg-white'} flex flex-col items-center gap-0.5 active:scale-95 transition-all ${noteSpan}"><span class="text-lg">📝</span><span class="text-[7px] font-black ${log?.notes ? 'text-green-700' : 'text-slate-500'}">Nota rápida</span>${log?.notes ? '<span class="text-[6px] font-black text-green-500">✓</span>' : ''}</button>`);
           const title = (lc === 'infants' || lc === 'toddlers') ? '🧷 Higiene y Pañales' : '🧼 Higiene y Esfínteres';
-          return section(title, `<div class="grid grid-cols-3 gap-1.5">${chips.join('')}</div>`);
+          return section('hygiene', title, `<div class="grid grid-cols-3 gap-1.5">${chips.join('')}</div>`,
+            nHyg > 0 ? { text: `${nHyg} reg.`, ok: true } : { text: 'Pendiente', ok: false });
         })()}
 
-        <div class="border-b border-slate-100"></div>
-
         <!-- ═══ SALUD ═══ -->
-        ${section('🏥 Salud y Alertas', `
+        ${section('health', '🏥 Salud y Alertas', `
           <div class="grid grid-cols-3 gap-1.5">
             ${chipBtn("App.addStudentEvent('" + studentId + "','temp')", '🌡️', 'Temperatura', hasEvent('temp'))}
             ${chipBtnNS("App._openMedModal('" + studentId + "')", '💊', 'Medicamento', hasEvent('med'))}
@@ -2754,12 +2821,10 @@ export function openStudentRoutine(studentId) {
             ${chipBtn("App.addStudentEvent('" + studentId + "','vomit')", '🤮', 'Vómito', hasEvent('health', 'vomit'))}
             ${chipBtn("App.addStudentEvent('" + studentId + "','cough')", '😷', 'Tos/Congestión', hasEvent('health', 'cough'))}
           </div>
-        `)}
-
-        <div class="border-b border-slate-100"></div>
+        `, nHealth > 0 ? { text: `${nHealth} reg.`, ok: true } : { text: 'Sin alertas', ok: false })}
 
         <!-- ═══ EVENTOS EXTRA ═══ -->
-        ${section('⚠️ Eventos Extra', `
+        ${section('extra', '⚠️ Eventos Extra', `
           <button onclick="App._openExtraEventModal('${studentId}')"
             class="w-full p-3 rounded-xl border-2 border-dashed border-slate-200 bg-white flex items-center gap-3 text-left hover:border-red-300 transition-all">
             <span class="text-xl">➕</span>
@@ -2769,12 +2834,10 @@ export function openStudentRoutine(studentId) {
             </div>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
           </button>
-        `)}
-
-        <div class="border-b border-slate-100"></div>
+        `, nIncident > 0 ? { text: `${nIncident} reg.`, ok: true } : { text: 'Pendiente', ok: false })}
 
         <!-- ═══ CONDUCTA ═══ -->
-        ${section('🤝 Conducta', `
+        ${section('behavior', '🤝 Conducta', `
           <div class="space-y-3">
             <div>
               <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wide mb-1.5">Social</p>
@@ -2840,22 +2903,21 @@ export function openStudentRoutine(studentId) {
               </div>
             </div>
           </div>
-        `)}
-
-        <div class="border-b border-slate-100"></div>
+        `, nBehavior > 0 ? { text: `${nBehavior} reg.`, ok: true } : { text: 'Pendiente', ok: false })}
 
         <!-- ═══ NOTA ═══ -->
-        ${section('📝 Nota Individual', `
+        ${section('note', '📝 Nota Individual', `
           <textarea id="studentNote-${studentId}" placeholder="Escribe una nota sobre el día..."
             class="w-full p-3 border-2 border-slate-100 rounded-xl text-xs focus:border-blue-400 outline-none" rows="3">${safeEscapeHTML(log?.notes || '')}</textarea>
           <button onclick="App.saveStudentNote('${studentId}')"
             class="mt-2 w-full p-3 rounded-xl text-white font-black text-xs uppercase" style="background:#28B54D">Guardar Nota</button>
-        `)}
+        `, log?.notes ? { text: '✓', ok: true } : { text: 'Vacía', ok: false })}
 
       </div>
     </div>
   `;
   UI.Modal.open('studentRoutineModal', modalContent);
+  _srSyncExpandBtn();
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

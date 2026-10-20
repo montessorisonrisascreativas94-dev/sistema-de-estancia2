@@ -187,6 +187,8 @@ window.App = {
     _addScheduleEventToStudent: Routine._addScheduleEventToStudent,
     _addClassRoutineToStudent:  Routine._addClassRoutineToStudent,
     _filterStudentEvents:       Routine._filterStudentEvents,
+    _srToggleSec:              Routine._srToggleSec,
+    _srToggleAll:              Routine._srToggleAll,
     publishDailyLogs:         Routine.publishDailyLogs,
     toggleOmitToday:          Routine.toggleOmitToday,
     insertEventAt:            Routine.insertEventAt,

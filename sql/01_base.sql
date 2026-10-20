@@ -1,3 +1,4 @@
+-- NOTA: este archivo contiene ademas bloques CONSOLIDADOS de los antiguos sql/11-30 (buscar "BLOQUE CONSOLIDADO" al final).
 -- ============================================================
 -- 01_base.sql — Colegio Montessori Sonrisas Creativas
 -- Contenido: sección 1 (LIMPIEZA DE FUNCIONES ANTIGUAS (para evitar conflictos)) + sección 2 (EXTENSIONES REQUERIDAS) + sección 3 (TIPOS PERSONALIZADOS (ENUMs)) + sección 4 (TABLAS (orden por dependencia))
@@ -1906,3 +1907,681 @@ CREATE TYPE  diaper_type AS ENUM (
 );
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
+
+
+-- #################################################################
+-- BLOQUE CONSOLIDADO DESDE los antiguos sql/11-30
+-- (integrado el 2026-10-19; idempotente y re-ejecutable)
+-- #################################################################
+-- ================================================================
+-- SECCIÓN 1 — HELPERS
+-- ================================================================
+-- (original 14_admision_completa.sql §1) Helper de 3 argumentos.
+-- La sobrecarga de 4 argumentos (p_table, p_column, p_type, p_default)
+-- causaba ERROR 42725 "function is not unique" al llamarla con 3 args;
+-- se elimina justo después y NO se vuelve a crear.
+CREATE OR REPLACE FUNCTION public.add_column_if_missing(
+  tbl        text,
+  col        text,
+  definition text
+) RETURNS void
+LANGUAGE plpgsql AS $$
+BEGIN
+  EXECUTE format(
+    'ALTER TABLE public.%I ADD COLUMN IF NOT EXISTS %I %s',
+    tbl, col, definition
+  );
+EXCEPTION WHEN OTHERS THEN
+  RAISE NOTICE 'add_column_if_missing(%, %) omitido: %', tbl, col, SQLERRM;
+END $$;
+
+-- (original 17_fix_students_prolonged_fee.sql) Quitar la sobrecarga de
+-- 4 args si migraciones viejas la crearon (resuelve el 42725).
+DO $$
+DECLARE
+  n4 integer;
+BEGIN
+  SELECT count(*) INTO n4
+  FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+  WHERE n.nspname = 'public' AND p.proname = 'add_column_if_missing' AND p.pronargs = 4;
+
+  IF n4 > 0 THEN
+    EXECUTE 'DROP FUNCTION public.add_column_if_missing(text, text, text, text)';
+    RAISE NOTICE 'Eliminada la sobrecarga de 4 args de add_column_if_missing (resuelve 42725)';
+  END IF;
+END $$;
+
+-- ================================================================
+-- SECCIÓN 2 — COLUMNAS
+-- ================================================================
+
+-- ----------------------------------------------------------------
+-- 2a. students: identidad y contacto            [original 14 §2–§4]
+-- ----------------------------------------------------------------
+SELECT public.add_column_if_missing('students', 'student_name',          'text');
+SELECT public.add_column_if_missing('students', 'student_last_name',     'text');
+SELECT public.add_column_if_missing('students', 'birth_date',            'date');
+SELECT public.add_column_if_missing('students', 'gender',                'text');
+SELECT public.add_column_if_missing('students', 'nationality',           'text');
+SELECT public.add_column_if_missing('students', 'birth_place',           'text');
+SELECT public.add_column_if_missing('students', 'address',      'text');
+SELECT public.add_column_if_missing('students', 'province',     'text');
+SELECT public.add_column_if_missing('students', 'municipality', 'text');
+SELECT public.add_column_if_missing('students', 'sector',       'text');
+-- level_requested conserva el valor crudo del formulario de
+-- preinscripción (ej. 'Kínder – Línea Gris'), que NO coincide con
+-- classroom.level. Se guarda aparte para auditoría.
+SELECT public.add_column_if_missing('students', 'level_requested', 'text');
+SELECT public.add_column_if_missing('students', 'suggested_level', 'text');
+SELECT public.add_column_if_missing('students', 'observations',    'text');
+SELECT public.add_column_if_missing('students', 'pre_registration_id', 'bigint');
+
+-- ----------------------------------------------------------------
+-- 2b. students: tutores y emergencia            [original 14 §5–§7]
+-- ----------------------------------------------------------------
+SELECT public.add_column_if_missing('students', 'p1_relationship', 'text');
+SELECT public.add_column_if_missing('students', 'p1_cedula',      'text');
+SELECT public.add_column_if_missing('students', 'p1_whatsapp',    'text');
+SELECT public.add_column_if_missing('students', 'p1_profession',  'text');
+SELECT public.add_column_if_missing('students', 'p1_workplace',   'text');
+SELECT public.add_column_if_missing('students', 'p1_occupation',  'text');
+SELECT public.add_column_if_missing('students', 'p2_relationship', 'text');
+SELECT public.add_column_if_missing('students', 'p2_cedula',      'text');
+SELECT public.add_column_if_missing('students', 'p2_whatsapp',    'text');
+SELECT public.add_column_if_missing('students', 'p2_profession',  'text');
+SELECT public.add_column_if_missing('students', 'p2_workplace',   'text');
+SELECT public.add_column_if_missing('students', 'emergency_name',         'text');
+SELECT public.add_column_if_missing('students', 'emergency_relationship', 'text');
+SELECT public.add_column_if_missing('students', 'emergency_cedula',       'text');
+SELECT public.add_column_if_missing('students', 'emergency_phone',        'text');
+SELECT public.add_column_if_missing('students', 'authorized_persons',     'jsonb DEFAULT ''[]''::jsonb');
+
+-- ----------------------------------------------------------------
+-- 2c. students: salud                          [original 14 §8]
+-- ----------------------------------------------------------------
+SELECT public.add_column_if_missing('students', 'medications',        'text');
+SELECT public.add_column_if_missing('students', 'medical_conditions', 'text');
+SELECT public.add_column_if_missing('students', 'disability',         'text');
+SELECT public.add_column_if_missing('students', 'food_restrictions',  'text');
+SELECT public.add_column_if_missing('students', 'medical_notes',      'text');
+SELECT public.add_column_if_missing('students', 'insurance',          'text');
+SELECT public.add_column_if_missing('students', 'pediatrician',       'text');
+SELECT public.add_column_if_missing('students', 'pediatrician_phone', 'text');
+SELECT public.add_column_if_missing('students', 'vaccines_complete',  'boolean DEFAULT false');
+
+-- ----------------------------------------------------------------
+-- 2d. students: documentos                     [original 14 §9]
+-- ----------------------------------------------------------------
+SELECT public.add_column_if_missing('students', 'photo_url',              'text');
+SELECT public.add_column_if_missing('students', 'birth_certificate_url',  'text');
+SELECT public.add_column_if_missing('students', 'cedula_front_url',       'text');
+SELECT public.add_column_if_missing('students', 'cedula_back_url',        'text');
+SELECT public.add_column_if_missing('students', 'p1_cedula_front_url',    'text');
+SELECT public.add_column_if_missing('students', 'p1_cedula_back_url',     'text');
+SELECT public.add_column_if_missing('students', 'p2_cedula_front_url',    'text');
+SELECT public.add_column_if_missing('students', 'p2_cedula_back_url',     'text');
+SELECT public.add_column_if_missing('students', 'vaccine_card_url',       'text');
+SELECT public.add_column_if_missing('students', 'contract_signed_url',    'text');
+SELECT public.add_column_if_missing('students', 'digital_signature',      'text');
+
+-- ----------------------------------------------------------------
+-- 2e. students: montos y formularios            [original 14 §10 + 17]
+-- ----------------------------------------------------------------
+SELECT public.add_column_if_missing('students', 'registration_fee', 'numeric(10,2) DEFAULT 0');
+SELECT public.add_column_if_missing('students', 'discount',         'numeric(10,2) DEFAULT 0');
+SELECT public.add_column_if_missing('students', 'discount_percent', 'numeric(5,2)  DEFAULT 0');
+
+-- (17) Cuota prolongada y año escolar solicitado: sin ellas el INSERT
+-- del modal de admisión fallaba con PGRST204 y la admisión no se creaba.
+ALTER TABLE public.students
+  ADD COLUMN IF NOT EXISTS prolonged_fee numeric(12,2) NOT NULL DEFAULT 0;
+ALTER TABLE public.students
+  ADD COLUMN IF NOT EXISTS school_year_requested text;
+
+-- ----------------------------------------------------------------
+-- 2f. student_preregistrations                  [original 14 §11]
+--     Sin reviewer_note el UPDATE a status='admitted' de
+--     admitStudent() fallaba y la preinscripción se quedaba en pending.
+-- ----------------------------------------------------------------
+SELECT public.add_column_if_missing('student_preregistrations', 'reviewer_note', 'text');
+SELECT public.add_column_if_missing('student_preregistrations', 'suggested_level',                    'text');
+SELECT public.add_column_if_missing('student_preregistrations', 'age_match',                         'boolean DEFAULT true');
+SELECT public.add_column_if_missing('student_preregistrations', 'director_authorization_requested', 'boolean DEFAULT false');
+SELECT public.add_column_if_missing('student_preregistrations', 'director_authorization_note',      'text');
+SELECT public.add_column_if_missing('student_preregistrations', 'director_authorization_approved', 'boolean');
+-- Acuse de recibo: la Edge Function prereg-notify marca aquí que ya se
+-- notificó al padre, para no reenviar en duplicado.
+SELECT public.add_column_if_missing('student_preregistrations', 'ack_sent_at',       'timestamp with time zone');
+SELECT public.add_column_if_missing('student_preregistrations', 'ack_email_sent_to','text');
+-- Credenciales entregadas al aceptar la admisión.
+SELECT public.add_column_if_missing('student_preregistrations', 'admitted_at',        'timestamp with time zone');
+SELECT public.add_column_if_missing('student_preregistrations', 'credentials_sent_at','timestamp with time zone');
+
+-- ----------------------------------------------------------------
+-- 2g. profiles: login vs notificaciones + contraseña temporal
+--     [original 14 §12 + MIGRACIÓN 16]
+-- ----------------------------------------------------------------
+-- login_email → fijo, @sonrisacreativas.com (es el Auth user)
+-- notification_email → el correo personal que dio la familia
+SELECT public.add_column_if_missing('profiles', 'notification_email', 'text');
+ALTER TABLE public.profiles
+  ADD COLUMN IF NOT EXISTS is_temporary_password boolean DEFAULT false;
+ALTER TABLE public.profiles
+  ADD COLUMN IF NOT EXISTS notification_email text;
+COMMENT ON COLUMN public.profiles.is_temporary_password
+  IS 'TRUE cuando el usuario aún usa la contraseña temporal "sonrisa123" y debe cambiarla en su próximo login.';
+COMMENT ON COLUMN public.profiles.notification_email
+  IS 'Correo personal de la familia donde llegan acuses, cuotas y avisos (distinto del login institucional @sonrisacreativas.com).';
+
+-- ----------------------------------------------------------------
+-- 2h. payments: vínculo con el plan de pagos    [original 14 §13]
+--     admitStudent() insertaba `payment_plan` (inexistente) y
+--     `description` en vez de `concept`.
+-- ----------------------------------------------------------------
+SELECT public.add_column_if_missing('payments', 'payment_plan_id', 'bigint REFERENCES public.payment_plans(id) ON DELETE SET NULL');
+SELECT public.add_column_if_missing('payments', 'description',    'text');
+
+-- ----------------------------------------------------------------
+-- 2i. eval_areas: un área por aula              [original 26_eval_areas_por_aula]
+--     Las áreas del boletín vivían como lista única por evaluación y
+--     cada aula pisaba las de las demás al sincronizar.
+--     classroom_id IS NULL = área global heredada (legacy).
+-- ----------------------------------------------------------------
+ALTER TABLE public.eval_areas
+  ADD COLUMN IF NOT EXISTS classroom_id bigint
+  REFERENCES public.classrooms(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS idx_eval_areas_eval_classroom
+  ON public.eval_areas(evaluation_id, classroom_id);
+COMMENT ON COLUMN public.eval_areas.classroom_id IS
+  'Aula a la que pertenece el área. NULL = área global legacy (se usa como fallback de las aulas sin áreas propias).';
+
+
+-- ================================================================
+-- SECCIÓN 5 — ACTIVIDADES ESCOLARES UNIFICADAS     [original 23 > 21]
+-- ================================================================
+-- Unifica en UNA sola tabla los dos esquemas que coexistían:
+--   · Esquema 21 (js/shared/school-activities.module.js):
+--       activity_date, start_time, end_time, category, color_hex, content,
+--       school_year_id, assigned_teacher_id, teacher_notes
+--   · Esquema 23 (js/directora/school-center.module.js):
+--       code, activity_type, priority, target_audience, scheduled_date,
+--       scheduled_time, duration_minutes, location, created_by, assigned_to,
+--       starts_at, ends_at, attachments_jsonb, metadata_jsonb
+-- Un trigger espejo mantiene activity_date ↔ scheduled_date,
+-- start_time ↔ scheduled_time y assigned_teacher_id ↔ assigned_to.
+-- Ciclo de vida: draft → scheduled → published → in_progress →
+--                completed → archived.
+-- Roles: staff crea/edita/cierra; maestra solo lectura de su aula +
+--        "registro individual"; padre solo lectura publicada.
+
+SET client_min_messages = WARNING;
+
+-- ----------------------------------------------------------------
+-- 5a. Tipos enumerados (sólo si no existen ya)
+-- ----------------------------------------------------------------
+DO $$ BEGIN
+  CREATE TYPE public.activity_status AS ENUM (
+    'draft', 'scheduled', 'in_progress', 'completed', 'published'
+  );
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE TYPE public.activity_category AS ENUM (
+    'ciencias', 'educativa', 'arte', 'celebracion',
+    'familia', 'recreativa', 'importante', 'general'
+  );
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+-- ----------------------------------------------------------------
+-- 5b. Tabla principal
+-- ----------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.school_activities (
+    id                  BIGSERIAL PRIMARY KEY,
+    code                TEXT NOT NULL UNIQUE,
+    title               TEXT NOT NULL,
+    description         TEXT NOT NULL DEFAULT '',
+    activity_type       TEXT NOT NULL DEFAULT 'academica'
+        CHECK (activity_type IN (
+            'academica','extracurricular','cierre_periodo',
+            'evaluacion','reunion_padres','excursion','admin','otra'
+        )),
+    priority            TEXT NOT NULL DEFAULT 'media'
+        CHECK (priority IN ('baja','media','alta','critica')),
+    status              TEXT NOT NULL DEFAULT 'scheduled'
+        CHECK (status IN ('draft','scheduled','published','in_progress','completed','archived')),
+    classroom_id        BIGINT REFERENCES public.classrooms(id) ON DELETE SET NULL,
+    target_audience     TEXT NOT NULL DEFAULT 'aula'
+        CHECK (target_audience IN ('aula','nivel','todo_el_centro','estudiante','staff')),
+    scheduled_date      DATE NOT NULL,
+    scheduled_time      TIME,
+    duration_minutes    INTEGER CHECK (duration_minutes IS NULL OR duration_minutes > 0),
+    location            TEXT,
+    created_by          UUID NOT NULL REFERENCES public.profiles(id) ON DELETE RESTRICT,
+    assigned_to         UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+    published_at        TIMESTAMPTZ,
+    starts_at           TIMESTAMPTZ,
+    ends_at             TIMESTAMPTZ,
+    completed_at        TIMESTAMPTZ,
+    attachments_jsonb   JSONB NOT NULL DEFAULT '[]'::jsonb,
+    metadata_jsonb      JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at          TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- ----------------------------------------------------------------
+-- 5c. Reconciliación de columnas (tabla ya creada por el 21)
+-- ----------------------------------------------------------------
+DO $$
+BEGIN
+    -- ---- Esquema 21 (módulo compartido) ----
+    IF EXISTS (SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+                WHERE n.nspname = 'public' AND c.relname = 'school_years' AND c.relkind = 'r') THEN
+        ALTER TABLE public.school_activities
+            ADD COLUMN IF NOT EXISTS school_year_id bigint REFERENCES public.school_years(id) ON DELETE CASCADE;
+    ELSE
+        ALTER TABLE public.school_activities
+            ADD COLUMN IF NOT EXISTS school_year_id bigint;
+    END IF;
+    ALTER TABLE public.school_activities
+        ADD COLUMN IF NOT EXISTS activity_date date;
+    ALTER TABLE public.school_activities
+        ADD COLUMN IF NOT EXISTS start_time time;
+    ALTER TABLE public.school_activities
+        ADD COLUMN IF NOT EXISTS end_time time;
+    ALTER TABLE public.school_activities
+        ADD COLUMN IF NOT EXISTS category public.activity_category NOT NULL DEFAULT 'general';
+    ALTER TABLE public.school_activities
+        ADD COLUMN IF NOT EXISTS color_hex text NOT NULL DEFAULT '#22C55E';
+    ALTER TABLE public.school_activities
+        ADD COLUMN IF NOT EXISTS content jsonb NOT NULL DEFAULT '{}'::jsonb;
+    ALTER TABLE public.school_activities
+        ADD COLUMN IF NOT EXISTS assigned_teacher_id uuid REFERENCES auth.users(id) ON DELETE SET NULL;
+    ALTER TABLE public.school_activities
+        ADD COLUMN IF NOT EXISTS teacher_notes text;
+
+    -- ---- Esquema 23 (Centro Escolar / planificación central) ----
+    ALTER TABLE public.school_activities
+        ADD COLUMN IF NOT EXISTS code text;
+    ALTER TABLE public.school_activities
+        ADD COLUMN IF NOT EXISTS activity_type text NOT NULL DEFAULT 'academica';
+    ALTER TABLE public.school_activities
+        ADD COLUMN IF NOT EXISTS priority text NOT NULL DEFAULT 'media';
+    ALTER TABLE public.school_activities
+        ADD COLUMN IF NOT EXISTS target_audience text NOT NULL DEFAULT 'aula';
+    ALTER TABLE public.school_activities
+        ADD COLUMN IF NOT EXISTS scheduled_date date;
+    ALTER TABLE public.school_activities
+        ADD COLUMN IF NOT EXISTS scheduled_time time;
+    ALTER TABLE public.school_activities
+        ADD COLUMN IF NOT EXISTS duration_minutes integer;
+    ALTER TABLE public.school_activities
+        ADD COLUMN IF NOT EXISTS location text;
+    ALTER TABLE public.school_activities
+        ADD COLUMN IF NOT EXISTS assigned_to uuid REFERENCES public.profiles(id) ON DELETE SET NULL;
+    ALTER TABLE public.school_activities
+        ADD COLUMN IF NOT EXISTS starts_at timestamptz;
+    ALTER TABLE public.school_activities
+        ADD COLUMN IF NOT EXISTS ends_at timestamptz;
+    ALTER TABLE public.school_activities
+        ADD COLUMN IF NOT EXISTS attachments_jsonb jsonb NOT NULL DEFAULT '[]'::jsonb;
+    ALTER TABLE public.school_activities
+        ADD COLUMN IF NOT EXISTS metadata_jsonb jsonb NOT NULL DEFAULT '{}'::jsonb;
+
+    ALTER TABLE public.school_activities ALTER COLUMN description SET DEFAULT '';
+END $$;
+
+DO $$ BEGIN
+    ALTER TABLE public.school_activities ADD CONSTRAINT school_activities_activity_type_check
+        CHECK (activity_type IN (
+            'academica','extracurricular','cierre_periodo',
+            'evaluacion','reunion_padres','excursion','admin','otra'));
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+    ALTER TABLE public.school_activities ADD CONSTRAINT school_activities_priority_check
+        CHECK (priority IN ('baja','media','alta','critica'));
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+    ALTER TABLE public.school_activities ADD CONSTRAINT school_activities_target_audience_check
+        CHECK (target_audience IN ('aula','nivel','todo_el_centro','estudiante','staff'));
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+CREATE UNIQUE INDEX IF NOT EXISTS school_activities_code_key
+    ON public.school_activities(code);
+
+-- ----------------------------------------------------------------
+-- 5d. Backfill de sincronía entre ambos esquemas
+-- ----------------------------------------------------------------
+UPDATE public.school_activities
+   SET scheduled_date = COALESCE(scheduled_date, activity_date, CURRENT_DATE),
+       activity_date  = COALESCE(activity_date, scheduled_date)
+ WHERE scheduled_date IS NULL OR activity_date IS NULL;
+
+UPDATE public.school_activities
+   SET activity_date = scheduled_date
+ WHERE activity_date IS NULL;
+
+UPDATE public.school_activities
+   SET scheduled_date = activity_date
+ WHERE scheduled_date IS NULL;
+
+UPDATE public.school_activities
+   SET start_time     = COALESCE(start_time, scheduled_time),
+       scheduled_time = COALESCE(scheduled_time, start_time)
+ WHERE start_time IS NULL OR scheduled_time IS NULL;
+
+UPDATE public.school_activities
+   SET assigned_to          = COALESCE(assigned_to, assigned_teacher_id),
+       assigned_teacher_id  = COALESCE(assigned_teacher_id, assigned_to)
+ WHERE assigned_to IS NULL OR assigned_teacher_id IS NULL;
+
+UPDATE public.school_activities
+   SET target_audience = 'todo_el_centro'
+ WHERE classroom_id IS NULL AND target_audience = 'aula';
+
+-- También al revés (fix visibilidad, original 25)
+UPDATE public.school_activities
+   SET target_audience = 'aula'
+ WHERE classroom_id IS NOT NULL
+   AND COALESCE(target_audience, 'aula') = 'todo_el_centro';
+
+ALTER TABLE public.school_activities ALTER COLUMN scheduled_date SET NOT NULL;
+ALTER TABLE public.school_activities ALTER COLUMN activity_date  SET NOT NULL;
+
+-- ----------------------------------------------------------------
+-- 5e. Enum status: añadir 'archived' si la columna es enum (esquema 21)
+-- ----------------------------------------------------------------
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+         WHERE table_schema = 'public' AND table_name = 'school_activities'
+           AND column_name = 'status' AND udt_name = 'activity_status'
+    ) AND NOT EXISTS (
+        SELECT 1 FROM pg_enum e
+          JOIN pg_type t ON t.oid = e.enumtypid
+         WHERE t.typname = 'activity_status' AND e.enumlabel = 'archived'
+    ) THEN
+        ALTER TYPE public.activity_status ADD VALUE IF NOT EXISTS 'archived';
+    END IF;
+END $$;
+
+
+-- ----------------------------------------------------------------
+-- 5g. Tablas de apoyo (sólo si faltan)
+-- ----------------------------------------------------------------
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+                WHERE n.nspname = 'public' AND c.relname = 'school_years' AND c.relkind = 'r') THEN
+        CREATE TABLE IF NOT EXISTS public.school_month_configs (
+          id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+          school_year_id bigint REFERENCES public.school_years(id) ON DELETE CASCADE,
+          year_number integer NOT NULL CHECK (year_number >= 2024),
+          month_number integer NOT NULL CHECK (month_number BETWEEN 1 AND 12),
+          special_title text NOT NULL,
+          slogan text,
+          banner_url text,
+          primary_color text DEFAULT '#22C55E',
+          family_message text,
+          created_by uuid REFERENCES auth.users(id),
+          created_at timestamp with time zone DEFAULT now(),
+          updated_at timestamp with time zone DEFAULT now(),
+          UNIQUE (school_year_id, year_number, month_number)
+        );
+    ELSE
+        CREATE TABLE IF NOT EXISTS public.school_month_configs (
+          id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+          school_year_id bigint,
+          year_number integer NOT NULL CHECK (year_number >= 2024),
+          month_number integer NOT NULL CHECK (month_number BETWEEN 1 AND 12),
+          special_title text NOT NULL,
+          slogan text,
+          banner_url text,
+          primary_color text DEFAULT '#22C55E',
+          family_message text,
+          created_by uuid REFERENCES auth.users(id),
+          created_at timestamp with time zone DEFAULT now(),
+          updated_at timestamp with time zone DEFAULT now(),
+          UNIQUE (school_year_id, year_number, month_number)
+        );
+    END IF;
+END $$;
+
+CREATE TABLE IF NOT EXISTS public.school_activity_evidences (
+  id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  activity_id bigint NOT NULL REFERENCES public.school_activities(id) ON DELETE CASCADE,
+  file_url text NOT NULL,
+  file_type text DEFAULT 'image' CHECK (file_type IN ('image', 'video')),
+  caption text,
+  uploaded_by uuid REFERENCES auth.users(id) NOT NULL,
+  created_at timestamp with time zone DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_school_activity_evidences_activity
+    ON public.school_activity_evidences(activity_id);
+CREATE INDEX IF NOT EXISTS idx_school_month_configs_ym
+    ON public.school_month_configs(year_number, month_number);
+
+-- ================================================================
+-- SECCIÓN 6 — MODO SUPERVISIÓN DE AULA             [original 22]
+-- ================================================================
+-- Auditoría e identidad (no-repudio): Directora/Asistente/Encargada
+-- conservan su rol y su identidad pero operan en el contexto de un
+-- aula. Sesiones + log de auditoría + tickets de intervención.
+-- (Idempotente: se añadieron DROP POLICY IF EXISTS a las políticas,
+--  que en el original no los traían y fallaban con 42710.)
+
+SET client_min_messages = WARNING;
+
+-- ----------------------------------------------------------------
+-- Tabla #1: supervision_sessions
+-- ----------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.supervision_sessions (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    usuario_id      UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+    role            TEXT NOT NULL CHECK (role IN ('directora','asistente','encargada','maestra')),
+    classroom_id    BIGINT NOT NULL REFERENCES public.classrooms(id) ON DELETE CASCADE,
+    teacher_id      UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+    module_origin   TEXT NOT NULL DEFAULT 'centro-escolar',
+    started_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    ended_at        TIMESTAMPTZ,
+    context_json    JSONB NOT NULL DEFAULT '{}'::jsonb
+);
+
+CREATE INDEX IF NOT EXISTS idx_supervision_sessions_user
+    ON public.supervision_sessions(usuario_id, started_at DESC);
+CREATE INDEX IF NOT EXISTS idx_supervision_sessions_classroom
+    ON public.supervision_sessions(classroom_id, started_at DESC);
+CREATE INDEX IF NOT EXISTS idx_supervision_sessions_active
+    ON public.supervision_sessions(usuario_id) WHERE ended_at IS NULL;
+
+COMMENT ON TABLE  public.supervision_sessions IS 'Sesiones activas/pasadas de supervisión de aula. Cada entrada del director/encargado al panel maestra se audita aquí.';
+COMMENT ON COLUMN public.supervision_sessions.module_origin IS 'Módulo desde donde se inició: centro-escolar, alerta-sem-aforo, listado-maestros...';
+COMMENT ON COLUMN public.supervision_sessions.context_json IS 'Snapshot inicial: submodulo de llegada, tipo de alerta, semaforo, etc.';
+
+-- ----------------------------------------------------------------
+-- Tabla #2: supervision_audit_log (append-only)
+-- ----------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.supervision_audit_log (
+    id                  BIGSERIAL PRIMARY KEY,
+    session_id          UUID REFERENCES public.supervision_sessions(id) ON DELETE SET NULL,
+    usuario_id          UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+    role                TEXT NOT NULL,
+    classroom_id        BIGINT NOT NULL,
+    teacher_id          UUID,
+    modulo_afectado     TEXT NOT NULL,
+    accion_realizada    TEXT NOT NULL,
+    motivo_administrativo TEXT,
+    student_id          BIGINT REFERENCES public.students(id) ON DELETE SET NULL,
+    table_name          TEXT,
+    record_id           TEXT,
+    metadata_jsonb      JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_supervision_audit_lookup
+    ON public.supervision_audit_log(usuario_id, classroom_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_supervision_audit_session
+    ON public.supervision_audit_log(session_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_supervision_audit_modulo
+    ON public.supervision_audit_log(modulo_afectado, created_at DESC);
+
+COMMENT ON TABLE  public.supervision_audit_log IS 'Rastro de auditoría inmutable. Toda intervención o modificación hecha durante una sesión de supervisión queda aquí registrada (por trigger server-side + interceptor JS).';
+COMMENT ON COLUMN public.supervision_audit_log.modulo_afectado IS 'asistencia, rutinas, muro, tareas, calificaciones, incidencias, comunicacion...';
+COMMENT ON COLUMN public.supervision_audit_log.accion_realizada IS 'update_attendance, create_task, modify_daily_log, reply_family, delete_task…';
+COMMENT ON COLUMN public.supervision_audit_log.metadata_jsonb  IS 'Campo flexible: antes/después, payload del cambio, IP, user-agent, etc.';
+
+-- ----------------------------------------------------------------
+-- Tabla #3: interventions (tickets de intervención)
+-- ----------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.interventions (
+    id              BIGSERIAL PRIMARY KEY,
+    code            TEXT NOT NULL UNIQUE,
+    created_by      UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+    role            TEXT NOT NULL,
+    classroom_id    BIGINT NOT NULL REFERENCES public.classrooms(id) ON DELETE CASCADE,
+    teacher_id      UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+    student_id      BIGINT REFERENCES public.students(id) ON DELETE SET NULL,
+    modulo          TEXT NOT NULL,
+    submodulo       TEXT,
+    situacion       TEXT NOT NULL,
+    prioridad       TEXT NOT NULL CHECK (prioridad IN ('baja','media','alta','critica')),
+    observacion     TEXT NOT NULL,
+    status          TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open','in_progress','resolved','closed')),
+    assigned_to     UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+    resolved_by     UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+    resolved_at     TIMESTAMPTZ,
+    closed_by       UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+    closed_at       TIMESTAMPTZ,
+    session_id      UUID REFERENCES public.supervision_sessions(id) ON DELETE SET NULL,
+    metadata_jsonb  JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_interventions_status
+    ON public.interventions(status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_interventions_classroom
+    ON public.interventions(classroom_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_interventions_teacher
+    ON public.interventions(teacher_id) WHERE teacher_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_interventions_student
+    ON public.interventions(student_id) WHERE student_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_interventions_priority
+    ON public.interventions(prioridad, status) WHERE status IN ('open','in_progress');
+
+COMMENT ON TABLE  public.interventions IS 'Tickets formales de intervención administrativa. La directora/encargada los levanta durante la supervisión y quedan asignados a la maestra responsable.';
+COMMENT ON COLUMN public.interventions.code       IS 'Identificador legible: INT-YYYY-NNNN (ej. INT-2026-0014)';
+COMMENT ON COLUMN public.interventions.modulo     IS 'Módulo donde se detectó la incidencia: asistencia, rutinas, muro, tareas, comunicacion, estudiantes.';
+COMMENT ON COLUMN public.interventions.submodulo  IS 'Sub-sección: almuerzo, baño, siesta, asistencia-mañana, tarea-matematicas...';
+COMMENT ON COLUMN public.interventions.situacion  IS 'Frase corta de situación, ej: "Registro de almuerzo incompleto (4/12)"';
+COMMENT ON COLUMN public.interventions.observacion IS 'Texto libre del motivo y la acción requerida';
+
+-- ================================================================
+-- SECCIÓN 9 — FKs HACIA CLASSROOMS                 [original 16]
+-- ================================================================
+-- "update or delete on table classrooms violates foreign key
+--  constraint attendance_classroom_id_fkey": el patrón principal es el
+--  SOFT DELETE (rooms.module.js), pero esto deja la base preparada para
+--  que un DELETE físico también funcione.
+--   * Columnas NULLABLE (histórico) → ON DELETE SET NULL
+--   * Columnas NOT NULL (hijos)     → ON DELETE CASCADE
+BEGIN;
+
+CREATE OR REPLACE FUNCTION public._tmp_repair_classroom_fk(
+  p_table  text,
+  p_column text,
+  p_rule   text   -- 'SET NULL' | 'CASCADE'
+) RETURNS void
+LANGUAGE plpgsql AS $$
+DECLARE
+  v_constraint text;
+BEGIN
+  FOR v_constraint IN
+    SELECT con.conname
+    FROM pg_constraint con
+    JOIN pg_class rel ON rel.oid = con.conrelid
+    JOIN pg_attribute att ON att.attrelid = rel.oid AND att.attnum = con.conkey[1]
+    JOIN pg_class ref ON ref.oid = con.confrelid
+    WHERE rel.relname = p_table
+      AND att.attname = p_column
+      AND con.contype = 'f'
+      AND ref.relname = 'classrooms'
+  LOOP
+    EXECUTE format(
+      'ALTER TABLE public.%I DROP CONSTRAINT %I', p_table, v_constraint
+    );
+  END LOOP;
+
+  EXECUTE format(
+    'ALTER TABLE public.%I ADD CONSTRAINT %I FOREIGN KEY (%I)
+       REFERENCES public.classrooms(id) ON DELETE %s',
+    p_table,
+    p_table || '_' || p_column || '_fkey',
+    p_column,
+    p_rule
+  );
+END $$;
+
+SELECT public._tmp_repair_classroom_fk('attendance',          'classroom_id',         'SET NULL');
+SELECT public._tmp_repair_classroom_fk('grades',              'classroom_id',         'SET NULL');
+SELECT public._tmp_repair_classroom_fk('report_cards',        'classroom_id',         'SET NULL');
+SELECT public._tmp_repair_classroom_fk('competency_scores',   'classroom_id',         'SET NULL');
+SELECT public._tmp_repair_classroom_fk('student_promotions',  'from_classroom_id',    'SET NULL');
+SELECT public._tmp_repair_classroom_fk('student_promotions',  'to_classroom_id',      'SET NULL');
+
+DO $$
+DECLARE
+  v_nullables text[] := ARRAY[
+    'classrooms_enrollments',
+    'classroom_attendance',
+    'schedules',
+    'classroom_schedule',
+    'daily_logs'
+  ];
+  v_table text;
+BEGIN
+  FOREACH v_table IN ARRAY v_nullables LOOP
+    IF to_regclass('public.' || v_table) IS NOT NULL
+       AND EXISTS (
+         SELECT 1 FROM information_schema.columns
+         WHERE table_schema = 'public' AND table_name = v_table
+           AND column_name = 'classroom_id' AND is_nullable = 'YES'
+       )
+    THEN
+      PERFORM public._tmp_repair_classroom_fk(v_table, 'classroom_id', 'SET NULL');
+    END IF;
+  END LOOP;
+END $$;
+
+DO $$
+DECLARE
+  v_cascade text[] := ARRAY[
+    'classroom_events',
+    'classroom_routines',
+    'nap_sessions'
+  ];
+  v_table text;
+BEGIN
+  FOREACH v_table IN ARRAY v_cascade LOOP
+    IF to_regclass('public.' || v_table) IS NOT NULL
+       AND EXISTS (
+         SELECT 1 FROM information_schema.columns
+         WHERE table_schema = 'public' AND table_name = v_table
+           AND column_name = 'classroom_id' AND is_nullable = 'NO'
+       )
+    THEN
+      PERFORM public._tmp_repair_classroom_fk(v_table, 'classroom_id', 'CASCADE');
+    END IF;
+  END LOOP;
+END $$;
+
+SELECT public._tmp_repair_classroom_fk('students', 'classroom_id', 'SET NULL');
+
+DROP FUNCTION IF EXISTS public._tmp_repair_classroom_fk(text, text, text);
+
+COMMIT;
+
+RESET client_min_messages;
