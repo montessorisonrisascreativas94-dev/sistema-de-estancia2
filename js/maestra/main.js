@@ -190,6 +190,8 @@ window.App = {
     _filterStudentEvents:       Routine._filterStudentEvents,
     _srToggleSec:              Routine._srToggleSec,
     _srToggleAll:              Routine._srToggleAll,
+    _srTimelineFilter:         Routine._srTimelineFilter,
+    _srToggleAulaAll:          Routine._srToggleAulaAll,
     publishDailyLogs:         Routine.publishDailyLogs,
     toggleOmitToday:          Routine.toggleOmitToday,
     insertEventAt:            Routine.insertEventAt,
@@ -979,7 +981,6 @@ async function initDashboard() {
 
     UI.updateDashboardStats(totals);
 
-    _updateNextActivityWidget();
     _updatePunchAlertWidget(totals);
     _updateTasksToGradeWidget(rooms.map(r => r.id));
 
@@ -1100,49 +1101,6 @@ function _renderClassroomCards(dash, activeId) {
 /**
  * AUTOMATIZACIÓN: Widgets Inteligentes
  */
-function _updateNextActivityWidget() {
-  const titleEl = document.getElementById('nextActivityTitle');
-  const timeEl = document.getElementById('nextActivityTime');
-  if (!titleEl || !timeEl) return;
-
-  const now = new Date();
-  const currentTime = now.getHours() * 60 + now.getMinutes();
-
-  // Horario predefinido (se puede traer de DB en el futuro)
-  const schedule = [
-    { name: 'Entrada y Bienvenida', start: 420, end: 480 }, // 7:00 AM - 8:00 AM
-    { name: 'Desayuno', start: 480, end: 540 },            // 8:00 AM - 9:00 AM
-    { name: 'Actividades Pedagógicas', start: 540, end: 660 }, // 9:00 AM - 11:00 AM
-    { name: 'Merienda', start: 660, end: 720 },            // 11:00 AM - 12:00 PM
-    { name: 'Almuerzo', start: 720, end: 780 },            // 12:00 PM - 1:00 PM
-    { name: 'Siesta', start: 780, end: 870 },              // 1:00 PM - 2:30 PM
-    { name: 'Juego Libre', start: 870, end: 960 },          // 2:30 PM - 4:00 PM
-    { name: 'Salida', start: 960, end: 1080 }              // 4:00 PM - 6:00 PM
-  ];
-
-  const current = schedule.find(s => currentTime >= s.start && currentTime < s.end);
-  const next = schedule.find(s => s.start > currentTime);
-
-  if (current) {
-    titleEl.textContent = current.name;
-    const endH = Math.floor(current.end / 60);
-    const endM = current.end % 60;
-    const ampm = endH >= 12 ? 'PM' : 'AM';
-    const h12 = endH > 12 ? endH - 12 : endH;
-    timeEl.textContent = `En curso — Termina ${h12}:${endM.toString().padStart(2, '0')} ${ampm}`;
-  } else if (next) {
-    titleEl.textContent = `Próximo: ${next.name}`;
-    const startH = Math.floor(next.start / 60);
-    const startM = next.start % 60;
-    const ampm = startH >= 12 ? 'PM' : 'AM';
-    const h12 = startH > 12 ? startH - 12 : startH;
-    timeEl.textContent = `Inicia a las ${h12}:${startM.toString().padStart(2, '0')} ${ampm}`;
-  } else {
-    titleEl.textContent = 'Fuera de Horario Escolar';
-    timeEl.textContent = '¡Hasta mañana! 👋';
-  }
-}
-
 function _updatePunchAlertWidget(totals = {}) {
   const widget = document.getElementById('punchAlertWidget');
   const textEl = document.getElementById('punchAlertText');

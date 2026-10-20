@@ -119,6 +119,13 @@ body.panel-maestra-body .nav-btn-toy span[id^="badge-"] {
   justify-content: center;
 }
 
+/* El estado oculto (Tailwind .hidden) debe ganar sobre la regla anterior,
+   si no el badge "0" queda visible en Calificaciones y Actividades. */
+body.panel-maestra-body .nav-btn-toy span[id^="badge-"].hidden,
+body.panel-maestra-body .nav-btn-toy span[id^="badge-"][hidden] {
+  display: none !important;
+}
+
 /* ── TARJETAS ────────────────────────────────────────────────────
    Todas blancas, uniformes. El color va en pequeños detalles.
    No mezclar bordes naranjas/verdes en la tarjeta misma.
@@ -1262,6 +1269,17 @@ body.panel-maestra-body #classesGrid > div.is-active-classroom:hover {
 #studentRoutineModal .sr-sec-body { padding: 2px 12px 12px; border-top: 1.5px dashed #f1f5f9; }
 #studentRoutineModal .sr-sec-body[style*="display:none"] { border-top: none; }
 
+/* Avatar del encabezado del modal individual — naranja de marca */
+#studentRoutineModal .sr-avatar {
+  width: 56px; height: 56px; flex-shrink: 0; border-radius: 16px; overflow: hidden;
+  background: #FF8A00; color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 900; font-size: 1.35rem; line-height: 1;
+  border: 2px solid rgba(255,255,255,.55);
+  box-shadow: 0 4px 12px rgba(0,0,0,.12);
+}
+#studentRoutineModal .sr-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
 /* Toolbar expandir/contraer todo (sticky) */
 #studentRoutineModal .sr-toolbar {
   position: sticky; top: -1rem; z-index: 6;
@@ -1279,10 +1297,89 @@ body.panel-maestra-body #classesGrid > div.is-active-classroom:hover {
 #studentRoutineModal .sr-tool-btn.sr-tool-off { opacity: .35; pointer-events: none; }
 #studentRoutineModal .sr-tool-hint { font-size: 8.5px; font-weight: 700; color: #94a3b8; }
 
+/* ═══ LÍNEA DEL TIEMPO (rediseño) ═══ */
+#studentRoutineModal .sr-tl-filters { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0 10px; }
+#studentRoutineModal .sr-tl-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: .02em;
+  color: #64748b; background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 999px;
+  padding: 5px 11px; cursor: pointer; transition: all .12s ease; -webkit-tap-highlight-color: transparent;
+}
+#studentRoutineModal .sr-tl-chip b { font-size: 9px; background: #e2e8f0; color: #475569; border-radius: 999px; padding: 1px 6px; }
+#studentRoutineModal .sr-tl-chip--on { background: #dcfce7; border-color: #86efac; color: #15803d; }
+#studentRoutineModal .sr-tl-chip--on b { background: #86efac; color: #14532d; }
+
+#studentRoutineModal .sr-tl { display: flex; flex-direction: column; }
+#studentRoutineModal .sr-tl-item { display: flex; gap: 8px; }
+#studentRoutineModal .sr-tl-rail { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; width: 30px; }
+#studentRoutineModal .sr-tl-dot {
+  width: 30px; height: 30px; border-radius: 999px; display: grid; place-items: center;
+  font-size: 15px; background: color-mix(in srgb, var(--tl-color) 14%, #fff);
+  border: 2px solid color-mix(in srgb, var(--tl-color) 38%, #fff); flex-shrink: 0;
+}
+#studentRoutineModal .sr-tl-line { flex: 1; width: 2px; background: #eef2f7; margin: 2px 0; min-height: 8px; }
+#studentRoutineModal .sr-tl-card {
+  flex: 1; min-width: 0; margin-bottom: 8px; padding: 8px 10px; border-radius: 14px;
+  background: color-mix(in srgb, var(--tl-color) 6%, #fff);
+  border: 1.5px solid color-mix(in srgb, var(--tl-color) 24%, #fff);
+}
+#studentRoutineModal .sr-tl-card-top { display: flex; align-items: flex-start; gap: 6px; justify-content: space-between; }
+#studentRoutineModal .sr-tl-label { font-size: 11px; font-weight: 900; color: var(--tl-color); line-height: 1.25; word-break: break-word; }
+#studentRoutineModal .sr-tl-origin {
+  flex-shrink: 0; font-size: 7px; font-weight: 900; text-transform: uppercase; letter-spacing: .03em;
+  border-radius: 999px; padding: 2px 7px; white-space: nowrap;
+}
+#studentRoutineModal .sr-tl-origin--aula { background: #ede9fe; color: #6d28d9; border: 1px solid #ddd6fe; }
+#studentRoutineModal .sr-tl-origin--indiv { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
+#studentRoutineModal .sr-tl-card-bot { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-top: 4px; }
+#studentRoutineModal .sr-tl-time { font-size: 9px; font-weight: 700; color: #94a3b8; }
+#studentRoutineModal .sr-tl-actions { display: flex; gap: 4px; flex-shrink: 0; }
+#studentRoutineModal .sr-tl-actions button {
+  padding: 3px 6px; border-radius: 8px; font-size: 10px; cursor: pointer;
+  background: #fff; border: 1.5px solid #e2e8f0; -webkit-tap-highlight-color: transparent;
+}
+#studentRoutineModal .sr-tl-actions button:active { transform: scale(.94); }
+#studentRoutineModal .sr-tl-empty {
+  text-align: center; padding: 18px 12px; border-radius: 16px;
+  background: #f8fafc; border: 2px dashed #e2e8f0;
+}
+#studentRoutineModal .sr-tl-empty-ico { font-size: 24px; }
+#studentRoutineModal .sr-tl-empty p { font-size: 12px; font-weight: 900; color: #64748b; margin-top: 4px; }
+#studentRoutineModal .sr-tl-empty small { display: block; font-size: 10px; color: #94a3b8; margin-top: 3px; line-height: 1.4; }
+
+/* ═══ EVENTOS DEL AULA ═══ */
+#studentRoutineModal .sr-aula-bar { display: flex; gap: 8px; margin-bottom: 8px; }
+#studentRoutineModal .sr-aula-search {
+  flex: 1; padding: 9px 12px; border: 2px solid #f1f5f9; border-radius: 12px;
+  font-size: 12px; outline: none;
+}
+#studentRoutineModal .sr-aula-search:focus { border-color: #86efac; }
+#studentRoutineModal .sr-aula-toggle {
+  flex-shrink: 0; font-size: 9.5px; font-weight: 900; text-transform: uppercase; letter-spacing: .02em;
+  color: #15803d; background: #dcfce7; border: 1.5px solid #86efac; border-radius: 12px;
+  padding: 0 12px; cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+#studentRoutineModal .sr-aula-count { display: flex; gap: 6px; margin-bottom: 10px; }
+#studentRoutineModal .sr-aula-count-chip {
+  font-size: 8.5px; font-weight: 900; text-transform: uppercase; letter-spacing: .02em;
+  background: #f1f5f9; color: #94a3b8; border: 1px solid #e2e8f0; border-radius: 999px; padding: 2px 9px;
+}
+#studentRoutineModal .sr-aula-count-chip.sr-ok { background: #dcfce7; color: #15803d; border-color: #86efac; }
+#studentRoutineModal .sr-aula-block { margin-top: 10px; }
+#studentRoutineModal .sr-aula-routines { max-height: 300px; overflow-y: auto; padding-right: 2px; }
+#studentRoutineModal .sr-aula-routines.sr-aula-collapsed { max-height: 150px; overflow: hidden; }
+
 /* Móvil: targets cómodos */
 @media (max-width: 640px) {
   #studentRoutineModal .sr-sec-head { padding: 13px 12px; }
   #studentRoutineModal .sr-sec-title { font-size: 12.5px; }
   #studentRoutineModal .sr-tool-btn { padding: 8px 14px; font-size: 10px; }
   #studentRoutineModal .sr-tool-hint { display: none; }
+  #studentRoutineModal .sr-tl-chip { padding: 7px 12px; font-size: 10px; }
+  #studentRoutineModal .sr-tl-dot { width: 30px; height: 30px; font-size: 15px; }
+  #studentRoutineModal .sr-tl-label { font-size: 12px; }
+  #studentRoutineModal .sr-tl-origin { font-size: 8px; }
+  #studentRoutineModal .sr-tl-time { font-size: 10px; }
+  #studentRoutineModal .sr-aula-search { font-size: 13px; padding: 11px 13px; }
+  #studentRoutineModal .sr-aula-toggle { font-size: 10px; padding: 0 14px; }
 }

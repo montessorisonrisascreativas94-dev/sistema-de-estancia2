@@ -2398,6 +2398,31 @@ function _srIsOpen(id, defOpen) {
 }
 function _srWriteSecState(st) { try { localStorage.setItem(SR_SEC_KEY, JSON.stringify(st)); } catch {} }
 
+/** Muestra/oculta TODAS las categorías de rutinas del aula en el modal individual */
+export function _srToggleAulaAll() {
+  const box = document.getElementById('srAulaRoutines');
+  const btn = document.getElementById('srAulaShowAllBtn');
+  if (!box) return;
+  const collapsed = box.classList.toggle('sr-aula-collapsed');
+  if (btn) btn.textContent = collapsed ? 'Ver todo' : 'Ver menos';
+  if (!collapsed) {
+    box.querySelectorAll('.sr-evchip').forEach(c => { c.style.display = ''; });
+  }
+}
+
+/** Filtra la línea del tiempo del modal individual por origen (all/aula/individual) */
+export function _srTimelineFilter(kind) {
+  const list = document.getElementById('srTimelineList');
+  if (!list) return;
+  list.querySelectorAll('.sr-tl-item').forEach(item => {
+    const origin = item.getAttribute('data-tl-origin');
+    item.style.display = (kind === 'all' || origin === kind) ? '' : 'none';
+  });
+  document.querySelectorAll('#srTlFilters .sr-tl-chip').forEach(btn => {
+    btn.classList.toggle('sr-tl-chip--on', btn.getAttribute('data-tl-filter') === kind);
+  });
+}
+
 /** Abre/cierra UNA sección del modal individual y persiste el estado */
 export function _srToggleSec(id) {
   const head = document.querySelector(`#studentRoutineModal [data-sr-head="${id}"]`);
@@ -2431,6 +2456,91 @@ function _srSyncExpandBtn() {
   const allClosed = bodies.every(b => b.style.display === 'none');
   document.getElementById('srExpandAllBtn')?.classList.toggle('sr-tool-off', allOpen);
   document.getElementById('srCollapseAllBtn')?.classList.toggle('sr-tool-off', allClosed);
+}
+
+// ───────────────────────────────────────────────────────────────────────────────
+// LÍNEA DEL TIEMPO UNIFICADA — reúne TODOS los registros del día del alumno:
+// ánimo, comidas, siesta, eventos individuales (biberón, medicamento,
+// temperatura, pañal, salud…) y los eventos/rutinas del aula que se marcaron
+// para él (tanto en grupo como individualmente). Cada registro indica su
+// origen (Aula / Individual) para que la maestra vea de dónde salió.
+// ───────────────────────────────────────────────────────────────────────────────
+const TIMELINE_TYPE_META = {
+  mood:           { emoji: '😊', color: '#3B82F6', group: 'Emocional' },
+  breakfast:      { emoji: '🍞', color: '#FF8A00', group: 'Alimentación' },
+  lunch:          { emoji: '🥗', color: '#28B54D', group: 'Alimentación' },
+  snack:          { emoji: '🍎', color: '#F59E0B', group: 'Alimentación' },
+  nap:            { emoji: '😴', color: '#8B5CF6', group: 'Descanso' },
+  sleep:          { emoji: '😴', color: '#8B5CF6', group: 'Descanso' },
+  milk:           { emoji: '🍼', color: '#0B63C7', group: 'Alimentación' },
+  activity:       { emoji: '🎨', color: '#7C3AED', group: 'Actividades' },
+  sensorial:      { emoji: '🔬', color: '#6366F1', group: 'Actividades' },
+  playground:     { emoji: '🌳', color: '#16A34A', group: 'Actividades' },
+  handwash:       { emoji: '🧼', color: '#0B63C7', group: 'Higiene' },
+  toothbrush:     { emoji: '🪥', color: '#06B6D4', group: 'Higiene' },
+  bath:           { emoji: '🚽', color: '#28B54D', group: 'Higiene' },
+  diaper:         { emoji: '🧷', color: '#FF8A00', group: 'Higiene' },
+  diaper_change:  { emoji: '🧻', color: '#94A3B8', group: 'Higiene' },
+  temp:           { emoji: '🌡️', color: '#EF4444', group: 'Salud' },
+  med:            { emoji: '💊', color: '#EC4899', group: 'Salud' },
+  health:         { emoji: '😷', color: '#6366F1', group: 'Salud' },
+  incident:       { emoji: '🤕', color: '#EF4444', group: 'Salud' },
+  behavior:       { emoji: '🤝', color: '#F59E0B', group: 'Conducta' },
+  note:           { emoji: '📝', color: '#64748B', group: 'Nota' }
+};
+
+/** Emoji correcto para un evento de infant_data (pañal usa subtype). */
+function _timelineEmoji(ev) {
+  if (ev.type === 'diaper') {
+    if (ev.subtype === 'soiled') return '💩';
+    if (ev.subtype === 'wet') return '💧';
+    return '🧷';
+  }
+  return ev.emoji || TIMELINE_TYPE_META[ev.type]?.emoji || '📌';
+}
+
+/** Construye la lista cronológica completa de eventos del día del alumno. */
+function _buildStudentTimeline(log, events, currentFood) {
+  const all = [];
+  const push = (o) => all.push(o);
+
+  if (log?.mood) {
+    const m = MOOD_OPTIONS.find(x => x.val === log.mood);
+    push({ emoji: m?.emoji || '😊', label: 'Ánimo: ' + (m?.label || log.mood), time: log.created_at, color: TIMELINE_TYPE_META.mood.color, type: 'mood', editable: false, origin: 'individual' });
+  }
+  if (currentFood.breakfast) push({ emoji: '🍞', label: 'Desayuno: ' + (foodOptLabel(currentFood.breakfast)), time: null, color: TIMELINE_TYPE_META.breakfast.color, type: 'food_breakfast', editable: false, origin: 'individual' });
+  if (currentFood.lunch)     push({ emoji: '🥗', label: 'Almuerzo: ' + (foodOptLabel(currentFood.lunch)), time: null, color: TIMELINE_TYPE_META.lunch.color, type: 'food_lunch', editable: false, origin: 'individual' });
+  if (currentFood.snack)     push({ emoji: '🍎', label: 'Merienda: ' + (foodOptLabel(currentFood.snack)), time: null, color: TIMELINE_TYPE_META.snack.color, type: 'food_snack', editable: false, origin: 'individual' });
+  if (log?.nap) push({ emoji: '😴', label: 'Siesta: ' + ({ si: 'Durmió', no: 'No durmió', poco: 'Poco', excelente: 'Excelente' }[log.nap] || log.nap), time: null, color: TIMELINE_TYPE_META.nap.color, type: 'nap', editable: false, origin: 'individual' });
+
+  events.forEach(ev => {
+    const meta = TIMELINE_TYPE_META[ev.type] || {};
+    const isClassEvent = ev.origin === 'colectivo';
+    push({
+      emoji: _timelineEmoji(ev),
+      label: ev.label || meta.group || ev.type,
+      time: ev.created_at || ev.start_time || null,
+      color: ev.color || meta.color || '#475569',
+      id: ev.id,
+      type: ev.type,
+      editable: true,
+      origin: isClassEvent ? 'aula' : 'individual'
+    });
+  });
+
+  if (log?.notes) push({ emoji: '📝', label: 'Nota: ' + log.notes.substring(0, 60) + (log.notes.length > 60 ? '…' : ''), time: log.created_at, color: TIMELINE_TYPE_META.note.color, type: 'note', editable: false, origin: 'individual' });
+
+  all.sort((a, b) => {
+    if (!a.time && !b.time) return 0;
+    if (!a.time) return 1;
+    if (!b.time) return -1;
+    return new Date(a.time).getTime() - new Date(b.time).getTime();
+  });
+  return all;
+}
+
+function foodOptLabel(val) {
+  return ({ todo: 'Todo', poco: 'Poco', nada: 'Nada', ayuda: 'Ayuda' })[val] || val;
 }
 
 export function openStudentRoutine(studentId) {
@@ -2537,8 +2647,8 @@ export function openStudentRoutine(studentId) {
       <!-- STUDENT HEADER -->
       <div class="p-5" style="background:linear-gradient(135deg,#28B54D,#239943)">
         <div class="flex items-center gap-4">
-          <div class="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center overflow-hidden">
-            ${student.avatar_url ? `<img src="${safeUrl(student.avatar_url)}" class="w-full h-full object-cover">` : `<span class="text-xl font-black text-white">${safeEscapeHTML((student.name || '?').charAt(0))}</span>`}
+          <div class="sr-avatar">
+            ${student.avatar_url ? `<img src="${safeUrl(student.avatar_url)}" alt="">` : `<span>${safeEscapeHTML((student.name || '?').charAt(0))}</span>`}
           </div>
           <div class="flex-1">
             <h3 class="text-lg font-black text-white">${safeEscapeHTML(student.name)}</h3>
@@ -2570,81 +2680,55 @@ export function openStudentRoutine(studentId) {
 
         <!-- ═══ LÍNEA DE TIEMPO DE EVENTOS REGISTRADOS ═══ -->
         ${(() => {
-          const nTimeline = (log?.mood ? 1 : 0) + (currentFood.breakfast ? 1 : 0) + (currentFood.lunch ? 1 : 0)
-            + (currentFood.snack ? 1 : 0) + (log?.nap ? 1 : 0) + events.length + (log?.notes ? 1 : 0);
+          const allEvents = _buildStudentTimeline(log, events, currentFood);
+          const nTimeline = allEvents.length;
+          const nAula = allEvents.filter(e => e.origin === 'aula').length;
+          const nIndiv = allEvents.filter(e => e.origin === 'individual').length;
+
           const body = (() => {
-            // Build chronological event list from all sources
-            const allEvents = [];
-
-            // Mood
-            if (log?.mood) {
-              const mood = MOOD_OPTIONS.find(m => m.val === log.mood);
-              allEvents.push({ emoji: mood?.emoji || '😊', label: 'Ánimo: ' + (mood?.label || log.mood), time: log.created_at, color: '#3B82F6', id: null, type: 'mood', editable: false });
-            }
-            // Food
-            if (currentFood.breakfast) allEvents.push({ emoji: '🍞', label: 'Desayuno: ' + (foodOptions.find(f => f.val === currentFood.breakfast)?.label || currentFood.breakfast), time: null, color: '#FF8A00', id: null, type: 'food_breakfast', editable: false });
-            if (currentFood.lunch)     allEvents.push({ emoji: '🥗', label: 'Almuerzo: ' + (foodOptions.find(f => f.val === currentFood.lunch)?.label || currentFood.lunch),   time: null, color: '#28B54D', id: null, type: 'food_lunch',     editable: false });
-            if (currentFood.snack)     allEvents.push({ emoji: '🍎', label: 'Merienda: ' + (foodOptions.find(f => f.val === currentFood.snack)?.label || currentFood.snack),     time: null, color: '#F59E0B', id: null, type: 'food_snack',     editable: false });
-            if (log?.nap)              allEvents.push({ emoji: '😴', label: 'Siesta: ' + ({si:'Durmió',no:'No durmió',poco:'Poco',excelente:'Excelente'}[log.nap]||log.nap), time: null, color: '#8B5CF6', id: null, type: 'nap', editable: false });
-
-            // infant_data events — each with its own created_at
-            const EMAP = { milk:'🍼', activity:'🎨', sensorial:'🔬', playground:'🌳', handwash:'🧼', toothbrush:'🪥', bath:'🚽', temp:'🌡️', med:'💊', note:'📝', behavior:'🤝', health:'😷', incident:'🤕', diaper:'🧻', diaper_change:'🧻', sleep:'😴' };
-            const poop = ev => ev.subtype === 'soiled' ? '💩' : (ev.subtype === 'wet' ? '💧' : EMAP[ev.type] || '📌');
-            events.forEach(ev => {
-              allEvents.push({
-                emoji: poop(ev),
-                label: ev.label || ev.type,
-                time:  ev.created_at || ev.start_time || null,
-                color: '#475569',
-                id:    ev.id,
-                type:  ev.type,
-                editable: true
-              });
-            });
-
-            if (log?.notes) allEvents.push({ emoji: '📝', label: 'Nota: ' + log.notes.substring(0,40) + (log.notes.length>40?'…':''), time: log.created_at, color: '#64748B', id: null, type: 'note', editable: false });
-
-            // Sort by time
-            allEvents.sort((a, b) => {
-              if (!a.time && !b.time) return 0;
-              if (!a.time) return 1;
-              if (!b.time) return -1;
-              return new Date(a.time).getTime() - new Date(b.time).getTime();
-            });
-
             if (!allEvents.length) return `
-              <div class="rounded-2xl p-4 text-center" style="background:#F8FAFC;border:2px dashed #E2E8F0">
-                <p class="text-xs font-bold text-slate-400">Sin eventos registrados hoy</p>
+              <div class="sr-tl-empty">
+                <span class="sr-tl-empty-ico">🕐</span>
+                <p>Sin eventos registrados hoy</p>
+                <small>Marca rutinas del aula o eventos individuales y aparecerán aquí ordenados por hora.</small>
               </div>`;
 
             return `
-              <div class="space-y-1.5">
-                ${allEvents.map(ev => `
-                  <div class="flex items-center gap-2.5 p-2.5 rounded-xl" style="background:${ev.color}0D;border:1.5px solid ${ev.color}33">
-                    <span class="text-lg flex-shrink-0">${ev.emoji}</span>
-                    <div class="flex-1 min-w-0">
-                      <p class="text-[11px] font-black truncate" style="color:${ev.color}">${safeEscapeHTML(ev.label)}</p>
-                      ${ev.time ? `<p class="text-[9px] font-bold text-slate-400">${_fmtTime(ev.time)}</p>` : '<p class="text-[9px] text-slate-300">Sin hora registrada</p>'}
+              <div class="sr-tl-filters" id="srTlFilters">
+                <button type="button" class="sr-tl-chip sr-tl-chip--on" data-tl-filter="all" onclick="App._srTimelineFilter('all')">Todo <b>${allEvents.length}</b></button>
+                <button type="button" class="sr-tl-chip" data-tl-filter="aula" onclick="App._srTimelineFilter('aula')">🏫 Del aula <b>${nAula}</b></button>
+                <button type="button" class="sr-tl-chip" data-tl-filter="individual" onclick="App._srTimelineFilter('individual')">🙋 Individual <b>${nIndiv}</b></button>
+              </div>
+              <div class="sr-tl" id="srTimelineList">
+                ${allEvents.map((ev, i) => `
+                  <div class="sr-tl-item" data-tl-origin="${ev.origin}" style="--tl-color:${ev.color}">
+                    <div class="sr-tl-rail">
+                      <span class="sr-tl-dot">${ev.emoji}</span>
+                      ${i < allEvents.length - 1 ? '<span class="sr-tl-line"></span>' : ''}
                     </div>
-                    ${ev.editable && ev.id ? `
-                      <button onclick="App._editEventTime('${studentId}','${ev.id}')"
-                        class="flex-shrink-0 p-1.5 rounded-lg text-[9px] font-black"
-                        style="background:${ev.color}15;color:${ev.color};border:1px solid ${ev.color}33"
-                        title="Editar hora">
-                        ✏️
-                      </button>
-                      <button onclick="App.deleteInfantEvent('${studentId}','${ev.id}')"
-                        class="flex-shrink-0 p-1.5 rounded-lg text-[9px] font-black"
-                        style="background:#FFF1F2;color:#E11D48;border:1px solid #FECDD3"
-                        title="Eliminar evento">
-                        🗑️
-                      </button>` : ''}
+                    <div class="sr-tl-card">
+                      <div class="sr-tl-card-top">
+                        <span class="sr-tl-label">${safeEscapeHTML(ev.label)}</span>
+                        <span class="sr-tl-origin ${ev.origin === 'aula' ? 'sr-tl-origin--aula' : 'sr-tl-origin--indiv'}">
+                          ${ev.origin === 'aula' ? '🏫 Aula' : '🙋 Individual'}
+                        </span>
+                      </div>
+                      <div class="sr-tl-card-bot">
+                        <span class="sr-tl-time">${ev.time ? '🕐 ' + _fmtTime(ev.time) : 'Sin hora registrada'}</span>
+                        ${ev.editable && ev.id ? `
+                          <span class="sr-tl-actions">
+                            <button onclick="App._editEventTime('${studentId}','${ev.id}')" title="Editar hora">✏️</button>
+                            <button onclick="App.deleteInfantEvent('${studentId}','${ev.id}')" title="Eliminar evento">🗑️</button>
+                          </span>` : ''}
+                      </div>
+                    </div>
                   </div>
                 `).join('')}
               </div>`;
           })();
+
           return section('timeline', '📋 Línea del Tiempo', body,
-            { text: `${nTimeline} reg.`, ok: nTimeline > 0 }, nTimeline > 0);
+            { text: `${nTimeline} reg.`, ok: nTimeline > 0 }, true);
         })()}
 
         <!-- ═══ ELEGIR EVENTO DEL AULA PARA ESTE ESTUDIANTE ═══ -->
@@ -2669,7 +2753,7 @@ export function openStudentRoutine(studentId) {
           )).join('');
 
           const routineBlocks = [...new Set(routines.map(r => r.cat))].map(cat => `
-            <div class="mt-2">
+            <div class="mt-2 sr-aula-cat">
               <p class="text-[9px] font-black text-slate-400 uppercase tracking-wide mb-1.5">${safeEscapeHTML(cat)}</p>
               <div class="grid grid-cols-4 gap-1.5">
                 ${routines.filter(r => r.cat === cat).map(r => chip(
@@ -2679,19 +2763,30 @@ export function openStudentRoutine(studentId) {
               </div>
             </div>`).join('');
 
+          const totalAula = schedule.length + routines.length;
+          const marcadosAula = schedule.filter(ev => hasLabel(ev.label)).length
+            + routines.filter(r => hasLabel(r.label)).length;
+
           const body = `
-            <input id="srEvSearch" placeholder="Buscar evento del aula..." oninput="App._filterStudentEvents(this.value)"
-              class="w-full mb-3 p-2.5 border-2 border-slate-100 rounded-xl text-xs focus:border-green-400 outline-none">
-            <div>
+            <div class="sr-aula-bar">
+              <input id="srEvSearch" placeholder="🔍 Buscar evento del aula..." oninput="App._filterStudentEvents(this.value)"
+                class="sr-aula-search">
+              <button type="button" id="srAulaShowAllBtn" class="sr-aula-toggle" onclick="App._srToggleAulaAll()">Ver todo</button>
+            </div>
+            <div class="sr-aula-count">
+              <span class="sr-aula-count-chip sr-ok">✓ ${marcadosAula} marcados</span>
+              <span class="sr-aula-count-chip">${totalAula} disponibles</span>
+            </div>
+            <div class="sr-aula-block">
               <p class="text-[9px] font-black text-slate-400 uppercase tracking-wide mb-1.5">⏰ Horario del Aula</p>
               <div class="grid grid-cols-4 gap-1.5">${schedChips || '<p class="col-span-4 text-[10px] text-slate-300 italic">Sin bloques configurados</p>'}</div>
             </div>
-            <div class="mt-3">
+            <div class="sr-aula-block">
               <p class="text-[9px] font-black text-slate-400 uppercase tracking-wide mb-1.5">🎯 Rutinas del Aula</p>
-              <div class="max-h-64 overflow-y-auto pr-1">${routineBlocks || '<p class="text-[10px] text-slate-300 italic">Sin rutinas para este nivel</p>'}</div>
+              <div class="sr-aula-routines sr-aula-collapsed" id="srAulaRoutines">${routineBlocks || '<p class="text-[10px] text-slate-300 italic">Sin rutinas para este nivel</p>'}</div>
             </div>`;
           return section('aula', '🗓️ Eventos del Aula', body,
-            { text: `${schedule.length} bloques`, ok: false }, true);
+            { text: `${marcadosAula}/${totalAula}`, ok: marcadosAula > 0 }, true);
         })()}
 
         <!-- ═══ ESTADO EMOCIONAL ═══ -->
@@ -3087,6 +3182,12 @@ export async function _addClassRoutineToStudent(studentId, routineId) {
 /** Filtra en vivo los chips de "Eventos del Aula" dentro del modal individual */
 export function _filterStudentEvents(query) {
   const q = String(query || '').trim().toLowerCase();
+  const box = document.getElementById('srAulaRoutines');
+  const toggleBtn = document.getElementById('srAulaShowAllBtn');
+  if (q && box && box.classList.contains('sr-aula-collapsed')) {
+    box.classList.remove('sr-aula-collapsed');
+    if (toggleBtn) toggleBtn.textContent = 'Ver menos';
+  }
   document.querySelectorAll('#studentRoutineModal .sr-evchip').forEach(btn => {
     const name = btn.getAttribute('data-evname') || '';
     btn.style.display = (!q || name.includes(q)) ? '' : 'none';

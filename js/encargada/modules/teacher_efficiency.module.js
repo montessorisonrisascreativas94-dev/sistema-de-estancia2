@@ -14,6 +14,12 @@ export const TeacherEfficiencyModule = {
     await this.load();
   },
 
+  _since(days) {
+    const d = new Date();
+    d.setDate(d.getDate() - days);
+    return d.toISOString().split('T')[0];
+  },
+
   async load() {
     const container = document.getElementById('eficienciaContent');
     if (!container) return;
@@ -30,16 +36,84 @@ export const TeacherEfficiencyModule = {
 
       if (error) throw error;
 
-      const list = (teachers || []).map((t) => ({
-        id:           t.id,
-        name:         t.name || 'Sin nombre',
-        role:         t.role,
-        efficiency:   0,
-        punctuality:  0,
-        attendance:   0,
-        reports:      0,
-        parentRating: 0
-      }));
+      // Datos reales para calcular métricas por maestra
+      const [classroomsRes, postsRes, ratingsRes, attendanceRes] = await Promise.allSettled([
+        supabase.from('classrooms').select('id, name, teacher_id').is('deleted_at', null),
+        supabase.from('posts').select('id, teacher_id, media_url'),
+        supabase.from('parent_ratings').select('teacher_id, rating'),
+        supabase.from('attendance').select('classroom_id, status').gte('date', this._since(30))
+      ]);
+
+      const classrooms = classroomsRes.status === 'fulfilled' ? (classroomsRes.value.data || []) : [];
+      const posts = postsRes.status === 'fulfilled' ? (postsRes.value.data || []) : [];
+      const ratings = ratingsRes.status === 'fulfilled' ? (ratingsRes.value.data || []) : [];
+      const attendance = attendanceRes.status === 'fulfilled' ? (attendanceRes.value.data || []) : [];
+
+      // Agrupar aulas por maestra
+      const roomsByTeacher = new Map();
+      classrooms.forEach(c => {
+        if (!c.teacher_id) return;
+        if (!roomsByTeacher.has(c.teacher_id)) roomsByTeacher.set(c.teacher_id, []);
+        roomsByTeacher.get(c.teacher_id).push(c.id);
+      });
+
+      // Publicaciones por maestra
+      const postsByTeacher = new Map();
+      posts.forEach(p => {
+        if (!p.teacher_id) return;
+        postsByTeacher.set(p.teacher_id, (postsByTeacher.get(p.teacher_id) || 0) + 1);
+      });
+
+      // Valoración de padres por maestra
+      const ratingAgg = new Map();
+      ratings.forEach(r => {
+        if (!r.teacher_id) return;
+        const agg = ratingAgg.get(r.teacher_id) || { sum: 0, n: 0 };
+        agg.sum += (r.rating || 0); agg.n += 1;
+        ratingAgg.set(r.teacher_id, agg);
+      });
+
+      // Asistencia / puntualidad por aula
+      const attByRoom = new Map();
+      attendance.forEach(a => {
+        if (a.classroom_id == null) return;
+        const agg = attByRoom.get(a.classroom_id) || { total: 0, present: 0 };
+        agg.total += 1;
+        if (a.status === 'present') agg.present += 1;
+        attByRoom.set(a.classroom_id, agg);
+      });
+
+      const list = (teachers || []).map((t) => {
+        const rooms = roomsByTeacher.get(t.id) || [];
+        let attTotal = 0, attPresent = 0;
+        rooms.forEach(rid => {
+          const agg = attByRoom.get(rid);
+          if (agg) { attTotal += agg.total; attPresent += agg.present; }
+        });
+
+        const attendancePct = attTotal > 0 ? Math.round((attPresent / attTotal) * 100) : 0;
+        const punctualityPct = attendancePct;
+        const reports = postsByTeacher.get(t.id) || 0;
+        const rAgg = ratingAgg.get(t.id);
+        const parentRating = rAgg && rAgg.n > 0 ? Math.round((rAgg.sum / rAgg.n) * 20) : 0;
+
+        // Índice compuesto solo con dimensiones que tienen datos reales.
+        const parts = [];
+        if (attTotal > 0) parts.push(attendancePct);
+        if (rAgg && rAgg.n > 0) parts.push(parentRating);
+        const efficiency = parts.length ? Math.round(parts.reduce((s, v) => s + v, 0) / parts.length) : 0;
+
+        return {
+          id:           t.id,
+          name:         t.name || 'Sin nombre',
+          role:         t.role,
+          efficiency,
+          punctuality:  punctualityPct,
+          attendance:   attendancePct,
+          reports:      Math.min(reports * 10, 100),
+          parentRating
+        };
+      });
 
       // Guardar en estado usando la clave correcta (teachers.all)
       AppState.set('teachers', { ...AppState.get('teachers'), all: teachers || [] });

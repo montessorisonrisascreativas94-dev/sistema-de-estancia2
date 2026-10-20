@@ -26,8 +26,9 @@ const ROLE_ICONS = {
 const ROLE_LABELS = {
   maestra: 'Maestra',
   encargada: 'Encargada',
-  padre: 'Padre/Madre',
+  asistente: 'Asistente',
   directora: 'Directora',
+  padre: 'Padre/Madre',
   'padre/madre': 'Padre/Madre',
   'padre_o_madre': 'Padre/Madre',
 };
@@ -141,17 +142,32 @@ export const EncargadaChatApp = {
     if (!quiet) list.innerHTML = Helpers.skeleton(4, 'h-20');
 
     try {
-      const { data: profiles, error } = await supabase
-        .from('profiles')
-        .select('id, name, avatar_url, role')
-        .eq('role', 'maestra')
-        .neq('id', this._currentUserId)
-        .is('deleted_at', null)
-        .not('name', 'is', null)
-        .order('name');
-      if (error) throw error;
+      // Personal: maestras (de todas las aulas), directora y asistente.
+      let staff = [];
+      try {
+        const { data: profiles, error } = await supabase
+          .from('profiles')
+          .select('id, name, avatar_url, role')
+          .in('role', ['maestra', 'directora', 'asistente'])
+          .neq('id', this._currentUserId)
+          .is('deleted_at', null)
+          .not('name', 'is', null)
+          .order('name');
+        if (error) throw error;
+        staff = profiles || [];
+      } catch (_) {
+        // Fallback si no existe deleted_at en el esquema desplegado.
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, name, avatar_url, role')
+          .in('role', ['maestra', 'directora', 'asistente'])
+          .neq('id', this._currentUserId)
+          .not('name', 'is', null)
+          .order('name');
+        staff = profiles || [];
+      }
 
-      const contactsRaw = (profiles || []).filter(p => p.name && p.name.trim().length > 0).map(u => ({
+      const staffContacts = staff.filter(p => p.name && p.name.trim().length > 0).map(u => ({
         id: u.id,
         name: u.name,
         parentName: null,
@@ -160,12 +176,76 @@ export const EncargadaChatApp = {
         roleLabel: ROLE_LABELS[u.role] || u.role || 'Contacto',
         roleIcon: ROLE_ICONS[u.role] || '👤',
         avatar: u.avatar_url,
-        meta: 'Personal Karpus',
+        meta: u.role === 'maestra' ? 'Maestra' : (u.role === 'directora' ? 'Dirección' : 'Asistente'),
         unread: 0,
         lastMessage: null,
         lastMessageTime: null,
       }));
 
+      // Padres: se resuelven vía students (parent_id o p1_email), como en el panel maestra.
+      const parentsMap = new Map();
+      try {
+        const { data: students } = await supabase
+          .from('students')
+          .select('id, name, parent_id, p1_name, p1_email')
+          .is('deleted_at', null);
+        const stuList = students || [];
+
+        const parentIds = [...new Set(stuList.filter(s => s.parent_id).map(s => s.parent_id))];
+        let parentProfiles = {};
+        if (parentIds.length) {
+          const { data: profs } = await supabase
+            .from('profiles')
+            .select('id, name, avatar_url')
+            .in('id', parentIds);
+          (profs || []).forEach(p => { parentProfiles[p.id] = p; });
+        }
+
+        const swParents = stuList.filter(s => !s.parent_id && s.p1_email);
+        if (swParents.length) {
+          const emails = [...new Set(swParents.map(s => s.p1_email).filter(Boolean))];
+          const { data: profsByEmail } = await supabase
+            .from('profiles')
+            .select('id, name, avatar_url, email')
+            .in('email', emails);
+          const emailMap = {};
+          (profsByEmail || []).forEach(p => { if (p.email) emailMap[p.email.toLowerCase()] = p; });
+          swParents.forEach(s => {
+            const prof = emailMap[(s.p1_email || '').toLowerCase()];
+            if (prof) { s._resolvedParentId = prof.id; parentProfiles[prof.id] = prof; }
+          });
+        }
+
+        stuList.forEach(s => {
+          const pid = s.parent_id || s._resolvedParentId;
+          if (pid && pid !== this._currentUserId) {
+            const profile = parentProfiles[pid];
+            const displayName = profile?.name || s.p1_name || `Padre de ${s.name}`;
+            if (!parentsMap.has(pid)) {
+              parentsMap.set(pid, {
+                id: pid,
+                name: s.name,
+                parentName: displayName,
+                studentName: s.name,
+                childName: s.name,
+                role: 'padre',
+                roleLabel: 'Padre/Madre',
+                roleIcon: ROLE_ICONS.padre,
+                avatar: profile?.avatar_url || null,
+                meta: 'Familia',
+                unread: 0,
+                lastMessage: null,
+                lastMessageTime: null,
+              });
+            } else {
+              const p = parentsMap.get(pid);
+              if (!p.childName.includes(s.name)) { p.childName += `, ${s.name}`; p.studentName = p.childName; }
+            }
+          }
+        });
+      } catch (_) {}
+
+      const contactsRaw = [...staffContacts, ...parentsMap.values()];
       this._contacts = await SharedChatModule.enrichContactsWithLastMessage(contactsRaw);
       this._renderContacts();
     } catch (e) {

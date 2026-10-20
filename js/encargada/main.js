@@ -85,6 +85,12 @@ export function goToSection(sectionId) {
       case 'dashboard':
         if (fresh('dashboard')) { loadDashboard(); done('dashboard'); }
         break;
+      case 'centro-escolar':
+        import('../directora/school-center.module.js')
+          .then(m => m.SchoolCenterModule.init())
+          .catch(err => console.error('[CentroEscolar] No se pudo iniciar:', err));
+        done('centro-escolar');
+        break;
       case 'rendimiento-eficiencia':
         if (fresh('rendimiento-eficiencia')) { loadEfficiency(); loadRanking(); done('rendimiento-eficiencia'); }
         break;
@@ -156,14 +162,15 @@ async function loadDashboard() {
     const activeClassrooms = classrooms?.filter(c => c.is_active !== false).length || 0;
     const totalChildren = students?.length || 0;
 
-    const [tasksRes, evidencesRes, postsRes, msgsRes, gradesRes, routinesRes, ratingsRes] = await Promise.allSettled([
+    const [tasksRes, evidencesRes, postsRes, msgsRes, gradesRes, routinesRes, ratingsRes, attendanceRes] = await Promise.allSettled([
       supabase.from('tasks').select('id, classroom_id, created_at'),
       supabase.from('task_evidences').select('id, task_id, created_at'),
       supabase.from('posts').select('id, teacher_id, created_at'),
       supabase.from('messages').select('id, sender_id, created_at'),
       supabase.from('grades').select('id, numeric_score, created_at'),
       supabase.from('daily_logs').select('id, classroom_id, date'),
-      supabase.from('parent_ratings').select('id, rating, teacher_id')
+      supabase.from('parent_ratings').select('id, rating, teacher_id'),
+      supabase.from('attendance').select('id, student_id, status, date').eq('date', new Date().toISOString().split('T')[0])
     ]);
 
     const allTasks = tasksRes.status === 'fulfilled' ? (tasksRes.value.data || []) : [];
@@ -173,6 +180,13 @@ async function loadDashboard() {
     const allGrades = gradesRes.status === 'fulfilled' ? (gradesRes.value.data || []) : [];
     const allRoutines = routinesRes.status === 'fulfilled' ? (routinesRes.value.data || []) : [];
     const allRatings = ratingsRes.status === 'fulfilled' ? (ratingsRes.value.data || []) : [];
+    const todayAttendance = attendanceRes.status === 'fulfilled' ? (attendanceRes.value.data || []) : [];
+
+    // Puntualidad real: alumnos presentes (no marcados como 'late') sobre el total registrado hoy.
+    const presentToday = todayAttendance.filter(a => a.status === 'present').length;
+    const punctualityMetric = todayAttendance.length > 0
+      ? Math.round((presentToday / todayAttendance.length) * 100) + '%'
+      : '—';
 
     const avgGrade = allGrades.length > 0
       ? (allGrades.reduce((sum, g) => sum + (g.numeric_score || 0), 0) / allGrades.length).toFixed(1)
@@ -200,7 +214,7 @@ async function loadDashboard() {
     };
 
     const metricElements = {
-      metricPuntualidad: activeTeachers > 0 ? Math.round(Math.random() * 15 + 85) + '%' : '—',
+      metricPuntualidad: punctualityMetric,
       metricCumplimientoRutina: activeClassrooms > 0 ? Math.round((routinesToday / Math.max(activeClassrooms, 1)) * 100) + '%' : '—',
       metricTareasAsignadas: allTasks.length || '0',
       metricTareasEntregadas: allEvidences.length || '0',
@@ -256,7 +270,41 @@ async function loadRanking() {
   if (!el) return;
   el.innerHTML = '<div class="text-slate-400">Cargando...</div>';
   try {
-    const { data: teachers } = await supabase.from('profiles').select('*').eq('role', 'maestra');
+    const [{ data: teachers }, { data: classrooms }, { data: ratings }] = await Promise.all([
+      supabase.from('profiles').select('id, name, avatar_url').eq('role', 'maestra').eq('is_active', true),
+      supabase.from('classrooms').select('id, name, teacher_id').is('deleted_at', null),
+      supabase.from('parent_ratings').select('teacher_id, rating')
+    ]);
+
+    // Aula(s) por maestra: classrooms.teacher_id -> name
+    const roomsByTeacher = new Map();
+    (classrooms || []).forEach(c => {
+      if (!c.teacher_id) return;
+      if (!roomsByTeacher.has(c.teacher_id)) roomsByTeacher.set(c.teacher_id, []);
+      roomsByTeacher.get(c.teacher_id).push(c.name);
+    });
+
+    // Valoración real por maestra (para eficiencia)
+    const ratingAgg = new Map();
+    (ratings || []).forEach(r => {
+      if (!r.teacher_id) return;
+      const agg = ratingAgg.get(r.teacher_id) || { sum: 0, n: 0 };
+      agg.sum += (r.rating || 0); agg.n += 1;
+      ratingAgg.set(r.teacher_id, agg);
+    });
+
+    const rows = (teachers || []).map(t => {
+      const rooms = roomsByTeacher.get(t.id) || [];
+      const rAgg = ratingAgg.get(t.id);
+      const efficiency = rAgg && rAgg.n > 0 ? Math.round((rAgg.sum / rAgg.n) * 20) : null;
+      return { t, rooms, efficiency };
+    }).sort((a, b) => (b.efficiency ?? -1) - (a.efficiency ?? -1));
+
+    if (!rows.length) {
+      el.innerHTML = '<div class="text-center py-10 text-slate-400 font-bold">No hay maestras registradas aún</div>';
+      return;
+    }
+
     el.innerHTML = `
       <div class="bg-white rounded-2xl border border-slate-100 overflow-hidden">
         <table class="w-full text-left">
@@ -269,7 +317,7 @@ async function loadRanking() {
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100">
-            ${(teachers || []).map((t, i) => `
+            ${rows.map(({ t, rooms, efficiency }, i) => `
               <tr class="hover:bg-slate-50 transition-colors">
                 <td class="px-6 py-4">
                   <span class="font-black text-xl ${i === 0 ? 'text-yellow-500' : i === 1 ? 'text-slate-400' : i === 2 ? 'text-orange-600' : 'text-slate-300'}">
@@ -284,8 +332,8 @@ async function loadRanking() {
                     <p class="font-bold text-slate-800">${t.name || 'Maestra'}</p>
                   </div>
                 </td>
-                <td class="px-6 py-4 text-slate-500 font-medium">${t.classroom?.name || 'Sin aula'}</td>
-                <td class="px-6 py-4 text-right font-black text-purple-600">—</td>
+                <td class="px-6 py-4 text-slate-500 font-medium">${rooms.length ? rooms.join(', ') : 'Sin aula'}</td>
+                <td class="px-6 py-4 text-right font-black text-purple-600">${efficiency != null ? efficiency + '%' : '—'}</td>
               </tr>
             `).join('')}
           </tbody>
@@ -690,12 +738,22 @@ async function loadPadresOpinion() {
   try {
     let feedback = [];
     try {
-      const { data } = await supabase.from('parent_feedback')
-        .select('*, profiles:user_id(name, avatar_url), students:student_id(name)')
+      const { data } = await supabase.from('parent_ratings')
+        .select('id, rating, comment, recommendations, observations, month, created_at, parent_id, teacher_id, parent:parent_id(name, avatar_url), teacher:teacher_id(name)')
         .order('created_at', { ascending: false })
         .limit(20);
       feedback = data || [];
     } catch (_) {}
+    // Fallback sin joins si el esquema embebido no está disponible.
+    if (feedback.length === 0) {
+      try {
+        const { data } = await supabase.from('parent_ratings')
+          .select('id, rating, comment, recommendations, observations, month, created_at, parent_id, teacher_id')
+          .order('created_at', { ascending: false })
+          .limit(20);
+        feedback = data || [];
+      } catch (_) {}
+    }
 
     if (feedback.length === 0) {
       el.innerHTML = `
@@ -720,14 +778,16 @@ async function loadPadresOpinion() {
           ${feedback.map(f => `
             <div class="bg-white rounded-2xl border border-slate-100 p-4">
               <div class="flex items-center gap-3 mb-2">
-                <img src="${f.profiles?.avatar_url || 'img/monte.jpg'}" class="w-8 h-8 rounded-full object-cover">
+                <img src="${f.parent?.avatar_url || 'img/monte.jpg'}" class="w-8 h-8 rounded-full object-cover" onerror="this.src='img/monte.jpg'">
                 <div>
-                  <div class="font-bold text-sm text-slate-800">${Helpers.escapeHTML(f.profiles?.name || 'Padre')}</div>
-                  <div class="text-xs text-slate-400">${f.students?.name || ''} · ${new Date(f.created_at).toLocaleDateString('es-DO')}</div>
+                  <div class="font-bold text-sm text-slate-800">${Helpers.escapeHTML(f.parent?.name || 'Padre')}</div>
+                  <div class="text-xs text-slate-400">${f.teacher?.name ? 'Maestra: ' + Helpers.escapeHTML(f.teacher.name) + ' · ' : ''}${f.month || ''}${f.created_at ? ' · ' + new Date(f.created_at).toLocaleDateString('es-DO') : ''}</div>
                 </div>
                 <div class="ml-auto flex gap-0.5">${[1,2,3,4,5].map(s => `<span class="text-sm ${s <= (f.rating||0) ? 'text-amber-400' : 'text-slate-200'}">★</span>`).join('')}</div>
               </div>
-              <p class="text-sm text-slate-600">${Helpers.escapeHTML(f.comment || f.feedback || '')}</p>
+              <p class="text-sm text-slate-600">${Helpers.escapeHTML(f.comment || '')}</p>
+              ${f.recommendations ? `<p class="text-xs text-slate-400 mt-1"><span class="font-bold">Recomendaciones:</span> ${Helpers.escapeHTML(f.recommendations)}</p>` : ''}
+              ${f.observations ? `<p class="text-xs text-slate-400 mt-1"><span class="font-bold">Observaciones:</span> ${Helpers.escapeHTML(f.observations)}</p>` : ''}
             </div>
           `).join('')}
         </div>`;
@@ -910,8 +970,9 @@ async function loadReportesCumplimiento() {
     const last7 = new Date(Date.now() - 7*86400000).toISOString().split('T')[0];
     let logs = [];
     try {
+      // daily_logs no tiene teacher_id: el aula enlaza con classrooms.teacher_id.
       const { data } = await supabase.from('daily_logs')
-        .select('teacher_id, classroom_id, date, id')
+        .select('id, classroom_id, date')
         .gte('date', last7);
       logs = data || [];
     } catch (_) {}
@@ -919,13 +980,17 @@ async function loadReportesCumplimiento() {
     let tasks = [];
     try {
       const { data } = await supabase.from('tasks')
-        .select('teacher_id, id, created_at');
+        .select('id, classroom_id, teacher_id, created_at');
       tasks = data || [];
     } catch (_) {}
 
+    // classroom_id -> teacher_id
+    const roomTeacher = new Map();
+    cls.forEach(c => { if (c.teacher_id) roomTeacher.set(c.id, c.teacher_id); });
+
     const teacherStats = teachers.map(t => {
-      const tLogs = logs.filter(l => l.teacher_id === t.id);
-      const tTasks = tasks.filter(tk => tk.teacher_id === t.id);
+      const tLogs = logs.filter(l => roomTeacher.get(l.classroom_id) === t.id);
+      const tTasks = tasks.filter(tk => tk.teacher_id === t.id || roomTeacher.get(tk.classroom_id) === t.id);
       const uniqueDays = new Set(tLogs.map(l => l.date)).size;
       const coverage = Math.round((uniqueDays / 7) * 100);
       return { name: t.name, logs: tLogs.length, tasks: tTasks.length, coverage };
@@ -983,13 +1048,24 @@ async function loadControlRutinas() {
   if (window.lucide) lucide.createIcons();
   try {
     const today = new Date().toISOString().split('T')[0];
-    const { data: classrooms } = await supabase.from('classrooms').select('id, name').is('deleted_at', null).order('name');
+    const { data: classrooms } = await supabase.from('classrooms').select('id, name, teacher_id').is('deleted_at', null).order('name');
     const cls = classrooms || [];
+    const roomName = new Map(cls.map(c => [c.id, c.name]));
+
+    // Nombres de maestras para mostrar en cada tarjeta
+    const teacherIds = [...new Set(cls.map(c => c.teacher_id).filter(Boolean))];
+    let teacherName = new Map();
+    if (teacherIds.length) {
+      const { data: profs } = await supabase.from('profiles').select('id, name').in('id', teacherIds);
+      teacherName = new Map((profs || []).map(p => [p.id, p.name]));
+    }
+    const roomTeacherName = new Map(cls.map(c => [c.id, teacherName.get(c.teacher_id) || null]));
 
     let logs = [];
     try {
+      // daily_logs no tiene teacher_id ni routine_type.
       const { data } = await supabase.from('daily_logs')
-        .select('*, profiles:teacher_id(name), classrooms:classroom_id(name)')
+        .select('id, classroom_id, date, mood, notes, status')
         .eq('date', today)
         .order('created_at', { ascending: false });
       logs = data || [];
@@ -1025,10 +1101,10 @@ async function loadControlRutinas() {
           <div class="bg-white rounded-2xl border border-slate-100 p-4 hover:shadow-md transition-all">
             <div class="flex items-center justify-between">
               <div>
-                <div class="font-black text-sm text-slate-800">${l.classrooms?.name || 'Aula'}</div>
-                <div class="text-xs text-slate-500 mt-0.5">${l.profiles?.name || 'Maestra'} · ${l.routine_type || 'General'}</div>
+                <div class="font-black text-sm text-slate-800">${roomName.get(l.classroom_id) || 'Aula'}</div>
+                <div class="text-xs text-slate-500 mt-0.5">${roomTeacherName.get(l.classroom_id) || 'Maestra'} · ${l.mood ? Helpers.escapeHTML(l.mood) : 'Rutina del día'}</div>
               </div>
-              <span class="px-2.5 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-black">Registrada</span>
+              <span class="px-2.5 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-black">${l.status === 'draft' ? 'Borrador' : 'Registrada'}</span>
             </div>
             ${l.notes ? `<p class="text-xs text-slate-500 mt-2 border-t border-slate-100 pt-2">${Helpers.escapeHTML(l.notes)}</p>` : ''}
           </div>
@@ -1124,9 +1200,18 @@ async function loadComparativoAulas() {
     let logs = [];
     try {
       const { data } = await supabase.from('daily_logs')
-        .select('classroom_id, date, attendance_count, total_students, notes')
+        .select('id, classroom_id, date')
         .gte('date', last7);
       logs = data || [];
+    } catch (_) {}
+
+    // Asistencia real desde la tabla attendance (daily_logs no la contiene).
+    let attendance = [];
+    try {
+      const { data } = await supabase.from('attendance')
+        .select('classroom_id, status, date')
+        .gte('date', last7);
+      attendance = data || [];
     } catch (_) {}
 
     let tasks = [];
@@ -1153,10 +1238,11 @@ async function loadComparativoAulas() {
             const cSubs = submissions.filter(s => cTasks.some(t => t.id === s.task_id));
             const uniqueDays = new Set(cLogs.map(l => l.date)).size;
             const coverage = Math.round((uniqueDays / 7) * 100);
-            const avgAttendance = cLogs.length > 0 ? Math.round(cLogs.reduce((sum,l) => sum + (l.attendance_count || 0), 0) / cLogs.length) : 0;
-            const avgTotal = cLogs.length > 0 ? Math.round(cLogs.reduce((sum,l) => sum + (l.total_students || 0), 0) / cLogs.length) : 0;
-            const attendancePct = avgTotal > 0 ? Math.round((avgAttendance / avgTotal) * 100) : 0;
-            const submissionRate = cTasks.length > 0 ? Math.round((cSubs.length / (cTasks.length * Math.max(avgTotal, 1))) * 100) : 0;
+            const cAtt = attendance.filter(a => a.classroom_id === c.id);
+            const presentCount = cAtt.filter(a => a.status === 'present').length;
+            const attendancePct = cAtt.length > 0 ? Math.round((presentCount / cAtt.length) * 100) : 0;
+            const totalStudents = cAtt.length > 0 ? Math.max(...cAtt.filter(a => a.date === cAtt[0].date).length, 1) : 1;
+            const submissionRate = cTasks.length > 0 ? Math.round((cSubs.length / (cTasks.length * totalStudents)) * 100) : 0;
             return `
               <div class="bg-slate-50 rounded-xl p-4 border border-slate-100 hover:shadow-md transition-all">
                 <div class="font-black text-slate-800 mb-1">${c.name}</div>

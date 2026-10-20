@@ -31,6 +31,8 @@
     <link rel="stylesheet" href="css/wall-social.css">
   <link rel="stylesheet" href="css/messenger-chat.css">      
   <link rel="stylesheet" href="css/supervision.css">
+  <link rel="stylesheet" href="css/school-center.css">
+  <link rel="stylesheet" href="css/student-record-modal.css">
   <script src="js/shared/chart.min.js" defer></script>
   <script src="js/shared/jspdf.min.js" defer></script>
   <script src="js/shared/jspdf-autotable.min.js" defer></script>
@@ -427,15 +429,22 @@
 
     .nav-btn, .kk-nav-item {
       display: flex; align-items: center; gap: 12px;
-      padding: 12px 16px; width: 100%; color: #94a3b8;
-      border-radius: 8px; margin-bottom: 4px;
+      padding: 12px 16px; width: 100%; color: rgba(255,255,255,0.85);
+      border-radius: 10px; margin-bottom: 6px;
       text-align: left; transition: all 0.2s ease;
       position: relative; cursor: pointer;
       -webkit-tap-highlight-color: transparent;
       touch-action: manipulation;
+      background: rgba(255,255,255,0.08);
+      border: 1.5px solid rgba(255,255,255,0.45);
+      border-left: 3px solid rgba(255,255,255,0.75);
     }
     .nav-btn [data-lucide], .kk-nav-item [data-lucide] { transition: color 0.2s ease; }
-    .nav-btn:hover, .nav-btn.active, .kk-nav-item:hover, .kk-nav-item.active { background: rgba(255,255,255,0.15); color: white; }
+    .nav-btn:hover, .kk-nav-item:hover { background: rgba(255,255,255,0.15); color: white; }
+    .nav-btn.active, .kk-nav-item.active {
+      background: rgba(255,255,255,0.22); color: white;
+      border-left: 3px solid #FFD43B;
+    }
     .nav-btn .badge, .kk-nav-item .kk-badge { display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 5px;border-radius:50px;background:rgba(255,255,255,0.3);color:white;font-size:9px;font-weight:900;line-height:1; }
 
     .data-table {
@@ -913,6 +922,12 @@
           <span class="label">Dashboard</span>
         </button>
 
+        <button data-section="centro-escolar" class="kk-nav-item" data-tooltip="Centro Escolar">
+          <i data-lucide="gauge" class="text-indigo-300 shrink-0"></i>
+          <span class="label">Centro Escolar</span>
+          <span id="badge-ksc" class="hidden kk-badge ml-auto">0</span>
+        </button>
+
         <button data-section="rendimiento-eficiencia" class="kk-nav-item" data-tooltip="Rendimiento y Eficiencia">
           <i data-lucide="gauge" class="shrink-0"></i>
           <span class="label">Rendimiento y Eficiencia</span>
@@ -1179,6 +1194,10 @@
             </div>
             <div id="chatContent" class="text-slate-400">Cargando...</div>
           </div>
+        </section>
+
+        <section id="centro-escolar" class="section">
+          <div id="kscRoot" class="ksc"></div>
         </section>
 
         <section id="control-rutinas-cumplimiento" class="section">
