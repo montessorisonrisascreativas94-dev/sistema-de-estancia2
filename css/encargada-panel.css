@@ -1,0 +1,472 @@
+/* =====================================================================
+   PANEL DE LA ENCARGADA — capa de diseño propia
+   ---------------------------------------------------------------------
+   1. Reporte de Opinión de Padres  (KPIs, distribución, filtros, cards)
+   2. Muro Escolar                  (toolbar, modal y borde morado)
+
+   Paleta: morado institucional (#7C3AED / #8B5CF6) coherente con
+   `--role-purple` definido en wall-social.css.
+   ===================================================================== */
+
+:root {
+  --enc-purple:      #7C3AED;
+  --enc-purple-mid:  #8B5CF6;
+  --enc-purple-soft: #EDE9FE;
+  --enc-purple-ink:  #5B21B6;
+  --enc-line:        #F1F5F9;
+  --enc-shadow:      0 6px 20px -10px rgba(15, 23, 42, .10);
+  --enc-shadow-hi:   0 16px 40px -14px rgba(124, 58, 237, .30);
+}
+
+/* =====================================================================
+   1. REPORTE DE OPINIÓN DE PADRES
+   ===================================================================== */
+
+/* ---------- Tarjetas KPI ---------- */
+.enc-kpi {
+  position: relative;
+  background: #fff;
+  border: 1px solid var(--enc-line);
+  border-radius: 1.25rem;
+  padding: 1rem;
+  box-shadow: var(--enc-shadow);
+  transition: box-shadow .25s ease, transform .25s ease, border-color .25s ease;
+  overflow: hidden;
+}
+.enc-kpi::after {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 4px;
+  background: linear-gradient(180deg, var(--enc-purple-mid), var(--enc-purple));
+  opacity: .0;
+  transition: opacity .25s ease;
+}
+.enc-kpi:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--enc-shadow-hi);
+  border-color: var(--enc-purple-soft);
+}
+.enc-kpi:hover::after { opacity: 1; }
+
+.enc-kpi-ico {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.enc-kpi-ico svg { width: 1.05rem; height: 1.05rem; }
+
+.enc-kpi-val {
+  margin-top: .6rem;
+  font-size: 1.55rem;
+  line-height: 1;
+  font-weight: 900;
+  color: #0F172A;
+  letter-spacing: -.02em;
+}
+.enc-kpi-lbl {
+  margin-top: .35rem;
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: #94A3B8;
+}
+
+/* ---------- Paneles ---------- */
+.enc-panel {
+  background: #fff;
+  border: 1px solid var(--enc-line);
+  border-radius: 1.25rem;
+  box-shadow: var(--enc-shadow);
+  overflow: hidden;
+}
+.enc-panel-head {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .9rem 1.1rem;
+  border-bottom: 1px solid var(--enc-line);
+  background: linear-gradient(180deg, #FBFAFF 0%, #FFFFFF 100%);
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--enc-purple-ink);
+  letter-spacing: .02em;
+}
+.enc-panel-head svg { width: 1rem; height: 1rem; color: var(--enc-purple); }
+
+.enc-panel-body { padding: 1.1rem; }
+
+/* ---------- Campos de formulario ---------- */
+.enc-field-lbl {
+  display: block;
+  margin-bottom: .3rem;
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: #64748B;
+}
+.enc-field {
+  width: 100%;
+  padding: .6rem .85rem;
+  border-radius: .85rem;
+  border: 2px solid #E2E8F0;
+  background: #fff;
+  color: #0F172A;
+  font-size: 13px;
+  font-weight: 700;
+  outline: none;
+  transition: border-color .18s ease, box-shadow .18s ease, background .18s ease;
+}
+.enc-field:focus {
+  border-color: var(--enc-purple-mid);
+  box-shadow: 0 0 0 4px rgba(139, 92, 246, .12);
+  background: #FDFEFF;
+}
+.enc-field::placeholder { color: #A8B0BF; font-weight: 600; }
+.enc-textarea {
+  min-height: 8rem;
+  resize: vertical;
+  line-height: 1.55;
+  font-weight: 600;
+}
+
+/* ---------- Botones ---------- */
+.enc-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .45rem;
+  padding: .62rem 1.1rem;
+  border-radius: .9rem;
+  border: 1px solid transparent;
+  background: var(--enc-purple);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: 0 8px 20px -8px rgba(124, 58, 237, .55);
+  transition: background .18s ease, transform .18s ease, box-shadow .18s ease;
+}
+.enc-btn-primary:hover { background: #6D28D9; box-shadow: 0 12px 26px -10px rgba(124, 58, 237, .65); }
+.enc-btn-primary:active { transform: scale(.97); }
+.enc-btn-primary:disabled { opacity: .6; cursor: not-allowed; }
+.enc-btn-primary svg { width: 1rem; height: 1rem; }
+
+.enc-btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .4rem;
+  padding: .55rem .9rem;
+  border-radius: .85rem;
+  background: #F8FAFC;
+  color: #475569;
+  border: 1px solid #E2E8F0;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background .18s ease, color .18s ease, transform .18s ease;
+}
+.enc-btn-ghost:hover { background: var(--enc-purple-soft); color: var(--enc-purple-ink); }
+.enc-btn-ghost:active { transform: scale(.97); }
+.enc-btn-ghost svg { width: .95rem; height: .95rem; }
+
+/* ---------- Estado vacío / error ---------- */
+.enc-empty {
+  text-align: center;
+  padding: 2.75rem 1.25rem;
+  background: #fff;
+  border: 1px dashed var(--enc-purple-soft);
+  border-radius: 1.5rem;
+}
+.enc-empty-ico {
+  width: 3.75rem;
+  height: 3.75rem;
+  margin: 0 auto 1rem;
+  border-radius: 999px;
+  background: var(--enc-purple-soft);
+  color: var(--enc-purple-mid);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.enc-empty-ico svg { width: 1.6rem; height: 1.6rem; }
+.enc-empty-title {
+  font-size: 1.05rem;
+  font-weight: 900;
+  color: #1E293B;
+  margin-bottom: .4rem;
+}
+.enc-empty-text {
+  font-size: .8rem;
+  color: #64748B;
+  max-width: 34rem;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+.enc-empty-hint {
+  margin-top: 1rem;
+  font-size: 10.5px;
+  color: #94A3B8;
+  line-height: 1.6;
+}
+.enc-empty-hint code {
+  background: #F1F5F9;
+  padding: .1rem .35rem;
+  border-radius: .35rem;
+  font-size: 10px;
+  color: var(--enc-purple-ink);
+}
+.enc-empty-error { border-color: #FECDD3; background: #FFFBFB; }
+.enc-empty-error .enc-empty-ico { background: #FFE4E6; color: #E11D48; }
+
+/* ---------- Tarjeta de valoración ---------- */
+.enc-feedback {
+  position: relative;
+  background: #fff;
+  border: 1px solid var(--enc-line);
+  border-left: 5px solid var(--enc-purple);
+  border-radius: 1rem;
+  padding: 1rem 1.1rem;
+  box-shadow: var(--enc-shadow);
+  transition: box-shadow .25s ease, transform .25s ease;
+  overflow: hidden;
+}
+.enc-feedback:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--enc-shadow-hi);
+}
+.enc-feedback-head {
+  display: flex;
+  align-items: flex-start;
+  gap: .75rem;
+  margin-bottom: .7rem;
+}
+.enc-feedback-text {
+  font-size: .85rem;
+  line-height: 1.65;
+  color: #475569;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.enc-feedback-extra {
+  margin-top: .85rem;
+  padding-top: .75rem;
+  border-top: 1px dashed #E2E8F0;
+  display: flex;
+  flex-direction: column;
+  gap: .55rem;
+}
+.enc-extra-row {
+  display: flex;
+  align-items: flex-start;
+  gap: .55rem;
+}
+.enc-extra-ico { width: 1rem; height: 1rem; margin-top: .15rem; flex: 0 0 auto; }
+.enc-extra-lbl {
+  display: block;
+  font-size: 9.5px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  color: #94A3B8;
+}
+.enc-extra-txt {
+  font-size: .78rem;
+  color: #475569;
+  line-height: 1.55;
+  margin-top: .1rem;
+  word-break: break-word;
+}
+.enc-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: .12rem .55rem;
+  border-radius: 999px;
+  background: var(--enc-purple-soft);
+  color: var(--enc-purple-ink);
+  font-size: 9.5px;
+  font-weight: 900;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+/* =====================================================================
+   2. MURO ESCOLAR
+   ===================================================================== */
+
+/* ---------- Barra superior del muro ---------- */
+.enc-muro-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 1rem 1.1rem;
+  margin-bottom: 1.25rem;
+  background: #fff;
+  border: 1px solid var(--enc-line);
+  border-radius: 1.25rem;
+  box-shadow: var(--enc-shadow);
+}
+.enc-muro-toolbar-info {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  min-width: 0;
+}
+.enc-muro-toolbar-ico {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 14px;
+  background: var(--enc-purple-soft);
+  color: var(--enc-purple);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+.enc-muro-toolbar-ico svg { width: 1.15rem; height: 1.15rem; }
+.enc-muro-new-btn { flex: 0 0 auto; }
+
+/* ---------- Tarjeta de publicación: BORDE MORADO IZQUIERDO ---------- */
+.enc-muro-post {
+  position: relative;
+  background: #fff;
+  border: 1px solid var(--enc-line);
+  border-left: 6px solid var(--enc-purple);
+  border-radius: 1.25rem;
+  padding: 1rem;
+  box-shadow: var(--enc-shadow);
+  transition: box-shadow .25s ease, transform .25s ease, border-color .25s ease;
+  /* Recorta las esquinas redondeadas: los avisos (importante/fijada) se apoyan
+     sobre el borde morado sin taparlo. */
+  overflow: hidden;
+}
+.enc-muro-post::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  background: linear-gradient(180deg, #A78BFA 0%, var(--enc-purple) 45%, #6D28D9 100%);
+  z-index: 2;
+  pointer-events: none;
+}
+.enc-muro-post:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--enc-shadow-hi);
+}
+.enc-muro-post.is-pinned {
+  box-shadow: 0 0 0 2px #FDE68A, var(--enc-shadow);
+}
+
+/* ---------- Modal de nueva publicación ---------- */
+.enc-muro-modal {
+  display: flex;
+  flex-direction: column;
+}
+.enc-muro-modal-head {
+  display: flex;
+  align-items: center;
+  gap: .85rem;
+  padding: 1.35rem 1.5rem 1rem;
+  /* Espacio para el botón de cerrar global (top-4 right-4). */
+  padding-right: 3.75rem;
+  background: linear-gradient(135deg, #F5F3FF 0%, #FFFFFF 70%);
+  border-bottom: 1px solid var(--enc-line);
+}
+.enc-muro-modal-ico {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 16px;
+  background: var(--enc-purple);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  box-shadow: 0 8px 18px -6px rgba(124, 58, 237, .6);
+}
+.enc-muro-modal-ico svg { width: 1.2rem; height: 1.2rem; }
+.enc-muro-modal-title {
+  font-size: 1.1rem;
+  font-weight: 900;
+  color: #1E293B;
+  line-height: 1.2;
+}
+.enc-muro-modal-sub {
+  font-size: .72rem;
+  color: #64748B;
+  margin-top: .15rem;
+  line-height: 1.45;
+}
+.enc-muro-modal-body {
+  padding: 1.1rem 1.5rem 1.25rem;
+}
+.enc-muro-modal-foot {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: .6rem;
+  padding: .9rem 1.5rem 1.25rem;
+  border-top: 1px solid var(--enc-line);
+  background: #FBFAFF;
+  border-radius: 0 0 1.5rem 1.5rem;
+}
+
+/* Selector de archivo */
+.enc-upload {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .45rem;
+  height: 2.5rem;
+  padding: 0 .85rem;
+  border-radius: .85rem;
+  border: 2px dashed #DDD6FE;
+  background: #FAF5FF;
+  color: var(--enc-purple-ink);
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: border-color .18s ease, background .18s ease;
+}
+.enc-upload:hover { border-color: var(--enc-purple-mid); background: var(--enc-purple-soft); }
+.enc-upload svg { width: 1rem; height: 1rem; flex: 0 0 auto; }
+.enc-upload span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Opciones de publicación dentro del modal */
+#poBox { border-radius: 1rem; }
+#poVisibility, #poStudent { border-color: #E2E8F0; }
+#poVisibility:focus, #poStudent:focus {
+  border-color: var(--enc-purple-mid);
+  box-shadow: 0 0 0 4px rgba(139, 92, 246, .12);
+}
+#poAllowDownload, #poProtect { accent-color: var(--enc-purple); }
+
+/* =====================================================================
+   3. AJUSTES RESPONSIVE
+   ===================================================================== */
+@media (max-width: 640px) {
+  .enc-muro-toolbar { flex-direction: column; align-items: stretch; }
+  .enc-muro-new-btn { width: 100%; }
+  .enc-feedback-head { flex-wrap: wrap; }
+  .enc-kpi-val { font-size: 1.35rem; }
+  .enc-muro-modal-body, .enc-muro-modal-foot, .enc-muro-modal-head { padding-left: 1rem; padding-right: 1rem; }
+  .enc-muro-modal-head { padding-right: 3.25rem; }
+}

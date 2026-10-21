@@ -274,6 +274,15 @@ BEGIN
     DROP POLICY IF EXISTS "parent_ratings_all" ON public.parent_ratings;
     CREATE POLICY "parent_ratings_all" ON public.parent_ratings FOR ALL
       USING (parent_id = auth.uid() OR COALESCE(get_my_role(), '') IN ('directora','admin','encargada'));
+
+    -- La política de lectura del personal debe incluir al rol 'encargada'.
+    -- Sin esto, el panel de la encargada devolvía 0 filas (RLS) y el reporte
+    -- de opinión de padres se quedaba siempre en estado vacío.
+    DROP POLICY IF EXISTS "parent_ratings_staff_read" ON public.parent_ratings;
+    CREATE POLICY "parent_ratings_staff_read" ON public.parent_ratings FOR SELECT
+      USING (COALESCE(get_my_role(), '') IN ('directora','asistente','admin','maestra','encargada'));
+
+    CREATE INDEX IF NOT EXISTS idx_parent_ratings_created_at ON public.parent_ratings(created_at DESC);
   END IF;
 END $$;
 

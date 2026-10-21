@@ -1141,7 +1141,7 @@ END $$;
 
 DO $$ BEGIN
 CREATE POLICY "parent_ratings_staff_read" ON public.parent_ratings FOR SELECT
-  USING (COALESCE(get_my_role(),'') IN ('directora','asistente','admin','maestra'));
+  USING (COALESCE(get_my_role(),'') IN ('directora','asistente','admin','maestra','encargada'));
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 

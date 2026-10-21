@@ -27,6 +27,7 @@ const MURO_COMMENTS_SHOWN = 3;
 const muroReactions = {};
 const muroCommentsCache = {};
 const muroCommentShown = {};
+let muroClassrooms = [];
 let muroActivePopover = null;
 
 const debounce = (fn, delay) => {
@@ -730,71 +731,370 @@ async function loadAlerts() {
   }
 }
 
+/* =====================================================================
+   REPORTE DE OPINIÓN DE PADRES
+   ---------------------------------------------------------------------
+   Los datos viven en `parent_ratings`. La consulta devolvía 0 filas sin
+   lanzar error cuando la política RLS "parent_ratings_staff_read" no
+   incluía al rol 'encargada', por lo que el panel siempre terminaba en el
+   estado vacío. Ahora:
+     · se distingue "no hay datos" de "no se pudo leer" (con reintento),
+     · se muestran KPIs, distribución de estrellas y filtros,
+     · cada valoración usa el mismo lenguaje visual del panel (borde morado).
+   ===================================================================== */
+
+const OPINIONES_FILTERS = { mes: '', maestra: '', texto: '' };
+let opinionesData = [];
+
+const _opMonthLabel = (m) => {
+  if (!m) return '';
+  const [y, mo] = String(m).split('-');
+  const meses = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  const idx = parseInt(mo, 10) - 1;
+  if (Number.isNaN(idx) || idx < 0 || idx > 11) return String(m);
+  return `${meses[idx]} ${String(y).slice(2)}`;
+};
+
+const _opStars = (rating, size = 'text-sm') => {
+  const r = Number(rating) || 0;
+  return `<span class="inline-flex items-center gap-0.5 ${size}" role="img" aria-label="${r} de 5 estrellas">${
+    [1,2,3,4,5].map(s => `<span class="${s <= r ? 'text-amber-400' : 'text-slate-200'}">★</span>`).join('')
+  }</span>`;
+};
+
+/** Consulta las valoraciones con degradación controlada (join → sin join). */
+async function _fetchOpiniones() {
+  const base = () => supabase
+    .from('parent_ratings')
+    .select('id, rating, comment, recommendations, observations, month, created_at, parent_id, teacher_id, parent:parent_id(name, avatar_url), teacher:teacher_id(name)')
+    .order('created_at', { ascending: false })
+    .limit(300);
+
+  let res = await base();
+  if (res.error) throw res.error;
+
+  // Si el join embebido no existe en el esquema, se reintenta sin él.
+  if (!res.data || res.data.length === 0) {
+    const plain = await supabase
+      .from('parent_ratings')
+      .select('id, rating, comment, recommendations, observations, month, created_at, parent_id, teacher_id')
+      .order('created_at', { ascending: false })
+      .limit(300);
+    if (plain.error) throw plain.error;
+    res = plain;
+  }
+  return res.data || [];
+}
+
+/** Rellena los nombres de padre/maestra cuando el join no vino resuelto. */
+async function _hydrateOpiniones(rows) {
+  const missingParents = rows.filter(r => r.parent_id && !r.parent?.name).map(r => r.parent_id);
+  const missingTeachers = rows.filter(r => r.teacher_id && !r.teacher?.name).map(r => r.teacher_id);
+  const ids = [...new Set([...missingParents, ...missingTeachers])];
+  if (!ids.length) return rows;
+
+  try {
+    const { data } = await supabase.from('profiles').select('id, name, avatar_url').in('id', ids);
+    const map = new Map((data || []).map(p => [p.id, p]));
+    rows.forEach(r => {
+      if (!r.parent?.name && map.get(r.parent_id)) r.parent = map.get(r.parent_id);
+      if (!r.teacher?.name && map.get(r.teacher_id)) r.teacher = map.get(r.teacher_id);
+    });
+  } catch (_) { /* los nombres son opcionales */ }
+  return rows;
+}
+
+function _opStats(rows) {
+  const total = rows.length;
+  const rated = rows.filter(r => Number(r.rating) > 0);
+  const avg = rated.length ? rated.reduce((s, r) => s + Number(r.rating), 0) / rated.length : 0;
+  const dist = { 1:0, 2:0, 3:0, 4:0, 5:0 };
+  rated.forEach(r => { dist[Number(r.rating)] = (dist[Number(r.rating)] || 0) + 1; });
+  const satisfied = rated.filter(r => Number(r.rating) >= 4).length;
+  const withText = rows.filter(r => (r.comment || '').trim() || (r.recommendations || '').trim()).length;
+  const currentMonth = new Date().toISOString().slice(0, 7);
+  return {
+    total,
+    avg,
+    dist,
+    satisfiedPct: rated.length ? Math.round((satisfied / rated.length) * 100) : 0,
+    withText,
+    currentMonth,
+    currentMonthCount: rows.filter(r => r.month === currentMonth).length,
+  };
+}
+
+function _opFilterRows(rows) {
+  const { mes, maestra, texto } = OPINIONES_FILTERS;
+  const q = texto.trim().toLowerCase();
+  return rows.filter(r => {
+    if (mes && r.month !== mes) return false;
+    if (maestra && String(r.teacher_id || '') !== String(maestra)) return false;
+    if (!q) return true;
+    const hay = [r.comment, r.recommendations, r.observations, r.parent?.name, r.teacher?.name, r.month]
+      .filter(Boolean).join(' ').toLowerCase();
+    return hay.includes(q);
+  });
+}
+
+function _opRenderShell(rows) {
+  const st = _opStats(rows);
+
+  const months = [...new Set(rows.map(r => r.month).filter(Boolean))].sort().reverse();
+  const maestras = [...new Map(rows.filter(r => r.teacher_id).map(r => [r.teacher_id, r.teacher?.name || 'Sin nombre'])).entries()]
+    .sort((a, b) => String(a[1]).localeCompare(String(b[1])));
+
+  const maxDist = Math.max(1, ...Object.values(st.dist));
+
+  return `
+    <!-- Resumen / KPIs -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-5">
+      <div class="enc-kpi">
+        <div class="enc-kpi-ico bg-purple-100 text-purple-600"><i data-lucide="star"></i></div>
+        <div class="enc-kpi-val">${st.avg ? st.avg.toFixed(1) : '—'}</div>
+        <div class="enc-kpi-lbl">Promedio general</div>
+      </div>
+      <div class="enc-kpi">
+        <div class="enc-kpi-ico bg-indigo-100 text-indigo-600"><i data-lucide="messages-square"></i></div>
+        <div class="enc-kpi-val">${st.total}</div>
+        <div class="enc-kpi-lbl">Opiniones recibidas</div>
+      </div>
+      <div class="enc-kpi">
+        <div class="enc-kpi-ico bg-emerald-100 text-emerald-600"><i data-lucide="thumbs-up"></i></div>
+        <div class="enc-kpi-val">${st.rated ? st.satisfiedPct + '%' : '—'}</div>
+        <div class="enc-kpi-lbl">Satisfechos (4-5 ★)</div>
+      </div>
+      <div class="enc-kpi">
+        <div class="enc-kpi-ico bg-amber-100 text-amber-600"><i data-lucide="calendar-days"></i></div>
+        <div class="enc-kpi-val">${st.currentMonthCount}</div>
+        <div class="enc-kpi-lbl">Este mes</div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-5 mb-5">
+      <!-- Distribución de estrellas -->
+      <div class="enc-panel lg:col-span-1">
+        <div class="enc-panel-head">
+          <i data-lucide="bar-chart-3"></i><span>Distribución de valoraciones</span>
+        </div>
+        <div class="enc-panel-body space-y-2.5">
+          ${[5,4,3,2,1].map(s => {
+            const n = st.dist[s] || 0;
+            const pct = st.rated.length ? Math.round((n / st.rated.length) * 100) : 0;
+            return `
+              <div class="flex items-center gap-2.5">
+                <span class="text-[11px] font-black text-slate-500 w-9 shrink-0 tabular-nums">${s} ★</span>
+                <div class="flex-1 h-2.5 rounded-full bg-slate-100 overflow-hidden">
+                  <div class="h-full rounded-full bg-gradient-to-r from-amber-300 to-amber-400 transition-all duration-500" style="width:${pct}%"></div>
+                </div>
+                <span class="text-[11px] font-black text-slate-600 tabular-nums w-10 text-right">${n} · ${pct}%</span>
+              </div>`;
+          }).join('')}
+          ${st.rated.length === 0 ? '<p class="text-xs text-slate-400 text-center py-3">Sin valoraciones con estrellas todavía.</p>' : ''}
+        </div>
+      </div>
+
+      <!-- Filtros -->
+      <div class="enc-panel lg:col-span-2">
+        <div class="enc-panel-head">
+          <i data-lucide="sliders-horizontal"></i><span>Filtros y búsqueda</span>
+        </div>
+        <div class="enc-panel-body">
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label class="enc-field-lbl" for="opFiltroMes">Mes</label>
+              <select id="opFiltroMes" class="enc-field">
+                <option value="">Todos los meses</option>
+                ${months.map(m => `<option value="${m}" ${OPINIONES_FILTERS.mes === m ? 'selected' : ''}>${_opMonthLabel(m)}</option>`).join('')}
+              </select>
+            </div>
+            <div>
+              <label class="enc-field-lbl" for="opFiltroMaestra">Maestra</label>
+              <select id="opFiltroMaestra" class="enc-field">
+                <option value="">Todas las maestras</option>
+                ${maestras.map(([id, name]) => `<option value="${id}" ${String(OPINIONES_FILTERS.maestra) === String(id) ? 'selected' : ''}>${Helpers.escapeHTML(name)}</option>`).join('')}
+              </select>
+            </div>
+            <div>
+              <label class="enc-field-lbl" for="opFiltroTexto">Buscar</label>
+              <div class="relative">
+                <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none"></i>
+                <input id="opFiltroTexto" type="search" value="${Helpers.escapeHTML(OPINIONES_FILTERS.texto)}" placeholder="Palabra clave..." class="enc-field pl-9">
+              </div>
+            </div>
+          </div>
+          <div class="flex flex-wrap items-center gap-2 mt-3">
+            <button type="button" id="opLimpiarFiltros" class="enc-btn-ghost">
+              <i data-lucide="rotate-ccw"></i> Limpiar filtros
+            </button>
+            <button type="button" id="opRefrescar" class="enc-btn-ghost">
+              <i data-lucide="refresh-cw"></i> Actualizar
+            </button>
+            <span id="opConteo" class="text-[11px] font-bold text-slate-400 ml-auto"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="opLista" class="space-y-3"></div>
+  `;
+}
+
+function _opRenderList(rows) {
+  const host = document.getElementById('opLista');
+  if (!host) return;
+
+  const list = _opFilterRows(rows);
+  const countEl = document.getElementById('opConteo');
+  if (countEl) {
+    const active = OPINIONES_FILTERS.mes || OPINIONES_FILTERS.maestra || OPINIONES_FILTERS.texto.trim();
+    countEl.textContent = active
+      ? `${list.length} de ${rows.length} opiniones`
+      : `${rows.length} ${rows.length === 1 ? 'opinión' : 'opiniones'}`;
+  }
+
+  if (list.length === 0) {
+    const filtered = !!(OPINIONES_FILTERS.mes || OPINIONES_FILTERS.maestra || OPINIONES_FILTERS.texto.trim());
+    host.innerHTML = `
+      <div class="enc-empty">
+        <div class="enc-empty-ico"><i data-lucide="${filtered ? 'filter-x' : 'message-circle-heart'}"></i></div>
+        <h3 class="enc-empty-title">${filtered ? 'Sin resultados con estos filtros' : 'Aún no hay valoraciones registradas'}</h3>
+        <p class="enc-empty-text">${filtered
+          ? 'Prueba con otro mes, otra maestra o limpia los filtros para ver todas las opiniones.'
+          : 'Los padres valoran al docente cada mes desde su panel. En cuanto envíen su valoración aparecerá aquí con su comentario.'}</p>
+        ${filtered ? '<button type="button" onclick="document.getElementById(\'opLimpiarFiltros\')?.click()" class="enc-btn-primary mt-4"><i data-lucide="rotate-ccw"></i> Limpiar filtros</button>' : ''}
+      </div>`;
+    if (window.lucide) lucide.createIcons();
+    return;
+  }
+
+  host.innerHTML = list.map(f => {
+    const rating = Number(f.rating) || 0;
+    const teacherName = f.teacher?.name;
+    return `
+      <article class="enc-feedback">
+        <div class="enc-feedback-head">
+          <img src="${f.parent?.avatar_url || 'img/monte.jpg'}" alt="" class="w-10 h-10 rounded-full object-cover border-2 border-purple-100" onerror="this.src='img/monte.jpg'">
+          <div class="min-w-0 flex-1">
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="font-black text-sm text-slate-800 truncate">${Helpers.escapeHTML(f.parent?.name || 'Padre')}</span>
+              ${f.month ? `<span class="enc-tag">${_opMonthLabel(f.month)}</span>` : ''}
+            </div>
+            <div class="text-[11px] text-slate-400 truncate">
+              ${teacherName ? `Docente: ${Helpers.escapeHTML(teacherName)}` : 'Sin docente asignado'}
+              ${f.created_at ? ` · ${new Date(f.created_at).toLocaleDateString('es-DO', { day: '2-digit', month: 'short', year: 'numeric' })}` : ''}
+            </div>
+          </div>
+          <div class="text-right shrink-0">
+            ${_opStars(rating, 'text-base')}
+            <div class="text-[10px] font-black uppercase tracking-wider ${rating >= 4 ? 'text-emerald-600' : rating >= 3 ? 'text-amber-600' : 'text-rose-500'}">${rating ? rating + '/5' : 'Sin nota'}</div>
+          </div>
+        </div>
+        ${(f.comment || '').trim() ? `
+          <p class="enc-feedback-text">${Helpers.escapeHTML(f.comment)}</p>` : `
+          <p class="enc-feedback-text italic text-slate-400">El padre envió su valoración sin comentario escrito.</p>`}
+        ${(f.recommendations || '').trim() || (f.observations || '').trim() ? `
+          <div class="enc-feedback-extra">
+            ${(f.recommendations || '').trim() ? `
+              <div class="enc-extra-row">
+                <i data-lucide="lightbulb" class="enc-extra-ico text-amber-500"></i>
+                <div><span class="enc-extra-lbl">Recomendaciones</span><p class="enc-extra-txt">${Helpers.escapeHTML(f.recommendations)}</p></div>
+              </div>` : ''}
+            ${(f.observations || '').trim() ? `
+              <div class="enc-extra-row">
+                <i data-lucide="eye" class="enc-extra-ico text-sky-500"></i>
+                <div><span class="enc-extra-lbl">Observaciones</span><p class="enc-extra-txt">${Helpers.escapeHTML(f.observations)}</p></div>
+              </div>` : ''}
+          </div>` : ''}
+      </article>`;
+  }).join('');
+
+  if (window.lucide) lucide.createIcons();
+}
+
+function _opRenderError(el, message) {
+  el.innerHTML = `
+    <div class="enc-empty enc-empty-error">
+      <div class="enc-empty-ico bg-rose-100 text-rose-500"><i data-lucide="shield-alert"></i></div>
+      <h3 class="enc-empty-title">No se pudieron cargar las opiniones</h3>
+      <p class="enc-empty-text">${Helpers.escapeHTML(message)}</p>
+      <div class="flex flex-wrap items-center justify-center gap-2 mt-4">
+        <button type="button" id="opReintentar" class="enc-btn-primary"><i data-lucide="refresh-cw"></i> Reintentar</button>
+        <button type="button" id="opCopiarError" class="enc-btn-ghost"><i data-lucide="copy"></i> Copiar detalle</button>
+      </div>
+      <p class="enc-empty-hint">
+        Si el mensaje menciona <b>permisos</b> o <b>rows</b>, aplica
+        <code>migrations/fix_parent_ratings_encargada.sql</code> en Supabase.
+      </p>
+    </div>`;
+  if (window.lucide) lucide.createIcons();
+  document.getElementById('opReintentar')?.addEventListener('click', () => loadPadresOpinion());
+  document.getElementById('opCopiarError')?.addEventListener('click', () => {
+    navigator.clipboard?.writeText(message).then(
+      () => Helpers.toast('Detalle copiado al portapapeles', 'success'),
+      () => Helpers.toast('No se pudo copiar', 'error')
+    );
+  });
+}
+
+function _opBindFilters() {
+  const mes = document.getElementById('opFiltroMes');
+  const maes = document.getElementById('opFiltroMaestra');
+  const txt = document.getElementById('opFiltroTexto');
+  const count = document.getElementById('opConteo');
+
+  mes?.addEventListener('change', () => { OPINIONES_FILTERS.mes = mes.value; _opRenderList(opinionesData); });
+  maes?.addEventListener('change', () => { OPINIONES_FILTERS.maestra = maes.value; _opRenderList(opinionesData); });
+
+  let t = null;
+  txt?.addEventListener('input', () => {
+    clearTimeout(t);
+    t = setTimeout(() => { OPINIONES_FILTERS.texto = txt.value; _opRenderList(opinionesData); }, 220);
+  });
+
+  document.getElementById('opLimpiarFiltros')?.addEventListener('click', () => {
+    OPINIONES_FILTERS.mes = '';
+    OPINIONES_FILTERS.maestra = '';
+    OPINIONES_FILTERS.texto = '';
+    if (mes) mes.value = '';
+    if (maes) maes.value = '';
+    if (txt) txt.value = '';
+    _opRenderList(opinionesData);
+  });
+
+  document.getElementById('opRefrescar')?.addEventListener('click', () => loadPadresOpinion());
+  if (count) count.textContent = '';
+}
+
 async function loadPadresOpinion() {
   const el = document.getElementById('opinionesContent');
   if (!el) return;
-  el.innerHTML = '<div class="text-center py-8 text-slate-400"><i data-lucide="loader-2" class="w-6 h-6 animate-spin mx-auto mb-2"></i>Cargando opiniones...</div>';
+  el.innerHTML = `
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      ${[0,1,2,3].map(() => `
+        <div class="enc-kpi animate-pulse">
+          <div class="enc-kpi-ico bg-slate-100"></div>
+          <div class="h-6 w-12 bg-slate-100 rounded-lg mt-2"></div>
+          <div class="h-2.5 w-24 bg-slate-100 rounded mt-2"></div>
+        </div>`).join('')}
+    </div>
+    <div class="text-center py-10 text-slate-400 mt-4">
+      <i data-lucide="loader-2" class="w-6 h-6 animate-spin mx-auto mb-2"></i> Cargando opiniones de los padres...
+    </div>`;
   if (window.lucide) lucide.createIcons();
-  try {
-    let feedback = [];
-    try {
-      const { data } = await supabase.from('parent_ratings')
-        .select('id, rating, comment, recommendations, observations, month, created_at, parent_id, teacher_id, parent:parent_id(name, avatar_url), teacher:teacher_id(name)')
-        .order('created_at', { ascending: false })
-        .limit(20);
-      feedback = data || [];
-    } catch (_) {}
-    // Fallback sin joins si el esquema embebido no está disponible.
-    if (feedback.length === 0) {
-      try {
-        const { data } = await supabase.from('parent_ratings')
-          .select('id, rating, comment, recommendations, observations, month, created_at, parent_id, teacher_id')
-          .order('created_at', { ascending: false })
-          .limit(20);
-        feedback = data || [];
-      } catch (_) {}
-    }
 
-    if (feedback.length === 0) {
-      el.innerHTML = `
-        <div class="text-center py-16">
-          <div class="w-20 h-20 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <i data-lucide="heart" class="w-10 h-10 text-indigo-400"></i>
-          </div>
-          <h3 class="text-xl font-black text-slate-700 mb-2">Sin opiniones aún</h3>
-          <p class="text-slate-500 text-sm">Las opiniones de los padres aparecerán aquí cuando las envíen</p>
-        </div>`;
-    } else {
-      const avgRating = feedback.reduce((sum,f) => sum + (f.rating || 0), 0) / feedback.length;
-      el.innerHTML = `
-        <div class="bg-white rounded-2xl border border-slate-100 p-6 mb-6 text-center">
-          <div class="text-4xl font-black text-indigo-600">${avgRating.toFixed(1)}</div>
-          <div class="text-sm text-slate-500 mt-1">${feedback.length} opiniones · Promedio general</div>
-          <div class="flex justify-center gap-0.5 mt-2">
-            ${[1,2,3,4,5].map(s => `<span class="text-xl ${s <= Math.round(avgRating) ? 'text-amber-400' : 'text-slate-200'}">★</span>`).join('')}
-          </div>
-        </div>
-        <div class="space-y-3">
-          ${feedback.map(f => `
-            <div class="bg-white rounded-2xl border border-slate-100 p-4">
-              <div class="flex items-center gap-3 mb-2">
-                <img src="${f.parent?.avatar_url || 'img/monte.jpg'}" class="w-8 h-8 rounded-full object-cover" onerror="this.src='img/monte.jpg'">
-                <div>
-                  <div class="font-bold text-sm text-slate-800">${Helpers.escapeHTML(f.parent?.name || 'Padre')}</div>
-                  <div class="text-xs text-slate-400">${f.teacher?.name ? 'Maestra: ' + Helpers.escapeHTML(f.teacher.name) + ' · ' : ''}${f.month || ''}${f.created_at ? ' · ' + new Date(f.created_at).toLocaleDateString('es-DO') : ''}</div>
-                </div>
-                <div class="ml-auto flex gap-0.5">${[1,2,3,4,5].map(s => `<span class="text-sm ${s <= (f.rating||0) ? 'text-amber-400' : 'text-slate-200'}">★</span>`).join('')}</div>
-              </div>
-              <p class="text-sm text-slate-600">${Helpers.escapeHTML(f.comment || '')}</p>
-              ${f.recommendations ? `<p class="text-xs text-slate-400 mt-1"><span class="font-bold">Recomendaciones:</span> ${Helpers.escapeHTML(f.recommendations)}</p>` : ''}
-              ${f.observations ? `<p class="text-xs text-slate-400 mt-1"><span class="font-bold">Observaciones:</span> ${Helpers.escapeHTML(f.observations)}</p>` : ''}
-            </div>
-          `).join('')}
-        </div>`;
-    }
+  try {
+    let rows = await _fetchOpiniones();
+    rows = await _hydrateOpiniones(rows);
+    opinionesData = rows;
+
+    el.innerHTML = _opRenderShell(rows);
     if (window.lucide) lucide.createIcons();
+    _opBindFilters();
+    _opRenderList(rows);
   } catch (e) {
-    el.innerHTML = `<p class="text-rose-500">Error al cargar: ${e.message}</p>`;
+    console.error('[Opinión de Padres] Error al cargar:', e);
+    _opRenderError(el, e?.message || 'Error desconocido al consultar las valoraciones.');
   }
 }
 
@@ -1324,6 +1624,7 @@ async function loadMuroEscolar() {
   try {
     const { data: classrooms } = await supabase.from('classrooms').select('id, name').is('deleted_at', null).order('name');
     const cls = classrooms || [];
+    muroClassrooms = cls;
 
     let posts = [];
     try {
@@ -1386,52 +1687,50 @@ async function loadMuroEscolar() {
     };
 
     el.innerHTML = `
-      <div class="bg-white rounded-2xl border border-slate-100 p-6 mb-6">
-        <h3 class="font-black text-purple-700 mb-4 flex items-center gap-2"><i data-lucide="plus-circle" class="w-5 h-5"></i> Nueva Publicación</h3>
-        <div class="space-y-3">
-          <textarea id="muroText" rows="3" placeholder="Escribe un aviso, novedad o mensaje para las familias..."
-            class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-purple-500 focus:ring-4 focus:ring-purple-50 outline-none transition-all text-sm"></textarea>
-          <div class="flex flex-wrap items-center gap-3">
-            <select id="muroClassroom" class="px-3 py-2 rounded-xl border border-slate-200 text-sm focus:border-purple-500 focus:ring-4 focus:ring-purple-50 outline-none">
-              <option value="">Todas las aulas</option>
-              ${cls.map(c => `<option value="${c.id}">${c.name}</option>`).join('')}
-            </select>
-            <label class="flex items-center gap-1.5 text-xs text-slate-500 cursor-pointer">
-              <i data-lucide="image" class="w-4 h-4"></i> Foto
-              <input type="file" accept="image/*" id="muroFile" class="hidden">
-            </label>
-            <button id="btnMuroPublish" class="ml-auto px-5 py-2 rounded-xl font-black text-xs transition-all shadow-md" style="background:#7C3AED!important;color:white!important">
-              Publicar
-            </button>
-          </div>
-          <div id="muroFilePreview" class="hidden mt-2 relative inline-block">
-            <img id="muroFileImg" class="h-24 rounded-xl object-cover border border-slate-200">
-            <button onclick="document.getElementById('muroFile').value='';document.getElementById('muroFilePreview').classList.add('hidden')" class="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full text-xs flex items-center justify-center shadow">&times;</button>
+      <div class="enc-muro-toolbar">
+        <div class="enc-muro-toolbar-info">
+          <div class="enc-muro-toolbar-ico"><i data-lucide="megaphone"></i></div>
+          <div>
+            <h3 class="font-black text-slate-800 text-sm leading-tight">Muro Escolar</h3>
+            <p class="text-[11px] text-slate-400 mt-0.5">
+              ${posts.length} ${posts.length === 1 ? 'publicación' : 'publicaciones'} · aviso para las familias
+            </p>
           </div>
         </div>
-        <div id="encargadaPostOptions" class="mt-3"></div>
+        <button type="button" data-action="muro-nueva-publicacion" class="enc-btn-primary enc-muro-new-btn">
+          <i data-lucide="plus-circle"></i> Nueva Publicación
+        </button>
       </div>
+
       <div id="muroPostsList" class="space-y-4">
-        ${posts.length === 0 ? '<div class="text-center py-12 text-slate-400"><i data-lucide="megaphone" class="w-12 h-12 mx-auto mb-3 text-slate-300"></i><p class="font-bold">No hay publicaciones aún</p><p class="text-xs mt-1">Crea la primera publicación del muro escolar</p></div>' : ''}
+        ${posts.length === 0 ? `
+          <div class="enc-empty">
+            <div class="enc-empty-ico"><i data-lucide="megaphone"></i></div>
+            <h3 class="enc-empty-title">No hay publicaciones aún</h3>
+            <p class="enc-empty-text">Crea la primera publicación para avisar a las familias del centro.</p>
+            <button type="button" data-action="muro-nueva-publicacion" class="enc-btn-primary mt-4">
+              <i data-lucide="plus-circle"></i> Nueva Publicación
+            </button>
+          </div>` : ''}
         ${posts.map(p => {
           const react = muroReactions[p.id] || { breakdown: {}, total: 0, my: null };
           const commN = (p.comments || []).filter(c => !c.parent_id).length;
           const summaryEmojis = MURO_REACTION_ORDER.filter(t => (react.breakdown[t] || 0) > 0).slice(0, 3)
             .map(t => `<span class="text-sm">${WALL_REACTIONS[t].emoji}</span>`).join('');
           return `
-          <div class="bg-white rounded-2xl border border-slate-100 p-4 hover:shadow-md transition-all ${p.is_pinned ? 'ring-2 ring-amber-200' : ''}">
+          <div class="enc-muro-post ${p.is_pinned ? 'is-pinned' : ''}">
             ${p.is_important ? `
-              <div class="wall-important-banner -mx-4 -mt-4 px-4 py-2 rounded-t-2xl flex items-center gap-2 mb-3">
+              <div class="wall-important-banner -mx-4 -mt-4 px-4 py-2 rounded-tr-2xl flex items-center gap-2 mb-3">
                 <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-600 shrink-0"></i>
                 <span class="text-[10px] font-black text-amber-700 uppercase tracking-widest">Aviso importante</span>
               </div>` : ''}
             ${p.is_pinned ? `
-              <div class="flex items-center gap-2 -mx-4 -mt-4 px-4 py-2 rounded-t-2xl bg-amber-50 border-b border-amber-100 mb-3">
+              <div class="flex items-center gap-2 -mx-4 -mt-4 px-4 py-2 rounded-tr-2xl bg-amber-50 border-b border-amber-100 mb-3">
                 <i data-lucide="pin" class="w-3.5 h-3.5 text-amber-500"></i>
                 <span class="text-[9px] font-black text-amber-600 uppercase tracking-widest">Publicación fijada</span>
               </div>` : ''}
             <div class="flex items-center gap-3 mb-3">
-              <img src="${authorAvatar(p)}" class="w-10 h-10 rounded-full object-cover border-2 border-indigo-100">
+              <img src="${authorAvatar(p)}" class="w-10 h-10 rounded-full object-cover border-2 border-purple-100">
               <div>
                 <div class="font-black text-sm text-slate-800">${authorName(p)}</div>
                 <div class="text-xs text-slate-400">${timeAgo(p.created_at)}${p.classroom_id ? ' · ' + (cls.find(c=>c.id===p.classroom_id)?.name || 'Aula') : ' · Todas las aulas'}</div>
@@ -1458,7 +1757,7 @@ async function loadMuroEscolar() {
               <div id="muro-comments-list-${p.id}" class="space-y-2 mb-2 max-h-64 overflow-y-auto kk-scroll py-2">
                 ${muroCommentList(p.id)}
               </div>
-              <div class="sticky bottom-0 flex gap-2 py-2 bg-slate-50/90">
+              <div class="flex gap-2 py-2 bg-slate-50/90">
                 <input type="text" id="muro-comment-input-${p.id}" class="flex-1 px-3 py-2.5 text-xs border border-slate-200 rounded-full focus:ring-2 focus:ring-purple-300 outline-none shadow-sm" placeholder="Escribe un comentario...">
                 <button data-action="muro-send-comment" data-post-id="${p.id}" class="shrink-0 p-2.5 bg-purple-600 text-white rounded-full hover:bg-purple-700 transition-colors shadow-md"><i data-lucide="send" class="w-4 h-4"></i></button>
               </div>
@@ -1474,56 +1773,180 @@ async function loadMuroEscolar() {
     ImageLoader.setupHoverAutoplay(el);
     _bindMuroEvents();
     initMuroRealtime();
-
-    document.getElementById('muroFile')?.addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      const preview = document.getElementById('muroFilePreview');
-      const img = document.getElementById('muroFileImg');
-      if (preview && img) { img.src = URL.createObjectURL(file); preview.classList.remove('hidden'); }
-    });
-
-    PostOptions.mount({ anchor: 'encargadaPostOptions', classroomSelectId: 'muroClassroom', position: 'after' }).catch(() => {});
-
-    document.getElementById('btnMuroPublish')?.addEventListener('click', async () => {
-      const text = document.getElementById('muroText')?.value?.trim();
-      if (!text) { Helpers.toast('Escribe algo para publicar', 'error'); return; }
-      const btn = document.getElementById('btnMuroPublish');
-      btn.disabled = true; btn.textContent = 'Publicando...';
-      try {
-        let mediaUrl = null;
-        const file = document.getElementById('muroFile')?.files[0];
-        if (file) {
-          const ext = file.name.split('.').pop() || 'jpg';
-          const path = `muro/${Date.now()}.${ext}`;
-          const { error: upErr } = await supabase.storage.from('student-documents').upload(path, file);
-          if (!upErr) {
-            const { data: urlData } = supabase.storage.from('student-documents').getPublicUrl(path);
-            mediaUrl = urlData?.publicUrl || null;
-          }
-        }
-        const clsId = document.getElementById('muroClassroom')?.value || null;
-        const result = await PostOptions.insertPost({
-          teacher_id: AppState.get('user')?.id,
-          classroom_id: clsId ? parseInt(clsId) : null,
-          content: text,
-          media_url: mediaUrl,
-          media_type: file ? 'image' : null,
-        });
-        if (result.error) throw result.error;
-        Helpers.toast('Publicación enviada', 'success');
-        document.getElementById('muroText').value = '';
-        document.getElementById('muroFile').value = '';
-        document.getElementById('muroFilePreview').classList.add('hidden');
-        loadMuroEscolar();
-      } catch (e) {
-        Helpers.toast('Error: ' + e.message, 'error');
-      } finally {
-        if (btn) { btn.disabled = false; btn.textContent = 'Publicar'; }
-      }
-    });
   } catch (e) {
-    el.innerHTML = `<p class="text-rose-500">Error al cargar: ${e.message}</p>`;
+    el.innerHTML = `
+      <div class="enc-empty enc-empty-error">
+        <div class="enc-empty-ico bg-rose-100 text-rose-500"><i data-lucide="alert-triangle"></i></div>
+        <h3 class="enc-empty-title">No se pudo cargar el muro escolar</h3>
+        <p class="enc-empty-text">${Helpers.escapeHTML(e?.message || 'Error desconocido')}</p>
+        <button type="button" onclick="loadMuroEscolar()" class="enc-btn-primary mt-4"><i data-lucide="refresh-cw"></i> Reintentar</button>
+      </div>`;
+    if (window.lucide) lucide.createIcons();
+  }
+}
+
+/* =====================================================================
+   MURO ESCOLAR — Modal de nueva publicación
+   ---------------------------------------------------------------------
+   El formulario de publicación se abre en un modal (openGlobalModal) en
+   lugar de quedar incrustado en la página. Se reutilizan los mismos IDs
+   (`muroText`, `muroClassroom`, `muroFile`, `muroFilePreview`,
+   `btnMuroPublish`, `encargadaPostOptions`) para no duplicar la lógica.
+   ===================================================================== */
+
+/** Abre el modal con el campo de publicación. */
+function openMuroComposer() {
+  const aulaOpts = muroClassrooms.map(c =>
+    `<option value="${c.id}">${Helpers.escapeHTML(c.name || 'Aula')}</option>`).join('');
+
+  openGlobalModal(`
+    <div class="enc-muro-modal">
+      <header class="enc-muro-modal-head">
+        <div class="enc-muro-modal-ico"><i data-lucide="pen-line"></i></div>
+        <div class="min-w-0 flex-1">
+          <h2 class="enc-muro-modal-title">Nueva Publicación</h2>
+          <p class="enc-muro-modal-sub">Escribe un aviso, novedad o mensaje para las familias del centro.</p>
+        </div>
+      </header>
+
+      <div class="enc-muro-modal-body">
+        <label class="enc-field-lbl" for="muroText">Contenido</label>
+        <textarea id="muroText" rows="5" maxlength="1200"
+          placeholder="Ej: Recordamos a las familias que la reunión deosters es este viernes a las 4:00 PM..."
+          class="enc-field enc-textarea"></textarea>
+        <p class="text-[10px] font-bold text-slate-400 mt-1 text-right"><span id="muroCharCount">0</span>/1200</p>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
+          <div>
+            <label class="enc-field-lbl" for="muroClassroom">Dirigida a</label>
+            <select id="muroClassroom" class="enc-field">
+              <option value="">Todas las aulas</option>
+              ${aulaOpts}
+            </select>
+          </div>
+          <div>
+            <label class="enc-field-lbl">Adjuntar</label>
+            <label class="enc-upload" for="muroFile">
+              <i data-lucide="image"></i>
+              <span id="muroUploadLabel">Elegir una foto</span>
+              <input type="file" accept="image/*" id="muroFile" class="hidden">
+            </label>
+          </div>
+        </div>
+
+        <div id="muroFilePreview" class="hidden mt-3 relative inline-block">
+          <img id="muroFileImg" alt="Vista previa" class="h-28 rounded-xl object-cover border border-slate-200">
+          <button type="button" id="muroFileClear"
+            class="absolute -top-2 -right-2 w-6 h-6 bg-rose-500 text-white rounded-full text-xs flex items-center justify-center shadow">
+            <i data-lucide="x" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+
+        <div id="encargadaPostOptions" class="mt-3"></div>
+      </div>
+
+      <footer class="enc-muro-modal-foot">
+        <button type="button" id="muroCancel" class="enc-btn-ghost">
+          <i data-lucide="x"></i> Cancelar
+        </button>
+        <button type="button" id="btnMuroPublish" class="enc-btn-primary">
+          <i data-lucide="send"></i> Publicar
+        </button>
+      </footer>
+    </div>
+  `, false, 'max-w-xl');
+
+  if (window.lucide) lucide.createIcons();
+
+  const ta = document.getElementById('muroText');
+  const counter = document.getElementById('muroCharCount');
+  ta?.addEventListener('input', () => { if (counter) counter.textContent = String(ta.value.length); });
+  setTimeout(() => ta?.focus(), 120);
+
+  document.getElementById('muroFile')?.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    const preview = document.getElementById('muroFilePreview');
+    const img = document.getElementById('muroFileImg');
+    const label = document.getElementById('muroUploadLabel');
+    if (!file) return;
+    if (preview && img) { img.src = URL.createObjectURL(file); preview.classList.remove('hidden'); }
+    if (label) label.textContent = file.name?.length > 22 ? file.name.slice(0, 22) + '…' : file.name;
+  });
+
+  document.getElementById('muroFileClear')?.addEventListener('click', () => {
+    const input = document.getElementById('muroFile');
+    if (input) input.value = '';
+    document.getElementById('muroFilePreview')?.classList.add('hidden');
+    const label = document.getElementById('muroUploadLabel');
+    if (label) label.textContent = 'Elegir una foto';
+  });
+
+  document.getElementById('muroCancel')?.addEventListener('click', () => closeGlobalModal());
+
+  // Cerrar con la tecla Escape.
+  const onKey = (e) => {
+    if (e.key !== 'Escape') return;
+    document.removeEventListener('keydown', onKey);
+    closeGlobalModal();
+  };
+  document.addEventListener('keydown', onKey);
+
+  // El botón se habilita cuando las opciones avanzadas (visibilidad,
+  // descarga, anti-captura) ya están montadas; así nunca se publica
+  // sin haberlas revisado.
+  const publishBtn = document.getElementById('btnMuroPublish');
+  if (publishBtn) publishBtn.disabled = true;
+  PostOptions.mount({ anchor: 'encargadaPostOptions', classroomSelectId: 'muroClassroom', position: 'after' })
+    .catch(() => {})
+    .finally(() => {
+      const b = document.getElementById('btnMuroPublish');
+      if (b) b.disabled = false;
+    });
+
+  publishBtn?.addEventListener('click', publishMuroPost);
+}
+
+/** Publica la publicación descrita en el modal de nueva publicación. */
+async function publishMuroPost() {
+  const text = document.getElementById('muroText')?.value?.trim();
+  if (!text) {
+    Helpers.toast('Escribe el contenido de la publicación', 'error');
+    document.getElementById('muroText')?.focus();
+    return;
+  }
+  const btn = document.getElementById('btnMuroPublish');
+  const original = btn?.innerHTML;
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Publicando...'; }
+  if (window.lucide) lucide.createIcons();
+
+  try {
+    let mediaUrl = null;
+    const file = document.getElementById('muroFile')?.files[0];
+    if (file) {
+      const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+      const path = `muro/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const { error: upErr } = await supabase.storage.from('student-documents').upload(path, file);
+      if (upErr) throw upErr;
+      const { data: urlData } = supabase.storage.from('student-documents').getPublicUrl(path);
+      mediaUrl = urlData?.publicUrl || null;
+    }
+    const clsId = document.getElementById('muroClassroom')?.value || null;
+    const result = await PostOptions.insertPost({
+      teacher_id: AppState.get('user')?.id,
+      classroom_id: clsId ? parseInt(clsId, 10) : null,
+      content: text,
+      media_url: mediaUrl,
+      media_type: file ? 'image' : null,
+    });
+    if (result.error) throw result.error;
+    Helpers.toast('Publicación enviada', 'success');
+    closeGlobalModal();
+    loadMuroEscolar();
+  } catch (e) {
+    Helpers.toast('Error: ' + (e?.message || 'no se pudo publicar'), 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = original; }
+    if (window.lucide) lucide.createIcons();
   }
 }
 
@@ -1640,6 +2063,9 @@ function _bindMuroEvents() {
   container.addEventListener('pointercancel', () => clearTimeout(muroReactTimer));
 
   container.addEventListener('click', async (e) => {
+    const newPostBtn = e.target.closest('[data-action="muro-nueva-publicacion"]');
+    if (newPostBtn) { openMuroComposer(); return; }
+
     const reactBtn = e.target.closest('[data-action="muro-react"]');
     if (reactBtn) {
       const postId = reactBtn.dataset.postId;
