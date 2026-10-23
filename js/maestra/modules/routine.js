@@ -21,6 +21,7 @@ let _visibilityBound = false;
 let _scBuildMode = 'library';
 let _buildDraft = null;
 let _buildStartTime = '07:30';
+let _routineViewMode = 'express'; // 'express' | 'schedule'
 
 const SCHEDULE_STORAGE_KEY = 'sonrisas_schedule_config';
 const SCHEDULE_DB_SEED_KEY = 'sonrisas_schedule_db_seed';
@@ -1201,8 +1202,44 @@ function _routineDivider(icon) {
   return `<div class="routine-divider"><span>${icon}</span></div>`;
 }
 
+export function setRoutineViewMode(mode) {
+  _routineViewMode = mode || 'express';
+  initRoutine();
+}
+
+/**
+ * Genera la rejilla matricial de Horario Semanal con la estética de IMG-20261013-WA0067.jpg
+ */
+export function renderWeeklyScheduleGrid(isTeacher = false) {
+  const schedule = _getSchedule();
+  return RoutineCatalog.renderWeeklyScheduleGrid({ isTeacher, customBlocks: schedule });
+}
+
 function _buildUI(students, schedule, nowMinutes) {
   const openSleeps = Object.keys(_sleepMap).length;
+  const levelCat = _getLevelCategory();
+
+  // Primary classroom logic: Primary level does NOT use infant routine logs
+  if (levelCat === 'primary') {
+    return `
+      <div class="space-y-4 pb-28" id="routineView">
+        <style>${ROUTINE_UI_STYLES}</style>
+        <div class="rounded-3xl p-6 text-center bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200/60 shadow-sm my-4">
+          <div class="w-16 h-16 rounded-2xl bg-blue-500 text-white flex items-center justify-center mx-auto mb-3 shadow-md text-3xl">
+            🎓
+          </div>
+          <h3 class="text-lg font-black text-slate-800 mb-2">Aula de Nivel Primario</h3>
+          <p class="text-xs font-semibold text-slate-600 max-w-md mx-auto mb-4 leading-relaxed">
+            Este nivel educativo utiliza el <strong>Horario Académico por Asignaturas</strong> y el <strong>Registro de Calificaciones por Competencias</strong> en lugar de la rutina de estancia infantil.
+          </p>
+          <button onclick="App.navigateToTab('grades')" class="px-5 py-2.5 rounded-xl bg-[#28B54D] hover:bg-[#20963F] text-white font-black text-xs uppercase tracking-wider shadow-md transition-all inline-flex items-center gap-2">
+            <span>Ir a Calificaciones del Aula</span>
+            <i data-lucide="arrow-right" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </div>
+    `;
+  }
 
   return `
     <div class="space-y-3 pb-28" id="routineView">
@@ -1222,11 +1259,20 @@ function _buildUI(students, schedule, nowMinutes) {
         </button>
       ` : ''}
 
-      ${_routineDivider('🤖')}
+      <!-- MODE SWITCHER TOGGLE -->
+      <div class="flex items-center justify-between gap-2 p-1.5 bg-slate-100 rounded-2xl mb-3 border border-slate-200">
+        <button onclick="App.setRoutineViewMode('express')" class="flex-1 py-2 px-3 rounded-xl font-black text-xs transition-all flex items-center justify-center gap-2 ${(_routineViewMode === 'express' || !_routineViewMode) ? 'bg-white text-[#28B54D] shadow-sm border border-slate-200/60' : 'text-slate-500 hover:text-slate-800'}">
+          <i data-lucide="zap" class="w-4 h-4"></i>
+          <span>Bitácora Express</span>
+        </button>
+        <button onclick="App.setRoutineViewMode('schedule')" class="flex-1 py-2 px-3 rounded-xl font-black text-xs transition-all flex items-center justify-center gap-2 ${_routineViewMode === 'schedule' ? 'bg-[#28B54D] text-white shadow-sm' : 'text-slate-500 hover:text-slate-800'}">
+          <i data-lucide="calendar" class="w-4 h-4"></i>
+          <span>Horario Semanal</span>
+        </button>
+      </div>
 
       <!-- NIVEL DEL AULA — badge informativo -->
       ${(() => {
-        const lc = _getLevelCategory();
         const meta = {
           infants:    { emoji: '👶', label: 'Bebés · Párvulos I-II',     color: '#F472B6' },
           toddlers:   { emoji: '🐣', label: 'Caminadores · Párvulos III', color: '#FACC15' },
@@ -1234,25 +1280,27 @@ function _buildUI(students, schedule, nowMinutes) {
           preprimary: { emoji: '📖', label: 'Pre-Primario',               color: '#374151' },
           primary:    { emoji: '🏫', label: 'Primaria',                   color: '#3B82F6' },
           special:    { emoji: '⭐', label: 'Programa Especial',           color: '#8B5CF6' },
-        }[lc] || { emoji: '🏫', label: 'Aula', color: '#64748B' };
+        }[levelCat] || { emoji: '🏫', label: 'Aula', color: '#64748B' };
         return `<div class="flex items-center gap-2 px-4 py-2 rounded-2xl text-xs font-bold mb-1" style="background:${meta.color}18;color:${meta.color};border:1.5px solid ${meta.color}33">
           <span>${meta.emoji}</span>
           <span>Perfil: ${meta.label}</span>
         </div>`;
       })()}
 
-      <!-- ASISTENCIA DEL DÍA (Regla 1 y 2) -->
-      ${_renderAttendanceBanner(_attendanceCount > 0)}
+      ${_routineViewMode === 'schedule' ? renderWeeklyScheduleGrid(true) : `
+        <!-- ASISTENCIA DEL DÍA (Regla 1 y 2) -->
+        ${_renderAttendanceBanner(_attendanceCount > 0)}
 
-      <!-- ═══════════════════════════════════════════════════════════════ -->
-      <!-- ACCIONES DEL AULA — fijos del día + buscador + carrusel por categoría -->
-      ${_renderAccionesAula()}
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <!-- ACCIONES DEL AULA — fijos del día + buscador + carrusel por categoría -->
+        ${_renderAccionesAula()}
 
-      ${_routineDivider('📊')}
+        ${_routineDivider('📊')}
 
-      <!-- ═══════════════════════════════════════════════════════════════ -->
-      <!-- TARJETAS DE LOS ALUMNOS -->
-      ${_renderStudentCards(students, _logsMap)}
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <!-- TARJETAS DE LOS ALUMNOS -->
+        ${_renderStudentCards(students, _logsMap)}
+      `}
     </div>
   `;
 }

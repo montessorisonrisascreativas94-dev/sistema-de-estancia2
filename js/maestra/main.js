@@ -159,6 +159,7 @@ window.App = {
 
   // Rutina del Aula — Sistema de Rutina para Todo el Aula (10 reglas)
     initRoutine:              Routine.initRoutine,
+    setRoutineViewMode:       Routine.setRoutineViewMode,
     openStudentRoutine:       Routine.openStudentRoutine,
     openBulkRoutineModal:     Routine.openBulkRoutineModal,
     routineQuickGroup:        Routine.routineQuickGroup,

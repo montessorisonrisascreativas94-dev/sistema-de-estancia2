@@ -4,6 +4,7 @@
  */
 import { supabase } from '../shared/supabase.js';
 import { Helpers } from '../shared/helpers.js';
+import { RoutineCatalog } from '../shared/routine-catalog.js';
 
 const ICONS = {
   food: { todo: '🍽️', poco: '🍲', nada: '🙅', ayuda: '🆘' },
@@ -108,6 +109,31 @@ function _sleepMs(events, nowIso) {
 
 export const DailyReportModule = {
   _studentId: null,
+  _viewMode: 'daily',
+
+  setViewMode(mode) {
+    this._viewMode = mode || 'daily';
+    const btnDaily = document.getElementById('btnParentViewDaily');
+    const btnSchedule = document.getElementById('btnParentViewSchedule');
+    const qs = document.getElementById('rutinaQuickStatus');
+
+    if (btnDaily && btnSchedule) {
+      if (this._viewMode === 'daily') {
+        btnDaily.className = "flex-1 py-2.5 px-3 rounded-xl font-black text-xs transition-all flex items-center justify-center gap-2 bg-white text-[#0B63C7] shadow-sm border border-slate-200/60";
+        btnSchedule.className = "flex-1 py-2.5 px-3 rounded-xl font-black text-xs transition-all flex items-center justify-center gap-2 text-slate-500 hover:text-slate-800";
+        if (qs) qs.classList.remove('hidden');
+      } else {
+        btnSchedule.className = "flex-1 py-2.5 px-3 rounded-xl font-black text-xs transition-all flex items-center justify-center gap-2 bg-[#0B63C7] text-white shadow-sm";
+        btnDaily.className = "flex-1 py-2.5 px-3 rounded-xl font-black text-xs transition-all flex items-center justify-center gap-2 text-slate-500 hover:text-slate-800";
+        if (qs) qs.classList.add('hidden');
+      }
+    }
+    this.load();
+  },
+
+  _renderWeeklyScheduleGrid(isTeacher = false) {
+    return RoutineCatalog.renderWeeklyScheduleGrid({ isTeacher });
+  },
 
   setStudent(id) {
     this._studentId = id;
@@ -342,6 +368,12 @@ export const DailyReportModule = {
     const container = document.getElementById('dailyReportContainer');
     if (!container || !this._studentId) return;
 
+    if (this._viewMode === 'schedule') {
+      container.innerHTML = this._renderWeeklyScheduleGrid(false);
+      if (window.lucide) lucide.createIcons();
+      return;
+    }
+
     container.innerHTML = `<div class="animate-pulse space-y-4">
       <div class="h-32 bg-slate-100 rounded-2xl"></div>
       <div class="h-40 bg-slate-100 rounded-2xl"></div>
@@ -390,6 +422,12 @@ export const DailyReportModule = {
   async load() {
     const container = document.getElementById('dailyReportContainer');
     if (!container) return;
+
+    if (this._viewMode === 'schedule') {
+      container.innerHTML = this._renderWeeklyScheduleGrid(false);
+      if (window.lucide) lucide.createIcons();
+      return;
+    }
 
     container.innerHTML = `<div class="animate-pulse space-y-4">
       <div class="h-32 bg-slate-100 rounded-2xl"></div>
