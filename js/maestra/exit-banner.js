@@ -23,6 +23,7 @@ const WINDOW_MIN = 30;
 const REFRESH_MS = 60 * 1000;
 
 const _state = { students: [], exited: new Set(), present: new Set(), timer: null, bound: false, patched: false };
+const ALERT_MIN = 10;
 
 // ── Horario: "8:00-15:00" → { entry, exit } ──────────────────────────────────
 function _parseSchedule(schedule) {
@@ -46,6 +47,34 @@ function _today() {
 }
 function _esc(s) { return Helpers.escapeHTML(s ?? ''); }
 
+// Una sola notificación por estudiante y día.
+function _notifyKey(id) { return `txb_notified:${_today()}:${id}`; }
+function _alreadyNotified(id) {
+  try { return localStorage.getItem(_notifyKey(id)) === '1'; } catch { return false; }
+}
+function _markNotified(id) {
+  try { localStorage.setItem(_notifyKey(id), '1'); } catch {}
+}
+function _maybeNotify(near) {
+  const due = near.filter(x => x.mins <= ALERT_MIN && !_alreadyNotified(x.s.id));
+  if (!due.length) return;
+  due.forEach(x => _markNotified(x.s.id));
+  const first = due[0];
+  const names = due.map(x => (x.s.name || '').split(' ')[0]).filter(Boolean).join(', ');
+  const minsTxt = first.mins <= 1 ? 'ahora' : `en ${first.mins} min`;
+  Helpers.toast(`🚪 ${names} sale${due.length > 1 ? 'n' : ''} ${minsTxt}`, 'warning');
+  try {
+    if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+      const n = new Notification('Salida próxima', {
+        body: `${names} sale${due.length > 1 ? 'n' : ''} ${minsTxt} (${_hhmm(first.sched.exit)}).`,
+        tag: `txb-${_today()}-${first.s.id}`,
+        icon: first.s.avatar_url || undefined
+      });
+      n.onclick = () => { try { window.focus(); _openModal(); } catch {} };
+    }
+  } catch {}
+}
+
 // ── CSS (una vez) ────────────────────────────────────────────────────────────
 const CSS = `
 #${BAR_ID}{position:sticky;top:0;z-index:160;padding:10px 16px 0}
@@ -58,6 +87,13 @@ const CSS = `
 .txb-btn{border:0;border-radius:12px;background:#FFD43B;color:#7A5B00;font-weight:900;font-size:12px;padding:10px 16px;cursor:pointer;white-space:nowrap;flex:0 0 auto;transition:filter .15s,transform .15s}
 .txb-btn:hover{filter:brightness(1.05)}
 .txb-btn:active{transform:translateY(1px)}
+.txb-count{border-radius:999px;background:rgba(255,255,255,.22);color:#fff;font-weight:900;font-size:12px;padding:6px 11px;white-space:nowrap;flex:0 0 auto;letter-spacing:.02em}
+.txb-bar.is-urgent{background:linear-gradient(135deg,#DC2626,#991B1B);box-shadow:0 10px 26px rgba(220,38,38,.4);animation:txbIn .4s cubic-bezier(.2,.85,.3,1.1) both,txbPulse 1.6s ease-in-out .4s infinite}
+.txb-bar.is-urgent .txb-ic{background:rgba(255,255,255,.25)}
+.txb-bar.is-urgent .txb-count{background:#fff;color:#B91C1C}
+@keyframes txbPulse{0%,100%{box-shadow:0 10px 26px rgba(220,38,38,.4)}50%{box-shadow:0 10px 34px rgba(220,38,38,.65)}}
+.txm-row.is-urgent{border-color:#FCA5A5;background:#FEF2F2}
+.txm-count{font-size:10px;font-weight:900;color:#B91C1C;background:#FEE2E2;border-radius:999px;padding:3px 8px;white-space:nowrap}
 @media(max-width:640px){.txb-sub{white-space:normal}}
 @keyframes txbIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
 .txm-row{display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid #E6EBF2;border-radius:14px;background:#fff}
@@ -139,48 +175,58 @@ function _render() {
   _injectCss();
   const near = _near(new Date());
   if (!near.length) { bar.hidden = true; bar.innerHTML = ''; return; }
+  _maybeNotify(near);
 
+  const first = near[0];
+  const mins = Math.max(0, first.mins);
+  const urgent = mins <= ALERT_MIN;
   const names = near.slice(0, 3).map(n => n.s.name).join(', ');
   const extra = near.length > 3 ? ` y ${near.length - 3} más` : '';
+  const minsTxt = mins <= 1 ? 'ahora' : `en ${mins} min`;
   bar.hidden = false;
   bar.innerHTML = `
-    <div class="txb-bar">
-      <div class="txb-ic">🚪</div>
+    <div class="txb-bar${urgent ? ' is-urgent' : ''}">
+      <div class="txb-ic">${urgent ? '🔔' : '🚪'}</div>
       <div class="txb-txt">
         <p class="txb-title">${near.length === 1 ? '1 estudiante próximo a salir' : `${near.length} estudiantes próximos a salir`}</p>
-        <p class="txb-sub">${_esc(names)}${_esc(extra)} · en menos de ${WINDOW_MIN} min</p>
+        <p class="txb-sub">${_esc(names)}${_esc(extra)} · sale${near.length > 1 ? 'n' : ''} a las ${_hhmm(first.sched.exit)} · ${minsTxt}</p>
       </div>
+      <span class="txb-count">${mins <= 1 ? '¡Ahora!' : `${mins} min`}</span>
       <button class="txb-btn" data-txb-act="manage">Gestionar salida</button>
     </div>`;
 }
 
-function _studentRow(s, isNear, sched) {
+function _studentRow(s, isNear, sched, mins = null) {
   const initial = _esc((s.name || '?').charAt(0));
   const av = s.avatar_url
     ? `<img src="${_esc(s.avatar_url)}" alt="">`
     : initial;
-  const timeLabel = sched ? `Hora de salida: ${_hhmm(sched.exit)}` : 'Sin horario definido';
+  const urgent = isNear && mins != null && mins <= ALERT_MIN;
+  const timeLabel = sched
+    ? `Hora de salida: ${_hhmm(sched.exit)}${mins != null ? ` · ${mins <= 1 ? 'ahora' : 'en ' + mins + ' min'}` : ''}`
+    : 'Sin horario definido';
   return `
-    <div class="txm-row${isNear ? ' is-near' : ''}">
+    <div class="txm-row${isNear ? ' is-near' : ''}${urgent ? ' is-urgent' : ''}">
       <div class="txm-av">${av}</div>
       <div class="txm-txt" style="flex:1 1 auto;min-width:0">
         <p class="txm-row-name" style="margin:0;font-weight:800;font-size:13px;color:#0F172A">${_esc(s.name)}</p>
         <p style="margin:2px 0 0;font-size:11px;font-weight:700;color:#64748B">${_esc(timeLabel)}</p>
       </div>
+      ${urgent ? `<span class="txm-count">${mins <= 1 ? '¡Ahora!' : mins + ' min'}</span>` : ''}
       <button class="txb-btn" style="background:#28B54D;color:#fff" data-txb-reg="${_esc(String(s.id))}">Registrar salida</button>
     </div>`;
 }
 
 function _openModal() {
   const now = new Date();
-  const near = _near(now).map(x => x.s);
-  const nearIds = new Set(near.map(s => String(s.id)));
+  const near = _near(now);
+  const nearIds = new Set(near.map(x => String(x.s.id)));
   const others = _state.students
     .filter(s => _state.present.has(String(s.id)) && !_state.exited.has(String(s.id)) && !nearIds.has(String(s.id)))
     .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
   const nearHTML = near.length
-    ? near.map(s => _studentRow(s, true, _parseSchedule(s.schedule))).join('')
+    ? near.map(x => _studentRow(x.s, true, x.sched, x.mins)).join('')
     : `<p style="font-size:12px;color:#94A3B8;font-weight:700;padding:4px 2px">Ninguno en este momento.</p>`;
   const othersHTML = others.length
     ? others.map(s => _studentRow(s, false, _parseSchedule(s.schedule))).join('')

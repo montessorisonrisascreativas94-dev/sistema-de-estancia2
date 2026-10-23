@@ -49,7 +49,7 @@ export const MaestraApi = {
     const cached = _getCache('getStudents', classroomId);
     if (cached) return cached;
 
-    const FULL_COLS = 'id, name, avatar_url, matricula, allergies, blood_type, p1_name, p1_phone, p1_email, parent_id, age, age_type';
+    const FULL_COLS = 'id, name, avatar_url, matricula, allergies, blood_type, p1_name, p1_phone, p1_email, parent_id, age, age_type, schedule';
     const MIN_COLS  = 'id, name, avatar_url, parent_id';
 
     let res = await supabase

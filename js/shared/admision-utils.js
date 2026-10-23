@@ -20,19 +20,23 @@ export const SPECIAL_LEVELS = SPECIAL_CLASSROOMS;
 
 // CANONICAL_LEVELS: construido dinámicamente desde CANONICAL_CLASSROOMS
 // para mantener compatibilidad con código que usa el formato antiguo .canon/.aliases/.minAge/.maxAge
+// ⚠️ Las claves DEBEN coincidir con `CANONICAL_CLASSROOMS[].level`
+// (ej. 'Kínder', '1° Primero'). El formulario público de preinscripción
+// guarda los nombres largos con línea ('Kínder – Línea Gris',
+// '1ro – Línea Roja'), por eso esos valores van como ALIAS y no como clave.
 const LEVEL_ALIASES = {
-  'Párvulos I':                 ['Parvulos I', 'Párvulos 1', 'Párvulos 1ro', 'Maternal', 'Maternal I'],
-  'Párvulos II':                ['Parvulos II', 'Párvulos 2', 'Párvulos 2do', 'Maternal II'],
-  'Párvulos III':               ['Parvulos III', 'Párvulos 3', 'Párvulos 3ro', 'Infante'],
-  'Pre-Kínder – Línea Blanca':  ['Pre-Kinder', 'Pre-Kinder – Línea Blanca', 'Pre-Kínder', 'Pre-Kinder - Línea Blanca', 'Pre-Kínder - Línea Blanca'],
-  'Kínder – Línea Gris':        ['Kinder', 'Kínder', 'Kínder - Línea Gris', 'Kinder - Línea Gris', 'Kinder Línea Gris'],
-  'Pre-Primario – Línea Negra': ['Preprimaria', 'Pre-Primario', 'Pre-Primario - Línea Negra', 'Preprimaria - Línea Negra'],
-  '1ro – Línea Roja':           ['1ro Primaria', '1ro', 'Primer Grado', '1ro - Línea Roja', '1ro - Linea Roja'],
-  '2do – Línea Amarilla':       ['2do Primaria', '2do', 'Segundo Grado', '2do - Línea Amarilla'],
-  '3ro – Línea Azul':           ['3ro Primaria', '3ro', 'Tercer Grado', '3ro - Línea Azul'],
-  '4to – Línea Verde':          ['4to Primaria', '4to', 'Cuarto Grado', '4to - Línea Verde'],
-  '5to – Línea Naranja':        ['5to Primaria', '5to', 'Quinto Grado', '5to - Línea Naranja'],
-  '6to – Línea Morado':         ['6to Primaria', '6to', 'Sexto Grado', '6to - Línea Morado'],
+  'Párvulos I':    ['Parvulos I', 'Párvulos 1', 'Párvulos 1ro', 'Maternal', 'Maternal I'],
+  'Párvulos II':   ['Parvulos II', 'Párvulos 2', 'Párvulos 2do', 'Maternal II'],
+  'Párvulos III':  ['Parvulos III', 'Párvulos 3', 'Párvulos 3ro', 'Infante'],
+  'Pre-Kínder':    ['Pre-Kínder – Línea Blanca', 'Pre-Kínder - Línea Blanca', 'Pre-Kinder – Línea Blanca', 'Pre-Kinder - Línea Blanca', 'Pre-Kinder', 'Prekinder', 'Pre kinder'],
+  'Kínder':        ['Kínder – Línea Gris', 'Kínder - Línea Gris', 'Kinder – Línea Gris', 'Kinder - Línea Gris', 'Kinder Línea Gris', 'Kinder', 'Kinder gris'],
+  'Pre-Primario':  ['Pre-Primario – Línea Negra', 'Pre-Primario - Línea Negra', 'Pre-Primario', 'Preprimaria – Línea Negra', 'Preprimaria - Línea Negra', 'Preprimaria'],
+  '1° Primero':    ['1ro – Línea Roja', '1ro - Línea Roja', '1ro - Linea Roja', '1ro Primaria', '1ro', 'Primer Grado', '1° Primero'],
+  '2° Segundo':    ['2do – Línea Amarilla', '2do - Línea Amarilla', '2do Primaria', '2do', 'Segundo Grado', '2° Segundo'],
+  '3° Tercero':    ['3ro – Línea Azul', '3ro - Línea Azul', '3ro Primaria', '3ro', 'Tercer Grado', '3° Tercero'],
+  '4° Cuarto':     ['4to – Línea Verde', '4to - Línea Verde', '4to Primaria', '4to', 'Cuarto Grado', '4° Cuarto'],
+  '5° Quinto':     ['5to – Línea Naranja', '5to - Línea Naranja', '5to Primaria', '5to', 'Quinto Grado', '5° Quinto'],
+  '6° Sexto':      ['6to – Línea Morado', '6to - Línea Morado', '6to Primaria', '6to', 'Sexto Grado', '6° Sexto'],
 };
 
 export const CANONICAL_LEVELS = CANONICAL_CLASSROOMS.map((c) => ({

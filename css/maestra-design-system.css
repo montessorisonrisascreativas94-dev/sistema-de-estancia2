@@ -1298,6 +1298,13 @@ body.panel-maestra-body #classesGrid > div.is-active-classroom:hover {
 #studentRoutineModal .sr-tool-hint { font-size: 8.5px; font-weight: 700; color: #94a3b8; }
 
 /* ═══ LÍNEA DEL TIEMPO (rediseño) ═══ */
+#studentRoutineModal .sr-repeat-btn {
+  display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%;
+  font-size: 10px; font-weight: 900; color: #0B63C7; background: #eff6ff;
+  border: 2px solid #bfdbfe; border-radius: 13px; padding: 10px 12px; margin: 2px 0 10px;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+#studentRoutineModal .sr-repeat-btn:active { transform: scale(.97); background: #dbeafe; }
 #studentRoutineModal .sr-tl-filters { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0 10px; }
 #studentRoutineModal .sr-tl-chip {
   display: inline-flex; align-items: center; gap: 5px;

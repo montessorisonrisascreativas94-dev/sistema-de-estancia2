@@ -759,23 +759,81 @@ export function filterStatus(filter) {
   });
 }
 
+// Evita que varios clics seguidos abran el modal N veces mientras se
+// cargan los datos de la preinscripción.
+let _admitOpening = false;
+
+/**
+ * Pinta un estado de carga DENTRO del contenedor global de modales de
+ * forma síncrona. Así el usuario ve respuesta inmediata al hacer clic,
+ * sin esperar las consultas a Supabase.
+ */
+function _showAdmitLoading() {
+  const gc = document.getElementById('globalModalContainer');
+  if (!gc) return;
+  // closeGlobalModal() deja la clase `hidden` y `backdropFilter:none`.
+  // Hay que limpiarlas para que el modal pueda volver a mostrarse.
+  gc.classList.remove('hidden');
+  gc.style.background = 'rgba(8,80,160,0.45)';
+  gc.style.backdropFilter = '';
+  gc.innerHTML = `
+    <div class="bg-white rounded-2xl shadow-2xl px-8 py-7 flex items-center gap-4 animate-scaleIn" role="status" aria-live="polite">
+      <div class="w-7 h-7 border-[3px] border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+      <div>
+        <p class="font-black text-slate-800 text-sm leading-tight">Abriendo expediente…</p>
+        <p class="text-xs text-slate-400 font-medium">Cargando datos de la preinscripción</p>
+      </div>
+    </div>`;
+  gc.style.display = 'flex';
+  gc.style.alignItems = 'center';
+  gc.style.justifyContent = 'center';
+  gc.style.position = 'fixed';
+  gc.style.inset = '0';
+  gc.style.zIndex = '9999';
+}
+
+function _hideAdmitLoading() {
+  const gc = document.getElementById('globalModalContainer');
+  if (!gc) return;
+  gc.innerHTML = '';
+  gc.style.display = 'none';
+}
+
 export async function openAdmitModal(preregId) {
-  const { data: reg, error } = await supabase
-    .from('student_preregistrations')
-    .select('*')
-    .eq('id', preregId)
-    .single();
+  if (_admitOpening) return;
+  _admitOpening = true;
+  _showAdmitLoading();
 
-  if (error || !reg) { Helpers.toast('No se pudo cargar el registro', 'error'); return; }
+  try {
+    // Consulta e import del modal en paralelo para reducir la espera.
+    const [result, mod] = await Promise.all([
+      supabase.from('student_preregistrations').select('*').eq('id', preregId).single(),
+      import('../shared/student-record-modal.js'),
+    ]);
 
-  if (reg.age_match === false && reg.director_authorization_approved !== true) {
-    Helpers.toast('Requiere aprobación de Directora: ver detalle y autorizar excepción', 'warning');
-    openPreDetail(preregId);
-    return;
+    const { data: reg, error } = result;
+
+    if (error || !reg) {
+      _hideAdmitLoading();
+      Helpers.toast('No se pudo cargar el registro', 'error');
+      return;
+    }
+
+    if (reg.age_match === false && reg.director_authorization_approved !== true) {
+      // openPreDetail reemplaza el contenido del contenedor; el loading
+      // permanece visible mientras se consulta el detalle.
+      Helpers.toast('Requiere aprobación de Directora: ver detalle y autorizar excepción', 'warning');
+      await openPreDetail(preregId);
+      return;
+    }
+
+    await mod.StudentRecordModal.open('admit', null, reg);
+  } catch (err) {
+    _hideAdmitLoading();
+    Helpers.toast('Error al abrir el expediente: ' + (err?.message || err), 'error');
+  } finally {
+    _admitOpening = false;
   }
-
-  const { StudentRecordModal } = await import('../shared/student-record-modal.js');
-  StudentRecordModal.open('admit', null, reg);
 }
 
 export async function openPreDetail(preregId) {
@@ -794,6 +852,9 @@ export async function openPreDetail(preregId) {
     const role = await _currentRole();
     const isDirector = role === 'directora' || role === 'admin';
 
+    gc.classList.remove('hidden');
+    gc.style.background = '';
+    gc.style.backdropFilter = '';
     gc.style.display = 'block';
     gc.style.zIndex = '9999';
     gc.style.position = 'fixed';
@@ -801,6 +862,7 @@ export async function openPreDetail(preregId) {
     _bindPreDetailEvents(r, isDirector);
     if (window.lucide) lucide.createIcons();
   } catch (e) {
+    _hideAdmitLoading();
     Helpers.toast('Error: ' + e.message, 'error');
   }
 }

@@ -1,13 +1,17 @@
-/**
- * Rutina Express — Sonrisas Creativas
- * Acciones Colectivas · Tarjetas · Modal Individual · Premium UX
+﻿/**
+ * Rutina Express â€” Sonrisas Creativas
+ * Acciones Colectivas Â· Tarjetas Â· Modal Individual Â· Premium UX
  */
 import { AppState } from '../state.js';
 import { UI, safeToast, safeEscapeHTML, safeUrl } from './ui.js';
 import { MaestraApi, invalidateCache } from '../api.js';
 import { supabase } from '../../shared/supabase.js';
 import { RoutineCatalog } from '../../shared/routine-catalog.js';
+import * as WeeklySchedule from './weekly-schedule.js';
+import { WEEKLY_CSS } from '../../shared/weekly-schedule-core.js';
 
+let _routineViewMode = 'express';
+try { _routineViewMode = localStorage.getItem('sonrisas_routine_view') || 'express'; } catch (_) {}
 let _logsMap = {};
 let _sleepMap = {};
 let _lastEvent = {};
@@ -28,95 +32,95 @@ const DAILY_OVERRIDES_KEY = 'sonrisas_daily_overrides';
 const SCHEDULE_VERSION = 5;
 
 const DEFAULT_SCHEDULE = [
-  { id: 'welcome',      emoji: '🖐️', label: 'Bienvenida',         color: '#FF8A00', startTime: '07:30', duration: 15,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true,  visibleDirector: true,  days: [1,2,3,4,5,6], active: true },
-  { id: 'roll_call',    emoji: '📋', label: 'Pase de Lista',       color: '#0B63C7', startTime: '07:45', duration: 15,  type: 'colectivo', auto: false, needsConfirm: true,  visibleParents: true,  visibleDirector: true,  days: [1,2,3,4,5,6], active: true },
-  { id: 'breakfast',    emoji: '🍞', label: 'Desayuno',            color: '#FF8A00', startTime: '08:00', duration: 30,  type: 'colectivo', auto: true,  needsConfirm: false, visibleParents: true,  visibleDirector: true,  days: [1,2,3,4,5,6], active: true, groupEventId: 'breakfast' },
-  { id: 'handwash',     emoji: '🧼', label: 'Lavado de manos',     color: '#0B63C7', startTime: '08:30', duration: 10,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true,  visibleDirector: true,  days: [1,2,3,4,5,6], active: true, groupEventId: 'handwash' },
-  { id: 'activity',     emoji: '🎨', label: 'Actividad educativa', color: '#7C3AED', startTime: '09:00', duration: 45,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true,  visibleDirector: true,  days: [1,2,3,4,5,6], active: true, groupEventId: 'activity' },
-  { id: 'playground',   emoji: '🌳', label: 'Salida al Patio',     color: '#16A34A', startTime: '09:45', duration: 30,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true,  visibleDirector: true,  days: [1,2,3,4,5,6], active: true, groupEventId: 'playground' },
-  { id: 'snack',        emoji: '🍎', label: 'Refrigerio',          color: '#28B54D', startTime: '10:15', duration: 30,  type: 'colectivo', auto: true,  needsConfirm: false, visibleParents: true,  visibleDirector: true,  days: [1,2,3,4,5,6], active: true, groupEventId: 'snack' },
-  { id: 'sensorial',    emoji: '🔬', label: 'Actividad sensorial', color: '#6366F1', startTime: '11:00', duration: 45,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true,  visibleDirector: true,  days: [1,2,3,4,5,6], active: true },
-  { id: 'lunch',        emoji: '🍽️', label: 'Almuerzo',            color: '#28B54D', startTime: '11:45', duration: 30,  type: 'colectivo', auto: true,  needsConfirm: false, visibleParents: true,  visibleDirector: true,  days: [1,2,3,4,5,6], active: true, groupEventId: 'lunch' },
-  { id: 'toothbrush',   emoji: '🪥', label: 'Cepillado',           color: '#06B6D4', startTime: '12:15', duration: 15,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true,  visibleDirector: true,  days: [1,2,3,4,5,6], active: true, groupEventId: 'toothbrush' },
-  { id: 'sleep_start',  emoji: '😴', label: 'Siesta',              color: '#8B5CF6', startTime: '12:30', duration: 120, type: 'colectivo', auto: true,  needsConfirm: false, visibleParents: true,  visibleDirector: true,  days: [1,2,3,4,5,6], active: true, groupEventId: 'sleep_start' },
-  { id: 'sleep_end',    emoji: '😊', label: 'Despertar',           color: '#FFD43B', startTime: '14:30', duration: 15,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true,  visibleDirector: true,  days: [1,2,3,4,5,6], active: true, groupEventId: 'sleep_end' },
-  { id: 'snack2',       emoji: '🍪', label: 'Merienda',            color: '#F59E0B', startTime: '15:00', duration: 30,  type: 'colectivo', auto: true,  needsConfirm: false, visibleParents: true,  visibleDirector: true,  days: [1,2,3,4,5,6], active: true, groupEventId: 'snack' },
-  { id: 'free_play',    emoji: '🎮', label: 'Juego libre',         color: '#EC4899', startTime: '15:30', duration: 30,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true,  visibleDirector: true,  days: [1,2,3,4,5,6], active: true },
-  { id: 'departure',    emoji: '👋', label: 'Entrega de niños',    color: '#EF4444', startTime: '16:00', duration: 60,  type: 'colectivo', auto: false, needsConfirm: true,  visibleParents: true,  visibleDirector: true,  days: [1,2,3,4,5,6], active: true }
+  { id: 'welcome',      emoji: 'ðŸ–ï¸', label: 'Bienvenida',         color: '#FF8A00', startTime: '07:30', duration: 15,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true,  visibleDirector: true,  days: [1,2,3,4,5,6], active: true },
+  { id: 'roll_call',    emoji: 'ðŸ“‹', label: 'Pase de Lista',       color: '#0B63C7', startTime: '07:45', duration: 15,  type: 'colectivo', auto: false, needsConfirm: true,  visibleParents: true,  visibleDirector: true,  days: [1,2,3,4,5,6], active: true },
+  { id: 'breakfast',    emoji: 'ðŸž', label: 'Desayuno',            color: '#FF8A00', startTime: '08:00', duration: 30,  type: 'colectivo', auto: true,  needsConfirm: false, visibleParents: true,  visibleDirector: true,  days: [1,2,3,4,5,6], active: true, groupEventId: 'breakfast' },
+  { id: 'handwash',     emoji: 'ðŸ§¼', label: 'Lavado de manos',     color: '#0B63C7', startTime: '08:30', duration: 10,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true,  visibleDirector: true,  days: [1,2,3,4,5,6], active: true, groupEventId: 'handwash' },
+  { id: 'activity',     emoji: 'ðŸŽ¨', label: 'Actividad educativa', color: '#7C3AED', startTime: '09:00', duration: 45,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true,  visibleDirector: true,  days: [1,2,3,4,5,6], active: true, groupEventId: 'activity' },
+  { id: 'playground',   emoji: 'ðŸŒ³', label: 'Salida al Patio',     color: '#16A34A', startTime: '09:45', duration: 30,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true,  visibleDirector: true,  days: [1,2,3,4,5,6], active: true, groupEventId: 'playground' },
+  { id: 'snack',        emoji: 'ðŸŽ', label: 'Refrigerio',          color: '#28B54D', startTime: '10:15', duration: 30,  type: 'colectivo', auto: true,  needsConfirm: false, visibleParents: true,  visibleDirector: true,  days: [1,2,3,4,5,6], active: true, groupEventId: 'snack' },
+  { id: 'sensorial',    emoji: 'ðŸ”¬', label: 'Actividad sensorial', color: '#6366F1', startTime: '11:00', duration: 45,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true,  visibleDirector: true,  days: [1,2,3,4,5,6], active: true },
+  { id: 'lunch',        emoji: 'ðŸ½ï¸', label: 'Almuerzo',            color: '#28B54D', startTime: '11:45', duration: 30,  type: 'colectivo', auto: true,  needsConfirm: false, visibleParents: true,  visibleDirector: true,  days: [1,2,3,4,5,6], active: true, groupEventId: 'lunch' },
+  { id: 'toothbrush',   emoji: 'ðŸª¥', label: 'Cepillado',           color: '#06B6D4', startTime: '12:15', duration: 15,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true,  visibleDirector: true,  days: [1,2,3,4,5,6], active: true, groupEventId: 'toothbrush' },
+  { id: 'sleep_start',  emoji: 'ðŸ˜´', label: 'Siesta',              color: '#8B5CF6', startTime: '12:30', duration: 120, type: 'colectivo', auto: true,  needsConfirm: false, visibleParents: true,  visibleDirector: true,  days: [1,2,3,4,5,6], active: true, groupEventId: 'sleep_start' },
+  { id: 'sleep_end',    emoji: 'ðŸ˜Š', label: 'Despertar',           color: '#FFD43B', startTime: '14:30', duration: 15,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true,  visibleDirector: true,  days: [1,2,3,4,5,6], active: true, groupEventId: 'sleep_end' },
+  { id: 'snack2',       emoji: 'ðŸª', label: 'Merienda',            color: '#F59E0B', startTime: '15:00', duration: 30,  type: 'colectivo', auto: true,  needsConfirm: false, visibleParents: true,  visibleDirector: true,  days: [1,2,3,4,5,6], active: true, groupEventId: 'snack' },
+  { id: 'free_play',    emoji: 'ðŸŽ®', label: 'Juego libre',         color: '#EC4899', startTime: '15:30', duration: 30,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true,  visibleDirector: true,  days: [1,2,3,4,5,6], active: true },
+  { id: 'departure',    emoji: 'ðŸ‘‹', label: 'Entrega de niÃ±os',    color: '#EF4444', startTime: '16:00', duration: 60,  type: 'colectivo', auto: false, needsConfirm: true,  visibleParents: true,  visibleDirector: true,  days: [1,2,3,4,5,6], active: true }
 ];
 
 const INDIV_EVENTS = [
-  { id: 'poop',     icon: '💩', label: 'Popó',            color: '#FF8A00', type: 'diaper', subtype: 'soiled' },
-  { id: 'pee',      icon: '💧', label: 'Pipí',            color: '#0B63C7', type: 'diaper', subtype: 'wet' },
-  { id: 'toilet',   icon: '🚽', label: 'Uso del Baño',    color: '#28B54D', type: 'bath' },
-  { id: 'diaper',   icon: '🧻', label: 'Cambio de Pañal',  color: '#94A3B8', type: 'diaper_change' },
-  { id: 'temp',     icon: '🌡️', label: 'Temperatura',      color: '#EF4444', type: 'temp' },
-  { id: 'med',      icon: '💊', label: 'Medicamento',      color: '#EC4899', type: 'med' },
-  { id: 'hit',      icon: '🤕', label: 'Golpe / Caída',    color: '#EF4444', type: 'incident', subtype: 'hit' },
-  { id: 'vomit',    icon: '🤮', label: 'Vómito',          color: '#EF4444', type: 'health', subtype: 'vomit' },
-  { id: 'cough',    icon: '😷', label: 'Tos / Congestión', color: '#6366F1', type: 'health', subtype: 'cough' },
-  { id: 'milk',     icon: '🍼', label: 'Biberón',         color: '#0B63C7', type: 'milk' },
-  { id: 'note',     icon: '📝', label: 'Nota Individual',  color: '#64748B', type: 'note' }
+  { id: 'poop',     icon: 'ðŸ’©', label: 'PopÃ³',            color: '#FF8A00', type: 'diaper', subtype: 'soiled' },
+  { id: 'pee',      icon: 'ðŸ’§', label: 'PipÃ­',            color: '#0B63C7', type: 'diaper', subtype: 'wet' },
+  { id: 'toilet',   icon: 'ðŸš½', label: 'Uso del BaÃ±o',    color: '#28B54D', type: 'bath' },
+  { id: 'diaper',   icon: 'ðŸ§»', label: 'Cambio de PaÃ±al',  color: '#94A3B8', type: 'diaper_change' },
+  { id: 'temp',     icon: 'ðŸŒ¡ï¸', label: 'Temperatura',      color: '#EF4444', type: 'temp' },
+  { id: 'med',      icon: 'ðŸ’Š', label: 'Medicamento',      color: '#EC4899', type: 'med' },
+  { id: 'hit',      icon: 'ðŸ¤•', label: 'Golpe / CaÃ­da',    color: '#EF4444', type: 'incident', subtype: 'hit' },
+  { id: 'vomit',    icon: 'ðŸ¤®', label: 'VÃ³mito',          color: '#EF4444', type: 'health', subtype: 'vomit' },
+  { id: 'cough',    icon: 'ðŸ˜·', label: 'Tos / CongestiÃ³n', color: '#6366F1', type: 'health', subtype: 'cough' },
+  { id: 'milk',     icon: 'ðŸ¼', label: 'BiberÃ³n',         color: '#0B63C7', type: 'milk' },
+  { id: 'note',     icon: 'ðŸ“', label: 'Nota Individual',  color: '#64748B', type: 'note' }
 ];
 
 const EXTRA_EVENTS = [
-  { id: 'fever',       icon: '🤒', label: 'Fiebre',           color: '#EF4444', type: 'incident', subtype: 'fever' },
-  { id: 'accident',    icon: '🩹', label: 'Accidente',        color: '#F97316', type: 'incident', subtype: 'accident' },
-  { id: 'parent_call', icon: '📞', label: 'Llamada a padres',  color: '#8B5CF6', type: 'incident', subtype: 'parent_call' },
-  { id: 'other',       icon: '📌', label: 'Otro',             color: '#64748B', type: 'incident', subtype: 'other' }
+  { id: 'fever',       icon: 'ðŸ¤’', label: 'Fiebre',           color: '#EF4444', type: 'incident', subtype: 'fever' },
+  { id: 'accident',    icon: 'ðŸ©¹', label: 'Accidente',        color: '#F97316', type: 'incident', subtype: 'accident' },
+  { id: 'parent_call', icon: 'ðŸ“ž', label: 'Llamada a padres',  color: '#8B5CF6', type: 'incident', subtype: 'parent_call' },
+  { id: 'other',       icon: 'ðŸ“Œ', label: 'Otro',             color: '#64748B', type: 'incident', subtype: 'other' }
 ];
 
 const MOOD_OPTIONS = [
-  { val: 'feliz',      emoji: '😊', label: 'Feliz' },
-  { val: 'tranquilo',  emoji: '🙂', label: 'Tranquilo' },
-  { val: 'normal',     emoji: '😐', label: 'Normal' },
-  { val: 'triste',     emoji: '😢', label: 'Triste' },
-  { val: 'llanto',     emoji: '😭', label: 'Llanto' },
-  { val: 'enfermo',    emoji: '🤒', label: 'Enfermo' },
-  { val: 'somnoliento',emoji: '😴', label: 'Somnoliento' },
-  { val: 'irritable',  emoji: '😡', label: 'Irritable' }
+  { val: 'feliz',      emoji: 'ðŸ˜Š', label: 'Feliz' },
+  { val: 'tranquilo',  emoji: 'ðŸ™‚', label: 'Tranquilo' },
+  { val: 'normal',     emoji: 'ðŸ˜', label: 'Normal' },
+  { val: 'triste',     emoji: 'ðŸ˜¢', label: 'Triste' },
+  { val: 'llanto',     emoji: 'ðŸ˜­', label: 'Llanto' },
+  { val: 'enfermo',    emoji: 'ðŸ¤’', label: 'Enfermo' },
+  { val: 'somnoliento',emoji: 'ðŸ˜´', label: 'Somnoliento' },
+  { val: 'irritable',  emoji: 'ðŸ˜¡', label: 'Irritable' }
 ];
 
 const TEMP_OPTIONS = [
-  { val: 'fria',     label: 'Fría',    icon: '🧊', color: '#0B63C7' },
-  { val: 'natural',  label: 'Natural', icon: '💧', color: '#28B54D' },
-  { val: 'tibia',    label: 'Tibia',   icon: '♨️', color: '#FF8A00' },
-  { val: 'caliente', label: 'Caliente', icon: '🔥', color: '#EF4444' }
+  { val: 'fria',     label: 'FrÃ­a',    icon: 'ðŸ§Š', color: '#0B63C7' },
+  { val: 'natural',  label: 'Natural', icon: 'ðŸ’§', color: '#28B54D' },
+  { val: 'tibia',    label: 'Tibia',   icon: 'â™¨ï¸', color: '#FF8A00' },
+  { val: 'caliente', label: 'Caliente', icon: 'ðŸ”¥', color: '#EF4444' }
 ];
 
 const COLLECTIVE_QUICK_EVENTS = [
-  { id: 'bathroom',  emoji: '🚽', label: 'Baño',        color: '#28B54D', groupEventId: 'bathroom',  type: '_group',  eventType: 'bath',    active: true },
-  { id: 'poop_gr',   emoji: '💩', label: 'Popó',        color: '#FF8A00', groupEventId: 'poop_gr',   type: '_group',  eventType: 'diaper',   active: true },
-  { id: 'milk_gr',   emoji: '🍼', label: 'Biberón',     color: '#0B63C7', groupEventId: 'milk_gr',   type: '_group',  eventType: 'milk',     active: true }
+  { id: 'bathroom',  emoji: 'ðŸš½', label: 'BaÃ±o',        color: '#28B54D', groupEventId: 'bathroom',  type: '_group',  eventType: 'bath',    active: true },
+  { id: 'poop_gr',   emoji: 'ðŸ’©', label: 'PopÃ³',        color: '#FF8A00', groupEventId: 'poop_gr',   type: '_group',  eventType: 'diaper',   active: true },
+  { id: 'milk_gr',   emoji: 'ðŸ¼', label: 'BiberÃ³n',     color: '#0B63C7', groupEventId: 'milk_gr',   type: '_group',  eventType: 'milk',     active: true }
 ];
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// PERFILES POR NIVEL — adapta eventos, rutinas y horario según la edad del aula
-// ═══════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// PERFILES POR NIVEL â€” adapta eventos, rutinas y horario segÃºn la edad del aula
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 /**
- * Categoría de nivel derivada del classroom.level.
- * infants   → Párvulos I – II      (45 días – 23 meses)
- * toddlers  → Párvulos III         (24 – 35 meses)
- * preschool → Pre-Kínder, Kínder   (3 – 5 años)
- * preprimary→ Pre-Primario         (5 – 6 años)
- * primary   → 1° – 6° Primaria     (6 – 12 años)
- * special   → Verano, Inglés, etc.
+ * CategorÃ­a de nivel derivada del classroom.level.
+ * infants   â†’ PÃ¡rvulos I â€“ II      (45 dÃ­as â€“ 23 meses)
+ * toddlers  â†’ PÃ¡rvulos III         (24 â€“ 35 meses)
+ * preschool â†’ Pre-KÃ­nder, KÃ­nder   (3 â€“ 5 aÃ±os)
+ * preprimaryâ†’ Pre-Primario         (5 â€“ 6 aÃ±os)
+ * primary   â†’ 1Â° â€“ 6Â° Primaria     (6 â€“ 12 aÃ±os)
+ * special   â†’ Verano, InglÃ©s, etc.
  */
 function _getLevelCategory() {
   const classroom = AppState.get('classroom');
   const level = (classroom?.level || classroom?.name || '').toLowerCase()
     .normalize('NFD').replace(/[\u0300-\u036f]/g, ''); // quitar tildes
-  if (/parvulos?\s*(i{1,3}|1|2)\b|parv[uo]los?\s*i{1,2}$/.test(level)) return 'infants';
   if (/parvulos?\s*(iii|3)\b/.test(level)) return 'toddlers';
+  if (/parvulos?\s*(i{1,2}|1|2)\b|parv[uo]los?\s*i{1,2}$/.test(level)) return 'infants';
   if (/pre[- ]?kinder|kinder/.test(level)) return 'preschool';
   if (/pre[- ]?primari/.test(level)) return 'preprimary';
-  if (/\d[°o]|primero|segundo|tercero|cuarto|quinto|sexto|primaria/.test(level)) return 'primary';
+  if (/\d[Â°o]|primero|segundo|tercero|cuarto|quinto|sexto|primaria/.test(level)) return 'primary';
   if (/verano|ingles|ballet|taekwondo|tarea|cuido/.test(level)) return 'special';
   return 'preschool'; // fallback razonable
 }
 
-/** IDs de eventos individuales permitidos por categoría */
+/** IDs de eventos individuales permitidos por categorÃ­a */
 const LEVEL_INDIV_IDS = {
   infants:    ['milk', 'poop', 'pee', 'diaper', 'temp', 'med', 'hit', 'vomit', 'cough', 'note'],
   toddlers:   ['poop', 'pee', 'toilet', 'diaper', 'milk', 'temp', 'med', 'hit', 'vomit', 'cough', 'note'],
@@ -126,110 +130,110 @@ const LEVEL_INDIV_IDS = {
   special:    ['temp', 'med', 'hit', 'vomit', 'cough', 'note'],
 };
 
-/** Categorías de WHOLE_CLASS_ROUTINES permitidas por nivel */
+/** CategorÃ­as de WHOLE_CLASS_ROUTINES permitidas por nivel */
 const LEVEL_ROUTINE_CATS = {
-  infants:    ['Higiene', 'Alimentación', 'Descanso', 'Motricidad'],
-  toddlers:   ['Higiene', 'Alimentación', 'Descanso', 'Motricidad', 'Arte y música', 'Social'],
-  preschool:  ['Higiene', 'Alimentación', 'Descanso', 'Actividades', 'Juego', 'Motricidad', 'Arte y música', 'Lenguaje', 'Social', 'Exterior'],
-  preprimary: ['Higiene', 'Alimentación', 'Actividades', 'Juego', 'Motricidad', 'Arte y música', 'Lenguaje', 'Social', 'Exterior', 'Transiciones'],
-  primary:    ['Actividades', 'Juego', 'Motricidad', 'Arte y música', 'Lenguaje', 'Social', 'Exterior', 'Transiciones'],
-  special:    ['Actividades', 'Juego', 'Motricidad', 'Arte y música', 'Social', 'Exterior'],
+  infants:    ['Higiene', 'AlimentaciÃ³n', 'Descanso', 'Motricidad'],
+  toddlers:   ['Higiene', 'AlimentaciÃ³n', 'Descanso', 'Motricidad', 'Arte y mÃºsica', 'Social'],
+  preschool:  ['Higiene', 'AlimentaciÃ³n', 'Descanso', 'Actividades', 'Juego', 'Motricidad', 'Arte y mÃºsica', 'Lenguaje', 'Social', 'Exterior'],
+  preprimary: ['Higiene', 'AlimentaciÃ³n', 'Actividades', 'Juego', 'Motricidad', 'Arte y mÃºsica', 'Lenguaje', 'Social', 'Exterior', 'Transiciones'],
+  primary:    ['Actividades', 'Juego', 'Motricidad', 'Arte y mÃºsica', 'Lenguaje', 'Social', 'Exterior', 'Transiciones'],
+  special:    ['Actividades', 'Juego', 'Motricidad', 'Arte y mÃºsica', 'Social', 'Exterior'],
 };
 
-/** Horario por defecto según nivel */
+/** Horario por defecto segÃºn nivel */
 const LEVEL_DEFAULT_SCHEDULE = {
   infants: [
-    { id: 'welcome',     emoji: '🖐️', label: 'Bienvenida',         color: '#FF8A00', startTime: '07:30', duration: 15,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true },
-    { id: 'roll_call',   emoji: '📋', label: 'Pase de Lista',       color: '#0B63C7', startTime: '07:45', duration: 15,  type: 'colectivo', auto: false, needsConfirm: true,  visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true },
-    { id: 'breakfast',   emoji: '🍼', label: 'Biberón / Desayuno',  color: '#FF8A00', startTime: '08:00', duration: 30,  type: 'colectivo', auto: true,  needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true, groupEventId: 'breakfast' },
-    { id: 'diaper1',     emoji: '🧷', label: 'Cambio de pañal',     color: '#94A3B8', startTime: '08:30', duration: 15,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true, groupEventId: 'diaper_change' },
-    { id: 'stimulation', emoji: '🧸', label: 'Estimulación',        color: '#7C3AED', startTime: '09:00', duration: 45,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true, groupEventId: 'activity' },
-    { id: 'sleep_start', emoji: '😴', label: 'Siesta',              color: '#8B5CF6', startTime: '10:00', duration: 90,  type: 'colectivo', auto: true,  needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true, groupEventId: 'sleep_start' },
-    { id: 'sleep_end',   emoji: '😊', label: 'Despertar',           color: '#FFD43B', startTime: '11:30', duration: 15,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true, groupEventId: 'sleep_end' },
-    { id: 'milk2',       emoji: '🍼', label: 'Biberón tarde',       color: '#0B63C7', startTime: '11:45', duration: 20,  type: 'colectivo', auto: true,  needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true, groupEventId: 'snack' },
-    { id: 'diaper2',     emoji: '🧷', label: 'Cambio pañal tarde',  color: '#94A3B8', startTime: '12:10', duration: 15,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true, groupEventId: 'diaper_change' },
-    { id: 'free_play',   emoji: '🎮', label: 'Juego sensorial',     color: '#EC4899', startTime: '12:30', duration: 30,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true },
-    { id: 'departure',   emoji: '👋', label: 'Entrega de niños',    color: '#EF4444', startTime: '16:00', duration: 60,  type: 'colectivo', auto: false, needsConfirm: true,  visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true },
+    { id: 'welcome',     emoji: 'ðŸ–ï¸', label: 'Bienvenida',         color: '#FF8A00', startTime: '07:30', duration: 15,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true },
+    { id: 'roll_call',   emoji: 'ðŸ“‹', label: 'Pase de Lista',       color: '#0B63C7', startTime: '07:45', duration: 15,  type: 'colectivo', auto: false, needsConfirm: true,  visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true },
+    { id: 'breakfast',   emoji: 'ðŸ¼', label: 'BiberÃ³n / Desayuno',  color: '#FF8A00', startTime: '08:00', duration: 30,  type: 'colectivo', auto: true,  needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true, groupEventId: 'breakfast' },
+    { id: 'diaper1',     emoji: 'ðŸ§·', label: 'Cambio de paÃ±al',     color: '#94A3B8', startTime: '08:30', duration: 15,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true, groupEventId: 'diaper_change' },
+    { id: 'stimulation', emoji: 'ðŸ§¸', label: 'EstimulaciÃ³n',        color: '#7C3AED', startTime: '09:00', duration: 45,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true, groupEventId: 'activity' },
+    { id: 'sleep_start', emoji: 'ðŸ˜´', label: 'Siesta',              color: '#8B5CF6', startTime: '10:00', duration: 90,  type: 'colectivo', auto: true,  needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true, groupEventId: 'sleep_start' },
+    { id: 'sleep_end',   emoji: 'ðŸ˜Š', label: 'Despertar',           color: '#FFD43B', startTime: '11:30', duration: 15,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true, groupEventId: 'sleep_end' },
+    { id: 'milk2',       emoji: 'ðŸ¼', label: 'BiberÃ³n tarde',       color: '#0B63C7', startTime: '11:45', duration: 20,  type: 'colectivo', auto: true,  needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true, groupEventId: 'snack' },
+    { id: 'diaper2',     emoji: 'ðŸ§·', label: 'Cambio paÃ±al tarde',  color: '#94A3B8', startTime: '12:10', duration: 15,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true, groupEventId: 'diaper_change' },
+    { id: 'free_play',   emoji: 'ðŸŽ®', label: 'Juego sensorial',     color: '#EC4899', startTime: '12:30', duration: 30,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true },
+    { id: 'departure',   emoji: 'ðŸ‘‹', label: 'Entrega de niÃ±os',    color: '#EF4444', startTime: '16:00', duration: 60,  type: 'colectivo', auto: false, needsConfirm: true,  visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true },
   ],
   toddlers: [
-    { id: 'welcome',     emoji: '🖐️', label: 'Bienvenida',         color: '#FF8A00', startTime: '07:30', duration: 15,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true },
-    { id: 'roll_call',   emoji: '📋', label: 'Pase de Lista',       color: '#0B63C7', startTime: '07:45', duration: 15,  type: 'colectivo', auto: false, needsConfirm: true,  visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true },
-    { id: 'breakfast',   emoji: '🍞', label: 'Desayuno',            color: '#FF8A00', startTime: '08:00', duration: 30,  type: 'colectivo', auto: true,  needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true, groupEventId: 'breakfast' },
-    { id: 'handwash',    emoji: '🧼', label: 'Lavado de manos',     color: '#0B63C7', startTime: '08:30', duration: 10,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true, groupEventId: 'handwash' },
-    { id: 'activity',    emoji: '🧸', label: 'Estimulación',        color: '#7C3AED', startTime: '09:00', duration: 45,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true, groupEventId: 'activity' },
-    { id: 'playground',  emoji: '🌳', label: 'Salida al Patio',     color: '#16A34A', startTime: '09:45', duration: 20,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true, groupEventId: 'playground' },
-    { id: 'lunch',       emoji: '🍽️', label: 'Almuerzo',            color: '#28B54D', startTime: '11:00', duration: 30,  type: 'colectivo', auto: true,  needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true, groupEventId: 'lunch' },
-    { id: 'toothbrush',  emoji: '🪥', label: 'Cepillado',           color: '#06B6D4', startTime: '11:30', duration: 10,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true, groupEventId: 'toothbrush' },
-    { id: 'sleep_start', emoji: '😴', label: 'Siesta',              color: '#8B5CF6', startTime: '12:00', duration: 90,  type: 'colectivo', auto: true,  needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true, groupEventId: 'sleep_start' },
-    { id: 'sleep_end',   emoji: '😊', label: 'Despertar',           color: '#FFD43B', startTime: '13:30', duration: 15,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true, groupEventId: 'sleep_end' },
-    { id: 'snack2',      emoji: '🍎', label: 'Merienda',            color: '#F59E0B', startTime: '14:00', duration: 20,  type: 'colectivo', auto: true,  needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true, groupEventId: 'snack' },
-    { id: 'free_play',   emoji: '🎮', label: 'Juego libre',         color: '#EC4899', startTime: '15:00', duration: 30,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true },
-    { id: 'departure',   emoji: '👋', label: 'Entrega de niños',    color: '#EF4444', startTime: '16:00', duration: 60,  type: 'colectivo', auto: false, needsConfirm: true,  visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true },
+    { id: 'welcome',     emoji: 'ðŸ–ï¸', label: 'Bienvenida',         color: '#FF8A00', startTime: '07:30', duration: 15,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true },
+    { id: 'roll_call',   emoji: 'ðŸ“‹', label: 'Pase de Lista',       color: '#0B63C7', startTime: '07:45', duration: 15,  type: 'colectivo', auto: false, needsConfirm: true,  visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true },
+    { id: 'breakfast',   emoji: 'ðŸž', label: 'Desayuno',            color: '#FF8A00', startTime: '08:00', duration: 30,  type: 'colectivo', auto: true,  needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true, groupEventId: 'breakfast' },
+    { id: 'handwash',    emoji: 'ðŸ§¼', label: 'Lavado de manos',     color: '#0B63C7', startTime: '08:30', duration: 10,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true, groupEventId: 'handwash' },
+    { id: 'activity',    emoji: 'ðŸ§¸', label: 'EstimulaciÃ³n',        color: '#7C3AED', startTime: '09:00', duration: 45,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true, groupEventId: 'activity' },
+    { id: 'playground',  emoji: 'ðŸŒ³', label: 'Salida al Patio',     color: '#16A34A', startTime: '09:45', duration: 20,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true, groupEventId: 'playground' },
+    { id: 'lunch',       emoji: 'ðŸ½ï¸', label: 'Almuerzo',            color: '#28B54D', startTime: '11:00', duration: 30,  type: 'colectivo', auto: true,  needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true, groupEventId: 'lunch' },
+    { id: 'toothbrush',  emoji: 'ðŸª¥', label: 'Cepillado',           color: '#06B6D4', startTime: '11:30', duration: 10,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true, groupEventId: 'toothbrush' },
+    { id: 'sleep_start', emoji: 'ðŸ˜´', label: 'Siesta',              color: '#8B5CF6', startTime: '12:00', duration: 90,  type: 'colectivo', auto: true,  needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true, groupEventId: 'sleep_start' },
+    { id: 'sleep_end',   emoji: 'ðŸ˜Š', label: 'Despertar',           color: '#FFD43B', startTime: '13:30', duration: 15,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true, groupEventId: 'sleep_end' },
+    { id: 'snack2',      emoji: 'ðŸŽ', label: 'Merienda',            color: '#F59E0B', startTime: '14:00', duration: 20,  type: 'colectivo', auto: true,  needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true, groupEventId: 'snack' },
+    { id: 'free_play',   emoji: 'ðŸŽ®', label: 'Juego libre',         color: '#EC4899', startTime: '15:00', duration: 30,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true },
+    { id: 'departure',   emoji: 'ðŸ‘‹', label: 'Entrega de niÃ±os',    color: '#EF4444', startTime: '16:00', duration: 60,  type: 'colectivo', auto: false, needsConfirm: true,  visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true },
   ],
   preschool: DEFAULT_SCHEDULE, // same as current default
   preprimary: [
-    { id: 'welcome',     emoji: '🖐️', label: 'Bienvenida',         color: '#FF8A00', startTime: '07:30', duration: 15,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true },
-    { id: 'roll_call',   emoji: '📋', label: 'Pase de Lista',       color: '#0B63C7', startTime: '07:45', duration: 15,  type: 'colectivo', auto: false, needsConfirm: true,  visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true },
-    { id: 'breakfast',   emoji: '🍞', label: 'Desayuno',            color: '#FF8A00', startTime: '08:00', duration: 30,  type: 'colectivo', auto: true,  needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true, groupEventId: 'breakfast' },
-    { id: 'morning_act', emoji: '🎨', label: 'Actividad matutina',  color: '#7C3AED', startTime: '08:30', duration: 60,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true, groupEventId: 'activity' },
-    { id: 'playground',  emoji: '🌳', label: 'Recreo',              color: '#16A34A', startTime: '09:30', duration: 30,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true, groupEventId: 'playground' },
-    { id: 'handwash',    emoji: '🧼', label: 'Lavado de manos',     color: '#0B63C7', startTime: '10:00', duration: 10,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true, groupEventId: 'handwash' },
-    { id: 'snack',       emoji: '🍎', label: 'Refrigerio',          color: '#28B54D', startTime: '10:10', duration: 20,  type: 'colectivo', auto: true,  needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true, groupEventId: 'snack' },
-    { id: 'afternoon_act',emoji:'🔬', label: 'Actividad de la tarde',color:'#6366F1', startTime: '10:30', duration: 60,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true },
-    { id: 'lunch',       emoji: '🍽️', label: 'Almuerzo',            color: '#28B54D', startTime: '11:45', duration: 30,  type: 'colectivo', auto: true,  needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true, groupEventId: 'lunch' },
-    { id: 'toothbrush',  emoji: '🪥', label: 'Cepillado',           color: '#06B6D4', startTime: '12:15', duration: 10,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true, groupEventId: 'toothbrush' },
-    { id: 'free_play',   emoji: '🎮', label: 'Juego libre',         color: '#EC4899', startTime: '13:00', duration: 30,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true },
-    { id: 'departure',   emoji: '👋', label: 'Entrega de niños',    color: '#EF4444', startTime: '16:00', duration: 60,  type: 'colectivo', auto: false, needsConfirm: true,  visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true },
+    { id: 'welcome',     emoji: 'ðŸ–ï¸', label: 'Bienvenida',         color: '#FF8A00', startTime: '07:30', duration: 15,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true },
+    { id: 'roll_call',   emoji: 'ðŸ“‹', label: 'Pase de Lista',       color: '#0B63C7', startTime: '07:45', duration: 15,  type: 'colectivo', auto: false, needsConfirm: true,  visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true },
+    { id: 'breakfast',   emoji: 'ðŸž', label: 'Desayuno',            color: '#FF8A00', startTime: '08:00', duration: 30,  type: 'colectivo', auto: true,  needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true, groupEventId: 'breakfast' },
+    { id: 'morning_act', emoji: 'ðŸŽ¨', label: 'Actividad matutina',  color: '#7C3AED', startTime: '08:30', duration: 60,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true, groupEventId: 'activity' },
+    { id: 'playground',  emoji: 'ðŸŒ³', label: 'Recreo',              color: '#16A34A', startTime: '09:30', duration: 30,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true, groupEventId: 'playground' },
+    { id: 'handwash',    emoji: 'ðŸ§¼', label: 'Lavado de manos',     color: '#0B63C7', startTime: '10:00', duration: 10,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true, groupEventId: 'handwash' },
+    { id: 'snack',       emoji: 'ðŸŽ', label: 'Refrigerio',          color: '#28B54D', startTime: '10:10', duration: 20,  type: 'colectivo', auto: true,  needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true, groupEventId: 'snack' },
+    { id: 'afternoon_act',emoji:'ðŸ”¬', label: 'Actividad de la tarde',color:'#6366F1', startTime: '10:30', duration: 60,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true },
+    { id: 'lunch',       emoji: 'ðŸ½ï¸', label: 'Almuerzo',            color: '#28B54D', startTime: '11:45', duration: 30,  type: 'colectivo', auto: true,  needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true, groupEventId: 'lunch' },
+    { id: 'toothbrush',  emoji: 'ðŸª¥', label: 'Cepillado',           color: '#06B6D4', startTime: '12:15', duration: 10,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true, groupEventId: 'toothbrush' },
+    { id: 'free_play',   emoji: 'ðŸŽ®', label: 'Juego libre',         color: '#EC4899', startTime: '13:00', duration: 30,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true },
+    { id: 'departure',   emoji: 'ðŸ‘‹', label: 'Entrega de niÃ±os',    color: '#EF4444', startTime: '16:00', duration: 60,  type: 'colectivo', auto: false, needsConfirm: true,  visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true },
   ],
   primary: [
-    { id: 'welcome',     emoji: '🖐️', label: 'Bienvenida',         color: '#FF8A00', startTime: '07:30', duration: 10,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true },
-    { id: 'roll_call',   emoji: '📋', label: 'Pase de Lista',       color: '#0B63C7', startTime: '07:40', duration: 10,  type: 'colectivo', auto: false, needsConfirm: true,  visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true },
-    { id: 'class1',      emoji: '📚', label: 'Clase 1',             color: '#7C3AED', startTime: '07:50', duration: 45,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true, groupEventId: 'activity' },
-    { id: 'class2',      emoji: '✏️', label: 'Clase 2',             color: '#2563EB', startTime: '08:35', duration: 45,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true, groupEventId: 'activity' },
-    { id: 'snack',       emoji: '🍎', label: 'Refrigerio',          color: '#28B54D', startTime: '09:20', duration: 20,  type: 'colectivo', auto: true,  needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true, groupEventId: 'snack' },
-    { id: 'playground',  emoji: '🌳', label: 'Recreo',              color: '#16A34A', startTime: '09:40', duration: 20,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true, groupEventId: 'playground' },
-    { id: 'class3',      emoji: '🔬', label: 'Clase 3',             color: '#0891B2', startTime: '10:00', duration: 45,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true, groupEventId: 'activity' },
-    { id: 'class4',      emoji: '🎨', label: 'Clase 4',             color: '#EC4899', startTime: '10:45', duration: 45,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true, groupEventId: 'activity' },
-    { id: 'lunch',       emoji: '🍽️', label: 'Almuerzo',            color: '#28B54D', startTime: '11:30', duration: 30,  type: 'colectivo', auto: true,  needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true, groupEventId: 'lunch' },
-    { id: 'afternoon',   emoji: '📖', label: 'Actividades tarde',   color: '#6366F1', startTime: '12:00', duration: 60,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true },
-    { id: 'departure',   emoji: '👋', label: 'Salida',              color: '#EF4444', startTime: '16:00', duration: 30,  type: 'colectivo', auto: false, needsConfirm: true,  visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true },
+    { id: 'welcome',     emoji: 'ðŸ–ï¸', label: 'Bienvenida',         color: '#FF8A00', startTime: '07:30', duration: 10,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true },
+    { id: 'roll_call',   emoji: 'ðŸ“‹', label: 'Pase de Lista',       color: '#0B63C7', startTime: '07:40', duration: 10,  type: 'colectivo', auto: false, needsConfirm: true,  visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true },
+    { id: 'class1',      emoji: 'ðŸ“š', label: 'Clase 1',             color: '#7C3AED', startTime: '07:50', duration: 45,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true, groupEventId: 'activity' },
+    { id: 'class2',      emoji: 'âœï¸', label: 'Clase 2',             color: '#2563EB', startTime: '08:35', duration: 45,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true, groupEventId: 'activity' },
+    { id: 'snack',       emoji: 'ðŸŽ', label: 'Refrigerio',          color: '#28B54D', startTime: '09:20', duration: 20,  type: 'colectivo', auto: true,  needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true, groupEventId: 'snack' },
+    { id: 'playground',  emoji: 'ðŸŒ³', label: 'Recreo',              color: '#16A34A', startTime: '09:40', duration: 20,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true, groupEventId: 'playground' },
+    { id: 'class3',      emoji: 'ðŸ”¬', label: 'Clase 3',             color: '#0891B2', startTime: '10:00', duration: 45,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true, groupEventId: 'activity' },
+    { id: 'class4',      emoji: 'ðŸŽ¨', label: 'Clase 4',             color: '#EC4899', startTime: '10:45', duration: 45,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true, groupEventId: 'activity' },
+    { id: 'lunch',       emoji: 'ðŸ½ï¸', label: 'Almuerzo',            color: '#28B54D', startTime: '11:30', duration: 30,  type: 'colectivo', auto: true,  needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true, groupEventId: 'lunch' },
+    { id: 'afternoon',   emoji: 'ðŸ“–', label: 'Actividades tarde',   color: '#6366F1', startTime: '12:00', duration: 60,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true },
+    { id: 'departure',   emoji: 'ðŸ‘‹', label: 'Salida',              color: '#EF4444', startTime: '16:00', duration: 30,  type: 'colectivo', auto: false, needsConfirm: true,  visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true },
   ],
   special: [
-    { id: 'welcome',     emoji: '🖐️', label: 'Bienvenida',         color: '#FF8A00', startTime: '08:00', duration: 15,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true },
-    { id: 'activity',    emoji: '🎨', label: 'Actividad principal', color: '#7C3AED', startTime: '08:15', duration: 90,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true, groupEventId: 'activity' },
-    { id: 'snack',       emoji: '🍎', label: 'Refrigerio',          color: '#28B54D', startTime: '10:00', duration: 20,  type: 'colectivo', auto: true,  needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true, groupEventId: 'snack' },
-    { id: 'playground',  emoji: '🌳', label: 'Recreo',              color: '#16A34A', startTime: '10:20', duration: 20,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true, groupEventId: 'playground' },
-    { id: 'activity2',   emoji: '🎭', label: 'Actividad 2',         color: '#EC4899', startTime: '10:40', duration: 60,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true, groupEventId: 'activity' },
-    { id: 'departure',   emoji: '👋', label: 'Salida',              color: '#EF4444', startTime: '16:00', duration: 30,  type: 'colectivo', auto: false, needsConfirm: true,  visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true },
+    { id: 'welcome',     emoji: 'ðŸ–ï¸', label: 'Bienvenida',         color: '#FF8A00', startTime: '08:00', duration: 15,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true },
+    { id: 'activity',    emoji: 'ðŸŽ¨', label: 'Actividad principal', color: '#7C3AED', startTime: '08:15', duration: 90,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true, groupEventId: 'activity' },
+    { id: 'snack',       emoji: 'ðŸŽ', label: 'Refrigerio',          color: '#28B54D', startTime: '10:00', duration: 20,  type: 'colectivo', auto: true,  needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true, groupEventId: 'snack' },
+    { id: 'playground',  emoji: 'ðŸŒ³', label: 'Recreo',              color: '#16A34A', startTime: '10:20', duration: 20,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true, groupEventId: 'playground' },
+    { id: 'activity2',   emoji: 'ðŸŽ­', label: 'Actividad 2',         color: '#EC4899', startTime: '10:40', duration: 60,  type: 'colectivo', auto: false, needsConfirm: false, visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true, groupEventId: 'activity' },
+    { id: 'departure',   emoji: 'ðŸ‘‹', label: 'Salida',              color: '#EF4444', startTime: '16:00', duration: 30,  type: 'colectivo', auto: false, needsConfirm: true,  visibleParents: true, visibleDirector: true, days: [1,2,3,4,5,6], active: true },
   ],
 };
 
-/** Eventos rápidos colectivos por nivel */
+/** Eventos rÃ¡pidos colectivos por nivel */
 const LEVEL_COLLECTIVE_QUICK = {
   infants:    [
-    { id: 'milk_gr',  emoji: '🍼', label: 'Biberón',      color: '#0B63C7', groupEventId: 'milk_gr',  type: '_group', eventType: 'milk',   active: true },
-    { id: 'poop_gr',  emoji: '💩', label: 'Popó',         color: '#FF8A00', groupEventId: 'poop_gr',  type: '_group', eventType: 'diaper', active: true },
-    { id: 'bathroom', emoji: '🧷', label: 'Cambio pañal', color: '#94A3B8', groupEventId: 'bathroom', type: '_group', eventType: 'diaper_change', active: true },
+    { id: 'milk_gr',  emoji: 'ðŸ¼', label: 'BiberÃ³n',      color: '#0B63C7', groupEventId: 'milk_gr',  type: '_group', eventType: 'milk',   active: true },
+    { id: 'poop_gr',  emoji: 'ðŸ’©', label: 'PopÃ³',         color: '#FF8A00', groupEventId: 'poop_gr',  type: '_group', eventType: 'diaper', active: true },
+    { id: 'bathroom', emoji: 'ðŸ§·', label: 'Cambio paÃ±al', color: '#94A3B8', groupEventId: 'bathroom', type: '_group', eventType: 'diaper_change', active: true },
   ],
   toddlers:   [
-    { id: 'bathroom', emoji: '🚽', label: 'Baño',         color: '#28B54D', groupEventId: 'bathroom', type: '_group', eventType: 'bath',   active: true },
-    { id: 'poop_gr',  emoji: '💩', label: 'Popó',         color: '#FF8A00', groupEventId: 'poop_gr',  type: '_group', eventType: 'diaper', active: true },
-    { id: 'milk_gr',  emoji: '🍼', label: 'Biberón',      color: '#0B63C7', groupEventId: 'milk_gr',  type: '_group', eventType: 'milk',   active: true },
+    { id: 'bathroom', emoji: 'ðŸš½', label: 'BaÃ±o',         color: '#28B54D', groupEventId: 'bathroom', type: '_group', eventType: 'bath',   active: true },
+    { id: 'poop_gr',  emoji: 'ðŸ’©', label: 'PopÃ³',         color: '#FF8A00', groupEventId: 'poop_gr',  type: '_group', eventType: 'diaper', active: true },
+    { id: 'milk_gr',  emoji: 'ðŸ¼', label: 'BiberÃ³n',      color: '#0B63C7', groupEventId: 'milk_gr',  type: '_group', eventType: 'milk',   active: true },
   ],
   preschool:  [
-    { id: 'bathroom', emoji: '🚽', label: 'Baño',         color: '#28B54D', groupEventId: 'bathroom', type: '_group', eventType: 'bath',   active: true },
-    { id: 'poop_gr',  emoji: '💩', label: 'Popó',         color: '#FF8A00', groupEventId: 'poop_gr',  type: '_group', eventType: 'diaper', active: true },
-    { id: 'milk_gr',  emoji: '🍼', label: 'Biberón',      color: '#0B63C7', groupEventId: 'milk_gr',  type: '_group', eventType: 'milk',   active: true },
+    { id: 'bathroom', emoji: 'ðŸš½', label: 'BaÃ±o',         color: '#28B54D', groupEventId: 'bathroom', type: '_group', eventType: 'bath',   active: true },
+    { id: 'poop_gr',  emoji: 'ðŸ’©', label: 'PopÃ³',         color: '#FF8A00', groupEventId: 'poop_gr',  type: '_group', eventType: 'diaper', active: true },
+    { id: 'milk_gr',  emoji: 'ðŸ¼', label: 'BiberÃ³n',      color: '#0B63C7', groupEventId: 'milk_gr',  type: '_group', eventType: 'milk',   active: true },
   ],
   preprimary: [
-    { id: 'bathroom', emoji: '🚽', label: 'Baño',         color: '#28B54D', groupEventId: 'bathroom', type: '_group', eventType: 'bath',   active: true },
-    { id: 'poop_gr',  emoji: '💩', label: 'Popó',         color: '#FF8A00', groupEventId: 'poop_gr',  type: '_group', eventType: 'diaper', active: true },
+    { id: 'bathroom', emoji: 'ðŸš½', label: 'BaÃ±o',         color: '#28B54D', groupEventId: 'bathroom', type: '_group', eventType: 'bath',   active: true },
+    { id: 'poop_gr',  emoji: 'ðŸ’©', label: 'PopÃ³',         color: '#FF8A00', groupEventId: 'poop_gr',  type: '_group', eventType: 'diaper', active: true },
   ],
   primary:    [
-    { id: 'bathroom', emoji: '🚽', label: 'Baño',         color: '#28B54D', groupEventId: 'bathroom', type: '_group', eventType: 'bath',   active: true },
+    { id: 'bathroom', emoji: 'ðŸš½', label: 'BaÃ±o',         color: '#28B54D', groupEventId: 'bathroom', type: '_group', eventType: 'bath',   active: true },
   ],
   special:    [
-    { id: 'bathroom', emoji: '🚽', label: 'Baño',         color: '#28B54D', groupEventId: 'bathroom', type: '_group', eventType: 'bath',   active: true },
+    { id: 'bathroom', emoji: 'ðŸš½', label: 'BaÃ±o',         color: '#28B54D', groupEventId: 'bathroom', type: '_group', eventType: 'bath',   active: true },
   ],
 };
 
@@ -253,21 +257,21 @@ function _getLevelDefaultSchedule() {
   return LEVEL_DEFAULT_SCHEDULE[cat] || DEFAULT_SCHEDULE;
 }
 
-/** Devuelve los eventos rápidos colectivos para el nivel actual */
+/** Devuelve los eventos rÃ¡pidos colectivos para el nivel actual */
 function _getLevelCollectiveQuick() {
   const cat = _getLevelCategory();
   return LEVEL_COLLECTIVE_QUICK[cat] || LEVEL_COLLECTIVE_QUICK.preschool;
 }
 
-// ───────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // REGLAS DEL SISTEMA DE RUTINA PARA TODO EL AULA (10 reglas)
 // Se aplican en initRoutine(), routineQuickGroup() y markWholeClassRoutine().
-// ───────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const ROUTINE_RULES = [
   { n: 1,  rule: 'Solo se marcan los alumnos PRESENTES hoy: la maestra pasa asistencia manual o los padres entran por QR en attendance-live.html.' },
-  { n: 2,  rule: 'Si aún no se tomó asistencia del día, la rutina NO marca a nadie: primero se pasa lista.' },
-  { n: 3,  rule: 'Un mismo evento no se registra dos veces al mismo alumno en el mismo día.' },
-  { n: 4,  rule: 'Cada acción se registra con fecha, hora y un identificador de ocurrencia único.' },
+  { n: 2,  rule: 'Si aÃºn no se tomÃ³ asistencia del dÃ­a, la rutina NO marca a nadie: primero se pasa lista.' },
+  { n: 3,  rule: 'Un mismo evento no se registra dos veces al mismo alumno en el mismo dÃ­a.' },
+  { n: 4,  rule: 'Cada acciÃ³n se registra con fecha, hora y un identificador de ocurrencia Ãºnico.' },
   { n: 5,  rule: 'Las acciones del aula se reflejan en el reporte diario de los padres en tiempo real.' },
   { n: 6,  rule: 'Solo se permiten marcar rutinas dentro del horario del aula (05:00 a 22:00).' },
   { n: 7,  rule: 'Las acciones masivas se confirman antes de marcar para evitar toques accidentales.' },
@@ -276,73 +280,73 @@ const ROUTINE_RULES = [
   { n: 10, rule: 'Todas las acciones quedan auditadas con origen "colectivo" para trazabilidad.' },
 ];
 
-// ───────────────────────────────────────────────────────────────────────────────
-// CATÁLOGO DE EVENTOS — biblioteca ampliada que la maestra puede agregar a su
-// cronología. Agrupados por categoría para mostrarse en el modal de Configurar
-// Horario. groupEventId marca los eventos que se registran como acción colectiva.
-// ───────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// CATÃLOGO DE EVENTOS â€” biblioteca ampliada que la maestra puede agregar a su
+// cronologÃ­a. Agrupados por categorÃ­a para mostrarse en el modal de Configurar
+// Horario. groupEventId marca los eventos que se registran como acciÃ³n colectiva.
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const SCHEDULE_CATALOG = {
-  base: { label: '📌 Rutina base', color: '#0B63C7', items: [
-    { id: 'welcome',       emoji: '🖐️', label: 'Bienvenida',        color: '#FF8A00', duration: 15 },
-    { id: 'roll_call',     emoji: '📋', label: 'Pase de Lista',     color: '#0B63C7', duration: 15 },
-    { id: 'departure',     emoji: '👋', label: 'Entrega de niños',  color: '#EF4444', duration: 60 },
-    { id: 'sleep_start',   emoji: '😴', label: 'Siesta',            color: '#8B5CF6', duration: 120, groupEventId: 'sleep_start' },
-    { id: 'sleep_end',     emoji: '😊', label: 'Despertar',         color: '#FFD43B', duration: 15,  groupEventId: 'sleep_end' }
+  base: { label: 'ðŸ“Œ Rutina base', color: '#0B63C7', items: [
+    { id: 'welcome',       emoji: 'ðŸ–ï¸', label: 'Bienvenida',        color: '#FF8A00', duration: 15 },
+    { id: 'roll_call',     emoji: 'ðŸ“‹', label: 'Pase de Lista',     color: '#0B63C7', duration: 15 },
+    { id: 'departure',     emoji: 'ðŸ‘‹', label: 'Entrega de niÃ±os',  color: '#EF4444', duration: 60 },
+    { id: 'sleep_start',   emoji: 'ðŸ˜´', label: 'Siesta',            color: '#8B5CF6', duration: 120, groupEventId: 'sleep_start' },
+    { id: 'sleep_end',     emoji: 'ðŸ˜Š', label: 'Despertar',         color: '#FFD43B', duration: 15,  groupEventId: 'sleep_end' }
   ]},
-  hygiene: { label: '🧼 Higiene y cuidado', color: '#0EA5E9', items: [
-    { id: 'bath_full',      emoji: '🛁', label: 'Baño completo',     color: '#0EA5E9', duration: 30, groupEventId: 'bath' },
-    { id: 'diaper_change',  emoji: '🧷', label: 'Cambio de pañal',   color: '#94A3B8', duration: 15, groupEventId: 'diaper_change' },
-    { id: 'handwash',       emoji: '🧼', label: 'Lavado de manos',   color: '#0B63C7', duration: 10, groupEventId: 'handwash' },
-    { id: 'toothbrush',     emoji: '🪥', label: 'Cepillado',         color: '#06B6D4', duration: 15, groupEventId: 'toothbrush' }
+  hygiene: { label: 'ðŸ§¼ Higiene y cuidado', color: '#0EA5E9', items: [
+    { id: 'bath_full',      emoji: 'ðŸ›', label: 'BaÃ±o completo',     color: '#0EA5E9', duration: 30, groupEventId: 'bath' },
+    { id: 'diaper_change',  emoji: 'ðŸ§·', label: 'Cambio de paÃ±al',   color: '#94A3B8', duration: 15, groupEventId: 'diaper_change' },
+    { id: 'handwash',       emoji: 'ðŸ§¼', label: 'Lavado de manos',   color: '#0B63C7', duration: 10, groupEventId: 'handwash' },
+    { id: 'toothbrush',     emoji: 'ðŸª¥', label: 'Cepillado',         color: '#06B6D4', duration: 15, groupEventId: 'toothbrush' }
   ]},
-  food: { label: '🍎 Alimentación', color: '#FF8A00', items: [
-    { id: 'breakfast',     emoji: '🍞', label: 'Desayuno',           color: '#FF8A00', duration: 30, groupEventId: 'breakfast' },
-    { id: 'papilla',       emoji: '🥣', label: 'Papilla',            color: '#F59E0B', duration: 20, groupEventId: 'snack' },
-    { id: 'hydration',     emoji: '💧', label: 'Hidratación',        color: '#0B63C7', duration: 15, groupEventId: 'water' },
-    { id: 'fruit',         emoji: '🍎', label: 'Fruta',              color: '#28B54D', duration: 20, groupEventId: 'snack' },
-    { id: 'snack',         emoji: '🍿', label: 'Refrigerio',         color: '#28B54D', duration: 30, groupEventId: 'snack' },
-    { id: 'lunch',         emoji: '🍽️', label: 'Almuerzo',           color: '#28B54D', duration: 30, groupEventId: 'lunch' },
-    { id: 'snack2',        emoji: '🍪', label: 'Merienda',           color: '#F59E0B', duration: 30, groupEventId: 'snack' }
+  food: { label: 'ðŸŽ AlimentaciÃ³n', color: '#FF8A00', items: [
+    { id: 'breakfast',     emoji: 'ðŸž', label: 'Desayuno',           color: '#FF8A00', duration: 30, groupEventId: 'breakfast' },
+    { id: 'papilla',       emoji: 'ðŸ¥£', label: 'Papilla',            color: '#F59E0B', duration: 20, groupEventId: 'snack' },
+    { id: 'hydration',     emoji: 'ðŸ’§', label: 'HidrataciÃ³n',        color: '#0B63C7', duration: 15, groupEventId: 'water' },
+    { id: 'fruit',         emoji: 'ðŸŽ', label: 'Fruta',              color: '#28B54D', duration: 20, groupEventId: 'snack' },
+    { id: 'snack',         emoji: 'ðŸ¿', label: 'Refrigerio',         color: '#28B54D', duration: 30, groupEventId: 'snack' },
+    { id: 'lunch',         emoji: 'ðŸ½ï¸', label: 'Almuerzo',           color: '#28B54D', duration: 30, groupEventId: 'lunch' },
+    { id: 'snack2',        emoji: 'ðŸª', label: 'Merienda',           color: '#F59E0B', duration: 30, groupEventId: 'snack' }
   ]},
-  stimulation: { label: '🧸 Estimulación y juego', color: '#7C3AED', items: [
-    { id: 'early_stimulation', emoji: '🧸', label: 'Estimulación temprana', color: '#7C3AED', duration: 30 },
-    { id: 'crawling',          emoji: '👶', label: 'Gateo',                   color: '#EC4899', duration: 25 },
-    { id: 'sensorial_games',   emoji: '🪀', label: 'Juegos sensoriales',      color: '#6366F1', duration: 30 },
-    { id: 'symbolic_play',     emoji: '🧸', label: 'Juego simbólico',         color: '#D946EF', duration: 30 },
-    { id: 'blocks',            emoji: '🚂', label: 'Bloques',                 color: '#F97316', duration: 25 },
-    { id: 'group_game',        emoji: '🪅', label: 'Juego grupal',            color: '#F59E0B', duration: 30 }
+  stimulation: { label: 'ðŸ§¸ EstimulaciÃ³n y juego', color: '#7C3AED', items: [
+    { id: 'early_stimulation', emoji: 'ðŸ§¸', label: 'EstimulaciÃ³n temprana', color: '#7C3AED', duration: 30 },
+    { id: 'crawling',          emoji: 'ðŸ‘¶', label: 'Gateo',                   color: '#EC4899', duration: 25 },
+    { id: 'sensorial_games',   emoji: 'ðŸª€', label: 'Juegos sensoriales',      color: '#6366F1', duration: 30 },
+    { id: 'symbolic_play',     emoji: 'ðŸ§¸', label: 'Juego simbÃ³lico',         color: '#D946EF', duration: 30 },
+    { id: 'blocks',            emoji: 'ðŸš‚', label: 'Bloques',                 color: '#F97316', duration: 25 },
+    { id: 'group_game',        emoji: 'ðŸª…', label: 'Juego grupal',            color: '#F59E0B', duration: 30 }
   ]},
-  socioemotional: { label: '🤗 Social-emocional', color: '#EF4444', items: [
-    { id: 'group_hug',         emoji: '🤗', label: 'Abrazo grupal',          color: '#EF4444', duration: 10 },
-    { id: 'emotional_ed',      emoji: '❤️', label: 'Educación emocional',    color: '#F43F5E', duration: 20 },
-    { id: 'identify_emotions', emoji: '😀', label: 'Identificar emociones',  color: '#FBBF24', duration: 20 }
+  socioemotional: { label: 'ðŸ¤— Social-emocional', color: '#EF4444', items: [
+    { id: 'group_hug',         emoji: 'ðŸ¤—', label: 'Abrazo grupal',          color: '#EF4444', duration: 10 },
+    { id: 'emotional_ed',      emoji: 'â¤ï¸', label: 'EducaciÃ³n emocional',    color: '#F43F5E', duration: 20 },
+    { id: 'identify_emotions', emoji: 'ðŸ˜€', label: 'Identificar emociones',  color: '#FBBF24', duration: 20 }
   ]},
-  motor: { label: '🤸 Motricidad', color: '#16A34A', items: [
-    { id: 'ball_play',    emoji: '🏀', label: 'Juego con pelota', color: '#16A34A', duration: 30 },
-    { id: 'coordination', emoji: '🎯', label: 'Coordinación',      color: '#0B63C7', duration: 30 },
-    { id: 'exercises',    emoji: '🏃', label: 'Ejercicios',        color: '#22C55E', duration: 20 }
+  motor: { label: 'ðŸ¤¸ Motricidad', color: '#16A34A', items: [
+    { id: 'ball_play',    emoji: 'ðŸ€', label: 'Juego con pelota', color: '#16A34A', duration: 30 },
+    { id: 'coordination', emoji: 'ðŸŽ¯', label: 'CoordinaciÃ³n',      color: '#0B63C7', duration: 30 },
+    { id: 'exercises',    emoji: 'ðŸƒ', label: 'Ejercicios',        color: '#22C55E', duration: 20 }
   ]},
-  cognitive: { label: '🧠 Cognitivo y aprendizaje', color: '#8B5CF6', items: [
-    { id: 'cognitive_stim',  emoji: '🧠', label: 'Estimulación cognitiva', color: '#8B5CF6', duration: 30 },
-    { id: 'experiment',      emoji: '🔬', label: 'Experimento',            color: '#6366F1', duration: 30 },
-    { id: 'oral_expression', emoji: '🎤', label: 'Expresión oral',         color: '#EC4899', duration: 20 },
-    { id: 'activity',        emoji: '🎨', label: 'Actividad educativa',    color: '#7C3AED', duration: 45, groupEventId: 'activity' },
-    { id: 'sensorial',       emoji: '🔬', label: 'Actividad sensorial',    color: '#6366F1', duration: 45 }
+  cognitive: { label: 'ðŸ§  Cognitivo y aprendizaje', color: '#8B5CF6', items: [
+    { id: 'cognitive_stim',  emoji: 'ðŸ§ ', label: 'EstimulaciÃ³n cognitiva', color: '#8B5CF6', duration: 30 },
+    { id: 'experiment',      emoji: 'ðŸ”¬', label: 'Experimento',            color: '#6366F1', duration: 30 },
+    { id: 'oral_expression', emoji: 'ðŸŽ¤', label: 'ExpresiÃ³n oral',         color: '#EC4899', duration: 20 },
+    { id: 'activity',        emoji: 'ðŸŽ¨', label: 'Actividad educativa',    color: '#7C3AED', duration: 45, groupEventId: 'activity' },
+    { id: 'sensorial',       emoji: 'ðŸ”¬', label: 'Actividad sensorial',    color: '#6366F1', duration: 45 }
   ]},
-  art: { label: '🎨 Arte y creatividad', color: '#EC4899', items: [
-    { id: 'coloring', emoji: '🖍', label: 'Colorear',  color: '#F472B6', duration: 25 },
-    { id: 'art',      emoji: '🎨', label: 'Arte',      color: '#EC4899', duration: 30 },
-    { id: 'music',    emoji: '🎵', label: 'Música',    color: '#8B5CF6', duration: 25 }
+  art: { label: 'ðŸŽ¨ Arte y creatividad', color: '#EC4899', items: [
+    { id: 'coloring', emoji: 'ðŸ–', label: 'Colorear',  color: '#F472B6', duration: 25 },
+    { id: 'art',      emoji: 'ðŸŽ¨', label: 'Arte',      color: '#EC4899', duration: 30 },
+    { id: 'music',    emoji: 'ðŸŽµ', label: 'MÃºsica',    color: '#8B5CF6', duration: 25 }
   ]},
-  language: { label: '📖 Lenguaje y lectura', color: '#2563EB', items: [
-    { id: 'reading',      emoji: '📖', label: 'Lectura',       color: '#0B63C7', duration: 20 },
-    { id: 'storytelling', emoji: '📚', label: 'Cuentacuentos', color: '#2563EB', duration: 25 }
+  language: { label: 'ðŸ“– Lenguaje y lectura', color: '#2563EB', items: [
+    { id: 'reading',      emoji: 'ðŸ“–', label: 'Lectura',       color: '#0B63C7', duration: 20 },
+    { id: 'storytelling', emoji: 'ðŸ“š', label: 'Cuentacuentos', color: '#2563EB', duration: 25 }
   ]},
-  recreation: { label: '⚽ Recreación y deportes', color: '#16A34A', items: [
-    { id: 'recreational_games', emoji: '🪁', label: 'Juegos recreativos', color: '#F59E0B', duration: 30 },
-    { id: 'sports',             emoji: '⚽', label: 'Deportes',           color: '#16A34A', duration: 30 },
-    { id: 'playground',         emoji: '🌳', label: 'Salida al Patio',   color: '#16A34A', duration: 30, groupEventId: 'playground' },
-    { id: 'free_play',          emoji: '🎮', label: 'Juego libre',        color: '#EC4899', duration: 30 }
+  recreation: { label: 'âš½ RecreaciÃ³n y deportes', color: '#16A34A', items: [
+    { id: 'recreational_games', emoji: 'ðŸª', label: 'Juegos recreativos', color: '#F59E0B', duration: 30 },
+    { id: 'sports',             emoji: 'âš½', label: 'Deportes',           color: '#16A34A', duration: 30 },
+    { id: 'playground',         emoji: 'ðŸŒ³', label: 'Salida al Patio',   color: '#16A34A', duration: 30, groupEventId: 'playground' },
+    { id: 'free_play',          emoji: 'ðŸŽ®', label: 'Juego libre',        color: '#EC4899', duration: 30 }
   ]}
 };
 
@@ -352,170 +356,170 @@ const _CATALOG_BY_ID = (() => {
   return map;
 })();
 
-// ───────────────────────────────────────────────────────────────────────────────
-// CATÁLOGO DE RUTINAS PARA TODO EL AULA (120+ rutinas bien distribuidas)
-// Cada chip de la sección "Rutinas del Aula" marca la rutina a TODOS los
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// CATÃLOGO DE RUTINAS PARA TODO EL AULA (120+ rutinas bien distribuidas)
+// Cada chip de la secciÃ³n "Rutinas del Aula" marca la rutina a TODOS los
 // alumnos presentes en un solo toque y cumple las 10 reglas anteriores.
-// ───────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const WHOLE_CLASS_ROUTINES = [
-  // 🧼 Higiene y cuidado personal
-  { id: 'wh_manos',      emoji: '🧼', label: 'Lavado de manos',            cat: 'Higiene' },
-  { id: 'wh_cara',       emoji: '🚿', label: 'Lavado de cara',             cat: 'Higiene' },
-  { id: 'wh_dientes',    emoji: '🪥', label: 'Cepillado dental',           cat: 'Higiene' },
-  { id: 'wh_bano',       emoji: '🛁', label: 'Baño completo',              cat: 'Higiene' },
-  { id: 'wh_esponja',    emoji: '🫧', label: 'Baño de esponja',            cat: 'Higiene' },
-  { id: 'wh_panal',      emoji: '🧷', label: 'Cambio de pañal',            cat: 'Higiene' },
-  { id: 'wh_bano_uso',   emoji: '🚽', label: 'Uso del baño',               cat: 'Higiene' },
-  { id: 'wh_peinado',    emoji: '💇', label: 'Peinado',                    cat: 'Higiene' },
-  { id: 'wh_pies',       emoji: '🦶', label: 'Lavado de pies',             cat: 'Higiene' },
-  { id: 'wh_unias',      emoji: '✂️', label: 'Higiene de uñas',            cat: 'Higiene' },
-  { id: 'wh_nariz',      emoji: '🤧', label: 'Limpiar la nariz',           cat: 'Higiene' },
-  { id: 'wh_manos_comer',emoji: '🧼', label: 'Lavado antes de comer',      cat: 'Higiene' },
-  { id: 'wh_dientes_pm', emoji: '🪥', label: 'Cepillado tras comer',       cat: 'Higiene' },
-  { id: 'wh_rostro',     emoji: '🧴', label: 'Losión y protección',        cat: 'Higiene' },
+  // ðŸ§¼ Higiene y cuidado personal
+  { id: 'wh_manos',      emoji: 'ðŸ§¼', label: 'Lavado de manos',            cat: 'Higiene' },
+  { id: 'wh_cara',       emoji: 'ðŸš¿', label: 'Lavado de cara',             cat: 'Higiene' },
+  { id: 'wh_dientes',    emoji: 'ðŸª¥', label: 'Cepillado dental',           cat: 'Higiene' },
+  { id: 'wh_bano',       emoji: 'ðŸ›', label: 'BaÃ±o completo',              cat: 'Higiene' },
+  { id: 'wh_esponja',    emoji: 'ðŸ«§', label: 'BaÃ±o de esponja',            cat: 'Higiene' },
+  { id: 'wh_panal',      emoji: 'ðŸ§·', label: 'Cambio de paÃ±al',            cat: 'Higiene' },
+  { id: 'wh_bano_uso',   emoji: 'ðŸš½', label: 'Uso del baÃ±o',               cat: 'Higiene' },
+  { id: 'wh_peinado',    emoji: 'ðŸ’‡', label: 'Peinado',                    cat: 'Higiene' },
+  { id: 'wh_pies',       emoji: 'ðŸ¦¶', label: 'Lavado de pies',             cat: 'Higiene' },
+  { id: 'wh_unias',      emoji: 'âœ‚ï¸', label: 'Higiene de uÃ±as',            cat: 'Higiene' },
+  { id: 'wh_nariz',      emoji: 'ðŸ¤§', label: 'Limpiar la nariz',           cat: 'Higiene' },
+  { id: 'wh_manos_comer',emoji: 'ðŸ§¼', label: 'Lavado antes de comer',      cat: 'Higiene' },
+  { id: 'wh_dientes_pm', emoji: 'ðŸª¥', label: 'Cepillado tras comer',       cat: 'Higiene' },
+  { id: 'wh_rostro',     emoji: 'ðŸ§´', label: 'LosiÃ³n y protecciÃ³n',        cat: 'Higiene' },
 
-  // 🍎 Alimentación
-  { id: 'al_desayuno',   emoji: '🍞', label: 'Desayuno',                   cat: 'Alimentación' },
-  { id: 'al_almuerzo',   emoji: '🍽️', label: 'Almuerzo',                  cat: 'Alimentación' },
-  { id: 'al_merienda',   emoji: '🍪', label: 'Merienda',                   cat: 'Alimentación' },
-  { id: 'al_refrigerio', emoji: '🍎', label: 'Refrigerio',                 cat: 'Alimentación' },
-  { id: 'al_hidratacion',emoji: '💧', label: 'Hidratación',                cat: 'Alimentación' },
-  { id: 'al_agua',       emoji: '🥤', label: 'Agua',                       cat: 'Alimentación' },
-  { id: 'al_fruta',      emoji: '🍌', label: 'Fruta',                      cat: 'Alimentación' },
-  { id: 'al_papilla',    emoji: '🥣', label: 'Papilla',                    cat: 'Alimentación' },
-  { id: 'al_sopa',       emoji: '🍲', label: 'Sopa',                       cat: 'Alimentación' },
-  { id: 'al_verduras',   emoji: '🥦', label: 'Verduras',                   cat: 'Alimentación' },
-  { id: 'al_proteina',   emoji: '🥚', label: 'Proteína',                   cat: 'Alimentación' },
-  { id: 'al_leche',      emoji: '🥛', label: 'Leche',                      cat: 'Alimentación' },
-  { id: 'al_biberon',    emoji: '🍼', label: 'Biberón',                    cat: 'Alimentación' },
-  { id: 'al_postre',     emoji: '🍮', label: 'Postre',                     cat: 'Alimentación' },
+  // ðŸŽ AlimentaciÃ³n
+  { id: 'al_desayuno',   emoji: 'ðŸž', label: 'Desayuno',                   cat: 'AlimentaciÃ³n' },
+  { id: 'al_almuerzo',   emoji: 'ðŸ½ï¸', label: 'Almuerzo',                  cat: 'AlimentaciÃ³n' },
+  { id: 'al_merienda',   emoji: 'ðŸª', label: 'Merienda',                   cat: 'AlimentaciÃ³n' },
+  { id: 'al_refrigerio', emoji: 'ðŸŽ', label: 'Refrigerio',                 cat: 'AlimentaciÃ³n' },
+  { id: 'al_hidratacion',emoji: 'ðŸ’§', label: 'HidrataciÃ³n',                cat: 'AlimentaciÃ³n' },
+  { id: 'al_agua',       emoji: 'ðŸ¥¤', label: 'Agua',                       cat: 'AlimentaciÃ³n' },
+  { id: 'al_fruta',      emoji: 'ðŸŒ', label: 'Fruta',                      cat: 'AlimentaciÃ³n' },
+  { id: 'al_papilla',    emoji: 'ðŸ¥£', label: 'Papilla',                    cat: 'AlimentaciÃ³n' },
+  { id: 'al_sopa',       emoji: 'ðŸ²', label: 'Sopa',                       cat: 'AlimentaciÃ³n' },
+  { id: 'al_verduras',   emoji: 'ðŸ¥¦', label: 'Verduras',                   cat: 'AlimentaciÃ³n' },
+  { id: 'al_proteina',   emoji: 'ðŸ¥š', label: 'ProteÃ­na',                   cat: 'AlimentaciÃ³n' },
+  { id: 'al_leche',      emoji: 'ðŸ¥›', label: 'Leche',                      cat: 'AlimentaciÃ³n' },
+  { id: 'al_biberon',    emoji: 'ðŸ¼', label: 'BiberÃ³n',                    cat: 'AlimentaciÃ³n' },
+  { id: 'al_postre',     emoji: 'ðŸ®', label: 'Postre',                     cat: 'AlimentaciÃ³n' },
 
-  // 🎨 Actividades educativas
-  { id: 'ac_cuento',     emoji: '📖', label: 'Lectura de cuento',          cat: 'Actividades' },
-  { id: 'ac_cantos',     emoji: '🎶', label: 'Cantos y rimas',             cat: 'Actividades' },
-  { id: 'ac_colores',    emoji: '🎨', label: 'Colores',                    cat: 'Actividades' },
-  { id: 'ac_numeros',    emoji: '🔢', label: 'Números',                    cat: 'Actividades' },
-  { id: 'ac_letras',     emoji: '🔤', label: 'Letras',                     cat: 'Actividades' },
-  { id: 'ac_manualidad', emoji: '🧶', label: 'Manualidad',                 cat: 'Actividades' },
-  { id: 'ac_pintura',    emoji: '🖌️', label: 'Pintura',                    cat: 'Actividades' },
-  { id: 'ac_plastilina', emoji: '🧱', label: 'Plastilina',                 cat: 'Actividades' },
-  { id: 'ac_puzzle',     emoji: '🧩', label: 'Rompecabezas',               cat: 'Actividades' },
-  { id: 'ac_bloques',    emoji: '🧊', label: 'Bloques',                    cat: 'Actividades' },
-  { id: 'ac_sensorial',  emoji: '🔬', label: 'Experimento sensorial',      cat: 'Actividades' },
-  { id: 'ac_clasificar', emoji: '🗂️', label: 'Clasificación',              cat: 'Actividades' },
-  { id: 'ac_formas',     emoji: '⬛', label: 'Figuras geométricas',         cat: 'Actividades' },
-  { id: 'ac_seriacion',  emoji: '🔗', label: 'Seriación',                  cat: 'Actividades' },
+  // ðŸŽ¨ Actividades educativas
+  { id: 'ac_cuento',     emoji: 'ðŸ“–', label: 'Lectura de cuento',          cat: 'Actividades' },
+  { id: 'ac_cantos',     emoji: 'ðŸŽ¶', label: 'Cantos y rimas',             cat: 'Actividades' },
+  { id: 'ac_colores',    emoji: 'ðŸŽ¨', label: 'Colores',                    cat: 'Actividades' },
+  { id: 'ac_numeros',    emoji: 'ðŸ”¢', label: 'NÃºmeros',                    cat: 'Actividades' },
+  { id: 'ac_letras',     emoji: 'ðŸ”¤', label: 'Letras',                     cat: 'Actividades' },
+  { id: 'ac_manualidad', emoji: 'ðŸ§¶', label: 'Manualidad',                 cat: 'Actividades' },
+  { id: 'ac_pintura',    emoji: 'ðŸ–Œï¸', label: 'Pintura',                    cat: 'Actividades' },
+  { id: 'ac_plastilina', emoji: 'ðŸ§±', label: 'Plastilina',                 cat: 'Actividades' },
+  { id: 'ac_puzzle',     emoji: 'ðŸ§©', label: 'Rompecabezas',               cat: 'Actividades' },
+  { id: 'ac_bloques',    emoji: 'ðŸ§Š', label: 'Bloques',                    cat: 'Actividades' },
+  { id: 'ac_sensorial',  emoji: 'ðŸ”¬', label: 'Experimento sensorial',      cat: 'Actividades' },
+  { id: 'ac_clasificar', emoji: 'ðŸ—‚ï¸', label: 'ClasificaciÃ³n',              cat: 'Actividades' },
+  { id: 'ac_formas',     emoji: 'â¬›', label: 'Figuras geomÃ©tricas',         cat: 'Actividades' },
+  { id: 'ac_seriacion',  emoji: 'ðŸ”—', label: 'SeriaciÃ³n',                  cat: 'Actividades' },
 
-  // 🎮 Juego
-  { id: 'ju_libre',      emoji: '🎮', label: 'Juego libre',                cat: 'Juego' },
-  { id: 'ju_dirigido',   emoji: '🎯', label: 'Juego dirigido',             cat: 'Juego' },
-  { id: 'ju_roles',      emoji: '🦸', label: 'Juego de roles',             cat: 'Juego' },
-  { id: 'ju_munecas',    emoji: '🪆', label: 'Muñecas',                    cat: 'Juego' },
-  { id: 'ju_carritos',   emoji: '🚗', label: 'Carritos',                   cat: 'Juego' },
-  { id: 'ju_arena',      emoji: '⏳', label: 'Arenero',                    cat: 'Juego' },
-  { id: 'ju_cocina',     emoji: '🍳', label: 'Cocina de juguete',          cat: 'Juego' },
-  { id: 'ju_pelotas',    emoji: '⚽', label: 'Pelotas',                    cat: 'Juego' },
-  { id: 'ju_escondite',  emoji: '🙈', label: 'Escondite',                  cat: 'Juego' },
-  { id: 'ju_casita',     emoji: '🏠', label: 'Casita de juego',            cat: 'Juego' },
-  { id: 'ju_piso_puzzle',emoji: '🧩', label: 'Rompecabezas de piso',       cat: 'Juego' },
-  { id: 'ju_dominos',    emoji: '🁢', label: 'Dominó gigante',              cat: 'Juego' },
+  // ðŸŽ® Juego
+  { id: 'ju_libre',      emoji: 'ðŸŽ®', label: 'Juego libre',                cat: 'Juego' },
+  { id: 'ju_dirigido',   emoji: 'ðŸŽ¯', label: 'Juego dirigido',             cat: 'Juego' },
+  { id: 'ju_roles',      emoji: 'ðŸ¦¸', label: 'Juego de roles',             cat: 'Juego' },
+  { id: 'ju_munecas',    emoji: 'ðŸª†', label: 'MuÃ±ecas',                    cat: 'Juego' },
+  { id: 'ju_carritos',   emoji: 'ðŸš—', label: 'Carritos',                   cat: 'Juego' },
+  { id: 'ju_arena',      emoji: 'â³', label: 'Arenero',                    cat: 'Juego' },
+  { id: 'ju_cocina',     emoji: 'ðŸ³', label: 'Cocina de juguete',          cat: 'Juego' },
+  { id: 'ju_pelotas',    emoji: 'âš½', label: 'Pelotas',                    cat: 'Juego' },
+  { id: 'ju_escondite',  emoji: 'ðŸ™ˆ', label: 'Escondite',                  cat: 'Juego' },
+  { id: 'ju_casita',     emoji: 'ðŸ ', label: 'Casita de juego',            cat: 'Juego' },
+  { id: 'ju_piso_puzzle',emoji: 'ðŸ§©', label: 'Rompecabezas de piso',       cat: 'Juego' },
+  { id: 'ju_dominos',    emoji: 'ðŸ¢', label: 'DominÃ³ gigante',              cat: 'Juego' },
 
-  // 🤸 Motricidad
-  { id: 'mo_ejercicios', emoji: '🤸', label: 'Ejercicios matutinos',        cat: 'Motricidad' },
-  { id: 'mo_marcha',     emoji: '🚶', label: 'Marcha',                     cat: 'Motricidad' },
-  { id: 'mo_correr',     emoji: '🏃', label: 'Correr',                     cat: 'Motricidad' },
-  { id: 'mo_saltar',     emoji: '🦘', label: 'Saltar la cuerda',           cat: 'Motricidad' },
-  { id: 'mo_baile',      emoji: '💃', label: 'Baile',                      cat: 'Motricidad' },
-  { id: 'mo_yoga',       emoji: '🧘', label: 'Yoga infantil',              cat: 'Motricidad' },
-  { id: 'mo_equilibrio', emoji: '⚖️', label: 'Equilibrio',                 cat: 'Motricidad' },
-  { id: 'mo_gateo',      emoji: '🐣', label: 'Gateo',                      cat: 'Motricidad' },
-  { id: 'mo_lanzar',     emoji: '🎾', label: 'Lanzar pelota',              cat: 'Motricidad' },
-  { id: 'mo_circuito',   emoji: '🏁', label: 'Circuito motriz',            cat: 'Motricidad' },
-  { id: 'mo_escalar',    emoji: '🧗', label: 'Escalada',                   cat: 'Motricidad' },
-  { id: 'mo_rodar',      emoji: '🛞', label: 'Rodar en colchoneta',        cat: 'Motricidad' },
+  // ðŸ¤¸ Motricidad
+  { id: 'mo_ejercicios', emoji: 'ðŸ¤¸', label: 'Ejercicios matutinos',        cat: 'Motricidad' },
+  { id: 'mo_marcha',     emoji: 'ðŸš¶', label: 'Marcha',                     cat: 'Motricidad' },
+  { id: 'mo_correr',     emoji: 'ðŸƒ', label: 'Correr',                     cat: 'Motricidad' },
+  { id: 'mo_saltar',     emoji: 'ðŸ¦˜', label: 'Saltar la cuerda',           cat: 'Motricidad' },
+  { id: 'mo_baile',      emoji: 'ðŸ’ƒ', label: 'Baile',                      cat: 'Motricidad' },
+  { id: 'mo_yoga',       emoji: 'ðŸ§˜', label: 'Yoga infantil',              cat: 'Motricidad' },
+  { id: 'mo_equilibrio', emoji: 'âš–ï¸', label: 'Equilibrio',                 cat: 'Motricidad' },
+  { id: 'mo_gateo',      emoji: 'ðŸ£', label: 'Gateo',                      cat: 'Motricidad' },
+  { id: 'mo_lanzar',     emoji: 'ðŸŽ¾', label: 'Lanzar pelota',              cat: 'Motricidad' },
+  { id: 'mo_circuito',   emoji: 'ðŸ', label: 'Circuito motriz',            cat: 'Motricidad' },
+  { id: 'mo_escalar',    emoji: 'ðŸ§—', label: 'Escalada',                   cat: 'Motricidad' },
+  { id: 'mo_rodar',      emoji: 'ðŸ›ž', label: 'Rodar en colchoneta',        cat: 'Motricidad' },
 
-  // 😴 Descanso
-  { id: 'de_preparar',   emoji: '🛏️', label: 'Preparar la siesta',         cat: 'Descanso' },
-  { id: 'de_siesta',     emoji: '😴', label: 'Siesta',                     cat: 'Descanso' },
-  { id: 'de_despertar',  emoji: '😊', label: 'Despertar',                  cat: 'Descanso' },
-  { id: 'de_relajar',    emoji: '🌿', label: 'Relajación',                 cat: 'Descanso' },
-  { id: 'de_masaje',     emoji: '🤲', label: 'Masaje',                     cat: 'Descanso' },
-  { id: 'de_silencio',   emoji: '🤫', label: 'Momento tranquilo',          cat: 'Descanso' },
-  { id: 'de_musica',     emoji: '🎵', label: 'Música relajante',           cat: 'Descanso' },
-  { id: 'de_ojos',       emoji: '🥱', label: 'Ojos cerrados',              cat: 'Descanso' },
-  { id: 'de_mantas',     emoji: '🛌', label: 'Sacar las mantas',           cat: 'Descanso' },
-  { id: 'de_luz',        emoji: '💡', label: 'Bajar la luz',               cat: 'Descanso' },
+  // ðŸ˜´ Descanso
+  { id: 'de_preparar',   emoji: 'ðŸ›ï¸', label: 'Preparar la siesta',         cat: 'Descanso' },
+  { id: 'de_siesta',     emoji: 'ðŸ˜´', label: 'Siesta',                     cat: 'Descanso' },
+  { id: 'de_despertar',  emoji: 'ðŸ˜Š', label: 'Despertar',                  cat: 'Descanso' },
+  { id: 'de_relajar',    emoji: 'ðŸŒ¿', label: 'RelajaciÃ³n',                 cat: 'Descanso' },
+  { id: 'de_masaje',     emoji: 'ðŸ¤²', label: 'Masaje',                     cat: 'Descanso' },
+  { id: 'de_silencio',   emoji: 'ðŸ¤«', label: 'Momento tranquilo',          cat: 'Descanso' },
+  { id: 'de_musica',     emoji: 'ðŸŽµ', label: 'MÃºsica relajante',           cat: 'Descanso' },
+  { id: 'de_ojos',       emoji: 'ðŸ¥±', label: 'Ojos cerrados',              cat: 'Descanso' },
+  { id: 'de_mantas',     emoji: 'ðŸ›Œ', label: 'Sacar las mantas',           cat: 'Descanso' },
+  { id: 'de_luz',        emoji: 'ðŸ’¡', label: 'Bajar la luz',               cat: 'Descanso' },
 
-  // 🤗 Social y emocional
-  { id: 'so_abrazo',     emoji: '🤗', label: 'Abrazo grupal',              cat: 'Social' },
-  { id: 'so_buenosdias', emoji: '☀️', label: 'Buenos días',                cat: 'Social' },
-  { id: 'so_emociones',  emoji: '😃', label: 'Identificar emociones',      cat: 'Social' },
-  { id: 'so_saludar',    emoji: '👋', label: 'Saludar a los amigos',       cat: 'Social' },
-  { id: 'so_compartir',  emoji: '🤝', label: 'Compartir materiales',       cat: 'Social' },
-  { id: 'so_gracias',    emoji: '🙏', label: 'Decir por favor y gracias',  cat: 'Social' },
-  { id: 'so_esperar',    emoji: '⏸️', label: 'Esperar el turno',           cat: 'Social' },
-  { id: 'so_perdon',     emoji: '💛', label: 'Pedir perdón',               cat: 'Social' },
-  { id: 'so_ayudar',     emoji: '🫶', label: 'Ayudar a un compañero',      cat: 'Social' },
-  { id: 'so_familia',    emoji: '👨‍👩‍👧', label: 'Hablar de la familia',   cat: 'Social' },
-  { id: 'so_normas',     emoji: '📜', label: 'Repasar las normas',         cat: 'Social' },
-  { id: 'so_ronda',      emoji: '⭕', label: 'Ronda de conversación',      cat: 'Social' },
+  // ðŸ¤— Social y emocional
+  { id: 'so_abrazo',     emoji: 'ðŸ¤—', label: 'Abrazo grupal',              cat: 'Social' },
+  { id: 'so_buenosdias', emoji: 'â˜€ï¸', label: 'Buenos dÃ­as',                cat: 'Social' },
+  { id: 'so_emociones',  emoji: 'ðŸ˜ƒ', label: 'Identificar emociones',      cat: 'Social' },
+  { id: 'so_saludar',    emoji: 'ðŸ‘‹', label: 'Saludar a los amigos',       cat: 'Social' },
+  { id: 'so_compartir',  emoji: 'ðŸ¤', label: 'Compartir materiales',       cat: 'Social' },
+  { id: 'so_gracias',    emoji: 'ðŸ™', label: 'Decir por favor y gracias',  cat: 'Social' },
+  { id: 'so_esperar',    emoji: 'â¸ï¸', label: 'Esperar el turno',           cat: 'Social' },
+  { id: 'so_perdon',     emoji: 'ðŸ’›', label: 'Pedir perdÃ³n',               cat: 'Social' },
+  { id: 'so_ayudar',     emoji: 'ðŸ«¶', label: 'Ayudar a un compaÃ±ero',      cat: 'Social' },
+  { id: 'so_familia',    emoji: 'ðŸ‘¨â€ðŸ‘©â€ðŸ‘§', label: 'Hablar de la familia',   cat: 'Social' },
+  { id: 'so_normas',     emoji: 'ðŸ“œ', label: 'Repasar las normas',         cat: 'Social' },
+  { id: 'so_ronda',      emoji: 'â­•', label: 'Ronda de conversaciÃ³n',      cat: 'Social' },
 
-  // 🌤️ Exterior
-  { id: 'ex_sol',        emoji: '🌞', label: 'Juego al sol',               cat: 'Exterior' },
-  { id: 'ex_aire',       emoji: '🌬️', label: 'Aire fresco',                cat: 'Exterior' },
-  { id: 'ex_parque',     emoji: '🌳', label: 'Esparcimiento',              cat: 'Exterior' },
-  { id: 'ex_paseo',      emoji: '🧐', label: 'Paseo de observación',       cat: 'Exterior' },
-  { id: 'ex_naturaleza', emoji: '🪴', label: 'Contacto con la naturaleza', cat: 'Exterior' },
-  { id: 'ex_insectos',   emoji: '🐜', label: 'Observar insectos',          cat: 'Exterior' },
-  { id: 'ex_nubes',      emoji: '☁️', label: 'Mirar las nubes',            cat: 'Exterior' },
-  { id: 'ex_higiene',    emoji: '🌞', label: 'Tomar sol (vitamina D)',     cat: 'Exterior' },
-  { id: 'ex_lluvia',     emoji: '☔', label: 'Observar la lluvia',         cat: 'Exterior' },
-  { id: 'ex_guardia',    emoji: '🧍', label: 'Guardia en la veranda',      cat: 'Exterior' },
+  // ðŸŒ¤ï¸ Exterior
+  { id: 'ex_sol',        emoji: 'ðŸŒž', label: 'Juego al sol',               cat: 'Exterior' },
+  { id: 'ex_aire',       emoji: 'ðŸŒ¬ï¸', label: 'Aire fresco',                cat: 'Exterior' },
+  { id: 'ex_parque',     emoji: 'ðŸŒ³', label: 'Esparcimiento',              cat: 'Exterior' },
+  { id: 'ex_paseo',      emoji: 'ðŸ§', label: 'Paseo de observaciÃ³n',       cat: 'Exterior' },
+  { id: 'ex_naturaleza', emoji: 'ðŸª´', label: 'Contacto con la naturaleza', cat: 'Exterior' },
+  { id: 'ex_insectos',   emoji: 'ðŸœ', label: 'Observar insectos',          cat: 'Exterior' },
+  { id: 'ex_nubes',      emoji: 'â˜ï¸', label: 'Mirar las nubes',            cat: 'Exterior' },
+  { id: 'ex_higiene',    emoji: 'ðŸŒž', label: 'Tomar sol (vitamina D)',     cat: 'Exterior' },
+  { id: 'ex_lluvia',     emoji: 'â˜”', label: 'Observar la lluvia',         cat: 'Exterior' },
+  { id: 'ex_guardia',    emoji: 'ðŸ§', label: 'Guardia en la veranda',      cat: 'Exterior' },
 
-  // 🎵 Arte y música
-  { id: 'ar_pintarp',    emoji: '🎨', label: 'Pintar con pincel',          cat: 'Arte y música' },
-  { id: 'ar_pinitos',    emoji: '🖐️', label: 'Pintar con las manos',       cat: 'Arte y música' },
-  { id: 'ar_dibujar',    emoji: '✏️', label: 'Dibujar',                    cat: 'Arte y música' },
-  { id: 'ar_pegar',      emoji: '📎', label: 'Pegar y recortar',           cat: 'Arte y música' },
-  { id: 'ar_moldear',    emoji: '🧱', label: 'Moldear plastilina',         cat: 'Arte y música' },
-  { id: 'ar_papel',      emoji: '📄', label: 'Papel de colores',           cat: 'Arte y música' },
-  { id: 'ar_canciones',  emoji: '🎤', label: 'Cantar',                     cat: 'Arte y música' },
-  { id: 'ar_ritmo',      emoji: '🥁', label: 'Instrumentos de ritmo',      cat: 'Arte y música' },
-  { id: 'ar_musical',    emoji: '🎸', label: 'Juego musical',              cat: 'Arte y música' },
-  { id: 'ar_danza',      emoji: '🪩', label: 'Danza',                      cat: 'Arte y música' },
-  { id: 'ar_titeres',    emoji: '🎭', label: 'Títeres',                    cat: 'Arte y música' },
-  { id: 'ar_runas',      emoji: '🥁', label: 'Percusión corporal',         cat: 'Arte y música' },
-  { id: 'ar_origami',    emoji: '✨', label: 'Plegado de papel',            cat: 'Arte y música' },
-  { id: 'ar_collage',    emoji: '🖼️', label: 'Collage',                    cat: 'Arte y música' },
+  // ðŸŽµ Arte y mÃºsica
+  { id: 'ar_pintarp',    emoji: 'ðŸŽ¨', label: 'Pintar con pincel',          cat: 'Arte y mÃºsica' },
+  { id: 'ar_pinitos',    emoji: 'ðŸ–ï¸', label: 'Pintar con las manos',       cat: 'Arte y mÃºsica' },
+  { id: 'ar_dibujar',    emoji: 'âœï¸', label: 'Dibujar',                    cat: 'Arte y mÃºsica' },
+  { id: 'ar_pegar',      emoji: 'ðŸ“Ž', label: 'Pegar y recortar',           cat: 'Arte y mÃºsica' },
+  { id: 'ar_moldear',    emoji: 'ðŸ§±', label: 'Moldear plastilina',         cat: 'Arte y mÃºsica' },
+  { id: 'ar_papel',      emoji: 'ðŸ“„', label: 'Papel de colores',           cat: 'Arte y mÃºsica' },
+  { id: 'ar_canciones',  emoji: 'ðŸŽ¤', label: 'Cantar',                     cat: 'Arte y mÃºsica' },
+  { id: 'ar_ritmo',      emoji: 'ðŸ¥', label: 'Instrumentos de ritmo',      cat: 'Arte y mÃºsica' },
+  { id: 'ar_musical',    emoji: 'ðŸŽ¸', label: 'Juego musical',              cat: 'Arte y mÃºsica' },
+  { id: 'ar_danza',      emoji: 'ðŸª©', label: 'Danza',                      cat: 'Arte y mÃºsica' },
+  { id: 'ar_titeres',    emoji: 'ðŸŽ­', label: 'TÃ­teres',                    cat: 'Arte y mÃºsica' },
+  { id: 'ar_runas',      emoji: 'ðŸ¥', label: 'PercusiÃ³n corporal',         cat: 'Arte y mÃºsica' },
+  { id: 'ar_origami',    emoji: 'âœ¨', label: 'Plegado de papel',            cat: 'Arte y mÃºsica' },
+  { id: 'ar_collage',    emoji: 'ðŸ–¼ï¸', label: 'Collage',                    cat: 'Arte y mÃºsica' },
 
-  // 🔤 Lenguaje y comunicación
-  { id: 'le_cuento',     emoji: '📖', label: 'Cuento con imágenes',        cat: 'Lenguaje' },
-  { id: 'le_cancion',    emoji: '🎵', label: 'Canción infantil',           cat: 'Lenguaje' },
-  { id: 'le_rondas',     emoji: '🪢', label: 'Rondas y juegos de dedos',   cat: 'Lenguaje' },
-  { id: 'le_laminas',    emoji: '🖼️', label: 'Láminas de palabras',        cat: 'Lenguaje' },
-  { id: 'le_vocales',    emoji: '🔠', label: 'Reconocer vocales',          cat: 'Lenguaje' },
-  { id: 'le_nombres',    emoji: '🗣️', label: 'Decir los nombres',          cat: 'Lenguaje' },
-  { id: 'le_opuesto',    emoji: '🔄', label: 'Opuestos',                   cat: 'Lenguaje' },
-  { id: 'le_pregunta',   emoji: '❓', label: 'Responder preguntas',        cat: 'Lenguaje' },
-  { id: 'le_cuento2',    emoji: '📚', label: 'Cuento narrado',             cat: 'Lenguaje' },
-  { id: 'le_sonidos',    emoji: '🎧', label: 'Sonidos de animales',        cat: 'Lenguaje' },
-  { id: 'le_poema',      emoji: '🌼', label: 'Poema y verso',              cat: 'Lenguaje' },
-  { id: 'le_onomato',    emoji: '🔔', label: 'Onomatopeyas',               cat: 'Lenguaje' },
+  // ðŸ”¤ Lenguaje y comunicaciÃ³n
+  { id: 'le_cuento',     emoji: 'ðŸ“–', label: 'Cuento con imÃ¡genes',        cat: 'Lenguaje' },
+  { id: 'le_cancion',    emoji: 'ðŸŽµ', label: 'CanciÃ³n infantil',           cat: 'Lenguaje' },
+  { id: 'le_rondas',     emoji: 'ðŸª¢', label: 'Rondas y juegos de dedos',   cat: 'Lenguaje' },
+  { id: 'le_laminas',    emoji: 'ðŸ–¼ï¸', label: 'LÃ¡minas de palabras',        cat: 'Lenguaje' },
+  { id: 'le_vocales',    emoji: 'ðŸ” ', label: 'Reconocer vocales',          cat: 'Lenguaje' },
+  { id: 'le_nombres',    emoji: 'ðŸ—£ï¸', label: 'Decir los nombres',          cat: 'Lenguaje' },
+  { id: 'le_opuesto',    emoji: 'ðŸ”„', label: 'Opuestos',                   cat: 'Lenguaje' },
+  { id: 'le_pregunta',   emoji: 'â“', label: 'Responder preguntas',        cat: 'Lenguaje' },
+  { id: 'le_cuento2',    emoji: 'ðŸ“š', label: 'Cuento narrado',             cat: 'Lenguaje' },
+  { id: 'le_sonidos',    emoji: 'ðŸŽ§', label: 'Sonidos de animales',        cat: 'Lenguaje' },
+  { id: 'le_poema',      emoji: 'ðŸŒ¼', label: 'Poema y verso',              cat: 'Lenguaje' },
+  { id: 'le_onomato',    emoji: 'ðŸ””', label: 'Onomatopeyas',               cat: 'Lenguaje' },
 
-  // 🔄 Transiciones
-  { id: 'tr_prep_guard', emoji: '⏰', label: 'Prepararse para salir',      cat: 'Transiciones' },
-  { id: 'tr_guardar',    emoji: '📦', label: 'Guardar juguetes',           cat: 'Transiciones' },
-  { id: 'tr_fila',       emoji: '🚶', label: 'Formar la fila',             cat: 'Transiciones' },
-  { id: 'tr_lavar',      emoji: '💧', label: 'Lavarse antes de comer',     cat: 'Transiciones' },
-  { id: 'tr_sentarse',   emoji: '🪑', label: 'Sentarse a la mesa',         cat: 'Transiciones' },
-  { id: 'tr_descansar',  emoji: '🛋️', label: 'Retirarse a descansar',      cat: 'Transiciones' },
+  // ðŸ”„ Transiciones
+  { id: 'tr_prep_guard', emoji: 'â°', label: 'Prepararse para salir',      cat: 'Transiciones' },
+  { id: 'tr_guardar',    emoji: 'ðŸ“¦', label: 'Guardar juguetes',           cat: 'Transiciones' },
+  { id: 'tr_fila',       emoji: 'ðŸš¶', label: 'Formar la fila',             cat: 'Transiciones' },
+  { id: 'tr_lavar',      emoji: 'ðŸ’§', label: 'Lavarse antes de comer',     cat: 'Transiciones' },
+  { id: 'tr_sentarse',   emoji: 'ðŸª‘', label: 'Sentarse a la mesa',         cat: 'Transiciones' },
+  { id: 'tr_descansar',  emoji: 'ðŸ›‹ï¸', label: 'Retirarse a descansar',      cat: 'Transiciones' },
 ];
 
-// ───────────────────────────────────────────────────────────────────────────────
-// CATÁLOGO DE EVENTOS — biblioteca ampliada que la maestra puede agregar a su
-// cronología. Agrupados por categoría para mostrarse en el modal de Configurar
-// Horario. groupEventId marca los eventos que se registran como acción colectiva.
-// ───────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// CATÃLOGO DE EVENTOS â€” biblioteca ampliada que la maestra puede agregar a su
+// cronologÃ­a. Agrupados por categorÃ­a para mostrarse en el modal de Configurar
+// Horario. groupEventId marca los eventos que se registran como acciÃ³n colectiva.
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function _today() { return AppState.today(); }
 function _fmtTime(d) {
   return new Date(d).toLocaleTimeString('es-DO', { hour: '2-digit', minute: '2-digit', hour12: true });
@@ -547,10 +551,10 @@ function _promptEventTime(emoji, label, defaultTime) {
       <div class="bg-white overflow-hidden" style="border-radius:24px;max-width:320px;margin:0 auto">
         <div class="p-4" style="background:linear-gradient(135deg,#475569,#64748B)">
           <div class="flex items-center gap-3">
-            <span class="text-2xl">${emoji || '⏰'}</span>
+            <span class="text-2xl">${emoji || 'â°'}</span>
             <div>
               <h3 class="text-sm font-black text-white">${safeEscapeHTML(label)}</h3>
-              <p class="text-xs font-bold text-white/80">¿A qué hora ocurrió?</p>
+              <p class="text-xs font-bold text-white/80">Â¿A quÃ© hora ocurriÃ³?</p>
             </div>
           </div>
         </div>
@@ -591,10 +595,26 @@ function _minutesToTime(minutes) {
   const m = minutes % 60;
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
+const REPEATABLE_EVENT_KEYS = new Set([
+  'diaper', 'diaper_change', 'poop', 'pee', 'toilet', 'bath', 'bathroom',
+  'poop_gr', 'milk', 'milk_gr', 'water', 'med', 'temp', 'health', 'incident',
+  'handwash', 'toothbrush'
+]);
+
+function _isRepeatableEvent(key) {
+  return REPEATABLE_EVENT_KEYS.has(String(key || ''));
+}
+
+function _isRepeatableLabel(label) {
+  return /pa[nÃ±]al|ba[nÃ±]o|biber|leche|agua|medic|temperatura|lavado de manos|cepillado|pop[oÃ³]|pip[iÃ­]/i
+    .test(String(label || '').normalize('NFD').replace(/[\u0300-\u036f]/g, ''));
+}
+
 function _isDuplicate(studentId, eventType) {
   const key = `${studentId}:${eventType}`;
   const last = _lastEvent[key];
-  if (last && Date.now() - last < 15000) return true;
+  const windowMs = _isRepeatableEvent(eventType) ? 3000 : 15000;
+  if (last && Date.now() - last < windowMs) return true;
   _lastEvent[key] = Date.now();
   return false;
 }
@@ -613,7 +633,7 @@ function _getDayOfWeek() { return new Date().getDay(); }
 function _getNowMinutes() { const n = new Date(); return n.getHours() * 60 + n.getMinutes(); }
 
 function _loadScheduleConfig() {
-  // Usar el horario base según el nivel del aula
+  // Usar el horario base segÃºn el nivel del aula
   const levelDefaults = _getLevelDefaultSchedule();
   const defaults = levelDefaults.map(e => ({ ...e }));
 
@@ -650,11 +670,11 @@ function _saveScheduleConfig() {
   _syncScheduleToDb();
 }
 
-// ───────────────────────────────────────────────────────────────────────────────
-// SINCROMAZÓN A LA BD — la cronología del día se persiste en
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// SINCROMAZÃ“N A LA BD â€” la cronologÃ­a del dÃ­a se persiste en
 // classroom_daily_schedule para que el panel de padres la muestre en tiempo
 // real (el plan que ve la maestra es el mismo que ven los padres).
-// ───────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 let _scheduleSyncTimer = null;
 
 function _syncScheduleToDb() {
@@ -682,8 +702,8 @@ function _getScheduleConfig() {
 }
 
 /**
- * Cronología V8: si la BD tiene bloques para el aula (classroom_schedule_blocks),
- * los usa como fuente para sembrar el schedule por primera vez. Después de
+ * CronologÃ­a V8: si la BD tiene bloques para el aula (classroom_schedule_blocks),
+ * los usa como fuente para sembrar el schedule por primera vez. DespuÃ©s de
  * sembrar (flag en localStorage) las ediciones locales de la maestra se
  * conservan. Si la BD no tiene bloques o falla, no toca nada (fallback a
  * DEFAULT_SCHEDULE / config previa).
@@ -779,30 +799,34 @@ function _getEventProgress(event, students, logsMap) {
     diaper_change: { field: '_group', type: 'diaper_change' }
   };
   const mapping = GROUP_MAP[gid];
-  if (!mapping) return { done: 0, total: students.length, pct: 0 };
+  if (!mapping) return { done: 0, total: students.length, pct: 0, occurrences: 0 };
   let done = 0;
+  let occurrences = 0;
   const markedStudents = [];
   for (const s of students) {
     const log = logsMap[s.id];
     if (!log || !_isWithin12h(log.created_at)) continue;
     let counted = false;
     if (mapping.field === 'food') {
-      try { const foodObj = JSON.parse(log.food || '{}'); if (foodObj[mapping.key]) { counted = true; done++; } } catch {}
+      try { const foodObj = JSON.parse(log.food || '{}'); if (foodObj[mapping.key]) { counted = true; done++; occurrences++; } } catch {}
     } else if (mapping.field === '_group') {
-      if ((log.infant_data || []).some(e => e.type === mapping.type)) { counted = true; done++; }
+      const matches = (log.infant_data || []).filter(e => e.type === mapping.type);
+      if (matches.length) { counted = true; done++; occurrences += matches.length; }
     } else if (mapping.field === '_sleep') {
-      if ((log.infant_data || []).some(e => e.type === 'sleep')) { counted = true; done++; }
+      const matches = (log.infant_data || []).filter(e => e.type === 'sleep');
+      if (matches.length) { counted = true; done++; occurrences += matches.length; }
     } else if (mapping.field === '_sleep_end') {
-      if ((log.infant_data || []).filter(e => e.type === 'sleep' && e.end_time).length > 0) { counted = true; done++; }
+      const matches = (log.infant_data || []).filter(e => e.type === 'sleep' && e.end_time);
+      if (matches.length) { counted = true; done++; occurrences += matches.length; }
     }
     if (counted) markedStudents.push(s.name);
   }
-  return { done, total: students.length, pct: Math.round((done / students.length) * 100), markedStudents };
+  return { done, total: students.length, pct: Math.round((done / students.length) * 100), markedStudents, occurrences };
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// LEVEL 2 — ACCIONES COLECTIVAS DEL AULA
-// ═══════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// LEVEL 2 â€” ACCIONES COLECTIVAS DEL AULA
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 function _renderCollectiveActions(schedule, students, logsMap, nowMinutes) {
   const fullConfig = _getScheduleConfig() || [];
@@ -818,10 +842,10 @@ function _renderCollectiveActions(schedule, students, logsMap, nowMinutes) {
   return `
     <div class="routine-card">
       <div class="routine-card-head">
-        <span class="routine-card-icon" style="background:#fff7ed;color:#FF8A00">🧑‍🏫</span>
+        <span class="routine-card-icon" style="background:#fff7ed;color:#FF8A00">ðŸ§‘â€ðŸ«</span>
         <div>
           <div class="routine-card-title">Acciones del Aula</div>
-          <div class="routine-card-sub">Toca para registrar ${students.length > 0 ? `· ${students.length} alumnos` : ''}</div>
+          <div class="routine-card-sub">Toca para registrar ${students.length > 0 ? `Â· ${students.length} alumnos` : ''}</div>
         </div>
       </div>
       <div class="routine-card-body">
@@ -839,6 +863,7 @@ function _renderCollectiveActions(schedule, students, logsMap, nowMinutes) {
         .ra-count{font-size:.5rem;font-weight:800;color:#94a3b8;margin-top:1px}
         .ra-btn.done .ra-count{color:#22c55e}
         .ra-check{font-size:.7rem;font-weight:900;color:#22c55e}
+        .ra-occ{font-size:.45rem;font-weight:900;color:#0B63C7;background:#eff6ff;border-radius:99px;padding:1px 5px;letter-spacing:.02em}
       </style>
       <div class="ra-grid">
         ${unique.map(ev => {
@@ -847,13 +872,15 @@ function _renderCollectiveActions(schedule, students, logsMap, nowMinutes) {
           const isDone = status === 'completed';
           const isActive = status === 'in_progress';
           const evColor = ev.color || '#94A3B8';
+          const isRepeatable = _isRepeatableLabel(ev.label);
           return `
             <div class="ra-btn ${isDone ? 'done' : isActive ? 'active' : ''}"
               style="--ev-color:${ev.color}" onclick="App.routineQuickGroup('${ev.groupEventId}')">
               <span class="ra-emoji">${ev.emoji}</span>
               <span class="ra-label" style="${isActive ? 'color:' + evColor : ''}">${safeEscapeHTML(ev.label)}</span>
-              ${progress && progress.total > 0 ? `<span class="ra-count">${progress.done}/${progress.total}</span>` : ''}
-              ${isDone ? '<span class="ra-check">✓</span>' : ''}
+              ${progress && progress.total > 0 ? `<span class="ra-count">${progress.done}/${progress.total}${isRepeatable && progress.occurrences > progress.done ? ` Â· ${progress.occurrences} reg.` : ''}</span>` : ''}
+              ${isDone && !isRepeatable ? '<span class="ra-check">âœ“</span>' : ''}
+              ${isRepeatable ? '<span class="ra-occ">â†» repetible</span>' : ''}
             </div>
           `;
         }).join('')}
@@ -863,40 +890,49 @@ function _renderCollectiveActions(schedule, students, logsMap, nowMinutes) {
   `;
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// ACCIONES DEL AULA — eventos fijos de la administración + catálogo amplio
-// visible con buscador y carrusel por categorías (las 10 reglas son internas).
-// ═══════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ACCIONES DEL AULA â€” eventos fijos de la administraciÃ³n + catÃ¡logo amplio
+// visible con buscador y carrusel por categorÃ­as (las 10 reglas son internas).
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
-// Eventos fijos diarios/frecuentes definidos por la administración.
+// Eventos fijos diarios/frecuentes definidos por la administraciÃ³n.
 const FIXED_DAILY_EVENTS = [
-  { id: 'welcome',     emoji: '👋', label: 'Bienvenida',      color: '#F59E0B' },
-  { id: 'handwash',    emoji: '🧼', label: 'Lavado de manos', color: '#0EA5E9' },
-  { id: 'breakfast',   emoji: '🍞', label: 'Desayuno',        color: '#FF8A00' },
-  { id: 'milk_gr',     emoji: '🍼', label: 'Leche',           color: '#0B63C7' },
-  { id: 'playground',  emoji: '🛝', label: 'Patio',           color: '#16A34A' },
-  { id: 'snack',       emoji: '🍎', label: 'Refrigerio',      color: '#28B54D' },
-  { id: 'departure',   emoji: '🚪', label: 'Salida',          color: '#64748B' },
-  { id: 'lunch',       emoji: '🍽️', label: 'Almuerzo',       color: '#F97316' },
-  { id: 'toothbrush',  emoji: '🪥', label: 'Cepillado',       color: '#06B6D4' },
-  { id: 'sleep_start', emoji: '😴', label: 'Duerme',          color: '#7C3AED' },
-  { id: 'sleep_end',   emoji: '😊', label: 'Despertó',        color: '#FFD43B' }
+  { id: 'welcome',     emoji: 'ðŸ‘‹', label: 'Bienvenida',      color: '#F59E0B' },
+  { id: 'handwash',    emoji: 'ðŸ§¼', label: 'Lavado de manos', color: '#0EA5E9' },
+  { id: 'breakfast',   emoji: 'ðŸž', label: 'Desayuno',        color: '#FF8A00' },
+  { id: 'milk_gr',     emoji: 'ðŸ¼', label: 'Leche',           color: '#0B63C7' },
+  { id: 'playground',  emoji: 'ðŸ›', label: 'Patio',           color: '#16A34A' },
+  { id: 'snack',       emoji: 'ðŸŽ', label: 'Refrigerio',      color: '#28B54D' },
+  { id: 'departure',   emoji: 'ðŸšª', label: 'Salida',          color: '#64748B' },
+  { id: 'lunch',       emoji: 'ðŸ½ï¸', label: 'Almuerzo',       color: '#F97316' },
+  { id: 'toothbrush',  emoji: 'ðŸª¥', label: 'Cepillado',       color: '#06B6D4' },
+  { id: 'sleep_start', emoji: 'ðŸ˜´', label: 'Duerme',          color: '#7C3AED' },
+  { id: 'sleep_end',   emoji: 'ðŸ˜Š', label: 'DespertÃ³',        color: '#FFD43B' }
 ];
 
 let _aaQuery = '';
 let _aaIndex = 0;
 let _aaBound = false;
+let _studentFilter = 'all';
+let _studentQuery = '';
+
+const STUDENT_FILTERS = [
+  { id: 'all', label: 'Todos', icon: 'ðŸ‘¥' },
+  { id: 'pending', label: 'Pendientes', icon: 'â³' },
+  { id: 'sleep', label: 'Durmiendo', icon: 'ðŸ˜´' },
+  { id: 'alert', label: 'Alertas', icon: 'ðŸ’Š' }
+];
 
 const _WH_CAT_COLORS = {
   'Higiene':        '#0EA5E9',
-  'Alimentación':   '#FF8A00',
+  'AlimentaciÃ³n':   '#FF8A00',
   'Actividades':    '#7C3AED',
   'Juego':          '#F59E0B',
   'Motricidad':     '#16A34A',
   'Descanso':       '#6366F1',
   'Social':         '#EF4444',
   'Exterior':       '#22C55E',
-  'Arte y música':  '#EC4899',
+  'Arte y mÃºsica':  '#EC4899',
   'Lenguaje':       '#0B63C7',
   'Transiciones':   '#64748B'
 };
@@ -922,7 +958,7 @@ function _aaSlidesHTML(query) {
       </button>`;
   }
 
-  // BUSCADOR ACTIVO — filtra por nombre del evento o por su categoría
+  // BUSCADOR ACTIVO â€” filtra por nombre del evento o por su categorÃ­a
   if (q) {
     const fixedMatches = FIXED_DAILY_EVENTS.filter(f => f.label.toLowerCase().includes(q));
     const matches = _getWholeClassRoutines().filter(r =>
@@ -930,17 +966,17 @@ function _aaSlidesHTML(query) {
     );
     const total = fixedMatches.length + matches.length;
     if (total === 0) {
-      return `<div class="aa-slide"><div class="aa-empty">Sin resultados para “${safeEscapeHTML(query.trim())}”</div></div>`;
+      return `<div class="aa-slide"><div class="aa-empty">Sin resultados para â€œ${safeEscapeHTML(query.trim())}â€</div></div>`;
     }
     const grouped = [...new Set(matches.map(r => r.cat))];
     return `
       <div class="aa-slide">
         <div class="aa-cathead">
-          <span class="aa-cattitle">🔍 Resultados</span>
+          <span class="aa-cattitle">ðŸ” Resultados</span>
           <span class="aa-count">${total}</span>
         </div>
         ${fixedMatches.length ? `
-          <div class="aa-subcat">⭐ Fijos del día</div>
+          <div class="aa-subcat">â­ Fijos del dÃ­a</div>
           <div class="aa-grid">${fixedMatches.map(fixedChip).join('')}</div>` : ''}
         ${grouped.map(cat => {
           const c = _WH_CAT_COLORS[cat] || '#64748B';
@@ -953,20 +989,20 @@ function _aaSlidesHTML(query) {
       </div>`;
   }
 
-  // PORTADA (solo los eventos fijos) + una diapositiva por categoría con TODOS sus eventos del nivel
+  // PORTADA (solo los eventos fijos) + una diapositiva por categorÃ­a con TODOS sus eventos del nivel
   const _levelRoutines = _getWholeClassRoutines();
   const cats = [...new Set(_levelRoutines.map(r => r.cat))];
   return `
     <div class="aa-slide">
       <div class="aa-cathead">
         <span class="aa-catdot" style="background:#f59e0b"></span>
-        <span class="aa-cattitle">📌 Fijos del día</span>
+        <span class="aa-cattitle">ðŸ“Œ Fijos del dÃ­a</span>
         <span class="aa-count">${FIXED_DAILY_EVENTS.length}</span>
       </div>
       <div class="aa-grid">
         ${FIXED_DAILY_EVENTS.map(fixedChip).join('')}
       </div>
-      <div class="aa-hint">Usa las flechas ‹ › para ver las rutinas por categoría</div>
+      <div class="aa-hint">Usa las flechas â€¹ â€º para ver las rutinas por categorÃ­a</div>
     </div>
     ${cats.map(cat => {
       const items = _levelRoutines.filter(r => r.cat === cat);
@@ -1032,10 +1068,10 @@ function _renderAccionesAula() {
   return `
     <div class="routine-card">
       <div class="routine-card-head">
-        <span class="routine-card-icon" style="background:#fff7ed;color:#FF8A00">🧑‍🏫</span>
+        <span class="routine-card-icon" style="background:#fff7ed;color:#FF8A00">ðŸ§‘â€ðŸ«</span>
         <div>
           <div class="routine-card-title">Acciones del Aula</div>
-          <div class="routine-card-sub">Portada: fijos del día · flechas ‹ › para ${WHOLE_CLASS_ROUTINES.length} rutinas por categoría</div>
+          <div class="routine-card-sub">Portada: fijos del dÃ­a Â· flechas â€¹ â€º para ${WHOLE_CLASS_ROUTINES.length} rutinas por categorÃ­a</div>
         </div>
       </div>
       <div class="routine-card-body">
@@ -1070,18 +1106,18 @@ function _renderAccionesAula() {
           .aa-empty{text-align:center;padding:26px 10px;color:#94a3b8;font-size:.7rem;font-weight:800}
         </style>
 
-        <!-- BUSCADOR DE EVENTOS (nombre o categoría) -->
+        <!-- BUSCADOR DE EVENTOS (nombre o categorÃ­a) -->
         <div class="aa-search">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2.4" style="flex-shrink:0"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
-          <input id="aaSearch" placeholder="Buscar rutina por nombre o categoría..." value="${safeEscapeHTML(_aaQuery)}" oninput="App.aaSearch(this.value)">
-          <button type="button" id="aaClear" class="aa-clear" onclick="document.getElementById('aaSearch').value='';App.aaSearch('')" style="${_aaQuery ? 'display:flex' : ''}">✕</button>
+          <input id="aaSearch" placeholder="Buscar rutina por nombre o categorÃ­a..." value="${safeEscapeHTML(_aaQuery)}" oninput="App.aaSearch(this.value)">
+          <button type="button" id="aaClear" class="aa-clear" onclick="document.getElementById('aaSearch').value='';App.aaSearch('')" style="${_aaQuery ? 'display:flex' : ''}">âœ•</button>
         </div>
 
-        <!-- CARRUSEL: portada (fijos) + categorías -->
+        <!-- CARRUSEL: portada (fijos) + categorÃ­as -->
         <div class="aa-cat">
-          <button type="button" class="aa-nav" onclick="App.aaNav(-1)" aria-label="Anterior">‹</button>
+          <button type="button" class="aa-nav" onclick="App.aaNav(-1)" aria-label="Anterior">â€¹</button>
           <div class="aa-wrap" id="aaCatWrap">${_aaSlidesHTML(_aaQuery)}</div>
-          <button type="button" class="aa-nav" onclick="App.aaNav(1)" aria-label="Siguiente">›</button>
+          <button type="button" class="aa-nav" onclick="App.aaNav(1)" aria-label="Siguiente">â€º</button>
         </div>
         <div class="aa-dots" id="aaDots"></div>
       </div>
@@ -1094,9 +1130,9 @@ function _renderAttendanceBanner(hasAttendance) {
   return `
     <button onclick="App.goToAttendance()" class="w-full flex items-center justify-between gap-3 rounded-2xl px-4 py-3 text-left active:scale-[.98]" style="background:#fffbeb;border:2px solid #fcd34d">
       <div class="flex items-center gap-3">
-        <span class="text-2xl">📋</span>
+        <span class="text-2xl">ðŸ“‹</span>
         <div>
-          <div class="text-sm font-black" style="color:#92400e">Aún no se tomó asistencia hoy</div>
+          <div class="text-sm font-black" style="color:#92400e">AÃºn no se tomÃ³ asistencia hoy</div>
           <div class="text-xs" style="color:#b45309">La rutina no marca a nadie hasta pasar lista</div>
         </div>
       </div>
@@ -1105,84 +1141,272 @@ function _renderAttendanceBanner(hasAttendance) {
   `;
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// LEVEL 3 — TARJETAS DE LOS ALUMNOS
-// ═══════════════════════════════════════════════════════════════════════════════
+function _timeRange(ev) {
+  if (!ev?.startTime) return '';
+  const start = _timeToMinutes(ev.startTime);
+  const end = _minutesToTime(start + (ev.duration || 30));
+  return `${_fmtTimeShort(ev.startTime)} â€“ ${_fmtTimeShort(end)}`;
+}
+
+function _renderSmartDay(schedule, students, logsMap, nowMinutes) {
+  const timed = schedule.filter(e => e.startTime).map(ev => {
+    const start = _timeToMinutes(ev.startTime);
+    const end = start + (ev.duration || 30);
+    return { ev, start, end, status: _getEventStatus(ev, nowMinutes), progress: _getEventProgress(ev, students, logsMap) };
+  }).sort((a, b) => a.start - b.start);
+
+  if (!timed.length) {
+    return `
+      <div class="routine-card smart-day">
+        <div class="smart-main">
+          <div class="smart-ico">ðŸ—“ï¸</div>
+          <div class="smart-copy">
+            <div class="smart-kicker">Rutina del dÃ­a</div>
+            <div class="smart-title">Sin bloques de horario configurados</div>
+            <div class="smart-sub">Agrega actividades para que el panel te guÃ­e automÃ¡ticamente.</div>
+          </div>
+          <button class="smart-cta" onclick="App.openScheduleConfig()">Configurar</button>
+        </div>
+      </div>`;
+  }
+
+  const current = timed.filter(t => t.status === 'in_progress').sort((a, b) => a.start - b.start)[0];
+  const next = timed.find(t => t.start > nowMinutes);
+  const focus = current || next;
+  const overdue = timed.filter(t =>
+    t.end < nowMinutes && nowMinutes - t.end <= 120 && t.ev.groupEventId && t.progress.total > 0 &&
+    t.progress.done < t.progress.total && !_isRepeatableLabel(t.ev.label)
+  ).slice(-2).reverse();
+
+  if (!focus) {
+    const done = timed.filter(t => t.progress.total > 0 && t.progress.done >= t.progress.total).length;
+    return `
+      <div class="routine-card smart-day is-done">
+        <div class="smart-main">
+          <div class="smart-ico">ðŸŒŸ</div>
+          <div class="smart-copy">
+            <div class="smart-kicker">Rutina del dÃ­a</div>
+            <div class="smart-title">Actividades del horario completadas</div>
+            <div class="smart-sub">${done} bloque(s) marcados. Puedes seguir registrando eventos individuales.</div>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  const pct = focus.progress.total > 0 ? Math.round((focus.progress.done / focus.progress.total) * 100) : 0;
+  const minsUntil = focus.start - nowMinutes;
+  const isCurrent = !!current;
+  const canQuick = !!focus.ev.groupEventId;
+  const statusTxt = isCurrent
+    ? `En curso Â· ${_timeRange(focus.ev)}`
+    : minsUntil <= 1 ? 'Comienza ahora' : `Comienza en ${minsUntil} min`;
+
+  return `
+    <div class="routine-card smart-day${isCurrent ? ' is-now' : ''}" style="--smart:${focus.ev.color || '#0B63C7'}">
+      <div class="smart-main">
+        <div class="smart-ico">${focus.ev.emoji || 'â°'}</div>
+        <div class="smart-copy">
+          <div class="smart-kicker">${isCurrent ? 'Ahora en el aula' : 'Siguiente actividad'} Â· ${safeEscapeHTML(statusTxt)}</div>
+          <div class="smart-title">${safeEscapeHTML(focus.ev.label)}</div>
+          <div class="smart-sub">${focus.ev.groupEventId ? `${focus.progress.done}/${focus.progress.total} alumnos marcados` : _timeRange(focus.ev)}</div>
+        </div>
+        ${canQuick ? `<button class="smart-cta" onclick="App.routineQuickGroup('${focus.ev.groupEventId}')">Marcar</button>` : ''}
+      </div>
+      ${focus.progress.total > 0 ? `
+        <div class="smart-bar"><span style="width:${pct}%"></span></div>` : ''}
+      ${next && next !== focus ? `
+        <div class="smart-next">â­ï¸ DespuÃ©s: <b>${safeEscapeHTML(next.ev.label)}</b> Â· ${_fmtTimeShort(next.ev.startTime)}</div>` : ''}
+      ${overdue.length ? `
+        <div class="smart-sugg">
+          <span class="smart-sugg-label">Sugerencias</span>
+          ${overdue.map(t => `
+            <button class="smart-sugg-chip" onclick="App.routineQuickGroup('${t.ev.groupEventId}')">
+              ${t.ev.emoji} ${safeEscapeHTML(t.ev.label)}
+              <b>${t.progress.total - t.progress.done} pend.</b>
+            </button>`).join('')}
+        </div>` : ''}
+    </div>`;
+}
+
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// LEVEL 3 â€” TARJETAS DE LOS ALUMNOS
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+
+function _scheduleExitTime(schedule) {
+  const m = String(schedule || '').match(/(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})/);
+  return m ? `${String(m[3]).padStart(2, '0')}:${m[4]}` : '';
+}
+
+function _lastLogEvent(log) {
+  const evs = (log?.infant_data || []).slice().sort((a, b) =>
+    new Date(b.created_at || b.start_time || 0) - new Date(a.created_at || a.start_time || 0)
+  );
+  return evs[0] || null;
+}
+
+function _studentMatches(s, log) {
+  const q = _studentQuery.trim().toLowerCase();
+  if (q && !String(s.name || '').toLowerCase().includes(q)) return false;
+  const prog = _calcProgress(log);
+  const sleeping = !!_sleepMap[s.id];
+  const alert = (log?.infant_data || []).some(e => ['med', 'incident', 'health'].includes(e.type));
+  if (_studentFilter === 'pending') return prog < 50;
+  if (_studentFilter === 'sleep') return sleeping;
+  if (_studentFilter === 'alert') return alert;
+  return true;
+}
 
 function _studentCardMini(s, log) {
   const prog = _calcProgress(log);
   const sleeping = !!_sleepMap[s.id];
-  const hasMed = (log?.infant_data || []).some(e => e.type === 'med');
+  const evs = log?.infant_data || [];
+  const hasMed = evs.some(e => e.type === 'med');
+  const hasAlert = evs.some(e => ['med', 'incident', 'health'].includes(e.type));
+  const lastEv = _lastLogEvent(log);
+  const exitT = _scheduleExitTime(s.schedule);
 
   let borderStyle = '';
-  if (hasMed) borderStyle = 'border-color:#fca5a5';
+  if (hasAlert) borderStyle = 'border-color:#fca5a5';
   else if (sleeping) borderStyle = 'border-color:#c4b5fd';
   else if (prog >= 80) borderStyle = 'border-color:#86efac';
 
   const moodObj = MOOD_OPTIONS.find(m => m.val === log?.mood);
-  const moodEmoji = moodObj ? moodObj.emoji : '😀';
+  const moodEmoji = moodObj ? moodObj.emoji : 'ðŸ˜€';
   let foodIcons = '';
   if (log?.food) {
     try {
       const foodObj = JSON.parse(log.food);
-      if (foodObj.breakfast) foodIcons += '🍞';
-      if (foodObj.lunch) foodIcons += '🥗';
-      if (foodObj.snack) foodIcons += '🍎';
+      if (foodObj.breakfast) foodIcons += 'ðŸž';
+      if (foodObj.lunch) foodIcons += 'ðŸ¥—';
+      if (foodObj.snack) foodIcons += 'ðŸŽ';
     } catch {}
   }
-  const napIcon = log?.nap ? '💤' : '○';
-  const diaperCount = (log?.infant_data || []).filter(e => e.type === 'diaper' || e.type === 'bath').length;
+  const napIcon = log?.nap ? 'ðŸ’¤' : 'â—‹';
+  const diaperCount = evs.filter(e => ['diaper', 'bath', 'diaper_change'].includes(e.type)).length;
+  const milkCount = evs.filter(e => e.type === 'milk').length;
+  const lastTxt = lastEv
+    ? `${_timelineEmoji(lastEv)} ${lastEv.created_at || lastEv.start_time ? _fmtTimeShort(_nowHHMM(new Date(lastEv.created_at || lastEv.start_time))) : ''}`
+    : 'Sin eventos';
 
   return `
-    <div class="sc-card" style="${borderStyle}" onclick="App.openStudentRoutine(this.dataset.sid)" data-sid="${encodeURIComponent(s.id)}">
-      ${sleeping ? '<div class="sc-badge sc-badge-sleep">💤</div>' : ''}
-      ${hasMed ? '<div class="sc-badge sc-badge-med">💊</div>' : ''}
+    <div class="sc-card${_studentMatches(s, log) ? '' : ' is-hidden'}"
+      style="${borderStyle}"
+      data-sid="${encodeURIComponent(s.id)}"
+      data-name="${safeEscapeHTML(String(s.name || '').toLowerCase())}"
+      data-pending="${prog < 50 ? '1' : '0'}"
+      data-sleep="${sleeping ? '1' : '0'}"
+      data-alert="${hasAlert ? '1' : '0'}"
+      data-exit="${exitT || ''}"
+      onclick="App.openStudentRoutine(this.dataset.sid)">
+      ${sleeping ? '<div class="sc-badge sc-badge-sleep">ðŸ’¤</div>' : ''}
+      ${hasAlert ? '<div class="sc-badge sc-badge-med">' + (hasMed ? 'ðŸ’Š' : 'âš ï¸') + '</div>' : ''}
       <div class="sc-avatar">
         ${s.avatar_url ? `<img src="${safeUrl(s.avatar_url)}" class="w-full h-full object-cover rounded-xl">` : `<span>${safeEscapeHTML((s.name || '?').charAt(0))}</span>`}
       </div>
       <div class="sc-name">${safeEscapeHTML((s.name || '').split(' ')[0])}</div>
-      <div class="sc-icons">${moodEmoji}${foodIcons || '○'}${napIcon}${diaperCount > 0 ? '🚽' + diaperCount : ''}</div>
+      <div class="sc-last">${lastTxt}</div>
+      <div class="sc-icons">${moodEmoji}${foodIcons || 'â—‹'}${napIcon}${diaperCount > 0 ? 'ðŸ§·' + diaperCount : ''}${milkCount > 1 ? 'ðŸ¼' + milkCount : ''}</div>
+      <div class="sc-exit">${exitT ? 'ðŸšª ' + _fmtTimeShort(exitT) : 'ðŸšª Sin hora'}</div>
       <div class="sc-prog"><div class="sc-prog-fill" style="width:${prog}%;background:${prog >= 80 ? '#28B54D' : prog >= 50 ? '#FF8A00' : '#94A3B8'}"></div></div>
     </div>
   `;
 }
 
 function _renderStudentCards(students, logsMap) {
+  const total = students.length;
+  const visible = students.filter(s => _studentMatches(s, logsMap[s.id])).length;
   return `
     <div class="routine-card">
       <div class="routine-card-head">
-        <span class="routine-card-icon" style="background:#eff6ff;color:#0B63C7">📋</span>
+        <span class="routine-card-icon" style="background:#eff6ff;color:#0B63C7">ðŸ“‹</span>
         <div class="flex-1">
           <div class="routine-card-title">Reportes Individuales</div>
-          <div class="routine-card-sub">${students.length} alumno(s) hoy · toca una tarjeta</div>
+          <div class="routine-card-sub">${total} alumno(s) hoy Â· toca una tarjeta para registrar</div>
         </div>
         <button onclick="App.openBulkRoutineModal()" class="text-[10px] font-black text-blue-600 uppercase tracking-wide px-2 py-1 rounded-lg hover:bg-blue-50 transition-all">Reporte masivo</button>
       </div>
       <div class="routine-card-body">
       <style>
-        .sc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px}
-        .sc-card{border-radius:16px;padding:10px 6px;border:2px solid #e2e8f0;background:white;cursor:pointer;touch-action:manipulation;transition:all .15s;display:flex;flex-direction:column;align-items:center;text-align:center;gap:3px;position:relative;min-height:100px}
+        .sc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:8px}
+        .sc-card{border-radius:16px;padding:10px 6px;border:2px solid #e2e8f0;background:white;cursor:pointer;touch-action:manipulation;transition:all .15s;display:flex;flex-direction:column;align-items:center;text-align:center;gap:3px;position:relative;min-height:120px}
         .sc-card:active{transform:scale(.94);box-shadow:0 4px 16px rgba(0,0,0,.08)}
+        .sc-card.is-hidden{display:none}
         .sc-badge{position:absolute;top:4px;font-size:.5rem;border-radius:6px;padding:1px 5px;font-weight:900;z-index:2}
         .sc-badge-sleep{left:4px;background:#ede9fe;color:#7c3aed}
         .sc-badge-med{right:4px;background:#fecdd3;color:#ef4444}
         .sc-avatar{width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#fff7ed,#ffedd5);overflow:hidden;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:.8rem;color:#FF8A00;border:2px solid white;box-shadow:0 2px 8px rgba(0,0,0,.06);flex-shrink:0}
         .sc-name{font-size:.6rem;font-weight:900;color:#1e293b;line-height:1.1;max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-        .sc-icons{font-size:.75rem;line-height:1;letter-spacing:1px}
-        .sc-prog{height:3px;border-radius:2px;background:#f1f5f9;overflow:hidden;width:100%}
+        .sc-last{font-size:.48rem;font-weight:800;color:#94a3b8;line-height:1.1;max-width:92px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+        .sc-icons{font-size:.72rem;line-height:1;letter-spacing:.5px}
+        .sc-exit{font-size:.48rem;font-weight:800;color:#64748b;background:#f8fafc;border-radius:99px;padding:1px 6px}
+        .sc-prog{height:3px;border-radius:2px;background:#f1f5f9;overflow:hidden;width:100%;margin-top:1px}
         .sc-prog-fill{height:100%;border-radius:2px;transition:width .5s}
+        .sc-tools{display:flex;flex-direction:column;gap:8px;margin-bottom:11px}
+        .sc-search{display:flex;align-items:center;gap:7px;padding:8px 11px;border-radius:13px;border:2px solid #e2e8f0;background:#f8fafc}
+        .sc-search input{flex:1;border:0;outline:0;background:transparent;font-size:.72rem;font-weight:700;color:#334155;min-width:0}
+        .sc-filters{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:1px}
+        .sc-filters::-webkit-scrollbar{display:none}
+        .sc-filter{border:1.5px solid #e2e8f0;background:#fff;color:#64748b;border-radius:99px;padding:6px 10px;font-size:.55rem;font-weight:900;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;gap:4px}
+        .sc-filter.on{background:#0B63C7;border-color:#0B63C7;color:#fff}
+        .sc-empty{display:none;text-align:center;padding:18px 10px;color:#94a3b8;font-size:.68rem;font-weight:800}
+        .sc-empty.on{display:block}
       </style>
-      <div class="sc-grid">
+      <div class="sc-tools">
+        <div class="sc-search">
+          <span>ðŸ”</span>
+          <input id="routineStudentSearch" placeholder="Buscar alumno..." value="${safeEscapeHTML(_studentQuery)}" oninput="App.filterRoutineStudents(this.value)">
+        </div>
+        <div class="sc-filters" id="routineStudentFilters">
+          ${STUDENT_FILTERS.map(f => `
+            <button type="button" class="sc-filter${_studentFilter === f.id ? ' on' : ''}" data-rfilter="${f.id}" onclick="App.setRoutineFilter('${f.id}')">
+              <span>${f.icon}</span> ${f.label}
+            </button>`).join('')}
+        </div>
+      </div>
+      <div class="sc-grid" id="routineStudentsGrid">
         ${students.map(s => _studentCardMini(s, logsMap[s.id])).join('')}
       </div>
+      <div class="sc-empty${visible === 0 ? ' on' : ''}" id="routineStudentsEmpty">No hay alumnos que coincidan con el filtro.</div>
       </div>
     </div>
   `;
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
+function _applyStudentFilter() {
+  const grid = document.getElementById('routineStudentsGrid');
+  if (!grid) return;
+  let visible = 0;
+  grid.querySelectorAll('.sc-card').forEach(card => {
+    const name = card.dataset.name || '';
+    const matchName = !_studentQuery || name.includes(_studentQuery.trim().toLowerCase());
+    let matchFilter = true;
+    if (_studentFilter === 'pending') matchFilter = card.dataset.pending === '1';
+    else if (_studentFilter === 'sleep') matchFilter = card.dataset.sleep === '1';
+    else if (_studentFilter === 'alert') matchFilter = card.dataset.alert === '1';
+    const show = matchName && matchFilter;
+    card.classList.toggle('is-hidden', !show);
+    if (show) visible++;
+  });
+  const empty = document.getElementById('routineStudentsEmpty');
+  if (empty) empty.classList.toggle('on', visible === 0);
+  document.querySelectorAll('#routineStudentFilters .sc-filter').forEach(b => {
+    b.classList.toggle('on', b.dataset.rfilter === _studentFilter);
+  });
+}
+
+export function filterRoutineStudents(value) {
+  _studentQuery = value || '';
+  _applyStudentFilter();
+}
+
+export function setRoutineFilter(id) {
+  _studentFilter = STUDENT_FILTERS.some(f => f.id === id) ? id : 'all';
+  _applyStudentFilter();
+}
+
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // MAIN UI BUILDER
-// ═══════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 const ROUTINE_UI_STYLES = `
   .routine-card{background:#fff;border-radius:22px;border:2px solid #f1f5f9;box-shadow:0 4px 18px rgba(15,23,42,.05);overflow:hidden}
@@ -1195,24 +1419,96 @@ const ROUTINE_UI_STYLES = `
   .routine-divider::before,.routine-divider::after{content:'';flex:1;height:2px;border-radius:2px;background:linear-gradient(90deg,transparent,#dbeafe)}
   .routine-divider::after{background:linear-gradient(90deg,#dbeafe,transparent)}
   .routine-divider span{width:28px;height:28px;border-radius:50%;background:#fff;border:2px solid #dbeafe;display:flex;align-items:center;justify-content:center;font-size:12px;box-shadow:0 2px 10px rgba(37,99,235,.12);flex-shrink:0}
+  .smart-day{padding:14px;border-color:#dbeafe;background:linear-gradient(135deg,#f8fbff,#fff)}
+  .smart-day.is-now{border-color:var(--smart,#0B63C7);box-shadow:0 8px 24px color-mix(in srgb,var(--smart,#0B63C7) 18%,transparent)}
+  .smart-day.is-done{border-color:#bbf7d0;background:linear-gradient(135deg,#f0fdf4,#fff)}
+  .smart-main{display:flex;align-items:center;gap:11px}
+  .smart-ico{width:46px;height:46px;border-radius:15px;background:#fff;border:2px solid #e2e8f0;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;box-shadow:0 3px 10px rgba(15,23,42,.06)}
+  .smart-copy{flex:1;min-width:0}
+  .smart-kicker{font-size:.55rem;font-weight:900;text-transform:uppercase;letter-spacing:.07em;color:#64748b}
+  .smart-title{font-size:.95rem;font-weight:900;color:#0f172a;line-height:1.15;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .smart-sub{font-size:.63rem;font-weight:700;color:#94a3b8;margin-top:1px}
+  .smart-cta{border:0;border-radius:12px;background:var(--smart,#0B63C7);color:#fff;font-size:.65rem;font-weight:900;text-transform:uppercase;letter-spacing:.04em;padding:10px 14px;cursor:pointer;flex-shrink:0}
+  .smart-cta:active{transform:scale(.95)}
+  .smart-bar{height:7px;border-radius:99px;background:#e2e8f0;overflow:hidden;margin-top:11px}
+  .smart-bar span{display:block;height:100%;border-radius:99px;background:var(--smart,#0B63C7);transition:width .4s}
+  .smart-next{margin-top:9px;font-size:.63rem;font-weight:800;color:#64748b;background:#fff;border:1.5px solid #eef2f7;border-radius:11px;padding:7px 10px}
+  .smart-sugg{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:10px;padding-top:10px;border-top:1.5px dashed #e2e8f0}
+  .smart-sugg-label{font-size:.5rem;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:#94a3b8;width:100%}
+  .smart-sugg-chip{display:inline-flex;align-items:center;gap:5px;border:1.5px solid #fed7aa;background:#fff7ed;color:#9a3412;border-radius:99px;padding:6px 9px;font-size:.58rem;font-weight:800;cursor:pointer}
+  .smart-sugg-chip b{color:#ea580c}
 `;
 
 function _routineDivider(icon) {
   return `<div class="routine-divider"><span>${icon}</span></div>`;
 }
 
-function _buildUI(students, schedule, nowMinutes) {
+function _renderRoutineModeSwitch() {
+  const options = [
+    { id: 'express', emoji: 'âš¡', label: 'BitÃ¡cora Express' },
+    { id: 'weekly', emoji: 'ðŸ—“ï¸', label: 'Horario Semanal' },
+  ];
+  return `<div class="flex items-center gap-1.5 p-1.5 rounded-2xl mb-2" style="background:#F1F5F9;border:1.5px solid #E2E8F0">
+    ${options.map(opt => {
+      const active = _routineViewMode === opt.id;
+      return `<button type="button" onclick="App.setRoutineViewMode('${opt.id}')"
+        class="flex-1 flex items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-[11px] font-black transition-all"
+        style="${active
+          ? 'background:#fff;color:#0F172A;box-shadow:0 3px 10px rgba(15,23,42,.09);border:1.5px solid #E2E8F0'
+          : 'background:transparent;color:#64748B;border:1.5px solid transparent'}">
+        <span>${opt.emoji}</span><span>${opt.label}</span>
+      </button>`;
+    }).join('')}
+  </div>`;
+}
+
+function _getWeeklyFallback() {
+  const source = (_scheduleConfig && _scheduleConfig.length ? _scheduleConfig : _getLevelDefaultSchedule())
+    .filter(e => e.active !== false);
+  return source.map(e => ({ ...e, days: (e.days || [1, 2, 3, 4, 5]).filter(d => d >= 1 && d <= 5) }));
+}
+
+function _renderPrimaryLevelNotice() {
+  return `<div class="space-y-4 pb-28" id="routineView">
+    <style>${ROUTINE_UI_STYLES}${WEEKLY_CSS}</style>
+    <div class="wk-primary-note" style="margin-top:8px">
+      <div class="wk-primary-icon">ðŸŽ“</div>
+      <h4>Primaria: el registro es acadÃ©mico</h4>
+      <p>En Primaria la rutina diaria se sustituye por el horario de materias, tareas y calificaciones. Usa el mÃ³dulo de Tareas para dar seguimiento al aprendizaje del grupo.</p>
+      <button type="button" class="wk-btn wk-btn-primary" onclick="App.activateTab?.('tasks')">Ir a Tareas y Calificaciones</button>
+    </div>
+  </div>`;
+}
+
+function _buildUI(students, schedule, nowMinutes, weeklyBlocks = []) {
   const openSleeps = Object.keys(_sleepMap).length;
+
+  if (_routineViewMode === 'weekly') {
+    return `
+      <div class="space-y-3 pb-28" id="routineView">
+        <style>${ROUTINE_UI_STYLES}</style>
+        ${_renderRoutineModeSwitch()}
+        ${WeeklySchedule.renderWeeklySchedule({
+          blocks: weeklyBlocks,
+          fallback: _getWeeklyFallback(),
+          students,
+          logsMap: _logsMap,
+          now: nowMinutes,
+        })}
+      </div>
+    `;
+  }
 
   return `
     <div class="space-y-3 pb-28" id="routineView">
       <style>${ROUTINE_UI_STYLES}</style>
+      ${_renderRoutineModeSwitch()}
 
       <!-- OPEN SLEEP ALERT -->
       ${openSleeps > 0 ? `
         <button onclick="App.routineWakeAll()" class="w-full flex items-center justify-between gap-3 rounded-2xl px-4 py-3 text-left active:scale-[.98]" style="background:#f5f3ff;border:2px solid #c4b5fd">
           <div class="flex items-center gap-3">
-            <span class="text-2xl">😴</span>
+            <span class="text-2xl">ðŸ˜´</span>
             <div>
               <div class="text-sm font-black" style="color:#7c3aed">${openSleeps} siesta(s) activa(s)</div>
               <div class="text-xs" style="color:#a78bfa">Toca para registrar que despertaron todos</div>
@@ -1222,44 +1518,47 @@ function _buildUI(students, schedule, nowMinutes) {
         </button>
       ` : ''}
 
-      ${_routineDivider('🤖')}
+      ${_routineDivider('ðŸ¤–')}
 
-      <!-- NIVEL DEL AULA — badge informativo -->
+      <!-- NIVEL DEL AULA â€” badge informativo -->
       ${(() => {
         const lc = _getLevelCategory();
         const meta = {
-          infants:    { emoji: '👶', label: 'Bebés · Párvulos I-II',     color: '#F472B6' },
-          toddlers:   { emoji: '🐣', label: 'Caminadores · Párvulos III', color: '#FACC15' },
-          preschool:  { emoji: '🎨', label: 'Pre-Kínder / Kínder',        color: '#9CA3AF' },
-          preprimary: { emoji: '📖', label: 'Pre-Primario',               color: '#374151' },
-          primary:    { emoji: '🏫', label: 'Primaria',                   color: '#3B82F6' },
-          special:    { emoji: '⭐', label: 'Programa Especial',           color: '#8B5CF6' },
-        }[lc] || { emoji: '🏫', label: 'Aula', color: '#64748B' };
+          infants:    { emoji: 'ðŸ‘¶', label: 'BebÃ©s Â· PÃ¡rvulos I-II',     color: '#F472B6' },
+          toddlers:   { emoji: 'ðŸ£', label: 'Caminadores Â· PÃ¡rvulos III', color: '#FACC15' },
+          preschool:  { emoji: 'ðŸŽ¨', label: 'Pre-KÃ­nder / KÃ­nder',        color: '#9CA3AF' },
+          preprimary: { emoji: 'ðŸ“–', label: 'Pre-Primario',               color: '#374151' },
+          primary:    { emoji: 'ðŸ«', label: 'Primaria',                   color: '#3B82F6' },
+          special:    { emoji: 'â­', label: 'Programa Especial',           color: '#8B5CF6' },
+        }[lc] || { emoji: 'ðŸ«', label: 'Aula', color: '#64748B' };
         return `<div class="flex items-center gap-2 px-4 py-2 rounded-2xl text-xs font-bold mb-1" style="background:${meta.color}18;color:${meta.color};border:1.5px solid ${meta.color}33">
           <span>${meta.emoji}</span>
           <span>Perfil: ${meta.label}</span>
         </div>`;
       })()}
 
-      <!-- ASISTENCIA DEL DÍA (Regla 1 y 2) -->
+      <!-- ASISTENCIA DEL DÃA (Regla 1 y 2) -->
       ${_renderAttendanceBanner(_attendanceCount > 0)}
 
-      <!-- ═══════════════════════════════════════════════════════════════ -->
-      <!-- ACCIONES DEL AULA — fijos del día + buscador + carrusel por categoría -->
+      <!-- ASISTENTE INTELIGENTE: ahora / siguiente / sugerencias -->
+      ${_renderSmartDay(schedule, students, _logsMap, nowMinutes)}
+
+      <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+      <!-- ACCIONES DEL AULA â€” fijos del dÃ­a + buscador + carrusel por categorÃ­a -->
       ${_renderAccionesAula()}
 
-      ${_routineDivider('📊')}
+      ${_routineDivider('ðŸ“Š')}
 
-      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
       <!-- TARJETAS DE LOS ALUMNOS -->
       ${_renderStudentCards(students, _logsMap)}
     </div>
   `;
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // INIT
-// ═══════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 export async function initRoutine() {
   const classroom = AppState.get('classroom');
@@ -1272,6 +1571,14 @@ export async function initRoutine() {
     _scheduleConfig = null;
   }
   initRoutine._lastClassroomKey = classroomKey;
+
+  if (_getLevelCategory() === 'primary') {
+    _clearAutoRefresh();
+    _clearRoutineChannels();
+    container.innerHTML = _renderPrimaryLevelNotice();
+    if (window.lucide) lucide.createIcons();
+    return;
+  }
 
   container.innerHTML = `<div class="animate-pulse space-y-4">
     <div class="h-16 bg-slate-100 rounded-2xl"></div>
@@ -1291,8 +1598,8 @@ export async function initRoutine() {
   const presentStudentIds = new Set(
     attendance.filter(a => ['present', 'late'].includes(a.status)).map(a => a.student_id)
   );
-  // Si aún no se tomó asistencia hoy, no excluir a nadie del registro de rutina:
-  // en caso contrario los padres verían "sin reporte" aunque la maestra sí registre.
+  // Si aÃºn no se tomÃ³ asistencia hoy, no excluir a nadie del registro de rutina:
+  // en caso contrario los padres verÃ­an "sin reporte" aunque la maestra sÃ­ registre.
   const students = attendance.length === 0
     ? allStudents
     : allStudents.filter(s => presentStudentIds.has(s.id));
@@ -1309,8 +1616,13 @@ export async function initRoutine() {
     if (ev) _sleepMap[log.student_id] = ev;
   });
 
+  let weeklyBlocks = [];
+  if (_routineViewMode === 'weekly') {
+    weeklyBlocks = await WeeklySchedule.loadBlocks(classroom.id);
+  }
+
   const wasAASearchFocused = document.activeElement && document.activeElement.id === 'aaSearch';
-  container.innerHTML = _buildUI(students, schedule, nowMinutes);
+  container.innerHTML = _buildUI(students, schedule, nowMinutes, weeklyBlocks);
 
   _bindAAScroll();
   _syncAADots();
@@ -1394,14 +1706,14 @@ function _bindVisibilityRefresh() {
   window.addEventListener('focus', refreshIfVisible);
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // EVENT CONFIGURATION
-// ═══════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 export function openEventConfig(eventId) {
   const ev = (_scheduleConfig || _getLevelDefaultSchedule()).find(e => e.id === eventId);
   if (!ev) return;
-  const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+  const dayNames = ['Dom', 'Lun', 'Mar', 'MiÃ©', 'Jue', 'Vie', 'SÃ¡b'];
   const modalContent = `
     <div class="bg-white overflow-hidden" style="border-radius:32px">
       <div class="p-6" style="background:linear-gradient(135deg,${ev.color},${ev.color}cc)">
@@ -1432,7 +1744,7 @@ export function openEventConfig(eventId) {
           <input type="color" id="cfgColor" value="${ev.color}" class="w-full mt-1 h-12 border-2 border-slate-100 rounded-xl cursor-pointer">
         </div>
         <div>
-          <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Días de ejecución</label>
+          <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">DÃ­as de ejecuciÃ³n</label>
           <div class="flex gap-1.5 mt-1 flex-wrap">
             ${[0,1,2,3,4,5,6].map(d => `
               <button onclick="this.classList.toggle('border-blue-400');this.classList.toggle('bg-blue-50');this.classList.toggle('border-slate-100')"
@@ -1454,7 +1766,7 @@ export function openEventConfig(eventId) {
         </div>
         <div class="flex items-center gap-2 p-3 rounded-xl bg-blue-50">
           <input type="checkbox" id="cfgRecalc" class="w-4 h-4 accent-blue-600">
-          <label for="cfgRecalc" class="text-[11px] font-bold text-blue-700 cursor-pointer">Mover eventos siguientes automáticamente</label>
+          <label for="cfgRecalc" class="text-[11px] font-bold text-blue-700 cursor-pointer">Mover eventos siguientes automÃ¡ticamente</label>
         </div>
         <div class="flex gap-3 pt-2">
           <button onclick="UI.Modal.close('eventConfigModal')" class="flex-1 py-3 rounded-xl border-2 border-slate-200 font-black text-xs uppercase text-slate-500">Cancelar</button>
@@ -1494,14 +1806,14 @@ export function saveEventConfig(eventId) {
 
   _saveScheduleConfig();
   UI.Modal.close('eventConfigModal');
-  safeToast('Evento configurado' + (doRecalc ? ' — horarios siguientes recalculados' : ''), 'success');
+  safeToast('Evento configurado' + (doRecalc ? ' â€” horarios siguientes recalculados' : ''), 'success');
   initRoutine();
 }
 
 export function addScheduleEvent() {
   const id = 'custom_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
   const newEv = {
-    id, emoji: '📌', label: 'Nuevo evento', color: '#64748B',
+    id, emoji: 'ðŸ“Œ', label: 'Nuevo evento', color: '#64748B',
     startTime: '08:00', duration: 30, type: 'colectivo', auto: false,
     needsConfirm: false, visibleParents: true, visibleDirector: true,
     days: [1,2,3,4,5,6], active: true
@@ -1510,7 +1822,7 @@ export function addScheduleEvent() {
   _saveScheduleConfig();
   openScheduleConfig();
   initRoutine();
-  safeToast('Nuevo evento agregado — configúralo', 'success');
+  safeToast('Nuevo evento agregado â€” configÃºralo', 'success');
 }
 
 export function deleteScheduleEvent(eventId) {
@@ -1519,7 +1831,7 @@ export function deleteScheduleEvent(eventId) {
   if (idx === -1) return;
   const isDefault = _getLevelDefaultSchedule().some(d => d.id === eventId);
   if (isDefault) { safeToast('No puedes eliminar un evento predeterminado', 'warning'); return; }
-  if (!confirm('¿Eliminar este evento de la rutina?')) return;
+  if (!confirm('Â¿Eliminar este evento de la rutina?')) return;
   _scheduleConfig.splice(idx, 1);
   _saveScheduleConfig();
   openScheduleConfig();
@@ -1537,7 +1849,7 @@ let _dragEvIdx = null;
 
 export function openScheduleConfig() {
   const schedule = _getScheduleConfig();
-  const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+  const dayNames = ['Dom', 'Lun', 'Mar', 'MiÃ©', 'Jue', 'Vie', 'SÃ¡b'];
   const buildMode = _scBuildMode === 'build';
   if (buildMode && !_buildDraft) _initBuildDraft();
 
@@ -1549,7 +1861,7 @@ export function openScheduleConfig() {
       const isOmittedToday = omitted.includes(ev.id);
       scheduleHtml += `
         <div class="flex items-center justify-center" style="margin:-4px 0">
-          <button onclick="App.insertEventAt(${i})" class="w-7 h-7 rounded-full border-2 border-dashed border-blue-200 bg-white flex items-center justify-center text-blue-400 hover:bg-blue-50 hover:border-blue-400 transition-all text-xs font-black" title="Insertar evento aquí">+</button>
+          <button onclick="App.insertEventAt(${i})" class="w-7 h-7 rounded-full border-2 border-dashed border-blue-200 bg-white flex items-center justify-center text-blue-400 hover:bg-blue-50 hover:border-blue-400 transition-all text-xs font-black" title="Insertar evento aquÃ­">+</button>
         </div>
         <div draggable="true"
           data-idx="${i}"
@@ -1560,16 +1872,16 @@ export function openScheduleConfig() {
           ondragover="event.preventDefault();this.parentElement.querySelectorAll('.schedule-row').forEach(r=>r.classList.remove('border-blue-400','bg-blue-50'));this.classList.add('border-blue-400','bg-blue-50')"
           ondragleave="this.classList.remove('border-blue-400','bg-blue-50')"
           ondrop="event.preventDefault();this.classList.remove('border-blue-400','bg-blue-50');var from=_dragEvIdx;if(from===null)return;var to=parseInt(this.dataset.idx);if(from===to)return;App._moveScheduleEvent(from,to);App.openScheduleConfig()">
-          <span class="text-slate-300 cursor-grab active:cursor-grabbing select-none text-sm" title="Arrastrar para reordenar">☰</span>
+          <span class="text-slate-300 cursor-grab active:cursor-grabbing select-none text-sm" title="Arrastrar para reordenar">â˜°</span>
           <span class="text-xl">${ev.emoji}</span>
           <div class="flex-1 min-w-0">
             <div class="text-sm font-black text-slate-800 truncate">${safeEscapeHTML(ev.label)}</div>
-            <div class="text-[10px] font-bold text-slate-400">${_fmtTimeShort(ev.startTime)}${isOmittedToday ? ' · <span class="text-amber-500">Omitido hoy</span>' : ''}</div>
+            <div class="text-[10px] font-bold text-slate-400">${_fmtTimeShort(ev.startTime)}${isOmittedToday ? ' Â· <span class="text-amber-500">Omitido hoy</span>' : ''}</div>
           </div>
           <div class="flex items-center gap-2">
             <span class="w-3 h-3 rounded-full" style="background:${ev.color}"></span>
             <span class="text-[10px] font-bold ${ev.active ? 'text-green-600' : 'text-slate-300'}">${ev.active ? 'Activo' : 'Inactivo'}</span>
-            ${!isDefault ? `<button onclick="event.stopPropagation();App.deleteScheduleEvent('${ev.id}')" class="p-1 rounded-lg hover:bg-red-50 text-slate-300 hover:text-red-500 transition-all" title="Eliminar">🗑️</button>` : ''}
+            ${!isDefault ? `<button onclick="event.stopPropagation();App.deleteScheduleEvent('${ev.id}')" class="p-1 rounded-lg hover:bg-red-50 text-slate-300 hover:text-red-500 transition-all" title="Eliminar">ðŸ—‘ï¸</button>` : ''}
           </div>
         </div>
       `;
@@ -1591,7 +1903,7 @@ export function openScheduleConfig() {
               <button onclick="App.buildModeAdd('${it.id}')" class="cat-chip ${selected ? 'sel' : ''}" title="${safeEscapeHTML(it.label)}">
                 <span class="text-lg leading-none">${it.emoji}</span>
                 <span class="cat-chip-name">${safeEscapeHTML(it.label)}</span>
-                <span class="cat-chip-badge">${selected ? '✓' : '+'}</span>
+                <span class="cat-chip-badge">${selected ? 'âœ“' : '+'}</span>
               </button>`;
           }
           const added = schedule.some(s => s.label === it.label);
@@ -1599,7 +1911,7 @@ export function openScheduleConfig() {
             <button onclick="App.addCatalogEvent('${it.id}')" class="cat-chip ${added ? 'added' : ''}" title="${safeEscapeHTML(it.label)}">
               <span class="text-lg leading-none">${it.emoji}</span>
               <span class="cat-chip-name">${safeEscapeHTML(it.label)}</span>
-              <span class="cat-chip-badge">${added ? '✓' : '+'}</span>
+              <span class="cat-chip-badge">${added ? 'âœ“' : '+'}</span>
             </button>`;
         }).join('')}
       </div>
@@ -1608,19 +1920,19 @@ export function openScheduleConfig() {
   const builderSection = `
     <div class="rounded-2xl p-3 mb-3" style="background:linear-gradient(135deg,#fdf2f8,#eff6ff);border:2px solid #fbcfe8">
       <div class="flex items-center justify-between mb-2">
-        <span class="text-xs font-black text-pink-600 uppercase tracking-wider">📝 Tu cronología personal</span>
+        <span class="text-xs font-black text-pink-600 uppercase tracking-wider">ðŸ“ Tu cronologÃ­a personal</span>
         <span class="bd-count">${(_buildDraft || []).length} evento(s)</span>
       </div>
       <div class="flex gap-1.5 flex-wrap mb-2">
         <label class="bd-start"><span>Inicio</span><input type="time" value="${_buildStartTime}" onchange="App.buildModeSetStart(this.value)"></label>
-        <button onclick="App.buildModeStack()" class="bd-act" title="Encadena las horas de los eventos en orden">⏱️ Auto-ordenar</button>
-        <button onclick="App.buildModeClear()" class="bd-act bd-act-red">🧹 Vaciar</button>
-        <button onclick="App.buildModeApply()" class="bd-act bd-act-green">✔ Aplicar cronología</button>
+        <button onclick="App.buildModeStack()" class="bd-act" title="Encadena las horas de los eventos en orden">â±ï¸ Auto-ordenar</button>
+        <button onclick="App.buildModeClear()" class="bd-act bd-act-red">ðŸ§¹ Vaciar</button>
+        <button onclick="App.buildModeApply()" class="bd-act bd-act-green">âœ” Aplicar cronologÃ­a</button>
       </div>
       ${(_buildDraft || []).length
         ? `<div class="bd-list">${_buildDraft.map((r, i) => {
             const cat = r.catId ? _CATALOG_BY_ID[r.catId] : null;
-            const emoji = cat ? cat.emoji : (r.emoji || '📌');
+            const emoji = cat ? cat.emoji : (r.emoji || 'ðŸ“Œ');
             const label = cat ? cat.label : (r.label || 'Evento');
             const color = cat ? cat.color : (r.color || '#0B63C7');
             return `
@@ -1628,12 +1940,12 @@ export function openScheduleConfig() {
                 <span class="bd-emoji">${emoji}</span>
                 <div class="flex-1 min-w-0"><div class="bd-name">${safeEscapeHTML(label)}</div></div>
                 <input type="time" value="${r.time}" class="bd-in" onchange="App.buildModeSetTime(${i},this.value)" title="Hora de inicio">
-                <button onclick="App.buildModeMove(${i},-1)" class="bd-btn" title="Subir">▲</button>
-                <button onclick="App.buildModeMove(${i},1)" class="bd-btn" title="Bajar">▼</button>
-                <button onclick="App.buildModeRemove(${i})" class="bd-btn bd-del" title="Quitar">✕</button>
+                <button onclick="App.buildModeMove(${i},-1)" class="bd-btn" title="Subir">â–²</button>
+                <button onclick="App.buildModeMove(${i},1)" class="bd-btn" title="Bajar">â–¼</button>
+                <button onclick="App.buildModeRemove(${i})" class="bd-btn bd-del" title="Quitar">âœ•</button>
               </div>`;
           }).join('')}</div>`
-        : `<div class="bd-empty">👆 Toca los eventos de abajo y se irán agregando aquí en orden</div>`}
+        : `<div class="bd-empty">ðŸ‘† Toca los eventos de abajo y se irÃ¡n agregando aquÃ­ en orden</div>`}
     </div>`;
 
   UI.Modal.open('scheduleConfigModal', `
@@ -1688,37 +2000,37 @@ export function openScheduleConfig() {
     <div class="bg-white overflow-hidden" style="border-radius:32px;max-height:88vh;display:flex;flex-direction:column">
       <div class="p-5 flex-shrink-0" style="background:linear-gradient(135deg,#0B63C7,#28B54D)">
         <div class="flex items-center justify-between">
-          <div><h3 class="text-xl font-black text-white">Configurar Horario</h3><p class="text-sm font-bold text-white/80">Arrastra ☰ — toca para configurar — + para insertar</p></div>
+          <div><h3 class="text-xl font-black text-white">Configurar Horario</h3><p class="text-sm font-bold text-white/80">Arrastra â˜° â€” toca para configurar â€” + para insertar</p></div>
           <button onclick="UI.Modal.close('scheduleConfigModal')" class="p-2 rounded-xl bg-white/20 text-white"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
         </div>
       </div>
       <div class="p-4 overflow-y-auto flex-1" id="sc-list">
         <div class="grid grid-cols-2 gap-2 mb-3">
-          <button onclick="App.setScheduleConfigMode('library')" class="sc-mode-btn ${!buildMode ? 'on' : ''}">📚 Biblioteca</button>
-          <button onclick="App.setScheduleConfigMode('build')" class="sc-mode-btn ${buildMode ? 'on' : ''}">🔨 Construir cronología</button>
+          <button onclick="App.setScheduleConfigMode('library')" class="sc-mode-btn ${!buildMode ? 'on' : ''}">ðŸ“š Biblioteca</button>
+          <button onclick="App.setScheduleConfigMode('build')" class="sc-mode-btn ${buildMode ? 'on' : ''}">ðŸ”¨ Construir cronologÃ­a</button>
         </div>
         ${buildMode ? builderSection : ''}
         <div class="rounded-2xl p-3" style="background:linear-gradient(135deg,#eff6ff,#fdf4ff);border:2px dashed #bfdbfe">
           ${buildMode ? `
-            <input class="sc-search" placeholder="🔍 Buscar evento..." oninput="var q=this.value.toLowerCase();document.querySelectorAll('#sc-catalog-b .cat-chip').forEach(function(c){c.style.display=c.textContent.toLowerCase().includes(q)?'':'none'})">
+            <input class="sc-search" placeholder="ðŸ” Buscar evento..." oninput="var q=this.value.toLowerCase();document.querySelectorAll('#sc-catalog-b .cat-chip').forEach(function(c){c.style.display=c.textContent.toLowerCase().includes(q)?'':'none'})">
             <div id="sc-catalog-b">${catalogHtml}</div>
           ` : `
-            <button onclick="var c=document.getElementById('sc-catalog');var t=this.querySelector('.sc-ic');c.classList.toggle('hidden');t.textContent=c.classList.contains('hidden')?'▼':'▲'" class="w-full flex items-center justify-between">
-              <span class="text-xs font-black text-blue-600 uppercase tracking-wider">📚 Biblioteca de eventos</span>
-              <span class="sc-ic">▼</span>
+            <button onclick="var c=document.getElementById('sc-catalog');var t=this.querySelector('.sc-ic');c.classList.toggle('hidden');t.textContent=c.classList.contains('hidden')?'â–¼':'â–²'" class="w-full flex items-center justify-between">
+              <span class="text-xs font-black text-blue-600 uppercase tracking-wider">ðŸ“š Biblioteca de eventos</span>
+              <span class="sc-ic">â–¼</span>
             </button>
             <div id="sc-catalog" class="hidden">
-              <input class="sc-search" placeholder="🔍 Buscar evento..." oninput="var q=this.value.toLowerCase();document.querySelectorAll('#sc-catalog .cat-chip').forEach(function(c){c.style.display=c.textContent.toLowerCase().includes(q)?'':'none'})">
+              <input class="sc-search" placeholder="ðŸ” Buscar evento..." oninput="var q=this.value.toLowerCase();document.querySelectorAll('#sc-catalog .cat-chip').forEach(function(c){c.style.display=c.textContent.toLowerCase().includes(q)?'':'none'})">
               ${catalogHtml}
             </div>
             <div class="mt-4">${scheduleHtml}</div>
             <div class="shift-ctl">
-              <span class="shift-lbl">⏱️ Correr todo el horario</span>
+              <span class="shift-lbl">â±ï¸ Correr todo el horario</span>
               <div class="shift-actions">
-                <button onclick="App.shiftAllScheduleTimes(-1)" class="shift-btn">⏪ Adelantar</button>
+                <button onclick="App.shiftAllScheduleTimes(-1)" class="shift-btn">âª Adelantar</button>
                 <input type="number" id="scShiftMin" value="5" min="1" max="180" inputmode="numeric" class="shift-in">
                 <span class="shift-unit">min</span>
-                <button onclick="App.shiftAllScheduleTimes(1)" class="shift-btn">Atrasar ⏩</button>
+                <button onclick="App.shiftAllScheduleTimes(1)" class="shift-btn">Atrasar â©</button>
               </div>
             </div>
           `}
@@ -1726,7 +2038,7 @@ export function openScheduleConfig() {
       </div>
       <div class="p-4 border-t border-slate-100 flex-shrink-0 space-y-2">
         <button onclick="App.resetScheduleConfig()" class="w-full py-3 rounded-xl border-2 border-red-200 font-black text-xs uppercase text-red-500 hover:bg-red-50 transition-all">Restaurar Horario Predeterminado</button>
-        <p class="text-center text-[9px] font-bold text-slate-300">Consejo: construye tu cronología y ajusta la hora de cada evento</p>
+        <p class="text-center text-[9px] font-bold text-slate-300">Consejo: construye tu cronologÃ­a y ajusta la hora de cada evento</p>
       </div>
     </div>
   `);
@@ -1743,7 +2055,7 @@ export function resetScheduleConfig() {
 }
 
 // Desplaza la hora de TODAS las rutinas del horario a la vez (individual o en general).
-// sign = 1 → atrasa (más tarde) · sign = -1 → adelanta (más temprano)
+// sign = 1 â†’ atrasa (mÃ¡s tarde) Â· sign = -1 â†’ adelanta (mÃ¡s temprano)
 export function shiftAllScheduleTimes(sign) {
   const mins = Math.abs(parseInt(document.getElementById('scShiftMin')?.value, 10)) || 5;
   const delta = (sign < 0 ? -1 : 1) * mins;
@@ -1760,9 +2072,9 @@ export function shiftAllScheduleTimes(sign) {
   initRoutine();
 }
 
-// ───────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // BIBLIOTECA DE EVENTOS
-// ───────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function _catalogScheduleEvent(catId, startTime, duration, customId) {
   const cat = _CATALOG_BY_ID[catId];
@@ -1797,22 +2109,22 @@ export function addCatalogEvent(catId) {
   _saveScheduleConfig();
   openScheduleConfig();
   initRoutine();
-  safeToast(`"${cat.label}" agregado al horario — configúralo`, 'success');
+  safeToast(`"${cat.label}" agregado al horario â€” configÃºralo`, 'success');
 }
 
-// ───────────────────────────────────────────────────────────────────────────────
-// MODO CONSTRUIR CRONOLOGÍA — la maestra selecciona eventos del catálogo y al
-// hacerlo se va armando su cronología personal en orden, con horarios que se
-// encadenan solos. Puede reordenar, quitar y ajustar horas/duración antes de
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// MODO CONSTRUIR CRONOLOGÃA â€” la maestra selecciona eventos del catÃ¡logo y al
+// hacerlo se va armando su cronologÃ­a personal en orden, con horarios que se
+// encadenan solos. Puede reordenar, quitar y ajustar horas/duraciÃ³n antes de
 // aplicarla.
-// ───────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function _initBuildDraft() {
   _buildDraft = (_getScheduleConfig() || []).map(ev => {
     const cat = _CATALOG_BY_ID[ev.id];
     return cat
       ? { uid: ev.id, catId: cat.id, time: ev.startTime, dur: ev.duration || cat.duration }
-      : { uid: ev.id, catId: null, emoji: ev.emoji || '📌', label: ev.label || 'Evento', color: ev.color || '#64748B', time: ev.startTime, dur: ev.duration || 30 };
+      : { uid: ev.id, catId: null, emoji: ev.emoji || 'ðŸ“Œ', label: ev.label || 'Evento', color: ev.color || '#64748B', time: ev.startTime, dur: ev.duration || 30 };
   });
 }
 
@@ -1890,7 +2202,7 @@ export function buildModeClear() {
 
 export function buildModeApply() {
   if (!_buildDraft.length) {
-    safeToast('Agrega al menos un evento para aplicar tu cronología', 'error');
+    safeToast('Agrega al menos un evento para aplicar tu cronologÃ­a', 'error');
     return;
   }
   const events = _buildDraft.map((r, i) => {
@@ -1898,7 +2210,7 @@ export function buildModeApply() {
     const id = (r.catId || 'custom') + '_' + Date.now().toString(36) + '_' + i;
     return {
       id,
-      emoji: cat ? cat.emoji : (r.emoji || '📌'),
+      emoji: cat ? cat.emoji : (r.emoji || 'ðŸ“Œ'),
       label: cat ? cat.label : (r.label || 'Evento'),
       color: cat ? cat.color : (r.color || '#64748B'),
       startTime: r.time,
@@ -1920,12 +2232,12 @@ export function buildModeApply() {
   UI.Modal.close('scheduleConfigModal');
   openScheduleConfig();
   initRoutine();
-  safeToast('¡Tu cronología personalizada fue aplicada!', 'success');
+  safeToast('Â¡Tu cronologÃ­a personalizada fue aplicada!', 'success');
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// DAILY ROUTINE OVERRIDES (Rutina del Día)
-// ═══════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// DAILY ROUTINE OVERRIDES (Rutina del DÃ­a)
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 function _loadDailyOverrides() {
   try { return JSON.parse(localStorage.getItem(DAILY_OVERRIDES_KEY) || '{}'); } catch { return {}; }
@@ -1959,7 +2271,7 @@ export function toggleOmitToday(eventId) {
 export function insertEventAt(index) {
   const id = 'custom_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
   const newEv = {
-    id, emoji: '📌', label: 'Nuevo evento', color: '#64748B',
+    id, emoji: 'ðŸ“Œ', label: 'Nuevo evento', color: '#64748B',
     startTime: '08:00', duration: 30, type: 'colectivo', auto: false,
     needsConfirm: false, visibleParents: true, visibleDirector: true,
     days: [1,2,3,4,5,6], active: true
@@ -1968,7 +2280,7 @@ export function insertEventAt(index) {
   _saveScheduleConfig();
   openScheduleConfig();
   initRoutine();
-  safeToast('Evento insertado — configúralo', 'success');
+  safeToast('Evento insertado â€” configÃºralo', 'success');
 }
 
 export function clearDailyOverrides() {
@@ -1980,25 +2292,25 @@ export function clearDailyOverrides() {
   safeToast('Rutina de hoy restaurada', 'success');
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // QUICK GROUP EVENT
-// ═══════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 export async function routineQuickGroup(eventId) {
   const classroom = AppState.get('classroom');
   const allStudents = AppState.get('students') || [];
   const today = _today();
 
-  // Regla 6 — solo dentro del horario del aula
+  // Regla 6 â€” solo dentro del horario del aula
   const _nowMin = new Date().getHours() * 60 + new Date().getMinutes();
   if (_nowMin < 5 * 60 || _nowMin >= 22 * 60) { safeToast('Regla 6: solo se pueden marcar rutinas de 05:00 a 22:00', 'warning'); return; }
 
   const attendance = await MaestraApi.getAttendance(classroom.id, today);
-  // Regla 2 — sin asistencia tomada no se marca a nadie
-  if (!attendance || attendance.length === 0) { safeToast('Regla 2: primero pasa asistencia del día', 'warning'); return; }
+  // Regla 2 â€” sin asistencia tomada no se marca a nadie
+  if (!attendance || attendance.length === 0) { safeToast('Regla 2: primero pasa asistencia del dÃ­a', 'warning'); return; }
   const presentStudentIds = new Set(attendance.filter(a => ['present', 'late'].includes(a.status)).map(a => a.student_id));
   const students = allStudents.filter(s => presentStudentIds.has(s.id));
-  // Regla 1 — solo se marcan alumnos presentes
+  // Regla 1 â€” solo se marcan alumnos presentes
   if (students.length === 0) { safeToast('No hay alumnos presentes para marcar', 'warning'); return; }
 
   const EVENT_MAP = {
@@ -2013,10 +2325,10 @@ export async function routineQuickGroup(eventId) {
     departure: { field: '_group', value: 'activity', label: 'Salida' },
     sleep_start: { field: '_sleep', value: 'start', label: 'Iniciar siesta' },
     sleep_end: { field: '_sleep', value: 'end', label: 'Terminar siesta' },
-    bathroom: { field: '_group', value: 'bath', label: 'Baño' },
-    diaper_change: { field: '_group', value: 'diaper_change', label: 'Cambio de pañal' },
-    poop_gr: { field: '_group', value: 'diaper', subtype: 'soiled', label: 'Popó' },
-    milk_gr: { field: '_group', value: 'milk', label: 'Biberón' }
+    bathroom: { field: '_group', value: 'bath', label: 'BaÃ±o' },
+    diaper_change: { field: '_group', value: 'diaper_change', label: 'Cambio de paÃ±al' },
+    poop_gr: { field: '_group', value: 'diaper', subtype: 'soiled', label: 'PopÃ³' },
+    milk_gr: { field: '_group', value: 'milk', label: 'BiberÃ³n' }
   };
 
   const ev = EVENT_MAP[eventId];
@@ -2031,8 +2343,8 @@ export async function routineQuickGroup(eventId) {
     ...(catalogEvent ? { event_id: catalogEvent.id } : {})
   });
 
-  // Regla 7 — las acciones masivas se confirman antes de marcar
-  if (students.length > 5 && !confirm(`¿Marcar "${ev.label}" para ${students.length} alumnos presentes?`)) {
+  // Regla 7 â€” las acciones masivas se confirman antes de marcar
+  if (students.length > 5 && !confirm(`Â¿Marcar "${ev.label}" para ${students.length} alumnos presentes?`)) {
     return;
   }
 
@@ -2076,15 +2388,15 @@ function _legacyKeyForEvent(ev) {
   return map[ev.value];
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// RUTINAS DEL AULA — MARCADO COLECTIVO DESDE EL CATÁLOGO AMPLIO (10 reglas)
-// ═══════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// RUTINAS DEL AULA â€” MARCADO COLECTIVO DESDE EL CATÃLOGO AMPLIO (10 reglas)
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 export async function markWholeClassRoutine(routineId) {
   const routine = _getWholeClassRoutines().find(r => r.id === routineId);
   if (!routine) return;
 
-  // Regla 9 — solo la maestra autorizada del aula
+  // Regla 9 â€” solo la maestra autorizada del aula
   const user = AppState.get('user') || {};
   const profile = AppState.get('profile') || {};
   if (profile.role && profile.role !== 'maestra') { safeToast('Regla 9: solo la maestra puede marcar rutinas del aula', 'warning'); return; }
@@ -2094,20 +2406,20 @@ export async function markWholeClassRoutine(routineId) {
   const allStudents = AppState.get('students') || [];
   const today = _today();
 
-  // Regla 6 — solo dentro del horario del aula
+  // Regla 6 â€” solo dentro del horario del aula
   const _nowMin = new Date().getHours() * 60 + new Date().getMinutes();
   if (_nowMin < 5 * 60 || _nowMin >= 22 * 60) { safeToast('Regla 6: solo se pueden marcar rutinas de 05:00 a 22:00', 'warning'); return; }
 
   const attendance = await MaestraApi.getAttendance(classroom.id, today);
-  // Regla 2 — sin asistencia tomada no se marca a nadie
-  if (!attendance || attendance.length === 0) { safeToast('Regla 2: primero pasa asistencia del día', 'warning'); return; }
+  // Regla 2 â€” sin asistencia tomada no se marca a nadie
+  if (!attendance || attendance.length === 0) { safeToast('Regla 2: primero pasa asistencia del dÃ­a', 'warning'); return; }
   const presentStudentIds = new Set(attendance.filter(a => ['present', 'late'].includes(a.status)).map(a => a.student_id));
-  // Regla 1 — solo se marcan alumnos presentes
+  // Regla 1 â€” solo se marcan alumnos presentes
   const students = allStudents.filter(s => presentStudentIds.has(s.id));
   if (students.length === 0) { safeToast('Regla 1: no hay alumnos presentes para marcar', 'warning'); return; }
 
-  // Regla 7 — las acciones masivas se confirman antes de marcar
-  if (students.length > 5 && !confirm(`¿Marcar "${routine.label}" (${routine.cat}) para ${students.length} alumnos presentes?`)) {
+  // Regla 7 â€” las acciones masivas se confirman antes de marcar
+  if (students.length > 5 && !confirm(`Â¿Marcar "${routine.label}" (${routine.cat}) para ${students.length} alumnos presentes?`)) {
     return;
   }
 
@@ -2115,14 +2427,14 @@ export async function markWholeClassRoutine(routineId) {
   const event_time = await _promptEventTime(routine.emoji, routine.label);
   if (event_time === null) return; // cancelado
 
-  // Regla 4 y 10 — ocurrencia única y origen colectivo para auditoría
+  // Regla 4 y 10 â€” ocurrencia Ãºnica y origen colectivo para auditorÃ­a
   const occurrenceId = crypto.randomUUID?.() || Math.random().toString(36).substr(2, 12);
 
   try {
     let markedCount = 0;
+    const repeatable = _isRepeatableLabel(routine.label) || routine.cat === 'Higiene';
     for (const s of students) {
-      // Regla 3 — un mismo evento no se registra dos veces al mismo alumno el mismo día
-      const alreadyMarked = (_logsMap[s.id]?.infant_data || []).some(
+      const alreadyMarked = !repeatable && (_logsMap[s.id]?.infant_data || []).some(
         e => e.type === 'activity' && e.label === routine.label
       );
       if (alreadyMarked) continue;
@@ -2154,9 +2466,9 @@ export async function markWholeClassRoutine(routineId) {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// LEVEL 4 — MODAL INDIVIDUAL (ENHANCED)
-// ═══════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// LEVEL 4 â€” MODAL INDIVIDUAL (ENHANCED)
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 function _renderMilkModal(studentId, existingEvent) {
   const ev = existingEvent || {};
@@ -2165,8 +2477,8 @@ function _renderMilkModal(studentId, existingEvent) {
       <div class="p-5" style="background:linear-gradient(135deg,#0B63C7,#3B82F6)">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-3">
-            <span class="text-2xl">🍼</span>
-            <div><h3 class="text-lg font-black text-white">Biberón</h3><p class="text-xs font-bold text-white/80">Registrar toma</p></div>
+            <span class="text-2xl">ðŸ¼</span>
+            <div><h3 class="text-lg font-black text-white">BiberÃ³n</h3><p class="text-xs font-bold text-white/80">Registrar toma</p></div>
           </div>
           <button onclick="UI.Modal.close('milkModal')" class="p-2 rounded-xl bg-white/20 text-white">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M18 6L6 18M6 6l12 12"/></svg>
@@ -2208,7 +2520,7 @@ function _renderMilkModal(studentId, existingEvent) {
           <textarea id="milkNotes" rows="2" placeholder="Notas adicionales..."
             class="w-full mt-2 p-3 border-2 border-slate-100 rounded-xl text-xs focus:border-blue-400 outline-none">${safeEscapeHTML(ev.notes || '')}</textarea>
         </div>
-        <button onclick="App._confirmMilk('${studentId}')" class="w-full py-3 rounded-xl font-black text-xs uppercase text-white" style="background:#0B63C7">Guardar Biberón</button>
+        <button onclick="App._confirmMilk('${studentId}')" class="w-full py-3 rounded-xl font-black text-xs uppercase text-white" style="background:#0B63C7">Guardar BiberÃ³n</button>
       </div>
     </div>
   `;
@@ -2221,8 +2533,8 @@ function _renderMedModal(studentId, existingEvent) {
       <div class="p-5" style="background:linear-gradient(135deg,#EC4899,#F472B6)">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-3">
-            <span class="text-2xl">💊</span>
-            <div><h3 class="text-lg font-black text-white">Medicamento</h3><p class="text-xs font-bold text-white/80">Registrar administración</p></div>
+            <span class="text-2xl">ðŸ’Š</span>
+            <div><h3 class="text-lg font-black text-white">Medicamento</h3><p class="text-xs font-bold text-white/80">Registrar administraciÃ³n</p></div>
           </div>
           <button onclick="UI.Modal.close('medModal')" class="p-2 rounded-xl bg-white/20 text-white">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M18 6L6 18M6 6l12 12"/></svg>
@@ -2246,7 +2558,7 @@ function _renderMedModal(studentId, existingEvent) {
             class="w-full mt-2 p-3 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-700 outline-none focus:border-blue-400">
         </div>
         <div class="flex items-center justify-between p-3 rounded-xl bg-slate-50">
-          <span class="text-sm font-bold text-slate-700">Autorización de padres</span>
+          <span class="text-sm font-bold text-slate-700">AutorizaciÃ³n de padres</span>
           <label class="relative inline-flex items-center cursor-pointer">
             <input type="checkbox" id="medAuth" ${ev.authorized ? 'checked' : ''} class="sr-only peer">
             <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
@@ -2269,7 +2581,7 @@ function _renderExtraEventModal(studentId) {
       <div class="p-5" style="background:linear-gradient(135deg,#EF4444,#F87171)">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-3">
-            <span class="text-2xl">⚠️</span>
+            <span class="text-2xl">âš ï¸</span>
             <div><h3 class="text-lg font-black text-white">Evento Extra</h3><p class="text-xs font-bold text-white/80">Registrar incidente o evento</p></div>
           </div>
           <button onclick="UI.Modal.close('extraEventModal')" class="p-2 rounded-xl bg-white/20 text-white">
@@ -2292,8 +2604,8 @@ function _renderExtraEventModal(studentId) {
           <input type="hidden" id="extraType" value="">
         </div>
         <div>
-          <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Descripción</label>
-          <textarea id="extraDesc" rows="3" placeholder="Describe lo que sucedió..."
+          <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">DescripciÃ³n</label>
+          <textarea id="extraDesc" rows="3" placeholder="Describe lo que sucediÃ³..."
             class="w-full mt-2 p-3 border-2 border-slate-100 rounded-xl text-xs focus:border-blue-400 outline-none"></textarea>
         </div>
         <div>
@@ -2320,7 +2632,7 @@ function _renderTempModal(studentId) {
       <div class="p-5" style="background:linear-gradient(135deg,#EF4444,#F87171)">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-3">
-            <span class="text-2xl">🌡️</span>
+            <span class="text-2xl">ðŸŒ¡ï¸</span>
             <div><h3 class="text-lg font-black text-white">Temperatura</h3><p class="text-xs font-bold text-white/80">Registrar temperatura corporal</p></div>
           </div>
           <button onclick="UI.Modal.close('tempModal')" class="p-2 rounded-xl bg-white/20 text-white">
@@ -2330,7 +2642,7 @@ function _renderTempModal(studentId) {
       </div>
       <div class="p-5 space-y-4">
         <div>
-          <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Temperatura (°C)</label>
+          <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Temperatura (Â°C)</label>
           <div class="flex gap-2 mt-2">
             ${[36.0,36.5,37.0,37.5,38.0,38.5,39.0,39.5,40.0].map(t => `
               <button onclick="document.getElementById('tempValue').value='${t}';this.parentElement.querySelectorAll('button').forEach(b=>b.classList.remove('border-red-500','bg-red-50'));this.classList.add('border-red-500','bg-red-50')"
@@ -2361,7 +2673,7 @@ export async function _confirmTemp(studentId) {
   btn.disabled = true; btn.textContent = 'Guardando...';
   const classroom = AppState.get('classroom');
   const value = parseFloat(document.getElementById('tempValue')?.value);
-  if (isNaN(value) || value < 34 || value > 42) { safeToast('Ingresa una temperatura válida (34-42°C)', 'warning'); btn.disabled = false; btn.textContent = 'Guardar Temperatura'; return; }
+  if (isNaN(value) || value < 34 || value > 42) { safeToast('Ingresa una temperatura vÃ¡lida (34-42Â°C)', 'warning'); btn.disabled = false; btn.textContent = 'Guardar Temperatura'; return; }
   const time = document.getElementById('tempTime')?.value || null;
   try {
     await MaestraApi.upsertDailyLog({
@@ -2375,13 +2687,13 @@ export async function _confirmTemp(studentId) {
   } catch { safeToast('Error al guardar', 'error'); btn.disabled = false; btn.textContent = 'Guardar Temperatura'; }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // SECCIONES COLAPSABLES DEL MODAL INDIVIDUAL
-// Cada "campo de evento" (emocional, alimentación, siesta…) puede ocultarse
-// o mostrarse para ganar espacio, sobre todo en móvil. El estado queda
-// guardado por maestra en localStorage: al reabrir (hoy o mañana) cada
-// sección aparece como ella lo dejó.
-// ═══════════════════════════════════════════════════════════════════════════════
+// Cada "campo de evento" (emocional, alimentaciÃ³n, siestaâ€¦) puede ocultarse
+// o mostrarse para ganar espacio, sobre todo en mÃ³vil. El estado queda
+// guardado por maestra en localStorage: al reabrir (hoy o maÃ±ana) cada
+// secciÃ³n aparece como ella lo dejÃ³.
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 const SR_SEC_KEY = 'msc_sr_sections_v1';
 const SR_SEC_IDS = ['timeline', 'aula', 'mood', 'food', 'nap', 'milk', 'activities', 'hygiene', 'health', 'extra', 'behavior', 'note'];
@@ -2398,7 +2710,7 @@ function _srIsOpen(id, defOpen) {
 }
 function _srWriteSecState(st) { try { localStorage.setItem(SR_SEC_KEY, JSON.stringify(st)); } catch {} }
 
-/** Muestra/oculta TODAS las categorías de rutinas del aula en el modal individual */
+/** Muestra/oculta TODAS las categorÃ­as de rutinas del aula en el modal individual */
 export function _srToggleAulaAll() {
   const box = document.getElementById('srAulaRoutines');
   const btn = document.getElementById('srAulaShowAllBtn');
@@ -2410,7 +2722,7 @@ export function _srToggleAulaAll() {
   }
 }
 
-/** Filtra la línea del tiempo del modal individual por origen (all/aula/individual) */
+/** Filtra la lÃ­nea del tiempo del modal individual por origen (all/aula/individual) */
 export function _srTimelineFilter(kind) {
   const list = document.getElementById('srTimelineList');
   if (!list) return;
@@ -2423,7 +2735,7 @@ export function _srTimelineFilter(kind) {
   });
 }
 
-/** Abre/cierra UNA sección del modal individual y persiste el estado */
+/** Abre/cierra UNA secciÃ³n del modal individual y persiste el estado */
 export function _srToggleSec(id) {
   const head = document.querySelector(`#studentRoutineModal [data-sr-head="${id}"]`);
   const body = document.querySelector(`#studentRoutineModal [data-sr-body="${id}"]`);
@@ -2458,60 +2770,60 @@ function _srSyncExpandBtn() {
   document.getElementById('srCollapseAllBtn')?.classList.toggle('sr-tool-off', allClosed);
 }
 
-// ───────────────────────────────────────────────────────────────────────────────
-// LÍNEA DEL TIEMPO UNIFICADA — reúne TODOS los registros del día del alumno:
-// ánimo, comidas, siesta, eventos individuales (biberón, medicamento,
-// temperatura, pañal, salud…) y los eventos/rutinas del aula que se marcaron
-// para él (tanto en grupo como individualmente). Cada registro indica su
-// origen (Aula / Individual) para que la maestra vea de dónde salió.
-// ───────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// LÃNEA DEL TIEMPO UNIFICADA â€” reÃºne TODOS los registros del dÃ­a del alumno:
+// Ã¡nimo, comidas, siesta, eventos individuales (biberÃ³n, medicamento,
+// temperatura, paÃ±al, saludâ€¦) y los eventos/rutinas del aula que se marcaron
+// para Ã©l (tanto en grupo como individualmente). Cada registro indica su
+// origen (Aula / Individual) para que la maestra vea de dÃ³nde saliÃ³.
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const TIMELINE_TYPE_META = {
-  mood:           { emoji: '😊', color: '#3B82F6', group: 'Emocional' },
-  breakfast:      { emoji: '🍞', color: '#FF8A00', group: 'Alimentación' },
-  lunch:          { emoji: '🥗', color: '#28B54D', group: 'Alimentación' },
-  snack:          { emoji: '🍎', color: '#F59E0B', group: 'Alimentación' },
-  nap:            { emoji: '😴', color: '#8B5CF6', group: 'Descanso' },
-  sleep:          { emoji: '😴', color: '#8B5CF6', group: 'Descanso' },
-  milk:           { emoji: '🍼', color: '#0B63C7', group: 'Alimentación' },
-  activity:       { emoji: '🎨', color: '#7C3AED', group: 'Actividades' },
-  sensorial:      { emoji: '🔬', color: '#6366F1', group: 'Actividades' },
-  playground:     { emoji: '🌳', color: '#16A34A', group: 'Actividades' },
-  handwash:       { emoji: '🧼', color: '#0B63C7', group: 'Higiene' },
-  toothbrush:     { emoji: '🪥', color: '#06B6D4', group: 'Higiene' },
-  bath:           { emoji: '🚽', color: '#28B54D', group: 'Higiene' },
-  diaper:         { emoji: '🧷', color: '#FF8A00', group: 'Higiene' },
-  diaper_change:  { emoji: '🧻', color: '#94A3B8', group: 'Higiene' },
-  temp:           { emoji: '🌡️', color: '#EF4444', group: 'Salud' },
-  med:            { emoji: '💊', color: '#EC4899', group: 'Salud' },
-  health:         { emoji: '😷', color: '#6366F1', group: 'Salud' },
-  incident:       { emoji: '🤕', color: '#EF4444', group: 'Salud' },
-  behavior:       { emoji: '🤝', color: '#F59E0B', group: 'Conducta' },
-  note:           { emoji: '📝', color: '#64748B', group: 'Nota' }
+  mood:           { emoji: 'ðŸ˜Š', color: '#3B82F6', group: 'Emocional' },
+  breakfast:      { emoji: 'ðŸž', color: '#FF8A00', group: 'AlimentaciÃ³n' },
+  lunch:          { emoji: 'ðŸ¥—', color: '#28B54D', group: 'AlimentaciÃ³n' },
+  snack:          { emoji: 'ðŸŽ', color: '#F59E0B', group: 'AlimentaciÃ³n' },
+  nap:            { emoji: 'ðŸ˜´', color: '#8B5CF6', group: 'Descanso' },
+  sleep:          { emoji: 'ðŸ˜´', color: '#8B5CF6', group: 'Descanso' },
+  milk:           { emoji: 'ðŸ¼', color: '#0B63C7', group: 'AlimentaciÃ³n' },
+  activity:       { emoji: 'ðŸŽ¨', color: '#7C3AED', group: 'Actividades' },
+  sensorial:      { emoji: 'ðŸ”¬', color: '#6366F1', group: 'Actividades' },
+  playground:     { emoji: 'ðŸŒ³', color: '#16A34A', group: 'Actividades' },
+  handwash:       { emoji: 'ðŸ§¼', color: '#0B63C7', group: 'Higiene' },
+  toothbrush:     { emoji: 'ðŸª¥', color: '#06B6D4', group: 'Higiene' },
+  bath:           { emoji: 'ðŸš½', color: '#28B54D', group: 'Higiene' },
+  diaper:         { emoji: 'ðŸ§·', color: '#FF8A00', group: 'Higiene' },
+  diaper_change:  { emoji: 'ðŸ§»', color: '#94A3B8', group: 'Higiene' },
+  temp:           { emoji: 'ðŸŒ¡ï¸', color: '#EF4444', group: 'Salud' },
+  med:            { emoji: 'ðŸ’Š', color: '#EC4899', group: 'Salud' },
+  health:         { emoji: 'ðŸ˜·', color: '#6366F1', group: 'Salud' },
+  incident:       { emoji: 'ðŸ¤•', color: '#EF4444', group: 'Salud' },
+  behavior:       { emoji: 'ðŸ¤', color: '#F59E0B', group: 'Conducta' },
+  note:           { emoji: 'ðŸ“', color: '#64748B', group: 'Nota' }
 };
 
-/** Emoji correcto para un evento de infant_data (pañal usa subtype). */
+/** Emoji correcto para un evento de infant_data (paÃ±al usa subtype). */
 function _timelineEmoji(ev) {
   if (ev.type === 'diaper') {
-    if (ev.subtype === 'soiled') return '💩';
-    if (ev.subtype === 'wet') return '💧';
-    return '🧷';
+    if (ev.subtype === 'soiled') return 'ðŸ’©';
+    if (ev.subtype === 'wet') return 'ðŸ’§';
+    return 'ðŸ§·';
   }
-  return ev.emoji || TIMELINE_TYPE_META[ev.type]?.emoji || '📌';
+  return ev.emoji || TIMELINE_TYPE_META[ev.type]?.emoji || 'ðŸ“Œ';
 }
 
-/** Construye la lista cronológica completa de eventos del día del alumno. */
+/** Construye la lista cronolÃ³gica completa de eventos del dÃ­a del alumno. */
 function _buildStudentTimeline(log, events, currentFood) {
   const all = [];
   const push = (o) => all.push(o);
 
   if (log?.mood) {
     const m = MOOD_OPTIONS.find(x => x.val === log.mood);
-    push({ emoji: m?.emoji || '😊', label: 'Ánimo: ' + (m?.label || log.mood), time: log.created_at, color: TIMELINE_TYPE_META.mood.color, type: 'mood', editable: false, origin: 'individual' });
+    push({ emoji: m?.emoji || 'ðŸ˜Š', label: 'Ãnimo: ' + (m?.label || log.mood), time: log.created_at, color: TIMELINE_TYPE_META.mood.color, type: 'mood', editable: false, origin: 'individual' });
   }
-  if (currentFood.breakfast) push({ emoji: '🍞', label: 'Desayuno: ' + (foodOptLabel(currentFood.breakfast)), time: null, color: TIMELINE_TYPE_META.breakfast.color, type: 'food_breakfast', editable: false, origin: 'individual' });
-  if (currentFood.lunch)     push({ emoji: '🥗', label: 'Almuerzo: ' + (foodOptLabel(currentFood.lunch)), time: null, color: TIMELINE_TYPE_META.lunch.color, type: 'food_lunch', editable: false, origin: 'individual' });
-  if (currentFood.snack)     push({ emoji: '🍎', label: 'Merienda: ' + (foodOptLabel(currentFood.snack)), time: null, color: TIMELINE_TYPE_META.snack.color, type: 'food_snack', editable: false, origin: 'individual' });
-  if (log?.nap) push({ emoji: '😴', label: 'Siesta: ' + ({ si: 'Durmió', no: 'No durmió', poco: 'Poco', excelente: 'Excelente' }[log.nap] || log.nap), time: null, color: TIMELINE_TYPE_META.nap.color, type: 'nap', editable: false, origin: 'individual' });
+  if (currentFood.breakfast) push({ emoji: 'ðŸž', label: 'Desayuno: ' + (foodOptLabel(currentFood.breakfast)), time: null, color: TIMELINE_TYPE_META.breakfast.color, type: 'food_breakfast', editable: false, origin: 'individual' });
+  if (currentFood.lunch)     push({ emoji: 'ðŸ¥—', label: 'Almuerzo: ' + (foodOptLabel(currentFood.lunch)), time: null, color: TIMELINE_TYPE_META.lunch.color, type: 'food_lunch', editable: false, origin: 'individual' });
+  if (currentFood.snack)     push({ emoji: 'ðŸŽ', label: 'Merienda: ' + (foodOptLabel(currentFood.snack)), time: null, color: TIMELINE_TYPE_META.snack.color, type: 'food_snack', editable: false, origin: 'individual' });
+  if (log?.nap) push({ emoji: 'ðŸ˜´', label: 'Siesta: ' + ({ si: 'DurmiÃ³', no: 'No durmiÃ³', poco: 'Poco', excelente: 'Excelente' }[log.nap] || log.nap), time: null, color: TIMELINE_TYPE_META.nap.color, type: 'nap', editable: false, origin: 'individual' });
 
   events.forEach(ev => {
     const meta = TIMELINE_TYPE_META[ev.type] || {};
@@ -2528,7 +2840,7 @@ function _buildStudentTimeline(log, events, currentFood) {
     });
   });
 
-  if (log?.notes) push({ emoji: '📝', label: 'Nota: ' + log.notes.substring(0, 60) + (log.notes.length > 60 ? '…' : ''), time: log.created_at, color: TIMELINE_TYPE_META.note.color, type: 'note', editable: false, origin: 'individual' });
+  if (log?.notes) push({ emoji: 'ðŸ“', label: 'Nota: ' + log.notes.substring(0, 60) + (log.notes.length > 60 ? 'â€¦' : ''), time: log.created_at, color: TIMELINE_TYPE_META.note.color, type: 'note', editable: false, origin: 'individual' });
 
   all.sort((a, b) => {
     if (!a.time && !b.time) return 0;
@@ -2547,8 +2859,8 @@ export function openStudentRoutine(studentId) {
   try { studentId = decodeURIComponent(studentId); } catch {}
   const students = AppState.get('students') || [];
   const student = students.find(s => String(s.id) === String(studentId));
-  if (!student) { safeToast('No se encontró el estudiante', 'error'); return; }
-  // 🚫 Si el estudiante ya fue retirado hoy, se bloquea el registro de rutina.
+  if (!student) { safeToast('No se encontrÃ³ el estudiante', 'error'); return; }
+  // ðŸš« Si el estudiante ya fue retirado hoy, se bloquea el registro de rutina.
   const _exitedIds = AppState.get('exitedStudentIds');
   const isExited = !!(_exitedIds && typeof _exitedIds.has === 'function' && _exitedIds.has(String(studentId)));
   const log = _logsMap[studentId];
@@ -2557,39 +2869,39 @@ export function openStudentRoutine(studentId) {
   const events = log?.infant_data || [];
   const hasEvent = (type, subtype) => events.some(e => e.type === type && (!subtype || e.subtype === subtype));
 
-  const mealLabels = { breakfast: '🍞 Desayuno', lunch: '🥗 Almuerzo', snack: '🍎 Merienda' };
+  const mealLabels = { breakfast: 'ðŸž Desayuno', lunch: 'ðŸ¥— Almuerzo', snack: 'ðŸŽ Merienda' };
   const foodOptions = [
-    { val: 'todo', icon: '✅', label: 'Todo' },
-    { val: 'poco', icon: '⚠️', label: 'Poco' },
-    { val: 'nada', icon: '❌', label: 'Nada' },
-    { val: 'ayuda', icon: '🆘', label: 'Ayuda' }
+    { val: 'todo', icon: 'âœ…', label: 'Todo' },
+    { val: 'poco', icon: 'âš ï¸', label: 'Poco' },
+    { val: 'nada', icon: 'âŒ', label: 'Nada' },
+    { val: 'ayuda', icon: 'ðŸ†˜', label: 'Ayuda' }
   ];
 
-  // ── Collect all registered events for the top summary ──
+  // â”€â”€ Collect all registered events for the top summary â”€â”€
   const registeredBadges = [];
   if (log?.mood) {
     const mood = MOOD_OPTIONS.find(m => m.val === log.mood);
     if (mood) registeredBadges.push({ emoji: mood.emoji, label: mood.label, color: '#3B82F6' });
   }
-  if (currentFood.breakfast) registeredBadges.push({ emoji: '🍞', label: 'Desayuno: ' + (foodOptions.find(f => f.val === currentFood.breakfast)?.label || currentFood.breakfast), color: '#FF8A00' });
-  if (currentFood.lunch) registeredBadges.push({ emoji: '🥗', label: 'Almuerzo: ' + (foodOptions.find(f => f.val === currentFood.lunch)?.label || currentFood.lunch), color: '#28B54D' });
-  if (currentFood.snack) registeredBadges.push({ emoji: '🍎', label: 'Merienda: ' + (foodOptions.find(f => f.val === currentFood.snack)?.label || currentFood.snack), color: '#F59E0B' });
-  if (log?.nap) registeredBadges.push({ emoji: '😴', label: 'Siesta', color: '#8B5CF6' });
-  if (hasEvent('milk')) registeredBadges.push({ emoji: '🍼', label: 'Biberón', color: '#0B63C7' });
-  if (hasEvent('activity')) registeredBadges.push({ emoji: '🎨', label: 'Actividad', color: '#7C3AED' });
-  if (hasEvent('sensorial')) registeredBadges.push({ emoji: '🔬', label: 'Sensorial', color: '#6366F1' });
-  if (hasEvent('playground')) registeredBadges.push({ emoji: '🌳', label: 'Patio', color: '#16A34A' });
-  if (hasEvent('handwash')) registeredBadges.push({ emoji: '🧼', label: 'Lavado', color: '#0B63C7' });
-  if (hasEvent('toothbrush')) registeredBadges.push({ emoji: '🪥', label: 'Cepillado', color: '#06B6D4' });
-  if (hasEvent('diaper', 'soiled')) registeredBadges.push({ emoji: '💩', label: 'Popó', color: '#FF8A00' });
-  if (hasEvent('diaper', 'wet')) registeredBadges.push({ emoji: '💧', label: 'Pipí', color: '#0B63C7' });
-  if (hasEvent('bath')) registeredBadges.push({ emoji: '🚽', label: 'Baño', color: '#28B54D' });
-  if (hasEvent('temp')) registeredBadges.push({ emoji: '🌡️', label: 'Temperatura', color: '#EF4444' });
-  if (hasEvent('med')) registeredBadges.push({ emoji: '💊', label: 'Medicamento', color: '#EC4899' });
-  if (hasEvent('behavior')) registeredBadges.push({ emoji: '🤝', label: 'Conducta', color: '#F59E0B' });
-  if (log?.notes) registeredBadges.push({ emoji: '📝', label: 'Nota', color: '#64748B' });
+  if (currentFood.breakfast) registeredBadges.push({ emoji: 'ðŸž', label: 'Desayuno: ' + (foodOptions.find(f => f.val === currentFood.breakfast)?.label || currentFood.breakfast), color: '#FF8A00' });
+  if (currentFood.lunch) registeredBadges.push({ emoji: 'ðŸ¥—', label: 'Almuerzo: ' + (foodOptions.find(f => f.val === currentFood.lunch)?.label || currentFood.lunch), color: '#28B54D' });
+  if (currentFood.snack) registeredBadges.push({ emoji: 'ðŸŽ', label: 'Merienda: ' + (foodOptions.find(f => f.val === currentFood.snack)?.label || currentFood.snack), color: '#F59E0B' });
+  if (log?.nap) registeredBadges.push({ emoji: 'ðŸ˜´', label: 'Siesta', color: '#8B5CF6' });
+  if (hasEvent('milk')) registeredBadges.push({ emoji: 'ðŸ¼', label: 'BiberÃ³n', color: '#0B63C7' });
+  if (hasEvent('activity')) registeredBadges.push({ emoji: 'ðŸŽ¨', label: 'Actividad', color: '#7C3AED' });
+  if (hasEvent('sensorial')) registeredBadges.push({ emoji: 'ðŸ”¬', label: 'Sensorial', color: '#6366F1' });
+  if (hasEvent('playground')) registeredBadges.push({ emoji: 'ðŸŒ³', label: 'Patio', color: '#16A34A' });
+  if (hasEvent('handwash')) registeredBadges.push({ emoji: 'ðŸ§¼', label: 'Lavado', color: '#0B63C7' });
+  if (hasEvent('toothbrush')) registeredBadges.push({ emoji: 'ðŸª¥', label: 'Cepillado', color: '#06B6D4' });
+  if (hasEvent('diaper', 'soiled')) registeredBadges.push({ emoji: 'ðŸ’©', label: 'PopÃ³', color: '#FF8A00' });
+  if (hasEvent('diaper', 'wet')) registeredBadges.push({ emoji: 'ðŸ’§', label: 'PipÃ­', color: '#0B63C7' });
+  if (hasEvent('bath')) registeredBadges.push({ emoji: 'ðŸš½', label: 'BaÃ±o', color: '#28B54D' });
+  if (hasEvent('temp')) registeredBadges.push({ emoji: 'ðŸŒ¡ï¸', label: 'Temperatura', color: '#EF4444' });
+  if (hasEvent('med')) registeredBadges.push({ emoji: 'ðŸ’Š', label: 'Medicamento', color: '#EC4899' });
+  if (hasEvent('behavior')) registeredBadges.push({ emoji: 'ðŸ¤', label: 'Conducta', color: '#F59E0B' });
+  if (log?.notes) registeredBadges.push({ emoji: 'ðŸ“', label: 'Nota', color: '#64748B' });
 
-  // ── Contadores de estado para los badges de cada sección ──
+  // â”€â”€ Contadores de estado para los badges de cada secciÃ³n â”€â”€
   const _nBy = (fn) => events.filter(fn).length;
   const nMilk     = _nBy(e => e.type === 'milk');
   const nAct      = _nBy(e => ['activity', 'sensorial', 'playground', 'handwash', 'toothbrush'].includes(e.type));
@@ -2599,9 +2911,9 @@ export function openStudentRoutine(studentId) {
   const nBehavior = _nBy(e => e.type === 'behavior');
   const foodCount = ['breakfast', 'lunch', 'snack'].filter(k => currentFood[k]).length;
 
-  // ── Helper: sección colapsable con badge de estado ──
-  // badge: { text, ok } — ok pinta el badge en verde (registrado/completo)
-  // defOpen: estado por defecto la PRIMERA vez (después manda localStorage)
+  // â”€â”€ Helper: secciÃ³n colapsable con badge de estado â”€â”€
+  // badge: { text, ok } â€” ok pinta el badge en verde (registrado/completo)
+  // defOpen: estado por defecto la PRIMERA vez (despuÃ©s manda localStorage)
   const section = (id, title, content, badge, defOpen = false) => {
     const open = _srIsOpen(id, defOpen);
     const badgeHTML = badge ? `<span class="sr-sec-badge${badge.ok ? ' sr-ok' : ''}">${badge.text}</span>` : '';
@@ -2618,14 +2930,14 @@ export function openStudentRoutine(studentId) {
     `;
   };
 
-  // ── Helper: button with registered detection ──
-  const chipBtn = (onclick, emoji, label, isRegistered, regColor = '#28B54D') => `
+  // â”€â”€ Helper: button with registered detection â”€â”€
+  const chipBtn = (onclick, emoji, label, isRegistered, regColor = '#28B54D', count = 0) => `
     <button onclick="${onclick}"
       class="p-2 rounded-xl border-2 ${isRegistered ? 'border-green-400 bg-green-50' : 'border-slate-100 bg-white'} flex flex-col items-center gap-0.5 active:scale-95 transition-all"
       style="${isRegistered ? 'box-shadow:0 0 0 2px rgba(34,197,94,0.15)' : ''}">
       <span class="text-lg">${emoji}</span>
       <span class="text-[7px] font-black ${isRegistered ? 'text-green-700' : 'text-slate-500'} text-center leading-tight">${label}</span>
-      ${isRegistered ? '<span class="text-[6px] font-black text-green-500">✓</span>' : ''}
+      ${count > 0 ? `<span class="text-[6px] font-black text-blue-500">Ã—${count}</span>` : isRegistered ? '<span class="text-[6px] font-black text-green-500">âœ“</span>' : ''}
     </button>
   `;
 
@@ -2636,7 +2948,7 @@ export function openStudentRoutine(studentId) {
       <div class="flex items-center gap-2">
         <span class="text-base">${emoji}</span>
         <span class="text-[10px] font-black ${isRegistered ? 'text-green-700' : 'text-slate-600'}">${label}</span>
-        ${isRegistered ? '<span class="ml-auto text-[8px] font-black text-green-500">✓</span>' : ''}
+        ${isRegistered ? '<span class="ml-auto text-[8px] font-black text-green-500">âœ“</span>' : ''}
       </div>
       ${note ? `<div class="text-[8px] text-slate-400 mt-0.5 ml-7">${note}</div>` : ''}
     </button>
@@ -2652,7 +2964,7 @@ export function openStudentRoutine(studentId) {
           </div>
           <div class="flex-1">
             <h3 class="text-lg font-black text-white">${safeEscapeHTML(student.name)}</h3>
-            <p class="text-xs font-bold text-white/80">${safeEscapeHTML(student.p1_name || '—')}</p>
+            <p class="text-xs font-bold text-white/80">${safeEscapeHTML(student.p1_name || 'â€”')}</p>
           </div>
           <button onclick="UI.Modal.close('studentRoutineModal')" class="p-2 rounded-xl bg-white/20 text-white">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M18 6L6 18M6 6l12 12"/></svg>
@@ -2664,21 +2976,21 @@ export function openStudentRoutine(studentId) {
 
         <!-- TOOLBAR: expandir/contraer todas las secciones -->
         <div class="sr-toolbar">
-          <button type="button" id="srExpandAllBtn" onclick="App._srToggleAll(true)" class="sr-tool-btn">⬆ Expandir todo</button>
-          <button type="button" id="srCollapseAllBtn" onclick="App._srToggleAll(false)" class="sr-tool-btn">⬇ Contraer todo</button>
-          <span class="sr-tool-hint">Toca cada sección para abrir o cerrar</span>
+          <button type="button" id="srExpandAllBtn" onclick="App._srToggleAll(true)" class="sr-tool-btn">â¬† Expandir todo</button>
+          <button type="button" id="srCollapseAllBtn" onclick="App._srToggleAll(false)" class="sr-tool-btn">â¬‡ Contraer todo</button>
+          <span class="sr-tool-hint">Toca cada secciÃ³n para abrir o cerrar</span>
         </div>
 
         ${isExited ? `
         <div class="rounded-2xl p-4 flex items-start gap-3" style="background:#FEE2E2;border:2px solid #FCA5A5">
-          <span class="text-2xl">🚫</span>
+          <span class="text-2xl">ðŸš«</span>
           <div>
             <p class="text-sm font-black text-red-700">Este estudiante ya fue retirado hoy</p>
-            <p class="text-xs font-bold text-red-500 mt-0.5">No se puede registrar ni modificar rutina después de la salida. Los datos mostrados son solo de lectura.</p>
+            <p class="text-xs font-bold text-red-500 mt-0.5">No se puede registrar ni modificar rutina despuÃ©s de la salida. Los datos mostrados son solo de lectura.</p>
           </div>
         </div>` : ''}
 
-        <!-- ═══ LÍNEA DE TIEMPO DE EVENTOS REGISTRADOS ═══ -->
+        <!-- â•â•â• LÃNEA DE TIEMPO DE EVENTOS REGISTRADOS â•â•â• -->
         ${(() => {
           const allEvents = _buildStudentTimeline(log, events, currentFood);
           const nTimeline = allEvents.length;
@@ -2688,16 +3000,25 @@ export function openStudentRoutine(studentId) {
           const body = (() => {
             if (!allEvents.length) return `
               <div class="sr-tl-empty">
-                <span class="sr-tl-empty-ico">🕐</span>
+                <span class="sr-tl-empty-ico">ðŸ•</span>
                 <p>Sin eventos registrados hoy</p>
-                <small>Marca rutinas del aula o eventos individuales y aparecerán aquí ordenados por hora.</small>
+                <small>Marca rutinas del aula o eventos individuales y aparecerÃ¡n aquÃ­ ordenados por hora.</small>
               </div>`;
 
             return `
+              ${(() => {
+                const lastRepeat = events.filter(e => e.type && e.type !== 'note').slice().sort((a, b) =>
+                  new Date(a.created_at || a.start_time || 0) - new Date(b.created_at || b.start_time || 0)
+                ).pop();
+                if (!lastRepeat) return '';
+                return `<button type="button" class="sr-repeat-btn" onclick="App.repeatLastEvent('${studentId}')">
+                  ðŸ” Repetir Ãºltimo: ${_timelineEmoji(lastRepeat)} ${safeEscapeHTML(lastRepeat.label || lastRepeat.type)}
+                </button>`;
+              })()}
               <div class="sr-tl-filters" id="srTlFilters">
                 <button type="button" class="sr-tl-chip sr-tl-chip--on" data-tl-filter="all" onclick="App._srTimelineFilter('all')">Todo <b>${allEvents.length}</b></button>
-                <button type="button" class="sr-tl-chip" data-tl-filter="aula" onclick="App._srTimelineFilter('aula')">🏫 Del aula <b>${nAula}</b></button>
-                <button type="button" class="sr-tl-chip" data-tl-filter="individual" onclick="App._srTimelineFilter('individual')">🙋 Individual <b>${nIndiv}</b></button>
+                <button type="button" class="sr-tl-chip" data-tl-filter="aula" onclick="App._srTimelineFilter('aula')">ðŸ« Del aula <b>${nAula}</b></button>
+                <button type="button" class="sr-tl-chip" data-tl-filter="individual" onclick="App._srTimelineFilter('individual')">ðŸ™‹ Individual <b>${nIndiv}</b></button>
               </div>
               <div class="sr-tl" id="srTimelineList">
                 ${allEvents.map((ev, i) => `
@@ -2710,15 +3031,15 @@ export function openStudentRoutine(studentId) {
                       <div class="sr-tl-card-top">
                         <span class="sr-tl-label">${safeEscapeHTML(ev.label)}</span>
                         <span class="sr-tl-origin ${ev.origin === 'aula' ? 'sr-tl-origin--aula' : 'sr-tl-origin--indiv'}">
-                          ${ev.origin === 'aula' ? '🏫 Aula' : '🙋 Individual'}
+                          ${ev.origin === 'aula' ? 'ðŸ« Aula' : 'ðŸ™‹ Individual'}
                         </span>
                       </div>
                       <div class="sr-tl-card-bot">
-                        <span class="sr-tl-time">${ev.time ? '🕐 ' + _fmtTime(ev.time) : 'Sin hora registrada'}</span>
+                        <span class="sr-tl-time">${ev.time ? 'ðŸ• ' + _fmtTime(ev.time) : 'Sin hora registrada'}</span>
                         ${ev.editable && ev.id ? `
                           <span class="sr-tl-actions">
-                            <button onclick="App._editEventTime('${studentId}','${ev.id}')" title="Editar hora">✏️</button>
-                            <button onclick="App.deleteInfantEvent('${studentId}','${ev.id}')" title="Eliminar evento">🗑️</button>
+                            <button onclick="App._editEventTime('${studentId}','${ev.id}')" title="Editar hora">âœï¸</button>
+                            <button onclick="App.deleteInfantEvent('${studentId}','${ev.id}')" title="Eliminar evento">ðŸ—‘ï¸</button>
                           </span>` : ''}
                       </div>
                     </div>
@@ -2727,11 +3048,11 @@ export function openStudentRoutine(studentId) {
               </div>`;
           })();
 
-          return section('timeline', '📋 Línea del Tiempo', body,
+          return section('timeline', 'ðŸ“‹ LÃ­nea del Tiempo', body,
             { text: `${nTimeline} reg.`, ok: nTimeline > 0 }, true);
         })()}
 
-        <!-- ═══ ELEGIR EVENTO DEL AULA PARA ESTE ESTUDIANTE ═══ -->
+        <!-- â•â•â• ELEGIR EVENTO DEL AULA PARA ESTE ESTUDIANTE â•â•â• -->
         ${(() => {
           const schedule = _getSchedule();
           const routines = _getWholeClassRoutines();
@@ -2741,10 +3062,10 @@ export function openStudentRoutine(studentId) {
           const chip = (onclick, emoji, label, time, isReg) => `
             <button data-evname="${safeEscapeHTML(norm(label))}" onclick="${onclick}"
               class="sr-evchip p-2 rounded-xl border-2 ${isReg ? 'border-green-400 bg-green-50' : 'border-slate-100 bg-white'} flex flex-col items-center gap-0.5 active:scale-95 transition-all">
-              <span class="text-lg">${emoji || '📌'}</span>
+              <span class="text-lg">${emoji || 'ðŸ“Œ'}</span>
               <span class="text-[7px] font-black ${isReg ? 'text-green-700' : 'text-slate-500'} text-center leading-tight">${safeEscapeHTML((label || '').substring(0, 16))}</span>
               ${time ? `<span class="text-[6px] font-bold text-slate-400">${_fmtTimeShort(time)}</span>` : ''}
-              ${isReg ? '<span class="text-[6px] font-black text-green-500">✓</span>' : ''}
+              ${isReg ? '<span class="text-[6px] font-black text-green-500">âœ“</span>' : ''}
             </button>`;
 
           const schedChips = schedule.map(ev => chip(
@@ -2769,28 +3090,28 @@ export function openStudentRoutine(studentId) {
 
           const body = `
             <div class="sr-aula-bar">
-              <input id="srEvSearch" placeholder="🔍 Buscar evento del aula..." oninput="App._filterStudentEvents(this.value)"
+              <input id="srEvSearch" placeholder="ðŸ” Buscar evento del aula..." oninput="App._filterStudentEvents(this.value)"
                 class="sr-aula-search">
               <button type="button" id="srAulaShowAllBtn" class="sr-aula-toggle" onclick="App._srToggleAulaAll()">Ver todo</button>
             </div>
             <div class="sr-aula-count">
-              <span class="sr-aula-count-chip sr-ok">✓ ${marcadosAula} marcados</span>
+              <span class="sr-aula-count-chip sr-ok">âœ“ ${marcadosAula} marcados</span>
               <span class="sr-aula-count-chip">${totalAula} disponibles</span>
             </div>
             <div class="sr-aula-block">
-              <p class="text-[9px] font-black text-slate-400 uppercase tracking-wide mb-1.5">⏰ Horario del Aula</p>
+              <p class="text-[9px] font-black text-slate-400 uppercase tracking-wide mb-1.5">â° Horario del Aula</p>
               <div class="grid grid-cols-4 gap-1.5">${schedChips || '<p class="col-span-4 text-[10px] text-slate-300 italic">Sin bloques configurados</p>'}</div>
             </div>
             <div class="sr-aula-block">
-              <p class="text-[9px] font-black text-slate-400 uppercase tracking-wide mb-1.5">🎯 Rutinas del Aula</p>
+              <p class="text-[9px] font-black text-slate-400 uppercase tracking-wide mb-1.5">ðŸŽ¯ Rutinas del Aula</p>
               <div class="sr-aula-routines sr-aula-collapsed" id="srAulaRoutines">${routineBlocks || '<p class="text-[10px] text-slate-300 italic">Sin rutinas para este nivel</p>'}</div>
             </div>`;
-          return section('aula', '🗓️ Eventos del Aula', body,
+          return section('aula', 'ðŸ—“ï¸ Eventos del Aula', body,
             { text: `${marcadosAula}/${totalAula}`, ok: marcadosAula > 0 }, true);
         })()}
 
-        <!-- ═══ ESTADO EMOCIONAL ═══ -->
-        ${section('mood', '😊 Estado Emocional', `
+        <!-- â•â•â• ESTADO EMOCIONAL â•â•â• -->
+        ${section('mood', 'ðŸ˜Š Estado Emocional', `
           <div class="grid grid-cols-4 gap-1.5">
             ${MOOD_OPTIONS.map(m => `
               <button onclick="App.setStudentMood('${studentId}','${m.val}')"
@@ -2798,14 +3119,14 @@ export function openStudentRoutine(studentId) {
                 style="${log?.mood === m.val ? 'box-shadow:0 0 0 2px rgba(34,197,94,0.15)' : ''}">
                 <span class="text-xl block">${m.emoji}</span>
                 <span class="text-[7px] font-black ${log?.mood === m.val ? 'text-green-700' : 'text-slate-500'} block">${m.label}</span>
-                ${log?.mood === m.val ? '<span class="text-[6px] font-black text-green-500">✓</span>' : ''}
+                ${log?.mood === m.val ? '<span class="text-[6px] font-black text-green-500">âœ“</span>' : ''}
               </button>
             `).join('')}
           </div>
-        `, log?.mood ? { text: MOOD_OPTIONS.find(m => m.val === log.mood)?.emoji + ' ✓', ok: true } : { text: 'Pendiente', ok: false }, true)}
+        `, log?.mood ? { text: MOOD_OPTIONS.find(m => m.val === log.mood)?.emoji + ' âœ“', ok: true } : { text: 'Pendiente', ok: false }, true)}
 
-        <!-- ═══ ALIMENTACIÓN ═══ -->
-        ${section('food', '🍽️ Alimentación', `
+        <!-- â•â•â• ALIMENTACIÃ“N â•â•â• -->
+        ${section('food', 'ðŸ½ï¸ AlimentaciÃ³n', `
           <div class="space-y-2">
             ${['breakfast', 'lunch', 'snack'].map(mealKey => {
               const currentVal = currentFood[mealKey] || '';
@@ -2830,102 +3151,109 @@ export function openStudentRoutine(studentId) {
           </div>
         `, { text: `${foodCount}/3 comidas`, ok: foodCount === 3 }, true)}
 
-        <!-- ═══ CICLO DE SUEÑO ═══ -->
-        ${section('nap', '😴 Ciclo de Sueño', `
+        <!-- â•â•â• CICLO DE SUEÃ‘O â•â•â• -->
+        ${section('nap', 'ðŸ˜´ Ciclo de SueÃ±o', `
           <div class="grid grid-cols-4 gap-1.5">
             ${[
-              { val: 'si', label: 'Dormido', icon: '💤' }, { val: 'no', label: 'No durmió', icon: '☀️' },
-              { val: 'poco', label: 'Se despertó', icon: '⏰' }, { val: 'excelente', label: 'Excelente', icon: '⭐' }
+              { val: 'si', label: 'Dormido', icon: 'ðŸ’¤' }, { val: 'no', label: 'No durmiÃ³', icon: 'â˜€ï¸' },
+              { val: 'poco', label: 'Se despertÃ³', icon: 'â°' }, { val: 'excelente', label: 'Excelente', icon: 'â­' }
             ].map(n => `
               <button onclick="App.setStudentNap('${studentId}','${n.val}')"
                 class="p-2 rounded-xl border-2 ${log?.nap === n.val ? 'border-green-400 bg-green-50' : 'border-slate-100 bg-white'} text-center active:scale-95 transition-all"
                 style="${log?.nap === n.val ? 'box-shadow:0 0 0 2px rgba(34,197,94,0.15)' : ''}">
                 <span class="text-base">${n.icon}</span>
                 <span class="text-[8px] font-black ${log?.nap === n.val ? 'text-green-700' : 'text-slate-600'} block">${n.label}</span>
-                ${log?.nap === n.val ? '<span class="text-[6px] font-black text-green-500">✓</span>' : ''}
+                ${log?.nap === n.val ? '<span class="text-[6px] font-black text-green-500">âœ“</span>' : ''}
               </button>
             `).join('')}
           </div>
           ${_sleepMap[studentId] ? `
           <button onclick="App.routineWakeStudent('${studentId}')"
             class="mt-2 w-full p-2.5 rounded-xl text-white font-black text-[10px] uppercase flex items-center justify-center gap-2" style="background:#7c3aed">
-            <span>😴</span> Despertar
+            <span>ðŸ˜´</span> Despertar
           </button>` : ''}
-        `, log?.nap ? { text: '✓', ok: true } : { text: 'Pendiente', ok: false })}
+        `, log?.nap ? { text: 'âœ“', ok: true } : { text: 'Pendiente', ok: false })}
 
-        <!-- ═══ BIBERÓN ═══ -->
-        ${section('milk', '🍼 Biberón', `
+        <!-- â•â•â• BIBERÃ“N â•â•â• -->
+        ${section('milk', 'ðŸ¼ BiberÃ³n', `
           <button onclick="App._openMilkModal('${studentId}')"
             class="w-full p-3 rounded-xl border-2 ${hasEvent('milk') ? 'border-green-300 bg-green-50' : 'border-slate-100 bg-white'} flex items-center gap-3 text-left hover:border-blue-200 transition-all">
-            <span class="text-xl">🍼</span>
+            <span class="text-xl">ðŸ¼</span>
             <div class="flex-1">
-              <div class="text-xs font-black ${hasEvent('milk') ? 'text-green-700' : 'text-slate-700'}">${hasEvent('milk') ? 'Registrar otro Biberón' : 'Registrar Biberón'}</div>
+              <div class="text-xs font-black ${hasEvent('milk') ? 'text-green-700' : 'text-slate-700'}">${hasEvent('milk') ? 'Registrar otro BiberÃ³n' : 'Registrar BiberÃ³n'}</div>
               <div class="text-[10px] text-slate-400">Onzas, temperatura y hora</div>
             </div>
-            ${hasEvent('milk') ? '<span class="text-[10px] font-black text-green-600 mr-1">✓</span>' : ''}
+            ${hasEvent('milk') ? '<span class="text-[10px] font-black text-green-600 mr-1">âœ“</span>' : ''}
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
           </button>
           ${nMilk > 0 ? `
           <div class="mt-2 space-y-1">
             ${events.filter(e => e.type === 'milk').map(evt => `
               <div class="flex items-center gap-2 p-2 rounded-lg bg-blue-50 text-[10px]">
-                <span>🍼</span>
+                <span>ðŸ¼</span>
                 <span class="font-bold text-blue-700">${evt.oz ? evt.oz + ' oz' : ''}</span>
-                ${evt.temp ? `<span class="text-blue-500">· ${TEMP_OPTIONS.find(t => t.val === evt.temp)?.label || evt.temp}</span>` : ''}
+                ${evt.temp ? `<span class="text-blue-500">Â· ${TEMP_OPTIONS.find(t => t.val === evt.temp)?.label || evt.temp}</span>` : ''}
                 <span class="ml-auto text-blue-400">${evt.created_at ? _fmtTime(evt.created_at) : ''}</span>
               </div>
             `).join('')}
           </div>` : ''}
         `, nMilk > 0 ? { text: `${nMilk} reg.`, ok: true } : { text: 'Pendiente', ok: false })}
 
-        <!-- ═══ ACTIVIDADES — nivel-aware ═══ -->
+        <!-- â•â•â• ACTIVIDADES â€” nivel-aware â•â•â• -->
         ${(() => {
           const lc = _getLevelCategory();
           const noHandwash = lc === 'primary';
-          return section('activities', '🎨 Actividades', `
+          return section('activities', 'ðŸŽ¨ Actividades', `
             <div class="grid grid-cols-3 gap-1.5">
-              ${chipBtn("App.addStudentEvent('" + studentId + "','activity')", '🎨', 'Actividad', hasEvent('activity'))}
-              ${chipBtn("App.addStudentEvent('" + studentId + "','sensorial')", '🔬', 'Sensorial', hasEvent('sensorial'))}
-              ${chipBtn("App.addStudentEvent('" + studentId + "','playground')", '🌳', 'Patio', hasEvent('playground'))}
-              ${!noHandwash ? chipBtn("App.addStudentEvent('" + studentId + "','handwash')", '🧼', 'Lavado manos', hasEvent('handwash')) : ''}
-              ${!noHandwash ? chipBtn("App.addStudentEvent('" + studentId + "','toothbrush')", '🪥', 'Cepillado', hasEvent('toothbrush')) : ''}
+              ${chipBtn("App.addStudentEvent('" + studentId + "','activity')", 'ðŸŽ¨', 'Actividad', hasEvent('activity'))}
+              ${chipBtn("App.addStudentEvent('" + studentId + "','sensorial')", 'ðŸ”¬', 'Sensorial', hasEvent('sensorial'))}
+              ${chipBtn("App.addStudentEvent('" + studentId + "','playground')", 'ðŸŒ³', 'Patio', hasEvent('playground'))}
+              ${!noHandwash ? chipBtn("App.addStudentEvent('" + studentId + "','handwash')", 'ðŸ§¼', 'Lavado manos', hasEvent('handwash')) : ''}
+              ${!noHandwash ? chipBtn("App.addStudentEvent('" + studentId + "','toothbrush')", 'ðŸª¥', 'Cepillado', hasEvent('toothbrush')) : ''}
             </div>
           `, nAct > 0 ? { text: `${nAct} reg.`, ok: true } : { text: 'Pendiente', ok: false });
         })()}
 
-        <!-- ═══ HIGIENE — filtrado por nivel ═══ -->
+        <!-- â•â•â• HIGIENE â€” filtrado por nivel â•â•â• -->
         ${(() => {
           const lc = _getLevelCategory();
           const allowed = new Set(LEVEL_INDIV_IDS[lc] || []);
+          const cnt = (fn) => events.filter(fn).length;
+          const nPoop = cnt(e => e.type === 'diaper' && e.subtype === 'soiled');
+          const nPee = cnt(e => e.type === 'diaper' && e.subtype === 'wet');
+          const nToilet = cnt(e => e.type === 'bath');
+          const nDiaper = cnt(e => e.type === 'diaper_change');
+          const nBottle = cnt(e => e.type === 'milk');
           const chips = [];
-          if (allowed.has('poop'))   chips.push(chipBtn("App.addStudentEvent('" + studentId + "','poop')", '💩', 'Popó', hasEvent('diaper', 'soiled')));
-          if (allowed.has('pee'))    chips.push(chipBtn("App.addStudentEvent('" + studentId + "','pee')", '💧', 'Pipí', hasEvent('diaper', 'wet')));
-          if (allowed.has('toilet')) chips.push(chipBtn("App.addStudentEvent('" + studentId + "','toilet')", '🚽', 'Baño', hasEvent('bath')));
-          if (allowed.has('diaper')) chips.push(chipBtn("App.addStudentEvent('" + studentId + "','diaper')", '🧻', 'Cambio pañal', hasEvent('diaper_change')));
-          if (allowed.has('milk'))   chips.push(chipBtn("App.addStudentEvent('" + studentId + "','milk')", '🍼', 'Biberón', hasEvent('milk')));
+          if (allowed.has('poop'))   chips.push(chipBtn("App.addStudentEvent('" + studentId + "','poop')", 'ðŸ’©', 'PopÃ³', nPoop > 0, '#28B54D', nPoop));
+          if (allowed.has('pee'))    chips.push(chipBtn("App.addStudentEvent('" + studentId + "','pee')", 'ðŸ’§', 'PipÃ­', nPee > 0, '#28B54D', nPee));
+          if (allowed.has('toilet')) chips.push(chipBtn("App.addStudentEvent('" + studentId + "','toilet')", 'ðŸš½', 'BaÃ±o', nToilet > 0, '#28B54D', nToilet));
+          if (allowed.has('diaper')) chips.push(chipBtn("App.addStudentEvent('" + studentId + "','diaper')", 'ðŸ§»', 'Cambio paÃ±al', nDiaper > 0, '#28B54D', nDiaper));
+          if (allowed.has('milk'))   chips.push(chipBtn("App.addStudentEvent('" + studentId + "','milk')", 'ðŸ¼', 'BiberÃ³n', nBottle > 0, '#28B54D', nBottle));
           const noteSpan = chips.length % 3 === 2 ? 'col-span-2' : '';
-          chips.push(`<button onclick="App.addStudentEvent('${studentId}','note')" class="p-2 rounded-xl border-2 ${log?.notes ? 'border-green-400 bg-green-50' : 'border-slate-100 bg-white'} flex flex-col items-center gap-0.5 active:scale-95 transition-all ${noteSpan}"><span class="text-lg">📝</span><span class="text-[7px] font-black ${log?.notes ? 'text-green-700' : 'text-slate-500'}">Nota rápida</span>${log?.notes ? '<span class="text-[6px] font-black text-green-500">✓</span>' : ''}</button>`);
-          const title = (lc === 'infants' || lc === 'toddlers') ? '🧷 Higiene y Pañales' : '🧼 Higiene y Esfínteres';
-          return section('hygiene', title, `<div class="grid grid-cols-3 gap-1.5">${chips.join('')}</div>`,
+          chips.push(`<button onclick="App.addStudentEvent('${studentId}','note')" class="p-2 rounded-xl border-2 ${log?.notes ? 'border-green-400 bg-green-50' : 'border-slate-100 bg-white'} flex flex-col items-center gap-0.5 active:scale-95 transition-all ${noteSpan}"><span class="text-lg">ðŸ“</span><span class="text-[7px] font-black ${log?.notes ? 'text-green-700' : 'text-slate-500'}">Nota rÃ¡pida</span>${log?.notes ? '<span class="text-[6px] font-black text-green-500">âœ“</span>' : ''}</button>`);
+          const title = (lc === 'infants' || lc === 'toddlers') ? 'ðŸ§· Higiene y PaÃ±ales' : 'ðŸ§¼ Higiene y EsfÃ­nteres';
+          return section('hygiene', title, `<div class="grid grid-cols-3 gap-1.5">${chips.join('')}</div>
+            <p class="text-[9px] text-slate-400 font-bold mt-2">Puedes tocar varias veces al dÃ­a: cada toque suma un registro nuevo con su hora.</p>`,
             nHyg > 0 ? { text: `${nHyg} reg.`, ok: true } : { text: 'Pendiente', ok: false });
         })()}
 
-        <!-- ═══ SALUD ═══ -->
-        ${section('health', '🏥 Salud y Alertas', `
+        <!-- â•â•â• SALUD â•â•â• -->
+        ${section('health', 'ðŸ¥ Salud y Alertas', `
           <div class="grid grid-cols-3 gap-1.5">
-            ${chipBtn("App.addStudentEvent('" + studentId + "','temp')", '🌡️', 'Temperatura', hasEvent('temp'))}
-            ${chipBtnNS("App._openMedModal('" + studentId + "')", '💊', 'Medicamento', hasEvent('med'))}
-            ${chipBtn("App.addStudentEvent('" + studentId + "','hit')", '🤕', 'Golpe/Caída', hasEvent('incident', 'hit'))}
-            ${chipBtn("App.addStudentEvent('" + studentId + "','vomit')", '🤮', 'Vómito', hasEvent('health', 'vomit'))}
-            ${chipBtn("App.addStudentEvent('" + studentId + "','cough')", '😷', 'Tos/Congestión', hasEvent('health', 'cough'))}
+            ${chipBtn("App.addStudentEvent('" + studentId + "','temp')", 'ðŸŒ¡ï¸', 'Temperatura', hasEvent('temp'))}
+            ${chipBtnNS("App._openMedModal('" + studentId + "')", 'ðŸ’Š', 'Medicamento', hasEvent('med'))}
+            ${chipBtn("App.addStudentEvent('" + studentId + "','hit')", 'ðŸ¤•', 'Golpe/CaÃ­da', hasEvent('incident', 'hit'))}
+            ${chipBtn("App.addStudentEvent('" + studentId + "','vomit')", 'ðŸ¤®', 'VÃ³mito', hasEvent('health', 'vomit'))}
+            ${chipBtn("App.addStudentEvent('" + studentId + "','cough')", 'ðŸ˜·', 'Tos/CongestiÃ³n', hasEvent('health', 'cough'))}
           </div>
         `, nHealth > 0 ? { text: `${nHealth} reg.`, ok: true } : { text: 'Sin alertas', ok: false })}
 
-        <!-- ═══ EVENTOS EXTRA ═══ -->
-        ${section('extra', '⚠️ Eventos Extra', `
+        <!-- â•â•â• EVENTOS EXTRA â•â•â• -->
+        ${section('extra', 'âš ï¸ Eventos Extra', `
           <button onclick="App._openExtraEventModal('${studentId}')"
             class="w-full p-3 rounded-xl border-2 border-dashed border-slate-200 bg-white flex items-center gap-3 text-left hover:border-red-300 transition-all">
-            <span class="text-xl">➕</span>
+            <span class="text-xl">âž•</span>
             <div class="flex-1">
               <div class="text-xs font-black text-slate-700">Agregar Evento</div>
               <div class="text-[10px] text-slate-400">Fiebre, accidente, golpe, llamada a padres</div>
@@ -2934,15 +3262,15 @@ export function openStudentRoutine(studentId) {
           </button>
         `, nIncident > 0 ? { text: `${nIncident} reg.`, ok: true } : { text: 'Pendiente', ok: false })}
 
-        <!-- ═══ CONDUCTA ═══ -->
-        ${section('behavior', '🤝 Conducta', `
+        <!-- â•â•â• CONDUCTA â•â•â• -->
+        ${section('behavior', 'ðŸ¤ Conducta', `
           <div class="space-y-3">
             <div>
               <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wide mb-1.5">Social</p>
               <div class="grid grid-cols-2 gap-1.5">
                 ${[
-                  { val: 'shared', icon: '🤝', label: 'Compartió' }, { val: 'alone', icon: '🧍', label: 'Jugó solo' },
-                  { val: 'group', icon: '👥', label: 'Grupo' }, { val: 'emotional_support', icon: '💛', label: 'Apoyo emocional' }
+                  { val: 'shared', icon: 'ðŸ¤', label: 'CompartiÃ³' }, { val: 'alone', icon: 'ðŸ§', label: 'JugÃ³ solo' },
+                  { val: 'group', icon: 'ðŸ‘¥', label: 'Grupo' }, { val: 'emotional_support', icon: 'ðŸ’›', label: 'Apoyo emocional' }
                 ].map(b => `
                   <button onclick="App.setStudentBehavior('${studentId}','social','${b.val}')"
                     class="p-2 rounded-xl border-2 border-slate-100 bg-white flex items-center gap-2 text-left active:scale-95 transition-all">
@@ -2956,9 +3284,9 @@ export function openStudentRoutine(studentId) {
               <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wide mb-1.5">Clase</p>
               <div class="grid grid-cols-2 gap-1.5">
                 ${[
-                  { val: 'attention', icon: '👂', label: 'Atención' }, { val: 'participation', icon: '🙋', label: 'Participó' },
-                  { val: 'curiosity', icon: '🔍', label: 'Curiosidad' }, { val: 'completed', icon: '✅', label: 'Terminó' },
-                  { val: 'needed_help', icon: '🙋‍♀️', label: 'Necesitó ayuda' }
+                  { val: 'attention', icon: 'ðŸ‘‚', label: 'AtenciÃ³n' }, { val: 'participation', icon: 'ðŸ™‹', label: 'ParticipÃ³' },
+                  { val: 'curiosity', icon: 'ðŸ”', label: 'Curiosidad' }, { val: 'completed', icon: 'âœ…', label: 'TerminÃ³' },
+                  { val: 'needed_help', icon: 'ðŸ™‹â€â™€ï¸', label: 'NecesitÃ³ ayuda' }
                 ].map(b => `
                   <button onclick="App.setStudentBehavior('${studentId}','classroom','${b.val}')"
                     class="p-2 rounded-xl border-2 border-slate-100 bg-white flex items-center gap-2 text-left active:scale-95 transition-all">
@@ -2972,9 +3300,9 @@ export function openStudentRoutine(studentId) {
               <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wide mb-1.5">Emocional</p>
               <div class="grid grid-cols-2 gap-1.5">
                 ${[
-                  { val: 'controlled', icon: '😌', label: 'Controló' }, { val: 'frustrated', icon: '😤', label: 'Se frustró' },
-                  { val: 'crying', icon: '😭', label: 'Lloró' }, { val: 'anxious', icon: '😰', label: 'Ansiedad' },
-                  { val: 'calmed', icon: '🧘', label: 'Se calmó' }
+                  { val: 'controlled', icon: 'ðŸ˜Œ', label: 'ControlÃ³' }, { val: 'frustrated', icon: 'ðŸ˜¤', label: 'Se frustrÃ³' },
+                  { val: 'crying', icon: 'ðŸ˜­', label: 'LlorÃ³' }, { val: 'anxious', icon: 'ðŸ˜°', label: 'Ansiedad' },
+                  { val: 'calmed', icon: 'ðŸ§˜', label: 'Se calmÃ³' }
                 ].map(b => `
                   <button onclick="App.setStudentBehavior('${studentId}','emotional','${b.val}')"
                     class="p-2 rounded-xl border-2 border-slate-100 bg-white flex items-center gap-2 text-left active:scale-95 transition-all">
@@ -2988,9 +3316,9 @@ export function openStudentRoutine(studentId) {
               <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wide mb-1.5">Montessori</p>
               <div class="grid grid-cols-3 gap-1.5">
                 ${[
-                  { val: 'manipulation', icon: '🤲', label: 'Manipulación' }, { val: 'fine_motor', icon: '✋', label: 'Fina' },
-                  { val: 'gross_motor', icon: '🏃', label: 'Gruesa' }, { val: 'language', icon: '💬', label: 'Lenguaje' },
-                  { val: 'concentration', icon: '🎯', label: 'Concentración' }, { val: 'autonomy', icon: '💪', label: 'Autonomía' }
+                  { val: 'manipulation', icon: 'ðŸ¤²', label: 'ManipulaciÃ³n' }, { val: 'fine_motor', icon: 'âœ‹', label: 'Fina' },
+                  { val: 'gross_motor', icon: 'ðŸƒ', label: 'Gruesa' }, { val: 'language', icon: 'ðŸ’¬', label: 'Lenguaje' },
+                  { val: 'concentration', icon: 'ðŸŽ¯', label: 'ConcentraciÃ³n' }, { val: 'autonomy', icon: 'ðŸ’ª', label: 'AutonomÃ­a' }
                 ].map(b => `
                   <button onclick="App.setStudentBehavior('${studentId}','montessori','${b.val}')"
                     class="p-2 rounded-xl border-2 border-slate-100 bg-white flex flex-col items-center gap-0.5 active:scale-95 transition-all">
@@ -3003,13 +3331,13 @@ export function openStudentRoutine(studentId) {
           </div>
         `, nBehavior > 0 ? { text: `${nBehavior} reg.`, ok: true } : { text: 'Pendiente', ok: false })}
 
-        <!-- ═══ NOTA ═══ -->
-        ${section('note', '📝 Nota Individual', `
-          <textarea id="studentNote-${studentId}" placeholder="Escribe una nota sobre el día..."
+        <!-- â•â•â• NOTA â•â•â• -->
+        ${section('note', 'ðŸ“ Nota Individual', `
+          <textarea id="studentNote-${studentId}" placeholder="Escribe una nota sobre el dÃ­a..."
             class="w-full p-3 border-2 border-slate-100 rounded-xl text-xs focus:border-blue-400 outline-none" rows="3">${safeEscapeHTML(log?.notes || '')}</textarea>
           <button onclick="App.saveStudentNote('${studentId}')"
             class="mt-2 w-full p-3 rounded-xl text-white font-black text-xs uppercase" style="background:#28B54D">Guardar Nota</button>
-        `, log?.notes ? { text: '✓', ok: true } : { text: 'Vacía', ok: false })}
+        `, log?.notes ? { text: 'âœ“', ok: true } : { text: 'VacÃ­a', ok: false })}
 
       </div>
     </div>
@@ -3018,9 +3346,9 @@ export function openStudentRoutine(studentId) {
   _srSyncExpandBtn();
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // HELPER FUNCTIONS
-// ═══════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 export async function deleteInfantEvent(studentId, eventId) {
   if (!studentId || !eventId) return;
@@ -3056,7 +3384,7 @@ export async function _editEventTime(studentId, eventId) {
       <div class="p-5" style="background:linear-gradient(135deg,#475569,#334155)">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-3">
-            <span class="text-2xl">${ev.emoji || '📌'}</span>
+            <span class="text-2xl">${ev.emoji || 'ðŸ“Œ'}</span>
             <div>
               <h3 class="text-base font-black text-white">Modificar Hora</h3>
               <p class="text-xs font-bold text-white/80">${safeEscapeHTML(ev.label || ev.type)}</p>
@@ -3103,7 +3431,7 @@ export async function _confirmEditEventTime(studentId, eventId) {
   try {
     await supabase.from('daily_logs').update({ infant_data: updated }).eq('id', log.id);
     invalidateCache('getDailyRoutine');
-    safeToast('Hora actualizada ✅', 'success');
+    safeToast('Hora actualizada âœ…', 'success');
     UI.Modal.close('editEventTimeModal');
     await initRoutine();
     openStudentRoutine(studentId);
@@ -3119,7 +3447,7 @@ export async function _addScheduleEventToStudent(studentId, scheduleId) {
   const ev = _getSchedule().find(e => String(e.id) === String(scheduleId))
           || _getLevelDefaultSchedule().find(e => String(e.id) === String(scheduleId));
   const label = ev?.label || 'Evento';
-  const emoji = ev?.emoji || '📌';
+  const emoji = ev?.emoji || 'ðŸ“Œ';
 
   // Cada evento permite ajustar su hora (por si se marca tarde).
   const event_time = await _promptEventTime(emoji, label, ev?.startTime || _nowHHMM());
@@ -3147,7 +3475,7 @@ export async function _addScheduleEventToStudent(studentId, scheduleId) {
   }
 }
 
-/** Agrega una Rutina del Aula (catálogo amplio) a un estudiante, con hora elegible */
+/** Agrega una Rutina del Aula (catÃ¡logo amplio) a un estudiante, con hora elegible */
 export async function _addClassRoutineToStudent(studentId, routineId) {
   const classroom = AppState.get('classroom');
   if (!classroom?.id) return;
@@ -3217,7 +3545,7 @@ export async function setStudentFood(studentId, food, mealKey) {
       else currentFood.snack = food;
     }
     await MaestraApi.upsertDailyLog({ student_id: studentId, classroom_id: classroom.id, date: _today(), food: JSON.stringify(currentFood) });
-    safeToast('Alimentación guardada', 'success');
+    safeToast('AlimentaciÃ³n guardada', 'success');
     await initRoutine();
     if (_isModalOpen()) openStudentRoutine(studentId);
   } catch { safeToast('Error al guardar', 'error'); }
@@ -3241,6 +3569,30 @@ export async function setStudentBehavior(studentId, category, value) {
       infant_event: { type: 'behavior', label: `Comportamiento: ${category}`, category, data: { [category]: value } }
     });
     safeToast('Comportamiento registrado', 'success');
+    await initRoutine();
+    if (_isModalOpen()) openStudentRoutine(studentId);
+  } catch { safeToast('Error al guardar', 'error'); }
+}
+
+export async function repeatLastEvent(studentId) {
+  const log = _logsMap[studentId];
+  const last = (log?.infant_data || []).filter(e => e.type && e.type !== 'note').slice().sort((a, b) =>
+    new Date(a.created_at || a.start_time || 0) - new Date(b.created_at || b.start_time || 0)
+  ).pop();
+  if (!last) { safeToast('AÃºn no hay eventos para repetir', 'warning'); return; }
+  if (_isDuplicate(studentId, last.type)) { safeToast('Espera un momento antes de repetir', 'warning'); return; }
+  const classroom = AppState.get('classroom');
+  try {
+    await MaestraApi.upsertDailyLog({
+      student_id: studentId, classroom_id: classroom.id, date: _today(),
+      infant_event: {
+        type: last.type,
+        subtype: last.subtype || undefined,
+        label: last.label || last.type,
+        event_time: _nowHHMM()
+      }
+    });
+    safeToast(`${last.label || 'Evento'} registrado de nuevo`, 'success');
     await initRoutine();
     if (_isModalOpen()) openStudentRoutine(studentId);
   } catch { safeToast('Error al guardar', 'error'); }
@@ -3273,7 +3625,7 @@ export async function addStudentEvent(studentId, eventId, customLabel) {
   } catch { safeToast('Error al guardar', 'error'); }
 }
 
-/** Modal rápido de confirmación de hora para eventos individuales directos */
+/** Modal rÃ¡pido de confirmaciÃ³n de hora para eventos individuales directos */
 function _openQuickEventTimeModal(studentId, ev, label) {
   const modalId = 'quickEventTimeModal';
   const content = `
@@ -3290,7 +3642,7 @@ function _openQuickEventTimeModal(studentId, ev, label) {
         </div>
       </div>
       <div class="p-5 space-y-4">
-        <p class="text-xs text-slate-500 font-medium">Si el evento ocurrió antes, ajusta la hora para que el padre lo vea en el momento correcto.</p>
+        <p class="text-xs text-slate-500 font-medium">Si el evento ocurriÃ³ antes, ajusta la hora para que el padre lo vea en el momento correcto.</p>
         <div>
           <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Hora del evento</label>
           <input type="time" id="quickEventTime" value="${_nowHHMM()}"
@@ -3336,7 +3688,7 @@ export async function routineWakeAll() {
   const classroom = AppState.get('classroom');
   const studentsToWake = Object.keys(_sleepMap);
   if (studentsToWake.length === 0) return;
-  if (!confirm(`¿Despertar a ${studentsToWake.length} estudiante(s)?`)) return;
+  if (!confirm(`Â¿Despertar a ${studentsToWake.length} estudiante(s)?`)) return;
   try {
     for (const studentId of studentsToWake) {
       await MaestraApi.upsertDailyLog({ student_id: studentId, classroom_id: classroom.id, date: _today(), infant_event: { type: 'sleep', end_time: new Date().toISOString() } });
@@ -3356,9 +3708,9 @@ export async function routineWakeStudent(studentId) {
   } catch { safeToast('Error al despertar', 'error'); }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// BIBERÓN, MEDICAMENTO, EVENTOS EXTRA — MODALS
-// ═══════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// BIBERÃ“N, MEDICAMENTO, EVENTOS EXTRA â€” MODALS
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 export function _openMilkModal(studentId) {
   UI.Modal.open('milkModal', _renderMilkModal(studentId));
@@ -3383,13 +3735,13 @@ export async function _confirmMilk(studentId) {
   try {
     await MaestraApi.upsertDailyLog({
       student_id: studentId, classroom_id: classroom.id, date: _today(),
-      infant_event: { type: 'milk', label: 'Biberón', oz, temp, time, notes, event_time: time }
+      infant_event: { type: 'milk', label: 'BiberÃ³n', oz, temp, time, notes, event_time: time }
     });
-    safeToast('Biberón registrado', 'success');
+    safeToast('BiberÃ³n registrado', 'success');
     UI.Modal.close('milkModal');
     await initRoutine();
     openStudentRoutine(studentId);
-  } catch { safeToast('Error al guardar', 'error'); if (btn) { btn.disabled = false; btn.textContent = 'Guardar Biberón'; } }
+  } catch { safeToast('Error al guardar', 'error'); if (btn) { btn.disabled = false; btn.textContent = 'Guardar BiberÃ³n'; } }
 }
 
 export async function _confirmMed(studentId) {
@@ -3436,26 +3788,26 @@ export async function _confirmExtraEvent(studentId) {
   } catch { safeToast('Error al guardar', 'error'); if (btn) { btn.disabled = false; btn.textContent = 'Guardar Evento'; } }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // QUICK ADD EVENT
-// ═══════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 const QUICK_EVENTS = [
-  { id: 'poop',     icon: '💩', label: 'Popó' },
-  { id: 'pee',      icon: '💧', label: 'Pipí' },
-  { id: 'toilet',   icon: '🚽', label: 'Baño' },
-  { id: 'diaper',   icon: '🧻', label: 'Cambio pañal' },
-  { id: 'milk',     icon: '🍼', label: 'Biberón' },
-  { id: 'temp',     icon: '🌡️', label: 'Temperatura' },
-  { id: 'activity', icon: '🎨', label: 'Actividad' },
-  { id: 'sensorial',icon: '🔬', label: 'Sensorial' },
-  { id: 'playground',icon: '🌳', label: 'Patio' },
-  { id: 'handwash', icon: '🧼', label: 'Lavado manos' },
-  { id: 'toothbrush',icon: '🪥', label: 'Cepillado' },
-  { id: 'med',      icon: '💊', label: 'Medicamento' },
-  { id: 'hit',      icon: '🤕', label: 'Golpe/Caída' },
-  { id: 'vomit',    icon: '🤮', label: 'Vómito' },
-  { id: 'cough',    icon: '😷', label: 'Tos/Congestión' },
+  { id: 'poop',     icon: 'ðŸ’©', label: 'PopÃ³' },
+  { id: 'pee',      icon: 'ðŸ’§', label: 'PipÃ­' },
+  { id: 'toilet',   icon: 'ðŸš½', label: 'BaÃ±o' },
+  { id: 'diaper',   icon: 'ðŸ§»', label: 'Cambio paÃ±al' },
+  { id: 'milk',     icon: 'ðŸ¼', label: 'BiberÃ³n' },
+  { id: 'temp',     icon: 'ðŸŒ¡ï¸', label: 'Temperatura' },
+  { id: 'activity', icon: 'ðŸŽ¨', label: 'Actividad' },
+  { id: 'sensorial',icon: 'ðŸ”¬', label: 'Sensorial' },
+  { id: 'playground',icon: 'ðŸŒ³', label: 'Patio' },
+  { id: 'handwash', icon: 'ðŸ§¼', label: 'Lavado manos' },
+  { id: 'toothbrush',icon: 'ðŸª¥', label: 'Cepillado' },
+  { id: 'med',      icon: 'ðŸ’Š', label: 'Medicamento' },
+  { id: 'hit',      icon: 'ðŸ¤•', label: 'Golpe/CaÃ­da' },
+  { id: 'vomit',    icon: 'ðŸ¤®', label: 'VÃ³mito' },
+  { id: 'cough',    icon: 'ðŸ˜·', label: 'Tos/CongestiÃ³n' },
 ];
 
 export function openQuickAddModal() {
@@ -3474,7 +3826,7 @@ export function openQuickAddModal() {
       <div class="p-5" style="background:linear-gradient(135deg,#0B63C7,#28B54D)">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-3">
-            <span class="text-2xl">➕</span>
+            <span class="text-2xl">âž•</span>
             <div><h3 class="text-lg font-black text-white">Agregar Evento</h3><p class="text-xs font-bold text-white/80">Selecciona tipo y alumno</p></div>
           </div>
           <button onclick="UI.Modal.close('quickAddModal')" class="p-2 rounded-xl bg-white/20 text-white">
@@ -3506,7 +3858,7 @@ export function openQuickAddModal() {
         </div>
         <div>
           <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nombre personalizado</label>
-          <input id="qaCustomLabel" type="text" placeholder="Ej: Baño con agua tibia"
+          <input id="qaCustomLabel" type="text" placeholder="Ej: BaÃ±o con agua tibia"
             class="w-full mt-1 p-3 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-700 outline-none focus:border-blue-400">
         </div>
         <button onclick="App._submitQuickAdd()" class="w-full py-3 rounded-xl font-black text-xs uppercase text-white" style="background:#28B54D">Registrar Evento</button>
@@ -3525,9 +3877,9 @@ export async function _submitQuickAdd() {
   await addStudentEvent(studentId, eventId, customLabel || undefined);
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // BULK REPORT
-// ═══════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 export async function openBulkRoutineModal() {
   const students = AppState.get('students') || [];
@@ -3573,3 +3925,19 @@ export async function publishDailyLogs() {
     UI.Modal.close('bulkRoutineModal');
   } catch { safeToast('Error al publicar', 'error'); }
 }
+
+export function setRoutineViewMode(mode) {
+  _routineViewMode = mode === 'weekly' ? 'weekly' : 'express';
+  try { localStorage.setItem('sonrisas_routine_view', _routineViewMode); } catch (_) {}
+  _clearAutoRefresh();
+  return initRoutine();
+}
+
+export function markScheduleBlock(blockId) {
+  return WeeklySchedule.markBlock(blockId);
+}
+
+export function showScheduleBlock(blockId) {
+  return WeeklySchedule.showBlock(blockId);
+}
+

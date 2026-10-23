@@ -77,9 +77,14 @@ let _state = { mode: 'new', studentId: null, preData: null, activeTab: 'info', d
         </div>
       </div>
     `;
+    // `closeGlobalModal()` deja el contenedor con la clase `hidden` y
+    // `display:none`. Si no la quitamos, la segunda vez que se abre el
+    // modal (p.ej. tras cerrar un expediente) queda invisible.
+    gc.classList.remove('hidden');
     gc.style.display = 'block';
     gc.style.zIndex = '9999';
     gc.style.position = 'fixed';
+    gc.onmousedown = (e) => { if (e.target === gc) this.close(); };
 
     this._installDraftListener(gc);
     this._bindEvents();
@@ -861,6 +866,15 @@ let _state = { mode: 'new', studentId: null, preData: null, activeTab: 'info', d
     const p1Name = this._v('p1_name') || 'Familia';
     const currentEmail = this._v('login_email') || d.parent?.email || '';
     const currentPw = this._v('password') || '';
+    // Los dos correos que reciben las credenciales. Se prioriza lo que el
+    // usuario ya escribió en la pestaña Familia o en la propia pestaña Accesos.
+    const notifyEmail1 = _state.draft['srm-emailnotif']
+      || _state.draft['srm-p1email']
+      || this._v('notification_email')
+      || this._v('p1_email');
+    const notifyEmail2 = _state.draft['srm-emailnotif2']
+      || _state.draft['srm-p2email']
+      || this._v('p2_email');
 
     const exampleUser = buildStudentParentLoginEmail({
       studentName: studentName || 'Juan', studentLastName: studentLast || 'Perez'
@@ -874,11 +888,39 @@ let _state = { mode: 'new', studentId: null, preData: null, activeTab: 'info', d
             <strong>El usuario de acceso siempre usa el dominio del colegio
             (@${Helpers.escapeHTML(LOGIN_DOMAIN)}).</strong>
             Se construye con el <strong>primer nombre + primer apellido del estudiante</strong>
-            (ej: ${Helpers.escapeHTML(exampleUser)}). El correo de notificaciones es el personal
-            que dio la familia: ahí llegan los acuses, las cuotas y los avisos.
+            (ej: ${Helpers.escapeHTML(exampleUser)}). Los correos de los <strong>dos tutores</strong>
+            son los que reciben las credenciales de acceso, los acuses, las cuotas y los avisos.
             La contraseña temporal inicial siempre es <code class="px-1.5 py-0.5 rounded bg-white text-xs font-black text-emerald-800 border border-emerald-300">${STUDENT_DEFAULT_PASSWORD}</code>.
           </div>
         </div>
+      </div>
+
+      <!-- Correos de los dos tutores que reciben el acceso -->
+      <div class="rounded-2xl border border-sky-200 bg-sky-50 p-4 mb-5">
+        <div class="flex items-center gap-2 mb-3">
+          <i data-lucide="mails" class="w-4 h-4 text-sky-600"></i>
+          <p class="text-[11px] font-black uppercase tracking-wider text-sky-700">Correos que recibirán el acceso</p>
+        </div>
+        <div class="srm-grid-2">
+          <div>
+            <label class="${L}">Tutor 1 · Principal</label>
+            <input id="srm-emailnotif" type="email"
+                   value="${Helpers.escapeHTML(notifyEmail1)}"
+                   class="${I}" placeholder="tutor1@correo.com">
+            <p class="text-[10px] text-slate-500 mt-1 font-bold">Recibirá el usuario y la contraseña de acceso.</p>
+          </div>
+          <div>
+            <label class="${L}">Tutor 2 · Secundario</label>
+            <input id="srm-emailnotif2" type="email"
+                   value="${Helpers.escapeHTML(notifyEmail2)}"
+                   class="${I}" placeholder="tutor2@correo.com">
+            <p class="text-[10px] text-slate-500 mt-1 font-bold">Recibirá una copia de las mismas credenciales.</p>
+          </div>
+        </div>
+        <p class="text-[10px] font-bold text-sky-700 mt-2">
+          <i data-lucide="info" class="inline w-3 h-3 -mt-0.5"></i>
+          El mismo usuario y contraseña se envía a ambos correos en un solo mensaje.
+        </p>
       </div>
 
       <div class="srm-grid-2">
@@ -894,7 +936,6 @@ let _state = { mode: 'new', studentId: null, preData: null, activeTab: 'info', d
           </div>
           <p class="text-[10px] text-slate-400 mt-1 font-bold">Dominio fijo: @${Helpers.escapeHTML(LOGIN_DOMAIN)} · Formato: <code class="text-[10px]">primer_nombre.primer_apellido</code></p>
         </div>
-        <div><label class="${L}">Correo de Notificaciones</label><input id="srm-emailnotif" type="email" value="${Helpers.escapeHTML(this._v('notification_email') || this._v('p1_email'))}" class="${I}"></div>
         <div>
           <label class="${L}">Contraseña Temporal</label>
           <div class="flex gap-2">
@@ -1476,6 +1517,7 @@ let _state = { mode: 'new', studentId: null, preData: null, activeTab: 'info', d
       'srm-p2phone': 'p2_phone',
       'srm-p2whatsapp': 'p2_whatsapp',
       'srm-p2email': 'p2_email',
+      'srm-emailnotif2': 'p2_email',
       'srm-p2address': 'p2_address',
       'srm-p2profession': 'p2_profession',
       'srm-p2workplace': 'p2_workplace',
@@ -1718,11 +1760,15 @@ let _state = { mode: 'new', studentId: null, preData: null, activeTab: 'info', d
       || document.getElementById('srm-emailnotif')?.value?.trim()
       || _state.data?.notification_email
       || payload.p1_email
+      || '';
+    const notificationEmail2 = _state.draft['srm-emailnotif2']
+      || document.getElementById('srm-emailnotif2')?.value?.trim()
+      || _state.data?.p2_email
       || payload.p2_email
       || '';
     // ✅ El correo de credenciales se envía a LOS DOS tutores: el
     // notificaciones del tutor principal + el correo del tutor secundario.
-    const parentEmails = this._parentEmailList(notificationEmail, payload.p1_email, payload.p2_email);
+    const parentEmails = this._parentEmailList(notificationEmail, notificationEmail2, payload.p1_email, payload.p2_email);
     const recipientsTxt = this._emailRecipientsTxt(parentEmails) || notificationEmail;
     // ✅ REGLA NUEVA: contraseña temporal SIEMPRE es sonrisa123 (minúscula).
     // Si el draft trae algo distinto se fuerza a la predeterminada.
@@ -2237,17 +2283,24 @@ let _state = { mode: 'new', studentId: null, preData: null, activeTab: 'info', d
       || document.getElementById('srm-emailnotif')?.value?.trim()
       || _state.data?.notification_email
       || data.p1_email
+      || '';
+    const notificationEmail2 = _state.draft['srm-emailnotif2']
+      || document.getElementById('srm-emailnotif2')?.value?.trim()
+      || _state.data?.p2_email
       || data.p2_email
       || '';
     // ✅ Credenciales para LOS DOS tutores: notificaciones del principal
     // y el correo personal del tutor secundario.
-    const parentEmails = this._parentEmailList(notificationEmail, data.p1_email, data.p2_email);
+    const parentEmails = this._parentEmailList(notificationEmail, notificationEmail2, data.p1_email, data.p2_email);
     const recipientsTxt = this._emailRecipientsTxt(parentEmails) || notificationEmail;
     const password = _state.draft['srm-password']
       || document.getElementById('srm-password')?.value?.trim()
       || _state.data?.password
       || STUDENT_DEFAULT_PASSWORD;
-    if (!notificationEmail) { this._nudge('srm-emailnotif'); return Helpers.toast('Ingresa el correo de notificaciones', 'warning'); }
+    if (!parentEmails.length && !notificationEmail && !notificationEmail2) {
+      this._nudge('srm-emailnotif');
+      return Helpers.toast('Ingresa al menos un correo de tutor', 'warning');
+    }
     if (!password || password.length < 6) { this._nudge('srm-password'); return Helpers.toast('La contraseña debe tener al menos 6 caracteres', 'warning'); }
     if (!loginEmail) return Helpers.toast('No se pudo generar el usuario de login', 'error');
 

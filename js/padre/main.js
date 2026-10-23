@@ -404,8 +404,11 @@ const TempPasswordGuard = {
         });
       } catch (_) { /* soft */ }
 
-      // 4. Animación de éxito y cerrar
-      await this._animateSuccess();
+      // 4. Aviso: la cuenta es compartida, recordar compartir la nueva
+      //    contraseña con el Tutor 2 antes de continuar al panel.
+      this._setLoading(false);
+      const tutor2Email = await this._fetchTutor2Email();
+      await this._showShareReminder(newV, tutor2Email);
 
       // Limpiar restricciones de UI
       document.removeEventListener('keydown', this._keyGuard, true);
@@ -427,6 +430,114 @@ const TempPasswordGuard = {
     } finally {
       this._setLoading(false);
     }
+  },
+
+  /** Devuelve el correo del Tutor 2 vinculado a los estudiantes de esta familia. */
+  async _fetchTutor2Email() {
+    try {
+      const { data } = await supabase
+        .from('students')
+        .select('p2_email')
+        .eq('parent_id', this._user?.id);
+      const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      return (data || [])
+        .map((r) => String(r.p2_email || '').trim())
+        .find((e) => re.test(e)) || '';
+    } catch (_) {
+      return '';
+    }
+  },
+
+  /**
+   * Pantalla final del guard: avisa que la cuenta de acceso es compartida y
+   * que debe comunicar la nueva contraseña al Tutor 2. La promesa se resuelve
+   * cuando el usuario pulsa "Entendido, continuar".
+   */
+  _showShareReminder(password, tutor2Email) {
+    const safeEmail = tutor2Email ? Helpers.escapeHTML(tutor2Email) : '';
+    const who = safeEmail
+      ? `con el <strong>Tutor 2</strong> (<span style="word-break:break-all">${safeEmail}</span>)`
+      : 'con el <strong>Tutor 2</strong>';
+
+    this._overlay.innerHTML = `
+      <style>
+        @keyframes tpwPop { from { transform: translateY(18px) scale(.97); opacity: 0; } to { transform: none; opacity: 1; } }
+        .tpw-title-font { font-family:'Baloo 2','Nunito',system-ui,sans-serif; }
+        .tpw-input {
+          width:100%;padding:10px 12px;border:1.5px solid #E2E8F0;border-radius:12px;
+          font-size:13px;font-weight:600;color:#0F172A;background:#F8FAFC;
+          outline:none;transition:all .18s ease;box-sizing:border-box;font-family:inherit;
+        }
+        .tpw-input:focus { border-color:#0B63C7; background:#FFF; box-shadow:0 0 0 3px rgba(11,99,199,0.12); }
+        .tpw-label { display:block; font-size:10px; font-weight:900; text-transform:uppercase; letter-spacing:.5px; color:#64748B; margin-bottom:5px; }
+        .tpw-btn {
+          width:100%;padding:10px 14px;border:none;border-radius:12px;cursor:pointer;
+          font-family:'Baloo 2','Nunito',system-ui,sans-serif;font-size:12.5px;font-weight:800;
+          text-transform:uppercase;letter-spacing:.3px;transition:all .2s ease;
+        }
+        .tpw-btn-primary {
+          background: linear-gradient(135deg,#0B63C7 0%,#4F46E5 100%);color:white;
+          box-shadow:0 6px 18px rgba(11,99,199,0.3);
+        }
+        .tpw-btn-primary:hover { transform:translateY(-1px); box-shadow:0 10px 22px rgba(11,99,199,0.38); }
+      </style>
+      <div class="tpw-backdrop" style="
+        position:fixed;inset:0;background:rgba(15,23,42,0.78);backdrop-filter:blur(8px);
+        -webkit-backdrop-filter:blur(8px);z-index:99998;display:flex;align-items:center;justify-content:center;
+        padding:10px;">
+        <div class="tpw-card" role="alertdialog" aria-modal="true" aria-labelledby="tpw-share-title" style="
+          position:relative;width:100%;max-width:380px;background:white;border-radius:20px;
+          box-shadow:0 24px 60px rgba(2,6,23,0.32);overflow:hidden;animation:tpwPop .35s cubic-bezier(.2,.8,.2,1);
+          border:1px solid rgba(226,232,240,0.8);max-height:calc(100vh - 20px);overflow-y:auto;">
+          <div style="background:linear-gradient(135deg,#059669 0%,#10B981 55%,#14B8A6 100%);color:white;padding:14px">
+            <div style="display:flex;align-items:center;gap:9px">
+              <div style="width:36px;height:36px;border-radius:12px;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="color:white"><polyline points="20 6 9 17 4 12"/></svg>
+              </div>
+              <div style="min-width:0">
+                <h2 id="tpw-share-title" class="tpw-title-font" style="margin:0;font-size:15.5px;line-height:1.15">¡Contraseña actualizada!</h2>
+                <p style="margin:3px 0 0;font-size:11px;font-weight:600;color:rgba(255,255,255,0.9);line-height:1.4">Ya puedes entrar al Portal de Padres.</p>
+              </div>
+            </div>
+          </div>
+          <div style="padding:16px">
+            <div style="background:#FFFBEB;border:1.5px solid #FCD34D;border-radius:12px;padding:12px;margin-bottom:14px;display:flex;gap:10px">
+              <div style="flex-shrink:0;width:32px;height:32px;border-radius:10px;background:#FEF3C7;display:flex;align-items:center;justify-content:center">
+                <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#B45309" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/></svg>
+              </div>
+              <div style="min-width:0">
+                <p style="margin:0;font-size:12px;font-weight:900;color:#92400E;line-height:1.3">Recuerda compartir la nueva contraseña</p>
+                <p style="margin:4px 0 0;font-size:11px;font-weight:600;color:#78350F;line-height:1.45">
+                  La cuenta de acceso es compartida. Comparte esta nueva contraseña ${who} para que también pueda entrar al portal.
+                </p>
+              </div>
+            </div>
+            <label class="tpw-label" for="tpw-share-pass">Nueva contraseña</label>
+            <div style="display:flex;gap:8px">
+              <input id="tpw-share-pass" type="text" readonly value="${Helpers.escapeHTML(password)}" class="tpw-input" style="flex:1;font-weight:800;letter-spacing:.5px">
+              <button id="tpw-copy-pass" type="button" class="tpw-btn tpw-btn-primary" style="width:auto;padding:10px 14px;white-space:nowrap">Copiar</button>
+            </div>
+            <p style="margin:8px 0 0;font-size:10px;font-weight:700;color:#94A3B8;line-height:1.4">
+              Por seguridad, compártela solo con el otro tutor autorizado de la familia.
+            </p>
+            <button id="tpw-reminder-ok" type="button" class="tpw-btn tpw-btn-primary" style="margin-top:14px">Entendido, continuar</button>
+          </div>
+        </div>
+      </div>`;
+
+    return new Promise((resolve) => {
+      document.getElementById('tpw-copy-pass')?.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(password);
+        } catch (_) {
+          const inp = document.getElementById('tpw-share-pass');
+          inp?.select();
+          try { document.execCommand('copy'); } catch (_) {}
+        }
+        Helpers.toast?.('Contraseña copiada. Compártela con el Tutor 2.', 'success', 3500);
+      });
+      document.getElementById('tpw-reminder-ok')?.addEventListener('click', () => resolve());
+    });
   },
 
   async _animateSuccess() {

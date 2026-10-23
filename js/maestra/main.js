@@ -159,6 +159,9 @@ window.App = {
 
   // Rutina del Aula — Sistema de Rutina para Todo el Aula (10 reglas)
     initRoutine:              Routine.initRoutine,
+    setRoutineViewMode:       Routine.setRoutineViewMode,
+    markScheduleBlock:        Routine.markScheduleBlock,
+    showScheduleBlock:        Routine.showScheduleBlock,
     openStudentRoutine:       Routine.openStudentRoutine,
     openBulkRoutineModal:     Routine.openBulkRoutineModal,
     routineQuickGroup:        Routine.routineQuickGroup,
@@ -172,6 +175,10 @@ window.App = {
     setStudentNap:            Routine.setStudentNap,
     setStudentBehavior:       Routine.setStudentBehavior,
     addStudentEvent:          Routine.addStudentEvent,
+    repeatLastEvent:          Routine.repeatLastEvent,
+    filterRoutineStudents:    Routine.filterRoutineStudents,
+    setRoutineFilter:         Routine.setRoutineFilter,
+    openScheduleConfig:       Routine.openScheduleConfig,
     deleteInfantEvent:        Routine.deleteInfantEvent,
     saveStudentNote:          Routine.saveStudentNote,
     _openTempModal:           Routine._openTempModal,
@@ -713,7 +720,18 @@ function _initClassroomSwitcher(classrooms) {
     window.App.switchClassroom(pill.dataset.croom);
   });
 
+  _syncClassroomPill(currentId);
   if (window.lucide) window.lucide.createIcons();
+}
+
+function _syncClassroomPill(activeId) {
+  if (activeId === undefined || activeId === null) return;
+  document.querySelectorAll('.croom-pill').forEach(b => {
+    const on = String(b.dataset.croom) === String(activeId);
+    b.classList.toggle('croom-active', on);
+    if (on) b.setAttribute('aria-current', 'true');
+    else b.removeAttribute('aria-current');
+  });
 }
 
 /**
@@ -740,9 +758,7 @@ window.App.switchClassroom = async (classroomId) => {
   initRealtimeUpdates(target.id);
   WallModule.init('muroPostsContainer', { accentColor: 'blue', classroomId: target.id }, AppState);
 
-  document.querySelectorAll('.croom-pill').forEach(b => {
-    b.classList.toggle('croom-active', String(b.dataset.croom) === String(target.id));
-  });
+  _syncClassroomPill(target.id);
 
   const activeSection = document.querySelector('.section.active')?.id || 't-home';
   const lastTab = localStorage.getItem('maestra_last_tab');
@@ -1403,6 +1419,7 @@ function initNavigation() {
 
       const nameEl = document.getElementById('currentClassName');
       if (nameEl) nameEl.textContent = classroom.name;
+      _syncClassroomPill(classroom.id);
 
       const layoutShell = document.getElementById('layoutShell');
       if (layoutShell) layoutShell.scrollTop = 0;
