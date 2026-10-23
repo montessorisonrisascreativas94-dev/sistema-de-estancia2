@@ -1,6 +1,6 @@
-﻿/**
- * Horario Semanal â€“ Panel de la maestra.
- * Matriz Lun-Vie por bloques, progreso colectivo y ejecuciÃ³n de bloques.
+/**
+ * Horario Semanal – Panel de la maestra.
+ * Matriz Lun-Vie por bloques, progreso colectivo y ejecución de bloques.
  */
 import { AppState } from '../state.js';
 import { MaestraApi } from '../api.js';
@@ -74,10 +74,10 @@ function _renderCell(block, day, students, logsMap, nowMin) {
   const done = progress.complete;
   const border = block.color;
   return `
-    <button type="button" class="wk-block ${now ? 'now' : ''} ${done ? 'is-done' : ''}"
+    <button type="button" class="wk-block ${now ? 'now' : ''} ${done ? '✓' : ''}"
       style="--wk-color:${block.color};--wk-bg:${block.bg};--wk-border:${border}"
       onclick="App.showScheduleBlock('${safeEscapeHTML(block.id)}')"
-      title="${safeEscapeHTML(block.label)} Â· ${formatRange(block.startTime, block.duration)}">
+      title="${safeEscapeHTML(block.label)} · ${formatRange(block.startTime, block.duration)}">
       ${now ? '<span class="wk-now-tag">Ahora</span>' : ''}
       <span class="wk-block-head">
         <span class="wk-block-emoji">${block.emoji}</span>
@@ -85,9 +85,9 @@ function _renderCell(block, day, students, logsMap, nowMin) {
           <span class="wk-block-label">${safeEscapeHTML(block.label)}</span>
           <span class="wk-block-meta">
             <span>${formatTime(block.startTime)}</span>
-            <span class="wk-check">${done ? 'âœ“' : `${progress.done}/${progress.total}`}</span>
+            <span class="wk-check">${done ? '✓' : `${progress.done}/${progress.total}`}</span>
           </span>
-          <span class="wk-bar"><i style="width:${progress.pct}%;background:${done ? '#28B54D' : block.color}"></i></span>
+          <span class="wk-bar"><i style="width:${progress.pct}%;background:${done ? '✓' : block.color}"></i></span>
         </span>
       </span>
     </button>
@@ -112,10 +112,10 @@ export function renderWeeklySchedule({ blocks = [], fallback = [], students = []
       ${shell}
       <div class="wk-toolbar">
         <div class="wk-title">
-          <div class="wk-title-icon">📅</div>
+          <div class="wk-title-icon">=–</div>
           <div>
             <h4>Horario Semanal</h4>
-            <p>${dates[0].date.toLocaleDateString('es-DO', { day: '2-digit', month: 'short' })} â€“ ${dates[4].date.toLocaleDateString('es-DO', { day: '2-digit', month: 'short' })} Â· Hoy ${doneBlocks}/${todayBlocks} bloques completos</p>
+            <p>${dates[0].date.toLocaleDateString('es-DO', { day: '2-digit', month: 'short' })} – ${dates[4].date.toLocaleDateString('es-DO', { day: '2-digit', month: 'short' })} · Hoy ${doneBlocks}/${todayBlocks} bloques completos</p>
           </div>
         </div>
         <div class="wk-legend">
@@ -127,7 +127,7 @@ export function renderWeeklySchedule({ blocks = [], fallback = [], students = []
 
       ${usable.length === 0 ? `
         <div class="wk-empty-state">
-          <div class="wk-empty-icon">ðŸ—“ï¸</div>
+          <div class="wk-empty-icon">🗓️</div>
           <h5>Sin horario configurado</h5>
           <p>Configura los bloques del aula para ver la matriz semanal y ejecutar las actividades con un toque.</p>
           <button type="button" class="wk-btn wk-btn-primary" style="margin-top:12px" onclick="App.openScheduleConfig()">Configurar horario</button>
@@ -157,7 +157,7 @@ export function renderWeeklySchedule({ blocks = [], fallback = [], students = []
                   ${WEEK_DAYS.map(d => {
                     const cellBlocks = row.cells[d.n] || [];
                     if (!cellBlocks.length) {
-                      return `<td class="wk-cell empty ${d.n === today ? 'today' : ''}">â€”</td>`;
+                      return `<td class="wk-cell empty ${d.n === today ? 'today' : ''}">–</td>`;
                     }
                     return `<td class="wk-cell ${d.n === today ? 'today' : ''}">
                       ${cellBlocks.map(block => _renderCell(block, d.n, students, logsMap, now)).join('')}
@@ -169,7 +169,7 @@ export function renderWeeklySchedule({ blocks = [], fallback = [], students = []
           </table>
         </div>
       `}
-      <p class="wk-detail-note" style="padding:2px 4px">Toca un bloque de hoy para registrarlo con todo el grupo. Los demÃ¡s dÃ­as muestran el detalle y el progreso.</p>
+      <p class="wk-detail-note" style="padding:2px 4px">Toca un bloque de hoy para registrarlo con todo el grupo. Los demás días muestran el detalle y el progreso.</p>
     </div>
   `;
 }
@@ -190,21 +190,21 @@ export function showBlock(blockId) {
         <div class="wk-detail-emoji">${block.emoji}</div>
         <div>
           <h5>${safeEscapeHTML(block.label)}</h5>
-          <p>${formatRange(block.startTime, block.duration)} Â· ${block.days.map(d => (WEEK_DAYS.find(x => x.n === d)?.short || '')).filter(Boolean).join(', ')}</p>
+          <p>${formatRange(block.startTime, block.duration)} · ${block.days.map(d => (WEEK_DAYS.find(x => x.n === d)?.short || '')).filter(Boolean).join(', ')}</p>
         </div>
-        <button type="button" class="wk-detail-close" onclick="UI.Modal.close('weeklyBlockModal')">Ã—</button>
+        <button type="button" class="wk-detail-close" onclick="UI.Modal.close('weeklyBlockModal')">–</button>
       </div>
       <div class="wk-detail-list">
         <div class="wk-detail-row">
           <time>${status === 'now' ? 'AHORA' : isToday ? 'HOY' : ''}</time>
-          <span>${progress.done} de ${progress.total} estudiantes Â· ${progress.pct}% completado</span>
+          <span>${progress.done} de ${progress.total} estudiantes · ${progress.pct}% completado</span>
         </div>
-        ${doneNames.slice(0, 8).map(name => `<div class="wk-detail-row"><time>âœ“</time><span>${safeEscapeHTML(name)}</span></div>`).join('')}
-        ${doneNames.length > 8 ? `<div class="wk-detail-row"><time>+</time><span>${doneNames.length - 8} estudiante(s) mÃ¡s</span></div>` : ''}
+        ${doneNames.slice(0, 8).map(name => `<div class="wk-detail-row"><time>✓</time><span>${safeEscapeHTML(name)}</span></div>`).join('')}
+        ${doneNames.length > 8 ? `<div class="wk-detail-row"><time>+</time><span>${doneNames.length - 8} estudiante(s) más</span></div>` : ''}
       </div>
       <p class="wk-detail-note">${isToday
         ? 'Puedes ejecutar este bloque para todos los estudiantes presentes.'
-        : 'Este bloque no corresponde al dÃ­a de hoy. Su registro se habilita el dÃ­a indicado.'}</p>
+        : 'Este bloque no corresponde al día de hoy. Su registro se habilita el día indicado.'}</p>
       <div class="wk-detail-actions">
         ${isToday ? `<button type="button" class="wk-btn wk-btn-primary" onclick="UI.Modal.close('weeklyBlockModal');App.markScheduleBlock('${safeEscapeHTML(block.id)}')">Registrar para el grupo</button>` : ''}
         <button type="button" class="wk-btn wk-btn-ghost" onclick="UI.Modal.close('weeklyBlockModal')">Cerrar</button>
@@ -229,11 +229,11 @@ function _promptTime(block) {
           <span style="font-size:26px">${block.emoji}</span>
           <div>
             <div style="font-size:14px;font-weight:900">${safeEscapeHTML(block.label)}</div>
-            <div style="font-size:11px;font-weight:700;opacity:.85">Â¿A quÃ© hora se realizÃ³?</div>
+            <div style="font-size:11px;font-weight:700;opacity:.85">¿A qué hora se realizó?</div>
           </div>
         </div>
         <div style="padding:16px;display:flex;flex-direction:column;gap:11px">
-          <p style="margin:0;font-size:11px;font-weight:600;color:#64748B">Ajusta la hora si registras el bloque mÃ¡s tarde.</p>
+          <p style="margin:0;font-size:11px;font-weight:600;color:#64748B">Ajusta la hora si registras el bloque más tarde.</p>
           <input type="time" id="weeklyBlockTimeInput" value="${defaultTime}" style="width:100%;padding:11px;border:2px solid #E2E8F0;border-radius:12px;font-size:14px;font-weight:800;color:#334155;outline:none">
           <div style="display:flex;gap:8px">
             <button type="button" id="weeklyBlockTimeCancel" style="flex:1;padding:11px;border:0;border-radius:12px;background:#F1F5F9;color:#64748B;font-size:11px;font-weight:900;text-transform:uppercase;cursor:pointer">Cancelar</button>
@@ -262,7 +262,7 @@ export async function markBlock(blockId) {
   const block = _byId.get(String(blockId));
   if (!block) return;
   if (!block.days.includes(todayNumber())) {
-    safeToast('Este bloque es de otro dÃ­a de la semana', 'warning');
+    safeToast('Este bloque es de otro día de la semana', 'warning');
     return;
   }
 
@@ -285,7 +285,7 @@ export async function markBlock(blockId) {
   const today = isoDate();
   const attendance = await MaestraApi.getAttendance(classroom.id, today);
   if (!attendance || attendance.length === 0) {
-    safeToast('Primero pasa asistencia del dÃ­a', 'warning');
+    safeToast('Primero pasa asistencia del día', 'warning');
     return;
   }
   const presentIds = new Set(attendance.filter(a => ['present', 'late'].includes(a.status)).map(a => a.student_id));
@@ -300,11 +300,11 @@ export async function markBlock(blockId) {
   (logs || []).forEach(log => { logsMap[log.student_id] = log; });
   const progress = blockProgress(block, students, logsMap);
   if (progress.complete) {
-    safeToast(`${block.emoji} ${block.label} ya estÃ¡ registrado para todo el grupo`, 'info');
+    safeToast(`${block.emoji} ${block.label} ya está registrado para todo el grupo`, 'info');
     return;
   }
 
-  if (students.length > 5 && !confirm(`Â¿Registrar "${block.label}" para ${students.length} estudiantes presentes?`)) {
+  if (students.length > 5 && !confirm(`¿Registrar "${block.label}" para ${students.length} estudiantes presentes?`)) {
     return;
   }
 
