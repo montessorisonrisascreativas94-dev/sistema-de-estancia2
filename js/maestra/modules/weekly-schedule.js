@@ -112,7 +112,7 @@ export function renderWeeklySchedule({ blocks = [], fallback = [], students = []
       ${shell}
       <div class="wk-toolbar">
         <div class="wk-title">
-          <div class="wk-title-icon">ðŸ—“ï¸</div>
+          <div class="wk-title-icon">📅</div>
           <div>
             <h4>Horario Semanal</h4>
             <p>${dates[0].date.toLocaleDateString('es-DO', { day: '2-digit', month: 'short' })} â€“ ${dates[4].date.toLocaleDateString('es-DO', { day: '2-digit', month: 'short' })} Â· Hoy ${doneBlocks}/${todayBlocks} bloques completos</p>

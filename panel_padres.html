@@ -1429,7 +1429,7 @@
                       <i data-lucide="clipboard-list" class="w-5 h-5"></i>
                     </div>
                     <div>
-                      <h3 class="text-lg font-black tracking-tight">Rutina de Hoy</h3>
+                      <h3 class="text-lg font-black tracking-tight">Rutina Diaria</h3>
                       <p id="rutinaDateLabel" class="text-[11px] font-bold text-white/80 uppercase tracking-widest mt-0.5 bg-white/10 inline-block px-2 py-0.5 rounded-md"></p>
                     </div>
                   </div>
@@ -1442,49 +1442,72 @@
                 </div>
               </div>
 
-              <!-- Quick Status Chips -->
-              <div id="rutinaQuickStatus" class="grid grid-cols-3 gap-3">
-                <div class="cloud-card p-3 text-center pay-card-enter" style="animation-delay:0ms">
-                  <div class="text-2xl mb-1" id="qsMood">😀</div>
-                  <div class="text-[9px] font-black text-[#64748B] uppercase tracking-wider">Ánimo</div>
-                  <div class="text-[11px] font-bold text-[#1A2340]" id="qsMoodLabel">Sin registro</div>
-                </div>
-                <div class="cloud-card p-3 text-center pay-card-enter" style="animation-delay:60ms">
-                  <div class="text-2xl mb-1" id="qsFood">🍽️</div>
-                  <div class="text-[9px] font-black text-[#64748B] uppercase tracking-wider">Alimentación</div>
-                  <div class="text-[11px] font-bold text-[#1A2340]" id="qsFoodLabel">Sin registro</div>
-                </div>
-                <div class="cloud-card p-3 text-center pay-card-enter" style="animation-delay:120ms">
-                  <div class="text-2xl mb-1" id="qsNap">😴</div>
-                  <div class="text-[9px] font-black text-[#64748B] uppercase tracking-wider">Siesta</div>
-                  <div class="text-[11px] font-bold text-[#1A2340]" id="qsNapLabel">Sin registro</div>
-                </div>
+              <!-- Conmutador Reporte del Día / Horario Semanal -->
+              <div class="flex items-center gap-1.5 p-1.5 rounded-2xl" style="background:#F1F5F9;border:1.5px solid #E2E8F0">
+                <button type="button" id="padreRoutineTabDaily" class="flex-1 flex items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-[11px] font-black transition-all" style="background:#fff;color:#0F172A;box-shadow:0 3px 10px rgba(15,23,42,.09);border:1.5px solid #E2E8F0" onclick="window.PadreRoutine?.setTab('daily')">
+                  <span>📋</span><span>Reporte del Día</span>
+                </button>
+                <button type="button" id="padreRoutineTabWeekly" class="flex-1 flex items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-[11px] font-black transition-all" style="background:transparent;color:#64748B;border:1.5px solid transparent" onclick="window.PadreRoutine?.setTab('weekly')">
+                  <span>📅</span><span>Horario Semanal</span>
+                </button>
               </div>
 
-              <!-- Daily report -->
-              <div id="dailyReportContainer">
-                <div class="animate-pulse space-y-4">
-                  <div class="h-32 bg-slate-100 rounded-2xl"></div>
-                  <div class="h-40 bg-slate-100 rounded-2xl"></div>
+              <!-- Vista: Reporte del Día -->
+              <div id="padreRoutineViewDaily">
+                <!-- Quick Status Chips -->
+                <div id="rutinaQuickStatus" class="grid grid-cols-3 gap-3">
+                  <div class="cloud-card p-3 text-center pay-card-enter" style="animation-delay:0ms">
+                    <div class="text-2xl mb-1" id="qsMood">😀</div>
+                    <div class="text-[9px] font-black text-[#64748B] uppercase tracking-wider">Ánimo</div>
+                    <div class="text-[11px] font-bold text-[#1A2340]" id="qsMoodLabel">Sin registro</div>
+                  </div>
+                  <div class="cloud-card p-3 text-center pay-card-enter" style="animation-delay:60ms">
+                    <div class="text-2xl mb-1" id="qsFood">🍽️</div>
+                    <div class="text-[9px] font-black text-[#64748B] uppercase tracking-wider">Alimentación</div>
+                    <div class="text-[11px] font-bold text-[#1A2340]" id="qsFoodLabel">Sin registro</div>
+                  </div>
+                  <div class="cloud-card p-3 text-center pay-card-enter" style="animation-delay:120ms">
+                    <div class="text-2xl mb-1" id="qsNap">😴</div>
+                    <div class="text-[9px] font-black text-[#64748B] uppercase tracking-wider">Siesta</div>
+                    <div class="text-[11px] font-bold text-[#1A2340]" id="qsNapLabel">Sin registro</div>
+                  </div>
                 </div>
-              </div>
 
-              <!-- Resumen Semanal -->
-              <div class="cloud-card overflow-hidden">
-                <div class="p-5 border-b border-[#E2E8F0]">
-                  <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#0B63C7] to-[#28B54D] text-white flex items-center justify-center shadow-md">
-                      <span class="text-lg">📊</span>
+                <!-- Daily report -->
+                <div id="dailyReportContainer" class="mt-4">
+                  <div class="animate-pulse space-y-4">
+                    <div class="h-32 bg-slate-100 rounded-2xl"></div>
+                    <div class="h-40 bg-slate-100 rounded-2xl"></div>
+                  </div>
+                </div>
+
+                <!-- Resumen Semanal -->
+                <div class="cloud-card overflow-hidden mt-4">
+                  <div class="p-5 border-b border-[#E2E8F0]">
+                    <div class="flex items-center gap-3">
+                      <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#0B63C7] to-[#28B54D] text-white flex items-center justify-center shadow-md">
+                        <span class="text-lg">📊</span>
+                      </div>
+                      <div>
+                        <h3 class="font-black text-base text-[#1A2340]">Resumen Semanal</h3>
+                        <p class="text-[10px] font-bold text-[#64748B] uppercase tracking-widest">Estadísticas de los últimos 7 días</p>
+                      </div>
                     </div>
-                    <div>
-                      <h3 class="font-black text-base text-[#1A2340]">Resumen Semanal</h3>
-                      <p class="text-[10px] font-bold text-[#64748B] uppercase tracking-widest">Estadísticas de los últimos 7 días</p>
+                  </div>
+                  <div id="weeklySummaryContainer" class="p-5">
+                    <div class="animate-pulse space-y-4">
+                      <div class="h-24 bg-slate-100 rounded-2xl"></div>
                     </div>
                   </div>
                 </div>
-                <div id="weeklySummaryContainer" class="p-5">
+              </div>
+
+              <!-- Vista: Horario Semanal -->
+              <div id="padreRoutineViewWeekly" class="hidden">
+                <div id="padreWeeklyScheduleContainer">
                   <div class="animate-pulse space-y-4">
-                    <div class="h-24 bg-slate-100 rounded-2xl"></div>
+                    <div class="h-16 bg-slate-100 rounded-2xl"></div>
+                    <div class="h-64 bg-slate-100 rounded-2xl"></div>
                   </div>
                 </div>
               </div>
@@ -1937,6 +1960,68 @@
   <script src="js/shared/harden-forms.js" defer></script>
   <script src="js/shared/lightbox.js"></script>
   <script type="module" src="js/padre/main.js"></script>
+  <script type="module">
+    import * as ParentWeeklySchedule from './js/padre/weekly-schedule.js';
+    import { AppState } from './js/padre/appState.js';
+
+    const STORAGE_KEY = 'sonrisas_padre_routine_tab';
+
+    function updateTabs(tab) {
+      const dailyBtn = document.getElementById('padreRoutineTabDaily');
+      const weeklyBtn = document.getElementById('padreRoutineTabWeekly');
+      const dailyView = document.getElementById('padreRoutineViewDaily');
+      const weeklyView = document.getElementById('padreRoutineViewWeekly');
+
+      if (tab === 'weekly') {
+        if (dailyBtn) { dailyBtn.style.background = 'transparent'; dailyBtn.style.color = '#64748B'; dailyBtn.style.boxShadow = 'none'; dailyBtn.style.border = '1.5px solid transparent'; }
+        if (weeklyBtn) { weeklyBtn.style.background = '#fff'; weeklyBtn.style.color = '#0F172A'; weeklyBtn.style.boxShadow = '0 3px 10px rgba(15,23,42,.09)'; weeklyBtn.style.border = '1.5px solid #E2E8F0'; }
+        if (dailyView) dailyView.classList.add('hidden');
+        if (weeklyView) weeklyView.classList.remove('hidden');
+        loadWeekly();
+      } else {
+        if (weeklyBtn) { weeklyBtn.style.background = 'transparent'; weeklyBtn.style.color = '#64748B'; weeklyBtn.style.boxShadow = 'none'; weeklyBtn.style.border = '1.5px solid transparent'; }
+        if (dailyBtn) { dailyBtn.style.background = '#fff'; dailyBtn.style.color = '#0F172A'; dailyBtn.style.boxShadow = '0 3px 10px rgba(15,23,42,.09)'; dailyBtn.style.border = '1.5px solid #E2E8F0'; }
+        if (weeklyView) weeklyView.classList.add('hidden');
+        if (dailyView) dailyView.classList.remove('hidden');
+      }
+      try { localStorage.setItem(STORAGE_KEY, tab); } catch (_) {}
+    }
+
+    async function loadWeekly() {
+      const container = document.getElementById('padreWeeklyScheduleContainer');
+      if (!container) return;
+      const student = AppState.get('currentStudent');
+      const classroomId = student?.classroom_id || student?.classrooms?.id;
+      if (!classroomId) {
+        container.innerHTML = '<div class="text-center text-sm font-bold text-slate-500 py-8">No hay aula asignada</div>';
+        return;
+      }
+      try {
+        const blocks = await ParentWeeklySchedule.loadBlocks(classroomId);
+        const { supabase } = await import('./js/shared/supabase.js');
+        const today = new Date().toISOString().slice(0, 10);
+        const { data: logs } = await supabase.from('daily_logs').select('*').eq('student_id', student.id).eq('date', today);
+        const logsMap = {};
+        (logs || []).forEach(l => { logsMap[l.student_id] = l; });
+        container.innerHTML = ParentWeeklySchedule.renderWeekly({ blocks, student, logsMap, now: new Date().getHours() * 60 + new Date().getMinutes() });
+        if (window.lucide) lucide.createIcons();
+      } catch (e) {
+        container.innerHTML = '<div class="text-center text-sm font-bold text-rose-500 py-8">Error al cargar el horario semanal</div>';
+      }
+    }
+
+    window.PadreRoutine = {
+      setTab: updateTabs,
+      refreshWeekly: loadWeekly,
+    };
+
+    window.addEventListener('DOMContentLoaded', () => {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY) || 'daily';
+        if (saved === 'weekly') updateTabs('weekly');
+      } catch (_) {}
+    });
+  </script>
   <!-- Safety: ocultar skeleton si JS tarda más de 8s o falla silenciosamente -->
   <script>
     setTimeout(() => {

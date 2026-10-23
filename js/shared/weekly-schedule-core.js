@@ -4,12 +4,15 @@
  */
 
 export const WEEK_DAYS = [
-  { n: 1, short: 'Lun.', label: 'Lunes', color: '#7C3AED', bg: '#F5F3FF' },
-  { n: 2, short: 'Mar.', label: 'Martes', color: '#0EA5E9', bg: '#F0F9FF' },
-  { n: 3, short: 'Mié.', label: 'Miércoles', color: '#EC4899', bg: '#FDF2F8' },
-  { n: 4, short: 'Jue.', label: 'Jueves', color: '#F59E0B', bg: '#FFFBEB' },
-  { n: 5, short: 'Vie.', label: 'Viernes', color: '#10B981', bg: '#ECFDF5' },
+  { n: 1, short: 'Lun.', label: 'Lunes', color: '#7C3AED', bg: '#EDE9FE' },
+  { n: 2, short: 'Mar.', label: 'Martes', color: '#2563EB', bg: '#E0F2FE' },
+  { n: 3, short: 'Mié.', label: 'Miércoles', color: '#16A34A', bg: '#DCFCE7' },
+  { n: 4, short: 'Jue.', label: 'Jueves', color: '#D97706', bg: '#FEF3C7' },
+  { n: 5, short: 'Vie.', label: 'Viernes', color: '#E11D48', bg: '#FCE7F3' },
 ];
+
+export const TIME_COLUMN_COLOR = '#DB2777';
+export const TIME_COLUMN_BG = '#FDF2F8';
 
 export const WEEK_DAY_BY_N = Object.fromEntries(WEEK_DAYS.map(d => [d.n, d]));
 
@@ -232,8 +235,8 @@ export const WEEKLY_CSS = `
 .wk-scroll{overflow-x:auto;border:2px solid var(--wk-line);border-radius:18px;background:#fff;box-shadow:0 10px 26px rgba(26,35,64,.06);-webkit-overflow-scrolling:touch}
 .wk-table{width:100%;min-width:780px;border-collapse:separate;border-spacing:0}
 .wk-table th,.wk-table td{padding:0}
-.wk-th-time{width:86px;min-width:86px;position:sticky;left:0;z-index:3;background:#fff;border-bottom:2px solid var(--wk-line);border-right:2px solid var(--wk-line)}
-.wk-th-time span{display:block;padding:11px 8px;text-align:center;font-size:.56rem;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:var(--wk-muted)}
+.wk-th-time{width:86px;min-width:86px;position:sticky;left:0;z-index:3;background:${TIME_COLUMN_BG};border-bottom:2px solid var(--wk-line);border-right:2px solid var(--wk-line)}
+.wk-th-time span{display:block;padding:11px 8px;text-align:center;font-size:.56rem;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:${TIME_COLUMN_COLOR}}
 .wk-th-day{position:relative;padding:10px 8px;text-align:center;color:#fff;border-bottom:0;border-right:2px solid rgba(255,255,255,.55)}
 .wk-th-day:last-child{border-right:0}
 .wk-th-day b{display:block;font-size:.72rem;font-weight:900;letter-spacing:.02em}
