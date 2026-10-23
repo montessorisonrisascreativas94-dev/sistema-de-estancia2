@@ -1442,6 +1442,18 @@
                 </div>
               </div>
 
+              <!-- Conmutador de Vista (Reporte del Día vs Horario Semanal) -->
+              <div class="flex items-center justify-between gap-2 p-1.5 bg-slate-100 rounded-2xl border border-slate-200">
+                <button id="btnParentViewDaily" onclick="DailyReportModule.setViewMode('daily')" class="flex-1 py-2.5 px-3 rounded-xl font-black text-xs transition-all flex items-center justify-center gap-2 bg-white text-[#0B63C7] shadow-sm border border-slate-200/60">
+                  <i data-lucide="clipboard-list" class="w-4 h-4"></i>
+                  <span>📋 Reporte del Día</span>
+                </button>
+                <button id="btnParentViewSchedule" onclick="DailyReportModule.setViewMode('schedule')" class="flex-1 py-2.5 px-3 rounded-xl font-black text-xs transition-all flex items-center justify-center gap-2 text-slate-500 hover:text-slate-800">
+                  <i data-lucide="calendar" class="w-4 h-4"></i>
+                  <span>📅 Horario Semanal</span>
+                </button>
+              </div>
+
               <!-- Quick Status Chips -->
               <div id="rutinaQuickStatus" class="grid grid-cols-3 gap-3">
                 <div class="cloud-card p-3 text-center pay-card-enter" style="animation-delay:0ms">
