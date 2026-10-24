@@ -10,8 +10,8 @@ import { RoutineCatalog } from '../../shared/routine-catalog.js';
 import * as WeeklySchedule from './weekly-schedule.js';
 import { WEEKLY_CSS } from '../../shared/weekly-schedule-core.js';
 
-let _routineViewMode = 'express';
-try { _routineViewMode = localStorage.getItem('sonrisas_routine_view') || 'express'; } catch (_) {}
+  let _routineViewMode = 'weekly';
+try { _routineViewMode = 'weekly'; } catch (_) {}
 let _logsMap = {};
 let _sleepMap = {};
 let _lastEvent = {};
@@ -286,20 +286,20 @@ const ROUTINE_RULES = [
 // Horario. groupEventId marca los eventos que se registran como acción colectiva.
 // ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 const SCHEDULE_CATALOG = {
-  base: { label: '–xR Rutina base', color: '#0B63C7', items: [
+  base: { label: '📋 Rutina base', color: '#0B63C7', items: [
     { id: 'welcome',       emoji: '🖐️', label: 'Bienvenida',        color: '#FF8A00', duration: 15 },
     { id: 'roll_call',     emoji: '📋', label: 'Pase de Lista',     color: '#0B63C7', duration: 15 },
     { id: 'departure',     emoji: '👋', label: 'Entrega de niños',  color: '#EF4444', duration: 60 },
     { id: 'sleep_start',   emoji: '😴', label: 'Siesta',            color: '#8B5CF6', duration: 120, groupEventId: 'sleep_start' },
     { id: 'sleep_end',     emoji: '😊', label: 'Despertar',         color: '#FFD43B', duration: 15,  groupEventId: 'sleep_end' }
   ]},
-  hygiene: { label: '–x–– Higiene y cuidado', color: '#0EA5E9', items: [
+  hygiene: { label: '🧼 Higiene y cuidado', color: '#0EA5E9', items: [
     { id: 'bath_full',      emoji: '🛁', label: 'Baño completo',     color: '#0EA5E9', duration: 30, groupEventId: 'bath' },
     { id: 'diaper_change',  emoji: '🧷', label: 'Cambio de pañal',   color: '#94A3B8', duration: 15, groupEventId: 'diaper_change' },
     { id: 'handwash',       emoji: '🧼', label: 'Lavado de manos',   color: '#0B63C7', duration: 10, groupEventId: 'handwash' },
     { id: 'toothbrush',     emoji: '🪥', label: 'Cepillado',         color: '#06B6D4', duration: 15, groupEventId: 'toothbrush' }
   ]},
-  food: { label: '–x–} Alimentación', color: '#FF8A00', items: [
+  food: { label: '🍽️ Alimentación', color: '#FF8A00', items: [
     { id: 'breakfast',     emoji: '🍞', label: 'Desayuno',           color: '#FF8A00', duration: 30, groupEventId: 'breakfast' },
     { id: 'papilla',       emoji: '🥣', label: 'Papilla',            color: '#F59E0B', duration: 20, groupEventId: 'snack' },
     { id: 'hydration',     emoji: '💧', label: 'Hidratación',        color: '#0B63C7', duration: 15, groupEventId: 'water' },
@@ -308,7 +308,7 @@ const SCHEDULE_CATALOG = {
     { id: 'lunch',         emoji: '🍽️', label: 'Almuerzo',           color: '#28B54D', duration: 30, groupEventId: 'lunch' },
     { id: 'snack2',        emoji: '🎁', label: 'Merienda',           color: '#F59E0B', duration: 30, groupEventId: 'snack' }
   ]},
-  stimulation: { label: '–x–– Estimulación y juego', color: '#7C3AED', items: [
+  stimulation: { label: '🎯 Estimulación y juego', color: '#7C3AED', items: [
     { id: 'early_stimulation', emoji: '🧸', label: 'Estimulación temprana', color: '#7C3AED', duration: 30 },
     { id: 'crawling',          emoji: '🐣', label: 'Gateo',                   color: '#EC4899', duration: 25 },
     { id: 'sensorial_games',   emoji: '🎯', label: 'Juegos sensoriales',      color: '#6366F1', duration: 30 },
@@ -316,33 +316,33 @@ const SCHEDULE_CATALOG = {
     { id: 'blocks',            emoji: '🧱', label: 'Bloques',                 color: '#F97316', duration: 25 },
     { id: 'group_game',        emoji: '👫', label: 'Juego grupal',            color: '#F59E0B', duration: 30 }
   ]},
-  socioemotional: { label: '–x– Social-emocional', color: '#EF4444', items: [
+  socioemotional: { label: '❤️ Social-emocional', color: '#EF4444', items: [
     { id: 'group_hug',         emoji: '🤗', label: 'Abrazo grupal',          color: '#EF4444', duration: 10 },
     { id: 'emotional_ed',      emoji: '❤️', label: 'Educación emocional',    color: '#F43F5E', duration: 20 },
     { id: 'identify_emotions', emoji: '😊', label: 'Identificar emociones',  color: '#FBBF24', duration: 20 }
   ]},
-  motor: { label: '–x–– Motricidad', color: '#16A34A', items: [
+  motor: { label: '🏃 Motricidad', color: '#16A34A', items: [
     { id: 'ball_play',    emoji: '⚽', label: 'Juego con pelota', color: '#16A34A', duration: 30 },
     { id: 'coordination', emoji: '🎯', label: 'Coordinación',      color: '#0B63C7', duration: 30 },
     { id: 'exercises',    emoji: '🏃', label: 'Ejercicios',        color: '#22C55E', duration: 20 }
   ]},
-  cognitive: { label: '–x–– Cognitivo y aprendizaje', color: '#8B5CF6', items: [
+  cognitive: { label: '🧠 Cognitivo y aprendizaje', color: '#8B5CF6', items: [
     { id: 'cognitive_stim',  emoji: '🧠', label: 'Estimulación cognitiva', color: '#8B5CF6', duration: 30 },
     { id: 'experiment',      emoji: '🔬', label: 'Experimento',            color: '#6366F1', duration: 30 },
     { id: 'oral_expression', emoji: '🗣️', label: 'Expresión oral',         color: '#EC4899', duration: 20 },
     { id: 'activity',        emoji: '🎨', label: 'Actividad educativa',    color: '#7C3AED', duration: 45, groupEventId: 'activity' },
     { id: 'sensorial',       emoji: '🔬', label: 'Actividad sensorial',    color: '#6366F1', duration: 45 }
   ]},
-  art: { label: '–x}– Arte y creatividad', color: '#EC4899', items: [
+  art: { label: '🎨 Arte y creatividad', color: '#EC4899', items: [
     { id: 'coloring', emoji: '🖍️', label: 'Colorear',  color: '#F472B6', duration: 25 },
     { id: 'art',      emoji: '🎨', label: 'Arte',      color: '#EC4899', duration: 30 },
     { id: 'music',    emoji: '🎵', label: 'Música',    color: '#8B5CF6', duration: 25 }
   ]},
-  language: { label: '–x Lenguaje y lectura', color: '#2563EB', items: [
+  language: { label: '📚 Lenguaje y lectura', color: '#2563EB', items: [
     { id: 'reading',      emoji: '📚', label: 'Lectura',       color: '#0B63C7', duration: 20 },
     { id: 'storytelling', emoji: '📖', label: 'Cuentacuentos', color: '#2563EB', duration: 25 }
   ]},
-  recreation: { label: '–a– Recreación y deportes', color: '#16A34A', items: [
+  recreation: { label: '⚽ Recreación y deportes', color: '#16A34A', items: [
     { id: 'recreational_games', emoji: '🎡', label: 'Juegos recreativos', color: '#F59E0B', duration: 30 },
     { id: 'sports',             emoji: '⚽', label: 'Deportes',           color: '#16A34A', duration: 30 },
     { id: 'playground',         emoji: '🌳', label: 'Salida al Patio',   color: '#16A34A', duration: 30, groupEventId: 'playground' },
@@ -362,7 +362,7 @@ const _CATALOG_BY_ID = (() => {
 // alumnos presentes en un solo toque y cumple las 10 reglas anteriores.
 // ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 const WHOLE_CLASS_ROUTINES = [
-  // –x–– Higiene y cuidado personal
+  // 🧼 Higiene y cuidado personal
   { id: 'wh_manos',      emoji: '🧼', label: 'Lavado de manos',            cat: 'Higiene' },
   { id: 'wh_cara',       emoji: '🧼', label: 'Lavado de cara',             cat: 'Higiene' },
   { id: 'wh_dientes',    emoji: '🪥', label: 'Cepillado dental',           cat: 'Higiene' },
@@ -378,7 +378,7 @@ const WHOLE_CLASS_ROUTINES = [
   { id: 'wh_dientes_pm', emoji: '🪥', label: 'Cepillado tras comer',       cat: 'Higiene' },
   { id: 'wh_rostro',     emoji: '🧴', label: 'Losión y protección',        cat: 'Higiene' },
 
-  // –x–} Alimentación
+  // 🍽️ Alimentación
   { id: 'al_desayuno',   emoji: '🍞', label: 'Desayuno',                   cat: 'Alimentación' },
   { id: 'al_almuerzo',   emoji: '🍽️', label: 'Almuerzo',                  cat: 'Alimentación' },
   { id: 'al_merienda',   emoji: '🎁', label: 'Merienda',                   cat: 'Alimentación' },
@@ -394,7 +394,7 @@ const WHOLE_CLASS_ROUTINES = [
   { id: 'al_biberon',    emoji: '🍼', label: 'Biberón',                    cat: 'Alimentación' },
   { id: 'al_postre',     emoji: '🍮', label: 'Postre',                     cat: 'Alimentación' },
 
-  // –x}– Actividades educativas
+  // 🎨 Actividades educativas
   { id: 'ac_cuento',     emoji: '📚', label: 'Lectura de cuento',          cat: 'Actividades' },
   { id: 'ac_cantos',     emoji: '🎵', label: 'Cantos y rimas',             cat: 'Actividades' },
   { id: 'ac_colores',    emoji: '🌈', label: 'Colores',                    cat: 'Actividades' },
@@ -410,7 +410,7 @@ const WHOLE_CLASS_ROUTINES = [
   { id: 'ac_formas',     emoji: '📐', label: 'Figuras geométricas',         cat: 'Actividades' },
   { id: 'ac_seriacion',  emoji: '🔢', label: 'Seriación',                  cat: 'Actividades' },
 
-  // –x}– Juego
+  // 🎨 Juego
   { id: 'ju_libre',      emoji: '🎮', label: 'Juego libre',                cat: 'Juego' },
   { id: 'ju_dirigido',   emoji: '🎯', label: 'Juego dirigido',             cat: 'Juego' },
   { id: 'ju_roles',      emoji: '🎭', label: 'Juego de roles',             cat: 'Juego' },
@@ -424,7 +424,7 @@ const WHOLE_CLASS_ROUTINES = [
   { id: 'ju_piso_puzzle',emoji: '🧩', label: 'Rompecabezas de piso',       cat: 'Juego' },
   { id: 'ju_dominos',    emoji: '🁣', label: 'Dominó gigante',              cat: 'Juego' },
 
-  // –x–– Motricidad
+  // 🏃 Motricidad
   { id: 'mo_ejercicios', emoji: '🏃', label: 'Ejercicios matutinos',        cat: 'Motricidad' },
   { id: 'mo_marcha',     emoji: '🚶', label: 'Marcha',                     cat: 'Motricidad' },
   { id: 'mo_correr',     emoji: '🏃', label: 'Correr',                     cat: 'Motricidad' },
@@ -450,7 +450,7 @@ const WHOLE_CLASS_ROUTINES = [
   { id: 'de_mantas',     emoji: '🛏️', label: 'Sacar las mantas',           cat: 'Descanso' },
   { id: 'de_luz',        emoji: '🌙', label: 'Bajar la luz',               cat: 'Descanso' },
 
-  // –x– Social y emocional
+  // ❤️ Social y emocional
   { id: 'so_abrazo',     emoji: '🤗', label: 'Abrazo grupal',              cat: 'Social' },
   { id: 'so_buenosdias', emoji: '🌅', label: 'Buenos días',                cat: 'Social' },
   { id: 'so_emociones',  emoji: '😊', label: 'Identificar emociones',      cat: 'Social' },
@@ -476,7 +476,7 @@ const WHOLE_CLASS_ROUTINES = [
   { id: 'ex_lluvia',     emoji: '🌧️', label: 'Observar la lluvia',         cat: 'Exterior' },
   { id: 'ex_guardia',    emoji: '🏡', label: 'Guardia en la veranda',      cat: 'Exterior' },
 
-  // –x}– Arte y música
+  // 🎨 Arte y música
   { id: 'ar_pintarp',    emoji: '🖌️', label: 'Pintar con pincel',          cat: 'Arte y música' },
   { id: 'ar_pinitos',    emoji: '🖐️', label: 'Pintar con las manos',       cat: 'Arte y música' },
   { id: 'ar_dibujar',    emoji: '✏️', label: 'Dibujar',                    cat: 'Arte y música' },
@@ -996,7 +996,7 @@ function _aaSlidesHTML(query) {
     <div class="aa-slide">
       <div class="aa-cathead">
         <span class="aa-catdot" style="background:#f59e0b"></span>
-        <span class="aa-cattitle">–xR Fijos del día</span>
+        <span class="aa-cattitle">📋 Fijos del día</span>
         <span class="aa-count">${FIXED_DAILY_EVENTS.length}</span>
       </div>
       <div class="aa-grid">
@@ -1183,7 +1183,7 @@ function _renderSmartDay(schedule, students, logsMap, nowMinutes) {
     return `
       <div class="routine-card smart-day is-done">
         <div class="smart-main">
-          <div class="smart-ico">–xRx</div>
+          <div class="smart-ico">📋</div>
           <div class="smart-copy">
             <div class="smart-kicker">Rutina del día</div>
             <div class="smart-title">Actividades del horario completadas</div>
@@ -1271,17 +1271,17 @@ function _studentCardMini(s, log) {
   else if (prog >= 80) borderStyle = 'border-color:#86efac';
 
   const moodObj = MOOD_OPTIONS.find(m => m.val === log?.mood);
-  const moodEmoji = moodObj ? moodObj.emoji : '–xܬ';
+  const moodEmoji = moodObj ? moodObj.emoji : '😐';
   let foodIcons = '';
   if (log?.food) {
     try {
       const foodObj = JSON.parse(log.food);
-      if (foodObj.breakfast) foodIcons += '–x–~';
-      if (foodObj.lunch) foodIcons += '–x–';
-      if (foodObj.snack) foodIcons += '–x–}';
+      if (foodObj.breakfast) foodIcons += '🍞';
+      if (foodObj.lunch) foodIcons += '🍽️';
+      if (foodObj.snack) foodIcons += '🍎';
     } catch {}
   }
-  const napIcon = log?.nap ? '–x–' : '–9';
+  const napIcon = log?.nap ? '😴' : '';
   const diaperCount = evs.filter(e => ['diaper', 'bath', 'diaper_change'].includes(e.type)).length;
   const milkCount = evs.filter(e => e.type === 'milk').length;
   const lastTxt = lastEv
@@ -1298,15 +1298,15 @@ function _studentCardMini(s, log) {
       data-alert="${hasAlert ? '1' : '0'}"
       data-exit="${exitT || ''}"
       onclick="App.openStudentRoutine(this.dataset.sid)">
-      ${sleeping ? '<div class="sc-badge sc-badge-sleep">–x–</div>' : ''}
-      ${hasAlert ? '<div class="sc-badge sc-badge-med">' + (hasMed ? '–x`' : '–a–️') + '</div>' : ''}
+      ${sleeping ? '<div class="sc-badge sc-badge-sleep">😴</div>' : ''}
+      ${hasAlert ? '<div class="sc-badge sc-badge-med">' + (hasMed ? '💊' : '⚠️') + '</div>' : ''}
       <div class="sc-avatar">
         ${s.avatar_url ? `<img src="${safeUrl(s.avatar_url)}" class="w-full h-full object-cover rounded-xl">` : `<span>${safeEscapeHTML((s.name || '?').charAt(0))}</span>`}
       </div>
       <div class="sc-name">${safeEscapeHTML((s.name || '').split(' ')[0])}</div>
       <div class="sc-last">${lastTxt}</div>
-      <div class="sc-icons">${moodEmoji}${foodIcons || '–9'}${napIcon}${diaperCount > 0 ? '–x––' + diaperCount : ''}${milkCount > 1 ? '–x––' + milkCount : ''}</div>
-      <div class="sc-exit">${exitT ? '–xa– ' + _fmtTimeShort(exitT) : '–xa– Sin hora'}</div>
+      <div class="sc-icons">${moodEmoji}${foodIcons || ''}${napIcon}${diaperCount > 0 ? '💩' + diaperCount : ''}${milkCount > 1 ? '🍼' + milkCount : ''}</div>
+      <div class="sc-exit">${exitT ? '🚪 ' + _fmtTimeShort(exitT) : ''}</div>
       <div class="sc-prog"><div class="sc-prog-fill" style="width:${prog}%;background:${prog >= 80 ? '#28B54D' : prog >= 50 ? '#FF8A00' : '#94A3B8'}"></div></div>
     </div>
   `;
@@ -1445,17 +1445,15 @@ function _routineDivider(icon) {
 
 function _renderRoutineModeSwitch() {
   const options = [
-    { id: 'express', emoji: '📓', label: 'Bit–cora Express' },
     { id: 'weekly', emoji: '📅', label: 'Horario Semanal' },
   ];
+  _routineViewMode = 'weekly';
+  try { localStorage.setItem('sonrisas_routine_view', 'weekly'); } catch (_) {}
   return `<div class="flex items-center gap-1.5 p-1.5 rounded-2xl mb-2" style="background:#F1F5F9;border:1.5px solid #E2E8F0">
     ${options.map(opt => {
-      const active = _routineViewMode === opt.id;
-      return `<button type="button" onclick="App.setRoutineViewMode('${opt.id}')"
-        class="flex-1 flex items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-[11px] font-black transition-all"
-        style="${active
-          ? 'background:#fff;color:#0F172A;box-shadow:0 3px 10px rgba(15,23,42,.09);border:1.5px solid #E2E8F0'
-          : 'background:transparent;color:#64748B;border:1.5px solid transparent'}">
+      const active = true;
+      return `<button type="button" class="flex-1 flex items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-[11px] font-black transition-all"
+        style="background:#fff;color:#0F172A;box-shadow:0 3px 10px rgba(15,23,42,.09);border:1.5px solid #E2E8F0">
         <span>${opt.emoji}</span><span>${opt.label}</span>
       </button>`;
     }).join('')}
@@ -1483,26 +1481,17 @@ function _renderPrimaryLevelNotice() {
 function _buildUI(students, schedule, nowMinutes, weeklyBlocks = []) {
   const openSleeps = Object.keys(_sleepMap).length;
 
-  if (_routineViewMode === 'weekly') {
-    return `
-      <div class="space-y-3 pb-28" id="routineView">
-        <style>${ROUTINE_UI_STYLES}</style>
-        ${_renderRoutineModeSwitch()}
-        ${WeeklySchedule.renderWeeklySchedule({
-          blocks: weeklyBlocks,
-          fallback: _getWeeklyFallback(),
-          students,
-          logsMap: _logsMap,
-          now: nowMinutes,
-        })}
-      </div>
-    `;
-  }
-
   return `
     <div class="space-y-3 pb-28" id="routineView">
       <style>${ROUTINE_UI_STYLES}</style>
       ${_renderRoutineModeSwitch()}
+      ${WeeklySchedule.renderWeeklySchedule({
+        blocks: weeklyBlocks,
+        fallback: _getWeeklyFallback(),
+        students,
+        logsMap: _logsMap,
+        now: nowMinutes,
+      })}
 
       <!-- OPEN SLEEP ALERT -->
         ${openSleeps > 0 ? `
@@ -1926,13 +1915,13 @@ export function openScheduleConfig() {
       <div class="flex gap-1.5 flex-wrap mb-2">
         <label class="bd-start"><span>Inicio</span><input type="time" value="${_buildStartTime}" onchange="App.buildModeSetStart(this.value)"></label>
         <button onclick="App.buildModeStack()" class="bd-act" title="Encadena las horas de los eventos en orden">⏱️ Auto-ordenar</button>
-        <button onclick="App.buildModeClear()" class="bd-act bd-act-red">–x–– Vaciar</button>
+        <button onclick="App.buildModeClear()" class="bd-act bd-act-red">🧼 Vaciar</button>
         <button onclick="App.buildModeApply()" class="bd-act bd-act-green">–S Aplicar cronología</button>
       </div>
       ${(_buildDraft || []).length
         ? `<div class="bd-list">${_buildDraft.map((r, i) => {
             const cat = r.catId ? _CATALOG_BY_ID[r.catId] : null;
-            const emoji = cat ? cat.emoji : (r.emoji || '–xR');
+            const emoji = cat ? cat.emoji : (r.emoji || '📋');
             const label = cat ? cat.label : (r.label || 'Evento');
             const color = cat ? cat.color : (r.color || '#0B63C7');
             return `
@@ -2124,7 +2113,7 @@ function _initBuildDraft() {
     const cat = _CATALOG_BY_ID[ev.id];
     return cat
       ? { uid: ev.id, catId: cat.id, time: ev.startTime, dur: ev.duration || cat.duration }
-      : { uid: ev.id, catId: null, emoji: ev.emoji || '–xR', label: ev.label || 'Evento', color: ev.color || '#64748B', time: ev.startTime, dur: ev.duration || 30 };
+      : { uid: ev.id, catId: null, emoji: ev.emoji || '📋', label: ev.label || 'Evento', color: ev.color || '#64748B', time: ev.startTime, dur: ev.duration || 30 };
   });
 }
 
@@ -2210,7 +2199,7 @@ export function buildModeApply() {
     const id = (r.catId || 'custom') + '_' + Date.now().toString(36) + '_' + i;
     return {
       id,
-      emoji: cat ? cat.emoji : (r.emoji || '–xR'),
+      emoji: cat ? cat.emoji : (r.emoji || '📋'),
       label: cat ? cat.label : (r.label || 'Evento'),
       color: cat ? cat.color : (r.color || '#64748B'),
       startTime: r.time,
@@ -2806,9 +2795,9 @@ function _timelineEmoji(ev) {
   if (ev.type === 'diaper') {
     if (ev.subtype === 'soiled') return '–x–';
     if (ev.subtype === 'wet') return '–x–';
-    return '–x––';
+    return '🧼';
   }
-  return ev.emoji || TIMELINE_TYPE_META[ev.type]?.emoji || '–xR';
+  return ev.emoji || TIMELINE_TYPE_META[ev.type]?.emoji || '📋';
 }
 
 /** Construye la lista cronológica completa de eventos del día del alumno. */
@@ -2869,7 +2858,7 @@ export function openStudentRoutine(studentId) {
   const events = log?.infant_data || [];
   const hasEvent = (type, subtype) => events.some(e => e.type === type && (!subtype || e.subtype === subtype));
 
-  const mealLabels = { breakfast: '–x–~ Desayuno', lunch: '–x– Almuerzo', snack: '–x–} Merienda' };
+  const mealLabels = { breakfast: '–x–~ Desayuno', lunch: '❤️ Almuerzo', snack: '🍽️ Merienda' };
   const foodOptions = [
     { val: 'todo', icon: '✅', label: 'Todo' },
     { val: 'poco', icon: '🍽️', label: 'Poco' },
@@ -3017,7 +3006,7 @@ export function openStudentRoutine(studentId) {
               })()}
               <div class="sr-tl-filters" id="srTlFilters">
                 <button type="button" class="sr-tl-chip sr-tl-chip--on" data-tl-filter="all" onclick="App._srTimelineFilter('all')">Todo <b>${allEvents.length}</b></button>
-                <button type="button" class="sr-tl-chip" data-tl-filter="aula" onclick="App._srTimelineFilter('aula')">–x–– Del aula <b>${nAula}</b></button>
+                <button type="button" class="sr-tl-chip" data-tl-filter="aula" onclick="App._srTimelineFilter('aula')">🧼 Del aula <b>${nAula}</b></button>
                 <button type="button" class="sr-tl-chip" data-tl-filter="individual" onclick="App._srTimelineFilter('individual')">–x"9 Individual <b>${nIndiv}</b></button>
               </div>
               <div class="sr-tl" id="srTimelineList">
@@ -3031,7 +3020,7 @@ export function openStudentRoutine(studentId) {
                       <div class="sr-tl-card-top">
                         <span class="sr-tl-label">${safeEscapeHTML(ev.label)}</span>
                         <span class="sr-tl-origin ${ev.origin === 'aula' ? 'sr-tl-origin--aula' : 'sr-tl-origin--indiv'}">
-                          ${ev.origin === 'aula' ? '–x–– Aula' : '–x"9 Individual'}
+                          ${ev.origin === 'aula' ? '🧼 Aula' : '–x"9 Individual'}
                         </span>
                       </div>
                       <div class="sr-tl-card-bot">
@@ -3048,7 +3037,7 @@ export function openStudentRoutine(studentId) {
               </div>`;
           })();
 
-          return section('timeline', '–x9 Línea del Tiempo', body,
+          return section('timeline', '🕒 Línea del Tiempo', body,
             { text: `${nTimeline} reg.`, ok: nTimeline > 0 }, true);
         })()}
 
@@ -3062,7 +3051,7 @@ export function openStudentRoutine(studentId) {
           const chip = (onclick, emoji, label, time, isReg) => `
             <button data-evname="${safeEscapeHTML(norm(label))}" onclick="${onclick}"
               class="sr-evchip p-2 rounded-xl border-2 ${isReg ? 'border-green-400 bg-green-50' : 'border-slate-100 bg-white'} flex flex-col items-center gap-0.5 active:scale-95 transition-all">
-              <span class="text-lg">${emoji || '–xR'}</span>
+              <span class="text-lg">${emoji || '📋'}</span>
               <span class="text-[7px] font-black ${isReg ? 'text-green-700' : 'text-slate-500'} text-center leading-tight">${safeEscapeHTML((label || '').substring(0, 16))}</span>
               ${time ? `<span class="text-[6px] font-bold text-slate-400">${_fmtTimeShort(time)}</span>` : ''}
               ${isReg ? '<span class="text-[6px] font-black text-green-500">❓</span>' : ''}
@@ -3103,10 +3092,10 @@ export function openStudentRoutine(studentId) {
               <div class="grid grid-cols-4 gap-1.5">${schedChips || '<p class="col-span-4 text-[10px] text-slate-300 italic">Sin bloques configurados</p>'}</div>
             </div>
             <div class="sr-aula-block">
-              <p class="text-[9px] font-black text-slate-400 uppercase tracking-wide mb-1.5">–x}– Rutinas del Aula</p>
+              <p class="text-[9px] font-black text-slate-400 uppercase tracking-wide mb-1.5">🎨 Rutinas del Aula</p>
               <div class="sr-aula-routines sr-aula-collapsed" id="srAulaRoutines">${routineBlocks || '<p class="text-[10px] text-slate-300 italic">Sin rutinas para este nivel</p>'}</div>
             </div>`;
-          return section('aula', '–x️ Eventos del Aula', body,
+          return section('aula', '🏫 Eventos del Aula', body,
             { text: `${marcadosAula}/${totalAula}`, ok: marcadosAula > 0 }, true);
         })()}
 
@@ -3126,7 +3115,7 @@ export function openStudentRoutine(studentId) {
         `, log?.mood ? { text: MOOD_OPTIONS.find(m => m.val === log.mood)?.emoji + ' –S', ok: true } : { text: 'Pendiente', ok: false }, true)}
 
         <!-- –"––"––"– ALIMENTACI–N –"––"––"– -->
-        ${section('food', '–x––️ Alimentación', `
+        ${section('food', '🧼️ Alimentación', `
           <div class="space-y-2">
             ${['breakfast', 'lunch', 'snack'].map(mealKey => {
               const currentVal = currentFood[mealKey] || '';
@@ -3175,7 +3164,7 @@ export function openStudentRoutine(studentId) {
         `, log?.nap ? { text: '–S', ok: true } : { text: 'Pendiente', ok: false })}
 
         <!-- –"––"––"– BIBER–N –"––"––"– -->
-        ${section('milk', '–x–– Biberón', `
+        ${section('milk', '🧼 Biberón', `
           <button onclick="App._openMilkModal('${studentId}')"
             class="w-full p-3 rounded-xl border-2 ${hasEvent('milk') ? 'border-green-300 bg-green-50' : 'border-slate-100 bg-white'} flex items-center gap-3 text-left hover:border-blue-200 transition-all">
             <span class="text-xl">❓</span>
@@ -3203,13 +3192,13 @@ export function openStudentRoutine(studentId) {
         ${(() => {
           const lc = _getLevelCategory();
           const noHandwash = lc === 'primary';
-          return section('activities', '–x}– Actividades', `
+          return section('activities', '🎨 Actividades', `
             <div class="grid grid-cols-3 gap-1.5">
-              ${chipBtn("App.addStudentEvent('" + studentId + "','activity')", '–x}–', 'Actividad', hasEvent('activity'))}
+              ${chipBtn("App.addStudentEvent('" + studentId + "','activity')", '🎨', 'Actividad', hasEvent('activity'))}
               ${chipBtn("App.addStudentEvent('" + studentId + "','sensorial')", '–x–', 'Sensorial', hasEvent('sensorial'))}
               ${chipBtn("App.addStudentEvent('" + studentId + "','playground')", '–xR–', 'Patio', hasEvent('playground'))}
-              ${!noHandwash ? chipBtn("App.addStudentEvent('" + studentId + "','handwash')", '–x––', 'Lavado manos', hasEvent('handwash')) : ''}
-              ${!noHandwash ? chipBtn("App.addStudentEvent('" + studentId + "','toothbrush')", '–x––', 'Cepillado', hasEvent('toothbrush')) : ''}
+              ${!noHandwash ? chipBtn("App.addStudentEvent('" + studentId + "','handwash')", '🧼', 'Lavado manos', hasEvent('handwash')) : ''}
+              ${!noHandwash ? chipBtn("App.addStudentEvent('" + studentId + "','toothbrush')", '🧼', 'Cepillado', hasEvent('toothbrush')) : ''}
             </div>
           `, nAct > 0 ? { text: `${nAct} reg.`, ok: true } : { text: 'Pendiente', ok: false });
         })()}
@@ -3228,29 +3217,29 @@ export function openStudentRoutine(studentId) {
           if (allowed.has('poop'))   chips.push(chipBtn("App.addStudentEvent('" + studentId + "','poop')", '–x–', 'Popó', nPoop > 0, '#28B54D', nPoop));
           if (allowed.has('pee'))    chips.push(chipBtn("App.addStudentEvent('" + studentId + "','pee')", '–x–', 'Pipí', nPee > 0, '#28B54D', nPee));
           if (allowed.has('toilet')) chips.push(chipBtn("App.addStudentEvent('" + studentId + "','toilet')", '–xa–', 'Baño', nToilet > 0, '#28B54D', nToilet));
-          if (allowed.has('diaper')) chips.push(chipBtn("App.addStudentEvent('" + studentId + "','diaper')", '–x––', 'Cambio pañal', nDiaper > 0, '#28B54D', nDiaper));
-          if (allowed.has('milk'))   chips.push(chipBtn("App.addStudentEvent('" + studentId + "','milk')", '–x––', 'Biberón', nBottle > 0, '#28B54D', nBottle));
+          if (allowed.has('diaper')) chips.push(chipBtn("App.addStudentEvent('" + studentId + "','diaper')", '🧼', 'Cambio pañal', nDiaper > 0, '#28B54D', nDiaper));
+          if (allowed.has('milk'))   chips.push(chipBtn("App.addStudentEvent('" + studentId + "','milk')", '🧼', 'Biberón', nBottle > 0, '#28B54D', nBottle));
           const noteSpan = chips.length % 3 === 2 ? 'col-span-2' : '';
           chips.push(`<button onclick="App.addStudentEvent('${studentId}','note')" class="p-2 rounded-xl border-2 ${log?.notes ? 'border-green-400 bg-green-50' : 'border-slate-100 bg-white'} flex flex-col items-center gap-0.5 active:scale-95 transition-all ${noteSpan}"><span class="text-lg">❓</span><span class="text-[7px] font-black ${log?.notes ? 'text-green-700' : 'text-slate-500'}">Nota rápida</span>${log?.notes ? '<span class="text-[6px] font-black text-green-500">❓</span>' : ''}</button>`);
-          const title = (lc === 'infants' || lc === 'toddlers') ? '–x–– Higiene y Pañales' : '–x–– Higiene y Esfínteres';
+          const title = (lc === 'infants' || lc === 'toddlers') ? '🧼 Higiene y Pañales' : '🧼 Higiene y Esfínteres';
           return section('hygiene', title, `<div class="grid grid-cols-3 gap-1.5">${chips.join('')}</div>
             <p class="text-[9px] text-slate-400 font-bold mt-2">Puedes tocar varias veces al día: cada toque suma un registro nuevo con su hora.</p>`,
             nHyg > 0 ? { text: `${nHyg} reg.`, ok: true } : { text: 'Pendiente', ok: false });
         })()}
 
         <!-- –"––"––"– SALUD –"––"––"– -->
-        ${section('health', '–x–– Salud y Alertas', `
+        ${section('health', '🧼 Salud y Alertas', `
           <div class="grid grid-cols-3 gap-1.5">
             ${chipBtn("App.addStudentEvent('" + studentId + "','temp')", '–xR–️', 'Temperatura', hasEvent('temp'))}
             ${chipBtnNS("App._openMedModal('" + studentId + "')", '–x`', 'Medicamento', hasEvent('med'))}
             ${chipBtn("App.addStudentEvent('" + studentId + "','hit')", '–x–"', 'Golpe/Caída', hasEvent('incident', 'hit'))}
-            ${chipBtn("App.addStudentEvent('" + studentId + "','vomit')", '–x––', 'Vómito', hasEvent('health', 'vomit'))}
+            ${chipBtn("App.addStudentEvent('" + studentId + "','vomit')", '🧼', 'Vómito', hasEvent('health', 'vomit'))}
             ${chipBtn("App.addStudentEvent('" + studentId + "','cough')", '–xܷ', 'Tos/Congestión', hasEvent('health', 'cough'))}
           </div>
         `, nHealth > 0 ? { text: `${nHealth} reg.`, ok: true } : { text: 'Sin alertas', ok: false })}
 
         <!-- –"––"––"– EVENTOS EXTRA –"––"––"– -->
-        ${section('extra', '–a–️ Eventos Extra', `
+        ${section('extra', '⚽️ Eventos Extra', `
           <button onclick="App._openExtraEventModal('${studentId}')"
             class="w-full p-3 rounded-xl border-2 border-dashed border-slate-200 bg-white flex items-center gap-3 text-left hover:border-red-300 transition-all">
             <span class="text-xl">❓</span>
@@ -3263,7 +3252,7 @@ export function openStudentRoutine(studentId) {
         `, nIncident > 0 ? { text: `${nIncident} reg.`, ok: true } : { text: 'Pendiente', ok: false })}
 
         <!-- –"––"––"– CONDUCTA –"––"––"– -->
-        ${section('behavior', '–x–– Conducta', `
+        ${section('behavior', '🧼 Conducta', `
           <div class="space-y-3">
             <div>
               <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wide mb-1.5">Social</p>
@@ -3384,7 +3373,7 @@ export async function _editEventTime(studentId, eventId) {
       <div class="p-5" style="background:linear-gradient(135deg,#475569,#334155)">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-3">
-            <span class="text-2xl">${ev.emoji || '–xR'}</span>
+            <span class="text-2xl">${ev.emoji || '📋'}</span>
             <div>
               <h3 class="text-base font-black text-white">Modificar Hora</h3>
               <p class="text-xs font-bold text-white/80">${safeEscapeHTML(ev.label || ev.type)}</p>
@@ -3447,7 +3436,7 @@ export async function _addScheduleEventToStudent(studentId, scheduleId) {
   const ev = _getSchedule().find(e => String(e.id) === String(scheduleId))
           || _getLevelDefaultSchedule().find(e => String(e.id) === String(scheduleId));
   const label = ev?.label || 'Evento';
-  const emoji = ev?.emoji || '–xR';
+  const emoji = ev?.emoji || '📋';
 
   // Cada evento permite ajustar su hora (por si se marca tarde).
   const event_time = await _promptEventTime(emoji, label, ev?.startTime || _nowHHMM());
@@ -3927,10 +3916,9 @@ export async function publishDailyLogs() {
 }
 
 export function setRoutineViewMode(mode) {
-  _routineViewMode = mode === 'weekly' ? 'weekly' : 'express';
-  try { localStorage.setItem('sonrisas_routine_view', _routineViewMode); } catch (_) {}
-  _clearAutoRefresh();
-  return initRoutine();
+  _routineViewMode = 'weekly';
+  try { localStorage.setItem('sonrisas_routine_view', 'weekly'); } catch (_) {}
+  initRoutine();
 }
 
 export function markScheduleBlock(blockId) {

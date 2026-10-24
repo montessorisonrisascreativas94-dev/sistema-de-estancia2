@@ -107,21 +107,24 @@ export function renderWeeklySchedule({ blocks = [], fallback = [], students = []
   const shell = '';
 
   return `
-    <div class="wk-shell">
+    <div class="wk-shell" id="wkShell">
       <style>${WEEKLY_CSS}</style>
       ${shell}
       <div class="wk-toolbar">
         <div class="wk-title">
-          <div class="wk-title-icon">=–</div>
+          <div class="wk-title-icon">📅</div>
           <div>
             <h4>Horario Semanal</h4>
-            <p>${dates[0].date.toLocaleDateString('es-DO', { day: '2-digit', month: 'short' })} – ${dates[4].date.toLocaleDateString('es-DO', { day: '2-digit', month: 'short' })} · Hoy ${doneBlocks}/${todayBlocks} bloques completos</p>
+            <p>${dates[0].date.toLocaleDateString('es-DO', { day: '2-digit', month: 'short' })} - ${dates[4].date.toLocaleDateString('es-DO', { day: '2-digit', month: 'short' })} · Hoy ${doneBlocks}/${todayBlocks} bloques completos</p>
           </div>
         </div>
-        <div class="wk-legend">
-          <span><i class="wk-dot" style="background:#FFD43B"></i> Ahora</span>
-          <span><i class="wk-dot" style="background:#28B54D"></i> Completado</span>
-          <span><i class="wk-dot" style="background:#CBD5E1"></i> Pendiente</span>
+        <div class="wk-toolbar-actions" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <button type="button" id="wkToggleBtn" class="wk-btn wk-btn-white" onclick="(function(){const el=document.getElementById('wkScrollWrap');const btn=document.getElementById('wkToggleBtn');if(!el||!btn)return;const expanded=el.dataset.expanded==='1';if(expanded){el.style.maxHeight='0px';el.style.overflow='hidden';el.dataset.expanded='0';btn.textContent='Abrir horario semanal';}else{el.style.maxHeight='80vh';el.style.overflow='auto';el.dataset.expanded='1';btn.textContent='Ocultar horario semanal';}}).call(this)">Abrir horario semanal</button>
+          <div class="wk-legend">
+            <span><i class="wk-dot" style="background:#FFD43B"></i> Ahora</span>
+            <span><i class="wk-dot" style="background:#28B54D"></i> Completado</span>
+            <span><i class="wk-dot" style="background:#CBD5E1"></i> Pendiente</span>
+          </div>
         </div>
       </div>
 
@@ -133,7 +136,7 @@ export function renderWeeklySchedule({ blocks = [], fallback = [], students = []
           <button type="button" class="wk-btn wk-btn-primary" style="margin-top:12px" onclick="App.openScheduleConfig()">Configurar horario</button>
         </div>
       ` : `
-        <div class="wk-scroll">
+        <div class="wk-scroll" id="wkScrollWrap" data-expanded="0" style="max-height:0;overflow:hidden;transition:max-height .35s ease">
           <table class="wk-table" role="grid" aria-label="Horario semanal del aula">
             <thead>
               <tr>
@@ -206,8 +209,8 @@ export function showBlock(blockId) {
         ? 'Puedes ejecutar este bloque para todos los estudiantes presentes.'
         : 'Este bloque no corresponde al día de hoy. Su registro se habilita el día indicado.'}</p>
       <div class="wk-detail-actions">
-        ${isToday ? `<button type="button" class="wk-btn wk-btn-primary" onclick="UI.Modal.close('weeklyBlockModal');App.markScheduleBlock('${safeEscapeHTML(block.id)}')">Registrar para el grupo</button>` : ''}
-        <button type="button" class="wk-btn wk-btn-ghost" onclick="UI.Modal.close('weeklyBlockModal')">Cerrar</button>
+        ${isToday ? `<button type="button" class="wk-btn wk-btn-white" onclick="UI.Modal.close('weeklyBlockModal');App.markScheduleBlock('${safeEscapeHTML(block.id)}')">Registrar para el grupo</button>` : ''}
+        <button type="button" class="wk-btn wk-btn-white" onclick="UI.Modal.close('weeklyBlockModal')">Cerrar</button>
       </div>
     </div>
   `);

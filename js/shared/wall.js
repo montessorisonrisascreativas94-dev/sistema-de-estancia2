@@ -436,31 +436,61 @@ export const WallModule = {
 
       // Query completa con columnas sociales; si la migración aún no se
       // aplicó en la base, reintenta con el esquema anterior (robustez).
-      let res = await withTimeout(() => buildQuery(true), 10_000).catch(() => null);
-      let posts = res?.error ? null : res?.data;
-      if (!posts) {
+      let posts = [];
+      const tryQuery = async (qfn) => {
         try {
-          res = await withTimeout(() => buildQuery(false), 10_000);
-          if (res?.error) {
-            const code = String(res.error.code || '').toLowerCase();
-            const msg  = String(res.error.message || '').toLowerCase();
-            if (res.error.status === 404 || code.includes('404') || msg.includes('not found') || msg.includes('does not exist')) {
-              console.warn('[WallModule] posts no disponible (404), mostrando estado vacío.');
-              posts = [];
+          const r = await withTimeout(() => qfn(), 10_000);
+          return r;
+        } catch (e) {
+          return { error: e };
+        }
+      };
+      try {
+        let res = await tryQuery(() => buildQuery(true));
+        if (res?.error) {
+          const err = res.error;
+          const code = String(err.code || '').toLowerCase();
+          const msg = String(err.message || '').toLowerCase();
+          const status = err.status;
+          const schemaIssue = status === 400 || code.includes('42703') || code.includes('42p01') || msg.includes('column') || msg.includes('does not exist') || msg.includes('relation');
+          if (schemaIssue) {
+            res = await tryQuery(() => buildQuery(false));
+            if (res?.error) {
+              const err2 = res.error;
+              const code2 = String(err2.code || '').toLowerCase();
+              const msg2 = String(err2.message || '').toLowerCase();
+              const status2 = err2.status;
+              if (status2 === 400 || code2.includes('42703') || msg2.includes('column') || msg2.includes('does not exist')) {
+                // Minimal safe query
+                let q3 = supabase
+                  .from('posts')
+                  .select('id, content, media_url, media_type, teacher_id, created_at, student_id, allow_download, protect_capture, classroom_id')
+                  .order('created_at', { ascending: false })
+                  .range(from, to);
+                if (this._options.classroomId) {
+                  q3 = q3.or(`classroom_id.eq.${this._options.classroomId},classroom_id.is.null`);
+                }
+                if (this._options.searchTerm) q3 = q3.ilike('content', `%${this._options.searchTerm}%`);
+                const res3 = await tryQuery(() => q3);
+                posts = res3?.data || [];
+              } else if (status2 === 404 || code2.includes('404') || msg2.includes('not found')) {
+                posts = [];
+              } else {
+                posts = [];
+              }
             } else {
-              throw res.error;
+              posts = res?.data || [];
             }
-          } else {
-            posts = res?.data || [];
-          }
-        } catch (err) {
-          if (err?.status === 404 || String(err?.code || '').includes('404') || String(err?.message || '').toLowerCase().includes('not found')) {
-            console.warn('[WallModule] posts no disponible (excepción 404), mostrando estado vacío.');
+          } else if (status === 404 || code.includes('404') || msg.includes('not found')) {
             posts = [];
           } else {
-            throw err;
+            posts = [];
           }
+        } else {
+          posts = res?.data || [];
         }
+      } catch (e) {
+        posts = [];
       }
 
       // Limpiar loaders
