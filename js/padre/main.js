@@ -1011,23 +1011,27 @@ function renderDailySummary(log) {
   // ── 1) Siempre incluir mood/nap de campos top-level ──────────────────────
   const moodMap = { feliz:'😊', bien:'😊', normal:'😐', triste:'😢', inquieto:'😫', enojado:'😡', muy_feliz:'😁', cansado:'😴', enfermo:'🤒' };
   const moodLbl = { feliz:'Contento/a', bien:'Contento/a', normal:'Normal', triste:'Triste', inquieto:'Inquieto/a', enojado:'Molesto/a', muy_feliz:'Muy contento/a', cansado:'Cansado/a', enfermo:'Enfermo/a' };
-  if (log.mood) items.push({ icon: moodMap[log.mood] || '😊', label: 'Ánimo: ' + (moodLbl[log.mood] || log.mood), detail: '', timeStr: fmtTime(log.created_at) });
+  if (log.mood) items.push({ icon: moodMap[log.mood] || '😊', label: 'Ánimo: ' + (moodLbl[log.mood] || log.mood), detail: '', timeStr: fmtTime(log.created_at), timeIso: log.created_at });
 
   // ── 2) Siempre incluir comidas del campo food (JSON estructurado) ─────────
   if (log.food) {
     let foodObj = {};
     try { foodObj = JSON.parse(log.food); } catch { foodObj = { breakfast: log.food }; }
     const fl = { todo:'Comió todo ✅', poco:'Comió poco ⚠️', nada:'No comió ❌', ayuda:'Necesitó ayuda 🆘' };
-    if (foodObj.breakfast) items.push({ icon:'🍞', label:'Desayuno', detail: fl[foodObj.breakfast] || foodObj.breakfast, timeStr:'' });
-    if (foodObj.lunch)     items.push({ icon:'🥗', label:'Almuerzo', detail: fl[foodObj.lunch] || foodObj.lunch,         timeStr:'' });
-    if (foodObj.snack)     items.push({ icon:'🍎', label:'Merienda', detail: fl[foodObj.snack] || foodObj.snack,         timeStr:'' });
+    // `_times` guarda la hora real de cada comida; si no existe (datos antiguos)
+    // usamos created_at del reporte para que la fila nunca quede sin hora.
+    const mealTimes = foodObj._times || {};
+    const mealTime = (key) => mealTimes[key] || log.created_at;
+    if (foodObj.breakfast) items.push({ icon:'🍞', label:'Desayuno', detail: fl[foodObj.breakfast] || foodObj.breakfast, timeStr: fmtTime(mealTime('breakfast')), timeIso: mealTime('breakfast') });
+    if (foodObj.lunch)     items.push({ icon:'🥗', label:'Almuerzo', detail: fl[foodObj.lunch] || foodObj.lunch,         timeStr: fmtTime(mealTime('lunch')),     timeIso: mealTime('lunch') });
+    if (foodObj.snack)     items.push({ icon:'🍎', label:'Merienda', detail: fl[foodObj.snack] || foodObj.snack,         timeStr: fmtTime(mealTime('snack')),     timeIso: mealTime('snack') });
   }
 
   // ── 3) Siempre incluir siesta del campo nap ───────────────────────────────
-  if (log.nap === 'si')         items.push({ icon:'💤', label:'Siesta', detail:'Durmió su siesta',   timeStr:'' });
-  else if (log.nap === 'no')    items.push({ icon:'☀️', label:'Siesta', detail:'No durmió siesta',   timeStr:'' });
-  else if (log.nap === 'poco')  items.push({ icon:'⏰', label:'Siesta', detail:'Durmió poco',         timeStr:'' });
-  else if (log.nap === 'excelente') items.push({ icon:'⭐', label:'Siesta', detail:'Durmió excelente', timeStr:'' });
+  if (log.nap === 'si')         items.push({ icon:'💤', label:'Siesta', detail:'Durmió su siesta',   timeStr:'', timeIso:'' });
+  else if (log.nap === 'no')    items.push({ icon:'☀️', label:'Siesta', detail:'No durmió siesta',   timeStr:'', timeIso:'' });
+  else if (log.nap === 'poco')  items.push({ icon:'⏰', label:'Siesta', detail:'Durmió poco',         timeStr:'', timeIso:'' });
+  else if (log.nap === 'excelente') items.push({ icon:'⭐', label:'Siesta', detail:'Durmió excelente', timeStr:'', timeIso:'' });
 
   // ── 4) Agregar todos los eventos de infant_data ───────────────────────────
   rawEvents.forEach(e => {
@@ -1035,11 +1039,12 @@ function renderDailySummary(log) {
     if (e.type === 'food_meal') return;
     const fn = typeMap[e.type];
     const base = fn ? fn(e) : { icon:'📌', label: e.label || e.type || 'Evento', detail: '' };
-    items.push({ ...base, timeStr: fmtTime(e.created_at || e.start_time) });
+    const iso = e.created_at || e.start_time || '';
+    items.push({ ...base, timeStr: fmtTime(iso), timeIso: iso });
   });
 
   // ── 5) Notas ──────────────────────────────────────────────────────────────
-  if (log.notes) items.push({ icon:'📝', label:'Observación', detail: log.notes, timeStr: fmtTime(log.created_at) });
+  if (log.notes) items.push({ icon:'📝', label:'Observación', detail: log.notes, timeStr: fmtTime(log.created_at), timeIso: log.created_at });
 
   if (!items.length) {
     timeline.innerHTML = `<div class="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl">
@@ -1051,6 +1056,16 @@ function renderDailySummary(log) {
     </div>`;
     return;
   }
+
+  // Orden cronológico: los eventos con hora primero; los que no tienen hora al final.
+  items.sort((a, b) => {
+    const ta = a.timeIso ? new Date(a.timeIso).getTime() : NaN;
+    const tb = b.timeIso ? new Date(b.timeIso).getTime() : NaN;
+    if (isNaN(ta) && isNaN(tb)) return 0;
+    if (isNaN(ta)) return 1;
+    if (isNaN(tb)) return -1;
+    return ta - tb;
+  });
 
   timeline.innerHTML = items.map(item => `
     <div class="flex items-center gap-3 px-3 py-2.5 rounded-2xl bg-slate-50 border border-slate-100 hover:bg-[#E8F2FF] hover:border-[#0B63C7]/20 transition-all">

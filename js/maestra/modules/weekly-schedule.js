@@ -32,6 +32,18 @@ let _lastLogs = {};
 
 const CACHE_MS = 5 * 60 * 1000;
 
+/** Tipo de evento real para bloques de higiene (pañal/baño), no `activity`. */
+function eventMetaForLabel(label) {
+  const s = String(label || '')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+  if (/cambio\s*(de\s*)?panal|panal/.test(s)) return { type: 'diaper_change' };
+  if (/\bpopo\b/.test(s)) return { type: 'diaper', subtype: 'soiled' };
+  if (/\bpipi\b/.test(s)) return { type: 'diaper', subtype: 'wet' };
+  if (/\bbano\b/.test(s)) return { type: 'bath' };
+  return { type: 'activity' };
+}
+
 export function getClassroomKey() {
   const classroom = AppState.get('classroom');
   return classroom?.id ? `${classroom.id}:${classroom.level || classroom.name || ''}` : '';
@@ -321,8 +333,10 @@ export async function markBlock(blockId) {
   try {
     for (const student of students) {
       if (!repeatable && isBlockDoneForLog(block, logsMap[student.id])) continue;
+      const meta = eventMetaForLabel(block.label);
       const event = {
-        type: 'activity',
+        type: meta.type,
+        ...(meta.subtype ? { subtype: meta.subtype } : {}),
         label: block.label,
         emoji: block.emoji,
         category: 'Horario',

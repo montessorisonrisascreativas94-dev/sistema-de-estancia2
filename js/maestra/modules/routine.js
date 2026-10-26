@@ -213,7 +213,7 @@ const LEVEL_COLLECTIVE_QUICK = {
   infants:    [
     { id: 'milk_gr',  emoji: '🍼', label: 'Biberón',      color: '#0B63C7', groupEventId: 'milk_gr',  type: '_group', eventType: 'milk',   active: true },
     { id: 'poop_gr',  emoji: '💩', label: 'Popó',         color: '#FF8A00', groupEventId: 'poop_gr',  type: '_group', eventType: 'diaper', active: true },
-    { id: 'bathroom', emoji: '🧷', label: 'Cambio pañal', color: '#94A3B8', groupEventId: 'bathroom', type: '_group', eventType: 'diaper_change', active: true },
+    { id: 'bathroom', emoji: '🧷', label: 'Cambio pañal', color: '#94A3B8', groupEventId: 'diaper_change', type: '_group', eventType: 'diaper_change', active: true },
   ],
   toddlers:   [
     { id: 'bathroom', emoji: '🚽', label: 'Baño',         color: '#28B54D', groupEventId: 'bathroom', type: '_group', eventType: 'bath',   active: true },
@@ -610,6 +610,22 @@ function _isRepeatableLabel(label) {
     .test(String(label || '').normalize('NFD').replace(/[\u0300-\u036f]/g, ''));
 }
 
+/**
+ * Deduce el tipo de evento real de una rutina del catálogo a partir de su
+ * nombre. Sin esto, "Cambio de pañal" se guardaba como `activity` y no
+ * aparecía en los contadores de higiene/pañales de maestra ni de padres.
+ */
+function _routineMetaFromLabel(label) {
+  const s = String(label || '')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+  if (/cambio\s*(de\s*)?panal|panal/.test(s)) return { type: 'diaper_change' };
+  if (/\bpopo\b/.test(s)) return { type: 'diaper', subtype: 'soiled' };
+  if (/\bpipi\b/.test(s)) return { type: 'diaper', subtype: 'wet' };
+  if (/\bbano\b/.test(s)) return { type: 'bath' };
+  return { type: 'activity' };
+}
+
 function _isDuplicate(studentId, eventType) {
   const key = `${studentId}:${eventType}`;
   const last = _lastEvent[key];
@@ -626,7 +642,7 @@ function _calcProgress(log) {
   if (log.nap !== undefined && log.nap !== null) score++;
   const evTypes = new Set((log.infant_data || []).map(e => e.type));
   if (evTypes.has('milk')) score++;
-  if (evTypes.has('diaper') || evTypes.has('bath')) score++;
+  if (evTypes.has('diaper') || evTypes.has('bath') || evTypes.has('diaper_change')) score++;
   return Math.round((score / 5) * 100);
 }
 function _getDayOfWeek() { return new Date().getDay(); }
@@ -2323,8 +2339,17 @@ export async function routineQuickGroup(eventId) {
   const ev = EVENT_MAP[eventId];
   if (!ev) return;
 
+  // "Baño" y "Cambio pañal" comparten el mismo botón según el nivel: usa el
+  // tipo real configurado para el nivel (infantiles = diaper_change).
+  const levelQuickDef = _getLevelCollectiveQuick().find(q => q.id === eventId);
+  if (levelQuickDef?.eventType && ev.field === '_group' && levelQuickDef.eventType !== ev.value) {
+    ev.value = levelQuickDef.eventType;
+    if (levelQuickDef.label) ev.label = levelQuickDef.label;
+  }
+
   const catalogEvent = await RoutineCatalog.findEvent({ legacyKey: _legacyKeyForEvent(ev) });
   const occurrenceId = crypto.randomUUID?.() || Math.random().toString(36).substr(2, 12);
+  const nowIso = new Date().toISOString();
   const enrich = (base) => ({
     ...base,
     origin: 'colectivo',
@@ -2341,14 +2366,15 @@ export async function routineQuickGroup(eventId) {
     let markedCount = 0;
     for (const s of students) {
       if (_isDuplicate(s.id, eventId)) continue;
-      const payload = { student_id: s.id, classroom_id: classroom.id, date: today, created_at: new Date().toISOString() };
+      const payload = { student_id: s.id, classroom_id: classroom.id, date: today, created_at: nowIso };
       if (ev.field === 'food') {
         let currentFood = {};
         try { currentFood = JSON.parse(_logsMap[s.id]?.food || '{}'); } catch {}
         currentFood[ev.foodKey] = ev.value;
+        currentFood._times = { ...(currentFood._times || {}), [ev.foodKey]: nowIso };
         payload.food = JSON.stringify(currentFood);
       } else if (ev.field === '_sleep') {
-        payload.infant_event = enrich({ type: 'sleep', label: ev.value === 'end' ? 'Terminar siesta' : 'Iniciar siesta', start_time: new Date().toISOString(), end_time: ev.value === 'end' ? new Date().toISOString() : null });
+        payload.infant_event = enrich({ type: 'sleep', label: ev.value === 'end' ? 'Terminar siesta' : 'Iniciar siesta', start_time: nowIso, end_time: ev.value === 'end' ? nowIso : null });
       } else if (ev.field === '_group') {
         payload.infant_event = enrich({ type: ev.value, subtype: ev.subtype, label: ev.label });
       }
@@ -2421,10 +2447,11 @@ export async function markWholeClassRoutine(routineId) {
 
   try {
     let markedCount = 0;
+    const meta = _routineMetaFromLabel(routine.label);
     const repeatable = _isRepeatableLabel(routine.label) || routine.cat === 'Higiene';
     for (const s of students) {
       const alreadyMarked = !repeatable && (_logsMap[s.id]?.infant_data || []).some(
-        e => e.type === 'activity' && e.label === routine.label
+        e => e.type === meta.type && e.label === routine.label
       );
       if (alreadyMarked) continue;
       const payload = {
@@ -2433,7 +2460,8 @@ export async function markWholeClassRoutine(routineId) {
         date: today,
         created_at: new Date().toISOString(),
         infant_event: {
-          type: 'activity',
+          type: meta.type,
+          ...(meta.subtype ? { subtype: meta.subtype } : {}),
           label: routine.label,
           emoji: routine.emoji,
           category: routine.cat,
@@ -2809,9 +2837,10 @@ function _buildStudentTimeline(log, events, currentFood) {
     const m = MOOD_OPTIONS.find(x => x.val === log.mood);
     push({ emoji: m?.emoji || '😐', label: 'Ánimo: ' + (m?.label || log.mood), time: log.created_at, color: TIMELINE_TYPE_META.mood.color, type: 'mood', editable: false, origin: 'individual' });
   }
-  if (currentFood.breakfast) push({ emoji: '🍞', label: 'Desayuno: ' + (foodOptLabel(currentFood.breakfast)), time: null, color: TIMELINE_TYPE_META.breakfast.color, type: 'food_breakfast', editable: false, origin: 'individual' });
-  if (currentFood.lunch)     push({ emoji: '🍽️', label: 'Almuerzo: ' + (foodOptLabel(currentFood.lunch)), time: null, color: TIMELINE_TYPE_META.lunch.color, type: 'food_lunch', editable: false, origin: 'individual' });
-  if (currentFood.snack)     push({ emoji: '🎁', label: 'Merienda: ' + (foodOptLabel(currentFood.snack)), time: null, color: TIMELINE_TYPE_META.snack.color, type: 'food_snack', editable: false, origin: 'individual' });
+  const mealTimes = currentFood._times || {};
+  if (currentFood.breakfast) push({ emoji: '🍞', label: 'Desayuno: ' + (foodOptLabel(currentFood.breakfast)), time: mealTimes.breakfast || null, color: TIMELINE_TYPE_META.breakfast.color, type: 'food_breakfast', editable: false, origin: 'individual' });
+  if (currentFood.lunch)     push({ emoji: '🍽️', label: 'Almuerzo: ' + (foodOptLabel(currentFood.lunch)), time: mealTimes.lunch || null, color: TIMELINE_TYPE_META.lunch.color, type: 'food_lunch', editable: false, origin: 'individual' });
+  if (currentFood.snack)     push({ emoji: '🎁', label: 'Merienda: ' + (foodOptLabel(currentFood.snack)), time: mealTimes.snack || null, color: TIMELINE_TYPE_META.snack.color, type: 'food_snack', editable: false, origin: 'individual' });
   if (log?.nap) push({ emoji: '😴', label: 'Siesta: ' + ({ si: 'Durmió', no: 'No durmió', poco: 'Poco', excelente: 'Excelente' }[log.nap] || log.nap), time: null, color: TIMELINE_TYPE_META.nap.color, type: 'nap', editable: false, origin: 'individual' });
 
   events.forEach(ev => {
@@ -3437,6 +3466,9 @@ export async function _addScheduleEventToStudent(studentId, scheduleId) {
           || _getLevelDefaultSchedule().find(e => String(e.id) === String(scheduleId));
   const label = ev?.label || 'Evento';
   const emoji = ev?.emoji || '📋';
+  const meta = ev?.groupEventId === 'diaper_change'
+    ? { type: 'diaper_change' }
+    : _routineMetaFromLabel(label);
 
   // Cada evento permite ajustar su hora (por si se marca tarde).
   const event_time = await _promptEventTime(emoji, label, ev?.startTime || _nowHHMM());
@@ -3448,8 +3480,8 @@ export async function _addScheduleEventToStudent(studentId, scheduleId) {
       classroom_id: classroom.id,
       date:         _today(),
       infant_event: {
-        type: 'activity',
-        subtype: scheduleId,
+        type: meta.type,
+        subtype: meta.subtype || scheduleId,
         label,
         emoji,
         event_time,
@@ -3474,13 +3506,15 @@ export async function _addClassRoutineToStudent(studentId, routineId) {
   const event_time = await _promptEventTime(routine.emoji, routine.label, _nowHHMM());
   if (event_time === null) return; // cancelado
 
+  const meta = _routineMetaFromLabel(routine.label);
   try {
     await MaestraApi.upsertDailyLog({
       student_id:   studentId,
       classroom_id: classroom.id,
       date:         _today(),
       infant_event: {
-        type: 'activity',
+        type: meta.type,
+        ...(meta.subtype ? { subtype: meta.subtype } : {}),
         label: routine.label,
         emoji: routine.emoji,
         category: routine.cat,
@@ -3526,13 +3560,13 @@ export async function setStudentFood(studentId, food, mealKey) {
   try {
     let currentFood = {};
     try { currentFood = JSON.parse(_logsMap[studentId]?.food || '{}'); } catch {}
-    if (mealKey) currentFood[mealKey] = food;
-    else {
+    let key = mealKey;
+    if (!key) {
       const hour = new Date().getHours();
-      if (hour < 10) currentFood.breakfast = food;
-      else if (hour < 14) currentFood.lunch = food;
-      else currentFood.snack = food;
+      key = hour < 10 ? 'breakfast' : hour < 14 ? 'lunch' : 'snack';
     }
+    currentFood[key] = food;
+    currentFood._times = { ...(currentFood._times || {}), [key]: new Date().toISOString() };
     await MaestraApi.upsertDailyLog({ student_id: studentId, classroom_id: classroom.id, date: _today(), food: JSON.stringify(currentFood) });
     safeToast('Alimentación guardada', 'success');
     await initRoutine();

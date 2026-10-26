@@ -226,7 +226,7 @@ export const DailyReportModule = {
         todaySleep = _sleepMs(todayLog.infant_data, new Date().toISOString());
         todayLog.infant_data?.forEach(ev => {
           if (ev.type === 'milk') { todayMilk += Number(ev.oz || 0); todayMilkFeeds++; }
-          if (ev.type === 'diaper') todayDiapers++;
+          if (ev.type === 'diaper' || ev.type === 'diaper_change') todayDiapers++;
           if (ev.type === 'temp') todayTemp = ev.value;
           if (ev.type === 'note' && !todayNote) todayNote = ev.text;
         });
@@ -601,11 +601,12 @@ export const DailyReportModule = {
     if (log.food) {
       let fo = {};
       try { fo = JSON.parse(log.food); } catch { fo = { breakfast: log.food }; }
+      const mealTimes = fo._times || {};
       [['breakfast', '🍞', 'Desayuno'], ['lunch', '🥗', 'Almuerzo'], ['snack', '🍎', 'Merienda']].forEach(([key, icon, name]) => {
         if (!fo[key]) return;
         const value = fo[key];
         const txt = (LABELS.food[value] || value) + (ICONS.food[value] ? ` ${ICONS.food[value]}` : '');
-        push(icon, name, txt, log.created_at);
+        push(icon, name, txt, mealTimes[key] || log.created_at);
       });
     }
 

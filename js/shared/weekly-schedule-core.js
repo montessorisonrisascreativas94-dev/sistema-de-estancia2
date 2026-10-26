@@ -211,7 +211,7 @@ export function logEntriesForBlock(block, log) {
   const label = normalizeText(block.label);
   const addFood = (key, text) => {
     if (!food[key]) return;
-    entries.push({ time: food[`${key}_time`] || '', emoji: '🍽️', label: text, detail: '' });
+    entries.push({ time: food[`${key}_time`] || food._times?.[key] || '', emoji: '🍽️', label: text, detail: '' });
   };
   if (/desayuno|biberon/.test(label)) addFood('breakfast', 'Desayuno registrado');
   if (/almuerzo|comida/.test(label)) addFood('lunch', 'Almuerzo registrado');
