@@ -529,6 +529,14 @@ function _nowHHMM(date) {
   const d = date || new Date();
   return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
 }
+
+function _isoFromHHMM(time) {
+  if (!time || !/^\d{2}:\d{2}$/.test(time)) return new Date().toISOString();
+  const [hh, mm] = time.split(':').map(Number);
+  const d = new Date();
+  d.setHours(hh, mm, 0, 0);
+  return d.toISOString();
+}
 function _fmtTimeShort(timeStr) {
   if (!timeStr) return '';
   const [h, m] = timeStr.split(':').map(Number);
@@ -538,6 +546,60 @@ function _fmtTimeShort(timeStr) {
 }
 function _isWithin12h(d) {
   return d ? (Date.now() - new Date(d).getTime()) < 43200000 : false;
+}
+
+function _fmtDuration(mins) {
+  const total = Math.max(0, Math.round(Number(mins) || 0));
+  const h = Math.floor(total / 60);
+  const m = total % 60;
+  if (h && m) return `${h}h ${m}m`;
+  if (h) return `${h}h`;
+  return `${m}m`;
+}
+
+function _sleepIntervals(log, now = new Date()) {
+  const events = (log?.infant_data || [])
+    .filter(e => e && e.type === 'sleep')
+    .map(e => {
+      const start = new Date(e.start_time || e.created_at || 0);
+      const end = e.end_time ? new Date(e.end_time) : null;
+      return { ev: e, start, end: end && !isNaN(end.getTime()) ? end : null };
+    })
+    .filter(x => !isNaN(x.start.getTime()))
+    .sort((a, b) => a.start - b.start);
+
+  const intervals = [];
+  let open = null;
+
+  const addInterval = (start, end, isOpen, origin, startEventId, endEventId) => {
+    const effectiveEnd = end || now;
+    intervals.push({
+      start,
+      end: end || null,
+      open: !!isOpen,
+      minutes: Math.max(0, Math.round((effectiveEnd.getTime() - start.getTime()) / 60000)),
+      origin: origin || 'individual',
+      startEventId: startEventId || null,
+      endEventId: endEventId || null
+    });
+  };
+
+  for (const { ev, start, end } of events) {
+    const origin = ev.origin === 'colectivo' ? 'aula' : 'individual';
+    if (end) {
+      if (open) {
+        addInterval(open.start, end, false, open.origin, open.eventId, ev.id);
+        open = null;
+      } else if (end.getTime() - start.getTime() > 60000) {
+        addInterval(start, end, false, origin, ev.id, ev.id);
+      }
+    } else if (!open) {
+      open = { start, origin, eventId: ev.id };
+    }
+  }
+
+  if (open) addInterval(open.start, null, true, open.origin, open.eventId, null);
+  return intervals;
 }
 
 /**
@@ -829,10 +891,10 @@ function _getEventProgress(event, students, logsMap) {
       const matches = (log.infant_data || []).filter(e => e.type === mapping.type);
       if (matches.length) { counted = true; done++; occurrences += matches.length; }
     } else if (mapping.field === '_sleep') {
-      const matches = (log.infant_data || []).filter(e => e.type === 'sleep');
+      const matches = _sleepIntervals(log);
       if (matches.length) { counted = true; done++; occurrences += matches.length; }
     } else if (mapping.field === '_sleep_end') {
-      const matches = (log.infant_data || []).filter(e => e.type === 'sleep' && e.end_time);
+      const matches = _sleepIntervals(log).filter(iv => !iv.open);
       if (matches.length) { counted = true; done++; occurrences += matches.length; }
     }
     if (counted) markedStudents.push(s.name);
@@ -1298,6 +1360,9 @@ function _studentCardMini(s, log) {
     } catch {}
   }
   const napIcon = log?.nap ? '😴' : '';
+  const sleepIvs = _sleepIntervals(log);
+  const sleepMins = sleepIvs.reduce((sum, iv) => sum + iv.minutes, 0);
+  const sleepOpen = sleepIvs.some(iv => iv.open);
   const diaperCount = evs.filter(e => ['diaper', 'bath', 'diaper_change'].includes(e.type)).length;
   const milkCount = evs.filter(e => e.type === 'milk').length;
   const lastTxt = lastEv
@@ -1321,6 +1386,7 @@ function _studentCardMini(s, log) {
       </div>
       <div class="sc-name">${safeEscapeHTML((s.name || '').split(' ')[0])}</div>
       <div class="sc-last">${lastTxt}</div>
+      ${sleepIvs.length ? `<div class="sc-sleep">😴 ${sleepOpen ? 'Ahora · ' : ''}${_fmtDuration(sleepMins)}</div>` : ''}
       <div class="sc-icons">${moodEmoji}${foodIcons || ''}${napIcon}${diaperCount > 0 ? '💩' + diaperCount : ''}${milkCount > 1 ? '🍼' + milkCount : ''}</div>
       <div class="sc-exit">${exitT ? '🚪 ' + _fmtTimeShort(exitT) : ''}</div>
       <div class="sc-prog"><div class="sc-prog-fill" style="width:${prog}%;background:${prog >= 80 ? '#28B54D' : prog >= 50 ? '#FF8A00' : '#94A3B8'}"></div></div>
@@ -1353,6 +1419,7 @@ function _renderStudentCards(students, logsMap) {
         .sc-avatar{width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#fff7ed,#ffedd5);overflow:hidden;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:.8rem;color:#FF8A00;border:2px solid white;box-shadow:0 2px 8px rgba(0,0,0,.06);flex-shrink:0}
         .sc-name{font-size:.6rem;font-weight:900;color:#1e293b;line-height:1.1;max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
         .sc-last{font-size:.48rem;font-weight:800;color:#94a3b8;line-height:1.1;max-width:92px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+        .sc-sleep{font-size:.48rem;font-weight:900;color:#7c3aed;background:#f5f3ff;border-radius:99px;padding:1px 7px;max-width:96px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
         .sc-icons{font-size:.72rem;line-height:1;letter-spacing:.5px}
         .sc-exit{font-size:.48rem;font-weight:800;color:#64748b;background:#f8fafc;border-radius:99px;padding:1px 6px}
         .sc-prog{height:3px;border-radius:2px;background:#f1f5f9;overflow:hidden;width:100%;margin-top:1px}
@@ -1617,8 +1684,8 @@ export async function initRoutine() {
 
   _sleepMap = {};
   (logs || []).forEach(log => {
-    const ev = (log.infant_data || []).filter(e => e.type === 'sleep' && !e.end_time).pop();
-    if (ev) _sleepMap[log.student_id] = ev;
+    const openIv = _sleepIntervals(log).find(iv => iv.open);
+    if (openIv) _sleepMap[log.student_id] = openIv;
   });
 
   let weeklyBlocks = [];
@@ -2843,7 +2910,10 @@ function _buildStudentTimeline(log, events, currentFood) {
   if (currentFood.snack)     push({ emoji: '🎁', label: 'Merienda: ' + (foodOptLabel(currentFood.snack)), time: mealTimes.snack || null, color: TIMELINE_TYPE_META.snack.color, type: 'food_snack', editable: false, origin: 'individual' });
   if (log?.nap) push({ emoji: '😴', label: 'Siesta: ' + ({ si: 'Durmió', no: 'No durmió', poco: 'Poco', excelente: 'Excelente' }[log.nap] || log.nap), time: null, color: TIMELINE_TYPE_META.nap.color, type: 'nap', editable: false, origin: 'individual' });
 
+  const sleepIvs = _sleepIntervals(log);
+
   events.forEach(ev => {
+    if (ev.type === 'sleep') return;
     const meta = TIMELINE_TYPE_META[ev.type] || {};
     const isClassEvent = ev.origin === 'colectivo';
     push({
@@ -2855,6 +2925,20 @@ function _buildStudentTimeline(log, events, currentFood) {
       type: ev.type,
       editable: true,
       origin: isClassEvent ? 'aula' : 'individual'
+    });
+  });
+
+  sleepIvs.forEach(iv => {
+    push({
+      emoji: '😴',
+      label: iv.open ? 'Siesta en curso' : 'Siesta',
+      time: iv.start.toISOString(),
+      color: TIMELINE_TYPE_META.sleep.color,
+      id: iv.startEventId,
+      type: 'sleep',
+      editable: !!iv.startEventId,
+      origin: iv.origin,
+      duration: _fmtDuration(iv.minutes)
     });
   });
 
@@ -2885,6 +2969,7 @@ export function openStudentRoutine(studentId) {
   let currentFood = {};
   if (log?.food) { try { currentFood = JSON.parse(log.food); } catch {} }
   const events = log?.infant_data || [];
+  const sleepIvs = _sleepIntervals(log);
   const hasEvent = (type, subtype) => events.some(e => e.type === type && (!subtype || e.subtype === subtype));
 
   const mealLabels = { breakfast: '🍞 Desayuno', lunch: '🍽️ Almuerzo', snack: '🍎 Merienda' };
@@ -3029,7 +3114,7 @@ export function openStudentRoutine(studentId) {
                   new Date(a.created_at || a.start_time || 0) - new Date(b.created_at || b.start_time || 0)
                 ).pop();
                 if (!lastRepeat) return '';
-                return `<button type="button" class="sr-repeat-btn" onclick="App.repeatLastEvent('${studentId}')">
+                return `<button type="button" class="sr-repeat-btn" onclick="App._openRepeatEventModal('${studentId}','${encodeURIComponent(JSON.stringify({type:lastRepeat.type,subtype:lastRepeat.subtype||'',label:lastRepeat.label||lastRepeat.type,emoji:(_timelineEmoji(lastRepeat)||'')}))}')">
                   🔁 Repetir último: ${_timelineEmoji(lastRepeat)} ${safeEscapeHTML(lastRepeat.label || lastRepeat.type)}
                 </button>`;
               })()}
@@ -3053,9 +3138,10 @@ export function openStudentRoutine(studentId) {
                         </span>
                       </div>
                       <div class="sr-tl-card-bot">
-                        <span class="sr-tl-time">${ev.time ? '🕒 ' + _fmtTime(ev.time) : 'Sin hora registrada'}</span>
+                        <span class="sr-tl-time">${ev.time ? '🕒 ' + _fmtTime(ev.time) : 'Sin hora registrada'}${ev.duration ? ' · ⏱ ' + ev.duration : ''}</span>
                         ${ev.editable && ev.id ? `
                           <span class="sr-tl-actions">
+                            <button onclick="App._openRepeatEventModal('${studentId}','${encodeURIComponent(JSON.stringify({type:ev.type,subtype:ev.subtype||'',label:ev.label||ev.type,emoji:ev.emoji||''}))}')" title="Repetir este evento">🔁</button>
                             <button onclick="App._editEventTime('${studentId}','${ev.id}')" title="Editar hora">✏️</button>
                             <button onclick="App.deleteInfantEvent('${studentId}','${ev.id}')" title="Eliminar evento">🗑️</button>
                           </span>` : ''}
@@ -3190,6 +3276,18 @@ export function openStudentRoutine(studentId) {
             class="mt-2 w-full p-2.5 rounded-xl text-white font-black text-[10px] uppercase flex items-center justify-center gap-2" style="background:#7c3aed">
             <span>☀️</span> Despertar
           </button>` : ''}
+          ${sleepIvs.length ? `
+          <div class="mt-2 rounded-xl border border-purple-100 bg-purple-50 p-2.5 space-y-1">
+            <div class="flex items-center justify-between">
+              <span class="text-[10px] font-black text-purple-700">😴 Sueño del día</span>
+              <span class="text-[10px] font-black text-purple-700">${_fmtDuration(sleepIvs.reduce((a, iv) => a + iv.minutes, 0))}</span>
+            </div>
+            ${sleepIvs.map(iv => `
+              <div class="flex items-center justify-between text-[9px] font-bold text-purple-600">
+                <span>${_fmtTime(iv.start)} → ${iv.open ? 'en curso' : _fmtTime(iv.end)}</span>
+                <span>${_fmtDuration(iv.minutes)}</span>
+              </div>`).join('')}
+          </div>` : ''}
         `, log?.nap ? { text: '✓', ok: true } : { text: 'Pendiente', ok: false })}
 
         <!-- ───────── BIBERÓN ───────── -->
@@ -3565,8 +3663,15 @@ export async function setStudentFood(studentId, food, mealKey) {
       const hour = new Date().getHours();
       key = hour < 10 ? 'breakfast' : hour < 14 ? 'lunch' : 'snack';
     }
+    const mealMeta = {
+      breakfast: { emoji: '🍞', label: 'Desayuno' },
+      lunch: { emoji: '🍽️', label: 'Almuerzo' },
+      snack: { emoji: '🍎', label: 'Merienda' }
+    }[key] || { emoji: '🍽️', label: 'Comida' };
+    const event_time = await _promptEventTime(mealMeta.emoji, mealMeta.label, _nowHHMM());
+    if (event_time === null) return;
     currentFood[key] = food;
-    currentFood._times = { ...(currentFood._times || {}), [key]: new Date().toISOString() };
+    currentFood._times = { ...(currentFood._times || {}), [key]: _isoFromHHMM(event_time) };
     await MaestraApi.upsertDailyLog({ student_id: studentId, classroom_id: classroom.id, date: _today(), food: JSON.stringify(currentFood) });
     safeToast('Alimentación guardada', 'success');
     await initRoutine();
@@ -3598,24 +3703,74 @@ export async function setStudentBehavior(studentId, category, value) {
 }
 
 export async function repeatLastEvent(studentId) {
+  // Compatibilidad: delega al nuevo modal con confirmación de hora
   const log = _logsMap[studentId];
   const last = (log?.infant_data || []).filter(e => e.type && e.type !== 'note').slice().sort((a, b) =>
     new Date(a.created_at || a.start_time || 0) - new Date(b.created_at || b.start_time || 0)
   ).pop();
   if (!last) { safeToast('Aún no hay eventos para repetir', 'warning'); return; }
-  if (_isDuplicate(studentId, last.type)) { safeToast('Espera un momento antes de repetir', 'warning'); return; }
+  const evData = { type: last.type, subtype: last.subtype || '', label: last.label || last.type, emoji: _timelineEmoji(last) || '' };
+  _openRepeatEventModal(studentId, encodeURIComponent(JSON.stringify(evData)));
+}
+
+/** Abre el modal de confirmación de hora para repetir un evento específico de la línea de tiempo */
+export function _openRepeatEventModal(studentId, evDataEncoded) {
+  let evData;
+  try { evData = JSON.parse(decodeURIComponent(evDataEncoded)); } catch { safeToast('Error al abrir modal', 'error'); return; }
+  const modalId = 'repeatEventModal';
+  const emoji = evData.emoji || '🔁';
+  const label = evData.label || evData.type || 'Evento';
+  const content = `
+    <div class="bg-white overflow-hidden" style="border-radius:24px;max-width:340px;margin:0 auto">
+      <div class="p-5" style="background:linear-gradient(135deg,#7C3AED,#8B5CF6)">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <span class="text-2xl">${emoji}</span>
+            <div>
+              <h3 class="text-base font-black text-white">Repetir: ${safeEscapeHTML(label)}</h3>
+              <p class="text-xs font-bold text-white/80">Confirmar hora del nuevo registro</p>
+            </div>
+          </div>
+          <button onclick="UI.Modal.close('${modalId}')" class="p-2 rounded-xl bg-white/20 text-white">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="p-5 space-y-4">
+        <p class="text-xs text-slate-500 font-medium">Si el evento ocurrió antes, ajusta la hora para que el padre lo vea en el momento correcto.</p>
+        <div>
+          <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Hora del evento</label>
+          <input type="time" id="repeatEventTime" value="${_nowHHMM()}"
+            class="w-full mt-2 p-3 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-700 outline-none focus:border-purple-400">
+        </div>
+        <button onclick="App._saveRepeatEvent('${safeEscapeHTML(studentId)}','${safeEscapeHTML(evDataEncoded)}')"
+          class="w-full py-3 rounded-xl font-black text-xs uppercase text-white" style="background:#7C3AED">
+          🔁 Registrar de nuevo
+        </button>
+      </div>
+    </div>
+  `;
+  UI.Modal.open(modalId, content);
+}
+
+/** Guarda el evento repetido con la hora confirmada */
+export async function _saveRepeatEvent(studentId, evDataEncoded) {
+  let evData;
+  try { evData = JSON.parse(decodeURIComponent(evDataEncoded)); } catch { safeToast('Error al guardar', 'error'); return; }
+  const event_time = document.getElementById('repeatEventTime')?.value || _nowHHMM();
   const classroom = AppState.get('classroom');
   try {
     await MaestraApi.upsertDailyLog({
       student_id: studentId, classroom_id: classroom.id, date: _today(),
       infant_event: {
-        type: last.type,
-        subtype: last.subtype || undefined,
-        label: last.label || last.type,
-        event_time: _nowHHMM()
+        type: evData.type,
+        subtype: evData.subtype || undefined,
+        label: evData.label || evData.type,
+        event_time,
       }
     });
-    safeToast(`${last.label || 'Evento'} registrado de nuevo`, 'success');
+    safeToast(`${evData.label || 'Evento'} registrado de nuevo`, 'success');
+    UI.Modal.close('repeatEventModal');
     await initRoutine();
     if (_isModalOpen()) openStudentRoutine(studentId);
   } catch { safeToast('Error al guardar', 'error'); }

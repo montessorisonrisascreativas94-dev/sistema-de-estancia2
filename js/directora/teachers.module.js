@@ -286,6 +286,10 @@ export const TeachersModule = {
           </span></td>
           <td class="p-4 text-right">
             <div class="flex justify-end gap-2">
+              ${t.class_ids?.length ? `
+              <button onclick="App.teachers.removeFromClassroom('${t.id}')" class="w-9 h-9 flex items-center justify-center bg-amber-50 text-amber-600 hover:bg-amber-500 hover:text-white rounded-xl transition-all" title="Quitar del aula">
+                <i data-lucide="user-minus" class="w-4 h-4"></i>
+              </button>` : ''}
               <button onclick="App.teachers.openModal('${t.id}')" class="w-9 h-9 flex items-center justify-center bg-[#E8F2FF] text-[#0B63C7] hover:bg-[#0B63C7] hover:text-white rounded-xl transition-all" title="Editar">
                 <i data-lucide="settings" class="w-4 h-4"></i>
               </button>
@@ -343,6 +347,9 @@ export const TeachersModule = {
               <i data-lucide="${active ? 'check' : 'pause'}"></i>${active ? 'Activo' : 'Inactivo'}
             </span>
             <div class="dc-student-actions">
+              ${t.class_ids?.length ? `<button class="dc-icon-btn dc-icon-btn--warn" onclick="event.stopPropagation();App.teachers.removeFromClassroom('${t.id}')" title="Quitar del aula">
+                <i data-lucide="user-minus"></i>
+              </button>` : ''}
               <button class="dc-icon-btn" onclick="event.stopPropagation();App.teachers.openModal('${t.id}')" title="Editar">
                 <i data-lucide="pencil"></i>
               </button>
@@ -356,6 +363,113 @@ export const TeachersModule = {
     }
 
     if (window.lucide) lucide.createIcons();
+  },
+
+  /**
+   * Quita a la maestra de TODAS sus aulas asignadas sin eliminar su cuenta.
+   * Si tiene varias aulas asignadas, pide confirmar cuál quitar o todas.
+   */
+  async removeFromClassroom(teacherId) {
+    const teachers = AppState.get('teachers') || [];
+    const teacher = teachers.find(t => String(t.id) === String(teacherId));
+    if (!teacher) return Helpers.toast('Maestra no encontrada', 'warning');
+
+    const name = teacher.name || 'la maestra';
+    const classIds = teacher.class_ids || [];
+    const classrooms = Array.isArray(teacher.classrooms) ? teacher.classrooms : [];
+
+    if (!classIds.length) {
+      return Helpers.toast(`${name} no tiene aulas asignadas`, 'info');
+    }
+
+    // Si tiene una sola aula, confirmar directo
+    if (classIds.length === 1) {
+      const aulaNombre = classrooms[0]?.name || 'su aula';
+      const ok = confirm(
+        `¿Quitar a "${name}" del aula "${aulaNombre}"?\n\nEl aula quedará sin maestra. La cuenta de la maestra se conserva.`
+      );
+      if (!ok) return;
+
+      try {
+        const { error } = await supabase
+          .from('classrooms')
+          .update({ teacher_id: null })
+          .in('id', classIds.map(Number));
+        if (error) throw error;
+
+        Helpers.toast(`${name} fue quitada del aula`, 'success');
+        QueryCache.invalidate('dir_teachers');
+        QueryCache.invalidate('dir_classrooms_occ');
+        QueryCache.invalidate('dir_classrooms');
+        await this.init(AppState.get('teachers'));
+      } catch (e) {
+        Helpers.toast('Error: ' + e.message, 'error');
+      }
+      return;
+    }
+
+    // Si tiene varias aulas: mostrar selector para elegir cuál quitar
+    const aulasHtml = classrooms.map(c =>
+      `<label class="flex items-center gap-3 p-3 rounded-xl border border-slate-100 cursor-pointer hover:bg-slate-50">
+        <input type="checkbox" value="${c.id}" checked class="w-4 h-4 rounded text-amber-500">
+        <span class="text-sm font-bold text-slate-700">${Helpers.escapeHTML(c.name || String(c.id))}</span>
+      </label>`
+    ).join('');
+
+    const modalId = 'removeTeacherRoomsModal';
+    const html = `
+      <div style="background:#fff;border-radius:24px;max-width:380px;margin:0 auto;overflow:hidden">
+        <div style="padding:20px 24px;background:linear-gradient(135deg,#F59E0B,#D97706);display:flex;align-items:center;gap:12px">
+          <span style="font-size:24px">👩‍🏫</span>
+          <div>
+            <h3 style="margin:0;font-size:15px;font-weight:900;color:#fff">Quitar del aula</h3>
+            <p style="margin:0;font-size:11px;color:rgba(255,255,255,.85);font-weight:700">${Helpers.escapeHTML(name)} — selecciona las aulas a quitar</p>
+          </div>
+        </div>
+        <div style="padding:20px 24px;display:flex;flex-direction:column;gap:8px">
+          ${aulasHtml}
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button onclick="App.ui.closeModal()" style="flex:1;padding:11px;border:2px solid #e2e8f0;border-radius:12px;font-size:11px;font-weight:900;text-transform:uppercase;cursor:pointer;background:#fff;color:#64748b">Cancelar</button>
+            <button id="btnConfirmRemoveTeacher" onclick="App.teachers._confirmRemoveFromClassroom('${teacherId}')"
+              style="flex:2;padding:11px;border:0;border-radius:12px;font-size:11px;font-weight:900;text-transform:uppercase;cursor:pointer;background:#F59E0B;color:#fff">
+              Quitar seleccionadas
+            </button>
+          </div>
+        </div>
+      </div>`;
+
+    window.openGlobalModal(html);
+  },
+
+  async _confirmRemoveFromClassroom(teacherId) {
+    const checked = [...document.querySelectorAll('#globalModalContainer input[type=checkbox]:checked')];
+    const ids = checked.map(cb => Number(cb.value)).filter(Boolean);
+    if (!ids.length) { Helpers.toast('Selecciona al menos un aula', 'warning'); return; }
+
+    const teachers = AppState.get('teachers') || [];
+    const teacher = teachers.find(t => String(t.id) === String(teacherId));
+    const name = teacher?.name || 'la maestra';
+
+    const btn = document.getElementById('btnConfirmRemoveTeacher');
+    if (btn) { btn.disabled = true; btn.textContent = 'Quitando...'; }
+
+    try {
+      const { error } = await supabase
+        .from('classrooms')
+        .update({ teacher_id: null })
+        .in('id', ids);
+      if (error) throw error;
+
+      Helpers.toast(`${name} fue quitada de ${ids.length} aula${ids.length > 1 ? 's' : ''}`, 'success');
+      App.ui.closeModal();
+      QueryCache.invalidate('dir_teachers');
+      QueryCache.invalidate('dir_classrooms_occ');
+      QueryCache.invalidate('dir_classrooms');
+      await this.init(AppState.get('teachers'));
+    } catch (e) {
+      Helpers.toast('Error: ' + e.message, 'error');
+      if (btn) { btn.disabled = false; btn.textContent = 'Quitar seleccionadas'; }
+    }
   },
 
   async delete(id) {

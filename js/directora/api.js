@@ -358,7 +358,7 @@ export const DirectorApi = {
       try {
         const { data, error } = await supabase
           .from(TABLES.CLASSROOMS)
-          .select('id, name, level, capacity, is_live, profiles:teacher_id(name), students(count)')
+          .select('id, name, level, capacity, is_live, teacher_id, profiles:teacher_id(name), students(count)')
           .is('deleted_at', null)
           .order('name');
         if (error) throw error;

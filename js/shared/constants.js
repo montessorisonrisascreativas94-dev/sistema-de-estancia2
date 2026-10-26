@@ -485,7 +485,11 @@ export function dedupeClassrooms(rows) {
       winner.level = canonicalMeta.level;
       if (!winner.teacher_id) {
         const withTeacher = items.find((it) => it.teacher_id);
-        if (withTeacher) winner.teacher_id = withTeacher.teacher_id;
+        if (withTeacher) {
+          winner.teacher_id = withTeacher.teacher_id;
+          if (!winner.profiles && withTeacher.profiles) winner.profiles = withTeacher.profiles;
+          if (!winner.teacher && withTeacher.teacher) winner.teacher = withTeacher.teacher;
+        }
       }
     }
     result.push(winner);

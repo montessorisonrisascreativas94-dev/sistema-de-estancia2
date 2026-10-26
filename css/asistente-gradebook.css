@@ -401,6 +401,8 @@
 .dc-icon-btn svg {width: .95rem; height: .95rem;}
 .dc-icon-btn:hover {background: var(--dc-blue-soft); border-color: #BFDBFE; color: var(--dc-blue-dark);}
 .dc-icon-btn--danger:hover {background: #FFF1F2; border-color: #FECDD3; color: #E11D48;}
+.dc-icon-btn--warn { color: #B45309; }
+.dc-icon-btn--warn:hover { background: #FFFBEB; border-color: #FDE68A; color: #D97706; }
 .dc-line-chip {display: inline-flex;
   align-items: center;
   gap: .4rem;

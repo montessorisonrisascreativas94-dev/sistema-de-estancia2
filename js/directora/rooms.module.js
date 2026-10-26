@@ -4,6 +4,11 @@ import { UI } from './ui.module.js';
 import { supabase } from '../shared/supabase.js';
 import { QueryCache } from '../shared/query-cache.js';
 import {
+  applyClassroomGroupTeacher,
+  getClassroomGroupTeacher,
+  notifyClassroomUpdated,
+} from '../shared/classroom-teacher-sync.js';
+import {
   CANONICAL_CLASSROOMS,
   SPECIAL_CLASSROOMS,
   SPECIAL_CLASSROOMS_META,
@@ -582,6 +587,8 @@ export const RoomsModule = {
         savedId = newRoom?.id;
       }
 
+      await applyClassroomGroupTeacher({ id: savedId, name, level }, teacher_id || null);
+
       const checks = document.querySelectorAll('.room-student-check');
       if (checks.length > 0 && savedId) {
         const roomIdNum = parseInt(savedId, 10);
@@ -620,11 +627,45 @@ export const RoomsModule = {
       QueryCache.invalidate('dir_classrooms_occ');
       QueryCache.invalidate('dir_classrooms');
       QueryCache.invalidate('dir_students');
+      QueryCache.invalidate('dir_teachers');
+      notifyClassroomUpdated();
       await this.init();
     } catch (e) {
       Helpers.toast('Error al guardar aula: ' + e.message, 'error');
     } finally {
       if (btn) { btn.disabled = false; btn.textContent = 'Guardar Aula'; }
+    }
+  },
+
+  /**
+   * Quita la maestra asignada a un aula sin eliminar el aula ni la maestra.
+   * Solo pone teacher_id = null en la tabla classrooms.
+   */
+  async removeTeacher(roomId, roomName, teacherName) {
+    if (!roomId || roomId === 'null' || !Number.isInteger(parseInt(roomId, 10))) {
+      return Helpers.toast('Aula no válida', 'warning');
+    }
+    const ok = confirm(
+      `¿Quitar a "${teacherName}" del aula "${roomName}"?\n\nEl aula quedará sin maestra asignada. La cuenta de la maestra no se elimina.`
+    );
+    if (!ok) return;
+
+    try {
+      const { error } = await supabase
+        .from('classrooms')
+        .update({ teacher_id: null })
+        .eq('id', parseInt(roomId, 10));
+
+      if (error) throw error;
+
+      Helpers.toast(`${teacherName} fue quitada del aula "${roomName}"`, 'success');
+      QueryCache.invalidate('dir_classrooms_occ');
+      QueryCache.invalidate('dir_classrooms');
+      QueryCache.invalidate('dir_teachers');
+      notifyClassroomUpdated();
+      await this.init();
+    } catch (e) {
+      Helpers.toast('Error al quitar la maestra: ' + e.message, 'error');
     }
   },
 
@@ -665,6 +706,8 @@ export const RoomsModule = {
       Helpers.toast('Aula eliminada', 'success');
       QueryCache.invalidate('dir_classrooms_occ');
       QueryCache.invalidate('dir_classrooms');
+      QueryCache.invalidate('dir_teachers');
+      notifyClassroomUpdated();
       await this.init();
     } catch (e) {
       const msg = /foreign key constraint/i.test(e.message || '')
@@ -751,7 +794,7 @@ export const RoomsModule = {
           <div>
             <label class="${LC}">Maestra Asignada</label>
             <select id="roomTeacher" class="${IC}">
-              <option value="">-- Sin asignar --</option>
+              <option value="">-- Sin maestra / quitar asignación --</option>
             </select>
           </div>
           <div>
@@ -798,7 +841,7 @@ export const RoomsModule = {
       const { data: teachers } = await DirectorApi.getTeachers();
       const select = document.getElementById('roomTeacher');
       if (select && teachers?.length) {
-        select.innerHTML = '<option value="">-- Sin asignar --</option>' +
+        select.innerHTML = '<option value="">-- Sin maestra / quitar asignación --</option>' +
           teachers.map((t) => `<option value="${t.id}">${Helpers.escapeHTML(t.name)}</option>`).join('');
       }
     } catch (e) { /* ignore */ }
@@ -816,7 +859,7 @@ export const RoomsModule = {
           document.getElementById('roomCapacity').value = room.capacity || 20;
           document.getElementById('roomCanonLevel').value = room.level || room.name || '';
           const sel = document.getElementById('roomTeacher');
-          if (sel) sel.value = room.teacher_id || '';
+          if (sel) sel.value = (await getClassroomGroupTeacher(room)) || '';
 
           const display = document.getElementById('roomLevelDisplay');
           const ageDisp = document.getElementById('roomAgeRangeDisplay');

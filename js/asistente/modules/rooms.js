@@ -1,6 +1,11 @@
 import { supabase } from '../../shared/supabase.js';
 import { Helpers } from '../../shared/helpers.js';
 import {
+  applyClassroomGroupTeacher,
+  getClassroomGroupTeacher,
+  notifyClassroomUpdated,
+} from '../../shared/classroom-teacher-sync.js';
+import {
   CANONICAL_CLASSROOMS,
   SPECIAL_CLASSROOMS,
   SPECIAL_CLASSROOMS_META,
@@ -325,6 +330,7 @@ export const RoomsModule = {
       }
 
       Helpers.toast('Aula eliminada correctamente', 'success');
+      notifyClassroomUpdated();
       await this.loadRooms();
     } catch (e) {
       const msg = /foreign key constraint/i.test(e.message || '')
@@ -354,7 +360,7 @@ export const RoomsModule = {
 
         document.getElementById('roomId').value = rm.id;
         document.getElementById('roomName').value = rm.name || '';
-        document.getElementById('roomTeacher').value = rm.teacher_id || '';
+        document.getElementById('roomTeacher').value = (await getClassroomGroupTeacher(rm)) || '';
         document.getElementById('roomCapacity').value = rm.capacity || 15;
       } catch (_) {
         Helpers.toast('Error cargando aula', 'error');
@@ -442,7 +448,7 @@ export const RoomsModule = {
     try {
       const { data, error } = await supabase.from('profiles').select('id, name').eq('role', 'maestra').order('name');
       if (!error && data) {
-        select.innerHTML = '<option value="">-- Sin asignar --</option>' + data.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+        select.innerHTML = '<option value="">-- Sin maestra / quitar asignación --</option>' + data.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
       }
     } catch (e) {}
   },
@@ -486,6 +492,8 @@ export const RoomsModule = {
         if (error) throw error;
         savedId = newRoom?.id;
       }
+
+      await applyClassroomGroupTeacher({ id: savedId, name, level }, teacher_id || null);
 
       const modal = document.getElementById('roomModal');
       const checks = modal ? modal.querySelectorAll('.room-student-check') : [];
@@ -532,6 +540,7 @@ export const RoomsModule = {
 
       Helpers.toast(id ? 'Aula actualizada correctamente' : 'Aula creada correctamente', 'success');
       this.closeModal();
+      notifyClassroomUpdated();
       await this.loadRooms();
     } catch (_) {
       Helpers.toast('Error al guardar aula: ' + (_.message || _), 'error');

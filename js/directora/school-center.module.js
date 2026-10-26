@@ -96,6 +96,7 @@ export const SchoolCenterModule = {
   _intList: [],
   _intNames: { rooms: {}, profs: {} },
   _intPromise: null,
+  _classroomSyncBound: false,
 
   /* ════════════════════════ CICLO DE VIDA ════════════════════════ */
 
@@ -153,6 +154,11 @@ export const SchoolCenterModule = {
     const root = document.getElementById('kscRoot');
     if (!root || root._kscBound) return;
     root._kscBound = true;
+
+    if (!this._classroomSyncBound) {
+      this._classroomSyncBound = true;
+      window.addEventListener('karpus:classroom-updated', () => this._invalidateClassroomData());
+    }
 
     root.addEventListener('click', (e) => {
       const t = (sel) => e.target.closest(sel);
@@ -1047,6 +1053,15 @@ export const SchoolCenterModule = {
     await this.load();
     document.getElementById('kscRefresh')?.classList.remove('is-spinning');
     if (this._loadedAt !== before) Helpers.toast('Centro Escolar actualizado', 'success');
+  },
+
+  _invalidateClassroomData() {
+    this._data = null;
+    this._loadedAt = 0;
+    const root = document.getElementById('kscRoot');
+    if (root && root.offsetParent !== null) {
+      this.load().catch(() => {});
+    }
   },
 
   _loadingHtml() {

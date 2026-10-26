@@ -8,6 +8,7 @@ import { RealtimeManager } from '../shared/realtime-manager.js';
 import { QueryCache } from '../shared/query-cache.js';
 import { SectionCache } from '../shared/section-cache.js';
 import { TeacherEfficiencyModule } from './modules/teacher_efficiency.module.js';
+import { RoomsModule } from '../directora/rooms.module.js';
 import { openGlobalModal, closeGlobalModal } from '../shared/modal.js';
 import { EncargadaChatApp } from './chat_app.js';
 import {
@@ -39,7 +40,8 @@ const debounce = (fn, delay) => {
 };
 
 window.App = {
-  navigation: { goTo: goToSection }
+  navigation: { goTo: goToSection },
+  rooms: RoomsModule
 };
 
 // Expose goToSection globally so HTML onclick= and common_ui can call it

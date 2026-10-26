@@ -224,6 +224,13 @@ const DirectorUI = {
             '<span class="dc-room-teacher-name">' + (teacher ? Helpers.escapeHTML(teacher) : 'Sin maestra asignada') + '</span>' +
             '<span class="dc-room-teacher-role">' + (teacher ? 'Docente a cargo' : 'Pendiente') + '</span>' +
           '</div>' +
+          (teacher && !isVirtual
+            ? '<button class="dc-icon-btn dc-icon-btn--warn" style="margin-left:auto;flex-shrink:0" ' +
+                'onclick="event.stopPropagation();App.rooms.removeTeacher(\'' + r.id + '\',\'' + Helpers.escapeHTML(m.name) + '\',\'' + Helpers.escapeHTML(teacher) + '\')" ' +
+                'title="Quitar maestra del aula">' +
+                '<i data-lucide="user-minus"></i>' +
+              '</button>'
+            : '') +
         '</div>' +
 
         '<div class="dc-room-tags">' +
@@ -250,6 +257,11 @@ const DirectorUI = {
     const rowActions = isVirtual
       ? '<span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Clase especial</span>'
       : '<div class="flex items-center justify-center gap-1">' +
+          (r.profiles?.name
+            ? '<button onclick="App.rooms.removeTeacher(\'' + r.id + '\',\'' + Helpers.escapeHTML(m.name) + '\',\'' + Helpers.escapeHTML(r.profiles.name) + '\')" class="dc-icon-btn dc-icon-btn--warn" title="Quitar maestra">' +
+                '<i data-lucide="user-minus"></i>' +
+              '</button>'
+            : '') +
           '<button onclick="App.rooms.openModal(\'' + r.id + '\')" class="dc-icon-btn" title="Editar">' +
             '<i data-lucide="pencil"></i>' +
           '</button>' +
