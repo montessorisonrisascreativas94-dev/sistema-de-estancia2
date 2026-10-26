@@ -7,8 +7,10 @@ import { Helpers } from '../shared/helpers.js';
 import { QueryCache } from '../shared/query-cache.js';
 import { RealtimeManager } from '../shared/realtime-manager.js';
 import { dedupeClassrooms } from '../shared/constants.js';
+import { normalizeSchoolYearName } from '../shared/school-year-name.js';
 
 const $el = id => document.getElementById(id);
+const yearLabel = (year) => Helpers.escapeHTML(normalizeSchoolYearName(year));
 const fmtCurrency = n => 'RD$' + Number(n||0).toLocaleString('es-DO',{minimumFractionDigits:2});
 const fmtDate = d => { if(!d) return '—'; return new Date((d+'').includes('T')?d:d+'T12:00:00').toLocaleDateString('es-ES',{day:'2-digit',month:'short',year:'numeric'}); };
 
@@ -87,13 +89,13 @@ export const AcademicCycleModule = {
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 class="text-xl font-black text-slate-800">Ciclo Académico</h2>
-          <p class="text-xs text-slate-400 font-bold uppercase tracking-wider">${yr?.name || 'Sin año activo'}</p>
+          <p class="text-xs text-slate-400 font-bold uppercase tracking-wider">${yr ? yearLabel(yr) : 'Sin año activo'}</p>
         </div>
         <div class="flex items-center gap-2 flex-wrap">
           ${this._years.length ? `
             <select id="yearSelector" onchange="App.academic.switchYear(this.value)"
               class="border-2 border-slate-100 rounded-xl px-3 py-2 font-black text-sm text-slate-700 outline-none focus:border-blue-400">
-                ${this._years.map(y=>`<option value="${y.id}"${y.id===yr?.id?' selected':''}>${y.name}${y.is_current?' ✓':''}</option>`).join('')}
+                ${this._years.map(y=>`<option value="${y.id}"${y.id===yr?.id?' selected':''}>${yearLabel(y)}${y.is_current?' ✓':''}</option>`).join('')}
             </select>
           ` : ''}
           <button onclick="App.academic.openNewYearModal()" class="px-3 py-2 text-white text-xs font-black uppercase rounded-xl hover:opacity-90" style="background:#28B54D">+ Año</button>
@@ -123,7 +125,7 @@ export const AcademicCycleModule = {
     const hasValue = yr && Array.from(hdr.options || []).some(o => o.value === String(yr.id));
     if (!hasValue || hdr.options.length !== this._years.length) {
       hdr.innerHTML = this._years
-        .map(y => `<option value="${y.id}"${yr && y.id === yr.id ? ' selected' : ''}>${y.name}${y.is_current ? ' ✓' : ''}</option>`)
+        .map(y => `<option value="${y.id}"${yr && y.id === yr.id ? ' selected' : ''}>${yearLabel(y)}${y.is_current ? ' ✓' : ''}</option>`)
         .join('');
     }
     if (yr && hdr.value !== String(yr.id)) hdr.value = String(yr.id);

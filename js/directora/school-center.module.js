@@ -20,6 +20,7 @@ import { StudentRecordModal } from '../shared/student-record-modal.js';
 import { openGlobalModal, closeGlobalModal as _scCloseModal } from '../shared/modal.js';
 import SupervisionEngine from '../shared/supervision.js';
 import { PostOptions } from '../shared/post-options.js';
+import { normalizeSchoolYearName } from '../shared/school-year-name.js';
 import {
   CANONICAL_CLASSROOMS,
   SPECIAL_CLASSROOMS_META,
@@ -2229,7 +2230,7 @@ export const SchoolCenterModule = {
       return `
         <div class="ksc-period">
           <div style="display:flex;justify-content:space-between;gap:.6rem;align-items:center">
-            <div class="ksc-period-name">${esc(y.name)} ${y.is_current ? '<span class="ksc-chip ksc-chip--ok">en curso</span>' : ''}</div>
+            <div class="ksc-period-name">${esc(normalizeSchoolYearName(y))} ${y.is_current ? '<span class="ksc-chip ksc-chip--ok">en curso</span>' : ''}</div>
             <div class="ksc-period-dates">${y.start_date ? esc(String(y.start_date).slice(0, 10)) : ''} → ${y.end_date ? esc(String(y.end_date).slice(0, 10)) : ''}</div>
           </div>
           <div class="ksc-period-track"><div class="ksc-period-fill" style="width:${pct}%"></div></div>

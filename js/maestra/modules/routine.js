@@ -1,5 +1,5 @@
 /**
- * Rutina Express – Sonrisas Creativas
+ * Rutina Express — Sonrisas Creativas
  * Acciones Colectivas · Tarjetas · Modal Individual · Premium UX
  */
 import { AppState } from '../state.js';
@@ -94,18 +94,18 @@ const COLLECTIVE_QUICK_EVENTS = [
   { id: 'milk_gr',   emoji: '🍼', label: 'Biberón',     color: '#0B63C7', groupEventId: 'milk_gr',   type: '_group',  eventType: 'milk',     active: true }
 ];
 
-// –"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"–
-// PERFILES POR NIVEL – adapta eventos, rutinas y horario según la edad del aula
-// –"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"–
+// ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+// PERFILES POR NIVEL — adapta eventos, rutinas y horario según la edad del aula
+// ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 
 /**
  * Categoría de nivel derivada del classroom.level.
- * infants   –  Párvulos I – II      (45 días – 23 meses)
- * toddlers  –  Párvulos III         (24 – 35 meses)
- * preschool –  Pre-Kínder, Kínder   (3 – 5 años)
- * preprimary–  Pre-Primario         (5 – 6 años)
- * primary   –  1° – 6° Primaria     (6 – 12 años)
- * special   –  Verano, Inglés, etc.
+ * infants   – · Párvulos I – II      (45 días – 23 meses)
+ * toddlers  – · Párvulos III         (24 – 35 meses)
+ * preschool – · Pre-Kínder, Kínder   (3 – 5 años)
+ * preprimary– · Pre-Primario         (5 – 6 años)
+ * primary   – · 1° – 6° Primaria     (6 – 12 años)
+ * special   – · Verano, Inglés, etc.
  */
 function _getLevelCategory() {
   const classroom = AppState.get('classroom');
@@ -263,10 +263,10 @@ function _getLevelCollectiveQuick() {
   return LEVEL_COLLECTIVE_QUICK[cat] || LEVEL_COLLECTIVE_QUICK.preschool;
 }
 
-// ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+// ────────────────────────────────────────────────────────────────
 // REGLAS DEL SISTEMA DE RUTINA PARA TODO EL AULA (10 reglas)
 // Se aplican en initRoutine(), routineQuickGroup() y markWholeClassRoutine().
-// ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+// ────────────────────────────────────────────────────────────────
 const ROUTINE_RULES = [
   { n: 1,  rule: 'Solo se marcan los alumnos PRESENTES hoy: la maestra pasa asistencia manual o los padres entran por QR en attendance-live.html.' },
   { n: 2,  rule: 'Si aún no se tomó asistencia del día, la rutina NO marca a nadie: primero se pasa lista.' },
@@ -280,11 +280,11 @@ const ROUTINE_RULES = [
   { n: 10, rule: 'Todas las acciones quedan auditadas con origen "colectivo" para trazabilidad.' },
 ];
 
-// ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
-// CATÁLOGO DE EVENTOS – biblioteca ampliada que la maestra puede agregar a su
+// ────────────────────────────────────────────────────────────────
+// CATÁLOGO DE EVENTOS — biblioteca ampliada que la maestra puede agregar a su
 // cronología. Agrupados por categoría para mostrarse en el modal de Configurar
 // Horario. groupEventId marca los eventos que se registran como acción colectiva.
-// ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+// ────────────────────────────────────────────────────────────────
 const SCHEDULE_CATALOG = {
   base: { label: '📋 Rutina base', color: '#0B63C7', items: [
     { id: 'welcome',       emoji: '🖐️', label: 'Bienvenida',        color: '#FF8A00', duration: 15 },
@@ -356,11 +356,11 @@ const _CATALOG_BY_ID = (() => {
   return map;
 })();
 
-// ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+// ────────────────────────────────────────────────────────────────
 // CATÁLOGO DE RUTINAS PARA TODO EL AULA (120+ rutinas bien distribuidas)
 // Cada chip de la sección "Rutinas del Aula" marca la rutina a TODOS los
 // alumnos presentes en un solo toque y cumple las 10 reglas anteriores.
-// ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+// ────────────────────────────────────────────────────────────────
 const WHOLE_CLASS_ROUTINES = [
   // 🧼 Higiene y cuidado personal
   { id: 'wh_manos',      emoji: '🧼', label: 'Lavado de manos',            cat: 'Higiene' },
@@ -438,7 +438,7 @@ const WHOLE_CLASS_ROUTINES = [
   { id: 'mo_escalar',    emoji: '🧗', label: 'Escalada',                   cat: 'Motricidad' },
   { id: 'mo_rodar',      emoji: '🛹', label: 'Rodar en colchoneta',        cat: 'Motricidad' },
 
-  // –xܴ Descanso
+  // 😴 Descanso
   { id: 'de_preparar',   emoji: '🛏️', label: 'Preparar la siesta',         cat: 'Descanso' },
   { id: 'de_siesta',     emoji: '😴', label: 'Siesta',                     cat: 'Descanso' },
   { id: 'de_despertar',  emoji: '😊', label: 'Despertar',                  cat: 'Descanso' },
@@ -464,7 +464,7 @@ const WHOLE_CLASS_ROUTINES = [
   { id: 'so_normas',     emoji: '📋', label: 'Repasar las normas',         cat: 'Social' },
   { id: 'so_ronda',      emoji: '💬', label: 'Ronda de conversación',      cat: 'Social' },
 
-  // –xR–️ Exterior
+  // 🌳 Exterior
   { id: 'ex_sol',        emoji: '☀️', label: 'Juego al sol',               cat: 'Exterior' },
   { id: 'ex_aire',       emoji: '🌿', label: 'Aire fresco',                cat: 'Exterior' },
   { id: 'ex_parque',     emoji: '🌳', label: 'Esparcimiento',              cat: 'Exterior' },
@@ -492,7 +492,7 @@ const WHOLE_CLASS_ROUTINES = [
   { id: 'ar_origami',    emoji: '📄', label: 'Plegado de papel',            cat: 'Arte y música' },
   { id: 'ar_collage',    emoji: '🖼️', label: 'Collage',                    cat: 'Arte y música' },
 
-  // –x– Lenguaje y comunicación
+  // 💬 Lenguaje y comunicación
   { id: 'le_cuento',     emoji: '📚', label: 'Cuento con imágenes',        cat: 'Lenguaje' },
   { id: 'le_cancion',    emoji: '🎵', label: 'Canción infantil',           cat: 'Lenguaje' },
   { id: 'le_rondas',     emoji: '🤲', label: 'Rondas y juegos de dedos',   cat: 'Lenguaje' },
@@ -506,7 +506,7 @@ const WHOLE_CLASS_ROUTINES = [
   { id: 'le_poema',      emoji: '📜', label: 'Poema y verso',              cat: 'Lenguaje' },
   { id: 'le_onomato',    emoji: '🔊', label: 'Onomatopeyas',               cat: 'Lenguaje' },
 
-  // –x Transiciones
+  // 🔄 Transiciones
   { id: 'tr_prep_guard', emoji: '⏰', label: 'Prepararse para salir',      cat: 'Transiciones' },
   { id: 'tr_guardar',    emoji: '🧹', label: 'Guardar juguetes',           cat: 'Transiciones' },
   { id: 'tr_fila',       emoji: '👣', label: 'Formar la fila',             cat: 'Transiciones' },
@@ -515,11 +515,11 @@ const WHOLE_CLASS_ROUTINES = [
   { id: 'tr_descansar',  emoji: '🛏️', label: 'Retirarse a descansar',      cat: 'Transiciones' },
 ];
 
-// ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
-// CATÁLOGO DE EVENTOS – biblioteca ampliada que la maestra puede agregar a su
+// ────────────────────────────────────────────────────────────────
+// CATÁLOGO DE EVENTOS — biblioteca ampliada que la maestra puede agregar a su
 // cronología. Agrupados por categoría para mostrarse en el modal de Configurar
 // Horario. groupEventId marca los eventos que se registran como acción colectiva.
-// ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+// ────────────────────────────────────────────────────────────────
 function _today() { return AppState.today(); }
 function _fmtTime(d) {
   return new Date(d).toLocaleTimeString('es-DO', { hour: '2-digit', minute: '2-digit', hour12: true });
@@ -670,11 +670,11 @@ function _saveScheduleConfig() {
   _syncScheduleToDb();
 }
 
-// ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
-// SINCROMAZ–N A LA BD – la cronología del día se persiste en
+// ────────────────────────────────────────────────────────────────
+// SINCROMACIÓN A LA BD — la cronología del día se persiste en
 // classroom_daily_schedule para que el panel de padres la muestre en tiempo
 // real (el plan que ve la maestra es el mismo que ven los padres).
-// ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+// ────────────────────────────────────────────────────────────────
 let _scheduleSyncTimer = null;
 
 function _syncScheduleToDb() {
@@ -824,9 +824,9 @@ function _getEventProgress(event, students, logsMap) {
   return { done, total: students.length, pct: Math.round((done / students.length) * 100), markedStudents, occurrences };
 }
 
-// –"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"–
-// LEVEL 2 – ACCIONES COLECTIVAS DEL AULA
-// –"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"–
+// ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+// LEVEL 2 — ACCIONES COLECTIVAS DEL AULA
+// ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 
 function _renderCollectiveActions(schedule, students, logsMap, nowMinutes) {
   const fullConfig = _getScheduleConfig() || [];
@@ -842,7 +842,7 @@ function _renderCollectiveActions(schedule, students, logsMap, nowMinutes) {
   return `
     <div class="routine-card">
       <div class="routine-card-head">
-        <span class="routine-card-icon" style="background:#fff7ed;color:#FF8A00">❓</span>
+        <span class="routine-card-icon" style="background:#fff7ed;color:#FF8A00">🎯</span>
         <div>
           <div class="routine-card-title">Acciones del Aula</div>
           <div class="routine-card-sub">Toca para registrar ${students.length > 0 ? `· ${students.length} alumnos` : ''}</div>
@@ -879,8 +879,8 @@ function _renderCollectiveActions(schedule, students, logsMap, nowMinutes) {
               <span class="ra-emoji">${ev.emoji}</span>
               <span class="ra-label" style="${isActive ? 'color:' + evColor : ''}">${safeEscapeHTML(ev.label)}</span>
               ${progress && progress.total > 0 ? `<span class="ra-count">${progress.done}/${progress.total}${isRepeatable && progress.occurrences > progress.done ? ` · ${progress.occurrences} reg.` : ''}</span>` : ''}
-              ${isDone && !isRepeatable ? '<span class="ra-check">❓</span>' : ''}
-              ${isRepeatable ? '<span class="ra-occ">❓</span>' : ''}
+              ${isDone && !isRepeatable ? '<span class="ra-check">✓</span>' : ''}
+              ${isRepeatable ? '<span class="ra-occ">🔁</span>' : ''}
             </div>
           `;
         }).join('')}
@@ -890,10 +890,10 @@ function _renderCollectiveActions(schedule, students, logsMap, nowMinutes) {
   `;
 }
 
-// –"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"–
-// ACCIONES DEL AULA – eventos fijos de la administración + catálogo amplio
+// ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+// ACCIONES DEL AULA — eventos fijos de la administración + catálogo amplio
 // visible con buscador y carrusel por categorías (las 10 reglas son internas).
-// –"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"–
+// ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 
 // Eventos fijos diarios/frecuentes definidos por la administración.
 const FIXED_DAILY_EVENTS = [
@@ -917,7 +917,7 @@ let _studentFilter = 'all';
 let _studentQuery = '';
 
 const STUDENT_FILTERS = [
-  { id: 'all', label: 'Todos', icon: '❓' },
+  { id: 'all', label: 'Todos', icon: '👥' },
   { id: 'pending', label: 'Pendientes', icon: '⏳' },
   { id: 'sleep', label: 'Durmiendo', icon: '😴' },
   { id: 'alert', label: 'Alertas', icon: '🔔' }
@@ -958,7 +958,7 @@ function _aaSlidesHTML(query) {
       </button>`;
   }
 
-  // BUSCADOR ACTIVO – filtra por nombre del evento o por su categoría
+  // BUSCADOR ACTIVO — filtra por nombre del evento o por su categoría
   if (q) {
     const fixedMatches = FIXED_DAILY_EVENTS.filter(f => f.label.toLowerCase().includes(q));
     const matches = _getWholeClassRoutines().filter(r =>
@@ -966,13 +966,13 @@ function _aaSlidesHTML(query) {
     );
     const total = fixedMatches.length + matches.length;
     if (total === 0) {
-      return `<div class="aa-slide"><div class="aa-empty">Sin resultados para –S${safeEscapeHTML(query.trim())}⬝</div></div>`;
+      return `<div class="aa-slide"><div class="aa-empty">Sin resultados para “${safeEscapeHTML(query.trim())}”</div></div>`;
     }
     const grouped = [...new Set(matches.map(r => r.cat))];
     return `
       <div class="aa-slide">
         <div class="aa-cathead">
-          <span class="aa-cattitle">–x– Resultados</span>
+          <span class="aa-cattitle">🔍 Resultados</span>
           <span class="aa-count">${total}</span>
         </div>
         ${fixedMatches.length ? `
@@ -1002,7 +1002,7 @@ function _aaSlidesHTML(query) {
       <div class="aa-grid">
         ${FIXED_DAILY_EVENTS.map(fixedChip).join('')}
       </div>
-      <div class="aa-hint">Usa las flechas ⬹ ⬺ para ver las rutinas por categoría</div>
+      <div class="aa-hint">Usa las flechas ‹ › para ver las rutinas por categoría</div>
     </div>
     ${cats.map(cat => {
       const items = _levelRoutines.filter(r => r.cat === cat);
@@ -1068,10 +1068,10 @@ function _renderAccionesAula() {
   return `
     <div class="routine-card">
       <div class="routine-card-head">
-        <span class="routine-card-icon" style="background:#fff7ed;color:#FF8A00">❓</span>
+        <span class="routine-card-icon" style="background:#fff7ed;color:#FF8A00">🎯</span>
         <div>
           <div class="routine-card-title">Acciones del Aula</div>
-          <div class="routine-card-sub">Portada: fijos del día · flechas ⬹ ⬺ para ${WHOLE_CLASS_ROUTINES.length} rutinas por categoría</div>
+          <div class="routine-card-sub">Portada: fijos del día · flechas ‹ › para ${WHOLE_CLASS_ROUTINES.length} rutinas por categoría</div>
         </div>
       </div>
       <div class="routine-card-body">
@@ -1110,14 +1110,14 @@ function _renderAccionesAula() {
         <div class="aa-search">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2.4" style="flex-shrink:0"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
           <input id="aaSearch" placeholder="Buscar rutina por nombre o categoría..." value="${safeEscapeHTML(_aaQuery)}" oninput="App.aaSearch(this.value)">
-          <button type="button" id="aaClear" class="aa-clear" onclick="document.getElementById('aaSearch').value='';App.aaSearch('')" style="${_aaQuery ? 'display:flex' : ''}">–S"</button>
+          <button type="button" id="aaClear" class="aa-clear" onclick="document.getElementById('aaSearch').value='';App.aaSearch('')" style="${_aaQuery ? 'display:flex' : ''}">✕</button>
         </div>
 
         <!-- CARRUSEL: portada (fijos) + categorías -->
         <div class="aa-cat">
-          <button type="button" class="aa-nav" onclick="App.aaNav(-1)" aria-label="Anterior">⬹</button>
+          <button type="button" class="aa-nav" onclick="App.aaNav(-1)" aria-label="Anterior">‹</button>
           <div class="aa-wrap" id="aaCatWrap">${_aaSlidesHTML(_aaQuery)}</div>
-          <button type="button" class="aa-nav" onclick="App.aaNav(1)" aria-label="Siguiente">⬺</button>
+          <button type="button" class="aa-nav" onclick="App.aaNav(1)" aria-label="Siguiente">›</button>
         </div>
         <div class="aa-dots" id="aaDots"></div>
       </div>
@@ -1130,7 +1130,7 @@ function _renderAttendanceBanner(hasAttendance) {
   return `
     <button onclick="App.goToAttendance()" class="w-full flex items-center justify-between gap-3 rounded-2xl px-4 py-3 text-left active:scale-[.98]" style="background:#fffbeb;border:2px solid #fcd34d">
       <div class="flex items-center gap-3">
-        <span class="text-2xl">❓</span>
+        <span class="text-2xl">📋</span>
         <div>
           <div class="text-sm font-black" style="color:#92400e">Aún no se tomó asistencia hoy</div>
           <div class="text-xs" style="color:#b45309">La rutina no marca a nadie hasta pasar lista</div>
@@ -1145,7 +1145,7 @@ function _timeRange(ev) {
   if (!ev?.startTime) return '';
   const start = _timeToMinutes(ev.startTime);
   const end = _minutesToTime(start + (ev.duration || 30));
-  return `${_fmtTimeShort(ev.startTime)} – ${_fmtTimeShort(end)}`;
+  return `${_fmtTimeShort(ev.startTime)} – ${_fmtTimeShort(end)}`;
 }
 
 function _renderSmartDay(schedule, students, logsMap, nowMinutes) {
@@ -1159,7 +1159,7 @@ function _renderSmartDay(schedule, students, logsMap, nowMinutes) {
     return `
       <div class="routine-card smart-day">
         <div class="smart-main">
-          <div class="smart-ico">–x️</div>
+          <div class="smart-ico">🗓️</div>
           <div class="smart-copy">
             <div class="smart-kicker">Rutina del día</div>
             <div class="smart-title">Sin bloques de horario configurados</div>
@@ -1228,9 +1228,9 @@ function _renderSmartDay(schedule, students, logsMap, nowMinutes) {
     </div>`;
 }
 
-// –"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"–
-// LEVEL 3 – TARJETAS DE LOS ALUMNOS
-// –"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"–
+// ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+// LEVEL 3 — TARJETAS DE LOS ALUMNOS
+// ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 
 function _scheduleExitTime(schedule) {
   const m = String(schedule || '').match(/(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})/);
@@ -1318,7 +1318,7 @@ function _renderStudentCards(students, logsMap) {
   return `
     <div class="routine-card">
       <div class="routine-card-head">
-        <span class="routine-card-icon" style="background:#eff6ff;color:#0B63C7">❓</span>
+        <span class="routine-card-icon" style="background:#eff6ff;color:#0B63C7">🧑‍🎓</span>
         <div class="flex-1">
           <div class="routine-card-title">Reportes Individuales</div>
           <div class="routine-card-sub">${total} alumno(s) hoy · toca una tarjeta para registrar</div>
@@ -1353,7 +1353,7 @@ function _renderStudentCards(students, logsMap) {
       </style>
       <div class="sc-tools">
         <div class="sc-search">
-          <span>❓</span>
+          <span>🔍</span>
           <input id="routineStudentSearch" placeholder="Buscar alumno..." value="${safeEscapeHTML(_studentQuery)}" oninput="App.filterRoutineStudents(this.value)">
         </div>
         <div class="sc-filters" id="routineStudentFilters">
@@ -1404,9 +1404,9 @@ export function setRoutineFilter(id) {
   _applyStudentFilter();
 }
 
-// –"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"–
+// ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 // MAIN UI BUILDER
-// –"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"–
+// ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 
 const ROUTINE_UI_STYLES = `
   .routine-card{background:#fff;border-radius:22px;border:2px solid #f1f5f9;box-shadow:0 4px 18px rgba(15,23,42,.05);overflow:hidden}
@@ -1440,7 +1440,7 @@ const ROUTINE_UI_STYLES = `
 `;
 
 function _routineDivider(icon) {
-  return `      <div class="routine-divider"><span>></span></div>`;
+  return `      <div class="routine-divider"><span>${icon || '•'}</span></div>`;
 }
 
 function _renderRoutineModeSwitch() {
@@ -1470,9 +1470,9 @@ function _renderPrimaryLevelNotice() {
   return `<div class="space-y-4 pb-28" id="routineView">
     <style>${ROUTINE_UI_STYLES}${WEEKLY_CSS}</style>
     <div class="wk-primary-note" style="margin-top:8px">
-      <div class="wk-primary-icon"><–</div>
-      <h4>Primaria: el registro es acad–mico</h4>
-      <p>En Primaria la rutina diaria se sustituye por el horario de materias, tareas y calificaciones. Usa el m–dulo de Tareas para dar seguimiento al aprendizaje del grupo.</p>
+      <div class="wk-primary-icon">🎓</div>
+      <h4>Primaria: el registro es académico</h4>
+      <p>En Primaria la rutina diaria se sustituye por el horario de materias, tareas y calificaciones. Usa el módulo de Tareas para dar seguimiento al aprendizaje del grupo.</p>
       <button type="button" class="wk-btn wk-btn-primary" onclick="App.activateTab?.('tasks')">Ir a Tareas y Calificaciones</button>
     </div>
   </div>`;
@@ -1497,7 +1497,7 @@ function _buildUI(students, schedule, nowMinutes, weeklyBlocks = []) {
         ${openSleeps > 0 ? `
           <button onclick="App.routineWakeAll()" class="w-full flex items-center justify-between gap-3 rounded-2xl px-4 py-3 text-left active:scale-[.98]" style="background:#f5f3ff;border:2px solid #c4b5fd">
             <div class="flex items-center gap-3">
-              <span class="text-2xl">=4</span>
+              <span class="text-2xl">😴</span>
             <div>
               <div class="text-sm font-black" style="color:#7c3aed">${openSleeps} siesta(s) activa(s)</div>
               <div class="text-xs" style="color:#a78bfa">Toca para registrar que despertaron todos</div>
@@ -1507,18 +1507,18 @@ function _buildUI(students, schedule, nowMinutes, weeklyBlocks = []) {
         </button>
       ` : ''}
 
-      ${_routineDivider('–x–')}
+      ${_routineDivider('📋')}
 
-      <!-- NIVEL DEL AULA  badge informativo -->
+      <!-- NIVEL DEL AULA — badge informativo -->
       ${(() => {
         const lc = _getLevelCategory();
         const meta = {
-          infants:    { emoji: '=v', label: 'Beb–s – P–rvulos I-II',     color: '#F472B6' },
-          toddlers:   { emoji: '=#', label: 'Caminadores – P–rvulos III', color: '#FACC15' },
-          preschool:  { emoji: '🎓', label: 'Pre-K–nder / K–nder',        color: '#9CA3AF' },
+          infants:    { emoji: '👶', label: 'Bebés – Párvulos I-II',     color: '#F472B6' },
+          toddlers:   { emoji: '🧸', label: 'Caminadores – Párvulos III', color: '#FACC15' },
+          preschool:  { emoji: '🎓', label: 'Pre-Kínder / Kínder',        color: '#9CA3AF' },
           preprimary: { emoji: '📚', label: 'Pre-Primario',               color: '#374151' },
           primary:    { emoji: '🏫', label: 'Primaria',                   color: '#3B82F6' },
-          special:    { emoji: 'P', label: 'Programa Especial',           color: '#8B5CF6' },
+          special:    { emoji: '⭐', label: 'Programa Especial',           color: '#8B5CF6' },
         }[lc] || { emoji: '🏫', label: 'Aula', color: '#64748B' };
         return `<div class="flex items-center gap-2 px-4 py-2 rounded-2xl text-xs font-bold mb-1" style="background:${meta.color}18;color:${meta.color};border:1.5px solid ${meta.color}33">
           <span>${meta.emoji}</span>
@@ -1532,11 +1532,11 @@ function _buildUI(students, schedule, nowMinutes, weeklyBlocks = []) {
       <!-- ASISTENTE INTELIGENTE: ahora / siguiente / sugerencias -->
       ${_renderSmartDay(schedule, students, _logsMap, nowMinutes)}
 
-      <!-- –"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"– -->
-      <!-- ACCIONES DEL AULA  fijos del d–a + buscador + carrusel por categor–a -->
+      <!-- ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── -->
+      <!-- ACCIONES DEL AULA — fijos del día + buscador + carrusel por categoría -->
       ${_renderAccionesAula()}
 
-      ${_routineDivider('=–')}
+      ${_routineDivider('👥')}
 
       <!-- PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP -->
       <!-- TARJETAS DE LOS ALUMNOS -->
@@ -1545,9 +1545,9 @@ function _buildUI(students, schedule, nowMinutes, weeklyBlocks = []) {
   `;
 }
 
-// –"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"–
+// ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 // INIT
-// –"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"–
+// ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 
 export async function initRoutine() {
   const classroom = AppState.get('classroom');
@@ -1695,9 +1695,9 @@ function _bindVisibilityRefresh() {
   window.addEventListener('focus', refreshIfVisible);
 }
 
-// –"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"–
+// ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 // EVENT CONFIGURATION
-// –"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"–
+// ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 
 export function openEventConfig(eventId) {
   const ev = (_scheduleConfig || _getLevelDefaultSchedule()).find(e => e.id === eventId);
@@ -1795,7 +1795,7 @@ export function saveEventConfig(eventId) {
 
   _saveScheduleConfig();
   UI.Modal.close('eventConfigModal');
-  safeToast('Evento configurado' + (doRecalc ? ' – horarios siguientes recalculados' : ''), 'success');
+  safeToast('Evento configurado' + (doRecalc ? ' — horarios siguientes recalculados' : ''), 'success');
   initRoutine();
 }
 
@@ -1811,7 +1811,7 @@ export function addScheduleEvent() {
   _saveScheduleConfig();
   openScheduleConfig();
   initRoutine();
-  safeToast('Nuevo evento agregado – configúralo', 'success');
+  safeToast('Nuevo evento agregado — configúralo', 'success');
 }
 
 export function deleteScheduleEvent(eventId) {
@@ -1861,7 +1861,7 @@ export function openScheduleConfig() {
           ondragover="event.preventDefault();this.parentElement.querySelectorAll('.schedule-row').forEach(r=>r.classList.remove('border-blue-400','bg-blue-50'));this.classList.add('border-blue-400','bg-blue-50')"
           ondragleave="this.classList.remove('border-blue-400','bg-blue-50')"
           ondrop="event.preventDefault();this.classList.remove('border-blue-400','bg-blue-50');var from=_dragEvIdx;if(from===null)return;var to=parseInt(this.dataset.idx);if(from===to)return;App._moveScheduleEvent(from,to);App.openScheduleConfig()">
-          <span class="text-slate-300 cursor-grab active:cursor-grabbing select-none text-sm" title="Arrastrar para reordenar">❓</span>
+          <span class="text-slate-300 cursor-grab active:cursor-grabbing select-none text-sm" title="Arrastrar para reordenar">≡</span>
           <span class="text-xl">${ev.emoji}</span>
           <div class="flex-1 min-w-0">
             <div class="text-sm font-black text-slate-800 truncate">${safeEscapeHTML(ev.label)}</div>
@@ -1870,7 +1870,7 @@ export function openScheduleConfig() {
           <div class="flex items-center gap-2">
             <span class="w-3 h-3 rounded-full" style="background:${ev.color}"></span>
             <span class="text-[10px] font-bold ${ev.active ? 'text-green-600' : 'text-slate-300'}">${ev.active ? 'Activo' : 'Inactivo'}</span>
-            ${!isDefault ? `<button onclick="event.stopPropagation();App.deleteScheduleEvent('${ev.id}')" class="p-1 rounded-lg hover:bg-red-50 text-slate-300 hover:text-red-500 transition-all" title="Eliminar">–x️</button>` : ''}
+            ${!isDefault ? `<button onclick="event.stopPropagation();App.deleteScheduleEvent('${ev.id}')" class="p-1 rounded-lg hover:bg-red-50 text-slate-300 hover:text-red-500 transition-all" title="Eliminar">🗑️</button>` : ''}
           </div>
         </div>
       `;
@@ -1892,7 +1892,7 @@ export function openScheduleConfig() {
               <button onclick="App.buildModeAdd('${it.id}')" class="cat-chip ${selected ? 'sel' : ''}" title="${safeEscapeHTML(it.label)}">
                 <span class="text-lg leading-none">${it.emoji}</span>
                 <span class="cat-chip-name">${safeEscapeHTML(it.label)}</span>
-                <span class="cat-chip-badge">${selected ? '–S' : '+'}</span>
+                <span class="cat-chip-badge">${selected ? '✓' : '+'}</span>
               </button>`;
           }
           const added = schedule.some(s => s.label === it.label);
@@ -1900,7 +1900,7 @@ export function openScheduleConfig() {
             <button onclick="App.addCatalogEvent('${it.id}')" class="cat-chip ${added ? 'added' : ''}" title="${safeEscapeHTML(it.label)}">
               <span class="text-lg leading-none">${it.emoji}</span>
               <span class="cat-chip-name">${safeEscapeHTML(it.label)}</span>
-              <span class="cat-chip-badge">${added ? '–S' : '+'}</span>
+              <span class="cat-chip-badge">${added ? '✓' : '+'}</span>
             </button>`;
         }).join('')}
       </div>
@@ -1909,14 +1909,14 @@ export function openScheduleConfig() {
   const builderSection = `
     <div class="rounded-2xl p-3 mb-3" style="background:linear-gradient(135deg,#fdf2f8,#eff6ff);border:2px solid #fbcfe8">
       <div class="flex items-center justify-between mb-2">
-        <span class="text-xs font-black text-pink-600 uppercase tracking-wider">–x– Tu cronología personal</span>
+        <span class="text-xs font-black text-pink-600 uppercase tracking-wider">🕒 Tu cronología personal</span>
         <span class="bd-count">${(_buildDraft || []).length} evento(s)</span>
       </div>
       <div class="flex gap-1.5 flex-wrap mb-2">
         <label class="bd-start"><span>Inicio</span><input type="time" value="${_buildStartTime}" onchange="App.buildModeSetStart(this.value)"></label>
         <button onclick="App.buildModeStack()" class="bd-act" title="Encadena las horas de los eventos en orden">⏱️ Auto-ordenar</button>
         <button onclick="App.buildModeClear()" class="bd-act bd-act-red">🧼 Vaciar</button>
-        <button onclick="App.buildModeApply()" class="bd-act bd-act-green">–S Aplicar cronología</button>
+        <button onclick="App.buildModeApply()" class="bd-act bd-act-green">✓ Aplicar cronología</button>
       </div>
       ${(_buildDraft || []).length
         ? `<div class="bd-list">${_buildDraft.map((r, i) => {
@@ -1929,12 +1929,12 @@ export function openScheduleConfig() {
                 <span class="bd-emoji">${emoji}</span>
                 <div class="flex-1 min-w-0"><div class="bd-name">${safeEscapeHTML(label)}</div></div>
                 <input type="time" value="${r.time}" class="bd-in" onchange="App.buildModeSetTime(${i},this.value)" title="Hora de inicio">
-                <button onclick="App.buildModeMove(${i},-1)" class="bd-btn" title="Subir">––</button>
-                <button onclick="App.buildModeMove(${i},1)" class="bd-btn" title="Bajar">––</button>
-                <button onclick="App.buildModeRemove(${i})" class="bd-btn bd-del" title="Quitar">–S"</button>
+                <button onclick="App.buildModeMove(${i},-1)" class="bd-btn" title="Subir">↑</button>
+                <button onclick="App.buildModeMove(${i},1)" class="bd-btn" title="Bajar">↓</button>
+                <button onclick="App.buildModeRemove(${i})" class="bd-btn bd-del" title="Quitar">✕</button>
               </div>`;
           }).join('')}</div>`
-        : `<div class="bd-empty">–x  Toca los eventos de abajo y se irán agregando aquí en orden</div>`}
+        : `<div class="bd-empty">👆 Toca los eventos de abajo y se irán agregando aquí en orden</div>`}
     </div>`;
 
   UI.Modal.open('scheduleConfigModal', `
@@ -1989,27 +1989,27 @@ export function openScheduleConfig() {
     <div class="bg-white overflow-hidden" style="border-radius:32px;max-height:88vh;display:flex;flex-direction:column">
       <div class="p-5 flex-shrink-0" style="background:linear-gradient(135deg,#0B63C7,#28B54D)">
         <div class="flex items-center justify-between">
-          <div><h3 class="text-xl font-black text-white">Configurar Horario</h3><p class="text-sm font-bold text-white/80">Arrastra –ܰ – toca para configurar – + para insertar</p></div>
+          <div><h3 class="text-xl font-black text-white">Configurar Horario</h3><p class="text-sm font-bold text-white/80">Arrastra ≡ · toca para configurar · + para insertar</p></div>
           <button onclick="UI.Modal.close('scheduleConfigModal')" class="p-2 rounded-xl bg-white/20 text-white"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
         </div>
       </div>
       <div class="p-4 overflow-y-auto flex-1" id="sc-list">
         <div class="grid grid-cols-2 gap-2 mb-3">
-          <button onclick="App.setScheduleConfigMode('library')" class="sc-mode-btn ${!buildMode ? 'on' : ''}">–xa Biblioteca</button>
-          <button onclick="App.setScheduleConfigMode('build')" class="sc-mode-btn ${buildMode ? 'on' : ''}">–x– Construir cronología</button>
+          <button onclick="App.setScheduleConfigMode('library')" class="sc-mode-btn ${!buildMode ? 'on' : ''}">📚 Biblioteca</button>
+          <button onclick="App.setScheduleConfigMode('build')" class="sc-mode-btn ${buildMode ? 'on' : ''}">🧱 Construir cronología</button>
         </div>
         ${buildMode ? builderSection : ''}
         <div class="rounded-2xl p-3" style="background:linear-gradient(135deg,#eff6ff,#fdf4ff);border:2px dashed #bfdbfe">
           ${buildMode ? `
-            <input class="sc-search" placeholder="–x– Buscar evento..." oninput="var q=this.value.toLowerCase();document.querySelectorAll('#sc-catalog-b .cat-chip').forEach(function(c){c.style.display=c.textContent.toLowerCase().includes(q)?'':'none'})">
+            <input class="sc-search" placeholder="🔍 Buscar evento..." oninput="var q=this.value.toLowerCase();document.querySelectorAll('#sc-catalog-b .cat-chip').forEach(function(c){c.style.display=c.textContent.toLowerCase().includes(q)?'':'none'})">
             <div id="sc-catalog-b">${catalogHtml}</div>
           ` : `
-            <button onclick="var c=document.getElementById('sc-catalog');var t=this.querySelector('.sc-ic');c.classList.toggle('hidden');t.textContent=c.classList.contains('hidden')?'––':'––'" class="w-full flex items-center justify-between">
-              <span class="text-xs font-black text-blue-600 uppercase tracking-wider">–xa Biblioteca de eventos</span>
-              <span class="sc-ic">❓</span>
+            <button onclick="var c=document.getElementById('sc-catalog');var t=this.querySelector('.sc-ic');c.classList.toggle('hidden');t.textContent=c.classList.contains('hidden')?'▾':'▴'" class="w-full flex items-center justify-between">
+              <span class="text-xs font-black text-blue-600 uppercase tracking-wider">📚 Biblioteca de eventos</span>
+              <span class="sc-ic">▾</span>
             </button>
             <div id="sc-catalog" class="hidden">
-              <input class="sc-search" placeholder="–x– Buscar evento..." oninput="var q=this.value.toLowerCase();document.querySelectorAll('#sc-catalog .cat-chip').forEach(function(c){c.style.display=c.textContent.toLowerCase().includes(q)?'':'none'})">
+              <input class="sc-search" placeholder="🔍 Buscar evento..." oninput="var q=this.value.toLowerCase();document.querySelectorAll('#sc-catalog .cat-chip').forEach(function(c){c.style.display=c.textContent.toLowerCase().includes(q)?'':'none'})">
               ${catalogHtml}
             </div>
             <div class="mt-4">${scheduleHtml}</div>
@@ -2044,7 +2044,7 @@ export function resetScheduleConfig() {
 }
 
 // Desplaza la hora de TODAS las rutinas del horario a la vez (individual o en general).
-// sign = 1 –  atrasa (más tarde) · sign = -1 –  adelanta (más temprano)
+// sign = 1 → atrasa (más tarde) · sign = -1 → adelanta (más temprano)
 export function shiftAllScheduleTimes(sign) {
   const mins = Math.abs(parseInt(document.getElementById('scShiftMin')?.value, 10)) || 5;
   const delta = (sign < 0 ? -1 : 1) * mins;
@@ -2061,9 +2061,9 @@ export function shiftAllScheduleTimes(sign) {
   initRoutine();
 }
 
-// ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+// ────────────────────────────────────────────────────────────────
 // BIBLIOTECA DE EVENTOS
-// ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+// ────────────────────────────────────────────────────────────────
 
 function _catalogScheduleEvent(catId, startTime, duration, customId) {
   const cat = _CATALOG_BY_ID[catId];
@@ -2098,15 +2098,15 @@ export function addCatalogEvent(catId) {
   _saveScheduleConfig();
   openScheduleConfig();
   initRoutine();
-  safeToast(`"${cat.label}" agregado al horario – configúralo`, 'success');
+  safeToast(`"${cat.label}" agregado al horario — configúralo`, 'success');
 }
 
-// ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
-// MODO CONSTRUIR CRONOLOGÍA – la maestra selecciona eventos del catálogo y al
+// ────────────────────────────────────────────────────────────────
+// MODO CONSTRUIR CRONOLOGÍA — la maestra selecciona eventos del catálogo y al
 // hacerlo se va armando su cronología personal en orden, con horarios que se
 // encadenan solos. Puede reordenar, quitar y ajustar horas/duración antes de
 // aplicarla.
-// ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+// ────────────────────────────────────────────────────────────────
 
 function _initBuildDraft() {
   _buildDraft = (_getScheduleConfig() || []).map(ev => {
@@ -2224,9 +2224,9 @@ export function buildModeApply() {
   safeToast('¡Tu cronología personalizada fue aplicada!', 'success');
 }
 
-// –"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"–
+// ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 // DAILY ROUTINE OVERRIDES (Rutina del Día)
-// –"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"–
+// ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 
 function _loadDailyOverrides() {
   try { return JSON.parse(localStorage.getItem(DAILY_OVERRIDES_KEY) || '{}'); } catch { return {}; }
@@ -2269,7 +2269,7 @@ export function insertEventAt(index) {
   _saveScheduleConfig();
   openScheduleConfig();
   initRoutine();
-  safeToast('Evento insertado – configúralo', 'success');
+  safeToast('Evento insertado — configúralo', 'success');
 }
 
 export function clearDailyOverrides() {
@@ -2281,25 +2281,25 @@ export function clearDailyOverrides() {
   safeToast('Rutina de hoy restaurada', 'success');
 }
 
-// –"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"–
+// ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 // QUICK GROUP EVENT
-// –"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"–
+// ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 
 export async function routineQuickGroup(eventId) {
   const classroom = AppState.get('classroom');
   const allStudents = AppState.get('students') || [];
   const today = _today();
 
-  // Regla 6 – solo dentro del horario del aula
+  // Regla 6 — solo dentro del horario del aula
   const _nowMin = new Date().getHours() * 60 + new Date().getMinutes();
   if (_nowMin < 5 * 60 || _nowMin >= 22 * 60) { safeToast('Regla 6: solo se pueden marcar rutinas de 05:00 a 22:00', 'warning'); return; }
 
   const attendance = await MaestraApi.getAttendance(classroom.id, today);
-  // Regla 2 – sin asistencia tomada no se marca a nadie
+  // Regla 2 — sin asistencia tomada no se marca a nadie
   if (!attendance || attendance.length === 0) { safeToast('Regla 2: primero pasa asistencia del día', 'warning'); return; }
   const presentStudentIds = new Set(attendance.filter(a => ['present', 'late'].includes(a.status)).map(a => a.student_id));
   const students = allStudents.filter(s => presentStudentIds.has(s.id));
-  // Regla 1 – solo se marcan alumnos presentes
+  // Regla 1 — solo se marcan alumnos presentes
   if (students.length === 0) { safeToast('No hay alumnos presentes para marcar', 'warning'); return; }
 
   const EVENT_MAP = {
@@ -2332,7 +2332,7 @@ export async function routineQuickGroup(eventId) {
     ...(catalogEvent ? { event_id: catalogEvent.id } : {})
   });
 
-  // Regla 7 – las acciones masivas se confirman antes de marcar
+  // Regla 7 — las acciones masivas se confirman antes de marcar
   if (students.length > 5 && !confirm(`¿Marcar "${ev.label}" para ${students.length} alumnos presentes?`)) {
     return;
   }
@@ -2377,15 +2377,15 @@ function _legacyKeyForEvent(ev) {
   return map[ev.value];
 }
 
-// –"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"–
-// RUTINAS DEL AULA – MARCADO COLECTIVO DESDE EL CATÁLOGO AMPLIO (10 reglas)
-// –"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"–
+// ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+// RUTINAS DEL AULA — MARCADO COLECTIVO DESDE EL CATÁLOGO AMPLIO (10 reglas)
+// ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 
 export async function markWholeClassRoutine(routineId) {
   const routine = _getWholeClassRoutines().find(r => r.id === routineId);
   if (!routine) return;
 
-  // Regla 9 – solo la maestra autorizada del aula
+  // Regla 9 — solo la maestra autorizada del aula
   const user = AppState.get('user') || {};
   const profile = AppState.get('profile') || {};
   if (profile.role && profile.role !== 'maestra') { safeToast('Regla 9: solo la maestra puede marcar rutinas del aula', 'warning'); return; }
@@ -2395,19 +2395,19 @@ export async function markWholeClassRoutine(routineId) {
   const allStudents = AppState.get('students') || [];
   const today = _today();
 
-  // Regla 6 – solo dentro del horario del aula
+  // Regla 6 — solo dentro del horario del aula
   const _nowMin = new Date().getHours() * 60 + new Date().getMinutes();
   if (_nowMin < 5 * 60 || _nowMin >= 22 * 60) { safeToast('Regla 6: solo se pueden marcar rutinas de 05:00 a 22:00', 'warning'); return; }
 
   const attendance = await MaestraApi.getAttendance(classroom.id, today);
-  // Regla 2 – sin asistencia tomada no se marca a nadie
+  // Regla 2 — sin asistencia tomada no se marca a nadie
   if (!attendance || attendance.length === 0) { safeToast('Regla 2: primero pasa asistencia del día', 'warning'); return; }
   const presentStudentIds = new Set(attendance.filter(a => ['present', 'late'].includes(a.status)).map(a => a.student_id));
-  // Regla 1 – solo se marcan alumnos presentes
+  // Regla 1 — solo se marcan alumnos presentes
   const students = allStudents.filter(s => presentStudentIds.has(s.id));
   if (students.length === 0) { safeToast('Regla 1: no hay alumnos presentes para marcar', 'warning'); return; }
 
-  // Regla 7 – las acciones masivas se confirman antes de marcar
+  // Regla 7 — las acciones masivas se confirman antes de marcar
   if (students.length > 5 && !confirm(`¿Marcar "${routine.label}" (${routine.cat}) para ${students.length} alumnos presentes?`)) {
     return;
   }
@@ -2416,7 +2416,7 @@ export async function markWholeClassRoutine(routineId) {
   const event_time = await _promptEventTime(routine.emoji, routine.label);
   if (event_time === null) return; // cancelado
 
-  // Regla 4 y 10 – ocurrencia única y origen colectivo para auditoría
+  // Regla 4 y 10 — ocurrencia única y origen colectivo para auditoría
   const occurrenceId = crypto.randomUUID?.() || Math.random().toString(36).substr(2, 12);
 
   try {
@@ -2455,9 +2455,9 @@ export async function markWholeClassRoutine(routineId) {
   }
 }
 
-// –"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"–
-// LEVEL 4 – MODAL INDIVIDUAL (ENHANCED)
-// –"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"–
+// ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+// LEVEL 4 — MODAL INDIVIDUAL (ENHANCED)
+// ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 
 function _renderMilkModal(studentId, existingEvent) {
   const ev = existingEvent || {};
@@ -2466,7 +2466,7 @@ function _renderMilkModal(studentId, existingEvent) {
       <div class="p-5" style="background:linear-gradient(135deg,#0B63C7,#3B82F6)">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-3">
-            <span class="text-2xl">❓</span>
+            <span class="text-2xl">🍼</span>
             <div><h3 class="text-lg font-black text-white">Biberón</h3><p class="text-xs font-bold text-white/80">Registrar toma</p></div>
           </div>
           <button onclick="UI.Modal.close('milkModal')" class="p-2 rounded-xl bg-white/20 text-white">
@@ -2570,7 +2570,7 @@ function _renderExtraEventModal(studentId) {
       <div class="p-5" style="background:linear-gradient(135deg,#EF4444,#F87171)">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-3">
-            <span class="text-2xl">❓</span>
+            <span class="text-2xl">⚠️</span>
             <div><h3 class="text-lg font-black text-white">Evento Extra</h3><p class="text-xs font-bold text-white/80">Registrar incidente o evento</p></div>
           </div>
           <button onclick="UI.Modal.close('extraEventModal')" class="p-2 rounded-xl bg-white/20 text-white">
@@ -2621,7 +2621,7 @@ function _renderTempModal(studentId) {
       <div class="p-5" style="background:linear-gradient(135deg,#EF4444,#F87171)">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-3">
-            <span class="text-2xl">❓</span>
+            <span class="text-2xl">🌡️</span>
             <div><h3 class="text-lg font-black text-white">Temperatura</h3><p class="text-xs font-bold text-white/80">Registrar temperatura corporal</p></div>
           </div>
           <button onclick="UI.Modal.close('tempModal')" class="p-2 rounded-xl bg-white/20 text-white">
@@ -2676,13 +2676,13 @@ export async function _confirmTemp(studentId) {
   } catch { safeToast('Error al guardar', 'error'); btn.disabled = false; btn.textContent = 'Guardar Temperatura'; }
 }
 
-// –"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"–
+// ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 // SECCIONES COLAPSABLES DEL MODAL INDIVIDUAL
-// Cada "campo de evento" (emocional, alimentación, siesta⬦) puede ocultarse
+// Cada "campo de evento" (emocional, alimentación, siesta…) puede ocultarse
 // o mostrarse para ganar espacio, sobre todo en móvil. El estado queda
 // guardado por maestra en localStorage: al reabrir (hoy o mañana) cada
 // sección aparece como ella lo dejó.
-// –"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"–
+// ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 
 const SR_SEC_KEY = 'msc_sr_sections_v1';
 const SR_SEC_IDS = ['timeline', 'aula', 'mood', 'food', 'nap', 'milk', 'activities', 'hygiene', 'health', 'extra', 'behavior', 'note'];
@@ -2759,15 +2759,15 @@ function _srSyncExpandBtn() {
   document.getElementById('srCollapseAllBtn')?.classList.toggle('sr-tool-off', allClosed);
 }
 
-// ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
-// LÍNEA DEL TIEMPO UNIFICADA – reúne TODOS los registros del día del alumno:
+// ────────────────────────────────────────────────────────────────
+// LÍNEA DEL TIEMPO UNIFICADA — reúne TODOS los registros del día del alumno:
 // ánimo, comidas, siesta, eventos individuales (biberón, medicamento,
-// temperatura, pañal, salud⬦) y los eventos/rutinas del aula que se marcaron
+// temperatura, pañal, salud…) y los eventos/rutinas del aula que se marcaron
 // para él (tanto en grupo como individualmente). Cada registro indica su
 // origen (Aula / Individual) para que la maestra vea de dónde salió.
-// ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+// ────────────────────────────────────────────────────────────────
 const TIMELINE_TYPE_META = {
-  mood:           { emoji: '❓', color: '#3B82F6', group: 'Emocional' },
+  mood:           { emoji: '😊', color: '#3B82F6', group: 'Emocional' },
   breakfast:      { emoji: '🍞', color: '#FF8A00', group: 'Alimentación' },
   lunch:          { emoji: '🍽️', color: '#28B54D', group: 'Alimentación' },
   snack:          { emoji: '🍎', color: '#F59E0B', group: 'Alimentación' },
@@ -2793,8 +2793,8 @@ const TIMELINE_TYPE_META = {
 /** Emoji correcto para un evento de infant_data (pañal usa subtype). */
 function _timelineEmoji(ev) {
   if (ev.type === 'diaper') {
-    if (ev.subtype === 'soiled') return '–x–';
-    if (ev.subtype === 'wet') return '–x–';
+    if (ev.subtype === 'soiled') return '💩';
+    if (ev.subtype === 'wet') return '💧';
     return '🧼';
   }
   return ev.emoji || TIMELINE_TYPE_META[ev.type]?.emoji || '📋';
@@ -2807,7 +2807,7 @@ function _buildStudentTimeline(log, events, currentFood) {
 
   if (log?.mood) {
     const m = MOOD_OPTIONS.find(x => x.val === log.mood);
-    push({ emoji: m?.emoji || '–x–`', label: 'Ánimo: ' + (m?.label || log.mood), time: log.created_at, color: TIMELINE_TYPE_META.mood.color, type: 'mood', editable: false, origin: 'individual' });
+    push({ emoji: m?.emoji || '😐', label: 'Ánimo: ' + (m?.label || log.mood), time: log.created_at, color: TIMELINE_TYPE_META.mood.color, type: 'mood', editable: false, origin: 'individual' });
   }
   if (currentFood.breakfast) push({ emoji: '🍞', label: 'Desayuno: ' + (foodOptLabel(currentFood.breakfast)), time: null, color: TIMELINE_TYPE_META.breakfast.color, type: 'food_breakfast', editable: false, origin: 'individual' });
   if (currentFood.lunch)     push({ emoji: '🍽️', label: 'Almuerzo: ' + (foodOptLabel(currentFood.lunch)), time: null, color: TIMELINE_TYPE_META.lunch.color, type: 'food_lunch', editable: false, origin: 'individual' });
@@ -2829,7 +2829,7 @@ function _buildStudentTimeline(log, events, currentFood) {
     });
   });
 
-  if (log?.notes) push({ emoji: '📝', label: 'Nota: ' + log.notes.substring(0, 60) + (log.notes.length > 60 ? '⬦' : ''), time: log.created_at, color: TIMELINE_TYPE_META.note.color, type: 'note', editable: false, origin: 'individual' });
+  if (log?.notes) push({ emoji: '📝', label: 'Nota: ' + log.notes.substring(0, 60) + (log.notes.length > 60 ? '…' : ''), time: log.created_at, color: TIMELINE_TYPE_META.note.color, type: 'note', editable: false, origin: 'individual' });
 
   all.sort((a, b) => {
     if (!a.time && !b.time) return 0;
@@ -2849,7 +2849,7 @@ export function openStudentRoutine(studentId) {
   const students = AppState.get('students') || [];
   const student = students.find(s => String(s.id) === String(studentId));
   if (!student) { safeToast('No se encontró el estudiante', 'error'); return; }
-  // –xa– Si el estudiante ya fue retirado hoy, se bloquea el registro de rutina.
+  // ⚠️ Si el estudiante ya fue retirado hoy, se bloquea el registro de rutina.
   const _exitedIds = AppState.get('exitedStudentIds');
   const isExited = !!(_exitedIds && typeof _exitedIds.has === 'function' && _exitedIds.has(String(studentId)));
   const log = _logsMap[studentId];
@@ -2858,7 +2858,7 @@ export function openStudentRoutine(studentId) {
   const events = log?.infant_data || [];
   const hasEvent = (type, subtype) => events.some(e => e.type === type && (!subtype || e.subtype === subtype));
 
-  const mealLabels = { breakfast: '–x–~ Desayuno', lunch: '❤️ Almuerzo', snack: '🍽️ Merienda' };
+  const mealLabels = { breakfast: '🍞 Desayuno', lunch: '🍽️ Almuerzo', snack: '🍎 Merienda' };
   const foodOptions = [
     { val: 'todo', icon: '✅', label: 'Todo' },
     { val: 'poco', icon: '🍽️', label: 'Poco' },
@@ -2866,7 +2866,7 @@ export function openStudentRoutine(studentId) {
     { val: 'ayuda', icon: '🤝', label: 'Ayuda' }
   ];
 
-  // –––– Collect all registered events for the top summary ––––
+  // —–—– Collect all registered events for the top summary —–—–
   const registeredBadges = [];
   if (log?.mood) {
     const mood = MOOD_OPTIONS.find(m => m.val === log.mood);
@@ -2890,7 +2890,7 @@ export function openStudentRoutine(studentId) {
   if (hasEvent('behavior')) registeredBadges.push({ emoji: '📋', label: 'Conducta', color: '#F59E0B' });
   if (log?.notes) registeredBadges.push({ emoji: '📝', label: 'Nota', color: '#64748B' });
 
-  // –––– Contadores de estado para los badges de cada sección ––––
+  // —–—– Contadores de estado para los badges de cada sección —–—–
   const _nBy = (fn) => events.filter(fn).length;
   const nMilk     = _nBy(e => e.type === 'milk');
   const nAct      = _nBy(e => ['activity', 'sensorial', 'playground', 'handwash', 'toothbrush'].includes(e.type));
@@ -2900,8 +2900,8 @@ export function openStudentRoutine(studentId) {
   const nBehavior = _nBy(e => e.type === 'behavior');
   const foodCount = ['breakfast', 'lunch', 'snack'].filter(k => currentFood[k]).length;
 
-  // –––– Helper: sección colapsable con badge de estado ––––
-  // badge: { text, ok } – ok pinta el badge en verde (registrado/completo)
+  // —–—– Helper: sección colapsable con badge de estado —–—–
+  // badge: { text, ok } — ok pinta el badge en verde (registrado/completo)
   // defOpen: estado por defecto la PRIMERA vez (después manda localStorage)
   const section = (id, title, content, badge, defOpen = false) => {
     const open = _srIsOpen(id, defOpen);
@@ -2919,14 +2919,14 @@ export function openStudentRoutine(studentId) {
     `;
   };
 
-  // –––– Helper: button with registered detection ––––
+  // —–—– Helper: button with registered detection —–—–
   const chipBtn = (onclick, emoji, label, isRegistered, regColor = '#28B54D', count = 0) => `
     <button onclick="${onclick}"
       class="p-2 rounded-xl border-2 ${isRegistered ? 'border-green-400 bg-green-50' : 'border-slate-100 bg-white'} flex flex-col items-center gap-0.5 active:scale-95 transition-all"
       style="${isRegistered ? 'box-shadow:0 0 0 2px rgba(34,197,94,0.15)' : ''}">
       <span class="text-lg">${emoji}</span>
       <span class="text-[7px] font-black ${isRegistered ? 'text-green-700' : 'text-slate-500'} text-center leading-tight">${label}</span>
-      ${count > 0 ? `<span class="text-[6px] font-black text-blue-500">❓</span>` : isRegistered ? '<span class="text-[6px] font-black text-green-500">❓</span>' : ''}
+      ${count > 0 ? `<span class="text-[6px] font-black text-blue-500">✓</span>` : isRegistered ? '<span class="text-[6px] font-black text-green-500">✓</span>' : ''}
     </button>
   `;
 
@@ -2937,7 +2937,7 @@ export function openStudentRoutine(studentId) {
       <div class="flex items-center gap-2">
         <span class="text-base">${emoji}</span>
         <span class="text-[10px] font-black ${isRegistered ? 'text-green-700' : 'text-slate-600'}">${label}</span>
-        ${isRegistered ? '<span class="ml-auto text-[8px] font-black text-green-500">❓</span>' : ''}
+        ${isRegistered ? '<span class="ml-auto text-[8px] font-black text-green-500">✓</span>' : ''}
       </div>
       ${note ? `<div class="text-[8px] text-slate-400 mt-0.5 ml-7">${note}</div>` : ''}
     </button>
@@ -2953,7 +2953,7 @@ export function openStudentRoutine(studentId) {
           </div>
           <div class="flex-1">
             <h3 class="text-lg font-black text-white">${safeEscapeHTML(student.name)}</h3>
-            <p class="text-xs font-bold text-white/80">${safeEscapeHTML(student.p1_name || '–')}</p>
+            <p class="text-xs font-bold text-white/80">${safeEscapeHTML(student.p1_name || '—')}</p>
           </div>
           <button onclick="UI.Modal.close('studentRoutineModal')" class="p-2 rounded-xl bg-white/20 text-white">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M18 6L6 18M6 6l12 12"/></svg>
@@ -2965,21 +2965,21 @@ export function openStudentRoutine(studentId) {
 
         <!-- TOOLBAR: expandir/contraer todas las secciones -->
         <div class="sr-toolbar">
-          <button type="button" id="srExpandAllBtn" onclick="App._srToggleAll(true)" class="sr-tool-btn">–  Expandir todo</button>
-          <button type="button" id="srCollapseAllBtn" onclick="App._srToggleAll(false)" class="sr-tool-btn">–! Contraer todo</button>
+          <button type="button" id="srExpandAllBtn" onclick="App._srToggleAll(true)" class="sr-tool-btn">⤢ Expandir todo</button>
+          <button type="button" id="srCollapseAllBtn" onclick="App._srToggleAll(false)" class="sr-tool-btn">⤡ Contraer todo</button>
           <span class="sr-tool-hint">Toca cada sección para abrir o cerrar</span>
         </div>
 
         ${isExited ? `
         <div class="rounded-2xl p-4 flex items-start gap-3" style="background:#FEE2E2;border:2px solid #FCA5A5">
-          <span class="text-2xl">❓</span>
+          <span class="text-2xl">⚠️</span>
           <div>
             <p class="text-sm font-black text-red-700">Este estudiante ya fue retirado hoy</p>
             <p class="text-xs font-bold text-red-500 mt-0.5">No se puede registrar ni modificar rutina después de la salida. Los datos mostrados son solo de lectura.</p>
           </div>
         </div>` : ''}
 
-        <!-- –"––"––"– LÍNEA DE TIEMPO DE EVENTOS REGISTRADOS –"––"––"– -->
+        <!-- ───────── LÍNEA DE TIEMPO DE EVENTOS REGISTRADOS ───────── -->
         ${(() => {
           const allEvents = _buildStudentTimeline(log, events, currentFood);
           const nTimeline = allEvents.length;
@@ -2989,7 +2989,7 @@ export function openStudentRoutine(studentId) {
           const body = (() => {
             if (!allEvents.length) return `
               <div class="sr-tl-empty">
-                <span class="sr-tl-empty-ico">❓</span>
+                <span class="sr-tl-empty-ico">📭</span>
                 <p>Sin eventos registrados hoy</p>
                 <small>Marca rutinas del aula o eventos individuales y aparecerán aquí ordenados por hora.</small>
               </div>`;
@@ -3001,13 +3001,13 @@ export function openStudentRoutine(studentId) {
                 ).pop();
                 if (!lastRepeat) return '';
                 return `<button type="button" class="sr-repeat-btn" onclick="App.repeatLastEvent('${studentId}')">
-                  –x– Repetir último: ${_timelineEmoji(lastRepeat)} ${safeEscapeHTML(lastRepeat.label || lastRepeat.type)}
+                  🔁 Repetir último: ${_timelineEmoji(lastRepeat)} ${safeEscapeHTML(lastRepeat.label || lastRepeat.type)}
                 </button>`;
               })()}
               <div class="sr-tl-filters" id="srTlFilters">
                 <button type="button" class="sr-tl-chip sr-tl-chip--on" data-tl-filter="all" onclick="App._srTimelineFilter('all')">Todo <b>${allEvents.length}</b></button>
-                <button type="button" class="sr-tl-chip" data-tl-filter="aula" onclick="App._srTimelineFilter('aula')">🧼 Del aula <b>${nAula}</b></button>
-                <button type="button" class="sr-tl-chip" data-tl-filter="individual" onclick="App._srTimelineFilter('individual')">–x"9 Individual <b>${nIndiv}</b></button>
+                <button type="button" class="sr-tl-chip" data-tl-filter="aula" onclick="App._srTimelineFilter('aula')">🏫 Del aula <b>${nAula}</b></button>
+                <button type="button" class="sr-tl-chip" data-tl-filter="individual" onclick="App._srTimelineFilter('individual')">👤 Individual <b>${nIndiv}</b></button>
               </div>
               <div class="sr-tl" id="srTimelineList">
                 ${allEvents.map((ev, i) => `
@@ -3020,15 +3020,15 @@ export function openStudentRoutine(studentId) {
                       <div class="sr-tl-card-top">
                         <span class="sr-tl-label">${safeEscapeHTML(ev.label)}</span>
                         <span class="sr-tl-origin ${ev.origin === 'aula' ? 'sr-tl-origin--aula' : 'sr-tl-origin--indiv'}">
-                          ${ev.origin === 'aula' ? '🧼 Aula' : '–x"9 Individual'}
+                          ${ev.origin === 'aula' ? '🏫 Aula' : '👤 Individual'}
                         </span>
                       </div>
                       <div class="sr-tl-card-bot">
-                        <span class="sr-tl-time">${ev.time ? '–x"– ' + _fmtTime(ev.time) : 'Sin hora registrada'}</span>
+                        <span class="sr-tl-time">${ev.time ? '🕒 ' + _fmtTime(ev.time) : 'Sin hora registrada'}</span>
                         ${ev.editable && ev.id ? `
                           <span class="sr-tl-actions">
-                            <button onclick="App._editEventTime('${studentId}','${ev.id}')" title="Editar hora">–S–️</button>
-                            <button onclick="App.deleteInfantEvent('${studentId}','${ev.id}')" title="Eliminar evento">–x️</button>
+                            <button onclick="App._editEventTime('${studentId}','${ev.id}')" title="Editar hora">✏️</button>
+                            <button onclick="App.deleteInfantEvent('${studentId}','${ev.id}')" title="Eliminar evento">🗑️</button>
                           </span>` : ''}
                       </div>
                     </div>
@@ -3041,7 +3041,7 @@ export function openStudentRoutine(studentId) {
             { text: `${nTimeline} reg.`, ok: nTimeline > 0 }, true);
         })()}
 
-        <!-- –"––"––"– ELEGIR EVENTO DEL AULA PARA ESTE ESTUDIANTE –"––"––"– -->
+        <!-- ───────── ELEGIR EVENTO DEL AULA PARA ESTE ESTUDIANTE ───────── -->
         ${(() => {
           const schedule = _getSchedule();
           const routines = _getWholeClassRoutines();
@@ -3054,7 +3054,7 @@ export function openStudentRoutine(studentId) {
               <span class="text-lg">${emoji || '📋'}</span>
               <span class="text-[7px] font-black ${isReg ? 'text-green-700' : 'text-slate-500'} text-center leading-tight">${safeEscapeHTML((label || '').substring(0, 16))}</span>
               ${time ? `<span class="text-[6px] font-bold text-slate-400">${_fmtTimeShort(time)}</span>` : ''}
-              ${isReg ? '<span class="text-[6px] font-black text-green-500">❓</span>' : ''}
+              ${isReg ? '<span class="text-[6px] font-black text-green-500">✓</span>' : ''}
             </button>`;
 
           const schedChips = schedule.map(ev => chip(
@@ -3079,12 +3079,12 @@ export function openStudentRoutine(studentId) {
 
           const body = `
             <div class="sr-aula-bar">
-              <input id="srEvSearch" placeholder="–x– Buscar evento del aula..." oninput="App._filterStudentEvents(this.value)"
+              <input id="srEvSearch" placeholder="🔍 Buscar evento del aula..." oninput="App._filterStudentEvents(this.value)"
                 class="sr-aula-search">
               <button type="button" id="srAulaShowAllBtn" class="sr-aula-toggle" onclick="App._srToggleAulaAll()">Ver todo</button>
             </div>
             <div class="sr-aula-count">
-              <span class="sr-aula-count-chip sr-ok">–S ${marcadosAula} marcados</span>
+              <span class="sr-aula-count-chip sr-ok">✓ ${marcadosAula} marcados</span>
               <span class="sr-aula-count-chip">${totalAula} disponibles</span>
             </div>
             <div class="sr-aula-block">
@@ -3099,8 +3099,8 @@ export function openStudentRoutine(studentId) {
             { text: `${marcadosAula}/${totalAula}`, ok: marcadosAula > 0 }, true);
         })()}
 
-        <!-- –"––"––"– ESTADO EMOCIONAL –"––"––"– -->
-        ${section('mood', '–x–` Estado Emocional', `
+        <!-- ───────── ESTADO EMOCIONAL ───────── -->
+        ${section('mood', '😊 Estado Emocional', `
           <div class="grid grid-cols-4 gap-1.5">
             ${MOOD_OPTIONS.map(m => `
               <button onclick="App.setStudentMood('${studentId}','${m.val}')"
@@ -3108,14 +3108,14 @@ export function openStudentRoutine(studentId) {
                 style="${log?.mood === m.val ? 'box-shadow:0 0 0 2px rgba(34,197,94,0.15)' : ''}">
                 <span class="text-xl block">${m.emoji}</span>
                 <span class="text-[7px] font-black ${log?.mood === m.val ? 'text-green-700' : 'text-slate-500'} block">${m.label}</span>
-                ${log?.mood === m.val ? '<span class="text-[6px] font-black text-green-500">❓</span>' : ''}
+                ${log?.mood === m.val ? '<span class="text-[6px] font-black text-green-500">✓</span>' : ''}
               </button>
             `).join('')}
           </div>
-        `, log?.mood ? { text: MOOD_OPTIONS.find(m => m.val === log.mood)?.emoji + ' –S', ok: true } : { text: 'Pendiente', ok: false }, true)}
+        `, log?.mood ? { text: MOOD_OPTIONS.find(m => m.val === log.mood)?.emoji + ' ✓', ok: true } : { text: 'Pendiente', ok: false }, true)}
 
-        <!-- –"––"––"– ALIMENTACI–N –"––"––"– -->
-        ${section('food', '🧼️ Alimentación', `
+        <!-- ───────── ALIMENTACIÓN ───────── -->
+        ${section('food', '🍽️ Alimentación', `
           <div class="space-y-2">
             ${['breakfast', 'lunch', 'snack'].map(mealKey => {
               const currentVal = currentFood[mealKey] || '';
@@ -3140,8 +3140,8 @@ export function openStudentRoutine(studentId) {
           </div>
         `, { text: `${foodCount}/3 comidas`, ok: foodCount === 3 }, true)}
 
-        <!-- –"––"––"– CICLO DE SUE–O –"––"––"– -->
-        ${section('nap', '–xܴ Ciclo de Sueño', `
+        <!-- ───────── CICLO DE SUEÑO ───────── -->
+        ${section('nap', '😴 Ciclo de Sueño', `
           <div class="grid grid-cols-4 gap-1.5">
             ${[
               { val: 'si', label: 'Dormido', icon: '😴' }, { val: 'no', label: 'No durmió', icon: '🌅' },
@@ -3152,34 +3152,34 @@ export function openStudentRoutine(studentId) {
                 style="${log?.nap === n.val ? 'box-shadow:0 0 0 2px rgba(34,197,94,0.15)' : ''}">
                 <span class="text-base">${n.icon}</span>
                 <span class="text-[8px] font-black ${log?.nap === n.val ? 'text-green-700' : 'text-slate-600'} block">${n.label}</span>
-                ${log?.nap === n.val ? '<span class="text-[6px] font-black text-green-500">❓</span>' : ''}
+                ${log?.nap === n.val ? '<span class="text-[6px] font-black text-green-500">✓</span>' : ''}
               </button>
             `).join('')}
           </div>
           ${_sleepMap[studentId] ? `
           <button onclick="App.routineWakeStudent('${studentId}')"
             class="mt-2 w-full p-2.5 rounded-xl text-white font-black text-[10px] uppercase flex items-center justify-center gap-2" style="background:#7c3aed">
-            <span>❓</span> Despertar
+            <span>☀️</span> Despertar
           </button>` : ''}
-        `, log?.nap ? { text: '–S', ok: true } : { text: 'Pendiente', ok: false })}
+        `, log?.nap ? { text: '✓', ok: true } : { text: 'Pendiente', ok: false })}
 
-        <!-- –"––"––"– BIBER–N –"––"––"– -->
-        ${section('milk', '🧼 Biberón', `
+        <!-- ───────── BIBERÓN ───────── -->
+        ${section('milk', '🍼 Biberón', `
           <button onclick="App._openMilkModal('${studentId}')"
             class="w-full p-3 rounded-xl border-2 ${hasEvent('milk') ? 'border-green-300 bg-green-50' : 'border-slate-100 bg-white'} flex items-center gap-3 text-left hover:border-blue-200 transition-all">
-            <span class="text-xl">❓</span>
+            <span class="text-xl">🍼</span>
             <div class="flex-1">
               <div class="text-xs font-black ${hasEvent('milk') ? 'text-green-700' : 'text-slate-700'}">${hasEvent('milk') ? 'Registrar otro Biberón' : 'Registrar Biberón'}</div>
               <div class="text-[10px] text-slate-400">Onzas, temperatura y hora</div>
             </div>
-            ${hasEvent('milk') ? '<span class="text-[10px] font-black text-green-600 mr-1">❓</span>' : ''}
+            ${hasEvent('milk') ? '<span class="text-[10px] font-black text-green-600 mr-1">✓</span>' : ''}
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
           </button>
           ${nMilk > 0 ? `
           <div class="mt-2 space-y-1">
             ${events.filter(e => e.type === 'milk').map(evt => `
               <div class="flex items-center gap-2 p-2 rounded-lg bg-blue-50 text-[10px]">
-                <span>❓</span>
+                <span>🍼</span>
                 <span class="font-bold text-blue-700">${evt.oz ? evt.oz + ' oz' : ''}</span>
                 ${evt.temp ? `<span class="text-blue-500">· ${TEMP_OPTIONS.find(t => t.val === evt.temp)?.label || evt.temp}</span>` : ''}
                 <span class="ml-auto text-blue-400">${evt.created_at ? _fmtTime(evt.created_at) : ''}</span>
@@ -3188,22 +3188,22 @@ export function openStudentRoutine(studentId) {
           </div>` : ''}
         `, nMilk > 0 ? { text: `${nMilk} reg.`, ok: true } : { text: 'Pendiente', ok: false })}
 
-        <!-- –"––"––"– ACTIVIDADES – nivel-aware –"––"––"– -->
+        <!-- ───────── ACTIVIDADES — nivel-aware ───────── -->
         ${(() => {
           const lc = _getLevelCategory();
           const noHandwash = lc === 'primary';
           return section('activities', '🎨 Actividades', `
             <div class="grid grid-cols-3 gap-1.5">
               ${chipBtn("App.addStudentEvent('" + studentId + "','activity')", '🎨', 'Actividad', hasEvent('activity'))}
-              ${chipBtn("App.addStudentEvent('" + studentId + "','sensorial')", '–x–', 'Sensorial', hasEvent('sensorial'))}
-              ${chipBtn("App.addStudentEvent('" + studentId + "','playground')", '–xR–', 'Patio', hasEvent('playground'))}
+              ${chipBtn("App.addStudentEvent('" + studentId + "','sensorial')", '🔬', 'Sensorial', hasEvent('sensorial'))}
+              ${chipBtn("App.addStudentEvent('" + studentId + "','playground')", '🌳', 'Patio', hasEvent('playground'))}
               ${!noHandwash ? chipBtn("App.addStudentEvent('" + studentId + "','handwash')", '🧼', 'Lavado manos', hasEvent('handwash')) : ''}
-              ${!noHandwash ? chipBtn("App.addStudentEvent('" + studentId + "','toothbrush')", '🧼', 'Cepillado', hasEvent('toothbrush')) : ''}
+              ${!noHandwash ? chipBtn("App.addStudentEvent('" + studentId + "','toothbrush')", '🪥', 'Cepillado', hasEvent('toothbrush')) : ''}
             </div>
           `, nAct > 0 ? { text: `${nAct} reg.`, ok: true } : { text: 'Pendiente', ok: false });
         })()}
 
-        <!-- –"––"––"– HIGIENE – filtrado por nivel –"––"––"– -->
+        <!-- ───────── HIGIENE — filtrado por nivel ───────── -->
         ${(() => {
           const lc = _getLevelCategory();
           const allowed = new Set(LEVEL_INDIV_IDS[lc] || []);
@@ -3214,35 +3214,35 @@ export function openStudentRoutine(studentId) {
           const nDiaper = cnt(e => e.type === 'diaper_change');
           const nBottle = cnt(e => e.type === 'milk');
           const chips = [];
-          if (allowed.has('poop'))   chips.push(chipBtn("App.addStudentEvent('" + studentId + "','poop')", '–x–', 'Popó', nPoop > 0, '#28B54D', nPoop));
-          if (allowed.has('pee'))    chips.push(chipBtn("App.addStudentEvent('" + studentId + "','pee')", '–x–', 'Pipí', nPee > 0, '#28B54D', nPee));
-          if (allowed.has('toilet')) chips.push(chipBtn("App.addStudentEvent('" + studentId + "','toilet')", '–xa–', 'Baño', nToilet > 0, '#28B54D', nToilet));
+          if (allowed.has('poop'))   chips.push(chipBtn("App.addStudentEvent('" + studentId + "','poop')", '💩', 'Popó', nPoop > 0, '#28B54D', nPoop));
+          if (allowed.has('pee'))    chips.push(chipBtn("App.addStudentEvent('" + studentId + "','pee')", '💧', 'Pipí', nPee > 0, '#28B54D', nPee));
+          if (allowed.has('toilet')) chips.push(chipBtn("App.addStudentEvent('" + studentId + "','toilet')", '🚽', 'Baño', nToilet > 0, '#28B54D', nToilet));
           if (allowed.has('diaper')) chips.push(chipBtn("App.addStudentEvent('" + studentId + "','diaper')", '🧼', 'Cambio pañal', nDiaper > 0, '#28B54D', nDiaper));
-          if (allowed.has('milk'))   chips.push(chipBtn("App.addStudentEvent('" + studentId + "','milk')", '🧼', 'Biberón', nBottle > 0, '#28B54D', nBottle));
+          if (allowed.has('milk'))   chips.push(chipBtn("App.addStudentEvent('" + studentId + "','milk')", '🍼', 'Biberón', nBottle > 0, '#28B54D', nBottle));
           const noteSpan = chips.length % 3 === 2 ? 'col-span-2' : '';
-          chips.push(`<button onclick="App.addStudentEvent('${studentId}','note')" class="p-2 rounded-xl border-2 ${log?.notes ? 'border-green-400 bg-green-50' : 'border-slate-100 bg-white'} flex flex-col items-center gap-0.5 active:scale-95 transition-all ${noteSpan}"><span class="text-lg">❓</span><span class="text-[7px] font-black ${log?.notes ? 'text-green-700' : 'text-slate-500'}">Nota rápida</span>${log?.notes ? '<span class="text-[6px] font-black text-green-500">❓</span>' : ''}</button>`);
+          chips.push(`<button onclick="App.addStudentEvent('${studentId}','note')" class="p-2 rounded-xl border-2 ${log?.notes ? 'border-green-400 bg-green-50' : 'border-slate-100 bg-white'} flex flex-col items-center gap-0.5 active:scale-95 transition-all ${noteSpan}"><span class="text-lg">📝</span><span class="text-[7px] font-black ${log?.notes ? 'text-green-700' : 'text-slate-500'}">Nota rápida</span>${log?.notes ? '<span class="text-[6px] font-black text-green-500">✓</span>' : ''}</button>`);
           const title = (lc === 'infants' || lc === 'toddlers') ? '🧼 Higiene y Pañales' : '🧼 Higiene y Esfínteres';
           return section('hygiene', title, `<div class="grid grid-cols-3 gap-1.5">${chips.join('')}</div>
             <p class="text-[9px] text-slate-400 font-bold mt-2">Puedes tocar varias veces al día: cada toque suma un registro nuevo con su hora.</p>`,
             nHyg > 0 ? { text: `${nHyg} reg.`, ok: true } : { text: 'Pendiente', ok: false });
         })()}
 
-        <!-- –"––"––"– SALUD –"––"––"– -->
-        ${section('health', '🧼 Salud y Alertas', `
+        <!-- ───────── SALUD ───────── -->
+        ${section('health', '🩺 Salud y Alertas', `
           <div class="grid grid-cols-3 gap-1.5">
-            ${chipBtn("App.addStudentEvent('" + studentId + "','temp')", '–xR–️', 'Temperatura', hasEvent('temp'))}
-            ${chipBtnNS("App._openMedModal('" + studentId + "')", '–x`', 'Medicamento', hasEvent('med'))}
-            ${chipBtn("App.addStudentEvent('" + studentId + "','hit')", '–x–"', 'Golpe/Caída', hasEvent('incident', 'hit'))}
-            ${chipBtn("App.addStudentEvent('" + studentId + "','vomit')", '🧼', 'Vómito', hasEvent('health', 'vomit'))}
-            ${chipBtn("App.addStudentEvent('" + studentId + "','cough')", '–xܷ', 'Tos/Congestión', hasEvent('health', 'cough'))}
+            ${chipBtn("App.addStudentEvent('" + studentId + "','temp')", '🌡️', 'Temperatura', hasEvent('temp'))}
+            ${chipBtnNS("App._openMedModal('" + studentId + "')", '💊', 'Medicamento', hasEvent('med'))}
+            ${chipBtn("App.addStudentEvent('" + studentId + "','hit')", '🤕', 'Golpe/Caída', hasEvent('incident', 'hit'))}
+            ${chipBtn("App.addStudentEvent('" + studentId + "','vomit')", '🤮', 'Vómito', hasEvent('health', 'vomit'))}
+            ${chipBtn("App.addStudentEvent('" + studentId + "','cough')", '😷', 'Tos/Congestión', hasEvent('health', 'cough'))}
           </div>
         `, nHealth > 0 ? { text: `${nHealth} reg.`, ok: true } : { text: 'Sin alertas', ok: false })}
 
-        <!-- –"––"––"– EVENTOS EXTRA –"––"––"– -->
+        <!-- ───────── EVENTOS EXTRA ───────── -->
         ${section('extra', '⚽️ Eventos Extra', `
           <button onclick="App._openExtraEventModal('${studentId}')"
             class="w-full p-3 rounded-xl border-2 border-dashed border-slate-200 bg-white flex items-center gap-3 text-left hover:border-red-300 transition-all">
-            <span class="text-xl">❓</span>
+            <span class="text-xl">➕</span>
             <div class="flex-1">
               <div class="text-xs font-black text-slate-700">Agregar Evento</div>
               <div class="text-[10px] text-slate-400">Fiebre, accidente, golpe, llamada a padres</div>
@@ -3251,8 +3251,8 @@ export function openStudentRoutine(studentId) {
           </button>
         `, nIncident > 0 ? { text: `${nIncident} reg.`, ok: true } : { text: 'Pendiente', ok: false })}
 
-        <!-- –"––"––"– CONDUCTA –"––"––"– -->
-        ${section('behavior', '🧼 Conducta', `
+        <!-- ───────── CONDUCTA ───────── -->
+        ${section('behavior', '🌟 Conducta', `
           <div class="space-y-3">
             <div>
               <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wide mb-1.5">Social</p>
@@ -3320,13 +3320,13 @@ export function openStudentRoutine(studentId) {
           </div>
         `, nBehavior > 0 ? { text: `${nBehavior} reg.`, ok: true } : { text: 'Pendiente', ok: false })}
 
-        <!-- –"––"––"– NOTA –"––"––"– -->
-        ${section('note', '–x– Nota Individual', `
+        <!-- ───────── NOTA ───────── -->
+        ${section('note', '📝 Nota Individual', `
           <textarea id="studentNote-${studentId}" placeholder="Escribe una nota sobre el día..."
             class="w-full p-3 border-2 border-slate-100 rounded-xl text-xs focus:border-blue-400 outline-none" rows="3">${safeEscapeHTML(log?.notes || '')}</textarea>
           <button onclick="App.saveStudentNote('${studentId}')"
             class="mt-2 w-full p-3 rounded-xl text-white font-black text-xs uppercase" style="background:#28B54D">Guardar Nota</button>
-        `, log?.notes ? { text: '–S', ok: true } : { text: 'Vacía', ok: false })}
+        `, log?.notes ? { text: '✓', ok: true } : { text: 'Vacía', ok: false })}
 
       </div>
     </div>
@@ -3335,9 +3335,9 @@ export function openStudentRoutine(studentId) {
   _srSyncExpandBtn();
 }
 
-// –"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"–
+// ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 // HELPER FUNCTIONS
-// –"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"–
+// ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 
 export async function deleteInfantEvent(studentId, eventId) {
   if (!studentId || !eventId) return;
@@ -3420,7 +3420,7 @@ export async function _confirmEditEventTime(studentId, eventId) {
   try {
     await supabase.from('daily_logs').update({ infant_data: updated }).eq('id', log.id);
     invalidateCache('getDailyRoutine');
-    safeToast('Hora actualizada –S&', 'success');
+    safeToast('Hora actualizada ✓', 'success');
     UI.Modal.close('editEventTimeModal');
     await initRoutine();
     openStudentRoutine(studentId);
@@ -3697,9 +3697,9 @@ export async function routineWakeStudent(studentId) {
   } catch { safeToast('Error al despertar', 'error'); }
 }
 
-// –"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"–
-// BIBER–N, MEDICAMENTO, EVENTOS EXTRA – MODALS
-// –"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"–
+// ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+// BIBERÓN, MEDICAMENTO, EVENTOS EXTRA — MODALS
+// ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 
 export function _openMilkModal(studentId) {
   UI.Modal.open('milkModal', _renderMilkModal(studentId));
@@ -3777,9 +3777,9 @@ export async function _confirmExtraEvent(studentId) {
   } catch { safeToast('Error al guardar', 'error'); if (btn) { btn.disabled = false; btn.textContent = 'Guardar Evento'; } }
 }
 
-// –"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"–
+// ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 // QUICK ADD EVENT
-// –"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"–
+// ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 
 const QUICK_EVENTS = [
   { id: 'poop',     icon: '💩', label: 'Popó' },
@@ -3815,7 +3815,7 @@ export function openQuickAddModal() {
       <div class="p-5" style="background:linear-gradient(135deg,#0B63C7,#28B54D)">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-3">
-            <span class="text-2xl">❓</span>
+            <span class="text-2xl">➕</span>
             <div><h3 class="text-lg font-black text-white">Agregar Evento</h3><p class="text-xs font-bold text-white/80">Selecciona tipo y alumno</p></div>
           </div>
           <button onclick="UI.Modal.close('quickAddModal')" class="p-2 rounded-xl bg-white/20 text-white">
@@ -3866,9 +3866,9 @@ export async function _submitQuickAdd() {
   await addStudentEvent(studentId, eventId, customLabel || undefined);
 }
 
-// –"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"–
+// ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 // BULK REPORT
-// –"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"––"–
+// ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 
 export async function openBulkRoutineModal() {
   const students = AppState.get('students') || [];

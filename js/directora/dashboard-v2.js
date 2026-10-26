@@ -6,6 +6,7 @@ import { supabase } from '../shared/supabase.js';
 import { countRowsSafe } from '../shared/db-utils.js';
 import { AppState } from './state.js';
 import { buildScoresMap, moduleAvg, avgOf, gradeColor, gradeToLevel } from '../shared/eval-utils.js';
+import { normalizeSchoolYearName } from '../shared/school-year-name.js';
 
 const fmt = n => 'RD$' + Number(n||0).toLocaleString('es-DO',{minimumFractionDigits:2});
 const today = () => new Date().toISOString().split('T')[0];
@@ -52,7 +53,8 @@ export async function renderDashboardV2(data) {
 
   const present    = attendance.filter(a=>['present','late'].includes(a.status?.toLowerCase())).length;
   const absent     = attendance.filter(a=>a.status?.toLowerCase()==='absent').length;
-  const currentCycle = cycles.find(c=>c.is_current)?.name || cycles[0]?.name || 'â€”';
+  const currentCycleRow = cycles.find(c=>c.is_current) || cycles[0];
+  const currentCycle = normalizeSchoolYearName(currentCycleRow, 'â€”');
 
   let academic = { totalClassrooms: 0, evaluations: 0, activities: 0, scores: 0, overall: null, rows: [] };
   try { academic = await _loadAcademicStats(); } catch (err) { console.error('[Dashboard] AcadÃ©mico', err); }
@@ -77,7 +79,7 @@ export async function renderDashboardV2(data) {
   <div class="flex items-center justify-between flex-wrap gap-3">
     <div>
       <h2 class="text-2xl font-black text-slate-800">Centro de Control</h2>
-      <p class="text-sm text-slate-400 font-bold">Ciclo activo: <span class="text-emerald-600">${currentCycle}</span> Â· ${now.toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'})}</p>
+      <p class="text-sm text-slate-400 font-bold">Ciclo activo: <span class="text-emerald-600">${esc(currentCycle)}</span> Â· ${now.toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'})}</p>
     </div>
     <div class="flex gap-2 flex-wrap">
       <button onclick="App.navigation?.goTo?.('ciclo-escolar')" class="px-4 py-2 text-white text-xs font-black uppercase rounded-xl shadow-md transition-all hover:opacity-90 active:scale-95" style="background:#0850A0">Ciclo Escolar</button>

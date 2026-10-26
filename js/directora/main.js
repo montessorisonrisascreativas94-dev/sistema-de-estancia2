@@ -17,6 +17,7 @@ import { InvoicingModule } from './invoicing.module.js';
 import { AccountingModule } from './accounting.module.js';
 import { NotificationCenter } from '../shared/notification-center.js';
 import { SCHOOL_SETTINGS_ID } from '../shared/constants.js';
+import { normalizeSchoolYearName } from '../shared/school-year-name.js';
 import { openGlobalModal, closeGlobalModal } from '../shared/modal.js';
 
 import { GradesModule } from './grades.module.js';
@@ -981,7 +982,7 @@ async function _loadCycleSelectors() {
     }
 
     const opts = years.map(y =>
-      `<option value="${y.id}"${y.is_current?' selected':''}>${y.name}${y.is_current?' ✓':''}</option>`
+      `<option value="${y.id}"${y.is_current?' selected':''}>${Helpers.escapeHTML(normalizeSchoolYearName(y))}${y.is_current?' ✓':''}</option>`
     ).join('');
 
     if (hdr) hdr.innerHTML = opts;

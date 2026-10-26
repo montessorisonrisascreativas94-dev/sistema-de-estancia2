@@ -8,8 +8,10 @@ import { supabase } from '../shared/supabase.js';
 import { Helpers } from '../shared/helpers.js';
 import { SmartLoader } from '../shared/smart-loader.js';
 import { SchoolYearGuard } from '../shared/school-year-guard.js';
+import { normalizeSchoolYearName } from '../shared/school-year-name.js';
 
 const $el = (id) => document.getElementById(id);
+const yearLabel = (year) => Helpers.escapeHTML(normalizeSchoolYearName(year));
 
 const LEVEL_ORDER = ['Maternal','Infante','Parvulos','Pre-Kinder','Kinder','Preprimaria','1ro Primaria','2do Primaria','3ro Primaria','4to Primaria','5to Primaria','6to Primaria'];
 
@@ -101,7 +103,7 @@ export const SchoolYearModule = {
     return {
       found: true,
       year: {
-        id: year.id, name: year.name, start_date: year.start_date,
+        id: year.id, name: normalizeSchoolYearName(year), start_date: year.start_date,
         end_date: year.end_date, status: year.status, is_current: year.is_current,
         period_model: year.period_model, num_periods: year.num_periods,
         enrollment_open: year.enrollment_open, reenrollment_open: year.reenrollment_open,
@@ -152,7 +154,7 @@ export const SchoolYearModule = {
             <h1 class="text-2xl font-black text-slate-800">Gestión del Año Escolar</h1>
           </div>
           <p class="text-slate-500 font-medium ml-4">
-            ${isHistory ? `Viendo: <strong>${viewYear?.name || ''}</strong> <button onclick="SchoolYearModule.exitHistory()" class="ml-2 text-xs font-bold text-[#0B63C7] underline">Volver al actual</button>` : 'Centro de control del ciclo escolar activo'}
+            ${isHistory ? `Viendo: <strong>${viewYear ? yearLabel(viewYear) : ''}</strong> <button onclick="SchoolYearModule.exitHistory()" class="ml-2 text-xs font-bold text-[#0B63C7] underline">Volver al actual</button>` : 'Centro de control del ciclo escolar activo'}
           </p>
         </div>
         <div class="flex gap-2">
@@ -164,7 +166,7 @@ export const SchoolYearModule = {
           <select onchange="SchoolYearModule.switchYear(this.value)" class="px-3 py-2 rounded-xl border-2 border-slate-200 text-sm font-bold bg-white outline-none focus:border-[#0B63C7]">
             ${this.state.schoolYears.map(y => `
               <option value="${y.id}" ${(this.state.viewingYearId || this.state.currentYear?.id) == y.id ? 'selected' : ''}>
-                ${y.name} ${y.is_current ? '(Actual)' : ''} ${y.status === 'closed' ? '(Cerrado)' : ''}
+                ${yearLabel(y)} ${y.is_current ? '(Actual)' : ''} ${y.status === 'closed' ? '(Cerrado)' : ''}
               </option>
             `).join('')}
           </select>
@@ -184,7 +186,7 @@ export const SchoolYearModule = {
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <div class="text-sm font-bold opacity-80 uppercase tracking-wide">Año Escolar</div>
-            <h3 class="text-4xl font-black mt-1">${year.name}</h3>
+            <h3 class="text-4xl font-black mt-1">${yearLabel(year)}</h3>
             <div class="flex items-center gap-4 mt-3">
               <span class="px-3 py-1 bg-white/20 rounded-full text-sm font-bold">
                 ${year.status === 'active' ? '🟢 Activo' : year.status === 'closed' ? '🔴 Cerrado' : '🟡 Próximo'}
@@ -387,7 +389,7 @@ export const SchoolYearModule = {
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <label class="block text-xs font-black uppercase text-slate-400 mb-2">Nombre</label>
-            <input id="syc-name" value="${year.name}" class="w-full px-4 py-3 rounded-xl border-2 border-slate-100 text-sm font-bold outline-none focus:border-[#0B63C7]">
+            <input id="syc-name" value="${yearLabel(year)}" class="w-full px-4 py-3 rounded-xl border-2 border-slate-100 text-sm font-bold outline-none focus:border-[#0B63C7]">
           </div>
           <div>
             <label class="block text-xs font-black uppercase text-slate-400 mb-2">Modelo de Períodos</label>
@@ -569,7 +571,7 @@ export const SchoolYearModule = {
               ${years.map(y => `
                 <tr class="hover:bg-slate-50 transition-colors ${y.is_current ? 'bg-blue-50/50' : ''}">
                   <td class="px-4 py-3">
-                    <div class="font-black text-slate-800">${y.name}</div>
+                    <div class="font-black text-slate-800">${yearLabel(y)}</div>
                     <div class="text-xs text-slate-400">${y.period_model || 'trimestres'} · ${y.num_periods || 3} períodos</div>
                   </td>
                   <td class="px-4 py-3 hidden sm:table-cell text-slate-600 text-xs">
@@ -677,7 +679,7 @@ export const SchoolYearModule = {
 
   async closeYear(yearId) {
     const year = this.state.schoolYears.find(y => y.id === yearId);
-    if (!confirm(`¿Estás seguro de cerrar el año escolar ${year?.name || ''}?\n\nEsto cerrará todos los períodos y bloqueará las ediciones.`)) return;
+    if (!confirm(`¿Estás seguro de cerrar el año escolar ${normalizeSchoolYearName(year, '')}?\n\nEsto cerrará todos los períodos y bloqueará las ediciones.`)) return;
 
     const progress = SmartLoader.overlay({
       title: 'Cerrando el Año Escolar',
@@ -853,7 +855,10 @@ export const SchoolYearModule = {
 
   openNewYearWizard() {
     const lastYear = this.state.schoolYears[0];
-    const suggestedName = lastYear ? (parseInt(lastYear.name.split('-')[0]) + 1) + '-' + (parseInt(lastYear.name.split('-')[1]) + 1) : new Date().getFullYear() + '-' + (new Date().getFullYear() + 1);
+    const lastStart = parseInt(String(lastYear?.start_date || '').slice(0, 4), 10);
+    const suggestedName = Number.isFinite(lastStart)
+      ? `${lastStart + 1}-${lastStart + 2}`
+      : `${new Date().getFullYear()}-${new Date().getFullYear() + 1}`;
 
     const html = `
       <div class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" id="newYearWizard">
@@ -924,14 +929,17 @@ export const SchoolYearModule = {
     const btn = $el('nyw-create-btn');
     if (btn) { btn.disabled = true; btn.textContent = '⏳ Creando...'; }
 
+    const name = $el('nyw-name')?.value?.trim();
+    const start = $el('nyw-start')?.value;
+    const end = $el('nyw-end')?.value;
     const model = $el('nyw-model')?.value;
     const numPeriods = model === 'semestres' ? 2 : model === 'mensual' ? 12 : 3;
 
     try {
       const { data, error } = await supabase.rpc('create_new_school_year_with_promotion', {
-        p_name: $el('nyw-name')?.value?.trim(),
-        p_start_date: $el('nyw-start')?.value,
-        p_end_date: $el('nyw-end')?.value,
+        p_name: name,
+        p_start_date: start,
+        p_end_date: end,
         p_copy_classrooms: $el('nyw-copy-classrooms')?.checked ?? true,
         p_copy_payment_plans: $el('nyw-copy-plans')?.checked ?? true,
         p_promote_students: $el('nyw-promote')?.checked ?? true,
@@ -950,7 +958,7 @@ export const SchoolYearModule = {
 
       this.closeWizard();
       Helpers.toast('Año escolar creado exitosamente', 'success');
-      alert(`Año "${data.name}" creado:\n\n${summary}`);
+      alert(`Año "${normalizeSchoolYearName({ name, start_date: start, end_date: end }, data.name)}" creado:\n\n${summary}`);
 
       await this.loadSchoolYears();
       await this.loadDashboard();

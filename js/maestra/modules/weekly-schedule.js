@@ -1,5 +1,5 @@
 /**
- * Horario Semanal – Panel de la maestra.
+ * Horario Semanal — Panel de la maestra.
  * Matriz Lun-Vie por bloques, progreso colectivo y ejecución de bloques.
  */
 import { AppState } from '../state.js';
@@ -160,7 +160,7 @@ export function renderWeeklySchedule({ blocks = [], fallback = [], students = []
                   ${WEEK_DAYS.map(d => {
                     const cellBlocks = row.cells[d.n] || [];
                     if (!cellBlocks.length) {
-                      return `<td class="wk-cell empty ${d.n === today ? 'today' : ''}">–</td>`;
+                      return `<td class="wk-cell empty ${d.n === today ? 'today' : ''}">–</td>`;
                     }
                     return `<td class="wk-cell ${d.n === today ? 'today' : ''}">
                       ${cellBlocks.map(block => _renderCell(block, d.n, students, logsMap, now)).join('')}
@@ -195,7 +195,7 @@ export function showBlock(blockId) {
           <h5>${safeEscapeHTML(block.label)}</h5>
           <p>${formatRange(block.startTime, block.duration)} · ${block.days.map(d => (WEEK_DAYS.find(x => x.n === d)?.short || '')).filter(Boolean).join(', ')}</p>
         </div>
-        <button type="button" class="wk-detail-close" onclick="UI.Modal.close('weeklyBlockModal')">–</button>
+        <button type="button" class="wk-detail-close" onclick="UI.Modal.close('weeklyBlockModal')">×</button>
       </div>
       <div class="wk-detail-list">
         <div class="wk-detail-row">
