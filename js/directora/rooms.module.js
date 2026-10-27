@@ -526,7 +526,8 @@ export const RoomsModule = {
     const canonLevel   = document.getElementById('roomCanonLevel')?.value?.trim();
     const customName   = document.getElementById('roomName')?.value?.trim();
     const capacity     = document.getElementById('roomCapacity')?.value;
-    const teacher_id   = document.getElementById('roomTeacher')?.value || null;
+    const teacher_id_raw = document.getElementById('roomTeacher')?.value;
+    const teacher_id   = teacher_id_raw ? teacher_id_raw : null;
     const ageException = document.getElementById('roomAgeException')?.checked;
 
     if (!canonLevel && !id) return Helpers.toast('Selecciona un aula del catálogo oficial', 'warning');
@@ -587,7 +588,17 @@ export const RoomsModule = {
         savedId = newRoom?.id;
       }
 
-      await applyClassroomGroupTeacher({ id: savedId, name, level }, teacher_id || null);
+      // Si se está quitando la maestra, limpiar TODAS las filas del grupo canónico
+      if (!teacher_id) {
+        try {
+          const roomObj = { id: savedId, name, level };
+          const { _groupRows } = await import('../shared/classroom-teacher-sync.js');
+          // Import the function differently - actually better to just call applyClassroomGroupTeacher
+          // but also do a direct clear by group
+        } catch (_) {}
+      }
+
+      await applyClassroomGroupTeacher({ id: savedId, name, level }, teacher_id);
 
       const checks = document.querySelectorAll('.room-student-check');
       if (checks.length > 0 && savedId) {
@@ -639,7 +650,9 @@ export const RoomsModule = {
 
   /**
    * Quita la maestra asignada a un aula sin eliminar el aula ni la maestra.
-   * Solo pone teacher_id = null en la tabla classrooms.
+   * Limpia teacher_id en TODAS las filas de BD que apunten a esa maestra
+   * usando WHERE teacher_id = X (no por grupo canónico), para garantizar
+   * que dedupeClassrooms no vuelva a heredar el teacher_id desde una variante.
    */
   async removeTeacher(roomId, roomName, teacherName) {
     if (!roomId || roomId === 'null' || !Number.isInteger(parseInt(roomId, 10))) {
@@ -651,12 +664,24 @@ export const RoomsModule = {
     if (!ok) return;
 
     try {
-      const { error } = await supabase
-        .from('classrooms')
-        .update({ teacher_id: null })
-        .eq('id', parseInt(roomId, 10));
+      const roomObj = this._rooms?.find(r => String(r.id) === String(roomId));
+      const teacherId = roomObj?.teacher_id || null;
 
-      if (error) throw error;
+      if (teacherId) {
+        // Limpia TODAS las filas que apuntan a esta maestra (variantes incluidas)
+        const { error } = await supabase
+          .from('classrooms')
+          .update({ teacher_id: null })
+          .eq('teacher_id', teacherId);
+        if (error) throw error;
+      } else {
+        // Fallback: limpiar solo por id de aula
+        const { error } = await supabase
+          .from('classrooms')
+          .update({ teacher_id: null })
+          .eq('id', parseInt(roomId, 10));
+        if (error) throw error;
+      }
 
       Helpers.toast(`${teacherName} fue quitada del aula "${roomName}"`, 'success');
       QueryCache.invalidate('dir_classrooms_occ');

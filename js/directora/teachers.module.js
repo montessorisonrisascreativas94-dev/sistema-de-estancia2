@@ -7,6 +7,9 @@ import { auditLog } from '../shared/db-utils.js';
 import { requireReauth } from '../shared/reauth.js';
 import { QueryCache } from '../shared/query-cache.js';
 import {
+  notifyClassroomUpdated,
+} from '../shared/classroom-teacher-sync.js';
+import {
   findCanonicalClassroom,
   findSpecialClassroom,
   formatClassroomLevel,
@@ -391,17 +394,55 @@ export const TeachersModule = {
       if (!ok) return;
 
       try {
-        const { error } = await supabase
-          .from('classrooms')
-          .update({ teacher_id: null })
-          .in('id', classIds.map(Number));
-        if (error) throw error;
+        // Limpiar SOLO las filas del grupo canónico de esa aula (no todas las del teacher_id)
+        const room = classrooms[0];
+        const { findCanonicalClassroom, findSpecialClassroom, sanitizeClassroomDisplayName } = await import('../shared/constants.js');
+        const canon = findCanonicalClassroom(room.level || room.name);
+        const spec = canon ? null : (findSpecialClassroom(room.name) || findSpecialClassroom(room.level));
+        let groupKey = null;
+        if (canon) groupKey = `canon:${canon.id}`;
+        else if (spec) groupKey = `spec:${spec.key}`;
+        else {
+          const n = String(room.name || '').trim().toLowerCase();
+          const l = String(room.level || '').trim().toLowerCase();
+          groupKey = `custom:${n}__${l}`;
+        }
+
+        let { data: allRows } = await supabase.from('classrooms').select('id, name, level').is('deleted_at', null);
+        if (!allRows) {
+          const res2 = await supabase.from('classrooms').select('id, name, level');
+          allRows = res2.data || [];
+        }
+
+        const groupIds = (allRows || []).filter(row => {
+          const rn = sanitizeClassroomDisplayName(row.name || '');
+          const rl = sanitizeClassroomDisplayName(row.level || '');
+          const rc = findCanonicalClassroom(rl || rn);
+          const rs = rc ? null : (findSpecialClassroom(rn) || findSpecialClassroom(rl));
+          if (groupKey?.startsWith('canon:') && rc && `canon:${rc.id}` === groupKey) return true;
+          if (groupKey?.startsWith('spec:') && rs && `spec:${rs.key}` === groupKey) return true;
+          if (groupKey?.startsWith('custom:')) {
+            const gn = String(room.name || '').trim().toLowerCase();
+            const gl = String(room.level || '').trim().toLowerCase();
+            return rn.trim().toLowerCase() === gn && rl.trim().toLowerCase() === gl;
+          }
+          return String(row.id) === String(room.id);
+        }).map(r => r.id);
+
+        if (groupIds.length) {
+          const { error } = await supabase.from('classrooms').update({ teacher_id: null }).in('id', groupIds);
+          if (error) throw error;
+        } else {
+          const { error } = await supabase.from('classrooms').update({ teacher_id: null }).eq('teacher_id', teacherId);
+          if (error) throw error;
+        }
 
         Helpers.toast(`${name} fue quitada del aula`, 'success');
+        notifyClassroomUpdated();
         QueryCache.invalidate('dir_teachers');
         QueryCache.invalidate('dir_classrooms_occ');
         QueryCache.invalidate('dir_classrooms');
-        await this.init(AppState.get('teachers'));
+        await this.init();
       } catch (e) {
         Helpers.toast('Error: ' + e.message, 'error');
       }
@@ -449,23 +490,67 @@ export const TeachersModule = {
     const teachers = AppState.get('teachers') || [];
     const teacher = teachers.find(t => String(t.id) === String(teacherId));
     const name = teacher?.name || 'la maestra';
+    const classrooms = Array.isArray(teacher?.classrooms) ? teacher.classrooms : [];
 
     const btn = document.getElementById('btnConfirmRemoveTeacher');
     if (btn) { btn.disabled = true; btn.textContent = 'Quitando...'; }
 
     try {
-      const { error } = await supabase
-        .from('classrooms')
-        .update({ teacher_id: null })
-        .in('id', ids);
-      if (error) throw error;
+      const { findCanonicalClassroom, findSpecialClassroom, sanitizeClassroomDisplayName } = await import('../shared/constants.js');
+      let allGroupIds = [];
+
+      for (const cid of ids) {
+        const room = classrooms.find(c => String(c.id) === String(cid)) || { id: cid };
+        const canon = findCanonicalClassroom(room.level || room.name);
+        const spec = canon ? null : (findSpecialClassroom(room.name) || findSpecialClassroom(room.level));
+        let groupKey = null;
+        if (canon) groupKey = `canon:${canon.id}`;
+        else if (spec) groupKey = `spec:${spec.key}`;
+        else {
+          const n = String(room.name || '').trim().toLowerCase();
+          const l = String(room.level || '').trim().toLowerCase();
+          groupKey = `custom:${n}__${l}`;
+        }
+
+        let { data: allRows } = await supabase.from('classrooms').select('id, name, level').is('deleted_at', null);
+        if (!allRows) {
+          const res2 = await supabase.from('classrooms').select('id, name, level');
+          allRows = res2.data || [];
+        }
+
+        const groupIds = (allRows || []).filter(row => {
+          const rn = sanitizeClassroomDisplayName(row.name || '');
+          const rl = sanitizeClassroomDisplayName(row.level || '');
+          const rc = findCanonicalClassroom(rl || rn);
+          const rs = rc ? null : (findSpecialClassroom(rn) || findSpecialClassroom(rl));
+          if (groupKey?.startsWith('canon:') && rc && `canon:${rc.id}` === groupKey) return true;
+          if (groupKey?.startsWith('spec:') && rs && `spec:${rs.key}` === groupKey) return true;
+          if (groupKey?.startsWith('custom:')) {
+            const gn = String(room.name || '').trim().toLowerCase();
+            const gl = String(room.level || '').trim().toLowerCase();
+            return rn.trim().toLowerCase() === gn && rl.trim().toLowerCase() === gl;
+          }
+          return String(row.id) === String(cid);
+        }).map(r => r.id);
+        allGroupIds.push(...groupIds);
+      }
+
+      const unique = [...new Set(allGroupIds)];
+      if (unique.length) {
+        const { error } = await supabase.from('classrooms').update({ teacher_id: null }).in('id', unique);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('classrooms').update({ teacher_id: null }).eq('teacher_id', teacherId).in('id', ids);
+        if (error) throw error;
+      }
 
       Helpers.toast(`${name} fue quitada de ${ids.length} aula${ids.length > 1 ? 's' : ''}`, 'success');
       App.ui.closeModal();
+      notifyClassroomUpdated();
       QueryCache.invalidate('dir_teachers');
       QueryCache.invalidate('dir_classrooms_occ');
       QueryCache.invalidate('dir_classrooms');
-      await this.init(AppState.get('teachers'));
+      await this.init();
     } catch (e) {
       Helpers.toast('Error: ' + e.message, 'error');
       if (btn) { btn.disabled = false; btn.textContent = 'Quitar seleccionadas'; }

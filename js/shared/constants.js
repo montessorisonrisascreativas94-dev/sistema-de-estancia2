@@ -483,12 +483,20 @@ export function dedupeClassrooms(rows) {
     if (canonicalMeta) {
       winner.name  = canonicalMeta.name;
       winner.level = canonicalMeta.level;
-      if (!winner.teacher_id) {
+      const allNull = items.every((it) => it.teacher_id === null || it.teacher_id === undefined);
+      const anyHasTeacher = items.some((it) => it.teacher_id);
+      if (winner.teacher_id == null || winner.teacher_id === undefined) {
+        if (allNull) {
+          winner.teacher_id = null;
+          if (winner.profiles) delete winner.profiles;
+          if (winner.teacher) delete winner.teacher;
+        } else if (anyHasTeacher) {
         const withTeacher = items.find((it) => it.teacher_id);
-        if (withTeacher) {
-          winner.teacher_id = withTeacher.teacher_id;
-          if (!winner.profiles && withTeacher.profiles) winner.profiles = withTeacher.profiles;
-          if (!winner.teacher && withTeacher.teacher) winner.teacher = withTeacher.teacher;
+          if (withTeacher) {
+            winner.teacher_id = withTeacher.teacher_id;
+            if (!winner.profiles && withTeacher.profiles) winner.profiles = withTeacher.profiles;
+            if (!winner.teacher && withTeacher.teacher) winner.teacher = withTeacher.teacher;
+          }
         }
       }
     }
