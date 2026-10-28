@@ -3138,12 +3138,12 @@ export function openStudentRoutine(studentId) {
                         </span>
                       </div>
                       <div class="sr-tl-card-bot">
-                        <span class="sr-tl-time">${ev.time ? '🕒 ' + _fmtTime(ev.time) : 'Sin hora registrada'}${ev.duration ? ' · ⏱ ' + ev.duration : ''}</span>
+                        <span class="sr-tl-time">${ev.time ? '🕒 ' + _fmtTime(ev.time) : 'Sin hora'}${ev.duration ? ' · ⏱ ' + ev.duration : ''}</span>
                         ${ev.editable && ev.id ? `
                           <span class="sr-tl-actions">
-                            <button onclick="App._openRepeatEventModal('${studentId}','${encodeURIComponent(JSON.stringify({type:ev.type,subtype:ev.subtype||'',label:ev.label||ev.type,emoji:ev.emoji||''}))}')" title="Repetir este evento">🔁</button>
-                            <button onclick="App._editEventTime('${studentId}','${ev.id}')" title="Editar hora">✏️</button>
-                            <button onclick="App.deleteInfantEvent('${studentId}','${ev.id}')" title="Eliminar evento">🗑️</button>
+                            <button class="sr-act-repeat" onclick="App._openRepeatEventModal('${studentId}','${encodeURIComponent(JSON.stringify({type:ev.type,subtype:ev.subtype||'',label:ev.label||ev.type,emoji:ev.emoji||''}))}')" title="Repetir este evento">🔁</button>
+                            <button class="sr-act-edit" onclick="App._editEventTime('${studentId}','${ev.id}')" title="Editar hora">✏️</button>
+                            <button class="sr-act-delete" onclick="App.deleteInfantEvent('${studentId}','${ev.id}')" title="Eliminar evento">🗑️</button>
                           </span>` : ''}
                       </div>
                     </div>

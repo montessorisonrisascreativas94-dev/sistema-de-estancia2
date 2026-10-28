@@ -1529,7 +1529,7 @@ SELECT sy.name,
   FROM public.school_years sy
   LEFT JOIN public.student_preregistrations pr ON pr.school_year_id = sy.id
   LEFT JOIN public.payments p ON p.school_year_id = sy.id AND p.deleted_at IS NULL
- GROUP BY sy.name
+ GROUP BY sy.name, sy.start_date
  ORDER BY sy.start_date DESC;
 
 -- ----------------------------------------------------------------

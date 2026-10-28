@@ -40,15 +40,20 @@ DROP POLICY IF EXISTS "attendance_staff_all" ON public.attendance;
 CREATE POLICY "attendance_staff_all" ON public.attendance FOR ALL
   USING (COALESCE(get_my_role(), '') IN ('directora','asistente','admin','maestra','encargada'));
 
-DROP POLICY IF EXISTS "attendance_parent_select" ON public.attendance;
-CREATE POLICY "attendance_parent_select" ON public.attendance FOR SELECT
-  USING (EXISTS (SELECT 1 FROM public.students s WHERE s.id = attendance.student_id AND s.parent_id = auth.uid()));
+DO $$ BEGIN
+  CREATE POLICY "attendance_parent_select" ON public.attendance FOR SELECT
+    USING (EXISTS (SELECT 1 FROM public.students s WHERE s.id = attendance.student_id AND s.parent_id = auth.uid()));
+EXCEPTION WHEN duplicate_object OR undefined_column OR undefined_table THEN NULL;
+END $$;
 
 -- attendance_requests
 DROP POLICY IF EXISTS "attendance_requests_all" ON public.attendance_requests;
-CREATE POLICY "attendance_requests_all" ON public.attendance_requests FOR ALL
-  USING (COALESCE(get_my_role(), '') IN ('directora','asistente','admin','maestra','encargada') OR
-         EXISTS (SELECT 1 FROM public.students s WHERE s.id = attendance_requests.student_id AND s.parent_id = auth.uid()));
+DO $$ BEGIN
+  CREATE POLICY "attendance_requests_all" ON public.attendance_requests FOR ALL
+    USING (COALESCE(get_my_role(), '') IN ('directora','asistente','admin','maestra','encargada') OR
+           EXISTS (SELECT 1 FROM public.students s WHERE s.id = attendance_requests.student_id AND s.parent_id = auth.uid()));
+EXCEPTION WHEN duplicate_object OR undefined_column OR undefined_table THEN NULL;
+END $$;
 
 -- periods
 DROP POLICY IF EXISTS "periods_all" ON public.periods;
@@ -165,17 +170,26 @@ CREATE POLICY "payments_staff_can_delete" ON public.payments FOR DELETE
   USING (COALESCE(get_my_role(), '') IN ('directora','asistente','admin','encargada'));
 
 DROP POLICY IF EXISTS "payments_parent_see_own" ON public.payments;
-CREATE POLICY "payments_parent_see_own" ON public.payments FOR SELECT
-  USING (EXISTS (SELECT 1 FROM public.students s WHERE s.id = payments.student_id AND s.parent_id = auth.uid() AND s.deleted_at IS NULL));
+DO $$ BEGIN
+  CREATE POLICY "payments_parent_see_own" ON public.payments FOR SELECT
+    USING (EXISTS (SELECT 1 FROM public.students s WHERE s.id = payments.student_id AND s.parent_id = auth.uid() AND s.deleted_at IS NULL));
+EXCEPTION WHEN duplicate_object OR undefined_column OR undefined_table THEN NULL;
+END $$;
 
 DROP POLICY IF EXISTS "payments_parent_can_submit" ON public.payments;
-CREATE POLICY "payments_parent_can_submit" ON public.payments FOR INSERT
-  WITH CHECK (EXISTS (SELECT 1 FROM public.students s WHERE s.id = payments.student_id AND s.parent_id = auth.uid() AND s.deleted_at IS NULL));
+DO $$ BEGIN
+  CREATE POLICY "payments_parent_can_submit" ON public.payments FOR INSERT
+    WITH CHECK (EXISTS (SELECT 1 FROM public.students s WHERE s.id = payments.student_id AND s.parent_id = auth.uid() AND s.deleted_at IS NULL));
+EXCEPTION WHEN duplicate_object OR undefined_column OR undefined_table THEN NULL;
+END $$;
 
 DROP POLICY IF EXISTS "payments_parent_can_update_own" ON public.payments;
-CREATE POLICY "payments_parent_can_update_own" ON public.payments FOR UPDATE
-  USING (EXISTS (SELECT 1 FROM public.students s WHERE s.id = payments.student_id AND s.parent_id = auth.uid() AND s.deleted_at IS NULL))
-  WITH CHECK (EXISTS (SELECT 1 FROM public.students s WHERE s.id = payments.student_id AND s.parent_id = auth.uid() AND s.deleted_at IS NULL));
+DO $$ BEGIN
+  CREATE POLICY "payments_parent_can_update_own" ON public.payments FOR UPDATE
+    USING (EXISTS (SELECT 1 FROM public.students s WHERE s.id = payments.student_id AND s.parent_id = auth.uid() AND s.deleted_at IS NULL))
+    WITH CHECK (EXISTS (SELECT 1 FROM public.students s WHERE s.id = payments.student_id AND s.parent_id = auth.uid() AND s.deleted_at IS NULL));
+EXCEPTION WHEN duplicate_object OR undefined_column OR undefined_table THEN NULL;
+END $$;
 
 -- payment_audit_log
 DROP POLICY IF EXISTS "audit_log_staff" ON public.payment_audit_log;
@@ -188,8 +202,11 @@ CREATE POLICY "incidents_staff_all" ON public.incidents FOR ALL
   USING (COALESCE(get_my_role(), '') IN ('directora','asistente','admin','maestra','encargada'));
 
 DROP POLICY IF EXISTS "incidents_parent_select" ON public.incidents;
-CREATE POLICY "incidents_parent_select" ON public.incidents FOR SELECT
-  USING (EXISTS (SELECT 1 FROM public.students s WHERE s.id = incidents.student_id AND s.parent_id = auth.uid()));
+DO $$ BEGIN
+  CREATE POLICY "incidents_parent_select" ON public.incidents FOR SELECT
+    USING (EXISTS (SELECT 1 FROM public.students s WHERE s.id = incidents.student_id AND s.parent_id = auth.uid()));
+EXCEPTION WHEN duplicate_object OR undefined_column OR undefined_table THEN NULL;
+END $$;
 
 -- daily_logs
 DROP POLICY IF EXISTS "daily_logs_staff_all" ON public.daily_logs;
@@ -197,8 +214,11 @@ CREATE POLICY "daily_logs_staff_all" ON public.daily_logs FOR ALL
   USING (COALESCE(get_my_role(), '') IN ('directora','asistente','admin','maestra','encargada'));
 
 DROP POLICY IF EXISTS "daily_logs_parent_select" ON public.daily_logs;
-CREATE POLICY "daily_logs_parent_select" ON public.daily_logs FOR SELECT
-  USING (EXISTS (SELECT 1 FROM public.students s WHERE s.id = daily_logs.student_id AND s.parent_id = auth.uid()));
+DO $$ BEGIN
+  CREATE POLICY "daily_logs_parent_select" ON public.daily_logs FOR SELECT
+    USING (EXISTS (SELECT 1 FROM public.students s WHERE s.id = daily_logs.student_id AND s.parent_id = auth.uid()));
+EXCEPTION WHEN duplicate_object OR undefined_column OR undefined_table THEN NULL;
+END $$;
 
 -- classroom_gallery
 DROP POLICY IF EXISTS "classroom_gallery_all" ON public.classroom_gallery;
@@ -226,8 +246,11 @@ CREATE POLICY "report_cards_staff" ON public.report_cards FOR ALL
   USING (COALESCE(get_my_role(), '') IN ('directora','asistente','admin','encargada'));
 
 DROP POLICY IF EXISTS "report_cards_parent" ON public.report_cards;
-CREATE POLICY "report_cards_parent" ON public.report_cards FOR SELECT
-  USING (EXISTS (SELECT 1 FROM public.students s WHERE s.id = report_cards.student_id AND s.parent_id = auth.uid()));
+DO $$ BEGIN
+  CREATE POLICY "report_cards_parent" ON public.report_cards FOR SELECT
+    USING (EXISTS (SELECT 1 FROM public.students s WHERE s.id = report_cards.student_id AND s.parent_id = auth.uid()));
+EXCEPTION WHEN duplicate_object OR undefined_column OR undefined_table THEN NULL;
+END $$;
 
 -- inquiries
 DROP POLICY IF EXISTS "inquiries_staff_all" ON public.inquiries;
@@ -286,8 +309,11 @@ CREATE POLICY "punches_staff_all" ON public.door_punches FOR ALL
   USING (COALESCE(get_my_role(), '') IN ('directora','asistente','maestra','admin','encargada'));
 
 DROP POLICY IF EXISTS "punches_parent_select" ON public.door_punches;
-CREATE POLICY "punches_parent_select" ON public.door_punches FOR SELECT
-  USING (EXISTS (SELECT 1 FROM public.students s WHERE s.id = door_punches.student_id AND s.parent_id = auth.uid()));
+DO $$ BEGIN
+  CREATE POLICY "punches_parent_select" ON public.door_punches FOR SELECT
+    USING (EXISTS (SELECT 1 FROM public.students s WHERE s.id = door_punches.student_id AND s.parent_id = auth.uid()));
+EXCEPTION WHEN duplicate_object OR undefined_column OR undefined_table THEN NULL;
+END $$;
 
 -- staff_permits (con encargada)
 DROP POLICY IF EXISTS "staff_permits_all" ON public.staff_permits;

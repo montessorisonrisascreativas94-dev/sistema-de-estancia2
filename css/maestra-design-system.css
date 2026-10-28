@@ -1297,14 +1297,15 @@ body.panel-maestra-body #classesGrid > div.is-active-classroom:hover {
 #studentRoutineModal .sr-tool-btn.sr-tool-off { opacity: .35; pointer-events: none; }
 #studentRoutineModal .sr-tool-hint { font-size: 8.5px; font-weight: 700; color: #94a3b8; }
 
-/* ═══ LÍNEA DEL TIEMPO (rediseño) ═══ */
+/* ═══ LÍNEA DEL TIEMPO (rediseño v2 — mobile-first, botones grandes) ═══ */
 #studentRoutineModal .sr-repeat-btn {
   display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%;
-  font-size: 10px; font-weight: 900; color: #0B63C7; background: #eff6ff;
-  border: 2px solid #bfdbfe; border-radius: 13px; padding: 10px 12px; margin: 2px 0 10px;
+  padding: 11px; border-radius: 14px; border: 2px solid #bfdbfe;
+  font-size: 11px; font-weight: 900; color: #1d4ed8; background: linear-gradient(135deg,#eff6ff,#dbeafe);
   cursor: pointer; -webkit-tap-highlight-color: transparent;
+  margin-bottom: 8px; transition: all .15s ease;
 }
-#studentRoutineModal .sr-repeat-btn:active { transform: scale(.97); background: #dbeafe; }
+#studentRoutineModal .sr-repeat-btn:active { transform: scale(.97); }
 #studentRoutineModal .sr-tl-filters { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0 10px; }
 #studentRoutineModal .sr-tl-chip {
   display: inline-flex; align-items: center; gap: 5px;
@@ -1316,41 +1317,61 @@ body.panel-maestra-body #classesGrid > div.is-active-classroom:hover {
 #studentRoutineModal .sr-tl-chip--on { background: #dcfce7; border-color: #86efac; color: #15803d; }
 #studentRoutineModal .sr-tl-chip--on b { background: #86efac; color: #14532d; }
 
-#studentRoutineModal .sr-tl { display: flex; flex-direction: column; }
+#studentRoutineModal .sr-tl { display: flex; flex-direction: column; gap: 2px; }
 #studentRoutineModal .sr-tl-item { display: flex; gap: 8px; }
-#studentRoutineModal .sr-tl-rail { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; width: 30px; }
+#studentRoutineModal .sr-tl-rail { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; width: 34px; }
 #studentRoutineModal .sr-tl-dot {
-  width: 30px; height: 30px; border-radius: 999px; display: grid; place-items: center;
-  font-size: 15px; background: color-mix(in srgb, var(--tl-color) 14%, #fff);
+  width: 34px; height: 34px; border-radius: 999px; display: grid; place-items: center;
+  font-size: 16px; background: color-mix(in srgb, var(--tl-color) 14%, #fff);
   border: 2px solid color-mix(in srgb, var(--tl-color) 38%, #fff); flex-shrink: 0;
+  box-shadow: 0 2px 6px color-mix(in srgb, var(--tl-color) 12%, transparent);
 }
-#studentRoutineModal .sr-tl-line { flex: 1; width: 2px; background: #eef2f7; margin: 2px 0; min-height: 8px; }
+#studentRoutineModal .sr-tl-line { flex: 1; width: 2.5px; background: linear-gradient(to bottom, color-mix(in srgb, var(--tl-color) 30%, #e2e8f0), #eef2f7); margin: 2px 0; min-height: 8px; border-radius: 2px; }
 #studentRoutineModal .sr-tl-card {
-  flex: 1; min-width: 0; margin-bottom: 8px; padding: 8px 10px; border-radius: 14px;
-  background: color-mix(in srgb, var(--tl-color) 6%, #fff);
-  border: 1.5px solid color-mix(in srgb, var(--tl-color) 24%, #fff);
+  flex: 1; min-width: 0; margin-bottom: 6px; padding: 10px 12px; border-radius: 16px;
+  background: color-mix(in srgb, var(--tl-color) 5%, #fff);
+  border: 1.5px solid color-mix(in srgb, var(--tl-color) 22%, #fff);
+  transition: border-color .15s ease, box-shadow .15s ease;
 }
+#studentRoutineModal .sr-tl-card:hover { border-color: color-mix(in srgb, var(--tl-color) 40%, #fff); box-shadow: 0 3px 12px color-mix(in srgb, var(--tl-color) 10%, transparent); }
 #studentRoutineModal .sr-tl-card-top { display: flex; align-items: flex-start; gap: 6px; justify-content: space-between; }
-#studentRoutineModal .sr-tl-label { font-size: 11px; font-weight: 900; color: var(--tl-color); line-height: 1.25; word-break: break-word; }
+#studentRoutineModal .sr-tl-label { font-size: 11.5px; font-weight: 900; color: var(--tl-color); line-height: 1.25; word-break: break-word; }
 #studentRoutineModal .sr-tl-origin {
   flex-shrink: 0; font-size: 7px; font-weight: 900; text-transform: uppercase; letter-spacing: .03em;
   border-radius: 999px; padding: 2px 7px; white-space: nowrap;
 }
 #studentRoutineModal .sr-tl-origin--aula { background: #ede9fe; color: #6d28d9; border: 1px solid #ddd6fe; }
 #studentRoutineModal .sr-tl-origin--indiv { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
-#studentRoutineModal .sr-tl-card-bot { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-top: 4px; }
-#studentRoutineModal .sr-tl-time { font-size: 9px; font-weight: 700; color: #94a3b8; }
-#studentRoutineModal .sr-tl-actions { display: flex; gap: 4px; flex-shrink: 0; }
+#studentRoutineModal .sr-tl-card-bot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 6px; }
+#studentRoutineModal .sr-tl-time { font-size: 9.5px; font-weight: 700; color: #94a3b8; }
+#studentRoutineModal .sr-tl-actions { display: flex; gap: 5px; flex-shrink: 0; }
 #studentRoutineModal .sr-tl-actions button {
-  padding: 3px 6px; border-radius: 8px; font-size: 10px; cursor: pointer;
+  display: grid; place-items: center;
+  width: 32px; height: 32px; border-radius: 10px; font-size: 13px; cursor: pointer;
   background: #fff; border: 1.5px solid #e2e8f0; -webkit-tap-highlight-color: transparent;
+  transition: all .12s ease;
 }
-#studentRoutineModal .sr-tl-actions button:active { transform: scale(.94); }
+#studentRoutineModal .sr-tl-actions button:active { transform: scale(.90); }
+/* Botón repetir — destacado en púrpura */
+#studentRoutineModal .sr-tl-actions .sr-act-repeat {
+  background: #f5f3ff; border-color: #c4b5fd; color: #7c3aed;
+}
+#studentRoutineModal .sr-tl-actions .sr-act-repeat:hover { background: #ede9fe; border-color: #a78bfa; box-shadow: 0 2px 8px rgba(124,58,237,.15); }
+/* Botón editar — azul */
+#studentRoutineModal .sr-tl-actions .sr-act-edit {
+  background: #eff6ff; border-color: #bfdbfe; color: #2563eb;
+}
+#studentRoutineModal .sr-tl-actions .sr-act-edit:hover { background: #dbeafe; border-color: #93c5fd; }
+/* Botón eliminar — rojo */
+#studentRoutineModal .sr-tl-actions .sr-act-delete {
+  background: #fef2f2; border-color: #fecaca; color: #dc2626;
+}
+#studentRoutineModal .sr-tl-actions .sr-act-delete:hover { background: #fee2e2; border-color: #fca5a5; }
 #studentRoutineModal .sr-tl-empty {
-  text-align: center; padding: 18px 12px; border-radius: 16px;
+  text-align: center; padding: 22px 14px; border-radius: 16px;
   background: #f8fafc; border: 2px dashed #e2e8f0;
 }
-#studentRoutineModal .sr-tl-empty-ico { font-size: 24px; }
+#studentRoutineModal .sr-tl-empty-ico { font-size: 28px; }
 #studentRoutineModal .sr-tl-empty p { font-size: 12px; font-weight: 900; color: #64748b; margin-top: 4px; }
 #studentRoutineModal .sr-tl-empty small { display: block; font-size: 10px; color: #94a3b8; margin-top: 3px; line-height: 1.4; }
 
@@ -1382,11 +1403,22 @@ body.panel-maestra-body #classesGrid > div.is-active-classroom:hover {
   #studentRoutineModal .sr-sec-title { font-size: 12.5px; }
   #studentRoutineModal .sr-tool-btn { padding: 8px 14px; font-size: 10px; }
   #studentRoutineModal .sr-tool-hint { display: none; }
+  #studentRoutineModal .sr-repeat-btn { padding: 12px; font-size: 12px; border-radius: 12px; }
   #studentRoutineModal .sr-tl-chip { padding: 7px 12px; font-size: 10px; }
-  #studentRoutineModal .sr-tl-dot { width: 30px; height: 30px; font-size: 15px; }
-  #studentRoutineModal .sr-tl-label { font-size: 12px; }
+  #studentRoutineModal .sr-tl-dot { width: 36px; height: 36px; font-size: 17px; }
+  #studentRoutineModal .sr-tl-label { font-size: 12.5px; }
   #studentRoutineModal .sr-tl-origin { font-size: 8px; }
   #studentRoutineModal .sr-tl-time { font-size: 10px; }
+  #studentRoutineModal .sr-tl-actions button { width: 36px; height: 36px; font-size: 15px; border-radius: 11px; }
+  #studentRoutineModal .sr-tl-card { padding: 12px 14px; border-radius: 14px; }
   #studentRoutineModal .sr-aula-search { font-size: 13px; padding: 11px 13px; }
   #studentRoutineModal .sr-aula-toggle { font-size: 10px; padding: 0 14px; }
+}
+
+/* Escritorio: hover effects y más detalle */
+@media (min-width: 641px) {
+  #studentRoutineModal .sr-tl-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px color-mix(in srgb, var(--tl-color) 12%, transparent);
+  }
 }

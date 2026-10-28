@@ -571,6 +571,14 @@ export const RoomsModule = {
     if (btn) { btn.disabled = true; btn.textContent = 'Guardando...'; }
 
     try {
+      // Si estamos editando un aula existente, obtener el teacher_id actual
+      // para poder limpiar todas las filas que apuntaban a esa maestra
+      let oldTeacherId = null;
+      if (id) {
+        const roomObj = this._rooms?.find(r => String(r.id) === String(id));
+        oldTeacherId = roomObj?.teacher_id || null;
+      }
+
       const payload = {
         name,
         level,
@@ -588,16 +596,18 @@ export const RoomsModule = {
         savedId = newRoom?.id;
       }
 
-      // Si se está quitando la maestra, limpiar TODAS las filas del grupo canónico
-      if (!teacher_id) {
-        try {
-          const roomObj = { id: savedId, name, level };
-          const { _groupRows } = await import('../shared/classroom-teacher-sync.js');
-          // Import the function differently - actually better to just call applyClassroomGroupTeacher
-          // but also do a direct clear by group
-        } catch (_) {}
+      // Si se quitó la maestra (teacher_id era null y antes había una),
+      // limpiar TODAS las filas de BD que apuntaban a esa maestra
+      // (más robusto que applyClassroomGroupTeacher que solo limpia por grupo canónico)
+      if (!teacher_id && oldTeacherId) {
+        const { error: cleanErr } = await supabase
+          .from('classrooms')
+          .update({ teacher_id: null })
+          .eq('teacher_id', oldTeacherId);
+        if (cleanErr) console.warn('[rooms.save] clean old teacher failed:', cleanErr);
       }
 
+      // Sincronizar el grupo canónico (para el caso de asignar una maestra nueva)
       await applyClassroomGroupTeacher({ id: savedId, name, level }, teacher_id);
 
       const checks = document.querySelectorAll('.room-student-check');

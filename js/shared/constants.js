@@ -483,21 +483,16 @@ export function dedupeClassrooms(rows) {
     if (canonicalMeta) {
       winner.name  = canonicalMeta.name;
       winner.level = canonicalMeta.level;
-      const allNull = items.every((it) => it.teacher_id === null || it.teacher_id === undefined);
-      const anyHasTeacher = items.some((it) => it.teacher_id);
-      if (winner.teacher_id == null || winner.teacher_id === undefined) {
-        if (allNull) {
-          winner.teacher_id = null;
-          if (winner.profiles) delete winner.profiles;
-          if (winner.teacher) delete winner.teacher;
-        } else if (anyHasTeacher) {
-        const withTeacher = items.find((it) => it.teacher_id);
-          if (withTeacher) {
-            winner.teacher_id = withTeacher.teacher_id;
-            if (!winner.profiles && withTeacher.profiles) winner.profiles = withTeacher.profiles;
-            if (!winner.teacher && withTeacher.teacher) winner.teacher = withTeacher.teacher;
-          }
-        }
+      // ❌ NO heredar teacher_id desde otras filas del grupo.
+      //    Antes se copiaba teacher_id de cualquier fila del grupo que lo tuviera,
+      //    pero eso deshace la acción de "quitar maestra": aunque el UPDATE
+      //    ponga teacher_id = null en la fila principal, si una variante con
+      //    _groupKey distinto aún conserva el teacher_id, dedupe lo reinyecta.
+      //    La limpieza debe ser autoritativa en BD (UPDATE WHERE teacher_id = X),
+      //    no reconstructiva en el cliente.
+      if (winner.teacher_id == null) {
+        if (winner.profiles) delete winner.profiles;
+        if (winner.teacher) delete winner.teacher;
       }
     }
     result.push(winner);
