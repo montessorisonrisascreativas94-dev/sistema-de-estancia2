@@ -981,7 +981,11 @@ function renderDailySummary(log) {
     milk:          (e) => ({ icon:'🍼', label:'Biberón',                detail: e.oz ? e.oz + ' oz' : '' }),
     sleep:         (e) => ({ icon:'😴', label: e.label || (e.end_time ? 'Terminó siesta' : 'Inició siesta'), detail: e.end_time ? ('hasta ' + fmtTime(e.end_time)) : 'En siesta...' }),
     diaper:        (e) => ({ icon: e.subtype==='wet'?'💧':'💩', label: e.subtype==='wet'?'Pañal mojado':'Pañal sucio', detail: '' }),
-    diaper_change: ()  => ({ icon:'🧻', label:'Cambio de pañal',        detail: '' }),
+    diaper_change: (e) => ({
+      icon: e.subtype==='wet' ? '💧' : e.subtype==='soiled' ? '💩' : '🧻',
+      label: e.label || (e.subtype==='wet' ? 'Cambio de pañal · Pipí' : e.subtype==='soiled' ? 'Cambio de pañal · Popó' : 'Cambio de pañal'),
+      detail: ''
+    }),
     food:          (e) => ({ icon:'🍽️', label: e.meal||'Comida',        detail: e.amount||'' }),
     temp:          (e) => ({ icon:'🌡️', label:'Temperatura',            detail: e.value ? e.value + '°C' : '' }),
     med:           (e) => ({ icon:'💊', label:'Medicamento',            detail: e.name||'' }),

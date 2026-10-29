@@ -44,6 +44,35 @@ function eventMetaForLabel(label) {
   return { type: 'activity' };
 }
 
+/** Etiqueta visible cuando el cambio de pañal se asocia a pipí o popó. */
+function _diaperLabelWithSubtype(label, subtype) {
+  if (!subtype) return label;
+  return `${label} · ${subtype === 'wet' ? 'Pipí' : 'Popó'}`;
+}
+
+/** Selector visual Pipí / Popó para la confirmación de hora del bloque. */
+function _diaperPickerHTML(inputName) {
+  const option = (value, emoji, text) => `
+    <label style="display:flex;align-items:center;justify-content:center;gap:8px;padding:11px;border:2px solid #E2E8F0;border-radius:12px;background:#fff;cursor:pointer">
+      <input type="radio" name="${inputName}" value="${value}" style="width:16px;height:16px;accent-color:#475569"
+        onchange="this.closest('[data-diaper-picker]').querySelectorAll('label').forEach(function(l){l.style.borderColor='#E2E8F0';l.style.background='#fff';});this.closest('label').style.borderColor='#475569';this.closest('label').style.background='#F1F5F9';">
+      <span style="font-size:13px;font-weight:900;color:#334155">${emoji} ${text}</span>
+    </label>`;
+  return `
+    <div data-diaper-picker>
+      <div style="font-size:10px;font-weight:900;color:#94A3B8;text-transform:uppercase;letter-spacing:.08em">¿Fue por?</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
+        ${option('wet', '💧', 'Pipí')}
+        ${option('soiled', '💩', 'Popó')}
+      </div>
+    </div>`;
+}
+
+/** Lee la opción Pipí/Popó elegida en el modal. */
+function _readDiaperSubtype(inputName) {
+  return document.querySelector(`input[name="${inputName}"]:checked`)?.value || null;
+}
+
 export function getClassroomKey() {
   const classroom = AppState.get('classroom');
   return classroom?.id ? `${classroom.id}:${classroom.level || classroom.name || ''}` : '';
@@ -237,6 +266,7 @@ function _promptTime(block) {
   return new Promise(resolve => {
     const id = 'weeklyBlockTimeModal';
     const now = new Date();
+    const askDiaper = eventMetaForLabel(block.label).type === 'diaper_change';
     const defaultTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
     UI.Modal.open(id, `
       <div style="background:#fff;border-radius:26px;overflow:hidden;max-width:340px;margin:0 auto">
@@ -249,6 +279,7 @@ function _promptTime(block) {
         </div>
         <div style="padding:16px;display:flex;flex-direction:column;gap:11px">
           <p style="margin:0;font-size:11px;font-weight:600;color:#64748B">Ajusta la hora si registras el bloque más tarde.</p>
+          ${askDiaper ? _diaperPickerHTML('weeklyBlockDiaperSubtype') : ''}
           <input type="time" id="weeklyBlockTimeInput" value="${defaultTime}" style="width:100%;padding:11px;border:2px solid #E2E8F0;border-radius:12px;font-size:14px;font-weight:800;color:#334155;outline:none">
           <div style="display:flex;gap:8px">
             <button type="button" id="weeklyBlockTimeCancel" style="flex:1;padding:11px;border:0;border-radius:12px;background:#F1F5F9;color:#64748B;font-size:11px;font-weight:900;text-transform:uppercase;cursor:pointer">Cancelar</button>
@@ -262,8 +293,10 @@ function _promptTime(block) {
     setTimeout(() => {
       document.getElementById('weeklyBlockTimeOk')?.addEventListener('click', () => {
         const value = document.getElementById('weeklyBlockTimeInput')?.value || defaultTime;
+        const subtype = askDiaper ? _readDiaperSubtype('weeklyBlockDiaperSubtype') : null;
+        if (askDiaper && !subtype) { safeToast('Selecciona si fue por Pipí o Popó', 'warning'); return; }
         UI.Modal.close(id);
-        resolve(value);
+        resolve({ time: value, subtype });
       });
       document.getElementById('weeklyBlockTimeCancel')?.addEventListener('click', () => {
         UI.Modal.close(id);
@@ -323,8 +356,9 @@ export async function markBlock(blockId) {
     return;
   }
 
-  const eventTime = await _promptTime(block);
-  if (eventTime === null) return;
+  const timeRes = await _promptTime(block);
+  if (!timeRes) return;
+  const { time: eventTime, subtype: pickedSubtype } = timeRes;
 
   const repeatable = _isRepeatableBlock(block);
   const occurrenceId = crypto.randomUUID?.() || Math.random().toString(36).slice(2, 12);
@@ -334,10 +368,14 @@ export async function markBlock(blockId) {
     for (const student of students) {
       if (!repeatable && isBlockDoneForLog(block, logsMap[student.id])) continue;
       const meta = eventMetaForLabel(block.label);
+      const eventSubtype = meta.type === 'diaper_change' ? pickedSubtype : meta.subtype;
+      const eventLabel = meta.type === 'diaper_change'
+        ? _diaperLabelWithSubtype(block.label, eventSubtype)
+        : block.label;
       const event = {
         type: meta.type,
-        ...(meta.subtype ? { subtype: meta.subtype } : {}),
-        label: block.label,
+        ...(eventSubtype ? { subtype: eventSubtype } : {}),
+        label: eventLabel,
         emoji: block.emoji,
         category: 'Horario',
         occurrence_id: occurrenceId,

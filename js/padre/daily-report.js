@@ -178,7 +178,7 @@ export const DailyReportModule = {
         logs.forEach(log => {
           totalSleepMs += _sleepMs(log.infant_data, null);
           (log.infant_data || []).forEach(ev => {
-            if (ev.type === 'diaper') {
+            if (ev.type === 'diaper' || ev.type === 'diaper_change') {
               if (ev.subtype === 'wet') totalDiaperWet++;
               if (ev.subtype === 'soiled') totalDiaperSoiled++;
             }
@@ -486,8 +486,8 @@ export const DailyReportModule = {
     todaySleepMs = _sleepMs(log.infant_data, new Date().toISOString());
     (log.infant_data || []).forEach(ev => {
       if (ev.type === 'milk') todayMilkOz += Number(ev.oz || 0);
-      if (ev.type === 'diaper' && ev.subtype === 'wet') todayDiaperWet++;
-      if (ev.type === 'diaper' && ev.subtype === 'soiled') todayDiaperSoiled++;
+      if ((ev.type === 'diaper' || ev.type === 'diaper_change') && ev.subtype === 'wet') todayDiaperWet++;
+      if ((ev.type === 'diaper' || ev.type === 'diaper_change') && ev.subtype === 'soiled') todayDiaperSoiled++;
     });
 
     const todaySleepHours = todaySleepMs > 0 ? Math.floor(todaySleepMs / (1000 * 60 * 60)) : 0;
@@ -668,7 +668,7 @@ export const DailyReportModule = {
     const iconMap = {
       sleep: '😴', milk: '🍼',
       diaper: e.subtype === 'wet' ? '💧' : '💩',
-      diaper_change: '🧻',
+      diaper_change: e.subtype === 'wet' ? '💧' : e.subtype === 'soiled' ? '💩' : '🧻',
       bath: '🚽', temp: '🌡️', med: '💊', note: '📝',
       handwash: '🧼', toothbrush: '🪥', activity: '🏫', playground: '🌳',
       welcome_song: '👋', prayer: '🙏', behavior: '🤝',

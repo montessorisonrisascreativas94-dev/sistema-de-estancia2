@@ -602,13 +602,51 @@ function _sleepIntervals(log, now = new Date()) {
   return intervals;
 }
 
+/** Detecta si una rutina corresponde a cambio de pañal (pipí/popó). */
+function _isDiaperLabel(label) {
+  const s = String(label || '')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+  return /cambio\s*(de\s*)?panal|panal/.test(s);
+}
+
+/** Etiqueta visible cuando el cambio de pañal se asocia a pipí o popó. */
+function _diaperLabelWithSubtype(label, subtype) {
+  if (!subtype) return label;
+  return `${label} · ${subtype === 'wet' ? 'Pipí' : 'Popó'}`;
+}
+
+/** Selector visual Pipí / Popó para las confirmaciones de hora. */
+function _diaperPickerHTML(inputName) {
+  const option = (value, emoji, text) => `
+    <label class="flex items-center justify-center gap-2 py-3 rounded-xl border-2 cursor-pointer transition-all" style="border-color:#E2E8F0;background:#fff">
+      <input type="radio" name="${inputName}" value="${value}" class="w-4 h-4" style="accent-color:#475569"
+        onchange="this.closest('[data-diaper-picker]').querySelectorAll('label').forEach(function(l){l.style.borderColor='#E2E8F0';l.style.background='#fff';});this.closest('label').style.borderColor='#475569';this.closest('label').style.background='#F1F5F9';">
+      <span class="text-sm font-black" style="color:#334155">${emoji} ${text}</span>
+    </label>`;
+  return `
+    <div data-diaper-picker>
+      <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">¿Fue por?</label>
+      <div class="grid grid-cols-2 gap-2 mt-2">
+        ${option('wet', '💧', 'Pipí')}
+        ${option('soiled', '💩', 'Popó')}
+      </div>
+    </div>`;
+}
+
+/** Lee la opción Pipí/Popó elegida en un modal. */
+function _readDiaperSubtype(inputName) {
+  return document.querySelector(`input[name="${inputName}"]:checked`)?.value || null;
+}
+
 /**
  * Muestra un mini-modal para que la maestra elija la hora del evento.
- * Retorna una Promise<string|null>: HH:MM si confirma, null si cancela.
+ * Retorna una Promise<{ time: string, subtype: string|null }|null>.
  */
-function _promptEventTime(emoji, label, defaultTime) {
+function _promptEventTime(emoji, label, defaultTime, opts = {}) {
   return new Promise((resolve) => {
     const modalId = 'eventTimePromptModal';
+    const askDiaper = opts.diaper === true || _isDiaperLabel(label);
     const content = `
       <div class="bg-white overflow-hidden" style="border-radius:24px;max-width:320px;margin:0 auto">
         <div class="p-4" style="background:linear-gradient(135deg,#475569,#64748B)">
@@ -622,6 +660,7 @@ function _promptEventTime(emoji, label, defaultTime) {
         </div>
         <div class="p-4 space-y-3">
           <p class="text-xs text-slate-500 font-medium">Si lo marcas tarde, ajusta la hora para que los padres lo vean en el momento correcto.</p>
+          ${askDiaper ? _diaperPickerHTML('eventTimeDiaperSubtype') : ''}
           <input type="time" id="eventTimePromptInput" value="${defaultTime || _nowHHMM()}"
             class="w-full p-3 border-2 border-slate-100 rounded-xl text-sm font-bold text-slate-700 outline-none focus:border-slate-400">
           <div class="flex gap-2">
@@ -638,8 +677,10 @@ function _promptEventTime(emoji, label, defaultTime) {
     setTimeout(() => {
       document.getElementById('eventTimePromptOk')?.addEventListener('click', () => {
         const val = document.getElementById('eventTimePromptInput')?.value || _nowHHMM();
+        const subtype = askDiaper ? _readDiaperSubtype('eventTimeDiaperSubtype') : null;
+        if (askDiaper && !subtype) { safeToast('Selecciona si fue por Pipí o Popó', 'warning'); return; }
         UI.Modal.close(modalId);
-        resolve(val);
+        resolve({ time: val, subtype });
       });
       document.getElementById('eventTimePromptCancel')?.addEventListener('click', () => {
         UI.Modal.close(modalId);
@@ -2506,8 +2547,9 @@ export async function markWholeClassRoutine(routineId) {
   }
 
   // Pedir hora del evento (puede ser retroactiva)
-  const event_time = await _promptEventTime(routine.emoji, routine.label);
-  if (event_time === null) return; // cancelado
+  const timeRes = await _promptEventTime(routine.emoji, routine.label);
+  if (!timeRes) return; // cancelado
+  const { time: event_time, subtype: pickedSubtype } = timeRes;
 
   // Regla 4 y 10 — ocurrencia única y origen colectivo para auditoría
   const occurrenceId = crypto.randomUUID?.() || Math.random().toString(36).substr(2, 12);
@@ -2515,10 +2557,14 @@ export async function markWholeClassRoutine(routineId) {
   try {
     let markedCount = 0;
     const meta = _routineMetaFromLabel(routine.label);
+    const eventSubtype = meta.type === 'diaper_change' ? pickedSubtype : meta.subtype;
+    const eventLabel = meta.type === 'diaper_change'
+      ? _diaperLabelWithSubtype(routine.label, eventSubtype)
+      : routine.label;
     const repeatable = _isRepeatableLabel(routine.label) || routine.cat === 'Higiene';
     for (const s of students) {
       const alreadyMarked = !repeatable && (_logsMap[s.id]?.infant_data || []).some(
-        e => e.type === meta.type && e.label === routine.label
+        e => e.type === meta.type && e.label === eventLabel
       );
       if (alreadyMarked) continue;
       const payload = {
@@ -2528,8 +2574,8 @@ export async function markWholeClassRoutine(routineId) {
         created_at: new Date().toISOString(),
         infant_event: {
           type: meta.type,
-          ...(meta.subtype ? { subtype: meta.subtype } : {}),
-          label: routine.label,
+          ...(eventSubtype ? { subtype: eventSubtype } : {}),
+          label: eventLabel,
           emoji: routine.emoji,
           category: routine.cat,
           occurrence_id: occurrenceId,
@@ -2892,6 +2938,11 @@ function _timelineEmoji(ev) {
     if (ev.subtype === 'wet') return '💧';
     return '🧼';
   }
+  if (ev.type === 'diaper_change') {
+    if (ev.subtype === 'soiled') return '💩';
+    if (ev.subtype === 'wet') return '💧';
+    return '🧷';
+  }
   return ev.emoji || TIMELINE_TYPE_META[ev.type]?.emoji || '📋';
 }
 
@@ -2923,6 +2974,7 @@ function _buildStudentTimeline(log, events, currentFood) {
       color: ev.color || meta.color || '#475569',
       id: ev.id,
       type: ev.type,
+      subtype: ev.subtype,
       editable: true,
       origin: isClassEvent ? 'aula' : 'individual'
     });
@@ -3569,8 +3621,15 @@ export async function _addScheduleEventToStudent(studentId, scheduleId) {
     : _routineMetaFromLabel(label);
 
   // Cada evento permite ajustar su hora (por si se marca tarde).
-  const event_time = await _promptEventTime(emoji, label, ev?.startTime || _nowHHMM());
-  if (event_time === null) return; // cancelado
+  const timeRes = await _promptEventTime(emoji, label, ev?.startTime || _nowHHMM());
+  if (!timeRes) return; // cancelado
+  const { time: event_time, subtype: pickedSubtype } = timeRes;
+  const eventSubtype = meta.type === 'diaper_change'
+    ? pickedSubtype
+    : (meta.subtype || scheduleId);
+  const eventLabel = meta.type === 'diaper_change'
+    ? _diaperLabelWithSubtype(label, eventSubtype)
+    : label;
 
   try {
     await MaestraApi.upsertDailyLog({
@@ -3579,8 +3638,8 @@ export async function _addScheduleEventToStudent(studentId, scheduleId) {
       date:         _today(),
       infant_event: {
         type: meta.type,
-        subtype: meta.subtype || scheduleId,
-        label,
+        subtype: eventSubtype,
+        label: eventLabel,
         emoji,
         event_time,
         origin: 'individual'
@@ -3601,10 +3660,15 @@ export async function _addClassRoutineToStudent(studentId, routineId) {
   const routine = _getWholeClassRoutines().find(r => String(r.id) === String(routineId));
   if (!routine) return;
 
-  const event_time = await _promptEventTime(routine.emoji, routine.label, _nowHHMM());
-  if (event_time === null) return; // cancelado
+  const timeRes = await _promptEventTime(routine.emoji, routine.label, _nowHHMM());
+  if (!timeRes) return; // cancelado
+  const { time: event_time, subtype: pickedSubtype } = timeRes;
 
   const meta = _routineMetaFromLabel(routine.label);
+  const eventSubtype = meta.type === 'diaper_change' ? pickedSubtype : meta.subtype;
+  const eventLabel = meta.type === 'diaper_change'
+    ? _diaperLabelWithSubtype(routine.label, eventSubtype)
+    : routine.label;
   try {
     await MaestraApi.upsertDailyLog({
       student_id:   studentId,
@@ -3612,8 +3676,8 @@ export async function _addClassRoutineToStudent(studentId, routineId) {
       date:         _today(),
       infant_event: {
         type: meta.type,
-        ...(meta.subtype ? { subtype: meta.subtype } : {}),
-        label: routine.label,
+        ...(eventSubtype ? { subtype: eventSubtype } : {}),
+        label: eventLabel,
         emoji: routine.emoji,
         category: routine.cat,
         event_time,
@@ -3668,8 +3732,9 @@ export async function setStudentFood(studentId, food, mealKey) {
       lunch: { emoji: '🍽️', label: 'Almuerzo' },
       snack: { emoji: '🍎', label: 'Merienda' }
     }[key] || { emoji: '🍽️', label: 'Comida' };
-    const event_time = await _promptEventTime(mealMeta.emoji, mealMeta.label, _nowHHMM());
-    if (event_time === null) return;
+    const timeRes = await _promptEventTime(mealMeta.emoji, mealMeta.label, _nowHHMM());
+    if (!timeRes) return;
+    const event_time = timeRes.time;
     currentFood[key] = food;
     currentFood._times = { ...(currentFood._times || {}), [key]: _isoFromHHMM(event_time) };
     await MaestraApi.upsertDailyLog({ student_id: studentId, classroom_id: classroom.id, date: _today(), food: JSON.stringify(currentFood) });
@@ -3806,6 +3871,7 @@ export async function addStudentEvent(studentId, eventId, customLabel) {
 /** Modal rápido de confirmación de hora para eventos individuales directos */
 function _openQuickEventTimeModal(studentId, ev, label) {
   const modalId = 'quickEventTimeModal';
+  const askDiaper = ev.type === 'diaper_change' || _isDiaperLabel(label);
   const content = `
     <div class="bg-white overflow-hidden" style="border-radius:24px;max-width:340px;margin:0 auto">
       <div class="p-5" style="background:linear-gradient(135deg,#475569,#64748B)">
@@ -3821,6 +3887,7 @@ function _openQuickEventTimeModal(studentId, ev, label) {
       </div>
       <div class="p-5 space-y-4">
         <p class="text-xs text-slate-500 font-medium">Si el evento ocurrió antes, ajusta la hora para que el padre lo vea en el momento correcto.</p>
+        ${askDiaper ? _diaperPickerHTML('quickDiaperSubtype') : ''}
         <div>
           <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Hora del evento</label>
           <input type="time" id="quickEventTime" value="${_nowHHMM()}"
@@ -3839,12 +3906,17 @@ function _openQuickEventTimeModal(studentId, ev, label) {
 export async function _saveQuickEvent(studentId, eventId, label, type, subtype) {
   const classroom = AppState.get('classroom');
   const event_time = document.getElementById('quickEventTime')?.value || _nowHHMM();
+  const askDiaper = type === 'diaper_change' || _isDiaperLabel(label);
+  const pickedSubtype = askDiaper ? _readDiaperSubtype('quickDiaperSubtype') : null;
+  if (askDiaper && !pickedSubtype) { safeToast('Selecciona si fue por Pipí o Popó', 'warning'); return; }
+  const finalSubtype = pickedSubtype || subtype || undefined;
+  const finalLabel = askDiaper ? _diaperLabelWithSubtype(label, pickedSubtype) : label;
   try {
     await MaestraApi.upsertDailyLog({
       student_id: studentId, classroom_id: classroom.id, date: _today(),
-      infant_event: { type, subtype: subtype || undefined, label, event_time }
+      infant_event: { type, subtype: finalSubtype, label: finalLabel, event_time }
     });
-    safeToast(`${label} registrado`, 'success');
+    safeToast(`${finalLabel} registrado`, 'success');
     UI.Modal.close('quickEventTimeModal');
     await initRoutine();
     if (_isModalOpen()) openStudentRoutine(studentId);
