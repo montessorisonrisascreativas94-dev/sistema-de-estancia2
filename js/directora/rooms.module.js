@@ -3,6 +3,7 @@ import { Helpers } from '../shared/helpers.js';
 import { UI } from './ui.module.js';
 import { supabase } from '../shared/supabase.js';
 import { QueryCache } from '../shared/query-cache.js';
+import { AppState } from './state.js';
 import {
   applyClassroomGroupTeacher,
   getClassroomGroupTeacher,
@@ -23,6 +24,17 @@ import {
   dedupeClassrooms,
   sanitizeClassroomDisplayName,
 } from '../shared/constants.js';
+
+/** Convierte un nombre de aula en slug para email: "Párvulos I" → "parvulos-i" */
+function _slugify(text) {
+  return String(text || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // quitar tildes
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .substring(0, 30);
+}
 
 export const RoomsModule = {
   _rooms: [],
@@ -655,6 +667,216 @@ export const RoomsModule = {
       Helpers.toast('Error al guardar aula: ' + e.message, 'error');
     } finally {
       if (btn) { btn.disabled = false; btn.textContent = 'Guardar Aula'; }
+    }
+  },
+
+  /**
+   * Crea una cuenta de maestra automáticamente para un aula, sin pedir datos.
+   * - Nombre: "Maestra {nombre del aula}"
+   * - Email: maestra.{slug}@sonrisascreativas.edu.do
+   * - Contraseña: creativas123 (fija)
+   * - Access code: autogenerado (TEA-2026-XXXX)
+   * - Asigna el aula inmediatamente
+   * Registra en Supabase Auth + tabla profiles + classrooms.teacher_id.
+   */
+  async quickCreateTeacher(roomId, roomName, roomLevel) {
+    if (!roomId || roomId === 'null' || !Number.isInteger(parseInt(roomId, 10))) {
+      return Helpers.toast('Aula no válida', 'warning');
+    }
+
+    // Confirmar con la directora
+    const ok = confirm(
+      `Crear cuenta de maestra para "${roomName}"?\n\n` +
+      `Se generará automáticamente:\n` +
+      `• Nombre: Maestra ${roomName}\n` +
+      `• Email: maestra.${_slugify(roomName)}@sonrisascreativas.edu.do\n` +
+      `• Contraseña: creativas123\n` +
+      `• Aula asignada: ${roomName}\n\n` +
+      `La maestra podrá cambiar su contraseña y nombre después.`
+    );
+    if (!ok) return;
+
+    const roomIdNum = parseInt(roomId, 10);
+    const slug = _slugify(roomName);
+    const email = `maestra.${slug}@sonrisascreativas.com`;
+    const name = `Maestra ${roomName}`;
+    const password = 'creativas123';
+    const accessCode = 'TEA-' + new Date().getFullYear() + '-' + String(Math.floor(Math.random() * 9000) + 1000);
+
+    console.log('[quickCreateTeacher] INICIO — roomId:', roomId, 'roomIdNum:', roomIdNum, 'roomName:', roomName, 'roomLevel:', roomLevel);
+
+    // Mostrar estado de carga
+    const btn = event?.target?.closest('button');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<span class="animate-spin inline-block">⏳</span> Creando...'; }
+
+    try {
+      // 1) Crear usuario en Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { name, role: 'maestra' } }
+      });
+
+      let userId = authData?.user?.id || null;
+
+      if (authError) {
+        // Si el email ya existe, buscar el profile y reutilizar la cuenta
+        if (authError.status === 422 || authError.message?.toLowerCase().includes('already registered')) {
+          const { data: existing } = await supabase
+            .from('profiles')
+            .select('id, name')
+            .eq('email', email)
+            .maybeSingle();
+          if (existing?.id) {
+            userId = existing.id;
+            // Actualizar el nombre por si cambió el aula
+            await supabase.from('profiles')
+              .update({ name, role: 'maestra', is_active: true, access_code: accessCode })
+              .eq('id', userId);
+          } else {
+            throw new Error('El email ya está registrado pero no se encontró el perfil. Usa el modal de personal.');
+          }
+        } else {
+          throw authError;
+        }
+      }
+
+      if (!userId) {
+        throw new Error('No se pudo crear el usuario. Verifica la conexión.');
+      }
+
+      // 2) Esperar a que el trigger cree el profile (o crearlo manualmente)
+      await new Promise(r => setTimeout(r, 1200));
+
+      const { data: existingProfile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', userId)
+        .maybeSingle();
+
+      if (!existingProfile) {
+        // El trigger no creó el profile — insertarlo manualmente
+        const { error: insertErr } = await supabase.from('profiles').insert({
+          id: userId,
+          email,
+          name,
+          role: 'maestra',
+          is_active: true,
+          access_code: accessCode,
+        });
+        if (insertErr) {
+          console.warn('[quickCreateTeacher] insert profile failed:', insertErr.message);
+        }
+      } else {
+        // Actualizar el profile existente
+        await supabase.from('profiles')
+          .update({ name, role: 'maestra', is_active: true, access_code: accessCode, email })
+          .eq('id', userId);
+      }
+
+      // 3) Asignar el aula a la nueva maestra
+      console.log('[quickCreateTeacher] userId:', userId, '— asignando aula...');
+      let assigned = false;
+
+      // 3a) UPDATE directo sobre el aula específica
+      if (roomIdNum && Number.isInteger(roomIdNum)) {
+        console.log('[quickCreateTeacher] 3a) UPDATE classrooms SET teacher_id WHERE id =', roomIdNum);
+        const updRes = await supabase
+          .from('classrooms')
+          .update({ teacher_id: userId }, { count: 'exact' })
+          .eq('id', roomIdNum);
+        console.log('[quickCreateTeacher] 3a) result:', updRes.error?.message || 'ok', 'count:', updRes.count);
+        if (updRes.error) {
+          console.warn('[quickCreateTeacher] 3a) failed:', updRes.error.message);
+        } else if (updRes.count && updRes.count > 0) {
+          assigned = true;
+        }
+      } else {
+        console.log('[quickCreateTeacher] 3a) SKIP — roomIdNum no es válido:', roomIdNum);
+      }
+
+      // 3b) Si no se asignó por id, buscar el aula por nombre/nivel en la BD
+      if (!assigned) {
+        console.log('[quickCreateTeacher] 3b) buscando por nombre:', roomName, 'o level:', roomLevel || roomName);
+        const { data: rooms, error: searchErr } = await supabase
+          .from('classrooms')
+          .select('id, name, level')
+          .is('deleted_at', null)
+          .or(`name.eq.${roomName},level.eq.${roomLevel || roomName}`);
+
+        console.log('[quickCreateTeacher] 3b) rooms encontrados:', rooms?.length || 0, rooms, 'error:', searchErr?.message);
+
+        if (rooms && rooms.length) {
+          for (const room of rooms) {
+            console.log('[quickCreateTeacher] 3b) UPDATE classrooms SET teacher_id WHERE id =', room.id, '(name:', room.name + ')');
+            const { error: updErr } = await supabase
+              .from('classrooms')
+              .update({ teacher_id: userId })
+              .eq('id', room.id);
+            if (!updErr) assigned = true;
+          }
+          if (assigned) {
+            console.log('[quickCreateTeacher] 3b) asignado por nombre a', rooms.length, 'fila(s)');
+          }
+        }
+      }
+
+      // 3c) Si aún no se asignó, buscar por nombre normalizado (sin tildes)
+      if (!assigned) {
+        const normName = String(roomName || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+        console.log('[quickCreateTeacher] 3c) búsqueda normalizada:', normName);
+        const { data: allRooms } = await supabase
+          .from('classrooms')
+          .select('id, name, level')
+          .is('deleted_at', null);
+        if (allRooms) {
+          for (const room of allRooms) {
+            const roomNorm = String(room.name || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+            const levelNorm = String(room.level || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+            if (roomNorm === normName || levelNorm === normName || roomNorm.includes(normName) || normName.includes(roomNorm)) {
+              console.log('[quickCreateTeacher] 3c) MATCH encontrado:', room.id, room.name, room.level);
+              const { error: updErr } = await supabase
+                .from('classrooms')
+                .update({ teacher_id: userId })
+                .eq('id', room.id);
+              if (!updErr) assigned = true;
+            }
+          }
+        }
+      }
+
+      // 3d) Último respaldo: applyClassroomGroupTeacher
+      if (!assigned) {
+        const roomObj = { id: roomIdNum, name: roomName, level: roomLevel };
+        try {
+          await applyClassroomGroupTeacher(roomObj, userId);
+          assigned = true;
+        } catch (e) {
+          console.warn('[quickCreateTeacher] 3d) applyClassroomGroupTeacher failed:', e.message);
+        }
+      }
+
+      console.log('[quickCreateTeacher] ASIGNACIÓN FINAL:', assigned ? '✅ EXITOSA' : '❌ FALLÓ');
+
+      // 4) Invalidar caches y recargar
+      QueryCache.invalidate('dir_classrooms_occ');
+      QueryCache.invalidate('dir_classrooms');
+      QueryCache.invalidate('dir_teachers');
+      notifyClassroomUpdated();
+
+      Helpers.toast(`✅ Maestra creada: ${name}\n📧 ${email}\n🔑 creativas123`, 'success', 6000);
+      await this.init();
+
+      // También recargar la lista de personal
+      try {
+        const { TeachersModule } = await import('./teachers.module.js');
+        await TeachersModule.init(AppState.get('teachers'));
+      } catch (_) {}
+    } catch (e) {
+      Helpers.toast('Error al crear maestra: ' + (e.message || 'Error desconocido'), 'error');
+      console.error('[quickCreateTeacher]', e);
+    } finally {
+      if (btn) { btn.disabled = false; btn.innerHTML = '<i data-lucide="user-plus"></i> Crear maestra'; if (window.lucide) lucide.createIcons(); }
     }
   },
 

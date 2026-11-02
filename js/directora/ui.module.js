@@ -230,7 +230,14 @@ const DirectorUI = {
                 'title="Quitar maestra del aula">' +
                 '<i data-lucide="user-minus"></i>' +
               '</button>'
-            : '') +
+            : (!teacher && !isVirtual
+              ? '<button class="dc-btn dc-btn--primary dc-btn--sm" style="margin-left:auto;flex-shrink:0" ' +
+                  'onclick="event.stopPropagation();App.rooms.quickCreateTeacher(\'' + r.id + '\',\'' + Helpers.escapeHTML(m.name) + '\',\'' + Helpers.escapeHTML(r.level || m.level || m.name) + '\')" ' +
+                  'title="Crear cuenta de maestra para esta aula">' +
+                  '<i data-lucide="user-plus"></i> Crear maestra' +
+                '</button>'
+              : '')
+            ) +
         '</div>' +
 
         '<div class="dc-room-tags">' +

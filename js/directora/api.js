@@ -694,7 +694,6 @@ export const DirectorApi = {
           supabase.from(TABLES.PROFILES)
             .select('id, name, role, email, phone, avatar_url, is_active, classrooms!classrooms_teacher_id_fkey(id, name, level, deleted_at)')
             .in('role', ['maestra', 'asistente', 'encargada'])
-            .is('deleted_at', null)
             .order('name')
         );
         if (error) throw error;
@@ -754,6 +753,11 @@ export const DirectorApi = {
       // Update existing profile, exclude email from update
       const { email, ...updateData } = safeData;
       result = await supabase.from(TABLES.PROFILES).update(updateData).eq('id', id);
+      if (result?.error) {
+        console.error('[updateTeacher] UPDATE failed:', result.error.message);
+      } else {
+        console.log('[updateTeacher] UPDATE ok, is_active sent:', safeData.is_active, 'data sent:', Object.keys(updateData));
+      }
     } else {
       // Insert new profile
       result = await supabase.from(TABLES.PROFILES).insert({ id, ...safeData });
