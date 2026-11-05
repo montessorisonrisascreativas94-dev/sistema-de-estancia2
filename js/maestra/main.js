@@ -1,6 +1,7 @@
 import { ensureRole, supabase, initOneSignal, emitEvent, sendPush } from '../shared/supabase.js';
 import { Security } from '../shared/security.js';
 import { RealtimeManager } from '../shared/realtime-manager.js';
+import { RealtimeSync } from '../shared/realtime-sync.js';
 import { AppState } from './state.js';
 
 import { MaestraApi } from './api.js';
@@ -289,6 +290,9 @@ window.addEventListener('error', (e) => {
 });
 
 document.addEventListener('DOMContentLoaded', async () => {
+  // Banner de actualización del PWA
+  try { initUpdateBanner(); } catch (_) {}
+
   // Logout
   document.getElementById('logoutBtn')?.addEventListener('click', async () => {
     await supabase.auth.signOut();
@@ -638,6 +642,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 🎯 Notification Center unificado (campana, badges, mensajes, realtime)
     NotificationCenter.init(auth.user.id, 'maestra');
+
+    // 🔄 Sincronización en vivo de la sección/tab visible (sin recargar página)
+    RealtimeSync.start({
+      panel: 'maestra',
+      onChange: () => {
+        try { window.App.refreshActiveSection?.(); } catch (e) {
+          console.warn('[maestra] realtime refresh:', e?.message || e);
+        }
+      }
+    });
 
     // ── Sidebar Manager (mobile + desktop) ───────────────────────────────────
     import('../shared/sidebar-manager.js')
@@ -1229,7 +1243,32 @@ function initNavigation() {
 
   // Track previous section for cleanup
   let previousSection = null;
-  
+
+  // Carga/recarga los datos de una sección sin tocar navegación ni canales.
+  // Se usa tanto al entrar a la sección como en el refresco automático.
+  const refreshSectionData = (cleanId) => {
+    if (cleanId === 'home') initDashboard();
+    if (cleanId === 'attendance') initAttendance();
+    if (cleanId === 'daily-routine') initRoutine();
+    if (cleanId === 'tasks') initTasks();
+    if (cleanId === 'grades') import('./modules/grades.js').then(m => m.MaestraGrades.init());
+    if (cleanId === 'actividades') {
+      import('../shared/school-activities.module.js')
+        .then(m => m.SchoolActivitiesModule.init({
+          mode: 'teacher',
+          containerId: 'actividadesContent',
+          profile: AppState.get('profile'),
+          keepMonth: true
+        }))
+        .catch(() => {});
+    }
+    if (cleanId === 'permits') PermitsModule.init();
+    if (cleanId === 'chat') initChat();
+    if (cleanId === 'profile') {
+      import('../shared/notify-permission.js').then(m => m.NotifyPermission.requestIfNeeded());
+    }
+  };
+
   const setActiveSection = (targetId, options = {}) => {
     // Si el targetId ya viene con 't-', lo usamos directamente, si no lo agregamos
     const fullId = targetId.startsWith('t-') ? targetId : `t-${targetId}`;
@@ -1295,26 +1334,17 @@ function initNavigation() {
       }
     }
 
-    if (cleanId === 'home') initDashboard();
-    if (cleanId === 'attendance') initAttendance();
-    if (cleanId === 'daily-routine') initRoutine();
-    if (cleanId === 'tasks') initTasks();
-    if (cleanId === 'grades') import('./modules/grades.js').then(m => m.MaestraGrades.init());
-    if (cleanId === 'actividades') {
-      import('../shared/school-activities.module.js')
-        .then(m => m.SchoolActivitiesModule.init({
-          mode: 'teacher',
-          containerId: 'actividadesContent',
-          profile: AppState.get('profile'),
-          keepMonth: true
-        }))
-        .catch(() => {});
+    refreshSectionData(cleanId);
+  };
+
+  // Refresco de la sección/tab visible solicitado por RealtimeSync.
+  const refreshActiveSection = () => {
+    const active = document.querySelector('.section.active')?.id || 't-home';
+    if (active === 't-class-detail') {
+      window.App.activateTab?.(localStorage.getItem('maestra_last_tab') || 'feed');
+      return;
     }
-    if (cleanId === 'permits') PermitsModule.init();
-    if (cleanId === 'chat') initChat();
-    if (cleanId === 'profile') {
-      import('../shared/notify-permission.js').then(m => m.NotifyPermission.requestIfNeeded());
-    }
+    refreshSectionData(active.replace('t-', ''));
   };
 
   navButtons.forEach(btn => {
@@ -1324,6 +1354,7 @@ function initNavigation() {
   // Exponer para uso global
   window.App.setActiveSection = setActiveSection;
   window.App._setActiveSection = setActiveSection; // Alias interno para el proxy global
+  window.App.refreshActiveSection = refreshActiveSection;
 
   // Restaurar última sección
   // 👁️ En supervisión se ignora el historial previo: se entra al contexto

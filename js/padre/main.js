@@ -23,6 +23,7 @@ import { ParentRatingModule } from './parent_rating.js';
 import { WizardPayment } from './payment-wizard.js';
 import { RecentActivityModule } from './recent-activity.js';
 import { SectionCache } from '../shared/section-cache.js';
+import { RealtimeSync } from '../shared/realtime-sync.js';
 import { ParentAnnouncements } from './announcements.js';
 import { MediaProtect } from '../shared/media-protect.js';
 import { PostOptions } from '../shared/post-options.js';
@@ -767,6 +768,20 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     });
 
+    // 🔄 Sincronización en vivo de la sección visible (sin recargar página).
+    // Las secciones con realtime propio (muro, chat, asistencia en vivo) ya se
+    // actualizan solas, así que se excluyen para no duplicar canales.
+    const _selfLiveSections = new Set(['class', 'notifications', 'live-attendance', 'videocall', 'qr-access']);
+    RealtimeSync.start({
+      panel: 'padre',
+      onChange: () => {
+        const sec = AppState.get('currentSection');
+        if (!sec || _selfLiveSections.has(sec)) return;
+        SectionCache.invalidate(sec);
+        navigateTo(sec, { force: true, keepChannels: true });
+      }
+    });
+
     if (currentStudent?.classroom_id) {
       initLiveClassListener(currentStudent.classroom_id);
     }
@@ -1173,25 +1188,28 @@ function _applySectionUI(targetId) {
   });
 }
 
-function _showOnlySection(targetId) {
+function _showOnlySection(targetId, opts = {}) {
   if (!targetId) return;
 
   Helpers.vibrate?.('light');
 
-  // Conserva los globales con sus nombres REALES. Antes ponía
-  // 'notifications' y 'live_status', que no coinciden con ningún canal real
-  // ('badges_<uid>', 'notif_<uid>', 'live_status_<classroomId>'), así que el
-  // canal de badges moría en cada navegación sin resuscripción.
-  if (window.RealtimeManager) {
-    const _rtUid = AppState.get('user')?.id;
-    const _rtKeep = _rtUid ? ['badges_' + _rtUid, 'news-center_' + _rtUid, 'notif_' + _rtUid, 'notif-center_' + _rtUid] : [];
-    const student = AppState.get('currentStudent');
-    if (student?.classroom_id) _rtKeep.push('live_status_' + student.classroom_id);
-    RealtimeManager.unsubscribeAll(_rtKeep);
-  }
-  if (FeedModule._channel) {
-    supabase.removeChannel(FeedModule._channel);
-    FeedModule._channel = null;
+  // `opts.keepChannels` = refresco automático: no destruir canales vivos.
+  if (!opts.keepChannels) {
+    // Conserva los globales con sus nombres REALES. Antes ponía
+    // 'notifications' y 'live_status', que no coinciden con ningún canal real
+    // ('badges_<uid>', 'notif_<uid>', 'live_status_<classroomId>'), así que el
+    // canal de badges moría en cada navegación sin resuscripción.
+    if (window.RealtimeManager) {
+      const _rtUid = AppState.get('user')?.id;
+      const _rtKeep = _rtUid ? ['badges_' + _rtUid, 'news-center_' + _rtUid, 'notif_' + _rtUid, 'notif-center_' + _rtUid] : [];
+      const student = AppState.get('currentStudent');
+      if (student?.classroom_id) _rtKeep.push('live_status_' + student.classroom_id);
+      RealtimeManager.unsubscribeAll(_rtKeep);
+    }
+    if (FeedModule._channel) {
+      supabase.removeChannel(FeedModule._channel);
+      FeedModule._channel = null;
+    }
   }
 
   document.querySelectorAll('.section').forEach(sec => {
@@ -1297,7 +1315,7 @@ export async function navigateTo(targetId, opts = {}) {
   if (current === targetId && !opts.force) return;
 
   // 1) Actualizar UI
-  _showOnlySection(targetId);
+  _showOnlySection(targetId, opts);
   _applySectionUI(targetId);
 
   // 2) Actualizar URL / historial (solo si el usuario navegó)

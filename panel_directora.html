@@ -36,6 +36,14 @@
       });
     });
   </script>
+  <!-- Registro del Service Worker de actualizaciones -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(() => {});
+      });
+    }
+  </script>
   <title>Colegio Montessori Sonrisas Creativas  Panel Directora</title>
   <link rel="icon" href="logo/favicon.ico" type="image/x-icon">
   <link rel="manifest" href="manifest.json">

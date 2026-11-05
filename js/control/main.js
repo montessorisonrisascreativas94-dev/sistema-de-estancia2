@@ -2,6 +2,7 @@ import { supabase, ensureRole } from '../shared/supabase.js';
 import { logError, auditLog } from '../shared/db-utils.js';
 import { NotificationCenter } from '../shared/notification-center.js';
 import { SchoolCenterModule } from '../directora/school-center.module.js';
+import { RealtimeSync } from '../shared/realtime-sync.js';
 
 const _kscLoaded = { done: false };
 
@@ -243,6 +244,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     await refreshAll();
     startRealtime();
+
+    // 🔄 Sincronización en vivo: recarga los datos y repinta la sección visible
+    // sin recargar la página.
+    RealtimeSync.start({
+      panel: 'control',
+      onChange: async () => {
+        const active = document.querySelector('.section.active')?.id || 'sec-dashboard';
+        const id = active.replace(/^sec-/, '');
+        await window.refreshAll?.();
+        window.goTo?.(id);
+      }
+    });
 
     // 🎯 Notification Center unificado (campana, badges, mensajes, realtime)
     // Antes: solo NewsCenter + UnreadMessages, SIN BadgeSystem.init — AHORA todo incluido.

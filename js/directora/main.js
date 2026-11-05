@@ -38,7 +38,9 @@ window.AccountingModule = AccountingModule;
 window.InvoiceModule = InvoiceModule;
 import { AttendanceModule } from './attendance.module.js';
 import { RealtimeManager } from '../shared/realtime-manager.js';
+import { RealtimeSync } from '../shared/realtime-sync.js';
 import { QueryCache } from '../shared/query-cache.js';
+import { initUpdateBanner } from '../shared/update-banner.js';
 const debounce = (fn, delay) => {
   let timeout;
   return (...args) => {
@@ -220,7 +222,7 @@ export function setupNavigationRouter(defaultSection = 'dashboard') {
  */
 const FINANCIAL_SECTIONS = new Set(['finanzas', 'pagos', 'caja', 'contabilidad', 'cuentas-cobrar', 'catalogo', 'nomina', 'dgii']);
 
-export function goToSection(sectionId) {
+export function goToSection(sectionId, opts = {}) {
   if (!sectionId) return;
 
   // Módulo financiero deshabilitado: redirigir al dashboard
@@ -230,10 +232,14 @@ export function goToSection(sectionId) {
 
   Helpers.vibrate?.('light');
 
-  // ✅ LIMPIEZA DE REALTIME: Eliminar canales al cambiar de sección
-  const _uid = AppState.get('user')?.id;
-  const _keepChannels = _uid ? ['badges_' + _uid, 'news-center_' + _uid, 'notif_' + _uid, 'notif-center_' + _uid] : [];
-  RealtimeManager.unsubscribeAll(_keepChannels);
+  // ✅ LIMPIEZA DE REALTIME: Eliminar canales al cambiar de sección.
+  // `opts.refresh` = refresco automático de la sección actual: no debe
+  // destruir los canales de los módulos que ya están suscritos.
+  if (!opts.refresh) {
+    const _uid = AppState.get('user')?.id;
+    const _keepChannels = _uid ? ['badges_' + _uid, 'news-center_' + _uid, 'notif_' + _uid, 'notif-center_' + _uid] : [];
+    RealtimeManager.unsubscribeAll(_keepChannels);
+  }
 
   // Desuscribir muro al salir (ahorro de recursos Realtime)
   const prevSection = AppState.get('currentSection');
@@ -529,6 +535,9 @@ window.addEventListener('unhandledrejection', (e) => {
 });
 
 document.addEventListener('DOMContentLoaded', async () => {
+  // Banner de actualización del PWA
+  try { initUpdateBanner(); } catch (_) {}
+
   try {
     // 1. Verificar Rol
     const auth = await ensureRole('directora');
@@ -568,6 +577,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     const initialSection = setupNavigationRouter('dashboard');
     goToSection(initialSection);
     setSidebarActive(initialSection);
+
+    // 🔄 Sincronización en vivo: cualquier cambio en la BD repinta la sección
+    // visible SIN recargar la página.
+    RealtimeSync.start({
+      panel: 'directora',
+      onChange: () => {
+        const sec = AppState.get('currentSection');
+        if (!sec) return;
+        goToSection(sec, { refresh: true });
+      }
+    });
 
     // Cargar ciclos escolares en los selectores del sidebar y header
     _loadCycleSelectors();

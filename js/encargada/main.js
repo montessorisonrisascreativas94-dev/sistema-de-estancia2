@@ -5,6 +5,7 @@ import { Helpers, escapeHtml } from '../shared/helpers.js';
 import { UIPremium } from '../shared/ui-premium.js';
 import { NotificationCenter } from '../shared/notification-center.js';
 import { RealtimeManager } from '../shared/realtime-manager.js';
+import { RealtimeSync } from '../shared/realtime-sync.js';
 import { QueryCache } from '../shared/query-cache.js';
 import { SectionCache } from '../shared/section-cache.js';
 import { TeacherEfficiencyModule } from './modules/teacher_efficiency.module.js';
@@ -54,19 +55,22 @@ window.App.ui = {
   closeModal: closeGlobalModal
 };
 
-export function goToSection(sectionId) {
+export function goToSection(sectionId, opts = {}) {
   if (!sectionId) return;
   Helpers.vibrate?.('light');
   // Conserva los globales con sus nombres REALES. Antes ponía 'notifications',
   // que no coincide con ningún canal, así que destruía el de badges en cada
   // navegación sin resuscripción.
-  const _rtUid = AppState.get('user')?.id;
-  RealtimeManager.unsubscribeAll(
-    _rtUid ? ['badges_' + _rtUid, 'news-center_' + _rtUid, 'notif_' + _rtUid, 'notif-center_' + _rtUid] : []
-  );
+  // `opts.refresh` = refresco automático: no destruir canales ni cerrar modales.
+  if (!opts.refresh) {
+    const _rtUid = AppState.get('user')?.id;
+    RealtimeManager.unsubscribeAll(
+      _rtUid ? ['badges_' + _rtUid, 'news-center_' + _rtUid, 'notif_' + _rtUid, 'notif-center_' + _rtUid] : []
+    );
 
-  // Dismiss any open modal overlay
-  closeGlobalModal();
+    // Dismiss any open modal overlay
+    closeGlobalModal();
+  }
 
   document.querySelectorAll('.section').forEach(sec => {
     sec.classList.remove('active');
@@ -2642,6 +2646,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     loadProfile();
     goToSection('dashboard');
+
+    // 🔄 Sincronización en vivo de la sección visible (sin recargar página)
+    RealtimeSync.start({
+      panel: 'encargada',
+      onChange: () => {
+        const sec = AppState.get('currentSection');
+        if (!sec) return;
+        window.__forceReload = sec;
+        goToSection(sec, { refresh: true });
+      }
+    });
 
     // ── Wire ALL sidebar nav buttons → goToSection() ────────────────
     document.querySelectorAll('#sidebar [data-section]').forEach(btn => {

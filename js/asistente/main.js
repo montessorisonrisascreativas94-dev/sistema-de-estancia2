@@ -14,6 +14,7 @@ import { DashboardModule } from './modules/dashboard.js';
 import { NotificationCenter } from '../shared/notification-center.js';
 import { ImageLoader } from '../shared/image-loader.js';
 import { RealtimeManager } from '../shared/realtime-manager.js';
+import { RealtimeSync } from '../shared/realtime-sync.js';
 import { UIPremium } from '../shared/ui-premium.js';
 import { AssistantAccountingModule } from './accounting.module.js';
 import { InscripcionesModule } from '../directora/inscripciones.module.js';
@@ -151,6 +152,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   
   initNavigation(); // Esto cargar� el dashboard y configurar� los listeners
+
+  // 🔄 Sincronización en vivo de la sección visible (sin recargar página)
+  RealtimeSync.start({
+    panel: 'asistente',
+    onChange: () => {
+      const sec = AppState.get('currentSection');
+      if (!sec) return;
+      window.App.navigateTo(sec, { force: true, keepChannels: true });
+    }
+  });
 
   // Asignar funciones internas al objeto global App
   Object.assign(window.App, {
@@ -349,21 +360,26 @@ function initNavigation() {
   const navLinks = document.querySelectorAll('[data-section]');
   const sections = document.querySelectorAll('section[id]');
 
-  const showSection = async (target) => {
+  const showSection = async (target, options = {}) => {
     // Módulo financiero deshabilitado: redirigir al dashboard
     if (ASIS_FINANCIAL_SECTIONS.has(target)) {
       target = 'dashboard';
     }
     Helpers.vibrate?.('light');
 
+    // Refresco automático: forzar que la sección se vuelva a cargar.
+    if (options.force) loadedSections.delete(target);
+
     // ✅ LIMPIEZA DE REALTIME: Eliminar canales al cambiar de sección
     // Conserva los globales con sus nombres REALES. Antes ponía 'notifications',
     // que no coincide con ningún canal ('badges_<uid>', 'notif_<uid>'), así que
     // destruía el canal de badges en cada navegación sin resuscripción.
-    const _uid = AppState.get('user')?.id;
-    RealtimeManager.unsubscribeAll(
-      _uid ? ['badges_' + _uid, 'news-center_' + _uid, 'notif_' + _uid, 'notif-center_' + _uid] : []
-    );
+    if (!options.keepChannels) {
+      const _uid = AppState.get('user')?.id;
+      RealtimeManager.unsubscribeAll(
+        _uid ? ['badges_' + _uid, 'news-center_' + _uid, 'notif_' + _uid, 'notif-center_' + _uid] : []
+      );
+    }
 
     // Desuscribir muro al salir (ahorro de recursos Realtime)
     const prevSection = AppState.get('currentSection');
@@ -561,7 +577,7 @@ function initNavigation() {
   });
 
   // Exponer navegación para onclicks del dashboard
-  window.App.navigateTo = showSection;
+  window.App.navigateTo = (target, options) => showSection(target, options);
 
   // Carga inicial del dashboard
   DashboardModule.init().then(() => loadedSections.add('dashboard'));

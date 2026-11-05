@@ -1,134 +1,90 @@
 /**
- * Colegio Montessori Sonrisas Creativas — Service Worker PWA
- * Las notificaciones push de OneSignal se manejan en un service worker
- * dedicado (push/onesignal/OneSignalSDKWorker.js, scope /push/onesignal/)
- * para evitar conflictos de handlers con este worker.
+ * sw.js — Service Worker · Colegio Montessori Sonrisas Creativas
+ * ─────────────────────────────────────────────────────────────────
+ * PARA PUBLICAR UNA ACTUALIZACIÓN:
+ *   Solo cambia el número en APP_VERSION (ej: 1.0.1 → 1.0.2)
+ *   Al hacer deploy, todos los dispositivos verán el banner de actualización.
  */
+const APP_VERSION = '1.0.2';
+const CACHE_NAME = `sonrisas-v${APP_VERSION}`;
 
-const CACHE_NAME = 'karpus-pwa-v14';
-
-self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'SKIP_WAITING') {
-    self.skipWaiting();
-  }
-});
-
-const ASSETS = [
-  './',
-  'login.html',
-  'css/panel-padre.css',
-  'logo/favicon.ico',
-  'img/mundo.jpg',
-  'https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Inter:wght@400;700;900&display=swap'
+// Archivos a cachear en la instalación inicial
+const PRECACHE = [
+  '/login.html',
+  '/index.html',
+  '/panel-maestra.html',
+  '/panel_directora.html',
+  '/panel_asistente.html',
+  '/panel_encargada.html',
+  '/panel_padres.html',
+  '/panel_control.html',
+  '/css/theme.css',
+  '/css/layout.css',
+  '/css/montessori-modern.css',
+  '/logo/android-chrome-192x192.png',
 ];
 
-self.addEventListener('install', e => {
-  e.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(c => c.addAll(ASSETS).catch(() => {}))
-      .then(() => self.skipWaiting())
+// ── INSTALL: precachear archivos base ─────────────────────────────
+self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) =>
+      Promise.allSettled(PRECACHE.map((url) => cache.add(url)))
+    )
   );
 });
 
-self.addEventListener('activate', e => {
-  e.waitUntil(
-    caches.keys()
-      .then(keys => Promise.all(keys.map(k => k !== CACHE_NAME ? caches.delete(k) : null)))
-      .then(() => self.clients.claim())
+// ── ACTIVATE: limpiar cachés viejos y avisar a clientes ──────────
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    (async () => {
+      const keys = await caches.keys();
+      const oldKeys = keys.filter((key) => key !== CACHE_NAME);
+      const hadOldCache = oldKeys.length > 0;
+
+      await Promise.all(oldKeys.map((key) => caches.delete(key)));
+      await self.clients.claim();
+
+      // Solo avisar si de verdad veníamos de una versión anterior
+      if (hadOldCache) {
+        const clients = await self.clients.matchAll({
+          includeUncontrolled: true,
+          type: 'window',
+        });
+        clients.forEach((client) => {
+          client.postMessage({
+            type: 'APP_UPDATED',
+            version: APP_VERSION,
+          });
+        });
+      }
+    })()
   );
 });
 
-// ✅ FIX: nunca pasar `undefined` a respondWith() — eso lanza
-// "Failed to convert value to 'Response'". Siempre devolvemos un Response real.
-function _safeRespond(promise) {
-  return Promise.resolve(promise).then(res => {
-    if (res && typeof res.status === 'number') return res;
-    // Fallback si la caché no tiene nada
-    return new Response('<!doctype html><meta charset="utf-8"><title>Sin conexión</title><body style="font-family:sans-serif;display:grid;place-items:center;height:100vh;margin:0"><div style="text-align:center"><h2>&#128421;&#65039; Sin conexión</h2><p style="color:#64748b">Revisa tu conexión e inténtalo de nuevo.</p></div></body>', {
-      status: 200,
-      headers: { 'Content-Type': 'text/html; charset=utf-8' }
-    });
-  });
-}
+// ── FETCH: network-first con fallback a caché ────────────────────
+self.addEventListener('fetch', (event) => {
+  if (event.request.method !== 'GET') return;
 
-self.addEventListener('fetch', e => {
-  if (e.request.method !== 'GET') return;
+  const url = new URL(event.request.url);
+  if (url.origin !== self.location.origin) return;
+  if (url.pathname === '/sw.js') return;
 
-  const url = new URL(e.request.url);
-
-  // ✅ CACHÉ DE FUENTES Y CDN (Stale-while-revalidate)
-  if (url.hostname.includes('fonts.googleapis.com') || url.hostname.includes('fonts.gstatic.com')) {
-    e.respondWith(_safeRespond(
-      caches.match(e.request).then(cached => {
-        const fetchPromise = fetch(e.request).then(networkResponse => {
-          if (networkResponse && networkResponse.ok && networkResponse.status === 200) {
-            try {
-              const copy = networkResponse.clone();
-              caches.open(CACHE_NAME).then(cache => cache.put(e.request, copy)).catch(() => {});
-            } catch (_) { /* cuerpo ya consumido — omitir caché */ }
-          }
-          return networkResponse;
-        }).catch(() => cached);
-        return cached || fetchPromise;
-      })
-    ));
-    return;
-  }
-
-  // No interceptar requests críticos de OneSignal ni Auth/Supabase ni Storage
-  if (
-    url.hostname.includes('onesignal.com') ||
-    url.hostname.includes('supabase.co') || // Exclude all Supabase requests
-    url.pathname.includes('/auth/v1/') ||
-    url.pathname.includes('OneSignal')
-  ) {
-    return;
-  }
-
-  // ✅ CONFIG Y CÓDIGO: NETWORK-FIRST
-  // Un .js cacheado con datos viejos rompe el sistema: si js/shared/supabase.js
-  // queda servido desde caché con un proyecto de Supabase distinto, el login
-  // falla con 400 aunque el archivo en disco ya sea correcto. Para código y
-  // HTML siempre se pregunta a la red primero; la caché es solo el fallback
-  // sin conexión.
-  // El CSS también es código: si queda servido desde caché, los ajustes de
-  // responsive (calendario/móvil) no llegan al usuario hasta vaciar la caché.
-  const isCode = url.pathname.endsWith('.js') ||
-                 url.pathname.endsWith('.css') ||
-                 url.pathname.endsWith('.html') ||
-                 url.pathname === '/' ||
-                 url.pathname === '';
-
-  if (isCode) {
-    e.respondWith(_safeRespond(
-      fetch(e.request).then(res => {
-        if (res && res.type === 'basic' && res.ok && res.status === 200) {
-          const copy = res.clone();
-          caches.open(CACHE_NAME).then(c => c.put(e.request, copy)).catch(() => {});
+  event.respondWith(
+    fetch(event.request)
+      .then((networkResponse) => {
+        if (networkResponse.ok) {
+          const clone = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
         }
-        return res;
-      }).catch(() => caches.match(e.request).then(cached => cached || caches.match('login.html')))
-    ));
-    return;
-  }
-
-  // ✅ ASSETS INMUTABLES (imágenes, fuentes): cache-first
-  const isCoreAsset = url.pathname.endsWith('.png') ||
-                     url.pathname.endsWith('.jpg') ||
-                     url.pathname.endsWith('.svg');
-
-  if (isCoreAsset || url.origin === self.location.origin) {
-    e.respondWith(_safeRespond(
-      caches.match(e.request).then(cached => {
-        if (cached) return cached;
-        return fetch(e.request).then(res => {
-          if (res && res.type === 'basic' && res.ok && res.status === 200) {
-            const copy = res.clone();
-            caches.open(CACHE_NAME).then(c => c.put(e.request, copy)).catch(() => {});
-          }
-          return res;
-        }).catch(() => caches.match('login.html'));
+        return networkResponse;
       })
-    ));
+      .catch(() => caches.match(event.request))
+  );
+});
+
+// ── MESSAGE: permitir que el banner active la nueva versión ──────
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'SKIP_WAITING') {
+    self.skipWaiting();
   }
 });

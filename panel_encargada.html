@@ -1265,6 +1265,7 @@
   <script src="js/shared/supabase-js.min.js"></script>
   <script src="js/shared/harden-forms.js" defer></script>
   <script src="js/encargada/main.js" type="module" defer></script>
+  <script>if('serviceWorker'in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('/sw.js',{scope:'/'}).catch(()=>{});});}</script>
 
 </body>
 </html>
