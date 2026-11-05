@@ -746,16 +746,22 @@ export const RoomsModule = {
       }
 
       // 2) Esperar a que el trigger cree el profile (o crearlo manualmente)
-      await new Promise(r => setTimeout(r, 1200));
-
-      const { data: existingProfile } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('id', userId)
-        .maybeSingle();
+      // Reintentar hasta 5 veces con delay creciente
+      let existingProfile = null;
+      for (let attempt = 0; attempt < 5; attempt++) {
+        await new Promise(r => setTimeout(r, 600 + attempt * 400));
+        const { data: prof } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('id', userId)
+          .maybeSingle();
+        if (prof?.id) { existingProfile = prof; break; }
+        console.log('[quickCreateTeacher] profile aún no existe, intento', attempt + 1, 'de 5...');
+      }
 
       if (!existingProfile) {
         // El trigger no creó el profile — insertarlo manualmente
+        console.log('[quickCreateTeacher] insertando profile manualmente...');
         const { error: insertErr } = await supabase.from('profiles').insert({
           id: userId,
           email,
@@ -766,93 +772,66 @@ export const RoomsModule = {
         });
         if (insertErr) {
           console.warn('[quickCreateTeacher] insert profile failed:', insertErr.message);
+        } else {
+          console.log('[quickCreateTeacher] profile insertado OK');
+          existingProfile = { id: userId };
         }
       } else {
         // Actualizar el profile existente
+        console.log('[quickCreateTeacher] profile existe, actualizando...');
         await supabase.from('profiles')
-          .update({ name, role: 'maestra', is_active: true, access_code: accessCode, email })
+          .update({ name, role: 'maestra', is_active: true, access_code: accessCode })
           .eq('id', userId);
       }
 
       // 3) Asignar el aula a la nueva maestra
-      console.log('[quickCreateTeacher] userId:', userId, '— asignando aula...');
+      console.log('[quickCreateTeacher] userId:', userId, '— asignando aula, roomId:', roomId, 'roomIdNum:', roomIdNum);
       let assigned = false;
 
-      // 3a) UPDATE directo sobre el aula específica
-      if (roomIdNum && Number.isInteger(roomIdNum)) {
-        console.log('[quickCreateTeacher] 3a) UPDATE classrooms SET teacher_id WHERE id =', roomIdNum);
-        const updRes = await supabase
-          .from('classrooms')
-          .update({ teacher_id: userId }, { count: 'exact' })
-          .eq('id', roomIdNum);
-        console.log('[quickCreateTeacher] 3a) result:', updRes.error?.message || 'ok', 'count:', updRes.count);
-        if (updRes.error) {
-          console.warn('[quickCreateTeacher] 3a) failed:', updRes.error.message);
-        } else if (updRes.count && updRes.count > 0) {
-          assigned = true;
-        }
-      } else {
-        console.log('[quickCreateTeacher] 3a) SKIP — roomIdNum no es válido:', roomIdNum);
-      }
+      // 3a) Primero: buscar el ID real del aula en la BD por nombre/level normalizado
+      // Esto resuelve el caso de placeholders con id=null o ids que no coinciden
+      const normTarget = String(roomName || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+      console.log('[quickCreateTeacher] buscando aula normalizada:', normTarget);
 
-      // 3b) Si no se asignó por id, buscar el aula por nombre/nivel en la BD
-      if (!assigned) {
-        console.log('[quickCreateTeacher] 3b) buscando por nombre:', roomName, 'o level:', roomLevel || roomName);
-        const { data: rooms, error: searchErr } = await supabase
-          .from('classrooms')
-          .select('id, name, level')
-          .is('deleted_at', null)
-          .or(`name.eq.${roomName},level.eq.${roomLevel || roomName}`);
+      const { data: allRooms, error: searchErr } = await supabase
+        .from('classrooms')
+        .select('id, name, level, teacher_id')
+        .is('deleted_at', null);
 
-        console.log('[quickCreateTeacher] 3b) rooms encontrados:', rooms?.length || 0, rooms, 'error:', searchErr?.message);
+      console.log('[quickCreateTeacher] total aulas en BD:', allRooms?.length, 'error:', searchErr?.message);
 
-        if (rooms && rooms.length) {
-          for (const room of rooms) {
-            console.log('[quickCreateTeacher] 3b) UPDATE classrooms SET teacher_id WHERE id =', room.id, '(name:', room.name + ')');
-            const { error: updErr } = await supabase
-              .from('classrooms')
-              .update({ teacher_id: userId })
-              .eq('id', room.id);
-            if (!updErr) assigned = true;
-          }
-          if (assigned) {
-            console.log('[quickCreateTeacher] 3b) asignado por nombre a', rooms.length, 'fila(s)');
-          }
+      const matchedRooms = (allRooms || []).filter(room => {
+        const rn = String(room.name || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+        const rl = String(room.level || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+        // Coincidencia por id (si es válido), nombre o level
+        const byId = roomIdNum && Number.isInteger(roomIdNum) && room.id === roomIdNum;
+        const byName = rn === normTarget || rl === normTarget;
+        return byId || byName;
+      });
+
+      console.log('[quickCreateTeacher] aulas coincidentes:', matchedRooms.map(r => ({ id: r.id, name: r.name, level: r.level })));
+
+      if (matchedRooms.length > 0) {
+        for (const room of matchedRooms) {
+          const { error: updErr, data: updData } = await supabase
+            .from('classrooms')
+            .update({ teacher_id: userId })
+            .eq('id', room.id)
+            .select('id, teacher_id');
+          console.log('[quickCreateTeacher] UPDATE id=' + room.id + ':', updErr ? ('ERROR: ' + updErr.message) : ('OK, teacher_id=' + updData?.[0]?.teacher_id));
+          if (!updErr) assigned = true;
         }
       }
 
-      // 3c) Si aún no se asignó, buscar por nombre normalizado (sin tildes)
-      if (!assigned) {
-        const normName = String(roomName || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
-        console.log('[quickCreateTeacher] 3c) búsqueda normalizada:', normName);
-        const { data: allRooms } = await supabase
-          .from('classrooms')
-          .select('id, name, level')
-          .is('deleted_at', null);
-        if (allRooms) {
-          for (const room of allRooms) {
-            const roomNorm = String(room.name || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
-            const levelNorm = String(room.level || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
-            if (roomNorm === normName || levelNorm === normName || roomNorm.includes(normName) || normName.includes(roomNorm)) {
-              console.log('[quickCreateTeacher] 3c) MATCH encontrado:', room.id, room.name, room.level);
-              const { error: updErr } = await supabase
-                .from('classrooms')
-                .update({ teacher_id: userId })
-                .eq('id', room.id);
-              if (!updErr) assigned = true;
-            }
-          }
-        }
-      }
-
-      // 3d) Último respaldo: applyClassroomGroupTeacher
-      if (!assigned) {
-        const roomObj = { id: roomIdNum, name: roomName, level: roomLevel };
+      // 3b) Respaldo: applyClassroomGroupTeacher con el primer match
+      if (!assigned || matchedRooms.length === 0) {
+        const roomObj = matchedRooms[0] || { id: roomIdNum, name: roomName, level: roomLevel };
         try {
           await applyClassroomGroupTeacher(roomObj, userId);
           assigned = true;
+          console.log('[quickCreateTeacher] applyClassroomGroupTeacher OK');
         } catch (e) {
-          console.warn('[quickCreateTeacher] 3d) applyClassroomGroupTeacher failed:', e.message);
+          console.warn('[quickCreateTeacher] applyClassroomGroupTeacher failed:', e.message);
         }
       }
 
